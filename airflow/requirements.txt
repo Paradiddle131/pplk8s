@@ -1,0 +1,7 @@
+# Providers added on top of the apache/airflow:3.3.1 image (PLAN.md D1, D3).
+# Installed with the Airflow 3.3.1 constraints file; the image and the local
+# test environment both install from this file, so DAG code sees one set of pins.
+apache-airflow-providers-google==22.4.0
+apache-airflow-providers-cncf-kubernetes==10.21.0
+apache-airflow-providers-http==6.0.5
+apache-airflow-providers-postgres==7.0.1

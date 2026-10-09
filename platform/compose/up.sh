@@ -13,3 +13,6 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
   -H 'Content-Type: application/json' -d '{"name":"staging"}' \
   'http://localhost:4480/storage/v1/b?project=pplk8s')
 case "$code" in 200|409) echo "bucket staging ready" ;; *) echo "bucket create failed: HTTP $code" >&2; exit 1 ;; esac
+
+# Let pods in the kind cluster reach these services by name, if the cluster is up.
+../kind/join-services-network.sh

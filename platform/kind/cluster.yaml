@@ -3,10 +3,19 @@
 # kind node images from v0.27 on already read registry config from
 # /etc/containerd/certs.d, where cluster-up.sh points localhost:5001 at the
 # local registry container.
+# __REPO__ is replaced with the repo's absolute path by cluster-up.sh, because
+# kind needs absolute host paths and does not expand variables.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: pplk8s
 nodes:
   - role: control-plane
   - role: worker
+    extraMounts: &dags
+      # DAG delivery for Phases 3-4 (PLAN.md D10): the repo's DAG folder,
+      # exposed to Airflow pods through a hostPath PersistentVolume.
+      - hostPath: __REPO__/airflow/dags
+        containerPath: /mnt/pplk8s/dags
+        readOnly: true
   - role: worker
+    extraMounts: *dags

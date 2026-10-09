@@ -20,7 +20,10 @@ fi
 if kind get clusters | grep -qx "$CLUSTER"; then
   echo "cluster $CLUSTER already exists"
 else
-  kind create cluster --config cluster.yaml --image "$NODE_IMAGE" --wait 120s
+  config="$(mktemp)"
+  trap 'rm -f "$config"' EXIT
+  sed "s|__REPO__|$(cd ../.. && pwd)|g" cluster.yaml >"$config"
+  kind create cluster --config "$config" --image "$NODE_IMAGE" --wait 120s
 fi
 
 # Inside a node, localhost is the node itself; alias localhost:5001 to the
@@ -50,3 +53,5 @@ data:
     host: "localhost:$REG_PORT"
     help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
+
+./join-services-network.sh
