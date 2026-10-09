@@ -155,3 +155,46 @@ platform/k8s/workloads-up.sh
 $K get pods -l app.kubernetes.io/name=el-factory     # 2 pods, 1/1 Running
 make phase2-check
 ```
+
+## Phase 4 drills
+
+Both drills are automated in `tests/e2e/phase4-check.sh` (`make phase4-check`); the observations below come from its first full pass on 2026-10-10.
+The script restores the EL Factory ConfigMap and the DAG's paused flag on exit, even when it fails.
+
+### 1. Kill a mapped extract task mid-run
+
+Trigger: set `PAGE_SIZE=1` in ConfigMap `el-factory-config` and roll EL Factory, so `synthetic.customers` spans 200 pages.
+Trigger a `sales_elt` run, wait until `extract` map index 0 is `running`, then force-delete the Celery worker pod running it (`kubectl -n airflow delete pod airflow-worker-N --force --grace-period=0`).
+
+Observed:
+
+- The task instance kept reporting `running` for about 5 minutes after the pod died.
+  Airflow notices a dead worker only through the task-instance heartbeat timeout, not through the pod deletion.
+- Then the task went to `up_for_retry` on try 1, to `running` on try 2 about 20 seconds later, and to `success` on try 2.
+- The tries API records the killed try as `failed`.
+- Row counts stayed at 200 customers and 40 orders for the run, and the gold and exposed table hashes did not change.
+  Try 2 restarts the entity at page 0, and page 0 clears the whole `(run_id, interval)` before loading, so the retry duplicates nothing.
+
+Diagnosis: `GET /api/v2/dags/sales_elt/dagRuns/<run>/taskInstances/extract/0/tries` shows each try with its state and hostname; `kubectl -n airflow get pods` shows the replacement worker.
+
+Recovery: none needed; the task retry is the recovery.
+To shorten detection, lower the task-instance heartbeat timeout (`[scheduler] task_instance_heartbeat_timeout`), at the cost of more false positives under load.
+
+### 2. Transient EL Factory failures (`FAIL_RATE`)
+
+Trigger: set `FAIL_RATE=1` in ConfigMap `el-factory-config` and roll EL Factory, trigger a run, let the first attempts fail, then set `FAIL_RATE=0` and roll again.
+`FAIL_RATE=1` is used instead of a fraction because a fraction across many pages makes the outcome random.
+
+Observed:
+
+- Try 1 of each extract failed with `POST /extract: HTTP 503: injected transient failure (FAIL_RATE)`.
+  The hook raised `ElFactoryTransientError`, so Airflow scheduled a retry with exponential backoff instead of failing the task.
+- After the failure rate went back to 0, both extract map indexes succeeded on try 3 and the run succeeded.
+- Row counts and the gold and exposed hashes did not change.
+
+A non-retryable error (`retryable: false`, 4xx, 502) raises `AirflowFailException` instead and fails the task at once, without spending retries.
+
+### 3. Clearing a dbt stage alone drops its downstream views
+
+Clearing only `dbt_gold` re-runs `dbt build --select gold`, which recreates the gold tables and drops the dependent exposed views (`DROP ... CASCADE`), without rebuilding them.
+Clear a dbt stage together with its downstream tasks (`include_downstream`), as the check does.

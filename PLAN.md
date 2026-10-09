@@ -87,6 +87,8 @@ Each decision states its rationale; change the decision here before acting on a 
 | D12 | **Tasks never touch the metadata DB directly** | Airflow 3 Task SDK model; Composer 3 workers have no DB access since 3.1.7-build.1. |
 | D13 | **Cluster ↔ Compose networking: kind nodes join the Compose network `pplk8s`**; pods use the Compose names (`warehouse`, `gcs`, `metadata-db`) | CoreDNS forwards non-cluster names to Docker's embedded DNS, so pods resolve the same names as Compose containers with no per-service Kubernetes objects. It also satisfies fake-gcs, which advertises `http://gcs:4443` for resumable uploads. Production reaches managed services by private IP/DNS in the same way. `platform/kind/join-services-network.sh` runs from both `cluster-up` and `services-up`, so start order does not matter. |
 | D14 | **Namespaces: `workloads`** (EL Factory, dbt pods: the Cloud Run stand-ins) **and `airflow`** (the chart) | Mirrors the production split: workloads are not part of the Airflow deployment. Airflow's worker ServiceAccount gets a Role in `workloads` to launch dbt pods; DAGs reach EL Factory at `http://el-factory.workloads.svc.cluster.local`. |
+| D15 | **Airflow is the single retry owner for transient faults.** EL Factory never retries internally; it classifies faults (503 `retryable: true` vs 4xx/502/500 non-retryable). `ElFactoryHook` makes one pass per task attempt: retryable → plain exception (task `retries` with exponential backoff apply), non-retryable → `AirflowFailException` (fail fast). dbt tasks retry by re-running `dbt build --select <stage>` in a fresh pod; `dbt retry` is not used | Retries never multiply across layers. Every extract attempt restarts at page 0, which clears the whole `(run_id, interval)`, so a retry after a failure on page N duplicates nothing. `dbt retry` needs the previous invocation's `target/run_results.json`, which dies with the ephemeral pod (the same holds on a Cloud Run Job); stage builds are idempotent, so a full stage re-run is safe. |
+| D16 | **Airflow image tags are immutable: bump `AIRFLOW_IMAGE` (Makefile) and `images.airflow.tag` (`values.yaml`) on every image change** | kind nodes cache images by tag with `pullPolicy: IfNotPresent`, so a rebuilt image under the same tag never reaches running pods. DAG files need no rebuild (host-path mount); anything under `airflow/include/` does. |
 
 ### EL Factory lite contract (as built in Phase 1)
 
@@ -137,25 +139,25 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - dbt project on `dbt-postgres`: sources on `ds_source`, models through `bronze` → `exposed`, tests, selectors per stage; its own image.
 - **Exit:** a manual `curl` run lands files in fake-gcs and rows in `ds_source`; `docker run <dbt image> build --select <stage>` produces `gold`/`exposed`; re-running the same `run_id` leaves row counts unchanged.
 
-### Phase 2 — Kubernetes with our own workloads · Status: not started
+### Phase 2 — Kubernetes with our own workloads · Status: done
 
 - Push images to the local registry; deploy EL Factory lite as Deployment + Service; run dbt as a Kubernetes Job.
 - Learn by writing: ConfigMaps, Secrets, probes, requests/limits, ServiceAccounts, namespaces; connect the cluster to the Compose network.
 - Break things on purpose: bad image tag, failing probe, OOMKill, missing Secret; diagnose each with `kubectl describe/logs/events`.
 - **Exit:** the dbt Job completes from `kubectl apply`, EL Factory lite answers inside the cluster, and every manifest field is explainable.
 
-### Phase 3 — Airflow via Helm · Status: not started
+### Phase 3 — Airflow via Helm · Status: done
 
 - Custom Airflow image (D1, D3) in the local registry; chart values in git (D2, D5, D6, D10); triggerer enabled; UI via port-forward.
 - Metadata DB Postgres added to Compose.
 - Practise `helm upgrade`, `helm rollback`, `helm diff`, and the DB-migration job.
 - **Exit:** a hello DAG runs on a Celery worker; an upgrade followed by a rollback leaves the deployment healthy.
 
-### Phase 4 — Port the scheduled ELT pipeline · Status: not started
+### Phase 4 — Port the scheduled ELT pipeline · Status: in progress (exit check passed once; needs a second consecutive pass, see LEDGER)
 
 - Build the workload seam (D7): `ElFactoryHook` (pagination, `run_id`, validation, result summary) and `run_dbt` (KubernetesPodOperator under the hood).
 - DAG: resolve run context → `GET /catalog` → dynamically mapped extract tasks in pool `el_factory` (size 7) → readiness/watermark check → one `run_dbt` per stage → write `ops.readiness`.
-- Decide and document the single retry owner across Airflow, EL Factory, and dbt (`dbt retry`).
+- Decide and document the single retry owner across Airflow, EL Factory, and dbt (`dbt retry`): decided as D15.
 - `catchup=False` unless a backfill policy exists; XCom carries identifiers only.
 - **Exit:** a full run succeeds; clearing and re-running any task or the whole run duplicates no data; killing a mapped task mid-run recovers via retry.
 

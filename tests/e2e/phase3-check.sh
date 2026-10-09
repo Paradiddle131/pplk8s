@@ -4,37 +4,9 @@
 # Expects `make airflow-up` to have run.
 set -euo pipefail
 
-CTX='kind-pplk8s'
-NS=airflow
+source "$(dirname "$0")/lib/airflow-api.sh"
 RELEASE=airflow
-API_PORT=18080
-API=http://localhost:$API_PORT
-kc() { kubectl --context "$CTX" -n "$NS" "$@"; }
 hm() { helm --kube-context "$CTX" -n "$NS" "$@"; }
-fail() { echo "FAIL: $*" >&2; exit 1; }
-
-# A port-forward is bound to one api-server pod, so it is restarted after each rollout.
-pf=""
-start_port_forward() {
-  [ -z "$pf" ] || kill "$pf" 2>/dev/null || true
-  kc port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
-  pf=$!
-  for _ in $(seq 30); do curl -sf -o /dev/null "$API/api/v2/version" 2>/dev/null && return; sleep 1; done
-  fail "API not reachable on $API"
-}
-trap '[ -z "$pf" ] || kill "$pf" 2>/dev/null || true' EXIT
-
-# Airflow 3 REST API: exchange the chart's default user for a JWT, then call /api/v2.
-TOKEN=""
-api() { # method path [json-body]
-  curl -sf -X "$1" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    ${3:+-d "$3"} "$API$2"
-}
-refresh_token() {
-  TOKEN=$(curl -sf -X POST -H 'Content-Type: application/json' \
-    -d '{"username":"admin","password":"admin"}' "$API/auth/token" | jq -r .access_token) ||
-    fail "could not get an API token"
-}
 
 # Trigger hello and wait for it to finish; prints the host that ran the task.
 run_hello() {

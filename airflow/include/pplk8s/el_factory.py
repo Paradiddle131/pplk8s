@@ -23,12 +23,15 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import requests
-from airflow.exceptions import AirflowFailException
 from airflow.providers.http.hooks.http import HttpHook
+from airflow.sdk.exceptions import AirflowFailException
 
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:+-]+$")
 DEFAULT_CONN_ID = "el_factory"
-DEFAULT_TIMEOUT_SECONDS = 120
+CONNECT_TIMEOUT_SECONDS = (
+    10  # a blackholed connection (pod just replaced) should fail fast and retry
+)
+READ_TIMEOUT_SECONDS = 120
 MAX_PAGES = 10_000
 
 
@@ -48,7 +51,7 @@ class ElFactoryHook(HttpHook):
         self,
         http_conn_id: str = DEFAULT_CONN_ID,
         *,
-        timeout: int = DEFAULT_TIMEOUT_SECONDS,
+        timeout: tuple[float, float] = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS),
     ) -> None:
         super().__init__(http_conn_id=http_conn_id)
         self.timeout = timeout

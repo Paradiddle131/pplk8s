@@ -12,10 +12,10 @@ DBT_IMAGE ?= localhost:5001/dbt:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.1
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.3
 export AIRFLOW_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -96,5 +96,8 @@ airflow-ui: ## Port-forward the Airflow UI/API to http://localhost:8080 (admin/a
 phase3-check: airflow-up ## Phase 3 exit check: hello DAG on a Celery worker, upgrade + rollback stays healthy
 	tests/e2e/phase3-check.sh
 
+phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run, idempotent clear/re-run, kill + FAIL_RATE retry drills
+	tests/e2e/phase4-check.sh
+
 lint: ## Lint shell scripts (shellcheck via uvx)
-	uvx --from shellcheck-py shellcheck scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh
+	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh

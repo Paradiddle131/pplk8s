@@ -76,7 +76,13 @@ def sales_elt():
             "interval_end": end.isoformat(),
         }
 
-    @task
+    @task(
+        retries=3,
+        retry_delay=timedelta(seconds=15),
+        retry_exponential_backoff=True,
+        max_retry_delay=timedelta(minutes=5),
+        execution_timeout=timedelta(minutes=10),
+    )
     def get_catalog() -> list[dict[str, str]]:
         return ElFactoryHook().get_catalog(PIPELINE)
 

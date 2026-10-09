@@ -1,7 +1,7 @@
 import pytest
 import requests
 import responses
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 from pplk8s.el_factory import ElFactoryHook, ElFactoryTransientError
 
 BASE = "http://el-factory.test:80"

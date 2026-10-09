@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 
 import pytest
-from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.sdk.exceptions import AirflowFailException
 from pplk8s import readiness
 
 START = datetime(2026, 10, 8, tzinfo=UTC)

@@ -16,10 +16,11 @@ def test_no_import_errors(bag):
     assert bag.import_errors == {}
 
 
-def test_hello_dag_loads_when_present(bag):
-    if not (DAGS / "hello.py").exists():
-        pytest.skip("hello.py is delivered by Phase 3")
-    assert bag.dags
+def test_hello_structure(bag):
+    hello = bag.dags["hello"]
+    assert hello.catchup is False
+    assert hello.schedule is None
+    assert list(hello.task_ids) == ["say_hello"]
 
 
 @pytest.fixture(scope="module")
@@ -74,3 +75,11 @@ def test_dbt_tasks_use_retries_and_timeouts(sales):
         task = sales.get_task(f"stage_{stage}.dbt_{stage}")
         assert task.retries >= 1
         assert task.execution_timeout is not None
+
+
+def test_every_elt_call_to_el_factory_is_retried(sales):
+    for task_id in ("get_catalog", "check_extracted"):
+        task = sales.get_task(task_id)
+        assert task.retries >= 2, task_id
+        assert task.execution_timeout is not None, task_id
+    assert sales.get_task("get_catalog").retry_exponential_backoff is True

@@ -13,8 +13,8 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
-from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.sdk.exceptions import AirflowFailException
 
 DEFAULT_CONN_ID = "warehouse"
 

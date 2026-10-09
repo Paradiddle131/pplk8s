@@ -36,3 +36,16 @@ def test_image_and_namespace_are_overridable_by_variables():
     op = run_dbt("silver")
     assert "var.value.get('dbt_image'" in op.image
     assert "var.value.get('dbt_namespace'" in op.namespace
+
+
+def test_pod_complies_with_restricted_profile():
+    op = run_dbt("gold")
+    assert op.security_context.run_as_non_root is True
+    assert op.security_context.run_as_user == 10001
+    assert op.security_context.seccomp_profile.type == "RuntimeDefault"
+    assert op.container_security_context.allow_privilege_escalation is False
+    assert op.container_security_context.read_only_root_filesystem is True
+    assert op.container_security_context.capabilities.drop == ["ALL"]
+    assert {m.mount_path for m in op.volume_mounts} == {"/dbt/target", "/dbt/logs", "/tmp"}
+    assert {v.name for v in op.volumes} == {m.name for m in op.volume_mounts}
+    assert op.automount_service_account_token is False

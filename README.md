@@ -24,6 +24,19 @@ make build          # EL Factory lite and dbt images
 make el-factory-up  # EL Factory lite on localhost:8090
 make dbt-build STAGE=gold
 make phase1-check   # end-to-end Phase 1 exit check
+
+make workloads-up   # EL Factory + dbt Job template in namespace workloads (pods reach Compose by name)
+make dbt-job STAGE=gold
+make phase2-check   # in-cluster extract + dbt Jobs for every stage
+
+make airflow-up     # Airflow 3.3.1 via the official chart in namespace airflow
+make airflow-ui     # http://localhost:8080 (admin/admin)
+make phase3-check   # hello DAG on a Celery worker, helm diff/upgrade/rollback
+make airflow-test   # DAG and seam unit tests (local uv env, no cluster)
+make phase4-check   # sales_elt end to end + idempotent re-runs + kill and FAIL_RATE drills (~18 min)
 ```
+
+Start order does not matter: `cluster-up` and `services-up` both attach the kind nodes to the Compose network.
+Failure drills and their observed symptoms live in [`docs/runbook.md`](docs/runbook.md).
 
 Run `make help` for every target.
