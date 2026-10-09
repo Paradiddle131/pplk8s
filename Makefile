@@ -6,10 +6,15 @@ SHELL := /usr/bin/env bash
 NODE_IMAGE ?= kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
 export NODE_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset
+# Workload images, tagged for the local registry so Phase 2 can push them as-is.
+ELF_IMAGE ?= localhost:5001/el-factory:0.1.0
+DBT_IMAGE ?= localhost:5001/dbt:0.1.0
+export ELF_IMAGE DBT_IMAGE
+
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build test phase1-check
 
 help: ## List targets
-	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
 tools: ## Install pinned kind, helm, k9s into ~/.local/bin
 	scripts/install-tools.sh
@@ -32,5 +37,15 @@ services-down: ## Stop the out-of-cluster services, keeping their data
 services-reset: ## Stop the out-of-cluster services and delete their data
 	docker compose -f platform/compose/compose.yaml down -v
 
+build: ## Build the EL Factory lite and dbt images
+	docker build -t $(ELF_IMAGE) services/el-factory
+	docker build -t $(DBT_IMAGE) dbt
+
+test: ## Run unit tests and linters
+	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
+
+phase1-check: services-up build ## Phase 1 exit check: extract via curl, re-run idempotently, dbt build every stage
+	tests/e2e/phase1-check.sh
+
 lint: ## Lint shell scripts (shellcheck via uvx)
-	uvx --from shellcheck-py shellcheck scripts/*.sh platform/*/*.sh
+	uvx --from shellcheck-py shellcheck scripts/*.sh platform/*/*.sh tests/e2e/*.sh
