@@ -1,0 +1,7 @@
+# Pipelines and the (source, entity) pairs each one extracts; DAGs fetch this via GET /catalog.
+pipelines:
+  sales:
+    - {source: synthetic, entity: customers}
+    - {source: synthetic, entity: orders}
+  weather:
+    - {source: open_meteo, entity: hourly_weather}
