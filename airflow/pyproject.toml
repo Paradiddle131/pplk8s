@@ -1,0 +1,31 @@
+[project]
+name = "pplk8s-airflow"
+version = "0.1.0"
+description = "Local test environment for the pplk8s DAGs and workload seam (PLAN.md D11)."
+requires-python = ">=3.12,<3.13"
+# Provider pins mirror airflow/requirements.txt (the Airflow image installs that file).
+dependencies = [
+  "apache-airflow==3.3.1",
+  "apache-airflow-providers-google==22.4.0",
+  "apache-airflow-providers-cncf-kubernetes==10.21.0",
+  "apache-airflow-providers-http==6.0.5",
+  "apache-airflow-providers-postgres==7.0.1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-mock>=3", "responses>=0.25", "ruff>=0.8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["include", "dags"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["dags/hello.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
