@@ -7,7 +7,7 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
 ## Endpoints
 
 - `GET /healthz` returns `200 {"status":"ok"}` and makes no dependency calls.
-- `GET /catalog?pipeline=<name>` returns the enabled `[{"source", "entity"}]` pairs from `catalog.yaml`.
+- `GET /catalog?pipeline=<name>` returns the enabled `[{"source", "entity"}]` pairs from `catalog.yaml`; entries marked `enabled: false` are left out.
   It answers 400 when `pipeline` is missing and 404 when the pipeline is unknown.
 - `POST /extract` with the JSON body `{source, entity, run_id, interval_start, interval_end, cursor?}` extracts one page.
   Timestamps are ISO-8601 with a timezone offset; the interval is half-open `[start, end)`.
@@ -16,9 +16,10 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
   Callers POST the same body to `next_url` until it is `null`.
 
 Every error is JSON: `{"status":"error","retryable":<bool>,"error":"..."}`.
-Validation failures are 400, unknown sources or entities are 404, and an injected or upstream transient failure is 503 with `retryable: true`.
+Validation failures are 400, and unknown pipelines, sources, or entities are 404.
+Transient failures are 503 with `retryable: true`: injected failures, Open-Meteo 5xx or connection errors, dropped warehouse connections, and GCS 5xx or 429 responses.
+An Open-Meteo 4xx means our request is wrong, so it is a 502 with `retryable: false`.
 Any other failure is 500 with `retryable: false`.
-An upstream HTTP 4xx from Open-Meteo is reported as a retryable 503 as well, because it arrives as a `requests` exception.
 
 ## Processing
 
@@ -28,6 +29,7 @@ An upstream HTTP 4xx from Open-Meteo is reported as a retryable 503 as well, bec
 4. The page is staged to `gs://<GCS_BUCKET>/<source>/<entity>/<run_id>/page-<NNNNN>.jsonl`, overwriting any earlier object.
 5. The staged object is downloaded and parsed, and its rows are loaded.
    The load deletes the rows for `(_run_id, _interval_start, _interval_end, _page)` and inserts the new ones in one transaction, under an advisory lock, so re-running a request leaves row counts unchanged.
+   Page 0 deletes every page of that `(_run_id, _interval_start, _interval_end)`, so a re-run that yields fewer pages leaves no stale rows behind.
 
 ## Configuration
 

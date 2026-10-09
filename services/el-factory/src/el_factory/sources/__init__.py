@@ -50,7 +50,9 @@ def load_catalog(path: Path, registry: Registry) -> dict[str, list[CatalogEntry]
     for pipeline, items in pipelines.items():
         if not isinstance(items, list):
             raise ConfigError(f"{path}: pipeline {pipeline} must be a list")
-        entries = [_catalog_entry(path, pipeline, item) for item in items]
+        entries = [
+            entry for entry in (_catalog_entry(path, pipeline, item) for item in items) if entry
+        ]
         for entry in entries:
             try:
                 registry.get(entry.source, entry.entity)
@@ -60,7 +62,11 @@ def load_catalog(path: Path, registry: Registry) -> dict[str, list[CatalogEntry]
     return catalog
 
 
-def _catalog_entry(path: Path, pipeline: object, item: Any) -> CatalogEntry:
+def _catalog_entry(path: Path, pipeline: object, item: Any) -> CatalogEntry | None:
+    """Parse one entry; a disabled entry (enabled: false) yields None and is left out."""
     if not isinstance(item, dict) or "source" not in item or "entity" not in item:
         raise ConfigError(f"{path}: pipeline {pipeline} entries need source and entity")
-    return CatalogEntry(str(item["source"]), str(item["entity"]))
+    enabled = item.get("enabled", True)
+    if not isinstance(enabled, bool):
+        raise ConfigError(f"{path}: pipeline {pipeline}: enabled must be true or false")
+    return CatalogEntry(str(item["source"]), str(item["entity"])) if enabled else None

@@ -9,6 +9,7 @@ from typing import Any
 import psycopg
 import requests
 from flask import Flask, Response, jsonify, request
+from google.api_core import exceptions as gcs_exceptions
 from werkzeug.exceptions import HTTPException
 
 from el_factory.config import Config
@@ -45,6 +46,14 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
     @app.errorhandler(requests.RequestException)
     def upstream_failure(exc: requests.RequestException) -> tuple[Response, int]:
         return _error(503, f"upstream request failed: {exc}", retryable=True)
+
+    # Dropped connections and GCS 5xx/429 are transient; the caller's retry is the remedy.
+    @app.errorhandler(psycopg.OperationalError)
+    @app.errorhandler(gcs_exceptions.ServerError)
+    @app.errorhandler(gcs_exceptions.TooManyRequests)
+    def transient_dependency_failure(exc: Exception) -> tuple[Response, int]:
+        app.logger.warning("transient dependency failure: %s", exc)
+        return _error(503, f"dependency temporarily unavailable: {exc}", retryable=True)
 
     @app.errorhandler(HTTPException)
     def http_error(exc: HTTPException) -> tuple[Response, int]:

@@ -50,7 +50,11 @@ class FakeWarehouse:
             }
             for row in rows
         ]
-        self.tables.setdefault(table.name, {})[key] = stored
+        pages = self.tables.setdefault(table.name, {})
+        if load.page == 0:
+            for stale in [k for k in pages if k[:3] == key[:3]]:
+                del pages[stale]
+        pages[key] = stored
         return len(stored)
 
     def row_count(self, table_name: str) -> int:

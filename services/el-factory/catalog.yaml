@@ -1,4 +1,5 @@
 # Pipelines and the (source, entity) pairs each one extracts; DAGs fetch this via GET /catalog.
+# An entry with `enabled: false` stays in the file but is left out of the catalog.
 pipelines:
   sales:
     - {source: synthetic, entity: customers}

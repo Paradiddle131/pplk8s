@@ -1,7 +1,9 @@
 import json
 from datetime import UTC, datetime
 
+import psycopg
 import pytest
+from google.api_core import exceptions as gcs_exceptions
 
 from el_factory.app import create_app
 from el_factory.model import Interval
@@ -236,3 +238,58 @@ def test_startup_survives_an_unreachable_warehouse(storage):
     app = create_app(make_config(), storage, DownWarehouse())
 
     assert app.test_client().get("/healthz").status_code == 200
+
+
+def test_transient_warehouse_error_is_a_retryable_503(make_client, storage):
+    class FlakyWarehouse:
+        def ensure_table(self, table):
+            pass
+
+        def replace_page(self, table, load, rows):
+            raise psycopg.OperationalError("server closed the connection unexpectedly")
+
+    app = create_app(make_config(), storage, FlakyWarehouse())
+    app.config["TESTING"] = False
+
+    response = app.test_client().post("/extract", json=ORDERS_BODY)
+
+    assert response.status_code == 503
+    assert response.get_json()["retryable"] is True
+
+
+def test_transient_storage_error_is_a_retryable_503(make_client, storage, monkeypatch):
+    def unavailable(uri, data):
+        raise gcs_exceptions.ServiceUnavailable("try again")
+
+    monkeypatch.setattr(storage, "upload", unavailable)
+
+    response = post(make_client(), ORDERS_BODY)
+
+    assert response.status_code == 503
+    assert response.get_json()["retryable"] is True
+
+
+def test_page_zero_replaces_every_page_of_the_same_run_and_interval(make_client, warehouse):
+    def run(client):
+        url = "/extract"
+        while url:
+            url = post(client, ORDERS_BODY, url).get_json()["next_url"]
+
+    run(make_client(page_size=20))
+    run(make_client(page_size=100))
+
+    assert warehouse.row_count("synthetic_orders") == expected_orders()
+
+
+def test_catalog_omits_disabled_entries(make_client, tmp_path):
+    catalog = tmp_path / "catalog.yaml"
+    catalog.write_text(
+        "pipelines:\n"
+        "  sales:\n"
+        "    - {source: synthetic, entity: customers}\n"
+        "    - {source: synthetic, entity: orders, enabled: false}\n"
+    )
+
+    response = make_client(catalog_path=catalog).get("/catalog?pipeline=sales")
+
+    assert response.get_json() == [{"source": "synthetic", "entity": "customers"}]

@@ -34,7 +34,7 @@ class Warehouse(Protocol):
     def ensure_table(self, table: Table) -> None: ...
 
     def replace_page(self, table: Table, load: PageLoad, rows: Sequence[Mapping[str, Any]]) -> int:
-        """Replace the rows of one (run, interval, page) atomically and return the rows written."""
+        """Replace one page atomically (page 0 clears the run+interval); return rows written."""
         ...
 
 
@@ -72,10 +72,16 @@ class PostgresWarehouse:
             sql.SQL(", ").join(sql.Identifier(n) for n in [*names, *meta]),
             sql.SQL(", ").join(sql.Placeholder() for _ in [*names, *meta]),
         )
+        # Page 0 starts a (re)load of the whole (run, interval): clearing every page keeps the
+        # load idempotent per (entity, interval, run_id) even if a re-run yields fewer pages.
+        scope = "" if load.page == 0 else " AND _page = %s"
         delete = sql.SQL(
-            "DELETE FROM {} WHERE _run_id = %s AND _interval_start = %s"
-            " AND _interval_end = %s AND _page = %s"
+            "DELETE FROM {} WHERE _run_id = %s AND _interval_start = %s AND _interval_end = %s"
+            + scope
         ).format(qualified)
+        delete_params: list[Any] = [load.run_id, load.interval.start, load.interval.end]
+        if load.page:
+            delete_params.append(load.page)
         params = [
             [row[name] for name in names]
             + [
@@ -91,7 +97,7 @@ class PostgresWarehouse:
             cur.execute(
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [_page_key(table, load)]
             )
-            cur.execute(delete, [load.run_id, load.interval.start, load.interval.end, load.page])
+            cur.execute(delete, delete_params)
             cur.executemany(insert, params)
         return len(params)
 
