@@ -14,17 +14,15 @@ RUN_ID=phase1__check
 INTERVAL_START=2026-10-01T00:00:00Z
 INTERVAL_END=2026-10-03T00:00:00Z
 
-psql_wh() { docker exec pplk8s-warehouse-1 psql -U warehouse -d warehouse -Atc "$1"; }
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+psql_wh() {
+  docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
+    psql -U warehouse -d warehouse -Atc "$1"
+}
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-docker rm -f pplk8s-el-factory >/dev/null 2>&1 || true
-docker run -d --name pplk8s-el-factory --network pplk8s -p 127.0.0.1:8090:8080 \
-  -e WAREHOUSE_DSN=postgresql://warehouse:warehouse@warehouse:5432/warehouse \
-  -e STORAGE_EMULATOR_HOST=http://gcs:4443 \
-  "$ELF_IMAGE" >/dev/null
-trap 'docker rm -f pplk8s-el-factory >/dev/null 2>&1 || true' EXIT
-for _ in $(seq 30); do curl -sf "$ELF/healthz" >/dev/null && break; sleep 1; done
-curl -sf "$ELF/healthz" >/dev/null || fail "EL Factory did not become healthy"
+ELF_PORT=8090 "$REPO/scripts/el-factory-local.sh" up >/dev/null || fail "EL Factory did not become healthy"
+trap '"$REPO/scripts/el-factory-local.sh" down >/dev/null' EXIT
 echo "ok: EL Factory healthy"
 
 # Extract every catalog entity, following next_url until it is null.
@@ -64,6 +62,16 @@ extract_pipeline
 second=$(counts)
 [ "$first" = "$second" ] || fail "re-run changed counts: $first -> $second"
 echo "ok: re-running $RUN_ID left counts unchanged ($second)"
+
+# A re-run that yields fewer pages must not leave the earlier run's extra pages behind.
+RUN_ID=phase1__repage
+for size in 20 100; do
+  PAGE_SIZE=$size ELF_PORT=8090 "$REPO/scripts/el-factory-local.sh" up >/dev/null || fail "EL Factory restart"
+  extract_pipeline
+done
+repaged=$(psql_wh "select count(*) from ds_source.synthetic_orders where _run_id = '$RUN_ID'")
+[ "$repaged" = "$orders" ] || fail "re-paginated run left $repaged orders, expected $orders"
+echo "ok: re-running with fewer pages left exactly $repaged orders"
 
 for stage in bronze silver gold exposed; do
   docker run --rm --network pplk8s "$DBT_IMAGE" build --select "$stage" >/tmp/pplk8s-dbt-$stage.log 2>&1 ||

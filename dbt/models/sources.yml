@@ -23,7 +23,7 @@ sources:
           - name: status
             description: placed, shipped or cancelled.
       - name: open_meteo_hourly_weather
-        description: Hourly weather observations per location (Open-Meteo shape, synthetic values in dev).
+        description: Hourly weather observations per location from the public Open-Meteo archive API.
         columns:
           - name: location
             tests: [not_null]

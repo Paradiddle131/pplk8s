@@ -8,7 +8,7 @@ See [`PLAN.md`](PLAN.md) for the roadmap and [`LEDGER.md`](LEDGER.md) for progre
 ## Prerequisites
 
 - Linux or WSL2 with Docker (Docker Desktop with WSL integration works; give it at least 8 CPUs and 16 GiB).
-- `kubectl`, `make`, `curl`, and [`uv`](https://docs.astral.sh/uv/) on `PATH`.
+- `kubectl`, `make`, `curl`, `jq`, and [`uv`](https://docs.astral.sh/uv/) on `PATH`.
 - `~/.local/bin` on `PATH`; `make tools` installs pinned `kind`, `helm`, and `k9s` there.
 
 ## Quick start

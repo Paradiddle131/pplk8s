@@ -11,7 +11,7 @@ ELF_IMAGE ?= localhost:5001/el-factory:0.1.0
 DBT_IMAGE ?= localhost:5001/dbt:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build test phase1-check
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test phase1-check
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -40,6 +40,16 @@ services-reset: ## Stop the out-of-cluster services and delete their data
 build: ## Build the EL Factory lite and dbt images
 	docker build -t $(ELF_IMAGE) services/el-factory
 	docker build -t $(DBT_IMAGE) dbt
+
+el-factory-up: services-up ## Run EL Factory lite on localhost:8090 against the Compose services
+	scripts/el-factory-local.sh up
+
+el-factory-down: ## Stop the local EL Factory lite container
+	scripts/el-factory-local.sh down
+
+STAGE ?= bronze
+dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed) against the warehouse
+	docker run --rm --network pplk8s $(DBT_IMAGE) build --select $(STAGE)
 
 test: ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
