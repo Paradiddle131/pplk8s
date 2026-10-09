@@ -1,0 +1,57 @@
+# Template for one `dbt build --select <stage>` run, filled in by dbt-job.sh (__NAME__, __STAGE__).
+# Not part of the Kustomization: a Job's pod template is immutable, so every run is a new, uniquely named Job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __NAME__
+  namespace: workloads
+  labels:
+    app.kubernetes.io/name: dbt
+    pplk8s/stage: __STAGE__
+spec:
+  backoffLimit: 1 # retry a failed pod once, then mark the Job Failed
+  activeDeadlineSeconds: 600 # hard cap on the whole Job, so a hung dbt cannot run forever
+  ttlSecondsAfterFinished: 3600 # the TTL controller deletes the finished Job and its pods after an hour
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dbt
+        pplk8s/stage: __STAGE__
+    spec:
+      restartPolicy: Never # Jobs allow only Never or OnFailure; Never keeps failed pods for `kubectl logs`
+      serviceAccountName: dbt
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dbt
+          image: localhost:5001/dbt:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: [build, --select, __STAGE__] # the image's ENTRYPOINT is `dbt`; args replace its default CMD
+          envFrom:
+            - secretRef:
+                name: warehouse-credentials # DBT_HOST, DBT_PORT, DBT_USER, DBT_PASSWORD, DBT_DBNAME read by profiles.yml
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts: # dbt writes compiled SQL, run results and logs; give it scratch space on a read-only root
+            - {name: target, mountPath: /dbt/target}
+            - {name: logs, mountPath: /dbt/logs}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: target, emptyDir: {}}
+        - {name: logs, emptyDir: {}}
+        - {name: tmp, emptyDir: {}}

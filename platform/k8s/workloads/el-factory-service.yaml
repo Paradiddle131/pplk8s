@@ -1,0 +1,14 @@
+# Stable in-cluster address: http://el-factory.workloads.svc.cluster.local (port 80).
+# Phase 4's ElFactoryHook depends on this exact name and port.
+apiVersion: v1
+kind: Service
+metadata:
+  name: el-factory
+spec:
+  type: ClusterIP # reachable only inside the cluster
+  selector: # routes to Ready pods carrying this label
+    app.kubernetes.io/name: el-factory
+  ports:
+    - name: http
+      port: 80 # what callers use
+      targetPort: http # the container port named `http` (8080)

@@ -1,0 +1,9 @@
+# Namespace for our own workloads, separate from the `airflow` namespace (PLAN.md D14), as on the real platform.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workloads
+  labels:
+    # Pod Security Admission in warn mode: kubectl prints a warning for any pod that is not restricted-profile
+    # (non-root, no privilege escalation, dropped caps, seccomp). Warn, not enforce, so Phase 4's operator pods are not rejected.
+    pod-security.kubernetes.io/warn: restricted

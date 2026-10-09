@@ -1,0 +1,24 @@
+# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt). Apply with `kubectl apply -k`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Sets metadata.namespace on every namespaced object below, so the manifests stay namespace-free.
+namespace: workloads
+
+resources:
+  - namespace.yaml
+  - serviceaccounts.yaml
+  - el-factory-configmap.yaml
+  - el-factory-deployment.yaml
+  - el-factory-service.yaml
+
+secretGenerator:
+  - name: warehouse-credentials
+    # KEY=value lines; written by workloads-up.sh from WAREHOUSE_PASSWORD (default: the Compose default) and git-ignored.
+    envs:
+      - warehouse.secret.env
+
+generatorOptions:
+  # Keep the name fixed: Phase 4's KubernetesPodOperator references `warehouse-credentials` literally.
+  # The trade-off: editing the Secret does not roll pods by itself; restart the Deployment after a change.
+  disableNameSuffixHash: true

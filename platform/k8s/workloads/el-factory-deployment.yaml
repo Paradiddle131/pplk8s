@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: el-factory
+  labels:
+    app.kubernetes.io/name: el-factory
+spec:
+  replicas: 2 # stateless, so two replicas survive a pod or node loss
+  selector: # immutable after creation; must match the pod template labels
+    matchLabels:
+      app.kubernetes.io/name: el-factory
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # never drop below 2 ready pods during a rollout
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: el-factory
+    spec:
+      serviceAccountName: el-factory
+      automountServiceAccountToken: false
+      securityContext: # pod level: applies to every container
+        runAsNonRoot: true # the kubelet refuses to start an image that runs as root
+        runAsUser: 10001 # matches the uid baked into the image
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault # filter dangerous syscalls (required by the restricted profile)
+      containers:
+        - name: el-factory
+          image: localhost:5001/el-factory:0.1.0 # the local registry resolves the same on the host and in the cluster
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080 # documentation plus a name the probes and Service can use
+          envFrom:
+            - configMapRef:
+                name: el-factory-config
+            - secretRef:
+                name: warehouse-credentials # supplies WAREHOUSE_DSN (and the DBT_* keys, unused here)
+          startupProbe: # gives a slow start up to 30 x 2s before liveness begins judging
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe: # failing removes the pod from the Service endpoints, without restarting it
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe: # failing makes the kubelet restart the container
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests: # what the scheduler reserves on a node
+              cpu: 100m
+              memory: 128Mi
+            limits: # the kernel enforces: memory over the limit is OOMKilled, CPU is throttled
+              cpu: 500m
+              memory: 256Mi
+          securityContext: # container level
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # the image never writes outside /tmp
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp # gunicorn worker heartbeat files live here
+      volumes:
+        - name: tmp
+          emptyDir: {} # per-pod scratch space, deleted with the pod

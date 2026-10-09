@@ -1,0 +1,11 @@
+# Non-secret configuration, injected as environment variables via envFrom.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: el-factory-config
+data:
+  # fake-gcs by its Compose name (PLAN.md D13); it advertises http://gcs:4443 for resumable uploads.
+  STORAGE_EMULATOR_HOST: http://gcs:4443
+  GCS_BUCKET: staging
+  PAGE_SIZE: "100" # ConfigMap values are strings, so numbers are quoted.
+  FAIL_RATE: "0" # raise above 0 to rehearse Airflow retries
