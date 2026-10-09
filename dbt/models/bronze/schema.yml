@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: brz_synthetic_customers
+    description: Customers as landed, cast only. Alias bronze.synthetic_customers. Keeps every run, so customer_id is not unique here.
+    columns:
+      - name: customer_id
+        description: Natural key; repeated across runs.
+        tests: [not_null]
+      - name: _run_id
+        tests: [not_null]
+
+  - name: brz_synthetic_orders
+    description: Orders as landed, cast only. Alias bronze.synthetic_orders. Keeps every run, so order_id can repeat across runs.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'order_id']
+    columns:
+      - name: order_id
+        description: Natural key; repeated across runs.
+        tests: [not_null]
+      - name: status
+        description: placed, shipped or cancelled.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['placed', 'shipped', 'cancelled']
+      - name: _run_id
+        tests: [not_null]
+
+  - name: brz_open_meteo_hourly_weather
+    description: Hourly weather as landed, cast only. Alias bronze.open_meteo_hourly_weather.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'location', 'observed_at']
+    columns:
+      - name: location
+        tests: [not_null]
+      - name: observed_at
+        tests: [not_null]

@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: gld_daily_sales
+    description: One row per order_date (UTC). Alias gold.daily_sales.
+    columns:
+      - name: order_date
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: orders_total
+        description: All orders that day, cancelled included.
+      - name: orders_cancelled
+        description: Cancelled orders that day.
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders.
+      - name: customers_distinct
+        description: Distinct customers with at least one non-cancelled order that day.
+
+  - name: gld_customer_lifetime
+    description: One row per customer. Alias gold.customer_lifetime.
+    columns:
+      - name: customer_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: orders
+        description: All orders, cancelled included.
+      - name: lifetime_value_eur
+        description: Sum of amount for non-cancelled orders.
+
+  - name: gld_daily_weather
+    description: One row per (location, UTC date). Alias gold.daily_weather.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['location', 'date']
+    columns:
+      - name: location
+        tests: [not_null]
+      - name: date
+        tests: [not_null]

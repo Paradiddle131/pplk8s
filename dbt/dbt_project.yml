@@ -1,0 +1,35 @@
+name: pplk8s
+version: "0.1.0"
+config-version: 2
+
+profile: pplk8s
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+
+# A test runs under indirect selection only when all of its parents are selected.
+# Without this, `build --select silver` would also run the gold reconciliation test before gold exists.
+flags:
+  indirect_selection: cautious
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  pplk8s:
+    bronze:
+      +schema: bronze
+      +tags: [bronze]
+      +materialized: view
+    silver:
+      +schema: silver
+      +tags: [silver]
+      +materialized: table
+    gold:
+      +schema: gold
+      +tags: [gold]
+      +materialized: table
+    exposed:
+      +schema: exposed
+      +tags: [exposed]
+      +materialized: view

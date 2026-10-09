@@ -1,0 +1,25 @@
+# One selector per stage, matched by tag. `dbt build --select bronze` (folder) matches the same models.
+selectors:
+  - name: bronze
+    description: Bronze layer, 1:1 with the ds_source tables (views).
+    definition:
+      method: tag
+      value: bronze
+
+  - name: silver
+    description: Silver layer, latest row per natural key (tables).
+    definition:
+      method: tag
+      value: silver
+
+  - name: gold
+    description: Gold layer, business aggregates (tables).
+    definition:
+      method: tag
+      value: gold
+
+  - name: exposed
+    description: Exposed layer, consumer-facing views.
+    definition:
+      method: tag
+      value: exposed

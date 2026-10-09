@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: ds_source
+    description: >
+      Append-only landing tables written by EL Factory lite.
+      Every table carries the metadata columns _run_id, _interval_start, _interval_end, _page, _source_uri, _loaded_at.
+      The same natural key can appear in several runs; the latest load (greatest _loaded_at, _run_id) wins in silver.
+    schema: ds_source
+    tables:
+      - name: synthetic_customers
+        description: Full customer snapshot per run (synthetic).
+        columns:
+          - name: customer_id
+            tests: [not_null]
+          - name: country
+            description: ISO-2 country code.
+      - name: synthetic_orders
+        description: Orders for the run's interval (synthetic).
+        columns:
+          - name: order_id
+            tests: [not_null]
+          - name: status
+            description: placed, shipped or cancelled.
+      - name: open_meteo_hourly_weather
+        description: Hourly weather observations per location (Open-Meteo shape, synthetic values in dev).
+        columns:
+          - name: location
+            tests: [not_null]
+          - name: observed_at
+            tests: [not_null]

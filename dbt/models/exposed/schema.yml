@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: exp_sales_by_country_daily
+    description: Sales per order_date and customer country. Alias exposed.sales_by_country_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['order_date', 'country']
+    columns:
+      - name: order_date
+        tests: [not_null]
+      - name: country
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NL', 'TR', 'GB', 'DE', 'FR', 'US']
+      - name: orders
+        description: All orders for that country and day, cancelled included.
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders.
+
+  - name: exp_daily_sales_with_weather
+    description: Daily sales left-joined to Amsterdam daily weather. Alias exposed.daily_sales_with_weather.
+    columns:
+      - name: order_date
+        description: Natural key.
+        tests: [not_null, unique]

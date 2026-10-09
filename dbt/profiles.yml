@@ -1,0 +1,14 @@
+# Connection profile used by the dbt image (DBT_PROFILES_DIR=/dbt).
+# Every value is overridable by environment variable; the defaults target the lab's Compose warehouse.
+pplk8s:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_HOST', 'warehouse') }}"
+      port: "{{ env_var('DBT_PORT', '5432') | int }}"
+      user: "{{ env_var('DBT_USER', 'warehouse') }}"
+      password: "{{ env_var('DBT_PASSWORD', 'warehouse') }}"
+      dbname: "{{ env_var('DBT_DBNAME', 'warehouse') }}"
+      schema: "{{ env_var('DBT_SCHEMA', 'public') }}"
+      threads: 4

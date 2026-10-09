@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: slv_customers
+    description: One row per customer, latest load wins. Alias silver.customers.
+    columns:
+      - name: customer_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: country
+        description: ISO-2 country code.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['NL', 'TR', 'GB', 'DE', 'FR', 'US']
+
+  - name: slv_orders
+    description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.
+    columns:
+      - name: order_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: customer_id
+        description: Must exist in slv_customers.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_customers')
+                field: customer_id
+      - name: order_date
+        tests: [not_null]
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['placed', 'shipped', 'cancelled']
+      - name: amount
+        tests: [not_null]
+
+  - name: slv_hourly_weather
+    description: One row per (location, observed_at), latest load wins. Alias silver.hourly_weather.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['location', 'observed_at']
+    columns:
+      - name: location
+        tests: [not_null]
+      - name: observed_at
+        tests: [not_null]
