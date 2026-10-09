@@ -76,7 +76,7 @@ Each decision states its rationale; change the decision here before acting on a 
 | D1 | **Airflow 3.3.1** | Newest version shipped by both Apache and Composer 3 (`composer-3-airflow-3.3.1-build.*`, Sep 2026); Airflow 3 is GA on Composer 3 since 2026-04-15. Composer's default is still 2.11.1, so starting on 3.x avoids learning a soon-legacy architecture. Re-check the Composer version list before bumping. |
 | D2 | **Official `apache-airflow/airflow` Helm chart, 1.22.x**, image overridden to 3.3.1 | Upstream-maintained, Airflow 3-aware (api-server, standalone dag-processor, triggerer), what self-managed GKE would use. |
 | D3 | **Provider pins track Composer's** (`apache-airflow-providers-google` 22.4.0 at time of writing) plus `cncf.kubernetes`, `http`, `postgres` | DAG code imports what Stage 3 will have. Look up current pins in the Composer preinstalled-packages changelog. |
-| D4 | **kind** for the local cluster, Kubernetes minor within GKE's currently supported range | Reproducible from one config file, multi-node, used by Airflow's own chart tests. Docker Desktop's built-in Kubernetes stays off. |
+| D4 | **kind** for the local cluster, Kubernetes minor within GKE's currently supported range: kind v0.33.0 with `kindest/node:v1.36.4` (digest-pinned in the `Makefile`), 1 control plane + 2 workers, local registry `registry:3` on `localhost:5001` | Reproducible from one config file, multi-node, used by Airflow's own chart tests. 1.36 is the GKE Regular-channel default as of 2026-10-08. Docker Desktop's built-in Kubernetes stays off. Toolchain pins (kind, helm 3.22.0, k9s 0.51.0) live in `scripts/install-tools.sh` with checksums. |
 | D5 | **CeleryExecutor** as the primary executor; KubernetesExecutor explored in Phase 6 via Airflow 3 multi-executor config | Tasks are thin orchestration calls; Composer runs Celery workers, so this is the transferable model. |
 | D6 | **External metadata DB** (Postgres in Compose), PgBouncer enabled in the chart | Mirrors Cloud SQL; the chart's bundled Postgres is dev-only. |
 | D7 | **Workload seam**: business DAGs call `ElFactoryHook` and a `run_dbt(selection, ...)` task factory from a shared package; nothing else touches workloads | Lets Stage 2/3 swap `KubernetesPodOperator` → `CloudRunExecuteJobOperator` without editing DAGs. |
@@ -120,7 +120,7 @@ Makefile          # single entry point: up / down / build / deploy / test
 
 Each phase ends on its exit criterion; a phase is done only when that check passes and a LEDGER entry records the evidence.
 
-### Phase 0 — Toolchain and skeleton · Status: not started
+### Phase 0 — Toolchain and skeleton · Status: done
 
 - Install `kind`, `helm` (≥ 3.19), `k9s`; confirm Docker Desktop WSL integration and its resource limits.
 - Create the layout above, the Makefile skeleton, kind config with a local registry, `.gitignore`.
