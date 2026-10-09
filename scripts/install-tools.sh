@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the pinned cluster toolchain (kind, helm, k9s) into $BIN_DIR.
+# Install the pinned cluster toolchain (kind, helm, helm-diff, k9s) into $BIN_DIR.
 # Each artifact is verified against a checksum recorded here, so a fresh
 # clone installs exactly the binaries the lab was built with.
 set -euo pipefail
@@ -10,6 +10,8 @@ KIND_VERSION=v0.33.0
 KIND_SHA256=aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d
 HELM_VERSION=v3.22.0
 HELM_SHA256=1e4ab49e429626cf6c6958d914248b78c9730803c2751b87627e171dc800e7bb
+HELM_DIFF_VERSION=v3.15.15
+HELM_DIFF_SHA256=504e99410611daa70702362e1b10dc74929df8a912cb3f6b5d21d1ee9d0cb7d9
 K9S_VERSION=v0.51.0
 K9S_SHA256=c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7
 
@@ -37,6 +39,16 @@ if installed helm "$HELM_VERSION"; then echo "helm $HELM_VERSION already install
   tar -xzf "$tmp/helm.tgz" -C "$tmp" linux-amd64/helm
   install -m 0755 "$tmp/linux-amd64/helm" "$BIN_DIR/helm"
   echo "installed helm $HELM_VERSION"
+fi
+
+# helm-diff is a helm plugin: unpack the verified release into helm's plugin dir.
+helm_plugins="$("$BIN_DIR/helm" env HELM_PLUGINS 2>/dev/null || helm env HELM_PLUGINS)"
+if grep -q "^version: \"\?${HELM_DIFF_VERSION#v}\"\?$" "$helm_plugins/diff/plugin.yaml" 2>/dev/null; then echo "helm-diff $HELM_DIFF_VERSION already installed"; else
+  fetch "https://github.com/databus23/helm-diff/releases/download/$HELM_DIFF_VERSION/helm-diff-linux-amd64.tgz" "$HELM_DIFF_SHA256" "$tmp/helm-diff.tgz"
+  mkdir -p "$helm_plugins"
+  rm -rf "${helm_plugins:?}/diff"
+  tar -xzf "$tmp/helm-diff.tgz" -C "$helm_plugins"
+  echo "installed helm-diff $HELM_DIFF_VERSION"
 fi
 
 if installed k9s "$K9S_VERSION"; then echo "k9s $K9S_VERSION already installed"; else

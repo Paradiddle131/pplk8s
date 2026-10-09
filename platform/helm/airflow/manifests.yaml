@@ -1,0 +1,83 @@
+# Cluster objects the chart does not own; applied by deploy.sh (kubectl apply, idempotent).
+---
+# `workloads` is owned by Phase 2 (EL Factory, dbt pods); declared here so Airflow RBAC can land first.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workloads
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airflow
+---
+# DAG delivery (D10): the kind workers mount the repo's airflow/dags at /mnt/pplk8s/dags
+# (platform/kind/cluster.yaml). A static hostPath PV bound to a named PVC lets the chart's
+# dags.persistence.existingClaim consume it; pods on either worker see the same files.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: airflow-dags
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes: [ReadOnlyMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "" # static binding, not the default dynamic class
+  claimRef:
+    namespace: airflow
+    name: airflow-dags
+  hostPath:
+    path: /mnt/pplk8s/dags
+    type: Directory
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-dags
+  namespace: airflow
+spec:
+  accessModes: [ReadOnlyMany]
+  storageClassName: ""
+  volumeName: airflow-dags
+  resources:
+    requests:
+      storage: 1Gi
+---
+# KubernetesPodOperator (D14): Celery workers (and the triggerer, for deferrable KPO) launch dbt
+# pods in `workloads`. Pod lifecycle, logs, and events only; nothing cluster-wide.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: airflow-pod-launcher
+  namespace: workloads
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, watch, delete, patch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: airflow-pod-launcher
+  namespace: workloads
+subjects:
+  - kind: ServiceAccount
+    name: airflow-worker
+    namespace: airflow
+  - kind: ServiceAccount
+    name: airflow-triggerer
+    namespace: airflow
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: airflow-pod-launcher

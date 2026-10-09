@@ -1,0 +1,146 @@
+# Values for the official apache-airflow/airflow chart, pinned to 1.22.0 in deploy.sh (PLAN.md D2).
+# Secrets are not here: deploy.sh generates them once into Kubernetes Secrets
+# (airflow-metadata, airflow-fernet-key, airflow-api-secret, airflow-jwt-secret,
+# airflow-connections) and the values below only reference them by name.
+
+# The chart 1.22 ships appVersion 3.2.2; render Airflow 3 resources for our 3.3.1 image (D1).
+airflowVersion: 3.3.1
+
+# Our custom image from airflow/Dockerfile (providers + include/), pulled from the
+# local registry that kind nodes reach at localhost:5001 (D4). deploy.sh overrides
+# the tag with --set images.airflow.tag so the Makefile's AIRFLOW_IMAGE stays the one source.
+images:
+  airflow:
+    repository: localhost:5001/airflow
+    tag: 3.3.1-pplk8s.1
+    pullPolicy: IfNotPresent
+
+# CeleryExecutor with the chart's bundled Redis as broker (D5).
+executor: CeleryExecutor
+
+# Pods find Services by DNS; skip the legacy per-Service env vars (chart 2.0 default).
+enableServiceLinks: false
+
+# Metadata DB (D6): an external Postgres in Compose, never the chart's subchart.
+postgresql:
+  enabled: false
+data:
+  # Secret `airflow-metadata` (key `connection`) is created by deploy.sh. Because PgBouncer is on,
+  # its URL points at the PgBouncer service (airflow-pgbouncer:6543, database `airflow-metadata`),
+  # not at Postgres; the chart would build that URL itself only when it owns the secret.
+  metadataSecretName: airflow-metadata
+  # What PgBouncer itself connects to. The password is passed by deploy.sh (--set), not stored here.
+  metadataConnection:
+    user: airflow
+    protocol: postgresql
+    host: metadata-db # Compose service name, resolvable from pods because kind nodes join the network (D13)
+    port: 5432
+    db: airflow
+    sslmode: disable # the Compose Postgres has no TLS
+
+pgbouncer:
+  enabled: true
+  # The Compose Postgres is not TLS-enabled; the chart default `prefer` falls back anyway,
+  # `disable` skips the failed TLS probe on every connection.
+  sslmode: disable
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 128Mi}
+
+# Keys from Kubernetes Secrets so `helm upgrade` never rotates them (a rotating JWT secret
+# breaks running tasks during component rollouts).
+fernetKeySecretName: airflow-fernet-key
+apiSecretKeySecretName: airflow-api-secret
+jwtSecretName: airflow-jwt-secret
+
+# Airflow connections for Phase 4, injected as AIRFLOW_CONN_* env vars into every component.
+extraEnvFrom: |
+  - secretRef:
+      name: airflow-connections
+
+# DAG delivery (D10): the repo's airflow/dags, mounted into the kind workers at
+# /mnt/pplk8s/dags and exposed as a hostPath PV + PVC (airflow-dags, created by deploy.sh).
+dags:
+  persistence:
+    enabled: true
+    existingClaim: airflow-dags
+  gitSync:
+    enabled: false # git-sync arrives in Phase 6
+    recommendedProbeSetting: true # silences the chart's deprecation of the old probe behaviour
+
+# Task logs stay on the default (local to the worker; the api-server fetches them from the
+# worker's log server). Remote logging comes with a later phase.
+logs:
+  persistence:
+    enabled: false
+
+# Airflow 3 splits the old webserver into api-server (UI + REST + execution API) and a standalone
+# dag-processor; both are first-class chart components.
+apiServer:
+  replicas: 1
+  resources:
+    requests: {cpu: 200m, memory: 768Mi}
+    limits: {memory: 1536Mi}
+dagProcessor:
+  enabled: true
+  replicas: 1
+  resources:
+    requests: {cpu: 200m, memory: 512Mi}
+    limits: {memory: 1Gi}
+scheduler:
+  replicas: 1
+  resources:
+    requests: {cpu: 200m, memory: 512Mi}
+    limits: {memory: 1Gi}
+triggerer:
+  enabled: true
+  replicas: 1
+  persistence:
+    enabled: false # triggerer logs are not needed on disk
+  resources:
+    requests: {cpu: 100m, memory: 384Mi}
+    limits: {memory: 768Mi}
+workers:
+  # Pod names stay airflow-worker-N (StatefulSet): the api-server resolves worker log URLs by pod name.
+  # Celery concurrency is 16 per worker by chart default; tasks here are thin HTTP/pod launches.
+  celery:
+    # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
+    terminationGracePeriodSeconds: 60
+    replicas: 2
+    resources:
+      requests: {cpu: 300m, memory: 768Mi}
+      limits: {memory: 1536Mi}
+redis:
+  persistence:
+    enabled: false # the broker holds only in-flight task messages; losing it on restart is acceptable for the lab
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 128Mi}
+
+# Not needed yet; Phase 6 adds StatsD/Prometheus on purpose.
+statsd:
+  enabled: false
+flower:
+  enabled: false
+
+# The chart's one-shot Jobs. Helm hooks are off: with `--wait`, Helm waits for the pods to be
+# Ready before it runs post-install hooks, while the pods' wait-for-airflow-migrations init
+# container waits for the migration hook, which is a deadlock (observed). As plain resources the
+# Jobs run alongside the Deployments, which wait for `airflow db migrate` to finish.
+# Jobs are immutable, so deploy.sh deletes finished ones before each upgrade.
+migrateDatabaseJob:
+  enabled: true
+  useHelmHooks: false
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+createUserJob:
+  # Creates the FAB auth-manager user admin/admin (chart default auth_manager is FabAuthManager).
+  # Lab-only credentials; change before exposing anything beyond the localhost port-forward.
+  useHelmHooks: false
+  defaultUser:
+    username: admin
+    password: admin
+    role: Admin
+    email: admin@example.com
+    firstName: admin
+    lastName: user
