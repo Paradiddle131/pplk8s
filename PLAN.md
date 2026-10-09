@@ -85,6 +85,8 @@ Each decision states its rationale; change the decision here before acting on a 
 | D10 | **DAG delivery**: kind host-path mount during Phases 3–4, git-sync from the GitHub remote from Phase 6 | Fast inner loop first, production-like delivery later. |
 | D11 | **Fast DAG loop**: `dag.test()` + pytest (DagBag import test, unit tests on hooks) on the workstation; the cluster is for platform behaviour | Avoids a second, Compose-based Airflow. |
 | D12 | **Tasks never touch the metadata DB directly** | Airflow 3 Task SDK model; Composer 3 workers have no DB access since 3.1.7-build.1. |
+| D13 | **Cluster ↔ Compose networking: kind nodes join the Compose network `pplk8s`**; pods use the Compose names (`warehouse`, `gcs`, `metadata-db`) | CoreDNS forwards non-cluster names to Docker's embedded DNS, so pods resolve the same names as Compose containers with no per-service Kubernetes objects. It also satisfies fake-gcs, which advertises `http://gcs:4443` for resumable uploads. Production reaches managed services by private IP/DNS in the same way. `platform/kind/join-services-network.sh` runs from both `cluster-up` and `services-up`, so start order does not matter. |
+| D14 | **Namespaces: `workloads`** (EL Factory, dbt pods: the Cloud Run stand-ins) **and `airflow`** (the chart) | Mirrors the production split: workloads are not part of the Airflow deployment. Airflow's worker ServiceAccount gets a Role in `workloads` to launch dbt pods; DAGs reach EL Factory at `http://el-factory.workloads.svc.cluster.local`. |
 
 ### EL Factory lite contract (as built in Phase 1)
 
