@@ -23,6 +23,9 @@ class Registry:
         self._entities = {(e.source, e.name): e for e in entities}
         self._sources = {e.source for e in entities}
 
+    def entities(self) -> list[Entity]:
+        return list(self._entities.values())
+
     def get(self, source: str, entity: str) -> Entity:
         found = self._entities.get((source, entity))
         if found is not None:

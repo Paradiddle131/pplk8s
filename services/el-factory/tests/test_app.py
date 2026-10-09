@@ -195,16 +195,16 @@ def test_fail_rate_one_returns_retryable_503_before_any_work(make_client, storag
         "error": "injected transient failure (FAIL_RATE)",
     }
     assert storage.objects == {}
-    assert warehouse.ensured == []
+    assert warehouse.row_count("synthetic_orders") == 0
 
 
 def test_unexpected_failures_are_500_and_not_retryable(make_client, storage):
     class BrokenWarehouse:
         def ensure_table(self, table):
-            raise RuntimeError("warehouse exploded")
+            pass
 
         def replace_page(self, table, load, rows):
-            raise AssertionError("unreachable")
+            raise RuntimeError("warehouse exploded")
 
     app = create_app(make_config(), storage, BrokenWarehouse())
     app.config["TESTING"] = False
@@ -213,3 +213,26 @@ def test_unexpected_failures_are_500_and_not_retryable(make_client, storage):
 
     assert response.status_code == 500
     assert response.get_json() == {"status": "error", "retryable": False, "error": "internal error"}
+
+
+def test_startup_provisions_every_source_table(make_client, warehouse):
+    make_client()
+
+    assert sorted(set(warehouse.ensured)) == [
+        "open_meteo_hourly_weather",
+        "synthetic_customers",
+        "synthetic_orders",
+    ]
+
+
+def test_startup_survives_an_unreachable_warehouse(storage):
+    class DownWarehouse:
+        def ensure_table(self, table):
+            raise OSError("connection refused")
+
+        def replace_page(self, table, load, rows):
+            raise AssertionError("not called")
+
+    app = create_app(make_config(), storage, DownWarehouse())
+
+    assert app.test_client().get("/healthz").status_code == 200

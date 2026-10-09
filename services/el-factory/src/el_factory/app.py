@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+import psycopg
 import requests
 from flask import Flask, Response, jsonify, request
 from werkzeug.exceptions import HTTPException
@@ -13,7 +14,7 @@ from werkzeug.exceptions import HTTPException
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, UpstreamError
 from el_factory.model import Interval
-from el_factory.sources import build_registry, load_catalog
+from el_factory.sources import Registry, build_registry, load_catalog
 from el_factory.staging import object_uri, read_staged, stage_page
 from el_factory.storage import GcsStorage, Storage
 from el_factory.warehouse import PageLoad, PostgresWarehouse, Warehouse
@@ -35,6 +36,7 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
     registry = build_registry(config.page_size, config.open_meteo_url)
     catalog = load_catalog(config.catalog_path, registry)
     app = Flask(__name__)
+    _provision_tables(app, warehouse, registry)
 
     @app.errorhandler(ApiError)
     def api_error(exc: ApiError) -> tuple[Response, int]:
@@ -102,6 +104,16 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
         )
 
     return app
+
+
+def _provision_tables(app: Flask, warehouse: Warehouse, registry: Registry) -> None:
+    # dbt sources expect every ds_source table to exist even before its first extract.
+    # Best effort: a warehouse outage at boot must not stop the service; /extract re-ensures.
+    for entity in registry.entities():
+        try:
+            warehouse.ensure_table(entity.table)
+        except (psycopg.Error, OSError) as exc:
+            app.logger.warning("could not provision %s at startup: %s", entity.table.name, exc)
 
 
 def create_app_from_env() -> Flask:

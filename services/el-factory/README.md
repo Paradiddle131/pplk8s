@@ -53,7 +53,7 @@ All synthetic output is deterministic and all data is synthetic or public.
 
 ## Warehouse contract
 
-The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS`.
+The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each load, so dbt sources resolve even before an entity's first extract.
 The schema itself must already exist; `warehouse-init` creates it in the Compose stack.
 Every table ends with the metadata columns `_run_id text`, `_interval_start timestamptz`, `_interval_end timestamptz`, `_page integer`, `_source_uri text`, and `_loaded_at timestamptz DEFAULT now()`.
 All metadata columns except `_loaded_at` are `NOT NULL`.
