@@ -33,14 +33,15 @@ series=(
   "kube_deployment_status_replicas_available deployment"
   "container_memory_working_set_bytes pod"
 )
-# A fresh scrape can lag the task by one scrape interval; wait for the newest series first.
-for _ in $(seq 12); do
-  [ "$(prom 'airflow_task_duration_seconds_count{dag_id="hello"}' | jq length)" -gt 0 ] && break
-  sleep 5
-done
+# The exporter drops counters idle for 5 minutes (histograms after 1 hour), so a series hello just
+# re-created reaches Prometheus only on the next scrape; poll each one instead of one sentinel.
 for entry in "${series[@]}"; do
   read -r name label <<<"$entry"
-  result=$(prom "$name")
+  for _ in $(seq 12); do
+    result=$(prom "$name")
+    [ "$(jq length <<<"$result")" -gt 0 ] && break
+    sleep 5
+  done
   [ "$(jq length <<<"$result")" -gt 0 ] || fail "no series for $name"
   if [ "$label" != - ]; then
     jq -e --arg l "$label" 'any(.[]; .metric[$l] != null and .metric[$l] != "")' <<<"$result" >/dev/null ||
