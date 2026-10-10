@@ -75,6 +75,8 @@ grafana:
       folderAnnotation: grafana_folder
       provider:
         foldersFromFilesStructure: true
+  # Grafana 13 idles near 270Mi; loading the Airflow dashboard over 6 h at 384Mi
+  # got it OOMKilled, so the limit leaves room for a burst of panel queries.
   resources:
-    requests: {cpu: 50m, memory: 192Mi}
-    limits: {memory: 384Mi}
+    requests: {cpu: 50m, memory: 320Mi}
+    limits: {memory: 768Mi}

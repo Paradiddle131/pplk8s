@@ -129,6 +129,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
 - Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.
 - Back-test every new alert expression with a range query over the incident you already have, before waiting for the next one.
+- Size Grafana's memory limit from its peak with the widest time range open on the busiest dashboard, not from its idle use: Grafana 13 idles near 270 MiB and reached 540 MiB on a 7-day view, so a 384 MiB limit got it OOMKilled and the browser reported only "Failed to fetch".
 
 ## Upgrades and rollback (Stage 2, and Composer's in-place upgrades)
 

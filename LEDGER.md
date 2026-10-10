@@ -171,3 +171,10 @@ Entry format:
   An earlier drill pass reported no restarts during the DB outage because its counter was broken; the fixed counter shows the scheduler (killed by its liveness probe, exit 143), dag-processor, and triggerer (exit 1) restarting 1–3 times each.
   `make test` → Airflow 106, EL Factory 69, event adapter 32 passed; `make lint` clean.
 - Open: #2 (PgBouncer is one replica; the drain that moved it restarted the triggerer once), #3 (a KEDA scale-in during a running task is never exercised).
+
+## 2026-10-10 — Phase 6 — Grafana OOMKill on wide dashboard ranges
+
+- Done: Grafana's memory request 192Mi → 320Mi and limit 384Mi → 768Mi (`platform/monitoring/values.yaml`); LESSONS gained a Grafana sizing line.
+- Evidence: switching *Airflow overview* off its default range ended `make grafana-ui` with `connection refused` inside the pod; the grafana container had `lastState.terminated.reason: OOMKilled` (exit 137) at 20:40:45 UTC, after idling near 268 MiB and peaking at 343 MiB.
+  After `make observability-up`, the dashboard loaded at 6 h, 2 d, and 7 d in a browser through `make grafana-ui`, with 0 restarts and a 542 MiB peak.
+- Open: #5 (Prometheus misses rule evaluations every ~4.5 min, so `PrometheusMissingRuleEvaluations` keeps firing).
