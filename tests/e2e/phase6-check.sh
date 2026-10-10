@@ -78,6 +78,12 @@ wait_run_done() { # run timeout -> final state
 restarts() { # pod=restarts for every Airflow pod that restarted at least once
   kc get pods -o json | jq -r '[.items[] | {n: .metadata.name, r: ([.status.containerStatuses[]?.restartCount] | add // 0)} | select(.r > 0) | "\(.n)=\(.r)"] | join(" ")'
 }
+restarted_since() { # restarts() snapshot -> pods that restarted after it
+  local p
+  for p in $(restarts); do
+    case " $1 " in *" $p "*) ;; *) echo -n "$p " ;; esac
+  done
+}
 
 # ---- preflight --------------------------------------------------------------------------------------
 start_port_forward
@@ -111,6 +117,8 @@ echo "ok: (1) scheduler outage detected and recovered"
 # ---- 2. drain the worker's node ---------------------------------------------------------------------
 node=$(kc get pod -l component=worker -o jsonpath='{.items[0].spec.nodeName}')
 say "2. drain: $node (runs $(kc get pods -o wide --no-headers --field-selector=status.phase=Running | awk -v n="$node" '$7==n{print $1}' | tr '\n' ' '))"
+bouncers=$(kc get pods -l component=pgbouncer -o wide --no-headers | awk -v n="$node" '$7==n' | wc -l)
+before=$(restarts)
 kubectl --context "$CTX" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=300s >/dev/null
 took=$(wait_alert KubeNodeUnschedulable firing 240)
 say "  detected: KubeNodeUnschedulable firing after ${took}s"
@@ -121,6 +129,10 @@ on_node=$(kc get pods -o wide --no-headers | awk -v n="$node" '$7==n' | wc -l)
 say "  every Airflow component rescheduled: $on_node pods left on $node, $pending Pending"
 [ "$on_node" = 0 ] && [ "$pending" = 0 ] || fail "pods still on $node ($on_node) or Pending ($pending)"
 canary
+# PgBouncer runs two replicas behind a PDB, so moving one must not cost any component its DB.
+restarted=$(restarted_since "$before")
+say "  $bouncers of $(kc get pods -l component=pgbouncer --no-headers | wc -l) PgBouncer replicas moved; restarted during the drain: [${restarted:-none}]"
+[ -z "$restarted" ] || fail "containers restarted during the drain: $restarted"
 kubectl --context "$CTX" uncordon "$node" >/dev/null
 took=$(wait_alert KubeNodeUnschedulable inactive 240)
 say "  recovered: $node uncordoned, alert resolved after ${took}s"
