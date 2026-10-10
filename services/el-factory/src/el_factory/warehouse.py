@@ -21,6 +21,21 @@ METADATA_COLUMNS = (
     ("_loaded_at", "timestamptz NOT NULL DEFAULT now()"),
 )
 
+# File entities (POST /load) are keyed by the object they came from, not by run and interval.
+FILE_METADATA_COLUMNS = (
+    ("_run_id", "text NOT NULL"),
+    ("_source_uri", "text NOT NULL"),
+    ("_generation", "bigint NOT NULL"),
+    ("_loaded_at", "timestamptz NOT NULL DEFAULT now()"),
+)
+
+
+@dataclass(frozen=True)
+class FileLoad:
+    run_id: str
+    source_uri: str
+    generation: int
+
 
 @dataclass(frozen=True)
 class PageLoad:
@@ -37,15 +52,36 @@ class Warehouse(Protocol):
         """Replace one page atomically (page 0 clears the run+interval); return rows written."""
         ...
 
+    def ensure_file_table(self, table: Table) -> None: ...
+
+    def replace_file(
+        self, table: Table, load: FileLoad, rows: Sequence[Mapping[str, Any]]
+    ) -> int | None:
+        """Replace every row of the object with this generation's rows; return rows written.
+
+        Returns None, writing nothing, when a newer generation of the object is already loaded.
+        """
+        ...
+
 
 class PostgresWarehouse:
     def __init__(self, dsn: str) -> None:
         self._dsn = dsn
 
     def ensure_table(self, table: Table) -> None:
+        self._ensure(
+            table, METADATA_COLUMNS, ("_run_id", "_interval_start", "_interval_end", "_page")
+        )
+
+    def ensure_file_table(self, table: Table) -> None:
+        self._ensure(table, FILE_METADATA_COLUMNS, ("_source_uri", "_generation"))
+
+    def _ensure(
+        self, table: Table, metadata: Sequence[tuple[str, str]], key: Sequence[str]
+    ) -> None:
         # The advisory lock serialises concurrent gunicorn workers creating the same table.
         qualified = sql.Identifier(SCHEMA, table.name)
-        columns = [*table.columns, *METADATA_COLUMNS]
+        columns = [*table.columns, *metadata]
         definition = sql.SQL(", ").join(
             sql.SQL("{} {}").format(sql.Identifier(name), sql.SQL(kind)) for name, kind in columns
         )
@@ -56,10 +92,7 @@ class PostgresWarehouse:
                 sql.SQL("CREATE INDEX IF NOT EXISTS {} ON {} ({})").format(
                     sql.Identifier(f"{table.name}_load_key_idx"),
                     qualified,
-                    sql.SQL(", ").join(
-                        sql.Identifier(c)
-                        for c in ("_run_id", "_interval_start", "_interval_end", "_page")
-                    ),
+                    sql.SQL(", ").join(sql.Identifier(c) for c in key),
                 )
             )
 
@@ -98,6 +131,41 @@ class PostgresWarehouse:
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [_page_key(table, load)]
             )
             cur.execute(delete, delete_params)
+            cur.executemany(insert, params)
+        return len(params)
+
+    def replace_file(
+        self, table: Table, load: FileLoad, rows: Sequence[Mapping[str, Any]]
+    ) -> int | None:
+        qualified = sql.Identifier(SCHEMA, table.name)
+        names = [name for name, _ in table.columns]
+        meta = ["_run_id", "_source_uri", "_generation"]
+        insert = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+            qualified,
+            sql.SQL(", ").join(sql.Identifier(n) for n in [*names, *meta]),
+            sql.SQL(", ").join(sql.Placeholder() for _ in [*names, *meta]),
+        )
+        params = [
+            [row[name] for name in names] + [load.run_id, load.source_uri, load.generation]
+            for row in rows
+        ]
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            # One lock per object, so loads of two generations never interleave.
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [f"{_lock_key(table)}|{load.source_uri}"],
+            )
+            cur.execute(
+                sql.SQL("SELECT max(_generation) FROM {} WHERE _source_uri = %s").format(qualified),
+                [load.source_uri],
+            )
+            row = cur.fetchone()
+            if row is not None and row[0] is not None and row[0] > load.generation:
+                return None
+            cur.execute(
+                sql.SQL("DELETE FROM {} WHERE _source_uri = %s").format(qualified),
+                [load.source_uri],
+            )
             cur.executemany(insert, params)
         return len(params)
 

@@ -10,19 +10,31 @@ import pytest
 from el_factory.app import create_app
 from el_factory.config import Config
 from el_factory.model import Table
-from el_factory.warehouse import PageLoad
+from el_factory.warehouse import FileLoad, PageLoad
 
 REPO_CATALOG = Path(__file__).resolve().parents[1] / "catalog.yaml"
 
 
 class FakeStorage:
+    """In-memory bucket without versioning: only the live generation of an object is readable."""
+
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
+        self.generations: dict[str, int] = {}
+        self._clock = 1_700_000_000_000_000
 
-    def upload(self, uri: str, data: bytes) -> None:
+    def upload(self, uri: str, data: bytes) -> int:
+        self._clock += 1
         self.objects[uri] = data
+        self.generations[uri] = self._clock
+        return self._clock
 
     def download(self, uri: str) -> bytes:
+        return self.objects[uri]
+
+    def download_generation(self, uri: str, generation: int) -> bytes | None:
+        if self.generations.get(uri) != generation:
+            return None
         return self.objects[uri]
 
 
@@ -56,6 +68,27 @@ class FakeWarehouse:
                 del pages[stale]
         pages[key] = stored
         return len(stored)
+
+    def ensure_file_table(self, table: Table) -> None:
+        self.ensure_table(table)
+
+    def replace_file(
+        self, table: Table, load: FileLoad, rows: Sequence[Mapping[str, Any]]
+    ) -> int | None:
+        objects = self.tables.setdefault(table.name, {})
+        current = objects.get((load.source_uri,))
+        if current and current[0]["_generation"] > load.generation:
+            return None
+        objects[(load.source_uri,)] = [
+            {
+                **{name: row[name] for name, _ in table.columns},
+                "_run_id": load.run_id,
+                "_source_uri": load.source_uri,
+                "_generation": load.generation,
+            }
+            for row in rows
+        ]
+        return len(rows)
 
     def row_count(self, table_name: str) -> int:
         return sum(len(rows) for rows in self.tables.get(table_name, {}).values())

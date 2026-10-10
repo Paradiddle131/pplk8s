@@ -13,15 +13,18 @@ from google.api_core import exceptions as gcs_exceptions
 from werkzeug.exceptions import HTTPException
 
 from el_factory.config import Config
-from el_factory.errors import ApiError, BadRequest, NotFound, UpstreamError
+from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
 from el_factory.model import Interval
-from el_factory.sources import Registry, build_registry, load_catalog
+from el_factory.sources import Registry, build_registry, files, load_catalog
 from el_factory.staging import object_uri, read_staged, stage_page
 from el_factory.storage import GcsStorage, Storage
-from el_factory.warehouse import PageLoad, PostgresWarehouse, Warehouse
+from el_factory.warehouse import FileLoad, PageLoad, PostgresWarehouse, Warehouse
 
 RUN_ID_PATTERN = re.compile(r"[A-Za-z0-9_.:+-]+")
 CURSOR_PATTERN = re.compile(r"[0-9]+")
+GENERATION_PATTERN = re.compile(r"[1-9][0-9]{0,18}")
+# GCS bucket naming rules, simplified (no dotted names).
+BUCKET_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]{1,61}[a-z0-9]")
 
 
 @dataclass(frozen=True)
@@ -33,15 +36,24 @@ class ExtractRequest:
     cursor: int
 
 
+@dataclass(frozen=True)
+class LoadRequest:
+    entity: str
+    run_id: str
+    uri: str
+    generation: int
+
+
 def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
     registry = build_registry(config.page_size, config.open_meteo_url)
     catalog = load_catalog(config.catalog_path, registry)
+    file_registry = files.FileRegistry(files.entities())
     app = Flask(__name__)
-    _provision_tables(app, warehouse, registry)
+    _provision_tables(app, warehouse, registry, file_registry)
 
     @app.errorhandler(ApiError)
     def api_error(exc: ApiError) -> tuple[Response, int]:
-        return _error(exc.status, exc.message, exc.retryable)
+        return _error(exc.status, exc.message, exc.retryable, **exc.extra)
 
     @app.errorhandler(requests.RequestException)
     def upstream_failure(exc: requests.RequestException) -> tuple[Response, int]:
@@ -112,17 +124,52 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
             }
         )
 
+    @app.post("/load")
+    def load() -> Response:
+        if random.random() < config.fail_rate:
+            raise UpstreamError("injected transient failure (FAIL_RATE)")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            raise BadRequest("request body must be a JSON object")
+        parsed = _parse_load(body)
+        entity = file_registry.get(parsed.entity)
+
+        data = storage.download_generation(parsed.uri, parsed.generation)
+        if data is None:
+            raise Superseded(f"{parsed.uri} generation {parsed.generation} is no longer live")
+        rows = files.parse_ndjson(entity, data)
+
+        warehouse.ensure_file_table(entity.table)
+        loaded = warehouse.replace_file(
+            entity.table, FileLoad(parsed.run_id, parsed.uri, parsed.generation), rows
+        )
+        if loaded is None:
+            raise Superseded(f"a newer generation of {parsed.uri} is already loaded")
+        return jsonify(
+            {
+                "status": "ok",
+                "entity": entity.name,
+                "object": parsed.uri,
+                "generation": str(parsed.generation),
+                "rows": loaded,
+            }
+        )
+
     return app
 
 
-def _provision_tables(app: Flask, warehouse: Warehouse, registry: Registry) -> None:
-    # dbt sources expect every ds_source table to exist even before its first extract.
-    # Best effort: a warehouse outage at boot must not stop the service; /extract re-ensures.
-    for entity in registry.entities():
+def _provision_tables(
+    app: Flask, warehouse: Warehouse, registry: Registry, file_registry: files.FileRegistry
+) -> None:
+    # dbt sources expect every ds_source table to exist even before its first extract or load.
+    # Best effort: a warehouse outage at boot must not stop the service; each request re-ensures.
+    targets = [(e.table, warehouse.ensure_table) for e in registry.entities()]
+    targets += [(e.table, warehouse.ensure_file_table) for e in file_registry.entities()]
+    for table, ensure in targets:
         try:
-            warehouse.ensure_table(entity.table)
+            ensure(table)
         except (psycopg.Error, OSError) as exc:
-            app.logger.warning("could not provision %s at startup: %s", entity.table.name, exc)
+            app.logger.warning("could not provision %s at startup: %s", table.name, exc)
 
 
 def create_app_from_env() -> Flask:
@@ -134,8 +181,32 @@ def create_app_from_env() -> Flask:
     )
 
 
-def _error(status: int, message: str, retryable: bool) -> tuple[Response, int]:
-    return jsonify({"status": "error", "retryable": retryable, "error": message}), status
+def _error(status: int, message: str, retryable: bool, **extra: object) -> tuple[Response, int]:
+    return jsonify({"status": "error", "retryable": retryable, "error": message, **extra}), status
+
+
+def _parse_load(body: dict[str, Any]) -> LoadRequest:
+    run_id = _required_str(body, "run_id")
+    if not RUN_ID_PATTERN.fullmatch(run_id):
+        raise BadRequest("run_id may contain only letters, digits, and _ . : + -")
+    bucket = _required_str(body, "bucket")
+    if not BUCKET_PATTERN.fullmatch(bucket):
+        raise BadRequest("bucket is not a valid bucket name")
+    name = _required_str(body, "object")
+    if name.startswith("/") or "\n" in name:
+        raise BadRequest("object must be a relative object name")
+    # GCS reports generations as decimal strings (int64); accept either form.
+    raw = body.get("generation")
+    if isinstance(raw, int) and not isinstance(raw, bool):
+        raw = str(raw)
+    if not isinstance(raw, str) or not GENERATION_PATTERN.fullmatch(raw):
+        raise BadRequest("generation must be a positive integer")
+    return LoadRequest(
+        entity=_required_str(body, "entity"),
+        run_id=run_id,
+        uri=f"gs://{bucket}/{name}",
+        generation=int(raw),
+    )
 
 
 def _parse_extract(body: dict[str, Any], query_cursor: str | None) -> ExtractRequest:

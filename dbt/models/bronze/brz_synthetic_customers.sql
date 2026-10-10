@@ -1,4 +1,4 @@
-{{ config(alias='synthetic_customers') }}
+{{ config(alias='synthetic_customers', tags=['sales']) }}
 
 select
     cast(customer_id as integer) as customer_id,

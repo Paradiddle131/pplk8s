@@ -1,4 +1,4 @@
-{{ config(alias='open_meteo_hourly_weather') }}
+{{ config(alias='open_meteo_hourly_weather', tags=['sales']) }}
 
 select
     cast(location as text) as location,

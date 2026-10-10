@@ -12,6 +12,7 @@ RELEASE=airflow
 NAMESPACE=airflow
 AIRFLOW_IMAGE="${AIRFLOW_IMAGE:?set AIRFLOW_IMAGE (make airflow-up does)}"
 METADATA_DB_PASSWORD="${METADATA_DB_PASSWORD:-airflow}"
+WAREHOUSE_PASSWORD="${WAREHOUSE_PASSWORD:-warehouse}" # same default as compose.yaml and workloads-up.sh
 KUBECTL=(kubectl --context kind-pplk8s)
 HELM=(helm --kube-context kind-pplk8s)
 
@@ -49,10 +50,13 @@ ensure_secret airflow-jwt-secret jwt-secret openssl rand -hex 32
   --from-literal="connection=postgresql://airflow:${METADATA_DB_PASSWORD}@${RELEASE}-pgbouncer.${NAMESPACE}:6543/${RELEASE}-metadata?sslmode=disable" \
   --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
 
-# Connections for Phase 4, as AIRFLOW_CONN_* env vars (URI form; the conn_id is the suffix).
+# Connections as AIRFLOW_CONN_* env vars (URI or JSON form; the conn_id is the suffix).
+# pubsub_emulator is for the AssetWatcher spike (D17): anonymous credentials, because the emulator
+# ignores them and the pods have no Google credentials to find.
 "${KUBECTL[@]}" -n "$NAMESPACE" create secret generic airflow-connections \
   --from-literal='AIRFLOW_CONN_EL_FACTORY=http://el-factory.workloads.svc.cluster.local:80' \
-  --from-literal='AIRFLOW_CONN_WAREHOUSE=postgresql://warehouse:warehouse@warehouse:5432/warehouse' \
+  --from-literal="AIRFLOW_CONN_WAREHOUSE=postgresql://warehouse:${WAREHOUSE_PASSWORD}@warehouse:5432/warehouse" \
+  --from-literal='AIRFLOW_CONN_PUBSUB_EMULATOR={"conn_type": "google_cloud_platform", "extra": {"project": "pplk8s", "is_anonymous": true}}' \
   --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
 
 # The chart's one-shot Jobs are plain resources here (values.yaml) and immutable: clear finished

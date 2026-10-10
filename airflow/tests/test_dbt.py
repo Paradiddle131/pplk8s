@@ -4,16 +4,17 @@ from pplk8s.dbt import STAGES, run_dbt
 
 @pytest.mark.parametrize("stage", STAGES)
 def test_operator_config(stage):
-    op = run_dbt(stage)
+    op = run_dbt(stage, pipeline="sales")
     assert op.task_id == f"dbt_{stage}"
-    assert op.arguments == ["build", "--select", stage]
+    assert op.arguments == ["build", "--select", f"tag:sales,tag:{stage}"]
     assert op.service_account_name == "dbt"
     assert op.on_finish_action == "delete_pod"
     assert op.get_logs is True
-    assert op.name == f"dbt-{stage}"
+    assert op.name == f"dbt-sales-{stage}"
+    assert op.labels["pplk8s/pipeline"] == "sales"
     assert op.random_name_suffix is True
     assert op.env_from[0].secret_ref.name == "warehouse-credentials"
-    assert "localhost:5001/dbt:0.1.0" in op.image
+    assert "localhost:5001/dbt:0.2.0" in op.image
     assert "workloads" in op.namespace
     assert op.container_resources.limits["memory"]
     assert op.retries == 2
@@ -21,7 +22,7 @@ def test_operator_config(stage):
 
 
 def test_overrides_and_custom_task_id():
-    op = run_dbt("gold", task_id="build_gold", retries=5, pool="dbt")
+    op = run_dbt("gold", pipeline="sales", task_id="build_gold", retries=5, pool="dbt")
     assert op.task_id == "build_gold"
     assert op.retries == 5
     assert op.pool == "dbt"
@@ -29,17 +30,27 @@ def test_overrides_and_custom_task_id():
 
 def test_unknown_stage_is_rejected():
     with pytest.raises(ValueError):
-        run_dbt("platinum")
+        run_dbt("platinum", pipeline="sales")
+
+
+@pytest.mark.parametrize("pipeline", ["", "Sales", "a,tag:b", "x y"])
+def test_unsafe_pipeline_names_are_rejected(pipeline):
+    with pytest.raises(ValueError):
+        run_dbt("gold", pipeline=pipeline)
+
+
+def test_pipeline_names_with_underscores_make_valid_pod_names():
+    assert run_dbt("silver", pipeline="partner_returns").name == "dbt-partner-returns-silver"
 
 
 def test_image_and_namespace_are_overridable_by_variables():
-    op = run_dbt("silver")
+    op = run_dbt("silver", pipeline="sales")
     assert "var.value.get('dbt_image'" in op.image
     assert "var.value.get('dbt_namespace'" in op.namespace
 
 
 def test_pod_complies_with_restricted_profile():
-    op = run_dbt("gold")
+    op = run_dbt("gold", pipeline="sales")
     assert op.security_context.run_as_non_root is True
     assert op.security_context.run_as_user == 10001
     assert op.security_context.seccomp_profile.type == "RuntimeDefault"

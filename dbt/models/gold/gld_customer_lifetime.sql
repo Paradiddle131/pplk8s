@@ -1,4 +1,4 @@
-{{ config(alias='customer_lifetime') }}
+{{ config(alias='customer_lifetime', tags=['sales']) }}
 
 -- One row per customer, including customers without orders (orders = 0, lifetime_value_eur = 0).
 -- orders and the order dates count all orders; lifetime_value_eur excludes cancelled orders.

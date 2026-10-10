@@ -1,4 +1,4 @@
-{{ config(alias='daily_sales') }}
+{{ config(alias='daily_sales', tags=['sales']) }}
 
 -- Counts include cancelled orders; revenue excludes them.
 -- customers_distinct counts customers with at least one non-cancelled order that day.

@@ -6,12 +6,16 @@ returning a ``CloudRunExecuteJobOperator`` from :func:`run_dbt` and nothing else
 
 Retry ownership (PLAN.md D15): Airflow task retries are the only retry layer for dbt.
 A failed or evicted pod fails the task, and the retry runs the same
-``dbt build --select <stage>`` again from scratch in a fresh pod.
+``dbt build`` selection again from scratch in a fresh pod.
 ``dbt retry`` is deliberately not used: it resumes from ``target/run_results.json`` of the
 previous invocation, and that artifact dies with the ephemeral pod (a Cloud Run Job execution
 has the same property), so a retry would find nothing to resume from.
 Re-running the whole stage is safe because dbt builds are idempotent (tables and views are
 rebuilt, tests re-run).
+
+Selection (PLAN.md D20): every model carries a pipeline tag next to its layer tag, and a task
+builds the intersection ``tag:<pipeline>,tag:<stage>``, so one pipeline's stage never rebuilds
+another pipeline's models.
 
 Overrides (resolved at task run time, so the DAG parse never reads the metadata DB):
 Airflow Variables ``dbt_image`` and ``dbt_namespace``; defaults below.
@@ -19,6 +23,7 @@ Airflow Variables ``dbt_image`` and ``dbt_namespace``; defaults below.
 
 from __future__ import annotations
 
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -26,7 +31,8 @@ from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperato
 from kubernetes.client import models as k8s
 
 STAGES = ("bronze", "silver", "gold", "exposed")
-DEFAULT_IMAGE = "localhost:5001/dbt:0.1.0"
+_PIPELINE = re.compile(r"^[a-z][a-z0-9_]*$")
+DEFAULT_IMAGE = "localhost:5001/dbt:0.2.0"
 DEFAULT_NAMESPACE = "workloads"
 SERVICE_ACCOUNT = "dbt"
 CREDENTIALS_SECRET = "warehouse-credentials"
@@ -37,19 +43,30 @@ _IMAGE = f"{{{{ var.value.get('dbt_image', '{DEFAULT_IMAGE}') }}}}"
 _NAMESPACE = f"{{{{ var.value.get('dbt_namespace', '{DEFAULT_NAMESPACE}') }}}}"
 
 
-def run_dbt(stage: str, *, task_id: str | None = None, **kwargs: Any) -> KubernetesPodOperator:
-    """Return the operator that runs ``dbt build --select <stage>``.
+def selection(pipeline: str, stage: str) -> str:
+    """The dbt selector for one pipeline's stage: models tagged with both."""
+    if stage not in STAGES:
+        raise ValueError(f"unknown dbt stage {stage!r}; expected one of {STAGES}")
+    if not _PIPELINE.match(pipeline):
+        raise ValueError(f"invalid pipeline name {pipeline!r}")
+    return f"tag:{pipeline},tag:{stage}"
+
+
+def run_dbt(
+    stage: str, *, pipeline: str, task_id: str | None = None, **kwargs: Any
+) -> KubernetesPodOperator:
+    """Return the operator that runs ``dbt build --select tag:<pipeline>,tag:<stage>``.
 
     ``kwargs`` override any operator argument (retries, execution_timeout, pool, ...).
     """
-    if stage not in STAGES:
-        raise ValueError(f"unknown dbt stage {stage!r}; expected one of {STAGES}")
+    select = selection(pipeline, stage)
     options: dict[str, Any] = {
         "task_id": task_id or f"dbt_{stage}",
-        "name": f"dbt-{stage}",  # KPO appends a random suffix, so concurrent runs never collide
+        # KPO appends a random suffix, so concurrent runs never collide.
+        "name": f"dbt-{pipeline.replace('_', '-')}-{stage}",
         "namespace": _NAMESPACE,
         "image": _IMAGE,
-        "arguments": ["build", "--select", stage],
+        "arguments": ["build", "--select", select],
         "service_account_name": SERVICE_ACCOUNT,
         "env_from": [
             k8s.V1EnvFromSource(secret_ref=k8s.V1SecretEnvSource(name=CREDENTIALS_SECRET))
@@ -79,7 +96,11 @@ def run_dbt(stage: str, *, task_id: str | None = None, **kwargs: Any) -> Kuberne
         "get_logs": True,
         "log_events_on_failure": True,
         "startup_timeout_seconds": 300,
-        "labels": {"app.kubernetes.io/name": "dbt", "pplk8s/stage": stage},
+        "labels": {
+            "app.kubernetes.io/name": "dbt",
+            "pplk8s/pipeline": pipeline,
+            "pplk8s/stage": stage,
+        },
         "retries": 2,
         "retry_delay": timedelta(seconds=30),
         "retry_exponential_backoff": True,

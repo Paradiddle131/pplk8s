@@ -7,15 +7,17 @@ NODE_IMAGE ?= kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16
 export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
-ELF_IMAGE ?= localhost:5001/el-factory:0.1.0
-DBT_IMAGE ?= localhost:5001/dbt:0.1.0
+ELF_IMAGE ?= localhost:5001/el-factory:0.2.0
+DBT_IMAGE ?= localhost:5001/dbt:0.2.0
+# Keep in step with event-adapter-deployment.yaml (D16: bump on every image change).
+ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.3
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.5
 export AIRFLOW_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -32,7 +34,7 @@ cluster-down: ## Delete the kind cluster and local registry
 cluster-check: ## Verify workers are Ready and the registry serves images in-cluster
 	platform/kind/cluster-check.sh
 
-services-up: ## Start warehouse Postgres (localhost:5433) and fake-gcs (localhost:4480)
+services-up: ## Start warehouse (localhost:5433), fake-gcs (localhost:4480), Pub/Sub emulator (localhost:8085)
 	platform/compose/up.sh
 
 services-down: ## Stop the out-of-cluster services, keeping their data
@@ -41,9 +43,10 @@ services-down: ## Stop the out-of-cluster services, keeping their data
 services-reset: ## Stop the out-of-cluster services and delete their data
 	docker compose -f platform/compose/compose.yaml down -v
 
-build: ## Build the EL Factory lite and dbt images
+build: ## Build the EL Factory lite, dbt, and event adapter images
 	docker build -t $(ELF_IMAGE) services/el-factory
 	docker build -t $(DBT_IMAGE) dbt
+	docker build -t $(ADAPTER_IMAGE) services/event-adapter
 
 el-factory-up: services-up ## Run EL Factory lite on localhost:8090 against the Compose services
 	scripts/el-factory-local.sh up
@@ -60,10 +63,12 @@ airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
 
 test: airflow-test ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
+	cd services/event-adapter && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
-push: build ## Push the EL Factory and dbt images to the local registry (localhost:5001)
+push: build ## Push the EL Factory, dbt, and event adapter images to the local registry (localhost:5001)
 	docker push $(ELF_IMAGE)
 	docker push $(DBT_IMAGE)
+	docker push $(ADAPTER_IMAGE)
 
 workloads-up: services-up push ## Apply the workloads namespace (EL Factory, Secret, ConfigMap) and wait for rollout
 	platform/k8s/workloads-up.sh
@@ -98,6 +103,9 @@ phase3-check: airflow-up ## Phase 3 exit check: hello DAG on a Celery worker, up
 
 phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run, idempotent clear/re-run, kill + FAIL_RATE retry drills
 	tests/e2e/phase4-check.sh
+
+phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
+	tests/e2e/phase5-check.sh
 
 lint: ## Lint shell scripts (shellcheck via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh

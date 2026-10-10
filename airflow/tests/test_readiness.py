@@ -89,3 +89,57 @@ def test_record_readiness_is_idempotent_against_the_warehouse(warehouse):
         "SELECT status, run_id, watermark FROM ops.readiness WHERE product = 'test.readiness'"
     )
     assert rows == [("ready", "run-2", END)]
+
+
+def test_readiness_state_maps_the_ledger_row(mocker):
+    mocker.patch.object(PostgresHook, "get_first", return_value=("ready", END, "run-1"))
+    assert readiness.readiness_state("sales.gold", START, END) == {
+        "status": "ready",
+        "watermark": END.isoformat(),
+        "run_id": "run-1",
+    }
+
+
+def test_readiness_state_is_none_without_a_row(mocker):
+    mocker.patch.object(PostgresHook, "get_first", return_value=None)
+    assert readiness.readiness_state("sales.gold", START, END) is None
+
+
+def test_file_load_sql_is_keyed_on_the_object_generation():
+    sql = " ".join(readiness.FILE_LOAD_SQL.split())
+    assert "ON CONFLICT (bucket, object, generation) DO UPDATE" in sql
+
+
+def test_file_ledger_helpers_pass_the_generation_as_an_integer(mocker):
+    run = mocker.patch.object(PostgresHook, "run")
+    get_first = mocker.patch.object(PostgresHook, "get_first", return_value=("run-1",))
+
+    readiness.record_file_load("landing", "returns/a.jsonl", "17", "partner_returns", "run-1", 3)
+
+    assert readiness.file_already_loaded("landing", "returns/a.jsonl", "17") == "run-1"
+    assert run.call_args.kwargs["parameters"]["generation"] == 17
+    assert get_first.call_args.kwargs["parameters"]["generation"] == 17
+
+
+@pytest.fixture
+def file_ledger():
+    hook = PostgresHook(postgres_conn_id="warehouse")
+    try:
+        hook.get_first("SELECT 1 FROM ops.file_loads LIMIT 1")
+    except Exception as exc:  # noqa: BLE001 - any connectivity problem means no warehouse here
+        pytest.skip(f"ops.file_loads not reachable at localhost:5433 (make services-up): {exc}")
+    hook.run("DELETE FROM ops.file_loads WHERE bucket = 'test-bucket'")
+    yield hook
+    hook.run("DELETE FROM ops.file_loads WHERE bucket = 'test-bucket'")
+
+
+def test_file_ledger_is_idempotent_against_the_warehouse(file_ledger):
+    assert readiness.file_already_loaded("test-bucket", "a.jsonl", 5) is None
+    for run_id in ("run-1", "run-2"):
+        readiness.record_file_load("test-bucket", "a.jsonl", 5, "partner_returns", run_id, 3)
+    assert readiness.file_already_loaded("test-bucket", "a.jsonl", 5) == "run-2"
+    assert readiness.file_already_loaded("test-bucket", "a.jsonl", 6) is None
+    count = file_ledger.get_first(
+        "SELECT count(*) FROM ops.file_loads WHERE bucket = 'test-bucket'"
+    )
+    assert count == (1,)

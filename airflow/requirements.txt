@@ -5,3 +5,5 @@ apache-airflow-providers-google==22.4.0
 apache-airflow-providers-cncf-kubernetes==10.21.0
 apache-airflow-providers-http==6.0.5
 apache-airflow-providers-postgres==7.0.1
+# Already in the base image (2.0.4); pinned because the AssetWatcher spike imports it (D17).
+apache-airflow-providers-common-messaging==2.0.4

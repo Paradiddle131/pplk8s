@@ -211,3 +211,41 @@ Docker started the kind node containers before the WSL file share was ready, so 
 Recovery: `docker restart pplk8s-worker pplk8s-worker2` re-resolves the bind; the dag-processor re-parses within a minute.
 `platform/kind/ensure-dag-mount.sh` does this automatically and runs from `make airflow-up`; the e2e checks wait for `is_stale=false` (`wait_dag_ready`) before triggering.
 The failure mode disappears with git-sync delivery (D10, Phase 6).
+
+## Phase 5 drills
+
+The event path is explained in [`events.md`](events.md); `tests/e2e/phase5-check.sh` (`make phase5-check`) automates the dedupe cases.
+The drills below were run by hand on 2026-10-10.
+
+### 1. The Pub/Sub emulator restarts and loses its topology
+
+Trigger: `docker restart pplk8s-pubsub-1`, then upload a file to `gs://landing/returns/`.
+
+Observed:
+
+- The emulator keeps topics and subscriptions in memory, so after the restart `GET /v1/projects/pplk8s/topics/gcs-object-events` answers 404.
+- The upload still succeeds, and its event is lost: fake-gcs logs `error publishing event: rpc error: code = NotFound desc = Topic not found` at INFO level and carries on.
+- The event adapter's streaming pull fails with `404 Subscription does not exist (resource=file-arrivals)`; the process exits and the kubelet restarts the pod (`restartCount` 1).
+
+Diagnosis: `docker logs pplk8s-gcs-1 | grep 'error publishing'`, `kubectl -n workloads get pods` (restarts), `kubectl -n workloads logs deploy/event-adapter --previous`.
+
+Recovery: `make services-up` re-runs `pubsub-init`, which recreates the topic and both subscriptions; the restarted adapter subscribes again.
+Events published while the topic was missing are gone; replay each by publishing the notification for the object's live generation (attributes `bucketId`, `objectId`, `objectGeneration`, `eventType=OBJECT_FINALIZE`) to `POST http://localhost:8085/v1/projects/pplk8s/topics/gcs-object-events:publish`, or by re-uploading the file.
+A replay is safe by construction (D18).
+On real GCP the notification config and topic are durable, so this failure mode belongs to the emulator; the equivalent production risk is a deleted topic or a missing publisher permission on the GCS service agent.
+
+### 2. The adapter is down while files land
+
+Observed when the adapter was first deployed: two events published before it existed waited in subscription `file-arrivals` and were handled within a second of the pod starting (one `ignored`, one `triggered`).
+Pub/Sub keeps unacked messages for the subscription's retention period, so an adapter outage delays runs but loses nothing.
+
+Recovery: none beyond bringing the adapter back; its Deployment uses `Recreate`, so a rollout never runs two subscribers.
+
+### 3. A poison event
+
+Trigger: upload a routed object whose name breaks the DAG's contract, such as `returns/not-a-day.jsonl`.
+
+Observed: the adapter triggers a run (routing looks only at the prefix); `validate_event` raises `AirflowFailException` and the run fails on try 1 without spending retries.
+Nothing reaches EL Factory or the warehouse.
+
+Recovery: fix or delete the object; a corrected upload is a new generation with its own event and run.

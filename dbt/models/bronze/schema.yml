@@ -40,3 +40,12 @@ models:
         tests: [not_null]
       - name: observed_at
         tests: [not_null]
+
+  - name: brz_partner_returns
+    description: Partner return lines, one row per line of every landed file. Alias bronze.partner_returns.
+    columns:
+      - name: return_id
+        tests: [not_null]
+      - name: _generation
+        description: GCS object generation the row was loaded from.
+        tests: [not_null]

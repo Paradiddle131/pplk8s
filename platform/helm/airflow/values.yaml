@@ -12,7 +12,7 @@ airflowVersion: 3.3.1
 images:
   airflow:
     repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.3 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
+    tag: 3.3.1-pplk8s.5 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).
@@ -95,6 +95,11 @@ scheduler:
 triggerer:
   enabled: true
   replicas: 1
+  # The AssetWatcher spike (D17) pulls from the Pub/Sub emulator inside the triggerer; the client
+  # library switches to the emulator when this is set.
+  env:
+    - name: PUBSUB_EMULATOR_HOST
+      value: pubsub:8085
   persistence:
     enabled: false # triggerer logs are not needed on disk
   resources:

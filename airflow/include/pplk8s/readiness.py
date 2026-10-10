@@ -1,9 +1,12 @@
-"""Readiness ledger and post-extraction checks on the warehouse (PLAN.md §3, D8).
+"""Readiness ledger, file-load ledger, and post-extraction checks on the warehouse (PLAN.md §3, D8).
 
-Both helpers talk to the warehouse stand-in over the ``warehouse`` Airflow connection, never
+All helpers talk to the warehouse stand-in over the ``warehouse`` Airflow connection, never
 to Airflow's metadata DB (PLAN.md D12).  The ledger is ``ops.readiness`` with the primary key
 ``(product, interval_start, interval_end)``; writes are UPSERTs, so repeating a task or a whole
 run rewrites the same row instead of adding one.
+
+``ops.file_loads`` (PLAN.md D18) records every landed object generation a file-arrival DAG loaded,
+keyed by ``(bucket, object, generation)``; it is the durable half of event dedupe.
 """
 
 from __future__ import annotations
@@ -36,6 +39,16 @@ ON CONFLICT (product, interval_start, interval_end) DO UPDATE SET
     updated_at = now()
 """
 
+FILE_LOAD_SQL = """
+INSERT INTO ops.file_loads (bucket, object, generation, entity, run_id, rows, loaded_at)
+VALUES (%(bucket)s, %(object)s, %(generation)s, %(entity)s, %(run_id)s, %(rows)s, now())
+ON CONFLICT (bucket, object, generation) DO UPDATE SET
+    entity = EXCLUDED.entity,
+    run_id = EXCLUDED.run_id,
+    rows = EXCLUDED.rows,
+    loaded_at = now()
+"""
+
 _IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
@@ -63,6 +76,65 @@ def record_readiness(
             "watermark": watermark,
             "run_id": run_id,
             "status": status,
+        },
+    )
+
+
+def readiness_state(
+    product: str,
+    interval_start: str | datetime,
+    interval_end: str | datetime,
+    *,
+    conn_id: str = DEFAULT_CONN_ID,
+) -> dict[str, Any] | None:
+    """Return ``{status, watermark, run_id}`` of one ledger row, or None if it does not exist."""
+    found = _hook(conn_id).get_first(
+        "SELECT status, watermark, run_id FROM ops.readiness "
+        "WHERE product = %(product)s AND interval_start = %(start)s AND interval_end = %(end)s",
+        parameters={"product": product, "start": interval_start, "end": interval_end},
+    )
+    if not found:
+        return None
+    status, watermark, run_id = found
+    return {
+        "status": status,
+        "watermark": watermark.isoformat() if watermark else None,
+        "run_id": run_id,
+    }
+
+
+def file_already_loaded(
+    bucket: str, name: str, generation: str | int, *, conn_id: str = DEFAULT_CONN_ID
+) -> str | None:
+    """Return the run_id that already loaded this object generation, or None."""
+    found = _hook(conn_id).get_first(
+        "SELECT run_id FROM ops.file_loads "
+        "WHERE bucket = %(bucket)s AND object = %(object)s AND generation = %(generation)s",
+        parameters={"bucket": bucket, "object": name, "generation": int(generation)},
+    )
+    return found[0] if found else None
+
+
+def record_file_load(
+    bucket: str,
+    name: str,
+    generation: str | int,
+    entity: str,
+    run_id: str,
+    rows: int,
+    *,
+    conn_id: str = DEFAULT_CONN_ID,
+) -> None:
+    """Upsert one ``ops.file_loads`` row (idempotent per object generation)."""
+    _hook(conn_id).run(
+        FILE_LOAD_SQL,
+        parameters={
+            "bucket": bucket,
+            "object": name,
+            "generation": int(generation),
+            "entity": entity,
+            "run_id": run_id,
+            "rows": rows,
         },
     )
 

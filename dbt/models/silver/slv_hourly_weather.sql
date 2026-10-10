@@ -1,4 +1,4 @@
-{{ config(alias='hourly_weather') }}
+{{ config(alias='hourly_weather', tags=['sales']) }}
 
 -- Latest row per (location, observed_at): greatest _loaded_at, then greatest _run_id as tie-breaker.
 with ranked as (

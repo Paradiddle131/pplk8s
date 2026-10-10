@@ -1,4 +1,4 @@
-{{ config(alias='synthetic_orders') }}
+{{ config(alias='synthetic_orders', tags=['sales']) }}
 
 select
     cast(order_id as text) as order_id,

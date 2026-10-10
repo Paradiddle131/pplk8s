@@ -83,3 +83,62 @@ def test_every_elt_call_to_el_factory_is_retried(sales):
         assert task.retries >= 2, task_id
         assert task.execution_timeout is not None, task_id
     assert sales.get_task("get_catalog").retry_exponential_backoff is True
+
+
+@pytest.fixture(scope="module")
+def returns(bag):
+    return bag.dags["returns_file_arrival"]
+
+
+def test_returns_dag_is_event_triggered_and_serial(returns):
+    assert returns.schedule is None
+    assert returns.catchup is False
+    assert returns.max_active_runs == 1
+
+
+def test_returns_flow_checks_the_ledger_before_loading_and_records_it_last(returns):
+    order = [
+        "validate_event",
+        "not_loaded_yet",
+        "load",
+        "stage_bronze.dbt_bronze",
+        "stage_bronze.record_bronze",
+        "stage_silver.dbt_silver",
+        "stage_silver.record_silver",
+        "record_file",
+    ]
+    for upstream, downstream in zip(order, order[1:], strict=False):
+        ancestors = returns.get_task(downstream).get_flat_relative_ids(upstream=True)
+        assert upstream in ancestors, f"{upstream} must run before {downstream}"
+    assert returns.get_task("stage_silver.dbt_silver").arguments[-1] == "tag:returns,tag:silver"
+
+
+@pytest.fixture(scope="module")
+def finance(bag):
+    return bag.dags["finance_daily"]
+
+
+def test_finance_waits_deferrably_on_both_producers_before_building(finance):
+    build = finance.get_task("dbt_exposed")
+    assert build.arguments[-1] == "tag:finance,tag:exposed"
+    for product, task_id in (
+        ("sales.gold", "wait_sales_gold"),
+        ("returns.silver", "wait_returns_silver"),
+    ):
+        wait = finance.get_task(task_id)
+        assert wait.product == product
+        assert wait.deferrable is True
+        assert task_id in build.upstream_task_ids
+    assert "dbt_exposed" in finance.get_task("record").upstream_task_ids
+
+
+def test_finance_runs_wait_in_parallel_but_build_one_at_a_time(finance):
+    assert finance.max_active_runs > 1
+    assert finance.get_task("dbt_exposed").max_active_tis_per_dag == 1
+
+
+def test_sales_dbt_stages_select_only_sales_models(sales):
+    for stage in ("bronze", "silver", "gold", "exposed"):
+        assert (
+            sales.get_task(f"stage_{stage}.dbt_{stage}").arguments[-1] == f"tag:sales,tag:{stage}"
+        )

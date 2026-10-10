@@ -49,3 +49,13 @@ models:
         tests: [not_null]
       - name: observed_at
         tests: [not_null]
+
+  - name: slv_returns
+    description: Latest row per return_id across landed files. Alias silver.returns.
+    columns:
+      - name: return_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: return_date
+        description: UTC date of returned_at.
+        tests: [not_null]

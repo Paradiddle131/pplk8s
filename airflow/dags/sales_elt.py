@@ -9,46 +9,25 @@ XCom carries identifiers, timestamps and compact summaries, never data.
 Retries (PLAN.md D15): Airflow task retries own every transient fault; see ``pplk8s.el_factory``
 and ``pplk8s.dbt`` for how EL Factory and dbt cooperate with that.
 
+dbt (PLAN.md D20): each stage builds only the models tagged ``sales`` and the stage's layer.
+
 Readiness products: one per stage (``sales.bronze`` ... ``sales.exposed``) so a consumer can wait
 for exactly the layer it reads, plus ``sales`` once the whole run is done.
 """
 
 from __future__ import annotations
 
-import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from airflow.sdk import TaskGroup, dag, get_current_context, task
+from pplk8s.context import resolve_interval, safe_run_id
 from pplk8s.dbt import STAGES, run_dbt
-from pplk8s.el_factory import RUN_ID_PATTERN, ElFactoryHook
+from pplk8s.el_factory import ElFactoryHook
 from pplk8s.readiness import check_extraction, record_readiness
 
 PIPELINE = "sales"
 EXTRACT_POOL = "el_factory"
-
-
-def safe_run_id(run_id: str) -> str:
-    """Airflow run ids (``scheduled__2026-10-09T00:00:00+00:00``) already satisfy EL Factory's
-    run_id pattern; anything else is mapped deterministically to a safe form."""
-    if RUN_ID_PATTERN.match(run_id):
-        return run_id
-    return re.sub(r"[^A-Za-z0-9_.:+-]", "_", run_id)
-
-
-def resolve_interval(
-    start: datetime | None, end: datetime | None, logical_date: datetime
-) -> tuple[datetime, datetime]:
-    """Return the half-open UTC interval a run processes.
-
-    Scheduled runs use their data interval.  Manual runs may carry an empty or missing interval;
-    they process the last complete UTC day before ``logical_date``, i.e. what the daily
-    schedule would have processed at that moment.
-    """
-    if start is not None and end is not None and start < end:
-        return start.astimezone(UTC), end.astimezone(UTC)
-    day = logical_date.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    return day - timedelta(days=1), day
 
 
 @dag(
@@ -137,7 +116,7 @@ def sales_elt():
     previous = check
     for stage in STAGES:
         with TaskGroup(group_id=f"stage_{stage}") as group:
-            build = run_dbt(stage)
+            build = run_dbt(stage, pipeline=PIPELINE)
             record = readiness_task(f"{PIPELINE}.{stage}", f"record_{stage}")(ctx, check)
             build >> record
         previous >> group

@@ -18,3 +18,16 @@ CREATE TABLE IF NOT EXISTS ops.readiness (
   updated_at     timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (product, interval_start, interval_end)
 );
+
+-- File-load ledger (PLAN.md D18): one row per landed object generation a file-arrival DAG loaded.
+-- Survives Airflow's own metadata (db clean, deleted runs), so a redelivered event is a no-op.
+CREATE TABLE IF NOT EXISTS ops.file_loads (
+  bucket     text        NOT NULL,
+  object     text        NOT NULL,
+  generation bigint      NOT NULL,
+  entity     text        NOT NULL,
+  run_id     text        NOT NULL,
+  rows       integer     NOT NULL,
+  loaded_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (bucket, object, generation)
+);

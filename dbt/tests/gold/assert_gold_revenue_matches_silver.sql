@@ -1,4 +1,4 @@
-{{ config(tags=['gold']) }}
+{{ config(tags=['gold', 'sales']) }}
 
 -- Gold revenue must equal the silver sum of non-cancelled order amounts.
 -- Returns a row (and so fails) only when the two totals differ.

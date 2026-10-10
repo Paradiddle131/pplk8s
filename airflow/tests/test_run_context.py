@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
+from pplk8s.context import resolve_interval, safe_run_id
 from pplk8s.el_factory import RUN_ID_PATTERN
-from sales_elt import resolve_interval, safe_run_id
 
 
 def test_airflow_run_ids_match_el_factory_pattern():

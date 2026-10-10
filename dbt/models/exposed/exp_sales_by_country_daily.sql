@@ -1,4 +1,4 @@
-{{ config(alias='sales_by_country_daily') }}
+{{ config(alias='sales_by_country_daily', tags=['sales']) }}
 
 -- Counts include cancelled orders; revenue excludes them, matching gold.
 select

@@ -22,6 +22,13 @@ sources:
             tests: [not_null]
           - name: status
             description: placed, shipped or cancelled.
+      - name: partner_returns
+        description: >
+          Partner return lines loaded from landed NDJSON files (EL Factory POST /load).
+          File tables carry _run_id, _source_uri, _generation, _loaded_at instead of the interval and page columns.
+        columns:
+          - name: return_id
+            tests: [not_null]
       - name: open_meteo_hourly_weather
         description: Hourly weather observations per location from the public Open-Meteo archive API.
         columns:

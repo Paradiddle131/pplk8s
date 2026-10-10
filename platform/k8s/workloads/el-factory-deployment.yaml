@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault # filter dangerous syscalls (required by the restricted profile)
       containers:
         - name: el-factory
-          image: localhost:5001/el-factory:0.1.0 # the local registry resolves the same on the host and in the cluster
+          image: localhost:5001/el-factory:0.2.0 # the local registry resolves the same on the host and in the cluster
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

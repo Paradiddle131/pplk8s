@@ -1,4 +1,4 @@
-{{ config(alias='daily_weather') }}
+{{ config(alias='daily_weather', tags=['sales']) }}
 
 -- dialect: the UTC day is cast(observed_at at time zone 'UTC' as date) in Postgres; BigQuery uses DATE(observed_at, 'UTC').
 select

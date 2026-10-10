@@ -1,4 +1,4 @@
-{{ config(alias='daily_sales_with_weather') }}
+{{ config(alias='daily_sales_with_weather', tags=['sales']) }}
 
 -- Toy example of combining data products: each day's sales with Amsterdam's weather for the same UTC date.
 -- Days without an Amsterdam observation keep their sales and get NULL weather columns.

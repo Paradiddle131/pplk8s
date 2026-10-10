@@ -18,6 +18,10 @@ start_port_forward() {
 }
 stop_port_forward() { [ -z "$pf" ] || kill "$pf" 2>/dev/null || true; }
 trap stop_port_forward EXIT
+# Bash skips the EXIT trap when killed by a signal it does not trap; exiting on them runs it, so a
+# check's cleanup (restoring config and paused flags) also happens on Ctrl-C or a stopped task.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Airflow 3 REST API: exchange the chart's default user for a JWT, then call /api/v2.
 TOKEN=""

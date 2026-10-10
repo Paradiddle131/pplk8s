@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-adapter-config
+  labels:
+    app.kubernetes.io/name: event-adapter
+data:
+  GCP_PROJECT: pplk8s
+  SUBSCRIPTION: file-arrivals # pull subscription on topic gcs-object-events, created by Compose pubsub-init
+  PUBSUB_EMULATOR_HOST: pubsub:8085 # Compose name, resolvable from pods (D13); unset it to use real Pub/Sub
+  AIRFLOW_API_URL: http://airflow-api-server.airflow.svc.cluster.local:8080
+  MAX_MESSAGES: "10" # flow control: at most this many unacked messages in flight
+  # Which object events start which DAG; an event matching no route is acked and logged as ignored.
+  routes.yaml: |
+    routes:
+      - {bucket: landing, prefix: returns/, dag_id: returns_file_arrival}

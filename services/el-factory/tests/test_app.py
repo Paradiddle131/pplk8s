@@ -205,6 +205,8 @@ def test_unexpected_failures_are_500_and_not_retryable(make_client, storage):
         def ensure_table(self, table):
             pass
 
+        ensure_file_table = ensure_table
+
         def replace_page(self, table, load, rows):
             raise RuntimeError("warehouse exploded")
 
@@ -222,6 +224,7 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
 
     assert sorted(set(warehouse.ensured)) == [
         "open_meteo_hourly_weather",
+        "partner_returns",
         "synthetic_customers",
         "synthetic_orders",
     ]
@@ -231,6 +234,8 @@ def test_startup_survives_an_unreachable_warehouse(storage):
     class DownWarehouse:
         def ensure_table(self, table):
             raise OSError("connection refused")
+
+        ensure_file_table = ensure_table
 
         def replace_page(self, table, load, rows):
             raise AssertionError("not called")
@@ -244,6 +249,8 @@ def test_transient_warehouse_error_is_a_retryable_503(make_client, storage):
     class FlakyWarehouse:
         def ensure_table(self, table):
             pass
+
+        ensure_file_table = ensure_table
 
         def replace_page(self, table, load, rows):
             raise psycopg.OperationalError("server closed the connection unexpectedly")

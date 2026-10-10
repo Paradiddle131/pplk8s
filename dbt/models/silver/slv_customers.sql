@@ -1,4 +1,4 @@
-{{ config(alias='customers') }}
+{{ config(alias='customers', tags=['sales']) }}
 
 -- Latest row per customer_id: greatest _loaded_at, then greatest _run_id as tie-breaker.
 with ranked as (

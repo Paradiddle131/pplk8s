@@ -14,6 +14,12 @@ DBT_USER=warehouse
 DBT_PASSWORD=${pw}
 DBT_DBNAME=warehouse
 ENV
+# The chart's default admin user (platform/helm/airflow); the lab has no other API identity yet.
+cat > airflow-api.secret.env <<ENV
+AIRFLOW_USERNAME=${AIRFLOW_API_USERNAME:-admin}
+AIRFLOW_PASSWORD=${AIRFLOW_API_PASSWORD:-admin}
+ENV
 
 kubectl --context kind-pplk8s apply -k .
 kubectl --context kind-pplk8s -n workloads rollout status deployment/el-factory --timeout=120s
+kubectl --context kind-pplk8s -n workloads rollout status deployment/event-adapter --timeout=120s

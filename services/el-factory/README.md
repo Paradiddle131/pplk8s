@@ -14,12 +14,18 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
   A `cursor` query parameter overrides the body cursor.
   The response is `{"status":"ok","source","entity","page","rows","object","next_url"}`.
   Callers POST the same body to `next_url` until it is `null`.
+- `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
+  `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
+  The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.
 
 Every error is JSON: `{"status":"error","retryable":<bool>,"error":"..."}`.
 Validation failures are 400, and unknown pipelines, sources, or entities are 404.
 Transient failures are 503 with `retryable: true`: injected failures, Open-Meteo 5xx or connection errors, dropped warehouse connections, and GCS 5xx or 429 responses.
 An Open-Meteo 4xx means our request is wrong, so it is a 502 with `retryable: false`.
 Any other failure is 500 with `retryable: false`.
+`POST /load` adds two non-retryable cases.
+A file that breaks its entity's contract is 422.
+A generation that is no longer live, or older than one already loaded, is 409 with `"superseded": true`: the newer generation has its own object event, so the caller should skip rather than fail.
 
 ## Processing
 
@@ -30,6 +36,15 @@ Any other failure is 500 with `retryable: false`.
 5. The staged object is downloaded and parsed, and its rows are loaded.
    The load deletes the rows for `(_run_id, _interval_start, _interval_end, _page)` and inserts the new ones in one transaction, under an advisory lock, so re-running a request leaves row counts unchanged.
    Page 0 deletes every page of that `(_run_id, _interval_start, _interval_end)`, so a re-run that yields fewer pages leaves no stale rows behind.
+
+### Loading a file
+
+1. The request is validated, and `FAIL_RATE` applies as for `/extract`.
+2. The object is read at the requested generation.
+   On a bucket without versioning only the live generation is readable, so an overwritten generation is superseded.
+3. Every line must be a JSON object with exactly the entity's columns; one bad line rejects the whole file and loads nothing.
+4. Under an advisory lock per object, the load deletes every row of that object and inserts the new rows in one transaction.
+   Reloading a generation leaves row counts unchanged, a newer generation replaces the rows instead of adding to them, and an older generation never overwrites a newer one.
 
 ## Configuration
 
@@ -61,10 +76,13 @@ Every table ends with the metadata columns `_run_id text`, `_interval_start time
 All metadata columns except `_loaded_at` are `NOT NULL`.
 Each table also has the index `<table>_load_key_idx` on `(_run_id, _interval_start, _interval_end, _page)`.
 
+File entities have their own metadata columns, because a file is keyed by the object it came from rather than by run and interval: `_run_id text`, `_source_uri text`, `_generation bigint`, all `NOT NULL`, plus `_loaded_at timestamptz DEFAULT now()`, and the index `<table>_load_key_idx` on `(_source_uri, _generation)`.
+
 | Table | Columns |
 |---|---|
 | `ds_source.synthetic_customers` | `customer_id integer`, `name text`, `email text`, `country text`, `signup_date date` |
 | `ds_source.synthetic_orders` | `order_id text`, `customer_id integer`, `order_ts timestamptz`, `status text`, `amount numeric(12,2)`, `currency text` |
+| `ds_source.partner_returns` (file entity `partner_returns`) | `return_id text`, `order_id text`, `returned_at timestamptz`, `amount numeric(12,2)`, `reason text` |
 | `ds_source.open_meteo_hourly_weather` | `location text`, `latitude numeric(8,4)`, `longitude numeric(8,4)`, `observed_at timestamptz`, `temperature_c numeric(5,2)`, `precipitation_mm numeric(6,2)` |
 
 ## Tests
@@ -80,8 +98,8 @@ The unit tests use in-memory fakes for storage and the warehouse and mock the Op
 ## Image
 
 ```bash
-docker build -t localhost:5001/el-factory:0.1.0 services/el-factory
-docker run --rm localhost:5001/el-factory:0.1.0 id -u   # prints 10001
+docker build -t localhost:5001/el-factory:0.2.0 services/el-factory
+docker run --rm localhost:5001/el-factory:0.2.0 id -u   # prints 10001
 ```
 
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.

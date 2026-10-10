@@ -1,4 +1,4 @@
-# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt). Apply with `kubectl apply -k`.
+# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt) and the Eventarc stand-in (event adapter). Apply with `kubectl apply -k`.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -11,12 +11,18 @@ resources:
   - el-factory-configmap.yaml
   - el-factory-deployment.yaml
   - el-factory-service.yaml
+  - event-adapter-configmap.yaml
+  - event-adapter-deployment.yaml
 
 secretGenerator:
   - name: warehouse-credentials
     # KEY=value lines; written by workloads-up.sh from WAREHOUSE_PASSWORD (default: the Compose default) and git-ignored.
     envs:
       - warehouse.secret.env
+  - name: event-adapter-airflow
+    # The Airflow API login the adapter triggers runs with; written by workloads-up.sh and git-ignored.
+    envs:
+      - airflow-api.secret.env
 
 generatorOptions:
   # Keep the name fixed: Phase 4's KubernetesPodOperator references `warehouse-credentials` literally.

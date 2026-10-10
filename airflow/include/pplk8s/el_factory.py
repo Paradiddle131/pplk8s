@@ -9,6 +9,9 @@ It classifies a failure and raises, and the Airflow task retry policy owns the r
   backoff on the task apply.
 * Non-retryable (4xx, 502 from a rejected source request, ``retryable: false``, malformed
   responses) raise ``AirflowFailException``, which fails the task at once with no retry.
+* A superseded file (409 with ``superseded: true`` from ``POST /load``) raises
+  ``AirflowSkipException``: the object was overwritten, and the newer generation has its own event
+  and run.
 
 Re-running an entity from page 0 is safe because EL Factory's page 0 resets the whole
 ``(run_id, interval)`` of that entity, so :meth:`ElFactoryHook.extract_entity` always starts
@@ -24,7 +27,7 @@ from urllib.parse import urlsplit
 
 import requests
 from airflow.providers.http.hooks.http import HttpHook
-from airflow.sdk.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException, AirflowSkipException
 
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:+-]+$")
 DEFAULT_CONN_ID = "el_factory"
@@ -110,6 +113,37 @@ class ElFactoryHook(HttpHook):
             seen.add(endpoint)
         return {"source": source, "entity": entity, "pages": pages, "rows": rows}
 
+    def load_file(
+        self, entity: str, bucket: str, name: str, generation: str | int, run_id: str
+    ) -> dict[str, Any]:
+        """Load one landed file at exactly ``generation``; return a compact summary."""
+        if not RUN_ID_PATTERN.match(run_id):
+            raise AirflowFailException(f"run_id {run_id!r} does not match {RUN_ID_PATTERN.pattern}")
+        payload = {
+            "entity": entity,
+            "bucket": bucket,
+            "object": name,
+            "generation": str(generation),
+            "run_id": run_id,
+        }
+        body = self._call("POST", "/load", json=payload)
+        rows = body.get("rows") if isinstance(body, dict) else None
+        if (
+            not isinstance(body, dict)
+            or body.get("status") != "ok"
+            or not isinstance(rows, int)
+            or isinstance(rows, bool)
+            or rows < 0
+            or body.get("generation") != str(generation)
+        ):
+            raise AirflowFailException(f"load {entity} returned an invalid response: {body!r}")
+        return {
+            "entity": entity,
+            "object": body.get("object"),
+            "generation": str(generation),
+            "rows": rows,
+        }
+
     def _call(self, method: str, endpoint: str, **kwargs: Any) -> Any:
         self.method = method
         try:
@@ -135,6 +169,8 @@ class ElFactoryHook(HttpHook):
             return body
         detail = body.get("error") if isinstance(body, dict) else response.text[:200]
         message = f"{method} {endpoint}: HTTP {status}: {detail}"
+        if isinstance(body, dict) and body.get("superseded") is True:
+            raise AirflowSkipException(message)
         if isinstance(body, dict) and isinstance(body.get("retryable"), bool):
             retryable = body["retryable"]
         else:

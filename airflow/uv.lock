@@ -294,6 +294,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apache-airflow-providers-common-messaging"
+version = "2.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apache-airflow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3f/65/422346df8d34ce4e8d6d5eef2483469174ab830305819ad6d7e9661e525c/apache_airflow_providers_common_messaging-2.0.4.tar.gz", hash = "sha256:f6d942b8e292ab45fd1417861cc7061e0c2945ab9df537985d35ff09c7b0d117", size = 17508, upload-time = "2026-06-07T09:43:47.703Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/84/da6bfe56f83d88a502674d629e8653333d813a44dcaed37fa988c048055d/apache_airflow_providers_common_messaging-2.0.4-py3-none-any.whl", hash = "sha256:c786db4378d85a3822d2ec44e8c2bb3170f61c49f6aaac47509ce6b5ad8556c1", size = 14674, upload-time = "2026-06-07T09:42:31.003Z" },
+]
+
+[[package]]
 name = "apache-airflow-providers-common-sql"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3114,6 +3126,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "apache-airflow" },
     { name = "apache-airflow-providers-cncf-kubernetes" },
+    { name = "apache-airflow-providers-common-messaging" },
     { name = "apache-airflow-providers-google" },
     { name = "apache-airflow-providers-http" },
     { name = "apache-airflow-providers-postgres" },
@@ -3131,6 +3144,7 @@ dev = [
 requires-dist = [
     { name = "apache-airflow", specifier = "==3.3.1" },
     { name = "apache-airflow-providers-cncf-kubernetes", specifier = "==10.21.0" },
+    { name = "apache-airflow-providers-common-messaging", specifier = "==2.0.4" },
     { name = "apache-airflow-providers-google", specifier = "==22.4.0" },
     { name = "apache-airflow-providers-http", specifier = "==6.0.5" },
     { name = "apache-airflow-providers-postgres", specifier = "==7.0.1" },

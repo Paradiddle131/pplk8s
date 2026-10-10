@@ -2,7 +2,7 @@
 -- Usage (creates the schemas and loads the synthetic ds_source rows into dbt_dev):
 --   docker exec -i pplk8s-warehouse-1 psql -U warehouse -d dbt_dev -v ON_ERROR_STOP=1 < dbt/dev/fixture.sql
 -- The values are synthetic; they are not Open-Meteo or customer data.
--- Re-running this file resets the three ds_source tables; layer schemas and models are left to dbt.
+-- Re-running this file resets the four ds_source tables; layer schemas and models are left to dbt.
 
 CREATE SCHEMA IF NOT EXISTS ds_source;
 CREATE SCHEMA IF NOT EXISTS bronze;
@@ -13,6 +13,7 @@ CREATE SCHEMA IF NOT EXISTS exposed;
 DROP TABLE IF EXISTS ds_source.synthetic_customers;
 DROP TABLE IF EXISTS ds_source.synthetic_orders;
 DROP TABLE IF EXISTS ds_source.open_meteo_hourly_weather;
+DROP TABLE IF EXISTS ds_source.partner_returns;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -142,3 +143,22 @@ CROSS JOIN generate_series(
     '2026-10-02 22:00+00'::timestamptz,
     interval '2 hours'
 ) AS ts(observed_at);
+
+-- Partner returns: file returns/2026-10-01.jsonl landed twice; generation 2 replaced generation 1
+-- in ds_source (so only its rows remain), and a second file covers 2026-10-02.
+CREATE TABLE ds_source.partner_returns (
+    return_id text,
+    order_id text,
+    returned_at timestamptz,
+    amount numeric(12,2),
+    reason text,
+    _run_id text,
+    _source_uri text,
+    _generation bigint,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.partner_returns VALUES
+    ('R-1', 'O-1', '2026-10-01 10:00+00', 12.50, 'damaged', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
+    ('R-2', 'O-2', '2026-10-01 15:30+00', 5.00, 'wrong size', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
+    ('R-3', 'O-3', '2026-10-02 09:15+00', 7.25, 'late delivery', 'gcs-run-b', 'gs://landing/returns/2026-10-02.jsonl', 1, '2026-10-03 06:00+00');

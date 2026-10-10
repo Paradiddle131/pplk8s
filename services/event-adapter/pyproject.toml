@@ -1,0 +1,35 @@
+[project]
+name = "event-adapter"
+version = "0.1.0"
+description = "Event adapter: turns GCS object events from Pub/Sub into Airflow DAG runs (the Eventarc stand-in)"
+requires-python = ">=3.13"
+dependencies = [
+    "google-cloud-pubsub==2.42.0",
+    "pyyaml==6.0.3",
+    "requests==2.34.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "responses",
+    "ruff",
+]
+
+[tool.uv.build-backend]
+module-name = "event_adapter"
+module-root = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

@@ -27,3 +27,13 @@ models:
       - name: order_date
         description: Natural key.
         tests: [not_null, unique]
+
+  - name: exp_net_sales_daily
+    description: Daily revenue net of partner returns, one row per order_date of gold.daily_sales. Alias exposed.net_sales_daily.
+    columns:
+      - name: order_date
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: net_revenue_eur
+        description: revenue_eur minus returns_eur.
+        tests: [not_null]
