@@ -107,8 +107,9 @@ for dag in "$PRODUCER" "$CONSUMER"; do
   api PATCH "/api/v2/dags/$dag" '{"is_paused":false}' >/dev/null
 done
 # Fixture: the consumer's exposed.net_sales_daily reads gold.daily_sales for $DAY, which only a
-# sales_elt run builds. A fresh lab (CI) has none, so build it with the real producer: the Phase 4
-# run (logical date $DAY, interval the day before), whose orders include $DAY.
+# sales_elt run for the interval [$DAY, +1 day) builds. A fresh lab (CI) has none, so build it with
+# the real producer, then remove the readiness rows that run recorded: the deferral step below needs
+# sales.gold not ready for exactly that interval, and these rows are the check's own.
 daily_sales_rows() { psql_wh "SELECT count(*) FROM gold.daily_sales WHERE order_date = '$DAY'" 2>/dev/null || echo 0; }
 if [ "$(daily_sales_rows)" = 0 ]; then
   wait_dag_ready sales_elt
@@ -116,7 +117,7 @@ if [ "$(daily_sales_rows)" = 0 ]; then
   api PATCH /api/v2/dags/sales_elt '{"is_paused":false}' >/dev/null
   fixture_run="phase5__fixture__$(date +%s)"
   api POST /api/v2/dags/sales_elt/dagRuns \
-    "{\"dag_run_id\":\"$fixture_run\",\"logical_date\":\"${DAY}T00:00:00.$(date +%N | cut -c1-6)Z\"}" >/dev/null ||
+    "{\"dag_run_id\":\"$fixture_run\",\"logical_date\":\"${CONSUMER_LOGICAL}T00:00:00.$(date +%N | cut -c1-6)Z\"}" >/dev/null ||
     fail "could not trigger the sales_elt fixture run"
   say "fixture: gold.daily_sales has no $DAY yet; building it with sales_elt run $fixture_run"
   end=$((SECONDS + 900))
@@ -124,6 +125,7 @@ if [ "$(daily_sales_rows)" = 0 ]; then
     [ "$state" = success ] || [ "$state" = failed ] || [ $SECONDS -ge $end ]; do sleep 10; done
   [ "$state" = success ] || fail "sales_elt fixture run $fixture_run ended $state"
   [ "$(daily_sales_rows)" != 0 ] || fail "gold.daily_sales still has no $DAY after $fixture_run"
+  psql_wh "DELETE FROM ops.readiness WHERE run_id = '$fixture_run'" >/dev/null
 fi
 
 # The consumer's interval must start with nothing ready. Rows this check wrote earlier are reset;
