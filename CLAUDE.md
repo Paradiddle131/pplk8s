@@ -22,6 +22,7 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 
 - [`PLAN.md`](PLAN.md): the roadmap, architecture decisions, and phase exit criteria. Read it before starting work; change a decision there, with its rationale, before acting on the change.
 - [`LEDGER.md`](LEDGER.md): an append-only log of completed work. Append an entry at the end of every working session that changed the repo.
+- [`LESSONS.md`](LESSONS.md): one-line lessons for the real GKE and Composer build (Stages 2-3). Append any lesson a session teaches that applies there; leave out anything that only matters on the local machine.
 
 ## Conventions
 
