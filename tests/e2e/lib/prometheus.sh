@@ -6,16 +6,22 @@ PROM=http://localhost:$PROM_PORT
 prom_pf=""
 start_prometheus() {
   [ -z "$prom_pf" ] || kill "$prom_pf" 2>/dev/null || true
+  kubectl --context "$CTX" -n monitoring rollout status statefulset/prometheus-kps-prometheus --timeout=180s >/dev/null 2>&1 || true
   kubectl --context "$CTX" -n monitoring port-forward svc/kps-prometheus "$PROM_PORT:9090" >/dev/null 2>&1 &
   prom_pf=$!
-  for _ in $(seq 30); do curl -sf -o /dev/null "$PROM/-/ready" 2>/dev/null && return; sleep 1; done
+  for _ in $(seq 90); do curl -sf -o /dev/null "$PROM/-/ready" 2>/dev/null && return; sleep 2; done
   fail "Prometheus not reachable on $PROM (is \`make observability-up\` done?)"
 }
 stop_prometheus() { [ -z "$prom_pf" ] || kill "$prom_pf" 2>/dev/null || true; }
 
 prom() { # promql -> the result array of an instant query
-  curl -sf "$PROM/api/v1/query" --data-urlencode "query=$1" | jq -c '.data.result' ||
-    fail "Prometheus query failed: $1"
+  local out
+  # A drill can evict or restart Prometheus (a drained node); reconnect once before giving up.
+  out=$(curl -sf "$PROM/api/v1/query" --data-urlencode "query=$1") || {
+    start_prometheus
+    out=$(curl -sf "$PROM/api/v1/query" --data-urlencode "query=$1") || fail "Prometheus query failed: $1"
+  }
+  jq -c '.data.result' <<<"$out"
 }
 prom_value() { # promql -> first sample value, or empty
   prom "$1" | jq -r '.[0].value[1] // empty'

@@ -11,7 +11,7 @@ recognises the typed ``NotFound`` error. Point ``[logging] logging_config_class`
 from __future__ import annotations
 
 import attrs
-from airflow.config_templates.airflow_local_settings import DEFAULT_LOGGING_CONFIG
+from airflow.config_templates import airflow_local_settings as _defaults
 from airflow.providers.google.cloud.log.gcs_task_handler import GCSRemoteLogIO
 from google.api_core.exceptions import NotFound
 
@@ -25,5 +25,17 @@ class EmulatorGCSRemoteLogIO(GCSRemoteLogIO):
         return isinstance(exc, NotFound) or GCSRemoteLogIO.no_log_found(exc)
 
 
-LOGGING_CONFIG = DEFAULT_LOGGING_CONFIG
-REMOTE_TASK_LOG = EmulatorGCSRemoteLogIO.from_config()
+def _emulator_io(default):
+    """Rebuild Airflow's own remote log IO as the emulator variant, field for field.
+
+    Copying the fields works with whatever the installed provider version defines; the upgrade
+    drill's older image has no ``from_config``.
+    """
+    if not isinstance(default, GCSRemoteLogIO):
+        return default
+    fields = attrs.fields(type(default))
+    return EmulatorGCSRemoteLogIO(**{f.name: getattr(default, f.name) for f in fields if f.init})
+
+
+LOGGING_CONFIG = _defaults.DEFAULT_LOGGING_CONFIG
+REMOTE_TASK_LOG = _emulator_io(_defaults.REMOTE_TASK_LOG)

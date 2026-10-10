@@ -1,12 +1,18 @@
 # Airflow image for the lab (PLAN.md D1, D3): the official 3.3.1 image plus the
 # provider pins from requirements.txt and the shared `pplk8s` package in include/.
 # Build context is this directory: `docker build -t <tag> airflow`.
-FROM apache/airflow:3.3.1-python3.11
-
+# The build arguments exist only for the upgrade drill's older image (Makefile
+# AIRFLOW_DRILL_IMAGE: 3.2.2 with requirements-drill-3.2.2.txt and no dropped
+# constraints); the lab runs the defaults.
 ARG AIRFLOW_VERSION=3.3.1
 ARG PYTHON_VERSION=3.11
+FROM apache/airflow:${AIRFLOW_VERSION}-python${PYTHON_VERSION}
+ARG AIRFLOW_VERSION
+ARG PYTHON_VERSION
+ARG REQUIREMENTS=requirements.txt
+ARG DROP_CONSTRAINTS="apache-airflow-providers-(google|cncf-kubernetes|postgres|common-sql|standard|fab)|google-cloud-aiplatform"
 
-COPY --chown=airflow:0 requirements.txt /tmp/requirements.txt
+COPY --chown=airflow:0 ${REQUIREMENTS} /tmp/requirements.txt
 
 # Install under the upstream constraints so transitive deps match what Airflow
 # was tested with. D3/D27 pin Composer 3.3.1-build.3's providers where they are
@@ -17,7 +23,7 @@ COPY --chown=airflow:0 requirements.txt /tmp/requirements.txt
 # remaining constraints, and `pip check` proves the result is consistent.
 RUN curl -fsSL -o /tmp/constraints.txt \
       "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt" \
- && sed -i -E '/^(apache-airflow-providers-(google|cncf-kubernetes|postgres|common-sql|standard|fab)|google-cloud-aiplatform)==/d' /tmp/constraints.txt \
+ && sed -i -E "/^(${DROP_CONSTRAINTS})==/d" /tmp/constraints.txt \
  && pip install --no-cache-dir -r /tmp/requirements.txt -c /tmp/constraints.txt \
  && pip check \
  && rm /tmp/constraints.txt /tmp/requirements.txt

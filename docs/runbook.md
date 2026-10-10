@@ -249,3 +249,130 @@ Observed: the adapter triggers a run (routing looks only at the prefix); `valida
 Nothing reaches EL Factory or the warehouse.
 
 Recovery: fix or delete the object; a corrected upload is a new generation with its own event and run.
+
+## Phase 6 drills
+
+Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
+Drills 1–4 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
+Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
+`KA` stands for `kubectl --context kind-pplk8s -n airflow`.
+
+### 1. Kill the scheduler
+
+Trigger: `KA scale deploy/airflow-scheduler --replicas=0`.
+Deleting the pod is not a useful drill: the Deployment replaces it within seconds, faster than any alert window.
+
+Observed:
+
+- `AirflowSchedulerDown` (no `airflow_scheduler_heartbeat` increase for 1 minute) fired about 2 minutes after the scale-down.
+- `GET /api/v2/monitor/health` reported the scheduler `unhealthy`; the api-server, workers, and triggerer stayed up, and nothing new was scheduled.
+- After scaling back to 1, the alert resolved within about 25 seconds and the canary succeeded.
+
+Detection: `AirflowSchedulerDown`; panel "Component heartbeats /min" (the scheduler line drops to 0) and "Health".
+
+Recovery: `KA scale deploy/airflow-scheduler --replicas=1`, then `KA rollout status deploy/airflow-scheduler`.
+A new scheduler adopts or resets the tasks the old one left queued.
+
+### 2. Drain a node
+
+Trigger: `kubectl --context kind-pplk8s drain <node running the Celery worker> --ignore-daemonsets --delete-emptydir-data`.
+
+Observed:
+
+- The drain evicted the scheduler, triggerer, statsd-exporter, and worker from `pplk8s-worker`; every pod was Running again on `pplk8s-worker2` within a minute, with none left Pending.
+- The canary succeeded on the rescheduled worker while the node was still cordoned.
+  Workers keep no volume since remote logging (D22), so nothing pins them to a node.
+- `KubeNodeUnschedulable` fired within seconds and resolved about 25 seconds after the uncordon.
+- No PodDisruptionBudget exists for any chart component, so the drain never waited.
+  With one replica per component, a PDB with `minAvailable: 1` would block the drain instead.
+
+Detection: `KubeNodeUnschedulable` (severity `info`); if pods cannot fit elsewhere, `AirflowPodsPending` after 2 minutes.
+
+Recovery: `kubectl --context kind-pplk8s uncordon <node>`.
+Pods do not move back on their own; the scheduler spreads new pods again as they are replaced.
+
+### 3. Stop the metadata DB
+
+Trigger: `docker compose -f platform/compose/compose.yaml stop metadata-db`.
+This is the stand-in for a Cloud SQL maintenance or failover window.
+
+Observed:
+
+- `MetadataDBDown` (`pg_up` from the Compose `postgres_exporter`) fired about 50 seconds after the stop.
+- PgBouncer kept accepting client connections, so no pod failed a probe at first; the scheduler stopped heartbeating and `AirflowSchedulerDown` fired about 75 seconds later.
+- After the start, the DB alert resolved within about 25 seconds and the scheduler heartbeated again about 20 seconds later.
+- No Airflow container restarted during the outage.
+
+Detection: `MetadataDBDown`, then `AirflowSchedulerDown`; panels "Metadata DB" and "PgBouncer clients".
+
+Diagnosis: `docker compose -f platform/compose/compose.yaml ps metadata-db`; `KA logs deploy/airflow-scheduler -c scheduler | grep OperationalError`.
+
+Recovery: `docker compose -f platform/compose/compose.yaml up -d --wait metadata-db`.
+Components reconnect on their own; check that tasks running during the outage were retried (they fail their heartbeat calls and time out after `task_instance_heartbeat_timeout`).
+
+### 4a. Starve the workers of slots
+
+Trigger: shrink pool `ops_load` to 1 slot (`KA exec deploy/airflow-scheduler -c scheduler -- airflow pools set ops_load 1 "..."`), then trigger `ops_load_test` with `{"tasks": 4, "seconds": 60}`.
+
+Observed:
+
+- `airflow_pool_starving_tasks{pool_name="ops_load"}` rose to 2 and `AirflowPoolStarving` fired after about 90 seconds.
+- KEDA did not scale the workers: its query counts running and queued task instances, and starved tasks wait in `scheduled`, before the executor sees them.
+  More workers do not help a pool limit; only more slots do.
+- After the pool went back to 16, the alert resolved within about 30 seconds and the run succeeded.
+
+Detection: `AirflowPoolStarving`; panels "Pool queued / starving / deferred" and "Pool open slots".
+When the executor itself has no free slot, `AirflowTasksQueuedTooLong` fires instead, and KEDA scales the workers (see `tests/e2e/keda-check.sh`).
+
+Recovery: raise the pool (`airflow pools set <pool> <slots> ...`) or wait for the backlog to drain.
+
+### 4b. Starve a worker of memory (OOMKill)
+
+Trigger: trigger `ops_load_test` with `{"tasks": 1, "seconds": 60, "hold_mb": 1700}`; the worker container is limited to 1536Mi.
+
+Observed:
+
+- The kernel OOMKilled the worker container (not just the task process), and `AirflowContainerOOMKilled` fired within about 30 seconds.
+- The task failed on try 1, and its run failed; `ops_load_test` uses `retries=0`, so the failure is visible at once.
+- The kubelet restarted the container, the canary succeeded on the same pod, and the alert resolved once the restart fell out of its 5-minute window.
+- Every task running on that worker died with it; with retries, they come back once their heartbeat is older than `[scheduler] task_instance_heartbeat_timeout`, 120 s since Phase 6 (300 s in Phase 4 drill 1).
+
+Detection: `AirflowContainerOOMKilled`; panels "Airflow memory vs limit (largest pod per container)" and "Container restarts (10m)".
+
+Diagnosis: `KA get pods` (restart count), `KA describe pod <worker>` (`Last State: Terminated, Reason: OOMKilled`).
+
+Recovery: none for the worker; fix the task (smaller batches) or move it to a KubernetesPodOperator pod with its own limit (`docs/executors.md`).
+Raising the worker limit only moves the ceiling, because every task on a Celery worker shares it.
+
+### 5. Roll the chart and the Airflow minor version
+
+Trigger: `make phase6-upgrade-drill`.
+It works on a throwaway database, `airflow_drill` on the same metadata-db server (`--set data.metadataConnection.db=airflow_drill`), never on the lab's only copy; its exit trap redeploys the normal release and drops `airflow_drill`.
+The steps: install chart 1.21.0 with Airflow 3.2.2 (image `AIRFLOW_DRILL_IMAGE`, with Composer 3.2.2's provider pins), back up the database with `pg_dump -Fc`, preview with `helm diff upgrade`, upgrade to chart 1.22.0 with Airflow 3.3.1, then go back first the wrong way and then the right way.
+
+Observed, upgrade:
+
+- `helm diff` showed 158 changed lines; the upgrade took about a minute, and the migration Job moved the schema from `1d6611b6ab7c` to `d2f4e1b3c5a7`.
+- The canary succeeded on both lines.
+
+Observed, the wrong way back (`helm rollback airflow <3.2.2 revision>` alone):
+
+- The rollback restores the 3.2.2 manifests but not the schema, and `airflow db migrate` cannot go back: the migration pod failed with `alembic.util.exc.CommandError: Can't locate revision identified by 'd2f4e1b3c5a7'` and restarted in place (the chart's Job uses `restartPolicy: OnFailure`).
+- Every new 3.2.2 pod stayed in `Init:Error`: `wait-for-airflow-migrations` reported `There are still unapplied migrations after 60 seconds. MigrationHead(s) in DB: {'d2f4e1b3c5a7'} | Migration Head(s) in Source Code: {'1d6611b6ab7c'}`.
+- The old 3.3.1 pods kept serving, so the API still reported 3.3.1, the canary still worked, and no availability alert fired: the rollback simply never landed.
+- `AirflowMigrationJobFailed` fired about 105 seconds after the rollback, and `AirflowRolloutStuck` about 105 seconds after that.
+
+Detection: `AirflowMigrationJobFailed` (a still-running migration pod that restarted, or a failed Job), then `AirflowRolloutStuck` (`kube_deployment_status_replicas > kube_deployment_spec_replicas` for 3 minutes); panel "Container restarts (10m)"; `GET /api/v2/version` still shows the newer version.
+
+Diagnosis: `KA logs job/airflow-run-airflow-migrations`; `KA logs <new pod> -c wait-for-airflow-migrations`; `helm --kube-context kind-pplk8s -n airflow history airflow`.
+
+Recovery, the right way back (took about a minute):
+
+1. Stop everything that holds connections: `KA scale deploy --all --replicas=0`.
+2. Recreate the database and restore the dump taken before the upgrade: `DROP DATABASE … WITH (FORCE)`, `CREATE DATABASE …`, `pg_restore --no-owner`; check that `alembic_version` is the old head.
+3. Redeploy the older line (chart 1.21.0, the 3.2.2 image), which brings every Deployment back to its replica count.
+
+Both alerts resolved, and the canary succeeded on 3.2.2.
+Runs recorded between the backup and the restore are lost; on a real platform, take the backup at the start of the change window and pause DAGs until the upgrade is accepted.
+On Cloud Composer the upgrade is in place and Google runs the migration; the transferable lesson is that the metadata schema only moves forward, so the way back is a snapshot, not a rollback.

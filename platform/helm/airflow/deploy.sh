@@ -9,7 +9,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 REPO="$(cd ../../.. && pwd)"
 
-CHART_VERSION=1.22.0
+# The upgrade drill (tests/e2e/phase6-upgrade-drill.sh) deploys an older chart and a prebuilt image
+# with CHART_VERSION and AIRFLOW_IMAGE_BUILD=0; everything else always uses these defaults.
+CHART_VERSION="${CHART_VERSION:-1.22.0}"
 RELEASE=airflow
 NAMESPACE=airflow
 AIRFLOW_IMAGE="${AIRFLOW_IMAGE:?set AIRFLOW_IMAGE (make airflow-up does)}"
@@ -23,7 +25,9 @@ HELM=(helm --kube-context kind-pplk8s)
 helm repo add apache-airflow https://airflow.apache.org --force-update >/dev/null
 
 # Image: build from airflow/ (context excludes dags/tests) and push to the local registry.
-docker build -t "$AIRFLOW_IMAGE" "$REPO/airflow"
+if [ "${AIRFLOW_IMAGE_BUILD:-1}" = 1 ]; then
+  docker build -t "$AIRFLOW_IMAGE" "$REPO/airflow"
+fi
 docker push "$AIRFLOW_IMAGE" >/dev/null
 
 # The metadata DB lives in Compose; make sure it is up and the nodes can resolve it (D13).

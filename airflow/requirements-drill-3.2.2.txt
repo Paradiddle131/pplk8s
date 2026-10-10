@@ -1,0 +1,12 @@
+# Providers for the upgrade drill's Airflow 3.2.2 image only (tests/e2e/phase6-upgrade-drill.sh).
+# Unpinned on purpose: each resolves to the version the Airflow 3.2.2 constraints file pins, the set
+# Apache tested together, because the 3.3.1 pins in requirements.txt do not resolve against 3.2.2.
+apache-airflow-providers-google
+apache-airflow-providers-cncf-kubernetes
+apache-airflow-providers-http
+apache-airflow-providers-postgres
+apache-airflow-providers-common-sql
+apache-airflow-providers-standard
+apache-airflow-providers-fab
+apache-airflow-providers-celery
+apache-airflow-providers-common-messaging

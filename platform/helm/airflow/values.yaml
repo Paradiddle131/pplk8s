@@ -12,7 +12,7 @@ airflowVersion: 3.3.1
 images:
   airflow:
     repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.9 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
+    tag: 3.3.1-pplk8s.11 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).
@@ -105,6 +105,11 @@ config:
     # Emulator-only shim: fake-gcs words a missing object differently from GCS, which made the
     # provider refuse every first upload (see the module's docstring). Drop this line on real GCS.
     logging_config_class: pplk8s.emulator_logging.LOGGING_CONFIG
+  scheduler:
+    # A task whose worker died (killed pod, OOM, drained node) stays `running` until its heartbeat
+    # is this many seconds old, then fails into a retry. The default 300 s made every lost-worker
+    # recovery take over 5 minutes (Phase 4); task supervisors heartbeat every few seconds.
+    task_instance_heartbeat_timeout: 120
   celery:
     # D24: 4 slots per worker (chart default 16), so a burst of the lab's few tasks needs more than
     # one worker and KEDA's scale-out is visible; KEDA's query divides by this value.
@@ -167,8 +172,11 @@ workers:
     # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
     # Celery's warm shutdown lets running tasks finish within this window when KEDA scales in.
     terminationGracePeriodSeconds: 60
-    # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, polled
-    # from the metadata DB through PgBouncer every 5 s, between 1 and 4 (what two kind nodes hold).
+    # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, read
+    # from the metadata DB through PgBouncer, between 1 and 4 (what two kind nodes hold). With a
+    # minimum above 0 the HPA KEDA creates does the scaling on its own 15 s loop, so pollingInterval
+    # only refreshes the ScaledObject's status and cooldownPeriod has no effect (KEDA 2.21 warns);
+    # the scale-down stabilisation window is what keeps workers through a gap between task waves.
     keda:
       enabled: true
       usePgbouncer: true
