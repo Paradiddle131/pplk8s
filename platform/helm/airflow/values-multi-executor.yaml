@@ -1,0 +1,6 @@
+# Overlay for the KubernetesExecutor experiment (PLAN.md D25): Celery stays the default executor and
+# a task opts into a pod of its own with executor="KubernetesExecutor" (DAG ops_executor_experiment).
+# The chart then also renders the pod template (built from the workers values, so pods get the same
+# image, DAG delivery, remote logging and hostname) and the scheduler's pod-launching RBAC.
+# Apply: make airflow-up AIRFLOW_OVERLAYS=values-multi-executor.yaml; remove it by deploying without.
+executor: "CeleryExecutor,KubernetesExecutor"

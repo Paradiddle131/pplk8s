@@ -160,3 +160,14 @@ def test_ops_load_test_holds_slots_in_its_own_pool(bag):
     assert hold.retries == 0
     assert load.schedule is None
 
+
+def test_executor_experiment_exists_only_with_kubernetes_executor(bag, monkeypatch):
+    # Without KubernetesExecutor configured the DAG must not exist: naming an unavailable executor
+    # is an import error on the DAG processor.
+    assert "ops_executor_experiment" not in bag.dags
+    monkeypatch.setenv("AIRFLOW__CORE__EXECUTOR", "CeleryExecutor,KubernetesExecutor")
+    multi = DagBag(dag_folder=str(DAGS / "ops_executor_experiment.py"))
+    assert multi.import_errors == {}
+    dag = multi.dags["ops_executor_experiment"]
+    assert dag.get_task("on_kubernetes").executor == "KubernetesExecutor"
+    assert dag.get_task("on_celery").executor is None

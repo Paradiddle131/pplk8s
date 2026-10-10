@@ -148,3 +148,11 @@ Entry format:
   Resource tuning from Prometheus (`max_over_time` of `container_memory_working_set_bytes` over 45 minutes covering the Phase 4 drills, a `sales_elt` run and the burst), memory request before → after: worker 768Mi → 1Gi (peak 1005Mi), dag-processor 512Mi → 640Mi (peak 617Mi), triggerer 384Mi → 576Mi and limit 768Mi → 1Gi (peak 553Mi), scheduler 512Mi → 384Mi (peak 369Mi), api-server 768Mi → 384Mi and limit 1536Mi → 1Gi (peak 337Mi); CPU peaks stayed at 0.3–0.45 cores, so CPU requests are unchanged.
   KEDA reported `FailedGetExternalMetric` twice during an Airflow redeploy (the scaler reads the connection from the worker pod template being replaced); it recovered by itself.
 - Open: no scale-in happened while tasks were still running (the stabilisation window held the workers until the burst ended); a forced scale-in mid-task is left to the drills.
+
+## 2026-10-10 — Phase 6 — KubernetesExecutor experiment
+- Done: overlay `platform/helm/airflow/values-multi-executor.yaml` (`CeleryExecutor,KubernetesExecutor`), `make airflow-up AIRFLOW_OVERLAYS=…`; DAG `ops_executor_experiment` (defined only when KubernetesExecutor is configured), `tests/e2e/executor-experiment.sh`, and the write-up `docs/executors.md`.
+- Evidence: three experiment runs passed: queued → running 0 s / 0 s / 1 s on Celery vs 2 s / 5 s / 5 s for a pod; trivial-task duration 0.08 s vs 1.4–1.5 s (the pod re-parses the DAG file, `dag_file_parse_ms` 1243); `on_kubernetes`'s pod was deleted and its log still came from `gs://airflow-logs`.
+  `exceed_memory` (600 MiB in a 384Mi pod) failed alone: scheduler log `container_reason: OOMKilled … exit_code: 137`, the Celery and other pod tasks of the run succeeded, no worker restarted; its remote log was lost (`Could not read served logs … timed out`), while `kubectl logs` on the kept failed pod still showed the task's stdout.
+  A task naming an unconfigured executor is an import error (`UnknownExecutorException`), hence the conditional DAG; a unit test covers both cases.
+  The overlay was removed (`executor = CeleryExecutor`) and `tests/e2e/phase5-check.sh` passed again.
+- Decisions: D5 stands; verdict and Composer translation in `docs/executors.md`.

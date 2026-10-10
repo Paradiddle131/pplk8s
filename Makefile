@@ -93,8 +93,10 @@ airflow-image: ## Build and push the Airflow image to the local registry
 	docker build -t $(AIRFLOW_IMAGE) airflow
 	docker push $(AIRFLOW_IMAGE)
 
-airflow-up: services-up keda-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local)
-	platform/helm/airflow/deploy.sh
+# Extra values files from platform/helm/airflow, e.g. AIRFLOW_OVERLAYS=values-multi-executor.yaml.
+AIRFLOW_OVERLAYS ?=
+airflow-up: services-up keda-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local, AIRFLOW_OVERLAYS=...)
+	platform/helm/airflow/deploy.sh $(addprefix -f ,$(AIRFLOW_OVERLAYS))
 
 airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
 	helm --kube-context kind-pplk8s uninstall airflow -n airflow --wait
