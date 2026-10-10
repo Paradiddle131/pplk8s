@@ -1,0 +1,19 @@
+# Values for kedacore/keda, pinned in deploy.sh (PLAN.md D24). KEDA 2.21 is the first release that
+# supports Kubernetes 1.36. It scales the Celery workers from the chart's ScaledObject, which polls
+# the metadata DB through PgBouncer for running + queued task instances.
+resources:
+  operator:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+  metricServer:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+  webhooks:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {memory: 128Mi}
+
+# Operator metrics (scaler errors, ScaledObject readiness) for Prometheus; deploy.sh turns the
+# ServiceMonitor on only when the monitoring stack's CRDs exist.
+prometheus:
+  operator:
+    enabled: true

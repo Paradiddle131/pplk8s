@@ -1,0 +1,5 @@
+# git-sync serves all of airflow/ (PLAN.md D23), so the DAG folder is airflow/ itself; only dags/
+# holds DAG files. Glob syntax (Airflow 3 default), one pattern per line, relative to this folder.
+include/**
+tests/**
+.venv/**

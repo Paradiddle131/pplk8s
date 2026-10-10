@@ -1,0 +1,22 @@
+# Monitoring objects the kube-prometheus-stack chart does not own: scrape targets, Airflow alert
+# rules, and Grafana dashboards. Applied by platform/monitoring/deploy.sh (`kubectl apply -k`).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - airflow-monitors.yaml
+  - airflow-rules.yaml
+
+configMapGenerator:
+  # The Grafana sidecar loads every ConfigMap labelled grafana_dashboard=1 into the folder named by
+  # the grafana_folder annotation.
+  - name: dashboard-airflow
+    namespace: monitoring
+    files:
+      - dashboards/airflow-overview.json
+    options:
+      labels: {grafana_dashboard: "1"}
+      annotations: {grafana_folder: pplk8s}
+
+generatorOptions:
+  disableNameSuffixHash: true

@@ -16,6 +16,15 @@ def test_no_import_errors(bag):
     assert bag.import_errors == {}
 
 
+def test_synced_folder_parses_only_dags(bag):
+    """git-sync serves all of airflow/ as the DAG folder (PLAN.md D23); .airflowignore must keep
+    include/ and tests/ away from the DAG processor, so it finds exactly the DAGs in dags/."""
+    synced = DagBag(dag_folder=str(DAGS.parent))
+    assert synced.import_errors == {}
+    assert set(synced.dag_ids) == set(bag.dag_ids)
+    assert {Path(dag.fileloc).parent for dag in synced.dags.values()} == {DAGS}
+
+
 def test_hello_structure(bag):
     hello = bag.dags["hello"]
     assert hello.catchup is False
@@ -142,3 +151,23 @@ def test_sales_dbt_stages_select_only_sales_models(sales):
         assert (
             sales.get_task(f"stage_{stage}.dbt_{stage}").arguments[-1] == f"tag:sales,tag:{stage}"
         )
+
+
+def test_ops_load_test_holds_slots_in_its_own_pool(bag):
+    load = bag.dags["ops_load_test"]
+    hold = load.get_task("hold_slot")
+    assert hold.pool == "ops_load"
+    assert hold.retries == 0
+    assert load.schedule is None
+
+
+def test_executor_experiment_exists_only_with_kubernetes_executor(bag, monkeypatch):
+    # Without KubernetesExecutor configured the DAG must not exist: naming an unavailable executor
+    # is an import error on the DAG processor.
+    assert "ops_executor_experiment" not in bag.dags
+    monkeypatch.setenv("AIRFLOW__CORE__EXECUTOR", "CeleryExecutor,KubernetesExecutor")
+    multi = DagBag(dag_folder=str(DAGS / "ops_executor_experiment.py"))
+    assert multi.import_errors == {}
+    dag = multi.dags["ops_executor_experiment"]
+    assert dag.get_task("on_kubernetes").executor == "KubernetesExecutor"
+    assert dag.get_task("on_celery").executor is None

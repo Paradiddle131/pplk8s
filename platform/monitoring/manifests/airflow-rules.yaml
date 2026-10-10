@@ -1,0 +1,131 @@
+# Airflow alert rules (PLAN.md D28): every failure drill in docs/runbook.md fires one of these, and
+# Grafana's "Airflow overview" dashboard shows the same signals. Alertmanager routes them to its
+# null receiver; firing alerts are read from Prometheus (ALERTS{alertstate="firing"}).
+# Heartbeat counters keep their last value in the statsd-exporter when a component stops, so their
+# rate drops to 0; `or vector(0)` also covers the series vanishing when the exporter restarts.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: airflow
+  namespace: monitoring
+spec:
+  groups:
+    - name: airflow.components
+      rules:
+        - alert: AirflowSchedulerDown
+          expr: (sum(rate(airflow_scheduler_heartbeat[1m])) or vector(0)) == 0
+          for: 1m
+          labels: {severity: critical, component: scheduler}
+          annotations:
+            summary: No scheduler heartbeat for over a minute; no task gets scheduled.
+            runbook: docs/runbook.md#1-kill-the-scheduler
+        - alert: AirflowDagProcessorDown
+          expr: (sum(rate(airflow_dag_processor_heartbeat[1m])) or vector(0)) == 0
+          for: 2m
+          labels: {severity: warning, component: dag-processor}
+          annotations:
+            summary: No dag-processor heartbeat for over two minutes; DAG changes are not parsed.
+        - alert: AirflowTriggererDown
+          expr: (sum(rate(airflow_triggerer_heartbeat[1m])) or vector(0)) == 0
+          for: 2m
+          labels: {severity: warning, component: triggerer}
+          annotations:
+            summary: No triggerer heartbeat for over two minutes; deferred tasks do not resume.
+        - alert: AirflowComponentUnavailable
+          expr: |
+            kube_deployment_status_replicas_available{namespace="airflow"}
+              < kube_deployment_spec_replicas{namespace="airflow"}
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.deployment }} has fewer available replicas than desired."
+        - alert: AirflowRolloutStuck
+          # A rollout whose new pods never become ready leaves the old ones serving, so availability
+          # stays fine while the change silently never lands (seen on a helm rollback onto a newer
+          # schema). Updated replicas cannot show it (a crash-looping new pod counts as updated);
+          # a rollout that never finishes keeps more pods than the spec asks for.
+          expr: |
+            kube_deployment_status_replicas{namespace="airflow"}
+              > kube_deployment_spec_replicas{namespace="airflow"}
+          for: 3m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.deployment }} has not finished rolling out for 3 minutes."
+            runbook: docs/runbook.md#5-roll-the-chart-and-the-airflow-minor-version
+        - alert: AirflowPodsPending
+          expr: sum by (namespace) (kube_pod_status_phase{namespace=~"airflow|workloads", phase="Pending"}) > 0
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "Pods in {{ $labels.namespace }} have been Pending for over two minutes (no node fits, or a volume is pinned)."
+        - alert: AirflowMetricsMissing
+          expr: absent(up{namespace="airflow", service="airflow-statsd"} == 1)
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: The Airflow statsd-exporter is not scraped; every Airflow alert is blind.
+    - name: airflow.platform
+      rules:
+        - alert: MetadataDBDown
+          expr: (max(pg_up{database="metadata-db"}) or vector(0)) == 0
+          for: 30s
+          labels: {severity: critical}
+          annotations:
+            summary: The Airflow metadata DB (Cloud SQL stand-in) does not answer.
+            runbook: docs/runbook.md#3-stop-the-metadata-db
+        - alert: KubeNodeUnschedulable
+          expr: max by (node) (kube_node_spec_unschedulable) == 1
+          for: 30s
+          labels: {severity: info}
+          annotations:
+            summary: "Node {{ $labels.node }} is cordoned (drain or maintenance)."
+            runbook: docs/runbook.md#2-drain-a-node
+        - alert: AirflowContainerOOMKilled
+          expr: |
+            max by (namespace, pod, container) (kube_pod_container_status_last_terminated_reason{namespace="airflow", reason="OOMKilled"})
+              and on (namespace, pod, container)
+            increase(kube_pod_container_status_restarts_total{namespace="airflow"}[5m]) > 0
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.pod }}/{{ $labels.container }} was OOMKilled in the last 5 minutes."
+            runbook: docs/runbook.md#4b-starve-a-worker-of-memory-oomkill
+        - alert: AirflowMigrationJobFailed
+          # The chart's migration Job uses restartPolicy OnFailure: a failing `airflow db migrate`
+          # restarts in place and counts as a failed Job only after its backoff limit (minutes later),
+          # so a still-active migration pod that has restarted is the early signal.
+          expr: |
+            (max by (pod) (kube_pod_container_status_restarts_total{namespace="airflow", pod=~".*-run-airflow-migrations-.*"}) > 0
+              and on (pod) max by (pod) (kube_pod_status_phase{namespace="airflow", phase=~"Pending|Running"}) == 1)
+            or on () max(kube_job_status_failed{namespace="airflow", job_name=~".*migrations.*"}) > 0
+          for: 1m
+          labels: {severity: critical}
+          annotations:
+            summary: The Airflow DB migration Job failed; components wait for migrations forever.
+            runbook: docs/runbook.md#5-roll-the-chart-and-the-airflow-minor-version
+    - name: airflow.work
+      rules:
+        - alert: AirflowPoolStarving
+          expr: max by (pool_name) (airflow_pool_starving_tasks) > 0
+          for: 1m
+          labels: {severity: warning}
+          annotations:
+            summary: "Tasks are waiting for free slots in pool {{ $labels.pool_name }}."
+            runbook: docs/runbook.md#4a-starve-the-workers-of-slots
+        - alert: AirflowTasksQueuedTooLong
+          expr: sum(airflow_executor_queued_tasks) > 0 and sum(airflow_executor_open_slots) == 0
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: Tasks sit in the executor queue while no worker slot is free.
+            runbook: docs/runbook.md#4a-starve-the-workers-of-slots
+        - alert: AirflowImportErrors
+          expr: max(airflow_dag_processing_import_errors) > 0
+          for: 30s
+          labels: {severity: warning}
+          annotations:
+            summary: DAG files fail to import; their DAGs are not updated (or disappear).
+        - alert: AirflowTaskFailures
+          expr: sum(increase(airflow_ti_failures[10m])) > 0
+          labels: {severity: info}
+          annotations:
+            summary: Task instances failed in the last 10 minutes.

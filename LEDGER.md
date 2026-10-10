@@ -110,3 +110,49 @@ Entry format:
 
 - Done: README rewritten for a first-time reader (purpose, data flow, status, layout table, shortest quick start, pointers to the working files); PLAN §4 layout now matches the tree (`platform/k8s/`, `tests/e2e/`, `docs/`, `scripts/`); removed four `.gitkeep` files from directories that now have content.
 - Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and `make lint` (shellcheck) clean; no credentials tracked beyond the documented lab defaults.
+
+## 2026-10-10 — Phase 6 — preflight: decisions D21–D28, Python 3.11 and Composer build.3 pins, adapter identity
+- Done: decisions D21–D28 recorded in `PLAN.md` §3, D5 and D10 refined, D16 updated for git-sync; Phase 6 `in progress`.
+  `scripts/install-tools.sh` pins kubectl v1.36.5 (checksum), one minor from the v1.36.4 server; it was v1.34.1 from Docker Desktop.
+  Airflow image `3.3.1-pplk8s.6`: `apache/airflow:3.3.1-python3.11` (Composer Gen 3 runs Python 3.11.8), cncf-kubernetes 10.21.1, postgres 7.0.2, common-sql 2.1.1, standard 1.18.0, fab 3.8.1, celery 3.23.1 (Composer `3.3.1-build.3`); the superseded constraint lines are dropped and `pip check` passes; `airflow/uv.lock` re-resolved for Python 3.11.
+  `resolve_context` in `sales_elt` and `finance_daily` has 2 retries (Phase 4 open item).
+  The event adapter logs in as its own Airflow user `event-adapter` (role User) instead of `admin`: `platform/helm/airflow/api-identity.sh` generates the password once into Secret `airflow/airflow-api-event-adapter`, `deploy.sh` creates the user, and `workloads-up.sh` hands the login to the adapter and restarts it when the login changed (Phase 5 open item).
+  Deleted the stray `default/dnsprobe` pod.
+- Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and shellcheck clean; in the image `python -V` = 3.11.15 and `pip list` shows the pins above.
+  On the new image `tests/e2e/phase5-check.sh` passed (adapter triggered every run with its new identity), then `tests/e2e/phase4-check.sh` passed with the same five hashes as Phase 4 (`gold.daily_sales=3:68713f0d…`, `gold.customer_lifetime=200:a1bd896f…`, `gold.daily_weather=6:b9cea776…`, `exposed.sales_by_country_daily=18:fda581ca…`, `exposed.daily_sales_with_weather=3:b83a5678…`); the kill drill went try 1 killed → try 2 success, FAIL_RATE retries reached try 3.
+- Decisions: D21–D28 (see PLAN.md); a read-only deploy key `pplk8s git-sync (read-only, local kind lab)` was registered on the GitHub repo for D23, its private half kept at `~/.ssh/pplk8s-deploy`.
+
+## 2026-10-10 — Phase 6 — observability stack and remote task logs
+- Done: `platform/monitoring/` (kube-prometheus-stack 92.3.0 values, `deploy.sh`, Kustomize manifests: `ServiceMonitor`s for `airflow-statsd` and `airflow-pgbouncer`, a `ScrapeConfig` for the Compose databases, `PrometheusRule` `airflow` with 14 alerts, dashboard "Airflow overview" as a ConfigMap); Make targets `observability-up`, `observability-down`, `grafana-ui`, `prometheus-ui`.
+  Compose: `metadata-db-exporter` and `warehouse-exporter` (postgres_exporter v0.20.1) beside the databases; `up.sh` creates bucket `airflow-logs`.
+  Airflow values: statsd-exporter on with InfluxDB-style tags, two histogram mappings replacing the chart's Airflow 2 ones, cache TTL 5 m (1 h for histograms); remote task logs to `gs://airflow-logs` through connection `gcs_logs` and `STORAGE_EMULATOR_HOST` on every component; workers are a Deployment with no log PVCs and report their pod IP as hostname; `deploy.sh` restarts the exporter when its mappings change and deletes the StatefulSet's leftover log PVCs.
+  `pplk8s.emulator_logging` (logging config for the emulator only) and `pplk8s.context.run_interval`, which anchors a run triggered with `"logical_date": null` on its `run_after` (it failed with `KeyError: 'logical_date'` before).
+  e2e: `lib/prometheus.sh`, `observability-check.sh`; `run_hello` and `worker_pod` moved into `lib/airflow-api.sh`; the Phase 3 upgrade drill no longer assumes `worker_concurrency = 16`.
+  Image `3.3.1-pplk8s.9` (`.7`/`.8` were intermediate builds of this session).
+- Evidence: StatsD tags were confirmed on the live exporter before any dashboard: `airflow_pool_open_slots{pool_name="el_factory"} 7`, `{pool_name="default_pool"} 128`, `airflow_task_duration_seconds_bucket{dag_id="hello",task_id="say_hello",…}`.
+  Corrections to the prep research: executor gauges carry an `executor_class_name` label (and a `_CeleryExecutor`-suffixed copy) even with one executor, and 3.3.1 still emits legacy per-pool names (`airflow_pool_open_slots_el_factory`) next to the tagged ones.
+  Without a TTL the exporter kept one `triggers_running` series per triggerer pod ever seen (sum 8 instead of 2); the chart did not restart the exporter for `overrideMappings` changes, so the TTL only took effect after a manual restart.
+  The first remote-log upload failed: `Refusing to overwrite remote log gs://airflow-logs/…: could not read existing content (404 … Not Found)`; after the shim, `hello`'s log was in the bucket, its worker pod was deleted, and `GET …/taskInstances/say_hello/logs/1` still returned the log with source `gs://airflow-logs/dag_id=hello/…/attempt=1.log`.
+  `tests/e2e/observability-check.sh` passed: 18 dashboard series present with their labels, pools are separate series, 14 Airflow alert rules loaded and none firing, Grafana lists "Airflow overview".
+  The dashboard was checked in a browser and fixed until it read cleanly (stat titles, units, axis ranges, per-container memory against dashed limits).
+  The default rule `AlertmanagerClusterCrashlooping` fired with zero restarts: on WSL2 `process_start_time_seconds` creeps ~2.5 s every 30 s; disabled in the values.
+  A `sales_elt` run triggered with `"logical_date": null` now succeeds; `make test` → Airflow 102, EL Factory 69, event adapter 32 passed.
+- Open: the worker's working set (~860 MiB) exceeds its 768 Mi request; resource tuning comes with KEDA.
+
+## 2026-10-10 — Phase 6 — KEDA scaling and resource tuning
+- Done: `platform/keda/` (KEDA 2.21.0 values and `deploy.sh`, operator metrics with a ServiceMonitor when the monitoring CRDs exist); Make targets `keda-up`, `keda-down`, and `airflow-up` now depends on `keda-up`.
+  Airflow values: `workers.celery.keda` (min 1, max 4, polling 5 s, cooldown 60 s, HPA scale-down stabilisation 120 s, query through PgBouncer), `worker_concurrency = 4`; pool `ops_load` (16) from `deploy.sh`.
+  Fixture DAG `ops_load_test` (mapped tasks that only hold a slot, `retries=0`, own pool) and `tests/e2e/keda-check.sh`.
+  e2e guard `require_synced_dags` (runs from `start_port_forward`): with git-sync a check refuses to run unless the local `airflow/` equals the served commit.
+- Evidence: `tests/e2e/keda-check.sh` passed: workers at 1, 16 tasks × 45 s triggered at 15:49:16, 4 workers available at 15:49:39 (23 s), run succeeded in 72 s with 16/16 tasks successful on try 1, workers back at 1 109 s after the run (HPA events: 1 → 4, 4 → 3, 3 → 1).
+  Resource tuning from Prometheus (`max_over_time` of `container_memory_working_set_bytes` over 45 minutes covering the Phase 4 drills, a `sales_elt` run and the burst), memory request before → after: worker 768Mi → 1Gi (peak 1005Mi), dag-processor 512Mi → 640Mi (peak 617Mi), triggerer 384Mi → 576Mi and limit 768Mi → 1Gi (peak 553Mi), scheduler 512Mi → 384Mi (peak 369Mi), api-server 768Mi → 384Mi and limit 1536Mi → 1Gi (peak 337Mi); CPU peaks stayed at 0.3–0.45 cores, so CPU requests are unchanged.
+  KEDA reported `FailedGetExternalMetric` twice during an Airflow redeploy (the scaler reads the connection from the worker pod template being replaced); it recovered by itself.
+- Open: no scale-in happened while tasks were still running (the stabilisation window held the workers until the burst ended); a forced scale-in mid-task is left to the drills.
+
+## 2026-10-10 — Phase 6 — KubernetesExecutor experiment
+- Done: overlay `platform/helm/airflow/values-multi-executor.yaml` (`CeleryExecutor,KubernetesExecutor`), `make airflow-up AIRFLOW_OVERLAYS=…`; DAG `ops_executor_experiment` (defined only when KubernetesExecutor is configured), `tests/e2e/executor-experiment.sh`, and the write-up `docs/executors.md`.
+- Evidence: three experiment runs passed: queued → running 0 s / 0 s / 1 s on Celery vs 2 s / 5 s / 5 s for a pod; trivial-task duration 0.08 s vs 1.4–1.5 s (the pod re-parses the DAG file, `dag_file_parse_ms` 1243); `on_kubernetes`'s pod was deleted and its log still came from `gs://airflow-logs`.
+  `exceed_memory` (600 MiB in a 384Mi pod) failed alone: scheduler log `container_reason: OOMKilled … exit_code: 137`, the Celery and other pod tasks of the run succeeded, no worker restarted; its remote log was lost (`Could not read served logs … timed out`), while `kubectl logs` on the kept failed pod still showed the task's stdout.
+  A task naming an unconfigured executor is an import error (`UnknownExecutorException`), hence the conditional DAG; a unit test covers both cases.
+  The overlay was removed (`executor = CeleryExecutor`) and `tests/e2e/phase5-check.sh` passed again.
+- Decisions: D5 stands; verdict and Composer translation in `docs/executors.md`.

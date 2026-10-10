@@ -36,6 +36,27 @@ services:
       timeout: 3s
       retries: 30
 
+  # Database monitoring, as Cloud SQL provides it outside GKE (PLAN.md D21): one exporter per
+  # database, scraped by the in-cluster Prometheus at <name>:9187 over the pplk8s network.
+  metadata-db-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    environment:
+      DATA_SOURCE_URI: metadata-db:5432/airflow?sslmode=disable
+      DATA_SOURCE_USER: airflow
+      DATA_SOURCE_PASS: ${METADATA_DB_PASSWORD:-airflow}
+    depends_on: [metadata-db]
+    # Stopping the database is a drill; the exporter keeps running and reports pg_up 0.
+    restart: unless-stopped
+
+  warehouse-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    environment:
+      DATA_SOURCE_URI: warehouse:5432/warehouse?sslmode=disable
+      DATA_SOURCE_USER: warehouse
+      DATA_SOURCE_PASS: ${WAREHOUSE_PASSWORD:-warehouse}
+    depends_on: [warehouse]
+    restart: unless-stopped
+
   pubsub: # Pub/Sub stand-in; in-network PUBSUB_EMULATOR_HOST=pubsub:8085, host localhost:8085
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:588.0.0-emulators
     command: [gcloud, beta, emulators, pubsub, start, --project=pplk8s, --host-port=0.0.0.0:8085]

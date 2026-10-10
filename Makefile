@@ -14,15 +14,23 @@ ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.5
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.11
 export AIRFLOW_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check
+# The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
+AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.2
+export AIRFLOW_DRILL_IMAGE
+
+# DAG delivery (PLAN.md D23): git-sync of `main` from GitHub, or `local` for this checkout's DAGs.
+DAG_DELIVERY ?= git-sync
+export DAG_DELIVERY
+
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill
 
 help: ## List targets
-	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
 
-tools: ## Install pinned kind, helm, k9s into ~/.local/bin
+tools: ## Install pinned kind, kubectl, helm, k9s into ~/.local/bin
 	scripts/install-tools.sh
 
 cluster-up: ## Create the kind cluster and local registry (localhost:5001)
@@ -89,8 +97,10 @@ airflow-image: ## Build and push the Airflow image to the local registry
 	docker build -t $(AIRFLOW_IMAGE) airflow
 	docker push $(AIRFLOW_IMAGE)
 
-airflow-up: services-up ## Deploy Airflow (image, secrets, RBAC, Helm chart, pool) into namespace airflow
-	platform/helm/airflow/deploy.sh
+# Extra values files from platform/helm/airflow, e.g. AIRFLOW_OVERLAYS=values-multi-executor.yaml.
+AIRFLOW_OVERLAYS ?=
+airflow-up: services-up keda-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local, AIRFLOW_OVERLAYS=...)
+	platform/helm/airflow/deploy.sh $(addprefix -f ,$(AIRFLOW_OVERLAYS))
 
 airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
 	helm --kube-context kind-pplk8s uninstall airflow -n airflow --wait
@@ -106,6 +116,43 @@ phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run,
 
 phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
 	tests/e2e/phase5-check.sh
+
+phase6-check: airflow-up observability-up airflow-drill-image ## Phase 6 exit check: dashboards' series, KEDA scale-out/in, then every failure drill incl. the chart/minor roll (alert fires, runbook recovers, canary) (~35 min)
+	tests/e2e/observability-check.sh
+	tests/e2e/keda-check.sh
+	tests/e2e/phase6-check.sh
+	tests/e2e/phase6-upgrade-drill.sh
+
+airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
+	docker build -t $(AIRFLOW_DRILL_IMAGE) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
+	docker push $(AIRFLOW_DRILL_IMAGE)
+
+phase6-upgrade-drill: airflow-up observability-up airflow-drill-image ## Phase 6 drill 5: chart 1.21.0 + Airflow 3.2.2 -> 1.22.0 + 3.3.1 and back, on a throwaway DB (~10 min)
+	tests/e2e/phase6-upgrade-drill.sh
+
+ci-integration: ## CI integration test: deploy with this checkout's DAGs, hello on a worker, then the Phase 5 event path
+	$(MAKE) airflow-up workloads-up DAG_DELIVERY=local
+	tests/e2e/smoke-check.sh
+	tests/e2e/phase5-check.sh
+
+keda-up: ## Deploy the KEDA operator that scales the Celery workers (namespace keda)
+	platform/keda/deploy.sh
+
+keda-down: ## Uninstall KEDA (uninstall Airflow first: its worker ScaledObject needs the CRDs)
+	helm --kube-context kind-pplk8s uninstall keda -n keda --wait --ignore-not-found
+
+observability-up: services-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)
+	platform/monitoring/deploy.sh
+
+observability-down: ## Uninstall the monitoring stack (the database exporters stay with the Compose services)
+	kubectl --context kind-pplk8s delete -k platform/monitoring/manifests --ignore-not-found
+	helm --kube-context kind-pplk8s uninstall kube-prometheus-stack -n monitoring --wait --ignore-not-found
+
+grafana-ui: ## Port-forward Grafana to http://localhost:3000 (admin/admin)
+	kubectl --context kind-pplk8s -n monitoring port-forward svc/grafana 3000:80
+
+prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
+	kubectl --context kind-pplk8s -n monitoring port-forward svc/kps-prometheus 9090:9090
 
 lint: ## Lint shell scripts (shellcheck via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh

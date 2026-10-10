@@ -2,14 +2,18 @@
 name = "pplk8s-airflow"
 version = "0.1.0"
 description = "Local test environment for the pplk8s DAGs and workload seam (PLAN.md D11)."
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11,<3.12" # Composer 3 runs Python 3.11 (D27)
 # Provider pins mirror airflow/requirements.txt (the Airflow image installs that file).
 dependencies = [
   "apache-airflow==3.3.1",
   "apache-airflow-providers-google==22.4.0",
-  "apache-airflow-providers-cncf-kubernetes==10.21.0",
+  "apache-airflow-providers-cncf-kubernetes==10.21.1",
   "apache-airflow-providers-http==6.0.5",
-  "apache-airflow-providers-postgres==7.0.1",
+  "apache-airflow-providers-postgres==7.0.2",
+  "apache-airflow-providers-common-sql==2.1.1",
+  "apache-airflow-providers-standard==1.18.0",
+  "apache-airflow-providers-fab==3.8.1",
+  "apache-airflow-providers-celery==3.23.1",
   "apache-airflow-providers-common-messaging==2.0.4",
 ]
 
@@ -25,7 +29,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 extend-exclude = ["dags/hello.py"]
 
 [tool.ruff.lint]

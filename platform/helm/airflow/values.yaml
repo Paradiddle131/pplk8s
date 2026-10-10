@@ -12,7 +12,7 @@ airflowVersion: 3.3.1
 images:
   airflow:
     repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.5 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
+    tag: 3.3.1-pplk8s.11 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).
@@ -58,39 +58,93 @@ extraEnvFrom: |
   - secretRef:
       name: airflow-connections
 
-# DAG delivery (D10): the repo's airflow/dags, mounted into the kind workers at
-# /mnt/pplk8s/dags and exposed as a hostPath PV + PVC (airflow-dags, created by deploy.sh).
+# DAG delivery (D10, D23): git-sync clones `main` of the GitHub remote into every component that
+# parses or runs DAGs (scheduler, dag-processor, triggerer, workers) and refreshes it every 10 s.
+# subPath `airflow` makes <mount>/repo/airflow the DAG folder; airflow/.airflowignore hides include/
+# and tests/ from the DAG processor, and the image's PYTHONPATH puts <mount>/repo/airflow/include
+# ahead of its baked copy, so DAGs and the shared package always arrive as one commit.
+# values-local-dags.yaml switches back to the kind host-path mount for the dev loop and CI.
 dags:
   persistence:
-    enabled: true
-    existingClaim: airflow-dags
+    enabled: false
   gitSync:
-    enabled: false # git-sync arrives in Phase 6
+    enabled: true
+    repo: git@github.com:Paradiddle131/pplk8s.git
+    ref: main # git-sync v4 reads `ref`; the chart's default is an Airflow 2 branch
+    branch: main
+    rev: HEAD
+    depth: 1
+    subPath: airflow
+    period: 10s
+    # Read-only deploy key, created as Secret airflow-git-ssh (key gitSshKey) by deploy.sh from a file
+    # outside the repo; the private key is never committed.
+    sshKeySecret: airflow-git-ssh
+    # GitHub's published host keys (api.github.com/meta, 2026-10-10); git-sync refuses any other host.
+    knownHosts: |
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+      github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+      github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
     recommendedProbeSetting: true # silences the chart's deprecation of the old probe behaviour
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
 
-# Task logs stay on the default (local to the worker; the api-server fetches them from the
-# worker's log server). Remote logging comes with a later phase.
+# Task logs (D22): written locally while a task runs (the api-server streams them from the worker's
+# log server), then uploaded to gs://airflow-logs on fake-gcs, where the api-server reads finished
+# logs. Composer keeps task logs in its environment bucket the same way. No log volumes anywhere.
 logs:
   persistence:
     enabled: false
 
+config:
+  logging:
+    remote_logging: "True"
+    remote_base_log_folder: gs://airflow-logs
+    # Connection AIRFLOW_CONN_GCS_LOGS (deploy.sh): anonymous credentials for the emulator.
+    remote_log_conn_id: gcs_logs
+    # Emulator-only shim: fake-gcs words a missing object differently from GCS, which made the
+    # provider refuse every first upload (see the module's docstring). Drop this line on real GCS.
+    logging_config_class: pplk8s.emulator_logging.LOGGING_CONFIG
+  scheduler:
+    # A task whose worker died (killed pod, OOM, drained node) stays `running` until its heartbeat
+    # is this many seconds old, then fails into a retry. The default 300 s made every lost-worker
+    # recovery take over 5 minutes (Phase 4); task supervisors heartbeat every few seconds.
+    task_instance_heartbeat_timeout: 120
+  celery:
+    # D24: 4 slots per worker (chart default 16), so a burst of the lab's few tasks needs more than
+    # one worker and KEDA's scale-out is visible; KEDA's query divides by this value.
+    worker_concurrency: 4
+  metrics:
+    # D21: Airflow 3.3 emits pool, ti.<state> and task.duration metrics with tags only; the InfluxDB
+    # form (`name,tag=value`) carries them to the statsd-exporter, which turns them into labels.
+    # job_id and run_id stay blocked (statsd_disabled_tags default) to bound label cardinality.
+    statsd_influxdb_enabled: "True"
+
+# Every Airflow container talks to fake-gcs for the task logs above; the google-cloud-storage
+# client switches to the emulator (and anonymous access) when this is set. Never in real manifests.
+env:
+  - name: STORAGE_EMULATOR_HOST
+    value: http://gcs:4443
+
 # Airflow 3 splits the old webserver into api-server (UI + REST + execution API) and a standalone
 # dag-processor; both are first-class chart components.
+# Requests sit near the peak working set observed over a sales_elt run, the Phase 4 drills, and a
+# 16-task KEDA burst (Phase 6 tuning, LEDGER); limits leave 50-100 % headroom above that peak.
 apiServer:
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 768Mi}
-    limits: {memory: 1536Mi}
+    requests: {cpu: 200m, memory: 384Mi} # peak 337Mi
+    limits: {memory: 1Gi}
 dagProcessor:
   enabled: true
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 512Mi}
+    requests: {cpu: 200m, memory: 640Mi} # peak 617Mi
     limits: {memory: 1Gi}
 scheduler:
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 512Mi}
+    requests: {cpu: 200m, memory: 384Mi} # peak 369Mi
     limits: {memory: 1Gi}
 triggerer:
   enabled: true
@@ -103,17 +157,42 @@ triggerer:
   persistence:
     enabled: false # triggerer logs are not needed on disk
   resources:
-    requests: {cpu: 100m, memory: 384Mi}
-    limits: {memory: 768Mi}
+    requests: {cpu: 100m, memory: 576Mi} # peak 553Mi; 768Mi left only 40 % headroom
+    limits: {memory: 1Gi}
 workers:
-  # Pod names stay airflow-worker-N (StatefulSet): the api-server resolves worker log URLs by pod name.
-  # Celery concurrency is 16 per worker by chart default; tasks here are thin HTTP/pod launches.
+  # No log volume (D22): workers are a Deployment that reschedules onto any node and can be scaled in
+  # without losing logs. A Deployment pod's name does not resolve in DNS, so workers report their pod
+  # IP as hostname; the api-server reaches a running task's live log at <hostname>:8793.
+  persistence:
+    enabled: false
+  env:
+    - name: AIRFLOW__CORE__HOSTNAME_CALLABLE
+      value: airflow.utils.net.get_host_ip_address
   celery:
     # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
+    # Celery's warm shutdown lets running tasks finish within this window when KEDA scales in.
     terminationGracePeriodSeconds: 60
-    replicas: 2
+    # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, read
+    # from the metadata DB through PgBouncer, between 1 and 4 (what two kind nodes hold). With a
+    # minimum above 0 the HPA KEDA creates does the scaling on its own 15 s loop, so pollingInterval
+    # only refreshes the ScaledObject's status and cooldownPeriod has no effect (KEDA 2.21 warns);
+    # the scale-down stabilisation window is what keeps workers through a gap between task waves.
+    keda:
+      enabled: true
+      usePgbouncer: true
+      minReplicaCount: 1
+      maxReplicaCount: 4
+      pollingInterval: 5
+      cooldownPeriod: 60
+      advanced:
+        horizontalPodAutoscalerConfig:
+          behavior:
+            scaleDown:
+              # Wait 2 minutes of lower demand before removing a worker, so a gap between mapped
+              # task waves does not flap the worker count.
+              stabilizationWindowSeconds: 120
     resources:
-      requests: {cpu: 300m, memory: 768Mi}
+      requests: {cpu: 300m, memory: 1Gi} # peak 1005Mi
       limits: {memory: 1536Mi}
 redis:
   persistence:
@@ -122,9 +201,36 @@ redis:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 128Mi}
 
-# Not needed yet; Phase 6 adds StatsD/Prometheus on purpose.
+# Metrics (D21): Airflow components push StatsD to this exporter, which Prometheus scrapes
+# (ServiceMonitor in platform/monitoring/manifests). The chart's built-in mappings target Airflow 2's
+# dotted names and do not match 3.3's tagged metrics, so they are replaced: everything keeps the
+# exporter's default name (dots -> underscores, tags -> labels); only timers get explicit histograms
+# so dashboards can aggregate quantiles across tasks.
+# The exporter keeps every series until it expires: without a TTL a replaced pod's gauges (one
+# triggers_running series per triggerer pod name) are summed forever. 5 minutes outlives any normal
+# emit interval; the duration histograms keep an hour so dashboard quantile windows stay filled.
 statsd:
-  enabled: false
+  enabled: true
+  cache:
+    ttl: 5m
+  overrideMappings:
+    - match: airflow.task.duration
+      name: airflow_task_duration_seconds
+      ttl: 1h
+      observer_type: histogram
+      histogram_options:
+        buckets: [0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1800]
+    - match: airflow.dagrun.duration.*
+      name: airflow_dagrun_duration_seconds
+      ttl: 1h
+      observer_type: histogram
+      histogram_options:
+        buckets: [5, 10, 30, 60, 120, 300, 600, 1200, 1800, 3600]
+      labels:
+        state: "$1"
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 128Mi}
 flower:
   enabled: false
 

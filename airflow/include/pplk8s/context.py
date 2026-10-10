@@ -6,6 +6,7 @@ Pure functions only, so DAG files stay thin and these rules are unit-tested once
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -37,6 +38,18 @@ def resolve_interval(
         return start.astimezone(UTC), end.astimezone(UTC)
     day = logical_date.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     return day - timedelta(days=1), day
+
+
+def run_interval(context: Mapping[str, Any]) -> tuple[datetime, datetime]:
+    """Return the interval of the running DAG run, from its task context (see ``resolve_interval``).
+
+    Airflow 3 lets a manual run be triggered without a logical date (the REST API's
+    ``"logical_date": null``); such a run is anchored on the moment it was asked to run instead.
+    """
+    anchor = context.get("logical_date") or context["dag_run"].run_after
+    return resolve_interval(
+        context.get("data_interval_start"), context.get("data_interval_end"), anchor
+    )
 
 
 def file_event(conf: dict[str, Any] | None, object_pattern: re.Pattern[str]) -> dict[str, str]:

@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from airflow.sdk import dag, get_current_context, task
-from pplk8s.context import resolve_interval, safe_run_id
+from pplk8s.context import run_interval, safe_run_id
 from pplk8s.dbt import run_dbt
 from pplk8s.readiness import record_readiness
 from pplk8s.sensors import ReadinessSensor
@@ -36,14 +36,11 @@ UPSTREAM = ("sales.gold", "returns.silver")
     doc_md=__doc__,
 )
 def finance_daily():
-    @task(multiple_outputs=True)
+    # Even the first task gets a retry budget: a transient blip here would fail the whole run.
+    @task(multiple_outputs=True, retries=2, retry_delay=timedelta(seconds=15))
     def resolve_context() -> dict[str, str]:
         context = get_current_context()
-        start, end = resolve_interval(
-            context.get("data_interval_start"),
-            context.get("data_interval_end"),
-            context["logical_date"],
-        )
+        start, end = run_interval(context)
         return {
             "run_id": safe_run_id(context["run_id"]),
             "interval_start": start.isoformat(),

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from pplk8s.context import resolve_interval, safe_run_id
+from pplk8s.context import resolve_interval, run_interval, safe_run_id
 from pplk8s.el_factory import RUN_ID_PATTERN
 
 
@@ -30,3 +30,22 @@ def test_empty_manual_interval_falls_back_to_previous_utc_day():
     assert end == datetime(2026, 10, 9, tzinfo=UTC)
     assert end - start == timedelta(days=1)
     assert resolve_interval(None, None, logical) == (start, end)
+
+
+class _DagRun:
+    run_after = datetime(2026, 10, 9, 10, 30, tzinfo=UTC)
+
+
+def test_run_without_logical_date_is_anchored_on_run_after():
+    # Airflow 3 accepts "logical_date": null on a manual trigger; the context then has no date.
+    context = {"logical_date": None, "dag_run": _DagRun()}
+    assert run_interval(context) == (
+        datetime(2026, 10, 8, tzinfo=UTC),
+        datetime(2026, 10, 9, tzinfo=UTC),
+    )
+
+
+def test_run_interval_prefers_the_data_interval():
+    start, end = datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 2, tzinfo=UTC)
+    context = {"data_interval_start": start, "data_interval_end": end, "logical_date": end}
+    assert run_interval(context) == (start, end)

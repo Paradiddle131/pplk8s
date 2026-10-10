@@ -1,0 +1,80 @@
+# Values for prometheus-community/kube-prometheus-stack, pinned in deploy.sh (PLAN.md D21).
+# The in-cluster monitoring stack is the self-managed GKE stand-in for Cloud Monitoring: Prometheus,
+# Alertmanager, Grafana, kube-state-metrics, and node-exporter, trimmed for one laptop.
+fullnameOverride: kps
+
+# kind runs etcd, the controller manager, the scheduler and kube-proxy as static pods that bind to
+# localhost; scraping them only adds failing targets and their alerts. GKE hides them too.
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+  disabled:
+    # Fires falsely on WSL2: the VM's boot time is corrected continuously, so every process's
+    # process_start_time_seconds creeps upward (~2.5 s per 30 s observed) and counts as a restart.
+    AlertmanagerClusterCrashlooping: true
+
+prometheus:
+  prometheusSpec:
+    # Short intervals so a drill's alert fires within a minute or two.
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 2d
+    # Select ServiceMonitors, PodMonitors, ScrapeConfigs and rules from every release and namespace,
+    # not only those labelled with this release (the Airflow monitors live in platform/monitoring).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 200m, memory: 512Mi}
+      limits: {memory: 1536Mi}
+
+alertmanager:
+  # The default config routes everything to a `null` receiver: alerts are visible in Prometheus
+  # (ALERTS{alertstate="firing"}) and the Alertmanager UI, and go nowhere else (D28).
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 20m, memory: 64Mi}
+      limits: {memory: 128Mi}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 256Mi}
+
+kube-state-metrics:
+  fullnameOverride: kube-state-metrics
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 256Mi}
+
+prometheus-node-exporter:
+  fullnameOverride: node-exporter
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {memory: 64Mi}
+
+grafana:
+  fullnameOverride: grafana
+  # Lab-only login, reached through `make grafana-ui` (port-forward to localhost).
+  adminUser: admin
+  adminPassword: admin
+  defaultDashboardsTimezone: utc
+  sidecar:
+    dashboards:
+      # Dashboards are ConfigMaps labelled grafana_dashboard=1, in any namespace (manifests/).
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  resources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 384Mi}
