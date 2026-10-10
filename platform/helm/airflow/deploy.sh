@@ -125,9 +125,12 @@ if ! "${KUBECTL[@]}" -n "$NAMESPACE" get statefulset "$RELEASE-worker" >/dev/nul
     --ignore-not-found >/dev/null
 fi
 
-# Pool for Phase 4 extraction concurrency; `pools set` creates or updates.
+# Pools: el_factory caps extraction concurrency (Phase 4); ops_load holds the KEDA load fixture
+# (ops_load_test, D24) and is the pool the slot-starvation drill shrinks. `pools set` creates or updates.
 "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
   airflow pools set el_factory 7 "EL Factory concurrency" >/dev/null
+"${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
+  airflow pools set ops_load 16 "KEDA load fixture (ops_load_test)" >/dev/null
 # The event adapter's own API identity (role User: it may trigger runs, nothing more); the password
 # comes from the Secret api-identity.sh generates once, so a re-run never changes it.
 adapter_password=$("$PWD/api-identity.sh")
@@ -138,4 +141,4 @@ if ! "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler 
     --email event-adapter@example.com --firstname event --lastname adapter >/dev/null
   echo "created Airflow user event-adapter"
 fi
-echo "airflow ready: release $RELEASE (chart $CHART_VERSION), pool el_factory=7"
+echo "airflow ready: release $RELEASE (chart $CHART_VERSION), pools el_factory=7 ops_load=16"

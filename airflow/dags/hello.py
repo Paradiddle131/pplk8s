@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 def hello():
     @task
     def say_hello() -> str:
-        # On the Celery executor the hostname is the worker pod's name (airflow-worker-N).
+        # On the Celery executor this is the worker pod's name (airflow-worker-<replicaset>-<id>).
         hostname = socket.gethostname()
         log.info("hello from %s", hostname)
         return hostname

@@ -105,6 +105,10 @@ config:
     # Emulator-only shim: fake-gcs words a missing object differently from GCS, which made the
     # provider refuse every first upload (see the module's docstring). Drop this line on real GCS.
     logging_config_class: pplk8s.emulator_logging.LOGGING_CONFIG
+  celery:
+    # D24: 4 slots per worker (chart default 16), so a burst of the lab's few tasks needs more than
+    # one worker and KEDA's scale-out is visible; KEDA's query divides by this value.
+    worker_concurrency: 4
   metrics:
     # D21: Airflow 3.3 emits pool, ti.<state> and task.duration metrics with tags only; the InfluxDB
     # form (`name,tag=value`) carries them to the statsd-exporter, which turns them into labels.
@@ -119,21 +123,23 @@ env:
 
 # Airflow 3 splits the old webserver into api-server (UI + REST + execution API) and a standalone
 # dag-processor; both are first-class chart components.
+# Requests sit near the peak working set observed over a sales_elt run, the Phase 4 drills, and a
+# 16-task KEDA burst (Phase 6 tuning, LEDGER); limits leave 50-100 % headroom above that peak.
 apiServer:
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 768Mi}
-    limits: {memory: 1536Mi}
+    requests: {cpu: 200m, memory: 384Mi} # peak 337Mi
+    limits: {memory: 1Gi}
 dagProcessor:
   enabled: true
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 512Mi}
+    requests: {cpu: 200m, memory: 640Mi} # peak 617Mi
     limits: {memory: 1Gi}
 scheduler:
   replicas: 1
   resources:
-    requests: {cpu: 200m, memory: 512Mi}
+    requests: {cpu: 200m, memory: 384Mi} # peak 369Mi
     limits: {memory: 1Gi}
 triggerer:
   enabled: true
@@ -146,8 +152,8 @@ triggerer:
   persistence:
     enabled: false # triggerer logs are not needed on disk
   resources:
-    requests: {cpu: 100m, memory: 384Mi}
-    limits: {memory: 768Mi}
+    requests: {cpu: 100m, memory: 576Mi} # peak 553Mi; 768Mi left only 40 % headroom
+    limits: {memory: 1Gi}
 workers:
   # No log volume (D22): workers are a Deployment that reschedules onto any node and can be scaled in
   # without losing logs. A Deployment pod's name does not resolve in DNS, so workers report their pod
@@ -159,10 +165,26 @@ workers:
       value: airflow.utils.net.get_host_ip_address
   celery:
     # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
+    # Celery's warm shutdown lets running tasks finish within this window when KEDA scales in.
     terminationGracePeriodSeconds: 60
-    replicas: 2
+    # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, polled
+    # from the metadata DB through PgBouncer every 5 s, between 1 and 4 (what two kind nodes hold).
+    keda:
+      enabled: true
+      usePgbouncer: true
+      minReplicaCount: 1
+      maxReplicaCount: 4
+      pollingInterval: 5
+      cooldownPeriod: 60
+      advanced:
+        horizontalPodAutoscalerConfig:
+          behavior:
+            scaleDown:
+              # Wait 2 minutes of lower demand before removing a worker, so a gap between mapped
+              # task waves does not flap the worker count.
+              stabilizationWindowSeconds: 120
     resources:
-      requests: {cpu: 300m, memory: 768Mi}
+      requests: {cpu: 300m, memory: 1Gi} # peak 1005Mi
       limits: {memory: 1536Mi}
 redis:
   persistence:

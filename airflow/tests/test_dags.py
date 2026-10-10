@@ -151,3 +151,12 @@ def test_sales_dbt_stages_select_only_sales_models(sales):
         assert (
             sales.get_task(f"stage_{stage}.dbt_{stage}").arguments[-1] == f"tag:sales,tag:{stage}"
         )
+
+
+def test_ops_load_test_holds_slots_in_its_own_pool(bag):
+    load = bag.dags["ops_load_test"]
+    hold = load.get_task("hold_slot")
+    assert hold.pool == "ops_load"
+    assert hold.retries == 0
+    assert load.schedule is None
+

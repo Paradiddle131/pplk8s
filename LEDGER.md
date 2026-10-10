@@ -138,3 +138,13 @@ Entry format:
   The default rule `AlertmanagerClusterCrashlooping` fired with zero restarts: on WSL2 `process_start_time_seconds` creeps ~2.5 s every 30 s; disabled in the values.
   A `sales_elt` run triggered with `"logical_date": null` now succeeds; `make test` → Airflow 102, EL Factory 69, event adapter 32 passed.
 - Open: the worker's working set (~860 MiB) exceeds its 768 Mi request; resource tuning comes with KEDA.
+
+## 2026-10-10 — Phase 6 — KEDA scaling and resource tuning
+- Done: `platform/keda/` (KEDA 2.21.0 values and `deploy.sh`, operator metrics with a ServiceMonitor when the monitoring CRDs exist); Make targets `keda-up`, `keda-down`, and `airflow-up` now depends on `keda-up`.
+  Airflow values: `workers.celery.keda` (min 1, max 4, polling 5 s, cooldown 60 s, HPA scale-down stabilisation 120 s, query through PgBouncer), `worker_concurrency = 4`; pool `ops_load` (16) from `deploy.sh`.
+  Fixture DAG `ops_load_test` (mapped tasks that only hold a slot, `retries=0`, own pool) and `tests/e2e/keda-check.sh`.
+  e2e guard `require_synced_dags` (runs from `start_port_forward`): with git-sync a check refuses to run unless the local `airflow/` equals the served commit.
+- Evidence: `tests/e2e/keda-check.sh` passed: workers at 1, 16 tasks × 45 s triggered at 15:49:16, 4 workers available at 15:49:39 (23 s), run succeeded in 72 s with 16/16 tasks successful on try 1, workers back at 1 109 s after the run (HPA events: 1 → 4, 4 → 3, 3 → 1).
+  Resource tuning from Prometheus (`max_over_time` of `container_memory_working_set_bytes` over 45 minutes covering the Phase 4 drills, a `sales_elt` run and the burst), memory request before → after: worker 768Mi → 1Gi (peak 1005Mi), dag-processor 512Mi → 640Mi (peak 617Mi), triggerer 384Mi → 576Mi and limit 768Mi → 1Gi (peak 553Mi), scheduler 512Mi → 384Mi (peak 369Mi), api-server 768Mi → 384Mi and limit 1536Mi → 1Gi (peak 337Mi); CPU peaks stayed at 0.3–0.45 cores, so CPU requests are unchanged.
+  KEDA reported `FailedGetExternalMetric` twice during an Airflow redeploy (the scaler reads the connection from the worker pod template being replaced); it recovered by itself.
+- Open: no scale-in happened while tasks were still running (the stabilisation window held the workers until the burst ended); a forced scale-in mid-task is left to the drills.

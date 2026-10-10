@@ -21,7 +21,7 @@ export AIRFLOW_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -93,7 +93,7 @@ airflow-image: ## Build and push the Airflow image to the local registry
 	docker build -t $(AIRFLOW_IMAGE) airflow
 	docker push $(AIRFLOW_IMAGE)
 
-airflow-up: services-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local)
+airflow-up: services-up keda-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local)
 	platform/helm/airflow/deploy.sh
 
 airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
@@ -115,6 +115,12 @@ ci-integration: ## CI integration test: deploy with this checkout's DAGs, hello 
 	$(MAKE) airflow-up workloads-up DAG_DELIVERY=local
 	tests/e2e/smoke-check.sh
 	tests/e2e/phase5-check.sh
+
+keda-up: ## Deploy the KEDA operator that scales the Celery workers (namespace keda)
+	platform/keda/deploy.sh
+
+keda-down: ## Uninstall KEDA (uninstall Airflow first: its worker ScaledObject needs the CRDs)
+	helm --kube-context kind-pplk8s uninstall keda -n keda --wait --ignore-not-found
 
 observability-up: services-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)
 	platform/monitoring/deploy.sh
