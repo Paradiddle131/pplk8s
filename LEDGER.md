@@ -110,3 +110,14 @@ Entry format:
 
 - Done: README rewritten for a first-time reader (purpose, data flow, status, layout table, shortest quick start, pointers to the working files); PLAN §4 layout now matches the tree (`platform/k8s/`, `tests/e2e/`, `docs/`, `scripts/`); removed four `.gitkeep` files from directories that now have content.
 - Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and `make lint` (shellcheck) clean; no credentials tracked beyond the documented lab defaults.
+
+## 2026-10-10 — Phase 6 — preflight: decisions D21–D28, Python 3.11 and Composer build.3 pins, adapter identity
+- Done: decisions D21–D28 recorded in `PLAN.md` §3, D5 and D10 refined, D16 updated for git-sync; Phase 6 `in progress`.
+  `scripts/install-tools.sh` pins kubectl v1.36.5 (checksum), one minor from the v1.36.4 server; it was v1.34.1 from Docker Desktop.
+  Airflow image `3.3.1-pplk8s.6`: `apache/airflow:3.3.1-python3.11` (Composer Gen 3 runs Python 3.11.8), cncf-kubernetes 10.21.1, postgres 7.0.2, common-sql 2.1.1, standard 1.18.0, fab 3.8.1, celery 3.23.1 (Composer `3.3.1-build.3`); the superseded constraint lines are dropped and `pip check` passes; `airflow/uv.lock` re-resolved for Python 3.11.
+  `resolve_context` in `sales_elt` and `finance_daily` has 2 retries (Phase 4 open item).
+  The event adapter logs in as its own Airflow user `event-adapter` (role User) instead of `admin`: `platform/helm/airflow/api-identity.sh` generates the password once into Secret `airflow/airflow-api-event-adapter`, `deploy.sh` creates the user, and `workloads-up.sh` hands the login to the adapter and restarts it when the login changed (Phase 5 open item).
+  Deleted the stray `default/dnsprobe` pod.
+- Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and shellcheck clean; in the image `python -V` = 3.11.15 and `pip list` shows the pins above.
+  On the new image `tests/e2e/phase5-check.sh` passed (adapter triggered every run with its new identity), then `tests/e2e/phase4-check.sh` passed with the same five hashes as Phase 4 (`gold.daily_sales=3:68713f0d…`, `gold.customer_lifetime=200:a1bd896f…`, `gold.daily_weather=6:b9cea776…`, `exposed.sales_by_country_daily=18:fda581ca…`, `exposed.daily_sales_with_weather=3:b83a5678…`); the kill drill went try 1 killed → try 2 success, FAIL_RATE retries reached try 3.
+- Decisions: D21–D28 (see PLAN.md); a read-only deploy key `pplk8s git-sync (read-only, local kind lab)` was registered on the GitHub repo for D23, its private half kept at `~/.ssh/pplk8s-deploy`.

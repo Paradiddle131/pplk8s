@@ -14,15 +14,15 @@ ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.5
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.6
 export AIRFLOW_IMAGE
 
 .PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check
 
 help: ## List targets
-	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
 
-tools: ## Install pinned kind, helm, k9s into ~/.local/bin
+tools: ## Install pinned kind, kubectl, helm, k9s into ~/.local/bin
 	scripts/install-tools.sh
 
 cluster-up: ## Create the kind cluster and local registry (localhost:5001)

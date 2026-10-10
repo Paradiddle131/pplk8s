@@ -76,4 +76,14 @@ ensure_secret airflow-jwt-secret jwt-secret openssl rand -hex 32
 # Pool for Phase 4 extraction concurrency; `pools set` creates or updates.
 "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
   airflow pools set el_factory 7 "EL Factory concurrency" >/dev/null
+# The event adapter's own API identity (role User: it may trigger runs, nothing more); the password
+# comes from the Secret api-identity.sh generates once, so a re-run never changes it.
+adapter_password=$("$PWD/api-identity.sh")
+if ! "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
+  airflow users list -o plain 2>/dev/null | grep -qw event-adapter; then
+  "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
+    airflow users create --username event-adapter --role User --password "$adapter_password" \
+    --email event-adapter@example.com --firstname event --lastname adapter >/dev/null
+  echo "created Airflow user event-adapter"
+fi
 echo "airflow ready: release $RELEASE (chart $CHART_VERSION), pool el_factory=7"

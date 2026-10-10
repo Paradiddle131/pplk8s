@@ -41,7 +41,8 @@ EXTRACT_POOL = "el_factory"
     doc_md=__doc__,
 )
 def sales_elt():
-    @task
+    # Even the first task gets a retry budget: a transient blip here would fail the whole run.
+    @task(retries=2, retry_delay=timedelta(seconds=15))
     def resolve_context() -> dict[str, str]:
         context = get_current_context()
         start, end = resolve_interval(

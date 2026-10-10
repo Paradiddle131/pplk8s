@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the pinned cluster toolchain (kind, helm, helm-diff, k9s) into $BIN_DIR.
+# Install the pinned cluster toolchain (kind, kubectl, helm, helm-diff, k9s) into $BIN_DIR.
 # Each artifact is verified against a checksum recorded here, so a fresh
 # clone installs exactly the binaries the lab was built with.
 set -euo pipefail
@@ -12,6 +12,10 @@ HELM_VERSION=v3.22.0
 HELM_SHA256=1e4ab49e429626cf6c6958d914248b78c9730803c2751b87627e171dc800e7bb
 HELM_DIFF_VERSION=v3.15.15
 HELM_DIFF_SHA256=504e99410611daa70702362e1b10dc74929df8a912cb3f6b5d21d1ee9d0cb7d9
+# kubectl within one minor of the cluster (kindest/node v1.36.4, PLAN.md D4); a distro or Docker
+# Desktop kubectl further down PATH may be older, so ours must come first.
+KUBECTL_VERSION=v1.36.5
+KUBECTL_SHA256=33bc88a24c3b09cf55bfd59e6ca977881b61fc3f25ab65bc80c65b430248648e
 K9S_VERSION=v0.51.0
 K9S_SHA256=c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7
 
@@ -32,6 +36,14 @@ if installed kind "$KIND_VERSION"; then echo "kind $KIND_VERSION already install
   fetch "https://kind.sigs.k8s.io/dl/$KIND_VERSION/kind-linux-amd64" "$KIND_SHA256" "$tmp/kind"
   install -m 0755 "$tmp/kind" "$BIN_DIR/kind"
   echo "installed kind $KIND_VERSION"
+fi
+
+if [ -x "$BIN_DIR/kubectl" ] && "$BIN_DIR/kubectl" version --client 2>/dev/null | grep -q -- "$KUBECTL_VERSION"; then
+  echo "kubectl $KUBECTL_VERSION already installed"
+else
+  fetch "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl" "$KUBECTL_SHA256" "$tmp/kubectl"
+  install -m 0755 "$tmp/kubectl" "$BIN_DIR/kubectl"
+  echo "installed kubectl $KUBECTL_VERSION"
 fi
 
 if installed helm "$HELM_VERSION"; then echo "helm $HELM_VERSION already installed"; else

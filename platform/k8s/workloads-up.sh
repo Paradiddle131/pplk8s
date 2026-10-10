@@ -14,12 +14,18 @@ DBT_USER=warehouse
 DBT_PASSWORD=${pw}
 DBT_DBNAME=warehouse
 ENV
-# The chart's default admin user (platform/helm/airflow); the lab has no other API identity yet.
+# The adapter's own Airflow API identity (Airflow role User, created by the Airflow deploy script).
 cat > airflow-api.secret.env <<ENV
-AIRFLOW_USERNAME=${AIRFLOW_API_USERNAME:-admin}
-AIRFLOW_PASSWORD=${AIRFLOW_API_PASSWORD:-admin}
+AIRFLOW_USERNAME=event-adapter
+AIRFLOW_PASSWORD=$(../../helm/airflow/api-identity.sh)
 ENV
 
+adapter_secret() { kubectl --context kind-pplk8s -n workloads get secret event-adapter-airflow -o jsonpath='{.data}' 2>/dev/null || true; }
+before=$(adapter_secret)
 kubectl --context kind-pplk8s apply -k .
+# The generated Secret keeps a fixed name, so a changed login does not roll the adapter by itself.
+if [ -n "$before" ] && [ "$before" != "$(adapter_secret)" ]; then
+  kubectl --context kind-pplk8s -n workloads rollout restart deployment/event-adapter
+fi
 kubectl --context kind-pplk8s -n workloads rollout status deployment/el-factory --timeout=120s
 kubectl --context kind-pplk8s -n workloads rollout status deployment/event-adapter --timeout=120s
