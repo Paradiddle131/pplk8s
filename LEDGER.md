@@ -72,3 +72,14 @@ Entry format:
 - Open (resume here): run `make phase4-check` once more; a second consecutive pass satisfies the "passes twice" bar, then mark Phase 4 done in `PLAN.md`.
   `airflow/uv.lock` is resolved without the Airflow constraints file, so transitive versions in the local test env can differ from the image's.
   Kill detection takes ~5 min (heartbeat timeout); worth tuning in Phase 6 drills.
+
+## 2026-10-10 — Phase 4 — exit check passed a second time; Phase 4 done
+- Done: `platform/kind/ensure-dag-mount.sh` (run from `deploy.sh`, so from `make airflow-up`) restarts any kind worker whose `airflow/dags` bind mount came up empty; `tests/e2e/lib/airflow-api.sh` gained `wait_dag_ready` (waits for `is_stale=false`) and `api` now prints the HTTP error body on stderr; the Phase 3 and Phase 4 checks use `wait_dag_ready`; runbook Phase 4 drill 4 (stale DAGs after a Docker Desktop restart); `PLAN.md` Phase 4 status `done`.
+- Evidence: the first attempt this session failed before any assertion with `FAIL: could not trigger sales_elt` (5 min 12 s, all prerequisites).
+  Root cause: after the machine rebooted, both kind workers showed a `tmpfs` at `/mnt/pplk8s/dags` instead of the bind mount, so the dag-processor saw no files, `sales_elt` went `is_stale: true`, and `POST /dagRuns` returned 404 `Dag with dag_id: 'sales_elt' not found`; the scheduled run `scheduled__2026-10-10T00:00:00+00:00` failed at `resolve_context` for the same reason.
+  `docker restart pplk8s-worker pplk8s-worker2` restored the mount.
+  The re-run `make phase4-check` passed end to end (11 min 15 s, EXIT=0): (a) full run, customers 200/200, orders 40/40, `gold.daily_sales=3:68713f0d…`, `gold.customer_lifetime=200:a1bd896f…`, `gold.daily_weather=6:b9cea776…`, `exposed.sales_by_country_daily=18:fda581ca…`, `exposed.daily_sales_with_weather=3:b83a5678…`, five readiness products; (b) re-running extract map index 1, `dbt_gold` with downstream, and the whole run left everything unchanged; (c) killed worker → `extract[0]` `running` 10:16:56 → `up_for_retry` 10:22:05 → `success` on try 2 10:22:38, counts unchanged; (d) `FAIL_RATE=1` → 503s retried, both extracts succeeded on try 3.
+  With the earlier session's pass, the check has now passed twice with no failing assertion in between; the one failed attempt never reached the DAG.
+- Open: the check ran for ~1 minute while `airflow/dags/sales_elt.py` briefly held a Phase 5 edit incompatible with the deployed image (reverted at 10:18:37); no import error was recorded and the check passed, but DAG files must not be edited while a cluster check runs, because the folder is live-mounted.
+  `resolve_context` has no retries, so a transient parse or mount problem fails the whole scheduled run at once.
+

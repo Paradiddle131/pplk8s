@@ -14,8 +14,7 @@ run_hello() {
   start_port_forward
   refresh_token
   # The dag-processor parses the DAG folder periodically; wait until hello is known.
-  for _ in $(seq 60); do api GET /api/v2/dags/hello >/dev/null 2>&1 && break; sleep 2; done
-  api GET /api/v2/dags/hello >/dev/null || fail "hello DAG never appeared"
+  wait_dag_ready hello
   api PATCH /api/v2/dags/hello '{"is_paused":false}' >/dev/null
   run_id=$(api POST /api/v2/dags/hello/dagRuns '{"logical_date":null}' | jq -r .dag_run_id)
   [ -n "$run_id" ] && [ "$run_id" != null ] || fail "could not trigger hello"

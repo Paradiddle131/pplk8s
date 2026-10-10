@@ -198,3 +198,16 @@ A non-retryable error (`retryable: false`, 4xx, 502) raises `AirflowFailExceptio
 
 Clearing only `dbt_gold` re-runs `dbt build --select gold`, which recreates the gold tables and drops the dependent exposed views (`DROP ... CASCADE`), without rebuilding them.
 Clear a dbt stage together with its downstream tasks (`include_downstream`), as the check does.
+
+### 4. DAGs go stale after a Docker Desktop restart
+
+Symptom: after a reboot or a Docker Desktop restart, triggering a DAG returns `404 Dag with dag_id: '<id>' not found`, while `GET /api/v2/dags/<id>` still answers with `is_stale: true`.
+The dag-processor log shows an empty file table.
+Seen on 2026-10-10: `make phase4-check` failed with `could not trigger sales_elt`.
+
+Diagnosis: `docker exec pplk8s-worker ls /mnt/pplk8s/dags` is empty and `grep pplk8s /proc/mounts` inside the node shows a `tmpfs` instead of the bind mount.
+Docker started the kind node containers before the WSL file share was ready, so the `extraMounts` bind of `airflow/dags` resolved to nothing.
+
+Recovery: `docker restart pplk8s-worker pplk8s-worker2` re-resolves the bind; the dag-processor re-parses within a minute.
+`platform/kind/ensure-dag-mount.sh` does this automatically and runs from `make airflow-up`; the e2e checks wait for `is_stale=false` (`wait_dag_ready`) before triggering.
+The failure mode disappears with git-sync delivery (D10, Phase 6).

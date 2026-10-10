@@ -153,7 +153,7 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - Practise `helm upgrade`, `helm rollback`, `helm diff`, and the DB-migration job.
 - **Exit:** a hello DAG runs on a Celery worker; an upgrade followed by a rollback leaves the deployment healthy.
 
-### Phase 4 — Port the scheduled ELT pipeline · Status: in progress (exit check passed once; needs a second consecutive pass, see LEDGER)
+### Phase 4 — Port the scheduled ELT pipeline · Status: done
 
 - Build the workload seam (D7): `ElFactoryHook` (pagination, `run_id`, validation, result summary) and `run_dbt` (KubernetesPodOperator under the hood).
 - DAG: resolve run context → `GET /catalog` → dynamically mapped extract tasks in pool `el_factory` (size 7) → readiness/watermark check → one `run_dbt` per stage → write `ops.readiness`.

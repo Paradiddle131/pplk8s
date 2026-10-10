@@ -1,5 +1,5 @@
 # Shared helpers for e2e checks that drive Airflow through its REST API (source this file).
-# Provides: kc, fail, start_port_forward, refresh_token, api. Set CTX/NS/API_PORT before sourcing to override.
+# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready. Set CTX/NS/API_PORT before sourcing to override.
 CTX=${CTX:-kind-pplk8s}
 NS=${NS:-airflow}
 API_PORT=${API_PORT:-18080}
@@ -21,12 +21,29 @@ trap stop_port_forward EXIT
 
 # Airflow 3 REST API: exchange the chart's default user for a JWT, then call /api/v2.
 TOKEN=""
-api() { # method path [json-body]
-  curl -sf -X "$1" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    ${3:+-d "$3"} "$API$2"
+api() { # method path [json-body]; on an HTTP error the response body goes to stderr
+  local out
+  out=$(curl -sS --fail-with-body -X "$1" -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' ${3:+-d "$3"} "$API$2") || {
+    echo "API $1 $2 failed: $out" >&2
+    return 1
+  }
+  printf '%s\n' "$out"
 }
 refresh_token() {
   TOKEN=$(curl -sf -X POST -H 'Content-Type: application/json' \
     -d '{"username":"admin","password":"admin"}' "$API/auth/token" | jq -r .access_token) ||
     fail "could not get an API token"
+}
+
+# Wait until the dag-processor has parsed DAG $1 from the DAG folder. A DAG whose file disappeared
+# still answers GET /dags/<id> but with is_stale=true, and triggering it returns 404.
+wait_dag_ready() { # dag_id [timeout-seconds]
+  local end=$((SECONDS + ${2:-120})) stale=""
+  while [ $SECONDS -lt $end ]; do
+    stale=$(api GET "/api/v2/dags/$1" 2>/dev/null | jq -r .is_stale) || stale=""
+    [ "$stale" = false ] && return 0
+    sleep 2
+  done
+  fail "DAG $1 is not parsed (is_stale=${stale:-unknown}); is airflow/dags mounted on the workers? see platform/kind/ensure-dag-mount.sh"
 }

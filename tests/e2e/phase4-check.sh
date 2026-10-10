@@ -117,8 +117,8 @@ wk rollout status deployment/el-factory --timeout=120s >/dev/null || fail "el-fa
 [ "$ORIG_FAIL_RATE" = 0 ] || fail "FAIL_RATE is $ORIG_FAIL_RATE; run with the declared config (0)"
 start_port_forward
 refresh_token
-for _ in $(seq 60); do api GET "/api/v2/dags/$DAG" >/dev/null 2>&1 && break; sleep 2; done
-ORIG_PAUSED=$(api GET "/api/v2/dags/$DAG" | jq -r .is_paused) || fail "$DAG DAG never appeared"
+wait_dag_ready "$DAG"
+ORIG_PAUSED=$(api GET "/api/v2/dags/$DAG" | jq -r .is_paused)
 api PATCH "/api/v2/dags/$DAG" '{"is_paused":false}' >/dev/null
 
 # ---- (a) a full run succeeds ------------------------------------------------------------------------

@@ -24,6 +24,7 @@ docker push "$AIRFLOW_IMAGE" >/dev/null
 # The metadata DB lives in Compose; make sure it is up and the nodes can resolve it (D13).
 docker compose -f "$REPO/platform/compose/compose.yaml" up -d --wait metadata-db
 "$REPO/platform/kind/join-services-network.sh"
+"$REPO/platform/kind/ensure-dag-mount.sh"
 
 "${KUBECTL[@]}" apply -f manifests.yaml >/dev/null
 
