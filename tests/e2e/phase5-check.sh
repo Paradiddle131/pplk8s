@@ -106,6 +106,26 @@ for dag in "$PRODUCER" "$CONSUMER"; do
   ORIG_PAUSED[$dag]=$(api GET "/api/v2/dags/$dag" | jq -r .is_paused)
   api PATCH "/api/v2/dags/$dag" '{"is_paused":false}' >/dev/null
 done
+# Fixture: the consumer's exposed.net_sales_daily reads gold.daily_sales for $DAY, which only a
+# sales_elt run builds. A fresh lab (CI) has none, so build it with the real producer: the Phase 4
+# run (logical date $DAY, interval the day before), whose orders include $DAY.
+daily_sales_rows() { psql_wh "SELECT count(*) FROM gold.daily_sales WHERE order_date = '$DAY'" 2>/dev/null || echo 0; }
+if [ "$(daily_sales_rows)" = 0 ]; then
+  wait_dag_ready sales_elt
+  ORIG_PAUSED[sales_elt]=$(api GET /api/v2/dags/sales_elt | jq -r .is_paused)
+  api PATCH /api/v2/dags/sales_elt '{"is_paused":false}' >/dev/null
+  fixture_run="phase5__fixture__$(date +%s)"
+  api POST /api/v2/dags/sales_elt/dagRuns \
+    "{\"dag_run_id\":\"$fixture_run\",\"logical_date\":\"${DAY}T00:00:00.$(date +%N | cut -c1-6)Z\"}" >/dev/null ||
+    fail "could not trigger the sales_elt fixture run"
+  say "fixture: gold.daily_sales has no $DAY yet; building it with sales_elt run $fixture_run"
+  end=$((SECONDS + 900))
+  until state=$(api GET "/api/v2/dags/sales_elt/dagRuns/$fixture_run" | jq -r .state) &&
+    [ "$state" = success ] || [ "$state" = failed ] || [ $SECONDS -ge $end ]; do sleep 10; done
+  [ "$state" = success ] || fail "sales_elt fixture run $fixture_run ended $state"
+  [ "$(daily_sales_rows)" != 0 ] || fail "gold.daily_sales still has no $DAY after $fixture_run"
+fi
+
 # The consumer's interval must start with nothing ready. Rows this check wrote earlier are reset;
 # a sales.gold row from a real sales_elt run is never touched, so then the check refuses to run.
 # The producer's file ledger is not reset, because every upload below is a new generation.
