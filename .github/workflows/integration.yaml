@@ -1,0 +1,50 @@
+# Integration test on kind (PLAN.md D26): the same Make targets as the laptop, on one runner.
+# DAGs come from this checkout through the host-path overlay (DAG_DELIVERY=local), so a pull request
+# tests its own DAGs rather than what git-sync would serve from main. The check is the slim one:
+# the hello DAG on a Celery worker and the Phase 5 event path (the full Phase 4 check stays local).
+name: integration
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DAG_DELIVERY: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Free disk space (the Airflow image is ~3.5 GB, and kind stores a second copy)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - name: Install the pinned toolchain
+        run: |
+          make tools
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Create the kind cluster and registry
+        run: make cluster-up
+      - name: Deploy and run the integration check
+        run: make ci-integration
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl --context kind-pplk8s get pods -A -o wide || true
+          kubectl --context kind-pplk8s get events -A --sort-by=.lastTimestamp | tail -50 || true
+          for c in scheduler dag-processor triggerer api-server; do
+            kubectl --context kind-pplk8s -n airflow logs "deploy/airflow-$c" --all-containers --tail=80 || true
+          done
+          kubectl --context kind-pplk8s -n airflow logs -l component=worker --all-containers --tail=80 || true
+          kubectl --context kind-pplk8s -n workloads logs deploy/event-adapter --tail=80 || true
+          docker compose -f platform/compose/compose.yaml ps || true

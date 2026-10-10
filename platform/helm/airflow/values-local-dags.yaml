@@ -1,0 +1,10 @@
+# Overlay for the dev loop and CI (PLAN.md D10): DAG files come from this checkout's airflow/dags
+# through the kind workers' host-path mount instead of git-sync. deploy.sh adds it when
+# DAG_DELIVERY=local. The shared package then comes from the image's baked copy of include/, so
+# a change under airflow/include needs an image rebuild in this mode.
+dags:
+  persistence:
+    enabled: true
+    existingClaim: airflow-dags
+  gitSync:
+    enabled: false

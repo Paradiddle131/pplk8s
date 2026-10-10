@@ -2,7 +2,9 @@
 # Deploy Airflow to the kind cluster with the official chart. Idempotent: safe to re-run.
 # Builds and pushes the image, creates generated secrets once, applies the PV/PVC and
 # RBAC, runs `helm upgrade --install`, and ensures the Phase 4 pool exists.
-# Extra arguments are passed through to `helm upgrade` (e.g. --set key=value).
+# Extra arguments are passed through to `helm upgrade` (e.g. --set key=value or -f <overlay>).
+# DAG_DELIVERY=git-sync (default, D23) syncs `main` from GitHub with the deploy key in
+# GIT_SYNC_SSH_KEY; DAG_DELIVERY=local mounts this checkout's airflow/dags instead (dev loop, CI).
 set -euo pipefail
 cd "$(dirname "$0")"
 REPO="$(cd ../../.. && pwd)"
@@ -13,6 +15,8 @@ NAMESPACE=airflow
 AIRFLOW_IMAGE="${AIRFLOW_IMAGE:?set AIRFLOW_IMAGE (make airflow-up does)}"
 METADATA_DB_PASSWORD="${METADATA_DB_PASSWORD:-airflow}"
 WAREHOUSE_PASSWORD="${WAREHOUSE_PASSWORD:-warehouse}" # same default as compose.yaml and workloads-up.sh
+DAG_DELIVERY="${DAG_DELIVERY:-git-sync}"
+GIT_SYNC_SSH_KEY="${GIT_SYNC_SSH_KEY:-$HOME/.ssh/pplk8s-deploy}"
 KUBECTL=(kubectl --context kind-pplk8s)
 HELM=(helm --kube-context kind-pplk8s)
 
@@ -25,9 +29,33 @@ docker push "$AIRFLOW_IMAGE" >/dev/null
 # The metadata DB lives in Compose; make sure it is up and the nodes can resolve it (D13).
 docker compose -f "$REPO/platform/compose/compose.yaml" up -d --wait metadata-db
 "$REPO/platform/kind/join-services-network.sh"
-"$REPO/platform/kind/ensure-dag-mount.sh"
 
 "${KUBECTL[@]}" apply -f manifests.yaml >/dev/null
+
+overlays=()
+case "$DAG_DELIVERY" in
+  local)
+    "$REPO/platform/kind/ensure-dag-mount.sh"
+    "${KUBECTL[@]}" apply -f dags-hostpath.yaml >/dev/null
+    overlays=(-f values-local-dags.yaml)
+    ;;
+  git-sync)
+    # The read-only deploy key stays outside the repo; the Secret is created once from it.
+    if ! "${KUBECTL[@]}" -n "$NAMESPACE" get secret airflow-git-ssh >/dev/null 2>&1; then
+      [ -r "$GIT_SYNC_SSH_KEY" ] || {
+        echo "git-sync needs a read-only deploy key at $GIT_SYNC_SSH_KEY (PLAN.md D23):" >&2
+        echo "  ssh-keygen -t ed25519 -N '' -f $GIT_SYNC_SSH_KEY" >&2
+        echo "  gh repo deploy-key add $GIT_SYNC_SSH_KEY.pub --title pplk8s-git-sync" >&2
+        echo "or deploy with DAG_DELIVERY=local." >&2
+        exit 1
+      }
+      "${KUBECTL[@]}" -n "$NAMESPACE" create secret generic airflow-git-ssh \
+        --from-file="gitSshKey=$GIT_SYNC_SSH_KEY" >/dev/null
+      echo "created secret airflow-git-ssh"
+    fi
+    ;;
+  *) echo "DAG_DELIVERY must be git-sync or local, not '$DAG_DELIVERY'" >&2; exit 1 ;;
+esac
 
 # Generated secrets are created once and never rotated by a re-run: a new fernet key would make
 # stored connections unreadable, a new JWT secret would break running tasks.
@@ -73,7 +101,7 @@ statsd_before=$(statsd_cm)
 # --wait-for-jobs makes Helm wait for the migration and user-creation Jobs too.
 "${HELM[@]}" upgrade --install "$RELEASE" apache-airflow/airflow \
   --version "$CHART_VERSION" --namespace "$NAMESPACE" \
-  -f values.yaml \
+  -f values.yaml "${overlays[@]}" \
   --set "images.airflow.repository=${AIRFLOW_IMAGE%:*}" \
   --set "images.airflow.tag=${AIRFLOW_IMAGE##*:}" \
   --set "data.metadataConnection.pass=${METADATA_DB_PASSWORD}" \
@@ -83,6 +111,11 @@ if [ -n "$statsd_before" ] && [ "$statsd_before" != "$(statsd_cm)" ]; then
   "${KUBECTL[@]}" -n "$NAMESPACE" rollout restart deploy/"$RELEASE-statsd" >/dev/null
   "${KUBECTL[@]}" -n "$NAMESPACE" rollout status deploy/"$RELEASE-statsd" --timeout=120s >/dev/null
   echo "restarted $RELEASE-statsd for its new mappings"
+fi
+
+# With git-sync nothing uses the host-path DAG volume any more; drop it if an earlier deploy made it.
+if [ "$DAG_DELIVERY" = git-sync ]; then
+  "${KUBECTL[@]}" delete -f dags-hostpath.yaml --ignore-not-found --wait=false >/dev/null
 fi
 
 # Workers keep no log volume since D22 (logs go to gs://airflow-logs); a StatefulSet from an earlier

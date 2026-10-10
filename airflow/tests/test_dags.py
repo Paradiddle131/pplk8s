@@ -16,6 +16,15 @@ def test_no_import_errors(bag):
     assert bag.import_errors == {}
 
 
+def test_synced_folder_parses_only_dags(bag):
+    """git-sync serves all of airflow/ as the DAG folder (PLAN.md D23); .airflowignore must keep
+    include/ and tests/ away from the DAG processor, so it finds exactly the DAGs in dags/."""
+    synced = DagBag(dag_folder=str(DAGS.parent))
+    assert synced.import_errors == {}
+    assert set(synced.dag_ids) == set(bag.dag_ids)
+    assert {Path(dag.fileloc).parent for dag in synced.dags.values()} == {DAGS}
+
+
 def test_hello_structure(bag):
     hello = bag.dags["hello"]
     assert hello.catchup is False

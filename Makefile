@@ -17,7 +17,11 @@ export ELF_IMAGE DBT_IMAGE
 AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.9
 export AIRFLOW_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui
+# DAG delivery (PLAN.md D23): git-sync of `main` from GitHub, or `local` for this checkout's DAGs.
+DAG_DELIVERY ?= git-sync
+export DAG_DELIVERY
+
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -89,7 +93,7 @@ airflow-image: ## Build and push the Airflow image to the local registry
 	docker build -t $(AIRFLOW_IMAGE) airflow
 	docker push $(AIRFLOW_IMAGE)
 
-airflow-up: services-up ## Deploy Airflow (image, secrets, RBAC, Helm chart, pool) into namespace airflow
+airflow-up: services-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local)
 	platform/helm/airflow/deploy.sh
 
 airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
@@ -105,6 +109,11 @@ phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run,
 	tests/e2e/phase4-check.sh
 
 phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
+	tests/e2e/phase5-check.sh
+
+ci-integration: ## CI integration test: deploy with this checkout's DAGs, hello on a worker, then the Phase 5 event path
+	$(MAKE) airflow-up workloads-up DAG_DELIVERY=local
+	tests/e2e/smoke-check.sh
 	tests/e2e/phase5-check.sh
 
 observability-up: services-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)

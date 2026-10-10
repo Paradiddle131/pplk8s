@@ -11,39 +11,6 @@ kind: Namespace
 metadata:
   name: airflow
 ---
-# DAG delivery (D10): the kind workers mount the repo's airflow/dags at /mnt/pplk8s/dags
-# (platform/kind/cluster.yaml). A static hostPath PV bound to a named PVC lets the chart's
-# dags.persistence.existingClaim consume it; pods on either worker see the same files.
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: airflow-dags
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes: [ReadOnlyMany]
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: "" # static binding, not the default dynamic class
-  claimRef:
-    namespace: airflow
-    name: airflow-dags
-  hostPath:
-    path: /mnt/pplk8s/dags
-    type: Directory
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: airflow-dags
-  namespace: airflow
-spec:
-  accessModes: [ReadOnlyMany]
-  storageClassName: ""
-  volumeName: airflow-dags
-  resources:
-    requests:
-      storage: 1Gi
----
 # KubernetesPodOperator (D14): Celery workers (and the triggerer, for deferrable KPO) launch dbt
 # pods in `workloads`. Pod lifecycle, logs, and events only; nothing cluster-wide.
 apiVersion: rbac.authorization.k8s.io/v1
