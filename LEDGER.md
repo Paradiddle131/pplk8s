@@ -83,3 +83,25 @@ Entry format:
 - Open: the check ran for ~1 minute while `airflow/dags/sales_elt.py` briefly held a Phase 5 edit incompatible with the deployed image (reverted at 10:18:37); no import error was recorded and the check passed, but DAG files must not be edited while a cluster check runs, because the folder is live-mounted.
   `resolve_context` has no retries, so a transient parse or mount problem fails the whole scheduled run at once.
 
+## 2026-10-10 — Phase 5 — events and cross-pipeline dependencies
+- Done: Compose `pubsub` (emulator `google-cloud-cli:588.0.0-emulators`, `localhost:8085`) and one-shot `pubsub-init` (topic `gcs-object-events`, subscriptions `file-arrivals` and `file-arrivals-assetwatcher`); fake-gcs publishes `finalize` events for bucket `landing`; `up.sh` creates `landing` and re-applies `warehouse-init` (new `ops.file_loads`).
+  EL Factory `POST /load` (generation-pinned read, per-object replace under an advisory lock, 422 bad file, 409 `superseded`), file entity `partner_returns`.
+  `services/event-adapter` (streaming pull → REST trigger, deterministic run id, ack/nack table, health endpoint) deployed in `workloads`.
+  Seam: `pplk8s.context` (run context and file-event validation, moved out of `sales_elt`), `ElFactoryHook.load_file`, `ops.file_loads` helpers, `pplk8s.sensors.ReadinessSensor`/`ReadinessTrigger`, `run_dbt(stage, pipeline=...)`.
+  dbt pipeline tags on every model; `brz_partner_returns`, `slv_returns`, `exp_net_sales_daily`.
+  DAGs `returns_file_arrival`, `finance_daily`, and the spike `returns_asset_watch`; `docs/events.md`; runbook Phase 5 drills; `tests/e2e/phase5-check.sh`, Makefile `phase5-check`.
+  Images: `el-factory`/`dbt` 0.2.0 (D16 now covers every image), `event-adapter` 0.1.0, `airflow` `3.3.1-pplk8s.5` (pins `common-messaging` 2.0.4).
+  Also fixed: `deploy.sh` follows `WAREHOUSE_PASSWORD` (Phase 3 open item); the e2e library runs a check's cleanup on SIGINT/SIGTERM.
+- Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and shellcheck clean.
+  `make phase5-check` passed twice in a row (1 min 58 s, 1 min 55 s): (e) both waits `deferred`, `default_pool running=0 deferred=4 occupied=0`; (a) one upload → exactly one run `gcs__landing__returns_2026-10-02.jsonl__<gen>__f2f19370`, 3 rows; (b) republished event → adapter `duplicate`, still one run; (c) run deleted + republished → re-created run short-circuited (`load=skipped`), rows unchanged; (d) new generation → one new run, rows replaced (3 → 2); (e) after `sales.gold` was recorded the consumer resumed, `exposed.net_sales_daily[2026-10-02]` = `7935.20 - 14.03 = 7921.17`.
+  `make phase4-check` re-passed after the `sales_elt` changes (11 min 26 s) with the same five gold/exposed hashes as before (`gold.daily_sales=3:68713f0d…` …), so the D20 selection builds exactly what Phase 4 built.
+  AssetWatcher spike: works against the emulator (async client honours `PUBSUB_EMULATOR_HOST`; needs a Google connection with `is_anonymous`); one pull of three messages became one asset event and one run; messages are acked on pull.
+  Drills run for real: emulator restart loses topology and silently drops events (fake-gcs logs `Topic not found` at INFO), adapter exits and restarts, replay by republishing; adapter-down backlog drains on start; poison object fails `validate_event` on try 1.
+- Decisions: D17 (adapter + REST trigger; AssetWatcher as a log-only spike), D18 (exactly-once by idempotency: run id + `ops.file_loads`), D19 (deferrable wait on `ops.readiness`), D20 (dbt selection by pipeline and layer); D16 widened to all images.
+  `finance_daily` allows 4 active runs with `dbt_exposed` at `max_active_tis_per_dag=1`: with 1 active run, the scheduled run created on unpause sat deferred on its own interval and blocked the manual run.
+- Open: a newer generation that is an empty file leaves no `_generation` marker in `ds_source`, so an older generation's load racing it could still commit; storage already refuses overwritten generations, so the window is the read-to-commit gap.
+  The scheduled `finance_daily` run for 2026-10-09 is deferred waiting on `returns.silver` for that day and will fail at its 6 h timeout unless a returns file lands; expected behaviour, but noise.
+  The adapter logs in with the chart's `admin/admin`; a dedicated API user belongs with Phase 6 hardening.
+  One `dbt build --select tag:sales,tag:silver` in a freshly created `dbt_dev` failed (3 errors) and could not be reproduced in three further attempts, including from an empty database; watch for it.
+  Ad-hoc shells that source `tests/e2e/lib/airflow-api.sh` from the agent tool leaked `kubectl port-forward` processes (the EXIT trap does not fire there); the check scripts themselves clean up.
+

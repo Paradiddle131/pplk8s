@@ -167,7 +167,7 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - `catchup=False` unless a backfill policy exists; XCom carries identifiers only.
 - **Exit:** a full run succeeds; clearing and re-running any task or the whole run duplicates no data; killing a mapped task mid-run recovers via retry.
 
-### Phase 5 — Events and cross-pipeline dependencies · Status: in progress (work plan: [`plans/005-phase5-events.md`](plans/005-phase5-events.md))
+### Phase 5 — Events and cross-pipeline dependencies · Status: done
 
 - Pub/Sub emulator in Compose; fake-gcs object notifications → topic; event adapter triggers a file-arrival DAG via the Airflow REST API with `{bucket, object, generation}` in `conf`.
 - Consumer DAG that waits (deferrable) on `ops.readiness` for a producer's watermark, then runs its own dbt stage.
