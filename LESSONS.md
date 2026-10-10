@@ -2,22 +2,70 @@
 
 This file distils what the pplk8s lab taught, for agents and engineers building the real platform.
 The lab itself is Stage 1 in [`PLAN.md`](PLAN.md): a local rehearsal on stand-ins.
-These lessons target Stage 2 (self-managed Airflow on GKE) and Stage 3 (Cloud Composer), with EL Factory on Cloud Run, dbt as a Cloud Run Job, BigQuery, GCS, Pub/Sub/Eventarc, Terraform, and GitHub Actions.
+These lessons target Stage 2 (self-managed Airflow on GKE) and Stage 3 (Cloud Composer), which run the same DAGs on the same Airflow line, with EL Factory on Cloud Run, dbt as a Cloud Run Job, BigQuery, GCS, Pub/Sub/Eventarc, Terraform, and GitHub Actions.
 Anything that only mattered on the laptop (WSL2, Docker Desktop, kind host mounts, local ports, reboots) is deliberately left out.
 Each line is one lesson: imperative, generic, and backed by something that actually happened in the lab.
+The exception is "Design choices to settle at work", which lists open forks and what to weigh, because the right answer depends on the real pipelines.
 Append new lessons under the matching heading as later phases run; keep one line each, and drop a lesson when it is proven wrong.
+
+## Which stage each section applies to
+
+A section applies to the stages marked below.
+Inside a section, a line that applies to only one stage starts with **[GKE]** or **[Composer]**.
+
+| Section | Stage 2: GKE | Stage 3: Composer |
+|---|---|---|
+| Migrating from Cloud Workflows | yes | yes |
+| Design choices to settle at work | yes | yes |
+| Versions and dependencies | yes | yes |
+| Airflow 3 code | yes | yes |
+| DAG design | yes | yes |
+| Retries and idempotency | yes | yes |
+| Events and file arrival | yes | yes |
+| Cross-pipeline readiness | yes | yes |
+| Helm chart and Kubernetes | yes | no: Composer runs the cluster, chart, scaling, and metadata DB |
+| Observability and alerting | yes | partly: Composer exports Airflow metrics to Cloud Monitoring itself |
+| Upgrades and rollback | yes | partly: Composer upgrades in place |
+| Shipping DAGs and images | yes | yes |
+| Warehouse and dbt | yes | yes |
+| Testing and verification | yes | yes |
+| Process | yes | yes |
+
+## Migrating from Cloud Workflows
+
+- Replace only the orchestrator: EL Factory (Cloud Run service) and dbt (Cloud Run Job) keep their deployments, scaling, and resource settings, and DAGs call them the way Cloud Workflows does today; moving them onto the Airflow cluster also makes the Composer step harder.
+- Inventory a workflow before porting it: its trigger (schedule or event), steps, waits, retry and timeout policies, the readiness rows it writes, and who reads them; the DAG must reproduce exactly that contract.
+- Migrate one pipeline at a time, starting with the smallest and least depended-on, and treat each cutover as its own change with its own verification.
+- Never let both orchestrators load the same pipeline's interval into the same tables: prove the DAG in a non-production environment or against a shadow dataset, then cut over by disabling the workflow's trigger and unpausing the DAG together.
+- Prove parity with data, not run status: for the same interval, readiness rows and each layer's row counts and content hashes must match what the workflow produced.
+- Keep the way back open: disable the old trigger rather than deleting the workflow, until the DAG has run its schedule cleanly for an agreed period; rolling back is pausing the DAG and re-enabling the trigger.
+- Cut producers and consumers over independently; the readiness ledger is their only contract (see "Cross-pipeline readiness"), so a migrated producer can feed a consumer still on Workflows, and the other way round.
+- Map every date the workflow passes onto the run's processing interval (see "Airflow 3 code"), and check one known day end to end before trusting a port.
+- Translate each workflow step's retry and timeout policy into the task's `retries`, `retry_delay`, and `execution_timeout`, keeping Airflow as the only retry owner (see "Retries and idempotency").
+- Never hold a worker slot through an hours-long wait: the lab's extraction calls were synchronous requests under two minutes, which does not carry over to multi-hour extractions (a Cloud Run request also stops at 60 minutes); find how the workflow waits today (polling, callback, or one long request), then wait deferrably: `CloudRunExecuteJobOperator(deferrable=True)` for dbt, and a deferrable status sensor for EL Factory.
+
+## Design choices to settle at work
+
+These are forks the lab cannot settle; decide them per pipeline with real volumes and timings, and record the decision with its reason.
+
+- DAG boundaries, option A: one DAG per schedule or workflow (its source/entity list, then its dbt tags), mirroring today; it is the simplest to verify against the workflow it replaces, so it is a sound default for the migration itself.
+- DAG boundaries, option B: one extraction DAG per source that publishes readiness, plus schedule DAGs that wait on the sources they need and then run their dbt tags; it isolates sources from each other and makes a single source easy to re-run, at the cost of more cross-DAG waits to keep correct.
+- Weigh for DAG boundaries: whether one source's failure should hold back models fed by other sources, whether a schedule tag's lineage spans several sources, how often one source is re-run alone, and how much a clear touches (a cleared dbt stage drops dependent views).
+- dbt granularity: one task per schedule tag (the whole tagged lineage, as today), per tag and layer (what the lab ran: per-layer readiness and retries), or per tag and source/domain, but never one task per model, because dbt owns the model graph.
+- Weigh for dbt granularity: every invocation pays a Cloud Run Job start and a parse of the whole project (more noticeable at 700+ models), a failed task re-runs its whole selection, consumers may need per-layer readiness, and parallel invocations share BigQuery slots.
+- Extraction fan-out: one mapped task per source/entity (per-entity retries and visibility, more tasks) or one task per source (EL Factory iterates); size the pool from the parallelism the workflows and EL Factory already run at today, not from a guess.
 
 ## Versions and dependencies
 
 - Pick the Airflow version the managed target actually ships (Composer's list), not Apache's newest; re-check before every bump.
-- Composer's default image can lag its newest Airflow line; choose the line deliberately, because starting on the old major means learning a soon-legacy architecture.
+- [Composer] Composer's default image can lag its newest Airflow line; choose the line deliberately, because starting on the old major means learning a soon-legacy architecture.
 - Pin provider versions to what Composer preinstalls, so DAG code imports what production will have.
 - Install under the official Airflow constraints file for your Python line, and when a pinned provider conflicts, drop only the conflicting constraint lines, say so in the Dockerfile, and run `pip check`.
 - Pin every provider you import, even one the base image already ships; an unpinned transitive provider disappears from a test env or a rebuild without warning.
 - Keep the local test environment's pins identical to the image's, or accept and document that transitive versions differ.
 - Verify Composer's Python minor before assuming the image's; the lab never confirmed it.
-- Override the Helm chart's Airflow image explicitly: the chart's default appVersion trails the Airflow release you want.
-- Pin the GKE minor to the release channel you will run (Regular by default), and record the source and date of every version fact.
+- [GKE] Override the Helm chart's Airflow image explicitly: the chart's default appVersion trails the Airflow release you want.
+- [GKE] Pin the GKE minor to the release channel you will run (Regular by default), and record the source and date of every version fact.
 - Pin dbt-core and the adapter as a pair, and nest generic-test arguments under `arguments:` (dbt 1.12 deprecates the flat form).
 
 ## Airflow 3 code
@@ -28,6 +76,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - `HttpHook.run` sends GET query parameters through `data=`, not `params=`.
 - Give HTTP calls a `(connect, read)` timeout tuple; a short connect timeout turns a blackholed connection during a service rollout into a fast, retryable failure instead of a two-minute hang.
 - Give even trivial first tasks (context resolution, catalog fetch) a retry budget; a transient blip there fails the whole run.
+- Resolve the interval a run processes in one tested helper, not in each DAG: Airflow 3 cron schedules (`create_cron_data_intervals = False`) give a run an empty interval at its fire time, and an API run may have no logical date, so the lab processes the last complete UTC day before the run; a consumer built the wrong day until it used the run whose interval holds that day.
 - Keep shared DAG code in one importable package, and keep DAG files thin enough that the DagBag import test catches every missing module.
 
 ## DAG design
@@ -35,8 +84,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Airflow orchestrates; extraction stays in the extraction service and transformation in dbt, and XCom carries identifiers and compact summaries only.
 - Reach workloads only through a thin seam (one hook, one task factory), so swapping KubernetesPodOperator for `CloudRunExecuteJobOperator` changes one module and no DAG.
 - Let the extraction service own the source catalog; the DAG asks for it at run time and maps over it, never copying it.
-- Map one task per source/entity with `expand`, label map indexes (`source.entity`), and cap concurrency against the shared service with a pool.
-- Run one dbt task per layer or selection, never per model; dbt owns the model graph.
+- When mapping per source/entity, use `expand`, label map indexes (`source.entity`), and cap concurrency against the shared service with a pool.
 - Select dbt work by pipeline tag intersected with layer tag (`tag:<pipeline>,tag:<layer>`); folder selection quietly builds every pipeline's models in that layer.
 - Tag singular tests with the same pipeline and layer tags as their models, and set `indirect_selection: cautious`, so a stage never runs a test that needs a later stage.
 - When you narrow a selection, prove it builds exactly the same tables by comparing content hashes before and after.
@@ -58,7 +106,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Validate service responses strictly (status, integer counts, bool is not int) and fail fast on anything malformed.
 - Before recording readiness, compare loaded rows with the count the service reported, and fail fast on a mismatch.
 - Prove idempotency with data, not run status: rows equal distinct keys per run, and gold/exposed count:hash values unchanged after clear-and-rerun.
-- Expect a killed worker's task to stay `running` until the task heartbeat timeout (~5 min by default) before it is retried; tune that timeout knowingly.
+- A task on a dead worker stays `running` until `[scheduler] task_instance_heartbeat_timeout` (300 s by default) before it is retried; the lab lowered it to 120 s because supervisors heartbeat every few seconds (on Composer, set it as an Airflow configuration override).
 - Inject faults before any side effect, and for a "retry then succeed" drill inject 100% failure, then lift it mid-retries; a fractional rate over many requests makes the outcome random.
 
 ## Events and file arrival
@@ -71,10 +119,10 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Never let an older generation's load overwrite a newer one: guard the loader with a per-object lock and a max-generation check.
 - Derive a file run's processing interval from a validated pattern in the object name, so its readiness record lines up with scheduled consumers.
 - A GCS notification publisher never creates its topic, and a publish to a missing topic drops the event silently; monitor the topic and the GCS service agent's publish permission.
-- Make the event adapter exit when its streaming pull dies, so the orchestrator restarts it; run one replica with a `Recreate` rollout, because the subscription buffers the backlog.
+- Make the event adapter exit when its streaming pull dies, so its platform restarts it, and run one instance, because the subscription buffers the backlog; on GKE give it a `Recreate` rollout, and on Composer, which runs no custom workloads, host it outside the environment (for example on Cloud Run).
 - An adapter outage delays runs but loses nothing while messages stay within subscription retention; replay lost events by republishing the notification for the object's live generation.
 - `AssetWatcher` with the Pub/Sub `MessageQueueTrigger` turns one pull into one asset event and one run (three messages became one run), acks on pull before any run exists, and has no routing or dedupe key; prefer an adapter when you need one run per file.
-- The provider's Pub/Sub trigger resolves Google credentials before building its client; against an emulator, give it a connection with `is_anonymous: true`, and set `PUBSUB_EMULATOR_HOST` on the triggerer, where it runs.
+- The provider's Pub/Sub trigger runs on the triggerer and resolves Google credentials before building its client, so give the triggerer the connection and environment it needs.
 
 ## Cross-pipeline readiness
 
@@ -83,10 +131,10 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Publish one readiness product per layer plus one for the whole run, so a consumer waits for exactly the layer it reads.
 - Consumers know only ledger product names, never producer DAG ids, so a producer can move to another environment or tool unchanged.
 - Wait with a deferrable sensor: check once on the worker, then defer to a trigger that polls the ledger from the triggerer; the waiting task holds no worker slot.
-- In a custom trigger, wrap the synchronous hook query in `sync_to_async`, serialise only plain values (ISO timestamps), and ship the trigger's module in the image the triggerer runs.
+- In a custom trigger, wrap the synchronous hook query in `sync_to_async`, serialise only plain values (ISO timestamps), and ship the trigger's module where the triggerer imports it (the image on GKE; the plugins folder or a PyPI package on Composer).
 - Bound every cross-pipeline wait with a sensor timeout, and expect scheduled consumers to time out on intervals whose producers never ran.
 
-## Helm chart and Kubernetes (Stage 2)
+## Helm chart and Kubernetes
 
 - Run the chart's migration and create-user Jobs without Helm hooks when installing with `--wait`: with hooks, Helm waits for pods that wait for the migration hook, a deadlock.
 - Jobs are immutable: delete finished chart Jobs before each upgrade and use `--wait-for-jobs`.
@@ -101,6 +149,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Changing a Secret consumed through `envFrom` does not roll pods; restart the workloads, or hash the Secret into a pod annotation.
 - Treat image tags as immutable and bump them on every change, across every manifest and default that names the image; with `IfNotPresent`, a same-tag rebuild never reaches running pods.
 - Enable PgBouncer in front of an external metadata DB, and keep the bundled Postgres subchart off.
+- Run PgBouncer with two replicas and a PodDisruptionBudget: a single replica moved by a drain cuts every component's DB connections, and the triggerer exits instead of reconnecting; leave PodDisruptionBudgets off other single-replica components, or a drain blocks.
 - Give workload pods the `restricted` profile: non-root uid, seccomp `RuntimeDefault`, drop ALL, no privilege escalation, read-only root with emptyDirs for scratch, and no service-account token unless they call the API.
 - Roll Pod Security out in `warn` mode first, then `enforce`.
 - Server libraries may write under `$HOME` (gunicorn's control socket); a non-root, read-only image needs that feature disabled or a writable path.
@@ -113,42 +162,38 @@ Append new lessons under the matching heading as later phases run; keep one line
 - A KubernetesExecutor pod costs seconds of start-up and a DAG re-parse per task; keep it for tasks that need their own memory limit, and know that an OOMKilled pod's log may never reach remote storage.
 - With a KEDA minimum above 0 the HPA does the scaling on its own 15 s loop: `cooldownPeriod` is ignored and the HPA scale-down stabilisation window is the setting that keeps workers through gaps.
 - KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
-- Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills), not from chart defaults; the lab's worker peaked above its request and the api-server far below.
-- Lower `[scheduler] task_instance_heartbeat_timeout` from 300 s when supervisors heartbeat every few seconds; it bounds how long a task on a dead worker stays `running`.
-- Leave PodDisruptionBudgets off for single-replica components, or a node drain blocks; add them once a component runs two replicas.
-- Run PgBouncer with two replicas and a PodDisruptionBudget: a single replica moved by a drain cuts every component's DB connections, and the triggerer exits instead of reconnecting.
+- Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills, with the busiest dashboards open on their widest ranges), not from chart defaults; the lab's worker peaked above its request, the api-server far below, and Grafana was OOMKilled loading a wide dashboard range.
 
-## Observability and alerting (Stage 2)
+## Observability and alerting
 
-- Turn on StatsD with InfluxDB-style tags (`statsd_influxdb_enabled`): Airflow 3 emits pool, task-state, and duration metrics with tags only, and plain StatsD collapses every pool into one series.
-- Read the live exporter's `/metrics` before building dashboards; executor gauges already carry `executor_class_name`, and legacy per-pool names still appear next to the tagged ones.
-- Give the statsd-exporter a series TTL, or it keeps one series per replaced pod forever (`triggers_running` summed to 8 for 2 triggerers), and restart it when its mappings change.
-- Alert on heartbeat counter rates with `or vector(0)`: a stopped component leaves its counter frozen, and an exporter restart drops the series entirely.
+- [GKE] Turn on StatsD with InfluxDB-style tags (`statsd_influxdb_enabled`): Airflow 3 emits pool, task-state, and duration metrics with tags only, and plain StatsD collapses every pool into one series.
+- [GKE] Read the live exporter's `/metrics` before building dashboards; executor gauges already carry `executor_class_name`, and legacy per-pool names still appear next to the tagged ones.
+- [GKE] Give the statsd-exporter a series TTL, or it keeps one series per replaced pod forever (`triggers_running` summed to 8 for 2 triggerers), and restart it when its mappings change.
+- Alert on a heartbeat's rate and on its series going missing: a stopped component leaves its counter frozen, and an exporter restart drops the series entirely (in PromQL, `or vector(0)`).
 - Simulate a crash as a sustained outage (scale to 0) when asserting an alert; a killed pod returns faster than any `for:` window.
-- Watch the metadata DB from outside the cluster (Cloud SQL monitoring, or `pg_up`): PgBouncer keeps accepting clients while the server is gone, so no probe fails first.
-- Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
-- Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.
+- [GKE] Watch the metadata DB from outside the cluster (Cloud SQL monitoring, or `pg_up`): PgBouncer keeps accepting clients while the server is gone, so no probe fails first.
+- [GKE] Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
+- [GKE] Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.
 - Back-test every new alert expression with a range query over the incident you already have, before waiting for the next one.
-- Size Grafana's memory limit from its peak with the widest time range open on the busiest dashboard, not from its idle use: Grafana 13 idles near 270 MiB and reached 540 MiB on a 7-day view, so a 384 MiB limit got it OOMKilled and the browser reported only "Failed to fetch".
 
-## Upgrades and rollback (Stage 2, and Composer's in-place upgrades)
+## Upgrades and rollback
 
-- Back up the metadata DB before every Airflow minor upgrade; the way back is restore plus redeploy of the old line, never `helm rollback` alone.
-- A `helm rollback` onto a migrated schema never lands: the old migration Job fails with `Can't locate revision identified by '<new head>'`, new pods wait in their `wait-for-airflow-migrations` init container, and the old pods keep serving the new version.
-- Rehearse an upgrade on a throwaway database (`data.metadataConnection.db`) on the same server, never on the only copy.
+- Back up the metadata DB before every Airflow minor upgrade (on Composer, save an environment snapshot); the way back is restore plus redeploy of the old line, never a manifest rollback alone.
+- [GKE] A `helm rollback` onto a migrated schema never lands: the old migration Job fails with `Can't locate revision identified by '<new head>'`, new pods wait in their `wait-for-airflow-migrations` init container, and the old pods keep serving the new version.
+- [GKE] Rehearse an upgrade on a throwaway database (`data.metadataConnection.db`) on the same server, never on the only copy.
 - The older Airflow line needs its own provider pins (Composer publishes one list per build); a seam module that uses a newer provider API breaks on it, so test imports on both images before the roll.
 
 ## Shipping DAGs and images
 
 - Ship DAG files and the shared package they import as one versioned unit: a DAG folder that syncs ahead of the image (or Composer's `dags/` ahead of its plugins or PyPI packages) produces import errors on every component.
 - Never edit DAGs in a live-synced location while a run or check depends on it.
-- Sync both DAGs and the shared package with git-sync from one ref with a read-only deploy key and pinned host keys, and have checks refuse to run when the local tree differs from the served commit.
+- [GKE] Sync both DAGs and the shared package with git-sync from one ref with a read-only deploy key and pinned host keys, and have checks refuse to run when the local tree differs from the served commit.
 - Run a DagBag import test in CI on every push; it catches the import errors that would otherwise surface on every component after a sync.
 - A DAG whose file vanished still answers `GET /dags/<id>` with `is_stale: true`, but triggering it returns 404; check `is_stale` before you trigger, and alert on it.
 - Check import health from the DAG processor (`airflow dags list-import-errors`), not only from the UI.
 - Make deploy scripts idempotent: create pools and connections on every run.
 - Use `postgresql://` in connection URIs (Airflow normalises it), and pass JSON-form connections when extras are needed.
-- Keep lab-default credentials out of real environments; the chart's create-user Job gives `admin`/`admin`, and an event adapter needs its own API identity.
+- Keep lab-default credentials out of real environments (the Helm chart's create-user Job gives `admin`/`admin`), and give an event adapter its own API identity.
 - Keep emulator switches (`STORAGE_EMULATOR_HOST`, `PUBSUB_EMULATOR_HOST`) out of real manifests: they switch clients to anonymous credentials or insecure channels.
 
 ## Warehouse and dbt
@@ -172,7 +217,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Make checks re-runnable and self-restoring: fresh run ids, restored config and paused flags in an exit trap that also fires on SIGINT/SIGTERM.
 - Never let a check delete state a real producer owns; detect it and refuse to run instead.
 - Drill failures for real (kill a worker, inject 503s, break a probe, drop a topic) and record what you observed, not what you expected.
-- A port-forward binds to one pod; restart it after every rollout.
+- [GKE] A port-forward binds to one pod and exits when that pod's container stops; restart it after every rollout or restart.
 - Fetch a mapped task's logs with `?map_index=` on the task path, not the index in the path.
 - Re-run a verification script after any edit to it, and verify a delegated agent's report against the raw logs before relying on it.
 - Distrust a reassuring zero from a check's diagnostics: a broken restart counter reported no restarts for a DB outage that restarted three components.
@@ -183,4 +228,3 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Keep project instructions to invariants; versions and status belong in the plan and the work log.
 - Surface genuine forks (event adapter vs AssetWatcher) to the owner instead of deciding silently; a spike built side by side settled it with evidence.
 - Treat identity, IAM, Workload Identity, and private networking as their own workstream on real GCP; the lab deferred them on purpose.
-- Keep EL Factory and dbt on Cloud Run when Airflow moves to GKE; moving them onto the Airflow cluster makes the Composer step harder.

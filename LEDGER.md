@@ -178,3 +178,9 @@ Entry format:
 - Evidence: switching *Airflow overview* off its default range ended `make grafana-ui` with `connection refused` inside the pod; the grafana container had `lastState.terminated.reason: OOMKilled` (exit 137) at 20:40:45 UTC, after idling near 268 MiB and peaking at 343 MiB.
   After `make observability-up`, the dashboard loaded at 6 h, 2 d, and 7 d in a browser through `make grafana-ui`, with 0 restarts and a 542 MiB peak.
 - Open: #5 (Prometheus misses rule evaluations every ~4.5 min, so `PrometheusMissingRuleEvaluations` keeps firing).
+
+## 2026-10-10 — LESSONS reorganised for Stages 2 and 3
+
+- Done: `LESSONS.md` gained a stage matrix and **[GKE]**/**[Composer]** line tags, a "Migrating from Cloud Workflows" section (one pipeline at a time, parity by data, a way back, deferrable long waits), and "Design choices to settle at work" (DAG boundaries, dbt granularity, extraction fan-out, with what to weigh).
+  Merged duplicates: the two heartbeat-timeout lines, the two PodDisruptionBudget lines, the Grafana and request-sizing lines, the two per-model dbt lines; "keep EL Factory and dbt on Cloud Run" moved into the migration section.
+- Evidence: the live scheduler reports `create_cron_data_intervals = False`, and scheduled `sales_elt` runs carry no data interval, so the interval lesson now names the tested helper (`pplk8s.context.resolve_interval`) instead of "a run starts when its interval ends".
