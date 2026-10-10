@@ -1,0 +1,43 @@
+# What Prometheus scrapes besides the cluster itself (PLAN.md D21).
+---
+# Airflow's metrics: Airflow components push StatsD over UDP to the chart's statsd-exporter, which
+# serves them as Prometheus metrics (InfluxDB-style tags become labels).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-statsd
+  namespace: airflow
+spec:
+  selector:
+    matchLabels: {tier: airflow, component: statsd}
+  endpoints:
+    - port: statsd-scrape
+      interval: 15s
+---
+# PgBouncer's exporter sidecar: client waits and server connections in front of the metadata DB.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-pgbouncer
+  namespace: airflow
+spec:
+  selector:
+    matchLabels: {tier: airflow, component: pgbouncer}
+  endpoints:
+    - port: pgb-metrics
+      interval: 15s
+---
+# The databases live in Compose, outside the cluster, like Cloud SQL and BigQuery; their exporters
+# run next to them (platform/compose) and pods reach them by Compose name (D13).
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: compose-databases
+  namespace: monitoring
+spec:
+  scrapeInterval: 15s
+  staticConfigs:
+    - targets: ["metadata-db-exporter:9187"]
+      labels: {database: metadata-db}
+    - targets: ["warehouse-exporter:9187"]
+      labels: {database: warehouse}

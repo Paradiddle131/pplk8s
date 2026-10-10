@@ -8,9 +8,9 @@ docker compose up -d --wait
 # fake-gcs has no healthcheck, so wait for it to answer on the host port.
 for _ in $(seq 30); do curl -sf -o /dev/null http://localhost:4480/storage/v1/b && break; sleep 1; done
 
-# Buckets: `staging` for EL Factory's staged pages, `landing` for files producers drop (events on).
-# fake-gcs answers 409 when the bucket already exists.
-for bucket in staging landing; do
+# Buckets: `staging` for EL Factory's staged pages, `landing` for files producers drop (events on),
+# `airflow-logs` for Airflow's remote task logs (PLAN.md D22). fake-gcs answers 409 when it exists.
+for bucket in staging landing airflow-logs; do
   code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
     -H 'Content-Type: application/json' -d "{\"name\":\"$bucket\"}" \
     'http://localhost:4480/storage/v1/b?project=pplk8s')

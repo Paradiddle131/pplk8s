@@ -14,10 +14,10 @@ ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.6
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.9
 export AIRFLOW_IMAGE
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -106,6 +106,19 @@ phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run,
 
 phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
 	tests/e2e/phase5-check.sh
+
+observability-up: services-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)
+	platform/monitoring/deploy.sh
+
+observability-down: ## Uninstall the monitoring stack (the database exporters stay with the Compose services)
+	kubectl --context kind-pplk8s delete -k platform/monitoring/manifests --ignore-not-found
+	helm --kube-context kind-pplk8s uninstall kube-prometheus-stack -n monitoring --wait --ignore-not-found
+
+grafana-ui: ## Port-forward Grafana to http://localhost:3000 (admin/admin)
+	kubectl --context kind-pplk8s -n monitoring port-forward svc/grafana 3000:80
+
+prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
+	kubectl --context kind-pplk8s -n monitoring port-forward svc/kps-prometheus 9090:9090
 
 lint: ## Lint shell scripts (shellcheck via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh

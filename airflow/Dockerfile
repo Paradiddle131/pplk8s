@@ -22,6 +22,8 @@ RUN curl -fsSL -o /tmp/constraints.txt \
  && pip check \
  && rm /tmp/constraints.txt /tmp/requirements.txt
 
-# Shared hooks/helpers (the workload seam, D7) ship in the image, not in the DAG folder.
+# Shared hooks/helpers (the workload seam, D7) arrive with the DAGs through git-sync (D23) at
+# /opt/airflow/dags/repo/airflow/include, which comes first on PYTHONPATH; the baked copy is the
+# fallback for the host-path dev overlay, where only airflow/dags is mounted.
 COPY --chown=airflow:0 include/ /opt/airflow/include/
-ENV PYTHONPATH=/opt/airflow/include
+ENV PYTHONPATH=/opt/airflow/dags/repo/airflow/include:/opt/airflow/include

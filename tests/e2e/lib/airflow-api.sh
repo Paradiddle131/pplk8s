@@ -1,5 +1,5 @@
 # Shared helpers for e2e checks that drive Airflow through its REST API (source this file).
-# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready. Set CTX/NS/API_PORT before sourcing to override.
+# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready, worker_pod, run_hello. Set CTX/NS/API_PORT before sourcing to override.
 CTX=${CTX:-kind-pplk8s}
 NS=${NS:-airflow}
 API_PORT=${API_PORT:-18080}
@@ -50,4 +50,37 @@ wait_dag_ready() { # dag_id [timeout-seconds]
     sleep 2
   done
   fail "DAG $1 is not parsed (is_stale=${stale:-unknown}); is airflow/dags mounted on the workers? see platform/kind/ensure-dag-mount.sh"
+}
+
+# Map a task instance's hostname to the Celery worker pod that ran it, or fail. Workers report their
+# pod IP (a Deployment's pod names do not resolve, and the api-server fetches live logs by hostname),
+# while older runs carry a StatefulSet pod FQDN (airflow-worker-N.airflow-worker...).
+worker_pod() { # hostname -> pod name
+  local pod
+  case "$1" in
+    airflow-worker-*) pod=${1%%.*} ;;
+    *) pod=$(kc get pod -l component=worker --field-selector "status.podIP=$1" -o name | head -1) ;;
+  esac
+  [ -n "$pod" ] || fail "host '$1' is not a Celery worker pod"
+  echo "${pod#pod/}"
+}
+
+# Trigger the hello DAG and wait for it to succeed; prints the worker pod that ran the task.
+run_hello() {
+  local run_id state host
+  start_port_forward
+  refresh_token
+  # The dag-processor parses the DAG folder periodically; wait until hello is known.
+  wait_dag_ready hello
+  api PATCH /api/v2/dags/hello '{"is_paused":false}' >/dev/null
+  run_id=$(api POST /api/v2/dags/hello/dagRuns '{"logical_date":null}' | jq -r .dag_run_id)
+  [ -n "$run_id" ] && [ "$run_id" != null ] || fail "could not trigger hello"
+  for _ in $(seq 90); do
+    state=$(api GET "/api/v2/dags/hello/dagRuns/$run_id" | jq -r .state)
+    case "$state" in success) break ;; failed) fail "hello run $run_id failed" ;; esac
+    sleep 2
+  done
+  [ "$state" = success ] || fail "hello run $run_id still $state after 180 s"
+  host=$(api GET "/api/v2/dags/hello/dagRuns/$run_id/taskInstances/say_hello" | jq -r .hostname)
+  worker_pod "$host"
 }

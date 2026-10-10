@@ -12,7 +12,7 @@ airflowVersion: 3.3.1
 images:
   airflow:
     repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.6 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
+    tag: 3.3.1-pplk8s.9 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).
@@ -68,11 +68,33 @@ dags:
     enabled: false # git-sync arrives in Phase 6
     recommendedProbeSetting: true # silences the chart's deprecation of the old probe behaviour
 
-# Task logs stay on the default (local to the worker; the api-server fetches them from the
-# worker's log server). Remote logging comes with a later phase.
+# Task logs (D22): written locally while a task runs (the api-server streams them from the worker's
+# log server), then uploaded to gs://airflow-logs on fake-gcs, where the api-server reads finished
+# logs. Composer keeps task logs in its environment bucket the same way. No log volumes anywhere.
 logs:
   persistence:
     enabled: false
+
+config:
+  logging:
+    remote_logging: "True"
+    remote_base_log_folder: gs://airflow-logs
+    # Connection AIRFLOW_CONN_GCS_LOGS (deploy.sh): anonymous credentials for the emulator.
+    remote_log_conn_id: gcs_logs
+    # Emulator-only shim: fake-gcs words a missing object differently from GCS, which made the
+    # provider refuse every first upload (see the module's docstring). Drop this line on real GCS.
+    logging_config_class: pplk8s.emulator_logging.LOGGING_CONFIG
+  metrics:
+    # D21: Airflow 3.3 emits pool, ti.<state> and task.duration metrics with tags only; the InfluxDB
+    # form (`name,tag=value`) carries them to the statsd-exporter, which turns them into labels.
+    # job_id and run_id stay blocked (statsd_disabled_tags default) to bound label cardinality.
+    statsd_influxdb_enabled: "True"
+
+# Every Airflow container talks to fake-gcs for the task logs above; the google-cloud-storage
+# client switches to the emulator (and anonymous access) when this is set. Never in real manifests.
+env:
+  - name: STORAGE_EMULATOR_HOST
+    value: http://gcs:4443
 
 # Airflow 3 splits the old webserver into api-server (UI + REST + execution API) and a standalone
 # dag-processor; both are first-class chart components.
@@ -106,8 +128,14 @@ triggerer:
     requests: {cpu: 100m, memory: 384Mi}
     limits: {memory: 768Mi}
 workers:
-  # Pod names stay airflow-worker-N (StatefulSet): the api-server resolves worker log URLs by pod name.
-  # Celery concurrency is 16 per worker by chart default; tasks here are thin HTTP/pod launches.
+  # No log volume (D22): workers are a Deployment that reschedules onto any node and can be scaled in
+  # without losing logs. A Deployment pod's name does not resolve in DNS, so workers report their pod
+  # IP as hostname; the api-server reaches a running task's live log at <hostname>:8793.
+  persistence:
+    enabled: false
+  env:
+    - name: AIRFLOW__CORE__HOSTNAME_CALLABLE
+      value: airflow.utils.net.get_host_ip_address
   celery:
     # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
     terminationGracePeriodSeconds: 60
@@ -122,9 +150,36 @@ redis:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 128Mi}
 
-# Not needed yet; Phase 6 adds StatsD/Prometheus on purpose.
+# Metrics (D21): Airflow components push StatsD to this exporter, which Prometheus scrapes
+# (ServiceMonitor in platform/monitoring/manifests). The chart's built-in mappings target Airflow 2's
+# dotted names and do not match 3.3's tagged metrics, so they are replaced: everything keeps the
+# exporter's default name (dots -> underscores, tags -> labels); only timers get explicit histograms
+# so dashboards can aggregate quantiles across tasks.
+# The exporter keeps every series until it expires: without a TTL a replaced pod's gauges (one
+# triggers_running series per triggerer pod name) are summed forever. 5 minutes outlives any normal
+# emit interval; the duration histograms keep an hour so dashboard quantile windows stay filled.
 statsd:
-  enabled: false
+  enabled: true
+  cache:
+    ttl: 5m
+  overrideMappings:
+    - match: airflow.task.duration
+      name: airflow_task_duration_seconds
+      ttl: 1h
+      observer_type: histogram
+      histogram_options:
+        buckets: [0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1800]
+    - match: airflow.dagrun.duration.*
+      name: airflow_dagrun_duration_seconds
+      ttl: 1h
+      observer_type: histogram
+      histogram_options:
+        buckets: [5, 10, 30, 60, 120, 300, 600, 1200, 1800, 3600]
+      labels:
+        state: "$1"
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 128Mi}
 flower:
   enabled: false
 

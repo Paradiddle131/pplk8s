@@ -51,18 +51,24 @@ ensure_secret airflow-jwt-secret jwt-secret openssl rand -hex 32
   --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
 
 # Connections as AIRFLOW_CONN_* env vars (URI or JSON form; the conn_id is the suffix).
-# pubsub_emulator is for the AssetWatcher spike (D17): anonymous credentials, because the emulator
-# ignores them and the pods have no Google credentials to find.
+# pubsub_emulator (the AssetWatcher spike, D17) and gcs_logs (remote task logs, D22) use anonymous
+# credentials, because the emulators ignore them and the pods have no Google credentials to find.
 "${KUBECTL[@]}" -n "$NAMESPACE" create secret generic airflow-connections \
   --from-literal='AIRFLOW_CONN_EL_FACTORY=http://el-factory.workloads.svc.cluster.local:80' \
   --from-literal="AIRFLOW_CONN_WAREHOUSE=postgresql://warehouse:${WAREHOUSE_PASSWORD}@warehouse:5432/warehouse" \
   --from-literal='AIRFLOW_CONN_PUBSUB_EMULATOR={"conn_type": "google_cloud_platform", "extra": {"project": "pplk8s", "is_anonymous": true}}' \
+  --from-literal='AIRFLOW_CONN_GCS_LOGS={"conn_type": "google_cloud_platform", "extra": {"project": "pplk8s", "is_anonymous": true}}' \
   --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
 
 # The chart's one-shot Jobs are plain resources here (values.yaml) and immutable: clear finished
 # ones so an upgrade can recreate them. Their pods are what `airflow db migrate` runs in.
 "${KUBECTL[@]}" -n "$NAMESPACE" delete job --ignore-not-found --wait=true \
   "$RELEASE-run-airflow-migrations" "$RELEASE-create-user" >/dev/null
+
+# The chart rolls the statsd-exporter on a mapping change only for statsd.extraMappings, not for
+# the overrideMappings used here; remember the ConfigMap's version to restart it ourselves.
+statsd_cm() { "${KUBECTL[@]}" -n "$NAMESPACE" get cm "$RELEASE-statsd" -o jsonpath='{.metadata.resourceVersion}' 2>/dev/null || true; }
+statsd_before=$(statsd_cm)
 
 # --wait-for-jobs makes Helm wait for the migration and user-creation Jobs too.
 "${HELM[@]}" upgrade --install "$RELEASE" apache-airflow/airflow \
@@ -72,6 +78,19 @@ ensure_secret airflow-jwt-secret jwt-secret openssl rand -hex 32
   --set "images.airflow.tag=${AIRFLOW_IMAGE##*:}" \
   --set "data.metadataConnection.pass=${METADATA_DB_PASSWORD}" \
   --wait --wait-for-jobs --timeout 10m "$@" >/dev/null
+
+if [ -n "$statsd_before" ] && [ "$statsd_before" != "$(statsd_cm)" ]; then
+  "${KUBECTL[@]}" -n "$NAMESPACE" rollout restart deploy/"$RELEASE-statsd" >/dev/null
+  "${KUBECTL[@]}" -n "$NAMESPACE" rollout status deploy/"$RELEASE-statsd" --timeout=120s >/dev/null
+  echo "restarted $RELEASE-statsd for its new mappings"
+fi
+
+# Workers keep no log volume since D22 (logs go to gs://airflow-logs); a StatefulSet from an earlier
+# deploy left its per-pod log PVCs behind, which nothing deletes on its own.
+if ! "${KUBECTL[@]}" -n "$NAMESPACE" get statefulset "$RELEASE-worker" >/dev/null 2>&1; then
+  "${KUBECTL[@]}" -n "$NAMESPACE" delete pvc -l "tier=airflow,component=worker,release=$RELEASE" \
+    --ignore-not-found >/dev/null
+fi
 
 # Pool for Phase 4 extraction concurrency; `pools set` creates or updates.
 "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
