@@ -187,7 +187,7 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - Compare Airflow Assets for intra-deployment signalling against the durable ledger.
 - **Exit:** dropping one file triggers exactly one scoped run; re-delivering the same event does not reprocess the same generation.
 
-### Phase 6 — Operate it like production · Status: in progress
+### Phase 6 — Operate it like production · Status: done
 
 - Observability: StatsD → Prometheus + Grafana; dashboards for scheduler heartbeat, queued tasks, pool usage, task durations.
 - Scaling: KEDA for Celery workers; resource tuning; KubernetesExecutor experiment (D5) with a written comparison.

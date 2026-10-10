@@ -283,7 +283,10 @@ Observed:
 - The drain evicted the scheduler, triggerer, statsd-exporter, and worker from `pplk8s-worker`; every pod was Running again on `pplk8s-worker2` within a minute, with none left Pending.
 - The canary succeeded on the rescheduled worker while the node was still cordoned.
   Workers keep no volume since remote logging (D22), so nothing pins them to a node.
-- `KubeNodeUnschedulable` fired within seconds and resolved about 25 seconds after the uncordon.
+- `KubeNodeUnschedulable` fired within about 30 seconds and resolved about 25 seconds after the uncordon.
+- When the drained node runs PgBouncer, its single replica moves too, and clients lose their DB connections.
+  In one pass the triggerer restarted once within the minute of the drain (exit `Error`); a triggerer that loses its connection exits on `sqlalchemy.exc.PendingRollbackError` after `server closed the connection unexpectedly` instead of reconnecting, and the kubelet restarts it.
+  The canary was unaffected.
 - No PodDisruptionBudget exists for any chart component, so the drain never waited.
   With one replica per component, a PDB with `minAvailable: 1` would block the drain instead.
 
@@ -299,10 +302,11 @@ This is the stand-in for a Cloud SQL maintenance or failover window.
 
 Observed:
 
-- `MetadataDBDown` (`pg_up` from the Compose `postgres_exporter`) fired about 50 seconds after the stop.
+- `MetadataDBDown` (`pg_up` from the Compose `postgres_exporter`) fired 50–60 seconds after the stop.
 - PgBouncer kept accepting client connections, so no pod failed a probe at first; the scheduler stopped heartbeating and `AirflowSchedulerDown` fired about 75 seconds later.
-- After the start, the DB alert resolved within about 25 seconds and the scheduler heartbeated again about 20 seconds later.
-- No Airflow container restarted during the outage.
+- After the start, the DB alert resolved within 10–30 seconds and the scheduler heartbeated again 15–30 seconds later.
+- Three components restarted during the outage, one to three times each per pass: the kubelet killed the scheduler (exit 143) when its DB-backed liveness probe failed, and the dag-processor and triggerer (exit 1) exited on their own when they lost the DB (`psycopg2.OperationalError: server closed the connection unexpectedly`, then `PendingRollbackError`); the api-server and workers did not restart.
+  The first pass reported no restarts because its restart counter was broken; trust `kubectl get pods` restart counts.
 
 Detection: `MetadataDBDown`, then `AirflowSchedulerDown`; panels "Metadata DB" and "PgBouncer clients".
 
@@ -361,7 +365,7 @@ Observed, the wrong way back (`helm rollback airflow <3.2.2 revision>` alone):
 - The rollback restores the 3.2.2 manifests but not the schema, and `airflow db migrate` cannot go back: the migration pod failed with `alembic.util.exc.CommandError: Can't locate revision identified by 'd2f4e1b3c5a7'` and restarted in place (the chart's Job uses `restartPolicy: OnFailure`).
 - Every new 3.2.2 pod stayed in `Init:Error`: `wait-for-airflow-migrations` reported `There are still unapplied migrations after 60 seconds. MigrationHead(s) in DB: {'d2f4e1b3c5a7'} | Migration Head(s) in Source Code: {'1d6611b6ab7c'}`.
 - The old 3.3.1 pods kept serving, so the API still reported 3.3.1, the canary still worked, and no availability alert fired: the rollback simply never landed.
-- `AirflowMigrationJobFailed` fired about 105 seconds after the rollback, and `AirflowRolloutStuck` about 105 seconds after that.
+- `AirflowMigrationJobFailed` fired 90–105 seconds after the rollback, and `AirflowRolloutStuck` 105–110 seconds after that.
 
 Detection: `AirflowMigrationJobFailed` (a still-running migration pod that restarted, or a failed Job), then `AirflowRolloutStuck` (`kube_deployment_status_replicas > kube_deployment_spec_replicas` for 3 minutes); panel "Container restarts (10m)"; `GET /api/v2/version` still shows the newer version.
 

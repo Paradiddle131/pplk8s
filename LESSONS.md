@@ -95,7 +95,8 @@ Append new lessons under the matching heading as later phases run; keep one line
 - Preview every upgrade with `helm diff`, and test the rollout path by changing a value that feeds the chart's config checksum.
 - Use the chart's renamed worker keys (`workers.celery.*`); the old ones only warn.
 - Lower the Celery workers' `terminationGracePeriodSeconds` from the chart's 600 s when tasks are short; one stuck pod otherwise stalls a rollout for ten minutes.
-- Keep worker pod names stable (StatefulSet): the API server fetches task logs from workers by pod name.
+- Ship task logs to object storage before making workers a Deployment: the API server streams a running task's log from its worker by hostname, and a finished task's log otherwise dies with the pod (scale-in, drain, OOM).
+- With Deployment workers, report the pod IP as the worker hostname (`hostname_callable = airflow.utils.net.get_host_ip_address`); a Deployment pod's name does not resolve.
 - Keep every generated secret (fernet, JWT, API secret, connections) in Kubernetes Secrets created once by the deploy script and never rotated by a re-run; a rotated JWT secret breaks running tasks.
 - Changing a Secret consumed through `envFrom` does not roll pods; restart the workloads, or hash the Secret into a pod annotation.
 - Treat image tags as immutable and bump them on every change, across every manifest and default that names the image; with `IfNotPresent`, a same-tag rebuild never reaches running pods.
@@ -108,11 +109,40 @@ Append new lessons under the matching heading as later phases run; keep one line
 - A worker hostname arrives as a pod FQDN; match it by prefix.
 - Grant the Airflow worker ServiceAccount a Role only in the namespace where it launches pods, and remember that deleting that namespace deletes the Role too.
 - Choose the executor for orchestration throughput and isolation; Celery fits thin HTTP and pod-launch tasks and matches Composer's model.
+- A task naming an executor the deployment does not configure is an import error; keep multi-executor experiments in their own DAGs.
+- A KubernetesExecutor pod costs seconds of start-up and a DAG re-parse per task; keep it for tasks that need their own memory limit, and know that an OOMKilled pod's log may never reach remote storage.
+- With a KEDA minimum above 0 the HPA does the scaling on its own 15 s loop: `cooldownPeriod` is ignored and the HPA scale-down stabilisation window is the setting that keeps workers through gaps.
+- KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
+- Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills), not from chart defaults; the lab's worker peaked above its request and the api-server far below.
+- Lower `[scheduler] task_instance_heartbeat_timeout` from 300 s when supervisors heartbeat every few seconds; it bounds how long a task on a dead worker stays `running`.
+- Leave PodDisruptionBudgets off for single-replica components, or a node drain blocks; add them once a component runs two replicas.
+- Run PgBouncer with two replicas and a PodDisruptionBudget: a single replica moved by a drain cuts every component's DB connections, and the triggerer exits instead of reconnecting.
+
+## Observability and alerting (Stage 2)
+
+- Turn on StatsD with InfluxDB-style tags (`statsd_influxdb_enabled`): Airflow 3 emits pool, task-state, and duration metrics with tags only, and plain StatsD collapses every pool into one series.
+- Read the live exporter's `/metrics` before building dashboards; executor gauges already carry `executor_class_name`, and legacy per-pool names still appear next to the tagged ones.
+- Give the statsd-exporter a series TTL, or it keeps one series per replaced pod forever (`triggers_running` summed to 8 for 2 triggerers), and restart it when its mappings change.
+- Alert on heartbeat counter rates with `or vector(0)`: a stopped component leaves its counter frozen, and an exporter restart drops the series entirely.
+- Simulate a crash as a sustained outage (scale to 0) when asserting an alert; a killed pod returns faster than any `for:` window.
+- Watch the metadata DB from outside the cluster (Cloud SQL monitoring, or `pg_up`): PgBouncer keeps accepting clients while the server is gone, so no probe fails first.
+- Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
+- Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.
+- Back-test every new alert expression with a range query over the incident you already have, before waiting for the next one.
+
+## Upgrades and rollback (Stage 2, and Composer's in-place upgrades)
+
+- Back up the metadata DB before every Airflow minor upgrade; the way back is restore plus redeploy of the old line, never `helm rollback` alone.
+- A `helm rollback` onto a migrated schema never lands: the old migration Job fails with `Can't locate revision identified by '<new head>'`, new pods wait in their `wait-for-airflow-migrations` init container, and the old pods keep serving the new version.
+- Rehearse an upgrade on a throwaway database (`data.metadataConnection.db`) on the same server, never on the only copy.
+- The older Airflow line needs its own provider pins (Composer publishes one list per build); a seam module that uses a newer provider API breaks on it, so test imports on both images before the roll.
 
 ## Shipping DAGs and images
 
 - Ship DAG files and the shared package they import as one versioned unit: a DAG folder that syncs ahead of the image (or Composer's `dags/` ahead of its plugins or PyPI packages) produces import errors on every component.
 - Never edit DAGs in a live-synced location while a run or check depends on it.
+- Sync both DAGs and the shared package with git-sync from one ref with a read-only deploy key and pinned host keys, and have checks refuse to run when the local tree differs from the served commit.
+- Run a DagBag import test in CI on every push; it catches the import errors that would otherwise surface on every component after a sync.
 - A DAG whose file vanished still answers `GET /dags/<id>` with `is_stale: true`, but triggering it returns 404; check `is_stale` before you trigger, and alert on it.
 - Check import health from the DAG processor (`airflow dags list-import-errors`), not only from the UI.
 - Make deploy scripts idempotent: create pools and connections on every run.
@@ -144,6 +174,7 @@ Append new lessons under the matching heading as later phases run; keep one line
 - A port-forward binds to one pod; restart it after every rollout.
 - Fetch a mapped task's logs with `?map_index=` on the task path, not the index in the path.
 - Re-run a verification script after any edit to it, and verify a delegated agent's report against the raw logs before relying on it.
+- Distrust a reassuring zero from a check's diagnostics: a broken restart counter reported no restarts for a DB outage that restarted three components.
 
 ## Process
 
