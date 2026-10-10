@@ -149,7 +149,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Changing a Secret consumed through `envFrom` does not roll pods; restart the workloads, or hash the Secret into a pod annotation.
 - Treat image tags as immutable and bump them on every change, across every manifest and default that names the image; with `IfNotPresent`, a same-tag rebuild never reaches running pods.
 - Enable PgBouncer in front of an external metadata DB, and keep the bundled Postgres subchart off.
-- Run PgBouncer with two replicas and a PodDisruptionBudget: a single replica moved by a drain cuts every component's DB connections, and the triggerer exits instead of reconnecting; leave PodDisruptionBudgets off other single-replica components, or a drain blocks.
+- Run PgBouncer with two replicas, preferred (not required) anti-affinity, and a PodDisruptionBudget of `maxUnavailable: 1`: a single replica moved by a drain cuts every component's DB connections, and the scheduler, dag-processor, and triggerer exit instead of reconnecting, while with two no component restarted; leave PodDisruptionBudgets off other single-replica components, or a drain blocks.
 - Give workload pods the `restricted` profile: non-root uid, seccomp `RuntimeDefault`, drop ALL, no privilege escalation, read-only root with emptyDirs for scratch, and no service-account token unless they call the API.
 - Roll Pod Security out in `warn` mode first, then `enforce`.
 - Server libraries may write under `$HOME` (gunicorn's control socket); a non-root, read-only image needs that feature disabled or a writable path.

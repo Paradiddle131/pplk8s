@@ -284,11 +284,13 @@ Observed:
 - The canary succeeded on the rescheduled worker while the node was still cordoned.
   Workers keep no volume since remote logging (D22), so nothing pins them to a node.
 - `KubeNodeUnschedulable` fired within about 30 seconds and resolved about 25 seconds after the uncordon.
-- When the drained node runs PgBouncer, its single replica moves too, and clients lose their DB connections.
-  In one pass the triggerer restarted once within the minute of the drain (exit `Error`); a triggerer that loses its connection exits on `sqlalchemy.exc.PendingRollbackError` after `server closed the connection unexpectedly` instead of reconnecting, and the kubelet restarts it.
-  The canary was unaffected.
-- No PodDisruptionBudget exists for any chart component, so the drain never waited.
-  With one replica per component, a PDB with `minAvailable: 1` would block the drain instead.
+- PgBouncer runs two replicas spread across the nodes behind a PodDisruptionBudget (`maxUnavailable: 1`), so a drain takes down at most one at a time and the Service always keeps an endpoint.
+  No Airflow container restarts; the drill fails if one does.
+  With a single replica, the drain cut every component's DB connections: in one pass the triggerer restarted within the minute (exit `Error`), and six evictions of a lone replica in a row restarted the scheduler, dag-processor, and triggerer once each.
+  A component that loses its connection exits on `sqlalchemy.exc.PendingRollbackError` after `server closed the connection unexpectedly` instead of reconnecting, and the kubelet restarts it.
+- When a drain has put both replicas on one node, draining that node evicts them one at a time: kubectl retries the second (`Cannot evict pod as it would violate the pod's disruption budget`) until the first is Ready elsewhere.
+- PgBouncer is the only chart component with a PodDisruptionBudget.
+  The others run one replica each, so a PDB with `minAvailable: 1` would block the drain instead.
 
 Detection: `KubeNodeUnschedulable` (severity `info`); if pods cannot fit elsewhere, `AirflowPodsPending` after 2 minutes.
 

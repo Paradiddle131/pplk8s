@@ -184,3 +184,11 @@ Entry format:
 - Done: `LESSONS.md` gained a stage matrix and **[GKE]**/**[Composer]** line tags, a "Migrating from Cloud Workflows" section (one pipeline at a time, parity by data, a way back, deferrable long waits), and "Design choices to settle at work" (DAG boundaries, dbt granularity, extraction fan-out, with what to weigh).
   Merged duplicates: the two heartbeat-timeout lines, the two PodDisruptionBudget lines, the Grafana and request-sizing lines, the two per-model dbt lines; "keep EL Factory and dbt on Cloud Run" moved into the migration section.
 - Evidence: the live scheduler reports `create_cron_data_intervals = False`, and scheduled `sales_elt` runs carry no data interval, so the interval lesson now names the tested helper (`pplk8s.context.resolve_interval`) instead of "a run starts when its interval ends".
+
+## 2026-10-11 — PgBouncer survives a node drain (#2)
+
+- Done: PgBouncer runs two replicas with preferred anti-affinity across the nodes and a PodDisruptionBudget `maxUnavailable: 1` (`platform/helm/airflow/values.yaml`); drill 2 of `tests/e2e/phase6-check.sh` now fails if any Airflow container restarts during the drain.
+  PLAN D6, the runbook's drill 2 entry, and the LESSONS PgBouncer line record the result.
+- Evidence: baseline with one replica, six evictions of the lone PgBouncer pod in a row restarted the scheduler, dag-processor, and triggerer once each.
+  With two replicas, eight evictions one replica at a time restarted nothing, and draining each node by hand (components moving with it) restarted nothing; with both replicas on one node, the drain waited on the PDB and evicted them one at a time.
+  `make phase6-check` passed, 23:51–00:20: drill 2 drained `pplk8s-worker2`, moved 1 of 2 PgBouncer replicas while the triggerer, dag-processor, and api-server stayed on the other node, and no container restarted; drills 1, 3, 4a, 4b, the upgrade drill, KEDA, and observability checks passed as before.

@@ -43,6 +43,24 @@ pgbouncer:
   # The Compose Postgres is not TLS-enabled; the chart default `prefer` falls back anyway,
   # `disable` skips the failed TLS probe on every connection.
   sslmode: disable
+  # Every component reaches the DB through PgBouncer, so one replica makes a drain of its node an
+  # outage for all of them (the scheduler, dag-processor and triggerer exit instead of reconnecting).
+  # Two replicas spread across the nodes keep a Service endpoint up while one moves; the PDB evicts
+  # them one at a time even after a drain has put both on one node. Anti-affinity is preferred, not
+  # required: two kind nodes have no room for a rollout's surge pod or a drained replica under a hard rule.
+  replicas: 2
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels: {tier: airflow, component: pgbouncer, release: airflow}
   resources:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 128Mi}
