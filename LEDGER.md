@@ -105,3 +105,8 @@ Entry format:
   One `dbt build --select tag:sales,tag:silver` in a freshly created `dbt_dev` failed (3 errors) and could not be reproduced in three further attempts, including from an empty database; watch for it.
   Ad-hoc shells that source `tests/e2e/lib/airflow-api.sh` from the agent tool leaked `kubectl port-forward` processes (the EXIT trap does not fire there); the check scripts themselves clean up.
 
+
+## 2026-10-10 — Repo tidy for the first push
+
+- Done: README rewritten for a first-time reader (purpose, data flow, status, layout table, shortest quick start, pointers to the working files); PLAN §4 layout now matches the tree (`platform/k8s/`, `tests/e2e/`, `docs/`, `scripts/`); removed four `.gitkeep` files from directories that now have content.
+- Evidence: `make test` → Airflow 96, EL Factory 69, event adapter 32 passed; ruff and `make lint` (shellcheck) clean; no credentials tracked beyond the documented lab defaults.

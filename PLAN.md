@@ -109,12 +109,13 @@ Each decision states its rationale; change the decision here before acting on a 
 
 `ops.readiness(product, interval_start, interval_end, watermark, run_id, status, updated_at)`, written by the DAG after each dbt stage and read by consumer DAGs; independent of Airflow's own metadata.
 
-## 4. Repository layout (target)
+## 4. Repository layout
 
 ```
 platform/
   compose/        # warehouse, metadata DB, fake-gcs, Pub/Sub emulator
   kind/           # cluster config, local registry
+  k8s/            # workloads namespace (Kustomize), dbt Job template
   helm/airflow/   # values.yaml (+ overlays per experiment)
 services/
   el-factory/     # EL Factory lite (Flask + gunicorn)
@@ -124,7 +125,9 @@ airflow/
   dags/           # business DAGs
   include/        # shared package: ElFactoryHook, run_dbt, readiness helpers
   Dockerfile      # Airflow image with pinned providers + include/
-tests/
+tests/e2e/        # one exit check per phase
+docs/             # runbook of failure drills, event path
+scripts/          # toolchain install, local helpers
 Makefile          # single entry point: up / down / build / deploy / test
 ```
 
