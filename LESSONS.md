@@ -190,6 +190,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Back up the metadata DB before every Airflow minor upgrade (on Composer, save an environment snapshot); the way back is restore plus redeploy of the old line, never a manifest rollback alone.
 - [GKE] A `helm rollback` onto a migrated schema never lands: the old migration Job fails with `Can't locate revision identified by '<new head>'`, new pods wait in their `wait-for-airflow-migrations` init container, and the old pods keep serving the new version.
 - [GKE] Rehearse an upgrade on a throwaway database (`data.metadataConnection.db`) on the same server, never on the only copy.
+- [GKE] Stop Airflow and PgBouncer before a release that points PgBouncer at another database: PgBouncer rolls while the migration Job runs, so the Job migrates whichever database an old PgBouncer pod still serves and can report success on the wrong one.
 - The older Airflow line needs its own provider pins (Composer publishes one list per build); a seam module that uses a newer provider API breaks on it, so test imports on both images before the roll.
 
 ## Shipping DAGs and images

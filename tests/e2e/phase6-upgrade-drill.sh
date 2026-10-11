@@ -40,13 +40,45 @@ reconnect() { # after a rollout the port-forward points at a dead pod
   start_port_forward
   refresh_token
 }
+# Before a deploy that moves PgBouncer to the other database (issue #11). PgBouncer rolls while the
+# migration Job already runs, so `airflow db migrate` and the pods' wait-for-airflow-migrations reach
+# whichever database the surviving old PgBouncer pod still serves: the 3.2.2 Job failed on the lab's
+# newer `airflow` schema and crash-looped past helm's timeout, and the restore's Job migrated
+# airflow_drill instead of `airflow`. With PgBouncer gone, only the new config can answer. Its preStop
+# sleeps 120 s for clients, and none are left, so its pods go at once.
+stop_airflow() {
+  kc scale deploy --all --replicas=0 >/dev/null
+  kc delete pod -l component=pgbouncer --grace-period=1 --ignore-not-found --wait=true >/dev/null
+  kc wait --for=delete pod -l 'component in (scheduler,api-server,dag-processor,triggerer)' --timeout=180s >/dev/null
+}
+dump_migration() { # what the migration Job and a waiting pod said, before anything redeploys them
+  local pod
+  kc get pods --no-headers | awk '$3!="Running" && $3!="Completed"{print "    " $1, $2, $3, "restarts=" $4}'
+  for pod in $(kc get pods -l job-name=airflow-run-airflow-migrations -o name); do
+    echo "    --- $pod (previous attempt)"
+    kc logs "$pod" --previous --tail=30 2>/dev/null | sed 's/^/    /'
+    echo "    --- $pod"
+    kc logs "$pod" --tail=30 2>/dev/null | sed 's/^/    /'
+  done
+  pod=$(kc get pods -l component=scheduler -o json |
+    jq -r '[.items[] | select(any(.status.initContainerStatuses[]?; .ready | not)) | .metadata.name] | first // empty')
+  [ -z "$pod" ] || {
+    echo "    --- $pod wait-for-airflow-migrations"
+    kc logs "$pod" -c wait-for-airflow-migrations --tail=15 2>/dev/null | sed 's/^/    /'
+  }
+}
 
 restored=""
 cleanup() {
   local rc=$?
   set +e
+  if [ "$rc" != 0 ]; then
+    say "failed (rc=$rc); migration state before the restore:"
+    dump_migration
+  fi
   if [ -z "$restored" ]; then
     say "restoring the normal release (chart 1.22.0, $NEW_IMAGE, database airflow)"
+    stop_airflow
     AIRFLOW_IMAGE=$NEW_IMAGE AIRFLOW_IMAGE_BUILD=0 "$DEPLOY" >/dev/null
   fi
   meta_psql postgres "DROP DATABASE IF EXISTS $DRILL_DB WITH (FORCE)" >/dev/null
@@ -73,6 +105,7 @@ meta_psql postgres "CREATE DATABASE $DRILL_DB OWNER airflow" >/dev/null
 
 # ---- 1. the older line ------------------------------------------------------------------------------
 say "1. installing chart $OLD_CHART + Airflow $OLD_AIRFLOW on database $DRILL_DB"
+stop_airflow
 deploy_old >/dev/null
 reconnect
 [ "$(version)" = "$OLD_AIRFLOW" ] || fail "api-server reports $(version), expected $OLD_AIRFLOW"
@@ -117,7 +150,7 @@ echo "ok: (3) helm rollback alone never landed (the old image cannot start on th
 
 # ---- 4. the right way back --------------------------------------------------------------------------
 say "4. restoring $DRILL_DB from the backup, then redeploying the older line"
-kc scale deploy --all --replicas=0 >/dev/null # nothing may hold connections during the restore
+stop_airflow # nothing may hold connections during the restore
 meta_psql postgres "DROP DATABASE IF EXISTS $DRILL_DB WITH (FORCE)" >/dev/null
 meta_psql postgres "CREATE DATABASE $DRILL_DB OWNER airflow" >/dev/null
 docker compose -f "$REPO/platform/compose/compose.yaml" exec -T metadata-db \
@@ -133,6 +166,7 @@ echo "ok: (4) restore + redeploy brought the older line back"
 
 # ---- back to the lab --------------------------------------------------------------------------------
 say "restoring the normal release"
+stop_airflow
 AIRFLOW_IMAGE=$NEW_IMAGE AIRFLOW_IMAGE_BUILD=0 "$DEPLOY" >/dev/null
 restored=1
 reconnect
