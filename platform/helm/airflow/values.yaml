@@ -197,6 +197,13 @@ workers:
     # The chart default of 600 s lets a stuck pod stall a rollout for 10 minutes; tasks here are short.
     # Celery's warm shutdown lets running tasks finish within this window when KEDA scales in.
     terminationGracePeriodSeconds: 60
+    # The probe is `celery inspect ping`. After a Redis restart during a running task, a worker takes
+    # no new task until that task ends, and sometimes stops answering pings too; then only the
+    # kubelet's restart frees it (runbook drill 8). The chart's 60 s x 5 let that last ~6 minutes;
+    # 30 s x 3 ends it in ~90 s. A ping takes ~2 s.
+    livenessProbe:
+      periodSeconds: 30
+      failureThreshold: 3
     # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, read
     # from the metadata DB through PgBouncer, between 1 and 4 (what two kind nodes hold). With a
     # minimum above 0 the HPA KEDA creates does the scaling on its own 15 s loop, so pollingInterval
@@ -221,7 +228,7 @@ workers:
       limits: {memory: 1536Mi}
 redis:
   persistence:
-    enabled: false # the broker holds only in-flight task messages; losing it on restart is acceptable for the lab
+    enabled: false # D29: the broker holds only in-flight messages; a restart loses them (runbook drill 8)
   resources:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 128Mi}

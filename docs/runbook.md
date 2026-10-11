@@ -253,7 +253,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4 and 7 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4, 7 and 8 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
@@ -432,3 +432,36 @@ Diagnosis: `KA get scaledobject airflow-worker` (`READY False`, reason `TriggerE
 
 Recovery: fix the cause the operator log names (here, restore the chart's query: `make airflow-up`, or patch the old query back).
 The HPA resumes on its next poll; workers that were held through the outage scale in after the 120 s stabilisation window.
+
+### 8. Restart the Celery broker
+
+Trigger: `KA delete pod airflow-redis-0`.
+Redis is the Celery broker and keeps no data (`redis.persistence.enabled: false`), so a restart, an eviction, or an OOMKill drops every message it holds; workers reconnect within 2–3 seconds.
+Nothing in Airflow notices the restart itself; what goes wrong depends on what the broker held.
+
+Observed (2026-10-11):
+
+- With every task already running (12 across 3 workers), the tasks finished on try 1 and the run succeeded.
+- **A task waiting in the broker is lost.** Its message vanished with Redis, but the task instance stayed `queued` and no worker ever saw it: `plan` waited 11 minutes, until the scheduler's stuck-in-queued check requeued it (`task_queued_timeout` 600 s plus up to one 120 s check interval; log `Task stuck in queued; will try to requeue`), and nothing fired before this drill added `AirflowTasksStuckQueued`.
+  The check runs automated as 8a: KEDA paused at 0 workers (`autoscaling.keda.sh/paused-replicas: "0"`), `hello` triggered (`LLEN default` = 1), Redis restarted (`LLEN default` = 0), KEDA resumed; `AirflowTasksStuckQueued` fired after 187 s with a worker up and `say_hello` still `queued`.
+- **A worker that was running a task when the connection dropped takes no new task until that task ends** (issue #15).
+  In 8b a 240 s task was running; `hello`, triggered right after the restart, waited 256 s and started the moment the long task finished, while the worker had 3 free slots and logged `Temporarily reducing the prefetch count to 3`.
+  KEDA does not help: its demand, `ceil((running + queued) / 4)`, is already met by the stalled worker.
+  Sometimes the worker also stops answering `celery inspect ping` (all three workers in one pass, one in another): then only the liveness probe frees it, and its restart kills the running task (exit 137 after the 60 s grace).
+  With the chart's probe (60 s x 5) that took about 6 minutes; the probe is now 30 s x 3 (`workers.celery.livenessProbe`), about 90 seconds.
+- An idle worker is not affected: pings and new tasks worked right after the restart.
+
+Detection: `AirflowTasksStuckQueued` (task instances in `queued` for 3 minutes; panel "Pool queued / starving / deferred"); `AirflowComponentUnavailable` if Redis stays down for 2 minutes (it covers StatefulSets now).
+The worker's log shows `consumer: Connection to broker lost` and then `Connected to redis://...`.
+The same alert fires when demand outruns KEDA's maximum, so check the broker before adding workers.
+
+Diagnosis: `KA get pods airflow-redis-0` (age, restarts); `KA logs deploy/airflow-worker -c worker | grep -E "broker lost|Connected to redis|prefetch"`; a queued task instance whose message is gone has an empty queue behind it: `KA exec airflow-redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning llen default'` reads 0.
+
+Recovery:
+
+1. Clear the stuck task instances (UI, or `POST /api/v2/dags/<dag>/clearTaskInstances` with `task_ids`); in 8a `say_hello` succeeded 5 seconds later on try 2 and the alert resolved 27 seconds after that.
+   Left alone, the scheduler requeues them after `task_queued_timeout`, at most twice, and marks the third stuck attempt failed.
+2. If tasks stay queued behind a worker that ran through the restart, restart that worker (`KA delete pod <worker>`); its running tasks die and retry (every business task has `retries ≥ 1`, PLAN.md D24).
+
+`task_queued_timeout` stays 600 s: lowering it would also requeue, and on the third time fail, tasks that only wait for capacity during a burst.
+

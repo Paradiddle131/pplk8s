@@ -261,3 +261,24 @@ Entry format:
   After `platform/monitoring/deploy.sh`, the old alert's series went stale, the new rule loaded with `health=ok`, and only `Watchdog` was firing; the check's firing query returned `PrometheusMissingRuleEvaluations` at 14:23 and nothing at 14:27.
   `tests/e2e/observability-check.sh` and `make lint` passed.
 - Open: the clock itself is a host issue outside the repo; switching the WSL2 kernel to `clocksource=hyperv_clocksource_tsc_page` might fix it but is untested (needs root).
+
+## 2026-10-11 — Phase 6 — Drill 8: restart the Celery broker
+
+- Done: a new failure drill for the one Airflow component no drill or alert covered, the chart's Redis broker (a StatefulSet without persistence).
+  `AirflowTasksStuckQueued` (task instances in `queued` for 3 minutes) is new, and `AirflowComponentUnavailable` now covers StatefulSets.
+  The worker liveness probe moved from the chart's 60 s x 5 to 30 s x 3 (`workers.celery.livenessProbe`).
+  `tests/e2e/phase6-check.sh` gained drill 8a (KEDA paused at 0 workers, `hello` queued in Redis, Redis restarted, alert fires, the task is cleared and succeeds) and 8b (Redis restarted under a 240 s task, `hello` must succeed within 5 minutes).
+  Runbook drill 8, PLAN D29, and three LESSONS lines record the result; issue #15 tracks the worker stall's root cause.
+- Evidence: exploration on the live lab, 14:39–15:07 UTC.
+  With all 12 tasks running, a Redis restart cost nothing (workers reconnected in 3 s, all on try 1).
+  A message waiting in Redis was lost: `plan` stayed `queued` 11 minutes with no alert until the scheduler requeued it (`Task stuck in queued; will try to requeue`, 600 s timeout plus its 120 s check); `airflow_pool_queued_slots{pool_name="default_pool"}` read 1 throughout, which the new rule back-tests on.
+  Under a 480 s task, the worker took no new task after the restart and stopped answering `inspect ping`; `hello` waited 5.5 minutes until the old probe restarted the worker (exit 137), which killed the long task.
+  An idle worker was unaffected.
+  The Airflow source caps stuck-in-queued requeues at 2 (`num_stuck_in_queued_retries`) and fails the third, so `task_queued_timeout` stays 600 s.
+  `make phase6-check` passed twice in a row, 17:22–18:14 and 18:14–19:05, every drill and the upgrade drill included.
+  Pass 1, 17:22–18:14: 8a fired after 202 s, the cleared `say_hello` succeeded 5 s later on try 2, resolved after 22 s; in 8b the worker stopped answering pings, the 30 s x 3 probe restarted it, `say_hello` succeeded 150 s after the restart (330 s with the chart's probe), and the 240 s task failed.
+  Pass 2: 8a fired after 200 s, recovered in 5 s, resolved after 27 s; 8b again took the probe-restart branch, `say_hello` after 144 s.
+  A standalone run of drill 8 at 15:11 showed the other branch of 8b: the worker kept answering pings, took no new task until the 240 s task ended, and `say_hello` succeeded after 256 s.
+  `make lint` passed.
+- Decisions: D29 keeps Redis without persistence and `task_queued_timeout` at 600 s, detects lost messages by alert, recovers by clearing the task, and shortens the worker probe.
+- Open: #15 (a worker that ran a task through a broker restart takes no new task until it ends).

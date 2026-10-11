@@ -8,10 +8,12 @@
 #   4a starve pool ops_load of slots                     -> AirflowPoolStarving
 #   4b starve a worker of memory (a task over its limit) -> AirflowContainerOOMKilled
 #   7  break KEDA's worker scaler (a query that fails)   -> KedaScalerErrors
+#   8a restart the Celery broker holding a queued task   -> AirflowTasksStuckQueued (message lost)
+#   8b restart the Celery broker while a task runs       -> new work waits for the running task (or a probe restart)
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up`. Re-runnable and self-restoring: the exit trap (also on
-# SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool
-# and KEDA's query.
+# SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool,
+# KEDA's query, and KEDA's scaling of the workers.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -34,6 +36,7 @@ cleanup() {
   done
   pool_size 16 >/dev/null 2>&1
   [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
+  keda_resume >/dev/null 2>&1
   [ "$load_was_paused" = true ] && api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
   stop_prometheus
   stop_port_forward
@@ -73,6 +76,30 @@ keda_set_query() { # the worker ScaledObject's trigger query (the Airflow chart 
   kc patch scaledobject airflow-worker --type json \
     -p "$(jq -nc --arg q "$1" '[{op: "replace", path: "/spec/triggers/0/metadata/query", value: $q}]')" >/dev/null 2>&1
 }
+# Pausing a ScaledObject at N replicas makes KEDA hold the workers there until the annotation goes.
+keda_pause() { kc annotate scaledobject airflow-worker --overwrite "autoscaling.keda.sh/paused-replicas=$1" >/dev/null; }
+keda_resume() { kc annotate scaledobject airflow-worker autoscaling.keda.sh/paused-replicas- >/dev/null; }
+# shellcheck disable=SC2016 # $REDIS_PASSWORD expands inside the Redis container
+redis_cli() { kc exec airflow-redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning "$@"' redis-cli "$@"; }
+restart_redis() { # the broker keeps no data (values.yaml), so every message it holds is dropped
+  kc delete pod airflow-redis-0 --wait=true >/dev/null
+  kc wait --for=condition=Ready pod/airflow-redis-0 --timeout=120s >/dev/null
+}
+trigger_hello() { # -> run id
+  api PATCH /api/v2/dags/hello '{"is_paused":false}' >/dev/null
+  api POST /api/v2/dags/hello/dagRuns '{"logical_date":null}' | jq -r .dag_run_id
+}
+hello_ti() { api GET "/api/v2/dags/hello/dagRuns/$1/taskInstances/say_hello" | jq -r "$2"; }
+wait_hello() { # run timeout -> seconds until say_hello succeeded
+  local end=$((SECONDS + $2)) start=$SECONDS state=""
+  while [ $SECONDS -lt $end ]; do
+    state=$(hello_ti "$1" .state)
+    case "$state" in success) echo $((SECONDS - start)); return 0 ;; failed) fail "hello run $1 failed" ;; esac
+    sleep 5
+  done
+  fail "hello run $1: say_hello still $state after $2 s"
+}
+worker_restarts() { kc get pods -l component=worker -o json | jq '[.items[].status.containerStatuses[] | select(.name=="worker") | .restartCount] | add // 0'; }
 keda_ready() { kc get scaledobject airflow-worker -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'; }
 run_state() { api GET "/api/v2/dags/$LOAD/dagRuns/$1" | jq -r .state; }
 wait_run_done() { # run timeout -> final state
@@ -229,6 +256,59 @@ took=$(wait_alert KedaScalerErrors inactive 300)
 say "  recovered: query restored, ScaledObject Ready, alert resolved after ${took}s"
 canary
 echo "ok: (7) KEDA scaler failure detected and recovered"
+
+# ---- 8. restart the Celery broker -------------------------------------------------------------------
+# The broker (the chart's Redis) keeps no data, so a restart drops every message it holds; Celery
+# workers reconnect within seconds. Two cases differ: a message waiting in Redis is lost, and a
+# worker that had a task running when the connection dropped takes no new task until that task
+# ends, or, when it also stops answering pings, until its liveness probe restarts it (issue #15).
+say "8a. broker: restart Redis while a task waits in it for a worker"
+keda_pause 0
+kc wait --for=delete pod -l component=worker --timeout=180s >/dev/null 2>&1 || true
+h=$(trigger_hello)
+end=$((SECONDS + 120))
+until [ "$(hello_ti "$h" .state)" = queued ] || [ $SECONDS -ge $end ]; do sleep 2; done
+waiting=$(redis_cli llen default)
+say "  no worker; say_hello is $(hello_ti "$h" .state) and Redis holds $waiting message(s) in queue 'default'"
+[ "$(hello_ti "$h" .state)" = queued ] && [ "$waiting" -ge 1 ] || fail "say_hello is not waiting in the broker"
+restart_redis
+say "  Redis restarted: queue 'default' now holds $(redis_cli llen default) message(s)"
+keda_resume
+kc rollout status deploy/airflow-worker --timeout=300s >/dev/null
+took=$(wait_alert AirflowTasksStuckQueued firing 420)
+say "  detected: AirflowTasksStuckQueued firing after ${took}s; a worker is up, and say_hello is still $(hello_ti "$h" .state)"
+[ "$(hello_ti "$h" .state)" = queued ] || fail "say_hello left queued without a message"
+# Recovery: clear the stuck task instance; otherwise the scheduler requeues it after task_queued_timeout.
+api POST /api/v2/dags/hello/clearTaskInstances \
+  "{\"dry_run\":false,\"dag_run_id\":\"$h\",\"task_ids\":[\"say_hello\"],\"only_failed\":false}" >/dev/null
+took=$(wait_hello "$h" 180)
+say "  recovered: say_hello cleared, then succeeded after ${took}s (try $(hello_ti "$h" .try_number))"
+took=$(wait_alert AirflowTasksStuckQueued inactive 180)
+say "  alert resolved after ${took}s"
+echo "ok: (8a) lost broker message detected and recovered"
+
+say "8b. broker: restart Redis while a worker runs a task"
+end=$((SECONDS + 300))
+until [ "$(kc get pods -l component=worker --no-headers | wc -l)" = 1 ] || [ $SECONDS -ge $end ]; do sleep 5; done
+run=$(trigger_load 1 240 0)
+end=$((SECONDS + 180))
+until [ "$(api GET "/api/v2/dags/$LOAD/dagRuns/$run/taskInstances?task_id=hold_slot" | jq -r '.task_instances[0].state')" = running ] || [ $SECONDS -ge $end ]; do sleep 3; done
+restarts_before=$(worker_restarts)
+restart_redis
+h=$(trigger_hello)
+say "  Redis restarted under a 240 s task; hello triggered"
+took=$(wait_hello "$h" 300)
+restarted=$(($(worker_restarts) - restarts_before))
+stuck=$(alert_state AirflowTasksStuckQueued)
+say "  say_hello succeeded ${took}s after the restart (AirflowTasksStuckQueued: $stuck); worker containers restarted by their liveness probe: $restarted"
+state=$(wait_run_done "$run" 600)
+say "  the 240 s task that ran through the broker restart: $state (retries=0 by design; a probe restart kills it)"
+if [ "$stuck" != inactive ]; then
+  took=$(wait_alert AirflowTasksStuckQueued inactive 300)
+  say "  AirflowTasksStuckQueued resolved after ${took}s more"
+fi
+canary
+echo "ok: (8b) broker restart under a running task recovered"
 
 firing=$(firing_ours)
 [ -z "$firing" ] || fail "alerts still firing after the drills: $firing"
