@@ -255,6 +255,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
 Drills 1–4 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
+Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
 `KA` stands for `kubectl --context kind-pplk8s -n airflow`.
 
@@ -382,3 +383,23 @@ Recovery, the right way back (took about a minute):
 Both alerts resolved, and the canary succeeded on 3.2.2.
 Runs recorded between the backup and the restore are lost; on a real platform, take the backup at the start of the change window and pause DAGs until the upgrade is accepted.
 On Cloud Composer the upgrade is in place and Google runs the migration; the transferable lesson is that the metadata schema only moves forward, so the way back is a snapshot, not a rollback.
+
+### 6. Scale in a worker while it runs a task
+
+Trigger (automated in `tests/e2e/keda-check.sh`): raise the ScaledObject's minimum by one (`KA patch scaledobject airflow-worker --type merge -p '{"spec":{"minReplicaCount":2}}'`), run `ops_load_test` with `{"tasks": 1, "seconds": N}`, mark the task's worker with `KA annotate pod <worker> controller.kubernetes.io/pod-deletion-cost=-100`, then set the minimum back to 1.
+The HPA scales in on its next 15 s loop, and the ReplicaSet deletes the pod with the lowest deletion cost.
+A natural burst never shows this: the 120 s stabilisation window keeps every worker until the burst ends.
+
+Observed (`terminationGracePeriodSeconds: 60`):
+
+- The HPA removed the marked pod 10–15 seconds after the minimum dropped; the worker logged `worker: Warm shutdown (MainProcess)` and took no new task.
+- A 45 s task, signalled about 14 seconds in, finished during the warm shutdown (`success` on try 1), and the pod exited right after it.
+- A 240 s task was SIGKILLed when the 60 s grace expired; it stayed `running` until its heartbeat was 120 s old, and the scheduler failed it about 2 minutes after the pod went.
+  `ops_load_test` uses `retries=0`, so the run fails; every business task has `retries ≥ 1` (PLAN.md D24), so there the failure becomes a retry, as in Phase 4 drill 1.
+
+Detection: a lost task shows as `AirflowTaskFailures` (or a retry) and on the panels "Task outcomes /min" and "Celery workers"; the scale-in itself is normal and raises no alert.
+If workers do not scale in (or out) at all, check the scaler before anything else: `KA describe hpa keda-hpa-airflow-worker` (`FailedGetExternalMetric`) and `kubectl -n keda logs deploy/keda-operator`.
+Through PgBouncer it failed on most polls with `prepared statement "stmtcache_…" already exists` until PgBouncer got `max_prepared_statements` (PLAN.md D6); no alert covers this yet (issue #7).
+
+Recovery: none for the scale-in; a killed task retries on its own.
+Keep tasks that outlast the grace period off the workers' critical path: defer long waits to the triggerer, and give every worker task retries.
