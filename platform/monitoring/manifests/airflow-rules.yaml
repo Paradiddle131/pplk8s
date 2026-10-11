@@ -32,13 +32,17 @@ spec:
           annotations:
             summary: No triggerer heartbeat for over two minutes; deferred tasks do not resume.
         - alert: AirflowComponentUnavailable
+          # StatefulSets too: the Celery broker (Redis) is one, and it was the only component unwatched.
           expr: |
             kube_deployment_status_replicas_available{namespace="airflow"}
               < kube_deployment_spec_replicas{namespace="airflow"}
+            or
+            kube_statefulset_status_replicas_ready{namespace="airflow"}
+              < kube_statefulset_replicas{namespace="airflow"}
           for: 2m
           labels: {severity: warning}
           annotations:
-            summary: "{{ $labels.deployment }} has fewer available replicas than desired."
+            summary: "{{ $labels.deployment }}{{ $labels.statefulset }} has fewer available replicas than desired."
         - alert: AirflowRolloutStuck
           # A rollout whose new pods never become ready leaves the old ones serving, so availability
           # stays fine while the change silently never lands (seen on a helm rollback onto a newer
@@ -139,6 +143,18 @@ spec:
           annotations:
             summary: Tasks sit in the executor queue while no worker slot is free.
             runbook: docs/runbook.md#4a-starve-the-workers-of-slots
+        - alert: AirflowTasksStuckQueued
+          # A queued task instance was handed to Celery but no worker has started it. Seen when a Redis
+          # restart drops the broker's messages (the scheduler requeues after task_queued_timeout, 600 s
+          # plus its 120 s check) and when a worker that ran a task through that restart takes no new
+          # one (runbook drill 8, issue #15);
+          # also fires when demand outruns KEDA's maximum. A normal scale-out clears in under a minute.
+          expr: sum(airflow_pool_queued_slots) > 0
+          for: 3m
+          labels: {severity: warning}
+          annotations:
+            summary: Task instances have sat in queued for 3 minutes; no worker is taking them.
+            runbook: docs/runbook.md#8-restart-the-celery-broker
         - alert: AirflowImportErrors
           expr: max(airflow_dag_processing_import_errors) > 0
           for: 30s

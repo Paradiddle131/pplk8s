@@ -169,6 +169,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
 - Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills, with the busiest dashboards open on their widest ranges), not from chart defaults; the lab's worker peaked above its request, the api-server far below, and Grafana was OOMKilled loading a wide dashboard range.
 - Fix a per-request memory spike vertically, not with replicas: one pod serves the request, so extra replicas sit idle while it is OOMKilled; set the limit with headroom above the worst realistic case (Grafana idled near 270 Mi, peaked at 542 Mi on a 7-day range, and holds at a 768 Mi limit).
+- [GKE] After a Celery broker (Redis) restart, a worker that was running a task can take no new task until that task ends, and sometimes stops answering `celery inspect ping`; keep the worker liveness probe short enough (30 s x 3, not the chart's 60 s x 5) that a wedged worker restarts within minutes, and give its tasks retries.
 
 ## Observability and alerting
 
@@ -185,6 +186,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - [GKE] Give Prometheus a persistent volume (`storageSpec`; a PD-backed PVC on GKE, or Managed Service for Prometheus): on the operator's default emptyDir, one node drain wiped the history the alert back-tests needed, and `retention` alone promises nothing across a pod move.
 - When every rule group misses evaluations at the same moment while each evaluation stays fast, check the node's clocks before tuning intervals: Prometheus counts missed slots on the wall clock, so a stepped clock fakes the misses.
 - [GKE] Keep a component's ServiceMonitor with the monitoring manifests, not behind a "monitoring CRDs exist" switch in its own chart; that switch made deploy order silently decide whether KEDA was scraped.
+- [GKE] Alert on task instances sitting in `queued` for minutes (`airflow_pool_queued_slots`): a broker restart drops the Celery message but not the task's state, and the scheduler only requeues it after `task_queued_timeout` (600 s), silently; lowering that timeout instead turns capacity waits into failures, because the third stuck attempt fails the task.
 
 ## Upgrades and rollback
 
@@ -228,6 +230,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Make checks re-runnable and self-restoring: fresh run ids, restored config and paused flags in an exit trap that also fires on SIGINT/SIGTERM.
 - Never let a check delete state a real producer owns; detect it and refuse to run instead.
 - Drill failures for real (kill a worker, inject 503s, break a probe, drop a topic) and record what you observed, not what you expected.
+- Drill a stateful dependency in every state it can hold work in, not only idle: one Redis restart was harmless with no work, lost a task that was waiting in it, and stalled a worker that was running one.
 - [GKE] A port-forward binds to one pod and exits when that pod's container stops; restart it after every rollout or restart.
 - Fetch a mapped task's logs with `?map_index=` on the task path, not the index in the path.
 - Re-run a verification script after any edit to it, and verify a delegated agent's report against the raw logs before relying on it.
