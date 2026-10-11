@@ -444,11 +444,16 @@ Observed (2026-10-11):
 - With every task already running (12 across 3 workers), the tasks finished on try 1 and the run succeeded.
 - **A task waiting in the broker is lost.** Its message vanished with Redis, but the task instance stayed `queued` and no worker ever saw it: `plan` waited 11 minutes, until the scheduler's stuck-in-queued check requeued it (`task_queued_timeout` 600 s plus up to one 120 s check interval; log `Task stuck in queued; will try to requeue`), and nothing fired before this drill added `AirflowTasksStuckQueued`.
   The check runs automated as 8a: KEDA paused at 0 workers (`autoscaling.keda.sh/paused-replicas: "0"`), `hello` triggered (`LLEN default` = 1), Redis restarted (`LLEN default` = 0), KEDA resumed; `AirflowTasksStuckQueued` fired after 187 s with a worker up and `say_hello` still `queued`.
-- **A worker that was running a task when the connection dropped takes no new task until that task ends** (issue #15).
-  In 8b a 240 s task was running; `hello`, triggered right after the restart, waited 256 s and started the moment the long task finished, while the worker had 3 free slots and logged `Temporarily reducing the prefetch count to 3`.
-  KEDA does not help: its demand, `ceil((running + queued) / 4)`, is already met by the stalled worker.
-  Sometimes the worker also stops answering `celery inspect ping` (all three workers in one pass, one in another): then only the liveness probe frees it, and its restart kills the running task (exit 137 after the 60 s grace).
-  With the chart's probe (60 s x 5) that took about 6 minutes; the probe is now 30 s x 3 (`workers.celery.livenessProbe`), about 90 seconds.
+- **A worker that was running a task when the connection dropped used to stall, in two ways** (issue #15, fixed).
+  First, it took no new task until the running one ended: in 8b, `hello` waited 256 s behind a 240 s task while the worker had 3 free slots.
+  KEDA did not help: its demand, `ceil((running + queued) / 4)`, was already met by the stalled worker.
+  Cause: on every reconnect Celery's `Consumer.on_close` calls `AsynPool.flush`, which clears the pool's set of busy processes, so the fair scheduler wrote `hello` into the pipe of the process still running the long task (celery/celery#10346).
+  Second, and more often, the worker stopped answering `celery inspect ping` until the liveness probe killed it, and the running task with it.
+  Cause: a `SIGUSR1` stack dump showed the main thread blocked in kombu's `_brpop_read` on a dead Redis socket that has no timeout, so the event loop never ran again (same trace as celery/celery#8091).
+  The settings issue #15 proposed do not help: `worker_enable_prefetch_count_reduction = False` and `worker_disable_prefetch = True` still stall, and `worker_cancel_long_running_tasks_on_connection_loss = True` frees the slot by cancelling the running task.
+  The fix (`values.yaml`): `[celery_broker_transport_options] socket_timeout = 10`, so a dead read raises and Celery reconnects, and `[celery] celery_config_options = pplk8s.celery_config.CELERY_CONFIG`, Airflow's default config plus a backport of Celery 5.7's busy-process fix to the installed 5.6.3.
+  Since then, in three runs of 8b, `hello` started 2–5 s after it was queued, the worker kept answering pings and was not restarted, and the 240 s task succeeded on try 1.
+  The worker liveness probe stays 30 s x 3 (`workers.celery.livenessProbe`) for any other wedge.
 - An idle worker is not affected: pings and new tasks worked right after the restart.
 
 Detection: `AirflowTasksStuckQueued` (task instances in `queued` for 3 minutes; panel "Pool queued / starving / deferred"); `AirflowComponentUnavailable` if Redis stays down for 2 minutes (it covers StatefulSets now).
@@ -461,7 +466,7 @@ Recovery:
 
 1. Clear the stuck task instances (UI, or `POST /api/v2/dags/<dag>/clearTaskInstances` with `task_ids`); in 8a `say_hello` succeeded 5 seconds later on try 2 and the alert resolved 27 seconds after that.
    Left alone, the scheduler requeues them after `task_queued_timeout`, at most twice, and marks the third stuck attempt failed.
-2. If tasks stay queued behind a worker that ran through the restart, restart that worker (`KA delete pod <worker>`); its running tasks die and retry (every business task has `retries ≥ 1`, PLAN.md D24).
+2. If tasks still stay queued behind a worker that ran through the restart (a regression of issue #15), dump its stacks with `KA exec <worker> -c worker -- python -c 'import os, signal; os.kill(<MainProcess pid>, signal.SIGUSR1)'` (the pid whose `/proc/<pid>/cmdline` names `MainProcess`; the stacks go to the worker log), then restart it (`KA delete pod <worker>`); its running tasks die and retry (every business task has `retries ≥ 1`, PLAN.md D24).
 
 `task_queued_timeout` stays 600 s: lowering it would also requeue, and on the third time fail, tasks that only wait for capacity during a burst.
 

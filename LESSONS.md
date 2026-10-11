@@ -169,7 +169,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
 - Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills, with the busiest dashboards open on their widest ranges), not from chart defaults; the lab's worker peaked above its request, the api-server far below, and Grafana was OOMKilled loading a wide dashboard range.
 - Fix a per-request memory spike vertically, not with replicas: one pod serves the request, so extra replicas sit idle while it is OOMKilled; set the limit with headroom above the worst realistic case (Grafana idled near 270 Mi, peaked at 542 Mi on a 7-day range, and holds at a 768 Mi limit).
-- [GKE] After a Celery broker (Redis) restart, a worker that was running a task can take no new task until that task ends, and sometimes stops answering `celery inspect ping`; keep the worker liveness probe short enough (30 s x 3, not the chart's 60 s x 5) that a wedged worker restarts within minutes, and give its tasks retries.
+- [GKE] Set a Redis `socket_timeout` (Airflow `[celery_broker_transport_options]`, e.g. 10 s, above kombu's 1 s BRPOP block): without it, a worker that ran a task through a broker restart can block forever reading a dead socket, stop answering `celery inspect ping`, and lose the task to its liveness probe.
+- [GKE] On Celery < 5.7, a prefork worker that ran a task through a broker reconnect queues new tasks behind it while its other slots idle (`AsynPool.flush` clears the busy-process set, celery/celery#10346); backport the fix or move to 5.7, and drill it with a task running, not idle.
 
 ## Observability and alerting
 

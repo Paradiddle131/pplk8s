@@ -14,11 +14,11 @@ ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.11
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.12
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
-AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.2
+AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.3
 export AIRFLOW_DRILL_IMAGE
 
 # DAG delivery (PLAN.md D23): git-sync of `main` from GitHub, or `local` for this checkout's DAGs.

@@ -12,7 +12,7 @@ airflowVersion: 3.3.1
 images:
   airflow:
     repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.11 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
+    tag: 3.3.1-pplk8s.12 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).
@@ -139,6 +139,16 @@ config:
     # D24: 4 slots per worker (chart default 16), so a burst of the lab's few tasks needs more than
     # one worker and KEDA's scale-out is visible; KEDA's query divides by this value.
     worker_concurrency: 4
+    # Airflow's default Celery config plus a backport of Celery 5.7's fix for a worker that, after a
+    # broker reconnect, queues new tasks behind a running one while its other slots idle (issue
+    # #15, runbook drill 8b). Drop it once the Airflow constraints reach Celery 5.7.
+    celery_config_options: pplk8s.celery_config.CELERY_CONFIG
+  celery_broker_transport_options:
+    # Without a socket timeout, a worker that ran a task through a Redis restart could block forever
+    # in kombu's BRPOP read on a dead socket and stop answering pings until its probe killed it, and
+    # the task with it (issue #15). 10 s is well above kombu's 1 s BRPOP block, so a healthy idle
+    # read never trips it; a dead one raises, and Celery reconnects.
+    socket_timeout: 10
   metrics:
     # D21: Airflow 3.3 emits pool, ti.<state> and task.duration metrics with tags only; the InfluxDB
     # form (`name,tag=value`) carries them to the statsd-exporter, which turns them into labels.

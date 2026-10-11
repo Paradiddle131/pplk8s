@@ -9,7 +9,7 @@
 #   4b starve a worker of memory (a task over its limit) -> AirflowContainerOOMKilled
 #   7  break KEDA's worker scaler (a query that fails)   -> KedaScalerErrors
 #   8a restart the Celery broker holding a queued task   -> AirflowTasksStuckQueued (message lost)
-#   8b restart the Celery broker while a task runs       -> new work waits for the running task (or a probe restart)
+#   8b restart the Celery broker while a task runs       -> new work starts at once, the running task survives (#15)
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up`. Re-runnable and self-restoring: the exit trap (also on
 # SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool,
@@ -259,9 +259,10 @@ echo "ok: (7) KEDA scaler failure detected and recovered"
 
 # ---- 8. restart the Celery broker -------------------------------------------------------------------
 # The broker (the chart's Redis) keeps no data, so a restart drops every message it holds; Celery
-# workers reconnect within seconds. Two cases differ: a message waiting in Redis is lost, and a
-# worker that had a task running when the connection dropped takes no new task until that task
-# ends, or, when it also stops answering pings, until its liveness probe restarts it (issue #15).
+# workers reconnect within seconds. A message waiting in Redis is lost (8a). A worker that had a
+# task running when the connection dropped used to take no new task until that task ended, or
+# block in a dead socket read until its liveness probe killed it and the task (issue #15); the
+# Redis socket timeout and the busy-worker backport (pplk8s.celery_config) fix both (8b).
 say "8a. broker: restart Redis while a task waits in it for a worker"
 keda_pause 0
 kc wait --for=delete pod -l component=worker --timeout=180s >/dev/null 2>&1 || true
@@ -297,16 +298,13 @@ restarts_before=$(worker_restarts)
 restart_redis
 h=$(trigger_hello)
 say "  Redis restarted under a 240 s task; hello triggered"
-took=$(wait_hello "$h" 300)
+took=$(wait_hello "$h" 60)
 restarted=$(($(worker_restarts) - restarts_before))
-stuck=$(alert_state AirflowTasksStuckQueued)
-say "  say_hello succeeded ${took}s after the restart (AirflowTasksStuckQueued: $stuck); worker containers restarted by their liveness probe: $restarted"
+say "  say_hello succeeded ${took}s after the restart, beside the running task; worker containers restarted: $restarted"
+[ "$restarted" -eq 0 ] || fail "a worker was restarted after the broker restart (stuck in a dead socket read?)"
 state=$(wait_run_done "$run" 600)
-say "  the 240 s task that ran through the broker restart: $state (retries=0 by design; a probe restart kills it)"
-if [ "$stuck" != inactive ]; then
-  took=$(wait_alert AirflowTasksStuckQueued inactive 300)
-  say "  AirflowTasksStuckQueued resolved after ${took}s more"
-fi
+say "  the 240 s task that ran through the broker restart: $state"
+[ "$state" = success ] || fail "the task that ran through the broker restart ended $state"
 canary
 echo "ok: (8b) broker restart under a running task recovered"
 
