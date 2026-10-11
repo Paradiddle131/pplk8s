@@ -253,7 +253,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4 and 7 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
@@ -308,6 +308,7 @@ Observed:
 - `MetadataDBDown` (`pg_up` from the Compose `postgres_exporter`) fired 50–60 seconds after the stop.
 - PgBouncer kept accepting client connections, so no pod failed a probe at first; the scheduler stopped heartbeating and `AirflowSchedulerDown` fired about 75 seconds later.
 - After the start, the DB alert resolved within 10–30 seconds and the scheduler heartbeated again 15–30 seconds later.
+- KEDA's worker query reads the same DB, so its scaler failed too and `KedaScalerErrors` fired about 2.5 minutes into the outage (2026-10-11); the worker count stays frozen until the DB is back (drill 7).
 - Three components restarted during the outage, one to three times each per pass: the kubelet killed the scheduler (exit 143) when its DB-backed liveness probe failed, and the dag-processor and triggerer (exit 1) exited on their own when they lost the DB (`psycopg2.OperationalError: server closed the connection unexpectedly`, then `PendingRollbackError`); the api-server and workers did not restart.
   The first pass reported no restarts because its restart counter was broken; trust `kubectl get pods` restart counts.
 
@@ -399,7 +400,30 @@ Observed (`terminationGracePeriodSeconds: 60`):
 
 Detection: a lost task shows as `AirflowTaskFailures` (or a retry) and on the panels "Task outcomes /min" and "Celery workers"; the scale-in itself is normal and raises no alert.
 If workers do not scale in (or out) at all, check the scaler before anything else: `KA describe hpa keda-hpa-airflow-worker` (`FailedGetExternalMetric`) and `kubectl -n keda logs deploy/keda-operator`.
-Through PgBouncer it failed on most polls with `prepared statement "stmtcache_…" already exists` until PgBouncer got `max_prepared_statements` (PLAN.md D6); no alert covers this yet (issue #7).
+Through PgBouncer it failed on most polls with `prepared statement "stmtcache_…" already exists` until PgBouncer got `max_prepared_statements` (PLAN.md D6); `KedaScalerErrors` now catches that (drill 7).
 
 Recovery: none for the scale-in; a killed task retries on its own.
 Keep tasks that outlast the grace period off the workers' critical path: defer long waits to the triggerer, and give every worker task retries.
+
+### 7. Break the KEDA scaler
+
+Trigger: point the worker ScaledObject's trigger at a table that does not exist, `KA patch scaledobject airflow-worker --type json -p '[{"op":"replace","path":"/spec/triggers/0/metadata/query","value":"SELECT count(*) FROM pplk8s_no_such_table"}]'`.
+It stands in for any scaler fault: wrong DB credentials, PgBouncer down, or the prepared-statement clash that froze the workers for about 4 minutes on 2026-10-11 (issue #7).
+
+Observed:
+
+- KEDA's PostgreSQL scaler failed on every poll (about 15 failed polls a minute); the ScaledObject went `Ready=False` (`TriggerError`) and the HPA's `ScalingActive` reason became `FailedGetExternalMetric`.
+- `keda_scaler_metrics_value` vanished, the worker count stayed where it was (1), and nothing else failed: no pod restarted, and the canary still ran.
+- `KedaScalerErrors` fired 147 seconds after the change (2026-10-11); after the query was restored, the ScaledObject was `Ready` again and the alert resolved 57 seconds later.
+- Back-tested over the prepared-statement clash of 2026-10-11 08:35–09:00 UTC, the same expression held true throughout, so the alert would have fired around 08:37.
+- With the KEDA operator scaled to 0 (by hand, not in the check), `KedaMetricsMissing` fired about 2.5 minutes later and resolved within a scrape of the operator coming back.
+
+Detection: `KedaScalerErrors` (`keda_scaled_object_errors_total` rising for 2 minutes); panels "KEDA scaler failed polls /min" and "KEDA worker target vs workers" (the target line has gaps while the worker count stays flat).
+Alert on `keda_scaled_object_errors_total`, not `keda_scaler_detail_errors_total`: during the prepared-statement clash the first counted 198 failed polls and the second stayed at 0.
+The HPA's `ScalingActive` condition is a weak signal, because it flips back to `True` on every poll that succeeds.
+`KedaMetricsMissing` fires when Prometheus does not scrape the KEDA operator at all; its ServiceMonitor lives in `platform/monitoring/manifests/airflow-monitors.yaml`, not in the KEDA chart, so the scrape exists whichever stack is deployed first.
+
+Diagnosis: `KA get scaledobject airflow-worker` (`READY False`, reason `TriggerError`); `KA describe hpa keda-hpa-airflow-worker` (`FailedGetExternalMetric` events); `kubectl --context kind-pplk8s -n keda logs deploy/keda-operator | grep -i error` names the failing query or connection.
+
+Recovery: fix the cause the operator log names (here, restore the chart's query: `make airflow-up`, or patch the old query back).
+The HPA resumes on its next poll; workers that were held through the outage scale in after the 120 s stabilisation window.

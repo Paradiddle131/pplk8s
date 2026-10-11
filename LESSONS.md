@@ -181,6 +181,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - [GKE] Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
 - [GKE] Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.
 - Back-test every new alert expression with a range query over the incident you already have, before waiting for the next one.
+- [GKE] Alert on the autoscaler's own failed-poll counter (KEDA: `keda_scaled_object_errors_total`): a failing scaler freezes the replica count with no pod failing, the HPA's `ScalingActive` condition flips back on every good poll, and KEDA's per-trigger `keda_scaler_detail_errors_total` stayed at 0 through a real outage.
+- [GKE] Keep a component's ServiceMonitor with the monitoring manifests, not behind a "monitoring CRDs exist" switch in its own chart; that switch made deploy order silently decide whether KEDA was scraped.
 
 ## Upgrades and rollback
 
