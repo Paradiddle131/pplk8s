@@ -235,3 +235,15 @@ Entry format:
   `make lint` passed.
 - Decisions: D21 keeps Prometheus on the control plane with a node-pinned volume instead of a shared host mount for a node-independent PV (closer to a GKE persistent disk, but it needs a cluster rebuild and a WSL2 bind mount that can come up empty).
 - Open: #11 (upgrade drill step 1 timed out once after the other drills).
+
+## 2026-10-11 — Phase 6 — Upgrade drill: no PgBouncer roll across a database switch (#11)
+
+- Done: `tests/e2e/phase6-upgrade-drill.sh` gained `stop_airflow` (every Deployment to 0, PgBouncer pods deleted at once instead of after their 120 s preStop sleep) and calls it before each deploy that moves PgBouncer between `airflow` and `airflow_drill`: step 1, step 4, the final restore and the exit trap.
+  On failure the exit trap now prints the migration Job's logs (current and previous attempt) and a waiting scheduler's `wait-for-airflow-migrations` log before it redeploys.
+  Runbook drill 5 and one LESSONS line record the cause.
+- Evidence: root cause reproduced with a log watcher on a standalone drill, 13:59–14:08.
+  In step 1 PgBouncer rolled while the 3.2.2 migration Job ran; two attempts reached the lab's `airflow` database through an old PgBouncer pod and failed with `Can't locate revision identified by 'd2f4e1b3c5a7'` (the 3.3.1 head of `airflow`) before a third reached `airflow_drill`.
+  The final restore's 3.3.1 Job ran `Running upgrade 1d6611b6ab7c -> …` on `airflow_drill`, not `airflow`, and reported success.
+  Each failed attempt adds to the container's restart backoff (10 s doubling to 300 s), which with a slower roll after the other drills explains the 10-minute timeout of #11.
+  With the fix, `make phase6-check` passed three times in a row, 14:09–14:50, 14:50–15:30 and 15:30–16:12; step 1 took 2.5–3 minutes each time, its Job never met the wrong schema (only `Connection refused` for the ~13 s before the new PgBouncer was ready), and the final restore's Job ran no upgrade.
+  `make lint` passed.
