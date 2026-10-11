@@ -209,3 +209,16 @@ Entry format:
   `make airflow-test` (109 passed) and `make lint` passed.
 - Decisions: D24 keeps `terminationGracePeriodSeconds: 60` and makes `retries ≥ 1` on every business task the contract instead (Composer also ends in-flight tasks when it removes workers); D6 records `max_prepared_statements`.
 - Open: #7 (no alert when the KEDA scaler fails; Prometheus does not scrape KEDA).
+
+## 2026-10-11 — Phase 6 — Alert when KEDA's scaler fails (#7)
+
+- Done: `KedaScalerErrors` (`keda_scaled_object_errors_total` rising in every 1-minute window for 2 minutes) and `KedaMetricsMissing` (the operator not scraped) in a new `airflow.scaling` rule group; a "Scaling" dashboard row with "KEDA scaler failed polls /min" and "KEDA worker target vs workers"; runbook drill 7; and drill 7 in `tests/e2e/phase6-check.sh`, which breaks the worker trigger's query, asserts the worker count stays put, restores it, and waits for the alert to resolve.
+  KEDA's ServiceMonitor moved from the KEDA chart (enabled only if the monitoring CRDs already existed, so `make phase6-check`'s order, KEDA before monitoring, left KEDA unscraped on a fresh lab) into `platform/monitoring/manifests/airflow-monitors.yaml`.
+  `observability-check.sh` also requires `keda_scaler_metrics_value` and treats a firing `Keda*` alert as unhealthy.
+  PLAN D24 and D28, runbook drills 3, 6 and 7, and two LESSONS lines record the result.
+- Evidence: during the prepared-statement clash `keda_scaled_object_errors_total` counted 198 failed polls while `keda_scaler_detail_errors_total` stayed at 0, so the alert uses the first; back-tested over 08:35–09:00 UTC, the expression held throughout (it would have fired around 08:37).
+  `make phase6-check` passed, 11:41–12:18: observability (19 series, 17 rules, none firing), KEDA (1 → 4 → 1, both scale-in cases), drills 1–4b as before, drill 7 `KedaScalerErrors` firing after 147 s with 15 failed polls a minute, ScaledObject `Ready=False`, HPA `FailedGetExternalMetric`, workers unchanged, resolved 57 s after the restore, canary passed; the upgrade drill passed.
+  `KedaScalerErrors` also fired during drill 3 (the metadata DB stop), as it should.
+  By hand, the operator scaled to 0 fired `KedaMetricsMissing` after about 2.5 minutes and it resolved once the operator was back.
+- Open: #9 (Prometheus keeps its TSDB on emptyDir, so drill 2's drain wiped every series older than the drain).
+

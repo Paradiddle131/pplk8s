@@ -102,6 +102,27 @@ spec:
           annotations:
             summary: The Airflow DB migration Job failed; components wait for migrations forever.
             runbook: docs/runbook.md#5-roll-the-chart-and-the-airflow-minor-version
+    - name: airflow.scaling
+      rules:
+        - alert: KedaScalerErrors
+          # A failing scaler leaves the HPA on its last replica count (no scale-out, no scale-in), and
+          # the HPA's ScalingActive condition flips back on every poll that succeeds, so it is a weak
+          # signal. keda_scaled_object_errors_total counts every failed poll, including the ones
+          # keda_scaler_detail_errors_total misses (a PgBouncer prepared-statement clash, issue #7).
+          # A 1m window held for 2m ignores a one-off failure; the HPA polls every 15 s.
+          expr: sum by (exported_namespace, scaledObject) (increase(keda_scaled_object_errors_total[1m])) > 0
+          for: 2m
+          labels: {severity: warning, component: keda}
+          annotations:
+            summary: "KEDA's scaler for {{ $labels.exported_namespace }}/{{ $labels.scaledObject }} keeps failing; the worker count is frozen."
+            runbook: docs/runbook.md#7-break-the-keda-scaler
+        - alert: KedaMetricsMissing
+          expr: absent(up{namespace="keda", job="keda-operator"} == 1)
+          for: 2m
+          labels: {severity: warning, component: keda}
+          annotations:
+            summary: The KEDA operator is not scraped; a failing worker scaler would go unnoticed.
+            runbook: docs/runbook.md#7-break-the-keda-scaler
     - name: airflow.work
       rules:
         - alert: AirflowPoolStarving

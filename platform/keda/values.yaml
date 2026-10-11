@@ -12,8 +12,9 @@ resources:
     requests: {cpu: 20m, memory: 32Mi}
     limits: {memory: 128Mi}
 
-# Operator metrics (scaler errors, ScaledObject readiness) for Prometheus; deploy.sh turns the
-# ServiceMonitor on only when the monitoring stack's CRDs exist.
+# Operator metrics (scaler errors, ScaledObject readiness) on the Service's `metrics` port. The
+# ServiceMonitor that scrapes them is in platform/monitoring/manifests, so that the scrape does not
+# depend on which stack is deployed first.
 prometheus:
   operator:
     enabled: true

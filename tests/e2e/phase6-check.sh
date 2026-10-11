@@ -6,9 +6,11 @@
 #   3  stop the metadata DB                              -> MetadataDBDown
 #   4a starve pool ops_load of slots                     -> AirflowPoolStarving
 #   4b starve a worker of memory (a task over its limit) -> AirflowContainerOOMKilled
+#   7  break KEDA's worker scaler (a query that fails)   -> KedaScalerErrors
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up`. Re-runnable and self-restoring: the exit trap (also on
-# SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool.
+# SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool
+# and KEDA's query.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -16,11 +18,11 @@ source "$(dirname "$0")/lib/airflow-api.sh"
 source "$(dirname "$0")/lib/prometheus.sh"
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml")
 LOAD=ops_load_test
-OUR_ALERTS='Airflow.*|MetadataDB.*|KubeNode.*'
+OUR_ALERTS='Airflow.*|MetadataDB.*|KubeNode.*|Keda.*'
 say() { echo "[$(date +%T)] $*"; }
 
 # ---- restorable state -------------------------------------------------------------------------------
-load_was_paused=""
+load_was_paused="" keda_query=""
 cleanup() {
   local rc=$? node
   set +e
@@ -30,6 +32,7 @@ cleanup() {
     kubectl --context "$CTX" uncordon "$node" >/dev/null && echo "uncordoned $node"
   done
   pool_size 16 >/dev/null 2>&1
+  [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
   [ "$load_was_paused" = true ] && api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
   stop_prometheus
   stop_port_forward
@@ -65,6 +68,11 @@ trigger_load() { # tasks seconds hold_mb -> run id
   api POST "/api/v2/dags/$LOAD/dagRuns" \
     "{\"logical_date\":null,\"conf\":{\"tasks\":$1,\"seconds\":$2,\"hold_mb\":$3}}" | jq -r .dag_run_id
 }
+keda_set_query() { # the worker ScaledObject's trigger query (the Airflow chart owns it; helm upgrade resets it)
+  kc patch scaledobject airflow-worker --type json \
+    -p "$(jq -nc --arg q "$1" '[{op: "replace", path: "/spec/triggers/0/metadata/query", value: $q}]')" >/dev/null 2>&1
+}
+keda_ready() { kc get scaledobject airflow-worker -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'; }
 run_state() { api GET "/api/v2/dags/$LOAD/dagRuns/$1" | jq -r .state; }
 wait_run_done() { # run timeout -> final state
   local end=$((SECONDS + $2)) state=""
@@ -187,6 +195,27 @@ canary
 took=$(wait_alert AirflowContainerOOMKilled inactive 600)
 say "  recovered: worker restarted by the kubelet, alert resolved after ${took}s"
 echo "ok: (4b) worker OOMKill detected and recovered"
+
+# ---- 7. break KEDA's worker scaler ------------------------------------------------------------------
+# Stands in for any scaler fault (DB credentials, PgBouncer, the prepared-statement clash of issue #7):
+# the HPA cannot read its metric and keeps the current worker count.
+keda_query=$(kc get scaledobject airflow-worker -o jsonpath='{.spec.triggers[0].metadata.query}')
+workers=$(kc get deploy airflow-worker -o jsonpath="{.spec.replicas}")
+say "7. KEDA: the worker trigger's query now reads a table that does not exist ($workers workers)"
+keda_set_query "SELECT count(*) FROM pplk8s_no_such_table"
+took=$(wait_alert KedaScalerErrors firing 300)
+failed=$(prom_value 'sum(increase(keda_scaled_object_errors_total{scaledObject="airflow-worker"}[1m]))')
+hpa=$(kc get hpa keda-hpa-airflow-worker -o jsonpath='{.status.conditions[?(@.type=="ScalingActive")].reason}')
+say "  detected: KedaScalerErrors firing after ${took}s (${failed%.*} failed polls in the last minute); ScaledObject Ready=$(keda_ready), HPA ScalingActive=$hpa"
+[ "$(kc get deploy airflow-worker -o jsonpath="{.spec.replicas}")" = "$workers" ] ||
+  fail "the worker count moved while the scaler was failing"
+keda_set_query "$keda_query"
+keda_query=""
+took=$(wait_alert KedaScalerErrors inactive 300)
+[ "$(keda_ready)" = True ] || fail "ScaledObject airflow-worker not Ready after the query was restored"
+say "  recovered: query restored, ScaledObject Ready, alert resolved after ${took}s"
+canary
+echo "ok: (7) KEDA scaler failure detected and recovered"
 
 firing=$(firing_ours)
 [ -z "$firing" ] || fail "alerts still firing after the drills: $firing"
