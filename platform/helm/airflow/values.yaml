@@ -49,6 +49,13 @@ pgbouncer:
   # them one at a time even after a drain has put both on one node. Anti-affinity is preferred, not
   # required: two kind nodes have no room for a rollout's surge pod or a drained replica under a hard rule.
   replicas: 2
+  # KEDA's PostgreSQL scaler (pgx) caches named prepared statements per client connection. In
+  # transaction pooling a statement lands on whichever server connection serves the query, so its
+  # next Parse failed with `prepared statement "stmtcache_…" already exists` on most polls, and the
+  # HPA, without a metric, froze the worker count. PgBouncer 1.21+ tracks protocol-level prepared
+  # statements itself when this is above 0 (default 0 = off).
+  extraIni: |
+    max_prepared_statements = 100
   podDisruptionBudget:
     enabled: true
     config:
