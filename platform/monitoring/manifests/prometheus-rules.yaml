@@ -1,0 +1,21 @@
+# Lab replacements for kube-prometheus-stack default rules that the values disable (values.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: lab-prometheus
+  namespace: monitoring
+spec:
+  groups:
+    - name: lab.prometheus
+      rules:
+        - alert: PrometheusRuleGroupOverrun
+          # Replaces PrometheusMissingRuleEvaluations, which counts missed slots on the wall clock and
+          # fires falsely on WSL2 (issue #5). A group misses slots when one evaluation runs longer
+          # than its interval; durations are timed on the monotonic clock, so a clock step cannot
+          # fake one.
+          expr: |
+            max_over_time(prometheus_rule_group_last_duration_seconds{job="kps-prometheus"}[5m])
+              > prometheus_rule_group_interval_seconds{job="kps-prometheus"}
+          labels: {severity: warning}
+          annotations:
+            summary: "Rule group {{ $labels.rule_group }} took longer than its interval; its evaluations are being skipped."

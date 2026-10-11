@@ -16,10 +16,16 @@ defaultRules:
     kubeSchedulerAlerting: false
     kubeSchedulerRecording: false
     kubeProxy: false
+  # Both fire falsely on WSL2, whose monotonic clock runs ~6.5% slower than wall time: Hyper-V
+  # TimeSync steps the wall clock forward ~2 s every ~32 s to catch up with the host (issue #5).
   disabled:
-    # Fires falsely on WSL2: the VM's boot time is corrected continuously, so every process's
-    # process_start_time_seconds creeps upward (~2.5 s per 30 s observed) and counts as a restart.
+    # The VM's boot time is corrected with each step, so every process's process_start_time_seconds
+    # creeps upward (~2.5 s per 30 s observed) and counts as a restart.
     AlertmanagerClusterCrashlooping: true
+    # Prometheus ticks rule groups on the monotonic clock but counts missed slots on the wall clock,
+    # so wall time gains one 15 s slot every ~4 min and every group "misses" one evaluation at once.
+    # PrometheusRuleGroupOverrun (manifests/prometheus-rules.yaml) alerts on the real cause instead.
+    PrometheusMissingRuleEvaluations: true
 
 prometheus:
   prometheusSpec:

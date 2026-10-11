@@ -183,6 +183,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Back-test every new alert expression with a range query over the incident you already have, before waiting for the next one.
 - [GKE] Alert on the autoscaler's own failed-poll counter (KEDA: `keda_scaled_object_errors_total`): a failing scaler freezes the replica count with no pod failing, the HPA's `ScalingActive` condition flips back on every good poll, and KEDA's per-trigger `keda_scaler_detail_errors_total` stayed at 0 through a real outage.
 - [GKE] Give Prometheus a persistent volume (`storageSpec`; a PD-backed PVC on GKE, or Managed Service for Prometheus): on the operator's default emptyDir, one node drain wiped the history the alert back-tests needed, and `retention` alone promises nothing across a pod move.
+- When every rule group misses evaluations at the same moment while each evaluation stays fast, check the node's clocks before tuning intervals: Prometheus counts missed slots on the wall clock, so a stepped clock fakes the misses.
 - [GKE] Keep a component's ServiceMonitor with the monitoring manifests, not behind a "monitoring CRDs exist" switch in its own chart; that switch made deploy order silently decide whether KEDA was scraped.
 
 ## Upgrades and rollback
