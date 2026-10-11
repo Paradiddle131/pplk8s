@@ -360,6 +360,8 @@ Raising the worker limit only moves the ceiling, because every task on a Celery 
 
 Trigger: `make phase6-upgrade-drill`.
 It works on a throwaway database, `airflow_drill` on the same metadata-db server (`--set data.metadataConnection.db=airflow_drill`), never on the lab's only copy; its exit trap redeploys the normal release and drops `airflow_drill`.
+Before every deploy that moves PgBouncer to the other database, the drill stops every Deployment and deletes the PgBouncer pods (issue #11).
+Otherwise PgBouncer rolls while the migration Job runs, and the Job reaches whichever database a surviving old PgBouncer pod still serves: the 3.2.2 Job failed on the lab's 3.3.1 schema with `Can't locate revision identified by 'd2f4e1b3c5a7'` and once crash-looped past helm's 10-minute timeout, and the restore's 3.3.1 Job migrated `airflow_drill` instead of `airflow` and reported success.
 The steps: install chart 1.21.0 with Airflow 3.2.2 (image `AIRFLOW_DRILL_IMAGE`, with Composer 3.2.2's provider pins), back up the database with `pg_dump -Fc`, preview with `helm diff upgrade`, upgrade to chart 1.22.0 with Airflow 3.3.1, then go back first the wrong way and then the right way.
 
 Observed, upgrade:
