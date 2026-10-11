@@ -290,6 +290,9 @@ Observed:
   With a single replica, the drain cut every component's DB connections: in one pass the triggerer restarted within the minute (exit `Error`), and six evictions of a lone replica in a row restarted the scheduler, dag-processor, and triggerer once each.
   A component that loses its connection exits on `sqlalchemy.exc.PendingRollbackError` after `server closed the connection unexpectedly` instead of reconnecting, and the kubelet restarts it.
 - When a drain has put both replicas on one node, draining that node evicts them one at a time: kubectl retries the second (`Cannot evict pod as it would violate the pod's disruption budget`) until the first is Ready elsewhere.
+- Prometheus keeps its history: it runs on the control plane with its TSDB on a PVC (D21), so a worker drain never moves it.
+  Before issue #9 it used an emptyDir, and a drain that moved it erased every series older than the drain.
+  The check restarts Prometheus after the drain and requires a `count(up)` sample from before it to read the same.
 - PgBouncer is the only chart component with a PodDisruptionBudget.
   The others run one replica each, so a PDB with `minAvailable: 1` would block the drain instead.
 

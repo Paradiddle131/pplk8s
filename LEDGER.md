@@ -222,3 +222,16 @@ Entry format:
   By hand, the operator scaled to 0 fired `KedaMetricsMissing` after about 2.5 minutes and it resolved once the operator was back.
 - Open: #9 (Prometheus keeps its TSDB on emptyDir, so drill 2's drain wiped every series older than the drain).
 
+
+## 2026-10-11 — Phase 6 — Prometheus keeps its history across a restart (#9)
+
+- Done: Prometheus' TSDB moved from the operator's default emptyDir to a 5Gi PVC on kind's `standard` StorageClass (`storageSpec.volumeClaimTemplate`, `retentionSize: 4GB`), and Prometheus runs on the control plane (`nodeSelector` plus a toleration), because a `local-path` PV is pinned to its node and a worker drain would leave Prometheus Pending during the drill it observes.
+  Drill 2 in `tests/e2e/phase6-check.sh` records a pre-drain `count(up)` sample, restarts Prometheus after the drain, and fails unless the same sample still reads back (`prom_value_at` in `tests/e2e/lib/prometheus.sh`).
+  PLAN D21, runbook drill 2, and one LESSONS line record the result.
+- Evidence: `make observability-up` let the operator recreate the StatefulSet itself; the PV landed on `pplk8s-control-plane`.
+  `make phase6-check`, 12:36–13:09: observability, KEDA, and drills 1–4b and 7 passed; drill 2 drained `pplk8s-worker2`, then the restarted Prometheus read `count(up)` at 12:51:55 as 28, the same as before.
+  Afterwards the pod was 10:54:33 UTC old and its oldest sample 10:39:34 UTC, the first start on the volume.
+  The upgrade drill in that run timed out installing the old line (#11); `make phase6-upgrade-drill` then passed on its own, 13:27–13:36.
+  `make lint` passed.
+- Decisions: D21 keeps Prometheus on the control plane with a node-pinned volume instead of a shared host mount for a node-independent PV (closer to a GKE persistent disk, but it needs a cluster rebuild and a WSL2 bind mount that can come up empty).
+- Open: #11 (upgrade drill step 1 timed out once after the other drills).

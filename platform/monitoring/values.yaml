@@ -27,6 +27,24 @@ prometheus:
     scrapeInterval: 15s
     evaluationInterval: 15s
     retention: 2d
+    # The TSDB lives on a PVC, so a pod move or restart keeps the history that drills and alert
+    # back-tests read (issue #9). About 3.4k samples/s is ~1 GB for 2 days plus the WAL;
+    # retentionSize keeps it inside the volume.
+    retentionSize: 4GB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests: {storage: 5Gi}
+    # kind's local-path PV is pinned to the node it was created on, so a drain of that node would
+    # leave Prometheus Pending and blind for the drill it should observe. The control plane is
+    # never drained, so Prometheus and its volume stay there (PLAN.md D21).
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
+    tolerations:
+      - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
     # Select ServiceMonitors, PodMonitors, ScrapeConfigs and rules from every release and namespace,
     # not only those labelled with this release (the Airflow monitors live in platform/monitoring).
     serviceMonitorSelectorNilUsesHelmValues: false
