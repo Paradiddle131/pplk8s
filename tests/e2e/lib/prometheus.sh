@@ -1,6 +1,6 @@
 # Helpers for checks that read Prometheus (source after airflow-api.sh, which provides fail).
-# Provides: start_prometheus, prom (instant query -> JSON result array), prom_value, alert_state,
-# wait_alert (firing|inactive). Set PROM_PORT before sourcing to override.
+# Provides: start_prometheus, prom (instant query -> JSON result array), prom_value, prom_value_at,
+# alert_state, wait_alert (firing|inactive). Set PROM_PORT before sourcing to override.
 PROM_PORT=${PROM_PORT:-19090}
 PROM=http://localhost:$PROM_PORT
 prom_pf=""
@@ -25,6 +25,10 @@ prom() { # promql -> the result array of an instant query
 }
 prom_value() { # promql -> first sample value, or empty
   prom "$1" | jq -r '.[0].value[1] // empty'
+}
+prom_value_at() { # promql unix-time -> first sample value at that time, or empty
+  curl -sf "$PROM/api/v1/query" --data-urlencode "query=$1" --data-urlencode "time=$2" |
+    jq -r '.data.result[0].value[1] // empty'
 }
 alert_state() { # alertname -> firing | pending | inactive
   prom "ALERTS{alertname=\"$1\"}" | jq -r 'map(.metric.alertstate) | if index("firing") then "firing" elif index("pending") then "pending" else "inactive" end'

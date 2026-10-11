@@ -3,6 +3,7 @@
 # recovered by its docs/runbook.md procedure, proven by the alert resolving and a canary DAG run.
 #   1  kill the scheduler (sustained: scaled to 0)      -> AirflowSchedulerDown
 #   2  drain the node that runs the Celery worker       -> KubeNodeUnschedulable
+#      (then restart Prometheus: its history from before the drain must survive)
 #   3  stop the metadata DB                              -> MetadataDBDown
 #   4a starve pool ops_load of slots                     -> AirflowPoolStarving
 #   4b starve a worker of memory (a task over its limit) -> AirflowContainerOOMKilled
@@ -127,6 +128,10 @@ node=$(kc get pod -l component=worker -o jsonpath='{.items[0].spec.nodeName}')
 say "2. drain: $node (runs $(kc get pods -o wide --no-headers --field-selector=status.phase=Running | awk -v n="$node" '$7==n{print $1}' | tr '\n' ' '))"
 bouncers=$(kc get pods -l component=pgbouncer -o wide --no-headers | awk -v n="$node" '$7==n' | wc -l)
 before=$(restarts)
+# Prometheus keeps its TSDB on a PVC on the control plane (D21, issue #9); remember a pre-drain sample.
+history_at=$(($(date +%s) - 30))
+history=$(prom_value_at 'count(up)' "$history_at")
+[ -n "$history" ] || fail "no count(up) sample at $history_at to check Prometheus' history against"
 kubectl --context "$CTX" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=300s >/dev/null
 took=$(wait_alert KubeNodeUnschedulable firing 240)
 say "  detected: KubeNodeUnschedulable firing after ${took}s"
@@ -145,7 +150,15 @@ kubectl --context "$CTX" uncordon "$node" >/dev/null
 took=$(wait_alert KubeNodeUnschedulable inactive 240)
 say "  recovered: $node uncordoned, alert resolved after ${took}s"
 canary
-echo "ok: (2) node drain detected; workloads moved off the node and kept running"
+# A drain never reaches Prometheus (it stays on the control plane with its node-pinned volume), so
+# restart it the way an eviction would and check the history from before the drain is still there.
+kubectl --context "$CTX" -n monitoring delete pod prometheus-kps-prometheus-0 --wait=true >/dev/null
+start_prometheus
+prom_node=$(kubectl --context "$CTX" -n monitoring get pod prometheus-kps-prometheus-0 -o jsonpath='{.spec.nodeName}')
+kept=$(prom_value_at 'count(up)' "$history_at")
+say "  Prometheus restarted on $prom_node: count(up) at $(date -d "@$history_at" +%T) was $history, now reads ${kept:-nothing}"
+[ "$kept" = "$history" ] || fail "Prometheus lost its history across a restart ($history -> ${kept:-nothing})"
+echo "ok: (2) node drain detected; workloads moved off the node and kept running; Prometheus kept its history"
 
 # ---- 3. stop the metadata DB ------------------------------------------------------------------------
 before=$(restarts)
