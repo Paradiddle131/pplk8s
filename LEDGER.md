@@ -192,3 +192,8 @@ Entry format:
 - Evidence: baseline with one replica, six evictions of the lone PgBouncer pod in a row restarted the scheduler, dag-processor, and triggerer once each.
   With two replicas, eight evictions one replica at a time restarted nothing, and draining each node by hand (components moving with it) restarted nothing; with both replicas on one node, the drain waited on the PDB and evicted them one at a time.
   `make phase6-check` passed, 23:51–00:20: drill 2 drained `pplk8s-worker2`, moved 1 of 2 PgBouncer replicas while the triggerer, dag-processor, and api-server stayed on the other node, and no container restarted; drills 1, 3, 4a, 4b, the upgrade drill, KEDA, and observability checks passed as before.
+
+## 2026-10-11 — Vertical sizing lessons
+
+- Done: `LESSONS.md` gained a Helm/Kubernetes line (fix a per-request memory spike with a higher limit, not replicas) and a [GKE] design choice on where the Vertical Pod Autoscaler fits (recommend-only widely; automatic resizing only for multi-replica stateless services with gradual growth).
+- Evidence: the Grafana OOMKill fixed in `685bf90` (one pod, 384 Mi limit, a wide dashboard range); the VPA line is reasoning, not a lab run, so it sits under "Design choices to settle at work".

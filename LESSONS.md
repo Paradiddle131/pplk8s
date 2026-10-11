@@ -54,6 +54,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - dbt granularity: one task per schedule tag (the whole tagged lineage, as today), per tag and layer (what the lab ran: per-layer readiness and retries), or per tag and source/domain, but never one task per model, because dbt owns the model graph.
 - Weigh for dbt granularity: every invocation pays a Cloud Run Job start and a parse of the whole project (more noticeable at 700+ models), a failed task re-runs its whole selection, consumers may need per-layer readiness, and parallel invocations share BigQuery slots.
 - Extraction fan-out: one mapped task per source/entity (per-entity retries and visibility, more tasks) or one task per source (EL Factory iterates); size the pool from the parallelism the workflows and EL Factory already run at today, not from a guess.
+- [GKE] Vertical Pod Autoscaler: run it in `Off` (recommend-only) mode widely to check hand-set requests, and let it resize pods only for multi-replica stateless services whose usage grows gradually; keep measured sizing with headroom for single replicas (VPA evicts to resize, and its updater skips workloads below two replicas), spiky user-driven load (history lags the spike), workloads an HPA scales on CPU or memory, and KEDA-scaled workers, whose `maxReplicaCount` assumes a fixed number per node.
 
 ## Versions and dependencies
 
@@ -163,6 +164,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - With a KEDA minimum above 0 the HPA does the scaling on its own 15 s loop: `cooldownPeriod` is ignored and the HPA scale-down stabilisation window is the setting that keeps workers through gaps.
 - KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
 - Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills, with the busiest dashboards open on their widest ranges), not from chart defaults; the lab's worker peaked above its request, the api-server far below, and Grafana was OOMKilled loading a wide dashboard range.
+- Fix a per-request memory spike vertically, not with replicas: one pod serves the request, so extra replicas sit idle while it is OOMKilled; set the limit with headroom above the worst realistic case (Grafana idled near 270 Mi, peaked at 542 Mi on a 7-day range, and holds at a 768 Mi limit).
 
 ## Observability and alerting
 
