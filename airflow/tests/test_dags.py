@@ -153,6 +153,18 @@ def test_sales_dbt_stages_select_only_sales_models(sales):
         )
 
 
+@pytest.mark.parametrize("dag_id", ["sales_elt", "returns_file_arrival", "finance_daily"])
+def test_every_business_task_survives_a_lost_worker(bag, dag_id):
+    """KEDA scale-in, a drain, or an OOM can kill a running task; Celery's warm shutdown only waits
+    terminationGracePeriodSeconds (PLAN.md D24). The scheduler fails the orphan after the heartbeat
+    timeout, so only a retry keeps the run alive. Bad input still fails fast
+    (AirflowFailException)."""
+    dag = bag.dags[dag_id]
+    for task in dag.tasks:
+        retries = task.partial_kwargs["retries"] if task.is_mapped else task.retries
+        assert retries >= 1, f"{dag_id}.{task.task_id} has no retries"
+
+
 def test_ops_load_test_holds_slots_in_its_own_pool(bag):
     load = bag.dags["ops_load_test"]
     hold = load.get_task("hold_slot")

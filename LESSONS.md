@@ -54,6 +54,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - dbt granularity: one task per schedule tag (the whole tagged lineage, as today), per tag and layer (what the lab ran: per-layer readiness and retries), or per tag and source/domain, but never one task per model, because dbt owns the model graph.
 - Weigh for dbt granularity: every invocation pays a Cloud Run Job start and a parse of the whole project (more noticeable at 700+ models), a failed task re-runs its whole selection, consumers may need per-layer readiness, and parallel invocations share BigQuery slots.
 - Extraction fan-out: one mapped task per source/entity (per-entity retries and visibility, more tasks) or one task per source (EL Factory iterates); size the pool from the parallelism the workflows and EL Factory already run at today, not from a guess.
+- [GKE] Vertical Pod Autoscaler: run it in `Off` (recommend-only) mode widely to check hand-set requests, and let it resize pods only for multi-replica stateless services whose usage grows gradually; keep measured sizing with headroom for single replicas (VPA evicts to resize, and its updater skips workloads below two replicas), spiky user-driven load (history lags the spike), workloads an HPA scales on CPU or memory, and KEDA-scaled workers, whose `maxReplicaCount` assumes a fixed number per node.
 
 ## Versions and dependencies
 
@@ -107,6 +108,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Before recording readiness, compare loaded rows with the count the service reported, and fail fast on a mismatch.
 - Prove idempotency with data, not run status: rows equal distinct keys per run, and gold/exposed count:hash values unchanged after clear-and-rerun.
 - A task on a dead worker stays `running` until `[scheduler] task_instance_heartbeat_timeout` (300 s by default) before it is retried; the lab lowered it to 120 s because supervisors heartbeat every few seconds (on Composer, set it as an Airflow configuration override).
+- Give every task that runs on a worker `retries ≥ 1`: a scale-in, drain, or OOM that outlasts the worker's grace period kills the task, and the scheduler only fails it at the heartbeat timeout; Composer documents the same for removed workers. Bad input still fails at once through `AirflowFailException`, and a DAG test that asserts retries on every business task keeps the rule from eroding.
 - Inject faults before any side effect, and for a "retry then succeed" drill inject 100% failure, then lift it mid-retries; a fractional rate over many requests makes the outcome random.
 
 ## Events and file arrival
@@ -160,9 +162,13 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Choose the executor for orchestration throughput and isolation; Celery fits thin HTTP and pod-launch tasks and matches Composer's model.
 - A task naming an executor the deployment does not configure is an import error; keep multi-executor experiments in their own DAGs.
 - A KubernetesExecutor pod costs seconds of start-up and a DAG re-parse per task; keep it for tasks that need their own memory limit, and know that an OOMKilled pod's log may never reach remote storage.
+- Celery's warm shutdown works on Kubernetes: on SIGTERM a worker stops taking tasks and finishes the running ones within `terminationGracePeriodSeconds`; size the grace to typical task length, not the longest, because it also bounds every rollout and drain, and let retries cover the rest.
+- [GKE] Behind PgBouncer in transaction pooling, set `max_prepared_statements` (PgBouncer 1.21+) before pointing KEDA's PostgreSQL scaler at it: its pgx statement cache otherwise fails most polls with `prepared statement … already exists`, and the HPA silently freezes the worker count with no pod failing.
+- Drill a scale-in deterministically: hold an extra replica by raising the minimum, mark the target pod with `controller.kubernetes.io/pod-deletion-cost: "-100"`, then lower the minimum; the ReplicaSet deletes the cheapest pod.
 - With a KEDA minimum above 0 the HPA does the scaling on its own 15 s loop: `cooldownPeriod` is ignored and the HPA scale-down stabilisation window is the setting that keeps workers through gaps.
 - KEDA's Celery query counts running and queued task instances, so it scales for a full executor but not for a full pool; starved pool tasks wait in `scheduled`.
 - Size requests from observed peaks (`max_over_time(container_memory_working_set_bytes[…])` over real runs and drills, with the busiest dashboards open on their widest ranges), not from chart defaults; the lab's worker peaked above its request, the api-server far below, and Grafana was OOMKilled loading a wide dashboard range.
+- Fix a per-request memory spike vertically, not with replicas: one pod serves the request, so extra replicas sit idle while it is OOMKilled; set the limit with headroom above the worst realistic case (Grafana idled near 270 Mi, peaked at 542 Mi on a 7-day range, and holds at a 768 Mi limit).
 
 ## Observability and alerting
 

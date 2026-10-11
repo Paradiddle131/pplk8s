@@ -192,3 +192,20 @@ Entry format:
 - Evidence: baseline with one replica, six evictions of the lone PgBouncer pod in a row restarted the scheduler, dag-processor, and triggerer once each.
   With two replicas, eight evictions one replica at a time restarted nothing, and draining each node by hand (components moving with it) restarted nothing; with both replicas on one node, the drain waited on the PDB and evicted them one at a time.
   `make phase6-check` passed, 23:51–00:20: drill 2 drained `pplk8s-worker2`, moved 1 of 2 PgBouncer replicas while the triggerer, dag-processor, and api-server stayed on the other node, and no container restarted; drills 1, 3, 4a, 4b, the upgrade drill, KEDA, and observability checks passed as before.
+
+## 2026-10-11 — Vertical sizing lessons
+
+- Done: `LESSONS.md` gained a Helm/Kubernetes line (fix a per-request memory spike with a higher limit, not replicas) and a [GKE] design choice on where the Vertical Pod Autoscaler fits (recommend-only widely; automatic resizing only for multi-replica stateless services with gradual growth).
+- Evidence: the Grafana OOMKill fixed in `685bf90` (one pod, 384 Mi limit, a wide dashboard range); the VPA line is reasoning, not a lab run, so it sits under "Design choices to settle at work".
+
+## 2026-10-11 — Phase 6 — KEDA scale-in during a running task (#3), and a frozen scaler
+
+- Done: `tests/e2e/keda-check.sh` adds a scale-in drill: raise the ScaledObject minimum by one, run one `ops_load_test` task, mark its pod with `controller.kubernetes.io/pod-deletion-cost: "-100"`, drop the minimum back; once with a task shorter than the 60 s grace and once with a longer one.
+  PgBouncer gets `max_prepared_statements = 100` (`pgbouncer.extraIni`), which stopped KEDA's PostgreSQL scaler from failing most polls with `prepared statement "stmtcache_…" already exists`.
+  `validate_event` (returns_file_arrival) and both `ReadinessSensor`s (finance_daily) gained retries, and `test_every_business_task_survives_a_lost_worker` asserts `retries ≥ 1` on every task of the three business DAGs.
+  Runbook drill 6, PLAN D24 and D6, and three LESSONS lines record the result.
+- Evidence: before the PgBouncer change, `keda-operator` logged 714 prepared-statement errors in 30 minutes, the HPA reported `FailedGetExternalMetric`, and a worker idle since 10:55:46 was only removed at 10:59:31; after it, none.
+  `tests/e2e/keda-check.sh` passed, 11:08–11:17: burst 1 → 4 workers in 28 s, 16/16 tasks on try 1, back to 1 worker 130 s after the run; the scale-in picked the marked pod after 13 s and the 45 s task succeeded during the warm shutdown; with a 240 s task the scale-in picked the marked pod after 10 s, the pod was gone after 77 s (60 s grace), and the scheduler failed the task 121 s later on its heartbeat timeout.
+  `make airflow-test` (109 passed) and `make lint` passed.
+- Decisions: D24 keeps `terminationGracePeriodSeconds: 60` and makes `retries ≥ 1` on every business task the contract instead (Composer also ends in-flight tasks when it removes workers); D6 records `max_prepared_statements`.
+- Open: #7 (no alert when the KEDA scaler fails; Prometheus does not scrape KEDA).

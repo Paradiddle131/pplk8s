@@ -44,7 +44,8 @@ STAGES = ("bronze", "silver")
     doc_md=__doc__,
 )
 def returns_file_arrival():
-    @task
+    # Retries cover a lost worker; a malformed event still fails fast (AirflowFailException).
+    @task(retries=2, retry_delay=timedelta(seconds=15))
     def validate_event() -> dict[str, str]:
         context = get_current_context()
         event = file_event(context["dag_run"].conf, OBJECT_PATTERN)

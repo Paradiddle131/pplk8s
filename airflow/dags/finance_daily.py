@@ -67,6 +67,9 @@ def finance_daily():
             interval_end=ctx["interval_end"],
             poll_interval=15,
             timeout=timedelta(hours=6),
+            # The first poke runs on a worker before deferring; a lost worker must not fail the run.
+            retries=2,
+            retry_delay=timedelta(seconds=15),
         )
         for product in UPSTREAM
     }
