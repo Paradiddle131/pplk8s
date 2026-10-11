@@ -247,3 +247,17 @@ Entry format:
   Each failed attempt adds to the container's restart backoff (10 s doubling to 300 s), which with a slower roll after the other drills explains the 10-minute timeout of #11.
   With the fix, `make phase6-check` passed three times in a row, 14:09–14:50, 14:50–15:30 and 15:30–16:12; step 1 took 2.5–3 minutes each time, its Job never met the wrong schema (only `Connection refused` for the ~13 s before the new PgBouncer was ready), and the final restore's Job ran no upgrade.
   `make lint` passed.
+
+## 2026-10-11 — Phase 6 — False `PrometheusMissingRuleEvaluations` on WSL2 (#5)
+
+- Done: root-caused the always-firing `PrometheusMissingRuleEvaluations` to the WSL2 VM's clocks, not to load.
+  `platform/monitoring/values.yaml` disables the rule next to `AlertmanagerClusterCrashlooping`, which has the same cause.
+  `platform/monitoring/manifests/prometheus-rules.yaml` adds `PrometheusRuleGroupOverrun`, which fires when a group evaluation outlasts its interval.
+  `tests/e2e/observability-check.sh` now also fails on any firing `Prometheus.*` alert.
+  PLAN D21 and one LESSONS line record the cause.
+- Evidence: reproduced on the live lab, 14:12 UTC: `increase(prometheus_rule_group_iterations_missed_total[30m])` was 8.05 for each of 34 groups, and the alert was firing on 33 series, while the slowest group evaluation took 0.035 s.
+  Sampling `time.time() - time.monotonic()` every 15 s showed the wall clock stepping forward by ~2.08 s every ~32 s, i.e. ~6.5% fast against the monotonic clock (clocksource `tsc`, Hyper-V TimeSync active); the wall clock agreed with an external HTTP `Date` header.
+  Prometheus 3.15.0 ticks each group on a monotonic `time.Ticker` but computes `missed := time.Since(evalTimestamp)/interval - 1` from a wall-clock-only `evalTimestamp` (`rules/group.go`), so wall time gains one 15 s slot every ~3.8 minutes: a predicted 7.8 misses per group per 30 minutes against 8.05 observed.
+  After `platform/monitoring/deploy.sh`, the old alert's series went stale, the new rule loaded with `health=ok`, and only `Watchdog` was firing; the check's firing query returned `PrometheusMissingRuleEvaluations` at 14:23 and nothing at 14:27.
+  `tests/e2e/observability-check.sh` and `make lint` passed.
+- Open: the clock itself is a host issue outside the repo; switching the WSL2 kernel to `clocksource=hyperv_clocksource_tsc_page` might fix it but is untested (needs root).

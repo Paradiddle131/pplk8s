@@ -56,7 +56,7 @@ echo "ok: pools are separate series (el_factory open slots: $(prom_value 'airflo
 
 rules=$(curl -sf "$PROM/api/v1/rules?type=alert" | jq '[.data.groups[] | select(.name|startswith("airflow.")) | .rules[]] | length')
 [ "$rules" -ge 10 ] || fail "only $rules Airflow alert rules loaded"
-firing=$(prom 'ALERTS{alertstate="firing", alertname=~"Airflow.*|MetadataDB.*|KubeNode.*|Keda.*"}' | jq -r 'map(.metric.alertname) | join(",")')
+firing=$(prom 'ALERTS{alertstate="firing", alertname=~"Airflow.*|MetadataDB.*|KubeNode.*|Keda.*|Prometheus.*"}' | jq -r 'map(.metric.alertname) | join(",")')
 [ -z "$firing" ] || fail "alerts firing on a healthy lab: $firing"
 echo "ok: $rules Airflow alert rules loaded, none firing"
 
