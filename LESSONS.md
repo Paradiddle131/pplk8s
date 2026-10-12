@@ -125,6 +125,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - An adapter outage delays runs but loses nothing while messages stay within subscription retention; replay lost events by republishing the notification for the object's live generation.
 - `AssetWatcher` with the Pub/Sub `MessageQueueTrigger` turns one pull into one asset event and one run (three messages became one run), acks on pull before any run exists, and has no routing or dedupe key; prefer an adapter when you need one run per file.
 - The provider's Pub/Sub trigger runs on the triggerer and resolves Google credentials before building its client, so give the triggerer the connection and environment it needs.
+- Keep event dedupe in the warehouse, not in Airflow's run ids alone: after a metadata restore a redelivered event re-creates its run under the same deterministic id, and only the durable file ledger stops a second load.
 
 ## Cross-pipeline readiness
 
@@ -138,6 +139,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Expect a triggerer outage to pause deferred waits, not fail them: another triggerer claims a trigger at once after a clean stop but only once the dead one's heartbeat is `triggerer_health_check_threshold` (30 s) old after a crash, and the outage counts against the sensor timeout, which is fixed when the task defers.
 - Alert on the triggerer's heartbeat, not on task failures: a wait whose upstream turned ready during a triggerer outage sits `deferred` and fails nothing until its timeout.
 - Run at least two triggerers (Composer's highly resilient mode does): a lost triggerer's triggers move to the survivor once its heartbeat is 30 s stale (23–24 s after a hang or crash in the lab), instead of waiting for a replacement; after a crash, the survivor and the restarted container race for them, and each trigger still moves only once.
+- Let every readiness row name the run that wrote it as `(dag_id, run_id)`, not `run_id` alone: run ids are unique only per DAG, and that pair is what lets you tell Airflow's history from the warehouse's after a metadata restore.
 
 ## Helm chart and Kubernetes
 
@@ -207,6 +209,9 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - [GKE] Rehearse an upgrade on a throwaway database (`data.metadataConnection.db`) on the same server, never on the only copy.
 - [GKE] Stop Airflow and PgBouncer before a release that points PgBouncer at another database: PgBouncer rolls while the migration Job runs, so the Job migrates whichever database an old PgBouncer pod still serves and can report success on the wrong one.
 - The older Airflow line needs its own provider pins (Composer publishes one list per build); a seam module that uses a newer provider API breaks on it, so test imports on both images before the roll.
+- [Composer] Treat a Cloud SQL restore or a Composer snapshot load as data drift, not only a rollback: Airflow forgets every run after the backup while the warehouse keeps their rows, and nothing else alerts; match the ledger's `(dag_id, run_id)` against Airflow's runs (a SQL exporter on each side, joined in PromQL) and alert on the difference.
+- After a metadata restore, replay the lost runs one at a time in the order they finished, manual and event runs under their own ids; replayed together, a consumer starts at once on its producers' still-`ready` ledger rows and builds before they are rebuilt.
+- Expect the scheduler not to backfill a restore's gap with `catchup=False`: it re-creates only the latest interval's run, so every earlier lost scheduled run needs an explicit replay (as a manual run: its `scheduled__` id belongs to the scheduler).
 
 ## Shipping DAGs and images
 
@@ -230,6 +235,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Keep dbt SQL portable to BigQuery, and mark each dialect-specific line with a comment naming the BigQuery form.
 - Run `dbt parse` in the image build as a smoke check, and drive connection settings from env vars so one image serves every environment.
 - An intermittent "dbt was unable to infer all dependencies" failure was seen and never reproduced; give dbt tasks retries and avoid concurrent builds against the same target.
+- On Postgres, dbt's table materialization drops the old table with `CASCADE`, which deletes every view on it, including another pipeline's (issue #27); BigQuery has no such dependency, so check cross-pipeline views after any rebuild on a Postgres stand-in.
 
 ## Testing and verification
 
