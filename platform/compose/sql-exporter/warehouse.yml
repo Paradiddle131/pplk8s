@@ -1,0 +1,18 @@
+# sql_exporter for the warehouse (D32): the readiness ledger rows written by Airflow runs, matched
+# against the metadata DB's runs by the AirflowMetadataBehindWarehouse alert. The DSN comes from
+# SQLEXPORTER_TARGET_DSN (compose.yaml), never from this file.
+global:
+  scrape_timeout_offset: 500ms
+  min_interval: 0s
+  max_connections: 2
+  max_idle_connections: 1
+  max_connection_lifetime: 10m
+
+target:
+  name: warehouse
+  # Placeholder: SQLEXPORTER_TARGET_DSN (compose.yaml) replaces it, so no password lives in this file.
+  data_source_name: "postgresql://set-by-env"
+  collectors: [ops_readiness]
+
+collector_files:
+  - "*.collector.yml"

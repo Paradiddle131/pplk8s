@@ -17,7 +17,7 @@ def test_upsert_sql_is_keyed_on_the_ledger_primary_key():
 
 def test_record_readiness_passes_parameters(mocker):
     run = mocker.patch.object(PostgresHook, "run")
-    readiness.record_readiness("sales.gold", START, END, END, "run-1", "ready")
+    readiness.record_readiness("sales.gold", START, END, END, "run-1", "ready", dag_id="sales_elt")
     run.assert_called_once()
     assert run.call_args.args[0] == readiness.UPSERT_SQL
     assert run.call_args.kwargs["parameters"] == {
@@ -25,6 +25,7 @@ def test_record_readiness_passes_parameters(mocker):
         "interval_start": START,
         "interval_end": END,
         "watermark": END,
+        "dag_id": "sales_elt",
         "run_id": "run-1",
         "status": "ready",
     }
@@ -83,12 +84,17 @@ def warehouse():
 
 
 def test_record_readiness_is_idempotent_against_the_warehouse(warehouse):
-    for status, run_id in (("running", "run-1"), ("ready", "run-1"), ("ready", "run-2")):
-        readiness.record_readiness("test.readiness", START, END, END, run_id, status)
+    for status, dag_id, run_id in (
+        ("running", "dag_a", "run-1"),
+        ("ready", "dag_a", "run-1"),
+        ("ready", "dag_b", "run-2"),
+    ):
+        readiness.record_readiness("test.readiness", START, END, END, run_id, status, dag_id=dag_id)
     rows = warehouse.get_records(
-        "SELECT status, run_id, watermark FROM ops.readiness WHERE product = 'test.readiness'"
+        "SELECT status, dag_id, run_id, watermark FROM ops.readiness "
+        "WHERE product = 'test.readiness'"
     )
-    assert rows == [("ready", "run-2", END)]
+    assert rows == [("ready", "dag_b", "run-2", END)]
 
 
 def test_readiness_state_maps_the_ledger_row(mocker):

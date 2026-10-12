@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS ops.readiness (
   updated_at     timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (product, interval_start, interval_end)
 );
+-- The Airflow DAG whose run `run_id` wrote the row (PLAN.md D32); NULL for any other producer.
+-- Run ids are unique per DAG only, so (dag_id, run_id) is what ties a row to Airflow's history.
+ALTER TABLE ops.readiness ADD COLUMN IF NOT EXISTS dag_id text;
 
 -- File-load ledger (PLAN.md D18): one row per landed object generation a file-arrival DAG loaded.
 -- Survives Airflow's own metadata (db clean, deleted runs), so a redelivered event is a no-op.

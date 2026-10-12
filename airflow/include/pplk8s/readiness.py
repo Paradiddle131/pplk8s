@@ -3,7 +3,8 @@
 All helpers talk to the warehouse stand-in over the ``warehouse`` Airflow connection, never
 to Airflow's metadata DB (PLAN.md D12).  The ledger is ``ops.readiness`` with the primary key
 ``(product, interval_start, interval_end)``; writes are UPSERTs, so repeating a task or a whole
-run rewrites the same row instead of adding one.
+run rewrites the same row instead of adding one.  Each row names the DAG run that wrote it
+(``dag_id``, ``run_id``), so a row can be matched against Airflow's own history (PLAN.md D32).
 
 ``ops.file_loads`` (PLAN.md D18) records every landed object generation a file-arrival DAG loaded,
 keyed by ``(bucket, object, generation)``; it is the durable half of event dedupe.
@@ -29,11 +30,12 @@ WATERMARK_COLUMNS = {
 
 UPSERT_SQL = """
 INSERT INTO ops.readiness
-    (product, interval_start, interval_end, watermark, run_id, status, updated_at)
+    (product, interval_start, interval_end, watermark, dag_id, run_id, status, updated_at)
 VALUES (%(product)s, %(interval_start)s, %(interval_end)s, %(watermark)s,
-        %(run_id)s, %(status)s, now())
+        %(dag_id)s, %(run_id)s, %(status)s, now())
 ON CONFLICT (product, interval_start, interval_end) DO UPDATE SET
     watermark = EXCLUDED.watermark,
+    dag_id = EXCLUDED.dag_id,
     run_id = EXCLUDED.run_id,
     status = EXCLUDED.status,
     updated_at = now()
@@ -64,9 +66,14 @@ def record_readiness(
     run_id: str,
     status: str,
     *,
+    dag_id: str,
     conn_id: str = DEFAULT_CONN_ID,
 ) -> None:
-    """Upsert one ``ops.readiness`` row (idempotent per product and interval)."""
+    """Upsert one ``ops.readiness`` row (idempotent per product and interval).
+
+    ``dag_id`` and ``run_id`` name the Airflow run that produced the row; the run id is the one
+    Airflow knows (``safe_run_id`` leaves every id Airflow generates unchanged).
+    """
     _hook(conn_id).run(
         UPSERT_SQL,
         parameters={
@@ -74,6 +81,7 @@ def record_readiness(
             "interval_start": interval_start,
             "interval_end": interval_end,
             "watermark": watermark,
+            "dag_id": dag_id,
             "run_id": run_id,
             "status": status,
         },

@@ -11,7 +11,7 @@ target:
   name: metadata-db
   # Placeholder: SQLEXPORTER_TARGET_DSN (compose.yaml) replaces it, so no password lives in this file.
   data_source_name: "postgresql://set-by-env"
-  collectors: [airflow_jobs]
+  collectors: [airflow_jobs, airflow_dag_runs]
 
 collector_files:
   - "*.collector.yml"
