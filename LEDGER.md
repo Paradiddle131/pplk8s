@@ -428,3 +428,21 @@ Entry format:
 - Evidence: local `make services-up build phase1-check` → all `ok:` lines including `ok: rebuilding sales gold and returns silver alone kept exposed.net_sales_daily`; the dbt image build ran the view check; CI `test`, `images`, `kind` green on 037dfc1. On cloud, reverting the model to a view made the check fail with one finding per foreign parent.
 - Decisions: D20 amended (cross-pipeline models are tables; BigQuery note).
 - Open: none.
+
+## 2026-10-13 — Phase 6 — git-sync fetch failures: retry, detect, drill 11
+
+- Done: issue #18.
+  The issue assumed git-sync retries a failing fetch silently; with the chart's `maxFailures: 0` it exits on the first failed fetch instead, crash-loops, and takes its pod out of Ready while Airflow keeps running the old commit, so only the misleading `AirflowComponentUnavailable` would fire, and a one-period GitHub blip would do the same.
+  `values.yaml`: `maxFailures: -1` (retry forever, pod stays Ready), `GITSYNC_HTTP_METRICS` plus `GITSYNC_HTTP_BIND` in `dags.gitSync.env` (the chart passes `env` to the init container too, which refuses metrics without a bind).
+  PodMonitor `airflow-git-sync` scrapes the sidecars of the dag-processor, triggerers, and workers; the schedulers have none (Airflow 3), and the old `values.yaml` comment saying they did is fixed.
+  `AirflowGitSyncFailing`: no success or noop for 2 minutes in a pod, or errors in a pod that never synced, `for: 1m`.
+  Drill 11 in `tests/e2e/phase6-check.sh`: a NetworkPolicy blocks TCP 22 egress for those pods; the alert must fire for every pod with every pod Ready and nothing restarted, then resolve after the block is removed.
+  Runbook drill 11, PLAN D23 and the Phase 6 drill list, two LESSONS lines.
+- Evidence: reproduced on the lab before the fix: blocking SSH for the dag-processor made git-sync abort after 31 s ("too many failures, aborting") and the pod went 2/3 Ready with a restart.
+  After it: `DRILLS=11 tests/e2e/phase6-check.sh` passed three times; in the last, the alert fired for 4 of 4 pods 186 s after the block, all Ready, no restarts, `error syncing repo, will retry` in the log, and resolved 61 s after the unblock; canary before and after.
+  `promtool check rules` (24 rules) and a `promtool test rules` of three sidecars (healthy, stuck mid-life, never synced) passed against Prometheus v3.15; `make lint` clean.
+- Found: the first deploy of the metrics flag put every new DAG-loading pod in `Init:CrashLoopBackOff` (`--http-bind must be specified when --http-metrics is set`) while the old pods kept serving: a bad git-sync flag fails loudly at rollout, unlike a fetch failure later.
+  The CI `kind` job flaked once on #28 (exec probes starved on the 2-vCPU runner, helm timed out) and passed on rerun: issue #30.
+- Settled: the lab's git-sync is back on `main` (the open item of the drill 10 entry).
+- Decisions: D23 amended (retry forever, git-sync metrics, `AirflowGitSyncFailing`).
+- Open: #25, #42.

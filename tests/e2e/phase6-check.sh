@@ -609,7 +609,7 @@ git_pods() { kc get pods -l "$GIT_PODS" --field-selector=status.phase=Running -o
 synced_pods() { prom_value 'count(count by (pod) (increase(git_sync_count_total{status=~"success|noop"}[1m]) > 0))'; }
 ready_pods() { kc get pods -l "$GIT_PODS" -o json | jq '[.items[] | select(all(.status.containerStatuses[]; .ready))] | length'; }
 drill_11() {
-  local pods before took t firing err
+  local pods before took t firing err end
   if ! kc get deploy airflow-dag-processor -o jsonpath='{.spec.template.spec.containers[*].name}' | grep -qw git-sync; then
     say "11. skipped: DAGs come from the host-path mount, not git-sync (DAG_DELIVERY=local)"
     return 0
@@ -621,7 +621,11 @@ drill_11() {
   block_git_ssh
   t=$SECONDS
   took=$(wait_alert AirflowGitSyncFailing firing 420)
-  firing=$(prom 'ALERTS{alertname="AirflowGitSyncFailing", alertstate="firing"}' | jq length)
+  end=$((SECONDS + 120))
+  until firing=$(prom 'ALERTS{alertname="AirflowGitSyncFailing", alertstate="firing"}' | jq length) && [ "$firing" = "$pods" ]; do
+    [ $SECONDS -lt $end ] || fail "AirflowGitSyncFailing fires for $firing of $pods pods"
+    sleep 5
+  done
   err=$(kc logs deploy/airflow-dag-processor -c git-sync --since=5m | grep -o 'error syncing repo, will retry' | tail -1 || true)
   say "  detected: AirflowGitSyncFailing firing for $firing of $pods pods $((SECONDS - t))s after the block; $(ready_pods) of $pods pods Ready; git-sync: ${err:-no retry line}"
   [ "$(ready_pods)" = "$pods" ] || fail "a pod went unready: the failure is not silent, so the drill no longer tests #18"
