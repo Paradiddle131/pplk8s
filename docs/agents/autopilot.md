@@ -60,6 +60,8 @@ areas: (none yet)
 state: orienting
 ```
 
+While §8 is in force, post your run-feedback comment now too (§8), before any real work.
+
 ## 3. Choose work — first match that doesn't conflict wins
 
 An item **conflicts** with a live run when it is the same issue or PR, when one is blocked by the other, or when their **areas** overlap.
@@ -146,7 +148,59 @@ A local session resuming a PR reads the handoff's agent section, runs the checkl
 ## 7. End of run
 
 - Leave the tree clean: everything committed and pushed, or deliberately discarded.
+- Finish your §8 feedback comment (while §8 is in force).
 - Edit your board comment to `⚫ ended <UTC>` with the items touched and what the next run should do first.
 - Every problem you found but did not fix gets an issue (symptom, evidence, suspected cause, acceptance).
 - Your final message: what you worked on, links, the next run's first step.
 - With budget left and nothing finished blocking you, go back to §3 instead of ending.
+
+## 8. Run feedback (temporary: the first runs)
+
+**In force until the user removes this section.** These are the first unattended runs; the user learns from each one what to fix in this brief, the setup script and the routine.
+The VM disappears when the run ends, so feedback lives only on GitHub: one comment per run on [🤖 pplk8s-worker run feedback (first runs)](https://github.com/Paradiddle131/pplk8s/issues/45).
+
+- Post it at the start of the run (right after registering on the board), with the probes filled in, then **edit it in place** after every working step, so a run cut off by a usage limit still leaves its feedback.
+- Be specific and honest: a command and its output beats an adjective; say what you guessed.
+- For every blocker or friction, write the answer that would have removed it if you know or found it (a setting, an allowlist host, a missing tool, a corrected sentence in this file), and a concrete patch when it is a text change.
+  Don't apply patches to this file or the setup script yourself unless that is the work item you claimed.
+- Probe the open environment facts once per run (cheap commands only; stop at the first answer):
+  - layout: `pwd` at start, `ls /home/user`, where the two clones are;
+  - skills: `ls -la ~/.claude/skills` (links resolve into the fresh clone?), `cat ~/.claude/settings.json`;
+  - attribution: after your first commit, `git log -1 --format=%B` (any `Claude-Session:` or co-author trailer?);
+  - Docker: `docker info` and `docker run --rm hello-world`;
+  - kind: `kind create cluster --name probe --wait 120s` then `kind delete cluster --name probe` (install with `scripts/install-tools.sh` if missing); record the first error verbatim;
+  - GitHub: does `gh api` REST work, does `gh issue list` fail, may the token dispatch a workflow (`gh api -X POST repos/Paradiddle131/pplk8s/actions/workflows/ci.yaml/dispatches -f ref=main`), can it read a job log?
+  - network: any host the run needed that was blocked (`curl -sI https://<host>`).
+  Skip a probe whose answer an earlier comment on the feedback issue already settled, and say so.
+
+```markdown
+🤖 Run feedback — <UTC start> — <session URL if known> — **<went well | partly | blocked>**
+
+**Outcome:** <one line: what the run achieved>
+**Blockers:** <one line each, or "none">
+**Top fix:** <the single change that would most improve the next run>
+
+<details><summary>How it went</summary>
+
+Timeline: orient → choice (and why) → work → verify → handoff, with rough durations and where time went.
+What in this brief was unclear, wrong or missing; what worked well and should stay.
+
+</details>
+<details><summary>Blockers and how to resolve them</summary>
+
+| Blocker | Evidence (command → output) | Known or likely resolution | Who: brief / setup script / routine config / user |
+|---|---|---|---|
+
+</details>
+<details><summary>Environment probes</summary>
+
+| Probe | Result |
+|---|---|
+
+</details>
+<details><summary>Proposed patches</summary>
+
+Diff-style text changes to `docs/agents/autopilot.md`, `docs/agents/cloud-setup.sh`, the routine prompt, or its network allowlist.
+
+</details>
+```
