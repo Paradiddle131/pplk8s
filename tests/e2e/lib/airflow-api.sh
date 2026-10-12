@@ -1,6 +1,6 @@
 # Shared helpers for e2e checks that drive Airflow through its REST API (source this file).
-# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready, discard_scheduled_runs,
-# worker_pod, run_hello, require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
+# Provides: kc, fail, start_port_forward, ensure_port_forward, refresh_token, api, wait_dag_ready,
+# discard_scheduled_runs, worker_pod, run_hello, require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
 CTX=${CTX:-kind-pplk8s}
 NS=${NS:-airflow}
 API_PORT=${API_PORT:-18080}
@@ -8,30 +8,40 @@ API=http://localhost:$API_PORT
 kc() { kubectl --context "$CTX" -n "$NS" "$@"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# A port-forward is bound to one api-server pod, so it is restarted after each rollout.
-pf=""
+# A port-forward is bound to one api-server pod, so it is restarted after each rollout. Checks call
+# these helpers from command substitutions (subshells) too, so the forward is found by its command
+# line, not by a PID only one shell knows: a subshell that restarted it used to leave its kubectl
+# running after the check, and the LEDGER's leaked port-forwards came from that and from
+# backgrounding the kc function (whose PID is a subshell, not kubectl).
+pf_owned=""
 dags_checked=""
 start_port_forward() {
   # Every check starts here, so this is where it proves it tests the DAG code it was written for.
   [ -n "$dags_checked" ] || { require_synced_dags; dags_checked=1; }
-  [ -z "$pf" ] || { kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null; } || true
-  # A port-forward leaked by another shell can hold the port (LEDGER, Phase 5); the check would then
-  # talk to whatever pod that one is bound to, and fail confusingly once a rollout replaces it.
+  [ -z "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"
+  # A port-forward leaked by another shell must not stand in for ours: it may be bound to a pod a
+  # rollout already replaced.
   port_free "$API_PORT"
-  # kubectl itself, not the kc function: a backgrounded function is a subshell, and killing that
-  # left its kubectl child running (the port-forwards that leaked from every check).
   kubectl --context "$CTX" -n "$NS" port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
-  pf=$!
+  pf_owned=1
   for _ in $(seq 30); do curl -sf -o /dev/null "$API/api/v2/version" 2>/dev/null && return; sleep 1; done
   fail "API not reachable on $API"
+}
+ensure_port_forward() { # keeps a forward of ours that still answers, else (re)starts one
+  [ -n "$pf_owned" ] && curl -sf -m 5 -o /dev/null "$API/api/v2/version" 2>/dev/null && return
+  start_port_forward
+}
+stop_forward() { # svc/<name> local-port -> kills that kubectl port-forward and waits for the port
+  pkill -f "^kubectl .*port-forward $1 $2:" 2>/dev/null
+  for _ in $(seq 20); do [ -z "$(ss -Hltn "sport = :$2")" ] && return 0; sleep 0.5; done
 }
 port_free() { # port -> fails when something already listens on it
   # ss, not a test connection: on WSL2 a connect to a closed localhost port can hang instead of failing.
   if [ -n "$(ss -Hltn "sport = :$1")" ]; then
-    fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "port-forward.* $1:" || echo unknown)"
+    fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "^kubectl .*port-forward.* $1:" || echo unknown)"
   fi
 }
-stop_port_forward() { [ -z "$pf" ] || kill "$pf" 2>/dev/null || true; }
+stop_port_forward() { [ -z "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"; }
 trap stop_port_forward EXIT
 # Bash skips the EXIT trap when killed by a signal it does not trap; exiting on them runs it, so a
 # check's cleanup (restoring config and paused flags) also happens on Ctrl-C or a stopped task.
@@ -97,7 +107,7 @@ worker_pod() { # hostname -> pod name
 # Trigger the hello DAG and wait for it to succeed; prints the worker pod that ran the task.
 run_hello() {
   local run_id state host
-  start_port_forward
+  ensure_port_forward
   refresh_token
   # The dag-processor parses the DAG folder periodically; wait until hello is known.
   wait_dag_ready hello

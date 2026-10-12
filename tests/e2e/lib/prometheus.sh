@@ -3,17 +3,17 @@
 # alert_state, wait_alert (firing|inactive). Set PROM_PORT before sourcing to override.
 PROM_PORT=${PROM_PORT:-19090}
 PROM=http://localhost:$PROM_PORT
-prom_pf=""
-start_prometheus() {
-  [ -z "$prom_pf" ] || { kill "$prom_pf" 2>/dev/null; wait "$prom_pf" 2>/dev/null; } || true
+prom_owned=""
+start_prometheus() { # (re)connects; the forward is found by its command line, as in airflow-api.sh
+  [ -z "$prom_owned" ] || stop_forward svc/kps-prometheus "$PROM_PORT"
   kubectl --context "$CTX" -n monitoring rollout status statefulset/prometheus-kps-prometheus --timeout=180s >/dev/null 2>&1 || true
   port_free "$PROM_PORT"
   kubectl --context "$CTX" -n monitoring port-forward svc/kps-prometheus "$PROM_PORT:9090" >/dev/null 2>&1 &
-  prom_pf=$!
+  prom_owned=1
   for _ in $(seq 90); do curl -sf -o /dev/null "$PROM/-/ready" 2>/dev/null && return; sleep 2; done
   fail "Prometheus not reachable on $PROM (is \`make observability-up\` done?)"
 }
-stop_prometheus() { [ -z "$prom_pf" ] || kill "$prom_pf" 2>/dev/null || true; }
+stop_prometheus() { [ -z "$prom_owned" ] || stop_forward svc/kps-prometheus "$PROM_PORT"; }
 
 prom() { # promql -> the result array of an instant query
   local out
