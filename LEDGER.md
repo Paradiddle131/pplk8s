@@ -382,3 +382,18 @@ Entry format:
   `docker compose exec -T` forwards stdin, so inside a `while read` loop it ate the loop's input (only the first lost run was replayed); `tee /dev/stderr` with stderr redirected to a file truncated that file.
 - Decisions: D32.
 - Open: switch git-sync back to `main` (`make airflow-up`) once both PRs are merged; #18, #23, #25, #27.
+
+## 2026-10-12 — Phase 6 — Probes sized for a CPU-contended node
+
+- Done: issue #30, framed as a GKE risk rather than a CI one: under contention a container gets CPU in proportion to its request, and the chart's exec probes boot the Airflow CLI (~1.8 CPU-seconds each).
+  The scheduler's probes curl its own `/health` server (`[scheduler] enable_health_check`); triggerer, dag-processor and worker exec probes get `timeoutSeconds` 60, 60 and 30; api-server and scheduler startup budgets are 30 x 10 s; the worker's first ping waits 60 s (PLAN D33, LESSONS).
+  New GitHub label `lesson` for issues and PRs likely to teach a Stage 2/3 lesson (#18, #23, #30, #31, #32, #33).
+- Evidence: reproduced by capping both kind worker nodes with `docker update --cpus=0.5` and deleting every Airflow pod at once.
+  Before: every exec probe timed out, scheduler startup failed 4 of 6, the api-server never bound inside its 60 s budget and restarted twice; all Ready after 222 s.
+  After: three runs, 171-172 s, no exec probe failure, no restart; at 1 and 2 vCPU per node the old probes still passed (91-108 s and 49 s), so the cliff sits between 1 and 0.5 vCPU per node.
+  Drill 1b by hand: a SIGSTOPped scheduler's `/health` returned 503 after 26 s and the kubelet restarted it after 290 s, as before.
+  `make lint`, `make test` (32 passed), `tests/e2e/smoke-check.sh` (on 0.5-vCPU nodes) passed; `integration` passed five consecutive times on 42670a4 (runs 38276665327, 38279351784, 38281874850, 38284064674, 38286566504; 20-23 min each) plus the PR run.
+- Found: the controller-manager's `Unauthorized` events (HPA scale reads, ReplicaSet pod deletes) were `service account token has expired` after a WSL2 clock jump; lab-only.
+  `docker update --cpus=0` does not lift a CPU cap; set it to the host's core count instead (the worker nodes now carry `--cpus=28`).
+- Decisions: D33.
+- Open: #18 (PR #31), #23, #25, #27.
