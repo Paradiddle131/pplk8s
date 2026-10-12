@@ -21,10 +21,12 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$(dirname "$0")/lib/airflow-api.sh"
 source "$(dirname "$0")/lib/prometheus.sh"
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml")
-DAY=2026-09-28 # an interval no other check uses; sales_elt's schedule starts on 2026-10-01
+# An interval no other check uses. Not before the DAGs' start_date (2026-10-01): Airflow creates no
+# task instances for a run whose logical date precedes it, and the empty run succeeds at once.
+DAY=2026-10-06
 INTERVAL_START="$DAY 00:00:00+00"
-INTERVAL_END='2026-09-29 00:00:00+00'
-LOGICAL=2026-09-29 # a manual run on this logical date processes [$DAY, +1 day)
+INTERVAL_END='2026-10-07 00:00:00+00'
+LOGICAL=2026-10-07 # a manual run on this logical date processes [$DAY, +1 day)
 BUCKET=landing
 OBJECT="returns/$DAY.jsonl"
 GCS=http://localhost:4480
