@@ -253,7 +253,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4, 7 and 8 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4 and 7–9 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
@@ -470,3 +470,40 @@ Recovery:
 
 `task_queued_timeout` stays 600 s: lowering it would also requeue, and on the third time fail, tasks that only wait for capacity during a burst.
 
+### 9. Kill the triggerer while a readiness wait is deferred
+
+Trigger: with a `finance_daily` run's `wait_*` tasks `deferred`, crash the triggerer (9a: SIGKILL its `airflow triggerer` job process; the image has no `kill`, so `KA exec deploy/airflow-triggerer -c triggerer -- python -c 'import os, signal; os.kill(<pid>, signal.SIGKILL)'`), or stop it for longer than the alert window (9b: `KA scale deploy/airflow-triggerer --replicas=0`).
+While it is gone, mark the wait's upstream `ready` in `ops.readiness`.
+The check uses the interval [2026-09-30, 2026-10-01), which no producer builds, and writes its ledger rows with `run_id = 'phase6-check'`.
+
+How a trigger moves: each trigger row belongs to one triggerer job (`trigger.triggerer_id`).
+Another triggerer claims it only when that job has an `end_date` (a clean stop on SIGTERM) or its last heartbeat is older than `[triggerer] triggerer_health_check_threshold` (30 s; `Trigger.assign_unassigned`).
+Nothing else watches deferred tasks: without a triggerer they stay `deferred`, hold no worker slot, and fail no one.
+
+Observed (2026-10-12):
+
+- Crash (9a): the container restarted in place within 2 s, and the new triggerer job was up within about 8 s of the kill.
+  It then waited 15 s, holding none of the triggers, and claimed them only when the dead job's last heartbeat was 30–31 s old; `wait_sales_gold`, whose upstream had turned ready during the gap, succeeded 3 s after the claim on try 1.
+  The dead job's row stays `running` with no `end_date` forever; that is harmless, because assignment checks the heartbeat, and `airflow db clean` removes old rows.
+- Pod deletion, even `--grace-period=0 --force`, is not a crash: the kubelet still sends SIGTERM, the job ends cleanly, and its replacement claims the triggers on its first loop (19 s from the delete to the wait resuming).
+- Sustained stop (9b): `AirflowTriggererDown` fired after 175–195 s.
+  `wait_returns_silver` stayed `deferred` the whole time with its upstream already `ready`, holding no worker slot (`default_pool` running 0), and its trigger stayed with the stopped job.
+  `/api/v2/monitor/health` reported the triggerer `unhealthy`, with the heartbeat of the most recent job still marked `running` (an earlier crashed one), not of the job that stopped.
+- After the scale-up the triggerer was Ready in 6–8 s and the wait succeeded 15–16 s after the scale-up; the alert resolved 15–30 s after that, and the run built `finance` exposed and recorded `finance.exposed`.
+- The outage counts against the sensor's timeout: `task_instance.trigger_timeout` is fixed when the task defers (defer time + 6 h for `finance_daily`), so an outage longer than the remaining time fails the wait at the next scheduler check.
+- The AssetWatcher spike's `PubsubPullTrigger` (D17) runs in the same triggerer and pauses with it; the event adapter does not.
+
+Detection: `AirflowTriggererDown`; panel "Component heartbeats /min" (the triggerer line drops to 0) and "Pool queued / starving / deferred" (deferred stays flat).
+A crash that the kubelet restarts within the 2-minute window fires nothing; the waits only resume late by up to `triggerer_health_check_threshold`.
+
+Diagnosis: who holds the deferred triggers and how fresh is their job:
+
+```bash
+docker compose -f platform/compose/compose.yaml exec -T metadata-db psql -U airflow -d airflow -c \
+  "SELECT t.id, t.triggerer_id, j.state, j.end_date, now() - j.latest_heartbeat AS heartbeat_age
+   FROM trigger t LEFT JOIN job j ON j.id = t.triggerer_id"
+```
+
+Recovery: `KA scale deploy/airflow-triggerer --replicas=1`, then `KA rollout status deploy/airflow-triggerer`.
+The new triggerer claims every orphaned trigger, and a trigger whose condition came true during the outage fires on its first poll; nothing needs clearing.
+If the outage outlasted a wait's timeout, the task failed: clear it once its upstream is ready.

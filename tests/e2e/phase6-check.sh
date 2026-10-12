@@ -10,10 +10,14 @@
 #   7  break KEDA's worker scaler (a query that fails)   -> KedaScalerErrors
 #   8a restart the Celery broker holding a queued task   -> AirflowTasksStuckQueued (message lost)
 #   8b restart the Celery broker while a task runs       -> new work starts at once, the running task survives (#15)
+#   9a crash the triggerer under a deferred readiness wait -> a new triggerer claims the trigger once the dead
+#      one's heartbeat is stale; the wait resumes (#17)
+#   9b stop the triggerer (sustained: scaled to 0)      -> AirflowTriggererDown; the wait stays deferred with its
+#      upstream ready, then resumes on scale-up and finance_daily succeeds
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
-# Expects `make airflow-up observability-up`. Re-runnable and self-restoring: the exit trap (also on
-# SIGINT/SIGTERM) scales the scheduler back, starts the DB, uncordons nodes, and restores the pool,
-# KEDA's query, and KEDA's scaling of the workers.
+# Expects `make airflow-up observability-up workloads-up`. Re-runnable and self-restoring: the exit trap (also on
+# SIGINT/SIGTERM) scales the scheduler and triggerer back, starts the DB, uncordons nodes, and
+# restores the pool, KEDA's query, KEDA's scaling of the workers, and the DAGs' paused flags.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -21,15 +25,17 @@ source "$(dirname "$0")/lib/airflow-api.sh"
 source "$(dirname "$0")/lib/prometheus.sh"
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml")
 LOAD=ops_load_test
+FIN=finance_daily
 OUR_ALERTS='Airflow.*|MetadataDB.*|KubeNode.*|Keda.*'
 say() { echo "[$(date +%T)] $*"; }
 
 # ---- restorable state -------------------------------------------------------------------------------
-load_was_paused="" keda_query=""
+load_was_paused="" fin_was_paused="" keda_query=""
 cleanup() {
   local rc=$? node
   set +e
   kc scale deploy/airflow-scheduler --replicas=1 >/dev/null 2>&1
+  kc scale deploy/airflow-triggerer --replicas=1 >/dev/null 2>&1
   "${COMPOSE[@]}" start metadata-db >/dev/null 2>&1
   for node in $(kubectl --context "$CTX" get nodes -o jsonpath='{range .items[?(@.spec.unschedulable==true)]}{.metadata.name}{" "}{end}'); do
     kubectl --context "$CTX" uncordon "$node" >/dev/null && echo "uncordoned $node"
@@ -38,6 +44,7 @@ cleanup() {
   [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
   keda_resume >/dev/null 2>&1
   [ "$load_was_paused" = true ] && api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
+  [ "$fin_was_paused" = true ] && api PATCH "/api/v2/dags/$FIN" '{"is_paused":true}' >/dev/null 2>&1
   stop_prometheus
   stop_port_forward
   exit $rc
@@ -45,6 +52,8 @@ cleanup() {
 trap cleanup EXIT
 
 # ---- helpers ----------------------------------------------------------------------------------------
+psql_meta() { "${COMPOSE[@]}" exec -T metadata-db psql -U airflow -d airflow -Atc "$1"; }
+psql_wh() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d warehouse -Atc "$1"; }
 pool_size() { kc exec deploy/airflow-scheduler -c scheduler -- airflow pools set ops_load "$1" "KEDA load fixture (ops_load_test)" >/dev/null; }
 # Info-level alerts (recent task failures, a cordoned node) describe history, not an outage.
 firing_ours() { prom "ALERTS{alertstate=\"firing\", alertname=~\"$OUR_ALERTS\", severity!=\"info\"}" | jq -r 'map(.metric.alertname) | unique | join(",")'; }
@@ -307,6 +316,109 @@ say "  the 240 s task that ran through the broker restart: $state"
 [ "$state" = success ] || fail "the task that ran through the broker restart ended $state"
 canary
 echo "ok: (8b) broker restart under a running task recovered"
+
+# ---- 9. kill the triggerer while a readiness wait is deferred ----------------------------------------
+# finance_daily's waits defer to ReadinessTrigger, which polls ops.readiness from the triggerer (D19).
+# A trigger belongs to one triggerer job; another triggerer claims it only once that job has ended
+# (a clean stop) or its heartbeat is older than triggerer_health_check_threshold (a crash). The
+# drill marks an upstream ready while no triggerer runs: the wait must resume once a triggerer
+# claims the trigger, with no retry (issue #17). The interval is one no producer builds; its
+# ledger rows are the drill's own, written with run_id phase6-check.
+FIN_START='2026-09-30 00:00:00+00' FIN_END='2026-10-01 00:00:00+00'
+fin_ti() { api GET "/api/v2/dags/$FIN/dagRuns/$1/taskInstances/$2" | jq -r .state; }
+fin_ready() { # product: stand in for its producer finishing the interval
+  psql_wh "INSERT INTO ops.readiness (product, interval_start, interval_end, watermark, run_id, status)
+           VALUES ('$1', '$FIN_START', '$FIN_END', '$FIN_END', 'phase6-check', 'ready')" >/dev/null
+}
+trigger_owner() { # run task -> id of the triggerer job holding the task's trigger (empty once fired)
+  psql_meta "SELECT t.triggerer_id FROM task_instance ti JOIN trigger t ON t.id = ti.trigger_id
+             WHERE ti.dag_id = '$FIN' AND ti.run_id = '$1' AND ti.task_id = '$2'"
+}
+wait_fin_ti() { # run task timeout -> seconds until the task succeeded
+  local end=$((SECONDS + $3)) start=$SECONDS state=""
+  while [ $SECONDS -lt $end ]; do
+    state=$(fin_ti "$1" "$2")
+    case "$state" in success) echo $((SECONDS - start)); return 0 ;; failed | up_for_retry) fail "$2 in $1 is $state" ;; esac
+    sleep 1
+  done
+  fail "$2 in $1 still $state after $3 s"
+}
+
+wait_dag_ready "$FIN"
+fin_was_paused=$(api GET "/api/v2/dags/$FIN" | jq -r .is_paused)
+api PATCH "/api/v2/dags/$FIN" '{"is_paused":false}' >/dev/null
+in_interval="interval_start = '$FIN_START' AND interval_end = '$FIN_END'"
+psql_wh "DELETE FROM ops.readiness WHERE $in_interval AND (run_id = 'phase6-check' OR product = 'finance.exposed')" >/dev/null
+real=$(psql_wh "SELECT string_agg(product || ' by ' || run_id, ', ') FROM ops.readiness WHERE $in_interval")
+[ -z "$real" ] || fail "the drill's interval [$FIN_START, $FIN_END) already has producer rows: $real"
+fin_run="phase6__triggerer__$(date +%s)"
+api POST "/api/v2/dags/$FIN/dagRuns" \
+  "{\"dag_run_id\":\"$fin_run\",\"logical_date\":\"2026-10-01T00:00:00.$(date +%N | cut -c1-6)Z\"}" >/dev/null ||
+  fail "could not trigger $FIN"
+end=$((SECONDS + 180))
+until [ "$(fin_ti "$fin_run" wait_sales_gold)" = deferred ] && [ "$(fin_ti "$fin_run" wait_returns_silver)" = deferred ]; do
+  [ $SECONDS -lt $end ] || fail "the waits of $fin_run never deferred"
+  sleep 3
+done
+threshold=$(kc exec deploy/airflow-triggerer -c triggerer -- airflow config get-value triggerer triggerer_health_check_threshold 2>/dev/null | tail -1)
+
+say "9a. triggerer: crashed (SIGKILL) while both waits of $fin_run are deferred; sales.gold marked ready meanwhile"
+old=$(trigger_owner "$fin_run" wait_returns_silver)
+[ -n "$old" ] || fail "wait_returns_silver's trigger is not assigned to a triggerer"
+# The image has no kill(1). The job is the lowest-numbered `airflow triggerer` process (PID 1 is
+# dumb-init; the trigger runner is its child), and the container restarts in place when it dies.
+kc exec deploy/airflow-triggerer -c triggerer -- python -c '
+import os, signal
+procs = [int(p) for p in os.listdir("/proc") if p.isdigit() and int(p) > 1]
+os.kill(min(p for p in procs if b"airflow\0triggerer" in open(f"/proc/{p}/cmdline", "rb").read()), signal.SIGKILL)' ||
+  fail "could not kill the triggerer"
+fin_ready sales.gold
+end=$((SECONDS + 180))
+while new=$(trigger_owner "$fin_run" wait_returns_silver); [ "$new" = "$old" ]; do
+  [ $SECONDS -lt $end ] || fail "no triggerer claimed the trigger of job $old within 180 s"
+  sleep 1
+done
+[ -n "$new" ] || fail "wait_returns_silver's trigger disappeared (returns.silver is not ready)"
+read -r crashed stale < <(psql_meta "SELECT end_date IS NULL, round(extract(epoch FROM now() - latest_heartbeat)) FROM job WHERE id = $old" | tr '|' ' ')
+up=$(psql_meta "SELECT round(extract(epoch FROM now() - start_date)) FROM job WHERE id = $new")
+say "  claimed by job $new ${up}s after it started; the dead job $old last heartbeated ${stale}s ago (threshold ${threshold}s)"
+[ "$crashed" = t ] || fail "job $old ended cleanly; the kill was not a crash"
+[ "$stale" -ge "$threshold" ] || fail "job $new claimed the trigger before job $old's heartbeat was $threshold s stale"
+took=$(wait_fin_ti "$fin_run" wait_sales_gold 60)
+say "  recovered: wait_sales_gold succeeded ${took}s after the claim (try $(api GET "/api/v2/dags/$FIN/dagRuns/$fin_run/taskInstances/wait_sales_gold" | jq -r .try_number))"
+echo "ok: (9a) triggerer crash under a deferred wait recovered"
+
+say "9b. triggerer: scaled to 0 while wait_returns_silver is deferred; returns.silver marked ready meanwhile"
+old=$new
+kc scale deploy/airflow-triggerer --replicas=0 >/dev/null
+kc wait --for=delete pod -l component=triggerer --timeout=120s >/dev/null
+[ "$(psql_meta "SELECT end_date IS NOT NULL FROM job WHERE id = $old")" = t ] || fail "job $old did not end on SIGTERM"
+fin_ready returns.silver
+took=$(wait_alert AirflowTriggererDown firing 300)
+state=$(fin_ti "$fin_run" wait_returns_silver)
+slots=$(api GET /api/v2/pools/default_pool | jq -r '"running=\(.running_slots) deferred=\(.deferred_slots)"')
+say "  detected: AirflowTriggererDown firing after ${took}s; wait_returns_silver is $state with its upstream ready; default_pool $slots"
+[ "$state" = deferred ] || fail "wait_returns_silver is $state without a triggerer"
+[ "$(trigger_owner "$fin_run" wait_returns_silver)" = "$old" ] || fail "the trigger left the stopped job $old"
+kc scale deploy/airflow-triggerer --replicas=1 >/dev/null
+start=$SECONDS
+kc rollout status deploy/airflow-triggerer --timeout=180s >/dev/null
+ready=$((SECONDS - start))
+took=$(wait_fin_ti "$fin_run" wait_returns_silver 120)
+say "  recovered: triggerer Ready ${ready}s after the scale-up; wait_returns_silver succeeded $((ready + took))s after the scale-up"
+took=$(wait_alert AirflowTriggererDown inactive 180)
+say "  alert resolved after ${took}s"
+end=$((SECONDS + 600))
+until state=$(api GET "/api/v2/dags/$FIN/dagRuns/$fin_run" | jq -r .state) && [ "$state" != running ] && [ "$state" != queued ]; do
+  [ $SECONDS -lt $end ] || fail "$fin_run still $state after 600 s"
+  sleep 5
+done
+[ "$state" = success ] || fail "$fin_run ended $state"
+[ "$(psql_wh "SELECT status FROM ops.readiness WHERE product = 'finance.exposed' AND $in_interval")" = ready ] ||
+  fail "finance.exposed is not recorded for the drill's interval"
+say "  $fin_run succeeded and recorded finance.exposed"
+canary
+echo "ok: (9b) triggerer outage under a deferred wait detected and recovered"
 
 firing=$(firing_ours)
 [ -z "$firing" ] || fail "alerts still firing after the drills: $firing"

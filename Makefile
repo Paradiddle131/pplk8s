@@ -117,7 +117,7 @@ phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run,
 phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
 	tests/e2e/phase5-check.sh
 
-phase6-check: airflow-up observability-up airflow-drill-image ## Phase 6 exit check: dashboards' series, KEDA scale-out/in, then every failure drill incl. the chart/minor roll (alert fires, runbook recovers, canary) (~35 min)
+phase6-check: airflow-up observability-up workloads-up airflow-drill-image ## Phase 6 exit check: dashboards' series, KEDA scale-out/in, then every failure drill incl. the chart/minor roll (alert fires, runbook recovers, canary) (~35 min)
 	tests/e2e/observability-check.sh
 	tests/e2e/keda-check.sh
 	tests/e2e/phase6-check.sh

@@ -135,6 +135,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Wait with a deferrable sensor: check once on the worker, then defer to a trigger that polls the ledger from the triggerer; the waiting task holds no worker slot.
 - In a custom trigger, wrap the synchronous hook query in `sync_to_async`, serialise only plain values (ISO timestamps), and ship the trigger's module where the triggerer imports it (the image on GKE; the plugins folder or a PyPI package on Composer).
 - Bound every cross-pipeline wait with a sensor timeout, and expect scheduled consumers to time out on intervals whose producers never ran.
+- Expect a triggerer outage to pause deferred waits, not fail them: another triggerer claims a trigger at once after a clean stop but only once the dead one's heartbeat is `triggerer_health_check_threshold` (30 s) old after a crash, and the outage counts against the sensor timeout, which is fixed when the task defers.
+- Alert on the triggerer's heartbeat, not on task failures: a wait whose upstream turned ready during a triggerer outage sits `deferred` and fails nothing until its timeout.
 
 ## Helm chart and Kubernetes
 
