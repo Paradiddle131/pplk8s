@@ -178,6 +178,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Fix a per-request memory spike vertically, not with replicas: one pod serves the request, so extra replicas sit idle while it is OOMKilled; set the limit with headroom above the worst realistic case (Grafana idled near 270 Mi, peaked at 542 Mi on a 7-day range, and holds at a 768 Mi limit).
 - [GKE] Set a Redis `socket_timeout` (Airflow `[celery_broker_transport_options]`, e.g. 10 s, above kombu's 1 s BRPOP block): without it, a worker that ran a task through a broker restart can block forever reading a dead socket, stop answering `celery inspect ping`, and lose the task to its liveness probe.
 - [GKE] On Celery < 5.7, a prefork worker that ran a task through a broker reconnect queues new tasks behind it while its other slots idle (`AsynPool.flush` clears the busy-process set, celery/celery#10346); backport the fix or move to 5.7, and drill it with a task running, not idle.
+- [GKE] Size probes for a CPU-starved node, not an idle laptop: under contention a container gets CPU in proportion to its request, and the chart's exec probes boot the Airflow CLI (~1.8 CPU-seconds), so a 100m triggerer's probe nears its 20 s timeout and a cold start restart-loops. Curl the scheduler's own `/health` server (`enable_health_check`) instead of `airflow jobs check`, give the remaining exec probes `timeoutSeconds` up to their period, and make startup budgets generous; rehearse by capping node CPUs and restarting every Airflow pod at once.
 
 ## Observability and alerting
 
