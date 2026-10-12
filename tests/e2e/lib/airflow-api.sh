@@ -1,6 +1,6 @@
 # Shared helpers for e2e checks that drive Airflow through its REST API (source this file).
-# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready, worker_pod, run_hello,
-# require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
+# Provides: kc, fail, start_port_forward, ensure_port_forward, refresh_token, api, wait_dag_ready,
+# discard_scheduled_runs, worker_pod, run_hello, require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
 CTX=${CTX:-kind-pplk8s}
 NS=${NS:-airflow}
 API_PORT=${API_PORT:-18080}
@@ -8,19 +8,45 @@ API=http://localhost:$API_PORT
 kc() { kubectl --context "$CTX" -n "$NS" "$@"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# A port-forward is bound to one api-server pod, so it is restarted after each rollout.
-pf=""
+# A port-forward is bound to one api-server pod, so it is restarted after each rollout. Checks call
+# these helpers from command substitutions (subshells) too, so the forward is found by its command
+# line, not by a PID only one shell knows, and ownership is a flag file keyed by $$, which every
+# subshell of a check shares: a subshell that started or restarted the forward used to leave its
+# kubectl running after the check, and the LEDGER's leaked port-forwards came from that and from
+# backgrounding the kc function (whose PID is a subshell, not kubectl).
+pf_owned="${TMPDIR:-/tmp}/pplk8s-port-forward.$$"
 dags_checked=""
 start_port_forward() {
   # Every check starts here, so this is where it proves it tests the DAG code it was written for.
   [ -n "$dags_checked" ] || { require_synced_dags; dags_checked=1; }
-  [ -z "$pf" ] || kill "$pf" 2>/dev/null || true
-  kc port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
-  pf=$!
+  [ ! -e "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"
+  # A port-forward leaked by another shell must not stand in for ours: it may be bound to a pod a
+  # rollout already replaced.
+  port_free "$API_PORT"
+  kubectl --context "$CTX" -n "$NS" port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
+  touch "$pf_owned"
   for _ in $(seq 30); do curl -sf -o /dev/null "$API/api/v2/version" 2>/dev/null && return; sleep 1; done
   fail "API not reachable on $API"
 }
-stop_port_forward() { [ -z "$pf" ] || kill "$pf" 2>/dev/null || true; }
+ensure_port_forward() { # keeps a forward of ours that still answers, else (re)starts one
+  [ -e "$pf_owned" ] && curl -sf -m 5 -o /dev/null "$API/api/v2/version" 2>/dev/null && return
+  start_port_forward
+}
+stop_forward() { # svc/<name> local-port -> kills that kubectl port-forward and waits for the port
+  pkill -f "^kubectl .*port-forward $1 $2:" 2>/dev/null
+  for _ in $(seq 20); do [ -z "$(ss -Hltn "sport = :$2")" ] && return 0; sleep 0.5; done
+}
+port_free() { # port -> fails when something already listens on it
+  # ss, not a test connection: on WSL2 a connect to a closed localhost port can hang instead of failing.
+  if [ -n "$(ss -Hltn "sport = :$1")" ]; then
+    fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "^kubectl .*port-forward.* $1:" || echo unknown)"
+  fi
+}
+stop_port_forward() {
+  [ -e "$pf_owned" ] || return 0
+  stop_forward svc/airflow-api-server "$API_PORT"
+  rm -f "$pf_owned"
+}
 trap stop_port_forward EXIT
 # Bash skips the EXIT trap when killed by a signal it does not trap; exiting on them runs it, so a
 # check's cleanup (restoring config and paused flags) also happens on Ctrl-C or a stopped task.
@@ -56,6 +82,20 @@ wait_dag_ready() { # dag_id [timeout-seconds]
   fail "DAG $1 is not parsed (is_stale=${stale:-unknown}); is airflow/dags mounted on the workers? see platform/kind/ensure-dag-mount.sh"
 }
 
+# Unpausing a scheduled DAG makes the scheduler create its latest scheduled run (catchup=False still
+# creates one), which a check never asked for: finance_daily's then defers for 6 h on an interval
+# whose producers never land, fails, and fires a late alert. A check's exit trap discards those
+# runs: fail first (that ends deferred or running tasks and releases their triggers), then delete.
+discard_scheduled_runs() { # dag_id since(UTC, %Y-%m-%dT%H:%M:%SZ) -> discards runs queued since then
+  local id path
+  for id in $(api GET "/api/v2/dags/$1/dagRuns?run_type=scheduled&limit=100&order_by=-run_after" |
+    jq -r --arg s "$2" '.dag_runs[] | select((.queued_at // "" | sub("\\.[0-9]+"; "")) >= $s) | .dag_run_id'); do
+    path="/api/v2/dags/$1/dagRuns/$(jq -rn --arg i "$id" '$i|@uri')"
+    api PATCH "$path" '{"state":"failed"}' >/dev/null
+    api DELETE "$path" >/dev/null && echo "discarded the scheduled run $1/$id"
+  done
+}
+
 # Map a task instance's hostname to the Celery worker pod that ran it, or fail. Workers report their
 # pod IP (a Deployment's pod names do not resolve, and the api-server fetches live logs by hostname),
 # while older runs carry a StatefulSet pod FQDN (airflow-worker-N.airflow-worker...).
@@ -72,7 +112,7 @@ worker_pod() { # hostname -> pod name
 # Trigger the hello DAG and wait for it to succeed; prints the worker pod that ran the task.
 run_hello() {
   local run_id state host
-  start_port_forward
+  ensure_port_forward
   refresh_token
   # The dag-processor parses the DAG folder periodically; wait until hello is known.
   wait_dag_ready hello

@@ -3,7 +3,7 @@
 # same event does not reprocess the same generation. Also checks the consumer DAG's deferrable wait
 # on ops.readiness (D19). Expects `make airflow-up workloads-up` to have run.
 # Re-runnable: every upload is a new object generation, the consumer's interval is reset first, and
-# the DAGs' paused flags are restored on exit.
+# on exit the DAGs' paused flags are restored and the scheduled runs their unpausing created discarded.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -26,14 +26,16 @@ psql_wh() {
 }
 say() { echo "[$(date +%T)] $*"; }
 
-# ---- restorable state: paused flags -------------------------------------------------------------------
+# ---- restorable state: paused flags and the scheduled runs unpausing creates ---------------------------
 declare -A ORIG_PAUSED=()
+STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 cleanup() {
   local rc=$? dag
   set +e
   for dag in "${!ORIG_PAUSED[@]}"; do
-    [ "${ORIG_PAUSED[$dag]}" = true ] && api PATCH "/api/v2/dags/$dag" '{"is_paused":true}' >/dev/null &&
-      echo "re-paused $dag"
+    [ "${ORIG_PAUSED[$dag]}" = true ] || continue
+    api PATCH "/api/v2/dags/$dag" '{"is_paused":true}' >/dev/null && echo "re-paused $dag"
+    discard_scheduled_runs "$dag" "$STARTED"
   done
   stop_port_forward
   exit $rc

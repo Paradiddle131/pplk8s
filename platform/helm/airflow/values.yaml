@@ -276,6 +276,19 @@ statsd:
 flower:
   enabled: false
 
+# Metadata DB retention (D30): the chart's CronJob runs `airflow db clean` daily for rows older than
+# 60 days, Composer 3's default database retention. Besides old runs, task instances and logs, it
+# removes the job rows of crashed schedulers, triggerers and dag-processors, which otherwise stay
+# `running` forever (runbook drill 9). No archive tables: nothing here reads purged rows back.
+databaseCleanup:
+  enabled: true
+  schedule: "17 3 * * *"
+  retentionDays: 60
+  skipArchive: true
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 512Mi}
+
 # The chart's one-shot Jobs. Helm hooks are off: with `--wait`, Helm waits for the pods to be
 # Ready before it runs post-install hooks, while the pods' wait-for-airflow-migrations init
 # container waits for the migration hook, which is a deadlock (observed). As plain resources the

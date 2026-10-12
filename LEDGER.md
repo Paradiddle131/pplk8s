@@ -314,3 +314,38 @@ Entry format:
 - Decisions: none new; the drill follows D28 (sustained outage for the alert, canary after recovery).
 - Open: like phase5-check, the drill unpauses `finance_daily`, so the scheduler creates the latest scheduled run, which defers until its 6 h timeout on an interval whose `returns.silver` never lands; removed by hand after this session's runs.
   37 triggerer job rows from past crashes stay `running`; harmless, `airflow db clean` removes them.
+
+## 2026-10-12 — Phase 6 — Reconcile open items: stray scheduled runs, metadata DB retention, leaked port-forwards
+
+- Done: PR #22 (drill 9) reviewed and merged.
+  `discard_scheduled_runs` in `tests/e2e/lib/airflow-api.sh`: the exit traps of `phase5-check.sh` and `phase6-check.sh` re-pause each DAG the check unpaused, then fail and delete the scheduled runs the scheduler created for it after the check started (drill 9's open item).
+  Failing first ends a deferred wait and releases its trigger; deleting removes the run, so nothing waits 6 h and no late alert fires.
+  The chart's `databaseCleanup` CronJob runs `airflow db clean` daily for rows older than 60 days without archive tables (D30); `tests/e2e/db-cleanup-check.sh` (`make db-cleanup-check`, also in `make phase6-check`) seeds a crashed job row with a 61-day-old heartbeat, runs the CronJob once, and asserts it is gone and the live jobs remain.
+  Port-forwards leaked from the checks themselves, three ways: `start_port_forward` backgrounded the `kc` function, so `$pf` was a subshell and killing it left `kubectl port-forward` running; `canary` restarted the forward inside `$(run_hello)`, a subshell that could not stop the parent's and whose own outlived the check; and a check whose first forward started in such a subshell (`smoke-check.sh`) never knew it owned one.
+  The helpers now background `kubectl` itself, find a forward by its command line (`stop_forward`), mark ownership with a flag file keyed by `$$` (shared by every subshell of a check), let `run_hello` keep a forward that still answers (`ensure_port_forward`), and refuse to start when their port is already taken (checked with `ss`; a test connect to a closed localhost port can hang on this WSL2 host).
+  Runbook drill 9 points at the CronJob; issue #23 filed.
+- Evidence: drill 9 alone (preflight + 9a/9b) passed, 09:49–09:53, and its trap printed `discarded the scheduled run finance_daily/scheduled__2026-10-12T00:00:00+00:00`; afterwards no task instance was `deferred`, `queued`, `running`, or `scheduled`, and the only trigger left was the AssetWatcher spike's `PubsubPullTrigger`.
+  By hand first: a failed-then-deleted scheduled `finance_daily` run turned `wait_returns_silver` from `deferred` to `failed` and its trigger row disappeared.
+  `tests/e2e/phase5-check.sh` passed, then re-paused `finance_daily` and discarded its scheduled run; no port-forward was left.
+  `tests/e2e/db-cleanup-check.sh` passed twice: the seeded rows went (`Checking table job`), `SchedulerJob`, `TriggererJob`, and `DagProcessorJob` rows stayed, no `_airflow_deleted__*` table remained.
+  Four port-forwards from 2026-10-11 were still running at the start of the session, one holding the checks' port 18080; with the fix, starts and restarts from the parent or a subshell followed by an exit leave no `kubectl` behind, and a held port fails fast with the holder's command line.
+  The first CI run of this branch failed exactly there (`FAIL: port 18080 is already in use` in `phase5-check.sh`, right after `smoke-check.sh`), which is how the third leak was found; `smoke-check.sh` then `phase5-check.sh` passed locally with nothing left running.
+  `make lint` passed.
+- Decisions: D30 (metadata DB retention by the chart's CronJob, 60 days, no archive).
+- Open items of earlier entries, settled:
+  Phase 2, workload manifests hard-code their image tags: still true (`el-factory-deployment.yaml:32`, `event-adapter-deployment.yaml:31`, `dbt-job.template.yaml:32`, `pplk8s.dbt.DEFAULT_IMAGE`); filed as #23.
+  Phase 3, `deploy.sh` hard-codes the warehouse password: resolved in Phase 5 (`d84b1b4`); `deploy.sh:19` reads `WAREHOUSE_PASSWORD`.
+  Phase 3, a Celery worker `Terminating` for ~10 minutes: explained, not a mystery: the chart's default `terminationGracePeriodSeconds` is 600 s, and Celery's warm shutdown waits up to that long for a running task; since `76e2820` it is 60 s (D24), and drill 6 measured a scale-in pod gone 77 s after removal with a task still running. Closed.
+  Phase 4, `resolve_context` has no retries: resolved in the Phase 6 preflight (`2768e45`); every task of `sales_elt`, `finance_daily`, and `returns_file_arrival` now has `retries ≥ 1`, enforced by `test_every_business_task_survives_a_lost_worker`.
+  Phase 5, an empty newer generation racing an older load: closed by argument.
+  EL Factory reads exactly the event's generation, and on a bucket without versioning only the live generation is readable (`storage.py:45`), so an older load can only proceed if it read its bytes before the newer generation existed.
+  It then waits only for its own per-object advisory lock and commits.
+  To lose, the newer generation's whole path (fake-gcs notification, Pub/Sub, adapter, DAG run, `validate_event`, a worker slot, its own load) must finish inside that read-to-lock gap of one HTTP request, milliseconds against the seconds a run takes to be scheduled.
+  The outcome would also be visible, not silent: `ops.file_loads` would record the newer generation as loaded.
+  Phase 5, the adapter logs in as `admin/admin`: resolved in the Phase 6 preflight (`2768e45`, its own `event-adapter` user with role User).
+  Phase 1 and Phase 5, the unreproduced dbt failures (`unable to infer all dependencies`, one `tag:sales,tag:silver` build): closed as watch items; neither recurred since: the metadata DB holds 136 successful dbt stage task instances and no failed one; re-open with the failing log if one does.
+  Phase 5, leaked port-forwards: root-caused and fixed above; the earlier explanation (ad-hoc shells skip the EXIT trap) missed that the checks leaked them too.
+  Phase 6, the WSL2 clocksource: deliberately left; it is a host setting outside the repo, and the alert side is handled (D21, #5).
+  Phase 6, drop `pplk8s.celery_config` once the constraints reach Celery ≥ 5.7: still open; the Airflow 3.3.1, 3.3.2, and `main` constraints pin `celery==5.6.3`, and 5.7 is still pre-release (`5.7.0b1`) on PyPI.
+- Open: #18 (git-sync staleness), #20 (two schedulers and triggerers, next), #21 (metadata DB restore, after #20), #23 (workload image tags).
+  The 41 crashed triggerer job rows of today stay until their heartbeats are 60 days old.
