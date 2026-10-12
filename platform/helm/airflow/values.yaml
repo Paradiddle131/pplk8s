@@ -135,6 +135,9 @@ config:
     # is this many seconds old, then fails into a retry. The default 300 s made every lost-worker
     # recovery take over 5 minutes (Phase 4); task supervisors heartbeat every few seconds.
     task_instance_heartbeat_timeout: 120
+    # Serves /health on :8974 from a subprocess: 200 while this host's SchedulerJob heartbeats, the
+    # same rule as `airflow jobs check --local`, so the probes below curl it instead (D33).
+    enable_health_check: "True"
   celery:
     # D24: 4 slots per worker (chart default 16), so a burst of the lab's few tasks needs more than
     # one worker and KEDA's scale-out is visible; KEDA's query divides by this value.
@@ -165,14 +168,25 @@ env:
 # dag-processor; both are first-class chart components.
 # Requests sit near the peak working set observed over a sales_elt run, the Phase 4 drills, and a
 # 16-task KEDA burst (Phase 6 tuning, LEDGER); limits leave 50-100 % headroom above that peak.
+#
+# Probes are sized for a CPU-contended node (D33, issue #30). On a busy node a container gets CPU in
+# proportion to its request, and the chart's exec probes boot the Airflow CLI (~1.8 CPU-seconds), so
+# a 100m triggerer needs ~18 s for a probe that times out at 20 s. With every pod starting at once on
+# 0.5-vCPU nodes, the api-server never answered within its 60 s startup budget and every exec probe
+# timed out. Startup budgets are generous (they only gate the start); liveness keeps its period and
+# threshold, so a hang is detected as fast as before, but each check may take longer to answer.
 apiServer:
   replicas: 1
+  startupProbe:
+    failureThreshold: 30 # 30 x 10 s: a cold api-server on a starved node took over 60 s to bind
   resources:
     requests: {cpu: 200m, memory: 384Mi} # peak 337Mi
     limits: {memory: 1Gi}
 dagProcessor:
   enabled: true
   replicas: 1
+  livenessProbe:
+    timeoutSeconds: 60 # exec `airflow jobs check`; 1.8 CPU-seconds fit down to a ~30m share
   resources:
     requests: {cpu: 200m, memory: 640Mi} # peak 617Mi
     limits: {memory: 1Gi}
@@ -188,6 +202,16 @@ scheduler:
     enabled: true
     config:
       maxUnavailable: 1
+  # The scheduler's own health server (config.scheduler.enable_health_check) instead of an Airflow
+  # CLI per probe: one indexed SELECT, no interpreter boot. It runs in a child process, so a hung
+  # scheduler (runbook drill 1b, SIGSTOP) still answers, with 503 once its heartbeat is 30 s stale.
+  startupProbe:
+    command: [curl, --fail, --silent, --max-time, "8", http://localhost:8974/health]
+    timeoutSeconds: 10
+    failureThreshold: 30 # 30 x 10 s; the probe also keeps a new pod un-Ready for its PDB (D31)
+  livenessProbe:
+    command: [curl, --fail, --silent, --max-time, "8", http://localhost:8974/health]
+    timeoutSeconds: 10
   resources:
     requests: {cpu: 200m, memory: 384Mi} # peak 369Mi
     limits: {memory: 1Gi}
@@ -205,6 +229,8 @@ triggerer:
       value: pubsub:8085
   persistence:
     enabled: false # triggerer logs are not needed on disk
+  livenessProbe:
+    timeoutSeconds: 60 # exec `airflow jobs check`; at its 100m request a probe alone needs ~18 s
   resources:
     requests: {cpu: 100m, memory: 576Mi} # peak 553Mi; 768Mi left only 40 % headroom
     limits: {memory: 1Gi}
@@ -224,10 +250,15 @@ workers:
     # The probe is `celery inspect ping`. After a Redis restart during a running task, a worker takes
     # no new task until that task ends, and sometimes stops answering pings too; then only the
     # kubelet's restart frees it (runbook drill 8). The chart's 60 s x 5 let that last ~6 minutes;
-    # 30 s x 3 ends it in ~90 s. A ping takes ~2 s.
+    # 30 s x 3 ends it in ~90 s. A ping takes ~2 s and ~1.8 CPU-seconds, shared with the running
+    # tasks inside the worker's request, so it may use the whole period before it counts as failed.
+    # The chart has no worker startup probe, so the first ping waits 60 s: on a starved node a booting
+    # worker failed two of its three pings (D33).
     livenessProbe:
+      initialDelaySeconds: 60
       periodSeconds: 30
       failureThreshold: 3
+      timeoutSeconds: 30
     # KEDA (D24) owns the replica count: ceil((running + queued) / worker_concurrency) workers, read
     # from the metadata DB through PgBouncer, between 1 and 4 (what two kind nodes hold). With a
     # minimum above 0 the HPA KEDA creates does the scaling on its own 15 s loop, so pollingInterval
