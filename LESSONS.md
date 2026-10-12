@@ -220,6 +220,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Ship DAG files and the shared package they import as one versioned unit: a DAG folder that syncs ahead of the image (or Composer's `dags/` ahead of its plugins or PyPI packages) produces import errors on every component.
 - Never edit DAGs in a live-synced location while a run or check depends on it.
 - [GKE] Sync both DAGs and the shared package with git-sync from one ref with a read-only deploy key and pinned host keys, and have checks refuse to run when the local tree differs from the served commit.
+- [GKE] Alert on git-sync's own counters (`git_sync_count_total` by status, served with `GITSYNC_HTTP_METRICS`): a failing fetch keeps every sidecar Ready on its last good commit, so DAGs go stale without any pod-level alert.
+- [Composer] Composer copies DAGs from its bucket instead of git-sync; before relying on it, find out how a stalled bucket sync shows up there, because healthy pods prove nothing about DAG freshness.
 - Run a DagBag import test in CI on every push; it catches the import errors that would otherwise surface on every component after a sync.
 - A DAG whose file vanished still answers `GET /dags/<id>` with `is_stale: true`, but triggering it returns 404; check `is_stale` before you trigger, and alert on it.
 - Check import health from the DAG processor (`airflow dags list-import-errors`), not only from the UI.
