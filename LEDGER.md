@@ -397,3 +397,19 @@ Entry format:
   `docker update --cpus=0` does not lift a CPU cap; set it to the host's core count instead (the worker nodes now carry `--cpus=28`).
 - Decisions: D33.
 - Open: #18 (PR #31), #23, #25, #27.
+
+## 2026-10-12 — Phase 6 — One source per image tag
+
+- Done: issue #23. The Makefile is now the only place a workload or Airflow image tag lives (PLAN D16, LESSONS).
+  The EL Factory and event adapter Deployments name placeholders that `workloads-up.sh` maps to `ELF_IMAGE`/`ADAPTER_IMAGE` with a throwaway Kustomize overlay; `dbt-job.sh` fills the Job template from `DBT_IMAGE`.
+  `run_dbt` reads the image from the Airflow Variable `dbt_image` with no default, set by both `workloads-up.sh` and the Airflow deploy (`dbt-image-variable.sh`); `values.yaml` no longer repeats the Airflow tag.
+  Scripts run outside make (the runbook's `workloads-up.sh`, the upgrade drill's `deploy.sh`) read the Makefile default with `make -s print-<VAR>`.
+- Evidence: on the lab, `make push workloads-up ELF_IMAGE=localhost:5001/el-factory:0.2.0-t23` rolled both EL Factory replicas to `0.2.0-t23` and set `dbt_image=localhost:5001/dbt:0.2.0`; a plain `make workloads-up` rolled them back to `0.2.0`.
+  The `integration` run on 7f32431 deployed from the overlay, set the Variable, and passed Phase 5, whose producer runs `run_dbt`.
+  Offline:
+  `kubectl kustomize` of the overlay with `ELF_IMAGE=…:0.3.0` renders `el-factory:0.3.0`, and the base alone renders only the placeholders; the filled dbt Job template passes `kubectl apply --dry-run=client`; `helm template` with the `--set` renders `localhost:5001/airflow:3.3.1-pplk8s.12` for all 16 Airflow images.
+  `make lint` clean; `make airflow-test` 119 passed.
+- Found: the runbook's image drill said `make push` publishes `0.1.0` while EL Factory was already on `0.2.0`, the drift this change removes.
+  Kustomize refuses an absolute path to a base, so the overlay is a temporary directory next to the base.
+- Decisions: D16 revised.
+- Open: #18 (PR #31), #25, #27.

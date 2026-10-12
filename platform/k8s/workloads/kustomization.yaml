@@ -1,4 +1,6 @@
-# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt) and the Eventarc stand-in (event adapter). Apply with `kubectl apply -k`.
+# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt) and the Eventarc stand-in (event adapter).
+# Apply through workloads-up.sh, never `kubectl apply -k` here: the Deployments name placeholder images
+# (el-factory, event-adapter) that its overlay maps to ELF_IMAGE and ADAPTER_IMAGE from the Makefile (D16).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 

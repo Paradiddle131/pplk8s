@@ -4,10 +4,11 @@ set -euo pipefail
 stage="${1:?usage: dbt-job.sh <stage>}"
 case "$stage" in bronze|silver|gold|exposed) ;; *) echo "unknown stage: $stage" >&2; exit 2 ;; esac
 
+image="${DBT_IMAGE:-$(make -s -C "$(dirname "$0")/../.." print-DBT_IMAGE)}" # Makefile default outside make
 k() { kubectl --context kind-pplk8s -n workloads "$@"; }
 name="dbt-${stage}-$(date +%s)"
 
-sed -e "s/__NAME__/${name}/g" -e "s/__STAGE__/${stage}/g" "$(dirname "$0")/dbt-job.template.yaml" | k apply -f - >/dev/null
+sed -e "s/__NAME__/${name}/g" -e "s/__STAGE__/${stage}/g" -e "s|__IMAGE__|${image}|g" "$(dirname "$0")/dbt-job.template.yaml" | k apply -f - >/dev/null
 echo "created job/${name}"
 
 # Wait for either outcome: `kubectl wait` blocks on one condition only, so poll both.

@@ -17,8 +17,11 @@ Selection (PLAN.md D20): every model carries a pipeline tag next to its layer ta
 builds the intersection ``tag:<pipeline>,tag:<stage>``, so one pipeline's stage never rebuilds
 another pipeline's models.
 
-Overrides (resolved at task run time, so the DAG parse never reads the metadata DB):
-Airflow Variables ``dbt_image`` and ``dbt_namespace``; defaults below.
+Image (PLAN.md D16): the Airflow Variable ``dbt_image``, required and resolved at task run time
+(so the DAG parse never reads the metadata DB).  The deploy sets it from ``DBT_IMAGE``; no tag is
+written here, because a default would silently run a stale image after a bump.  On Cloud Run the
+image belongs to the Job definition instead, and the operator names only the Job.
+Namespace: the Variable ``dbt_namespace``, default below.
 """
 
 from __future__ import annotations
@@ -32,14 +35,13 @@ from kubernetes.client import models as k8s
 
 STAGES = ("bronze", "silver", "gold", "exposed")
 _PIPELINE = re.compile(r"^[a-z][a-z0-9_]*$")
-DEFAULT_IMAGE = "localhost:5001/dbt:0.2.0"
 DEFAULT_NAMESPACE = "workloads"
 SERVICE_ACCOUNT = "dbt"
 CREDENTIALS_SECRET = "warehouse-credentials"
 RUN_AS_ID = 10001
 SCRATCH = {"target": "/dbt/target", "logs": "/dbt/logs", "tmp": "/tmp"}  # noqa: S108
 
-_IMAGE = f"{{{{ var.value.get('dbt_image', '{DEFAULT_IMAGE}') }}}}"
+_IMAGE = "{{ var.value.dbt_image }}"
 _NAMESPACE = f"{{{{ var.value.get('dbt_namespace', '{DEFAULT_NAMESPACE}') }}}}"
 
 

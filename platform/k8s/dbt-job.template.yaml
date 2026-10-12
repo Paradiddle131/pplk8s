@@ -1,4 +1,4 @@
-# Template for one `dbt build --select <stage>` run, filled in by dbt-job.sh (__NAME__, __STAGE__).
+# Template for one `dbt build --select <stage>` run, filled in by dbt-job.sh (__NAME__, __STAGE__, __IMAGE__).
 # Not part of the Kustomization: a Job's pod template is immutable, so every run is a new, uniquely named Job.
 apiVersion: batch/v1
 kind: Job
@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: dbt
-          image: localhost:5001/dbt:0.2.0
+          image: __IMAGE__
           imagePullPolicy: IfNotPresent
           args: [build, --select, __STAGE__] # the image's ENTRYPOINT is `dbt`; args replace its default CMD
           envFrom:

@@ -7,12 +7,10 @@
 airflowVersion: 3.3.1
 
 # Our custom image from airflow/Dockerfile (providers + include/), pulled from the
-# local registry that kind nodes reach at localhost:5001 (D4). deploy.sh overrides
-# the tag with --set images.airflow.tag so the Makefile's AIRFLOW_IMAGE stays the one source.
+# local registry that kind nodes reach at localhost:5001 (D4). deploy.sh sets repository and
+# tag with --set from the Makefile's AIRFLOW_IMAGE, the one place they live (D16).
 images:
   airflow:
-    repository: localhost:5001/airflow
-    tag: 3.3.1-pplk8s.12 # keep in step with AIRFLOW_IMAGE in the Makefile; bump on every image change, nodes cache by tag
     pullPolicy: IfNotPresent
 
 # CeleryExecutor with the chart's bundled Redis as broker (D5).

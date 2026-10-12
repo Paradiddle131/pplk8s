@@ -224,6 +224,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - A DAG whose file vanished still answers `GET /dags/<id>` with `is_stale: true`, but triggering it returns 404; check `is_stale` before you trigger, and alert on it.
 - Check import health from the DAG processor (`airflow dags list-import-errors`), not only from the UI.
 - Make deploy scripts idempotent: create pools and connections on every run.
+- Give each image tag exactly one source that the deploy reads (Kustomize `images:`, a Helm `--set`, an Airflow Variable): a tag repeated across a Makefile, manifests and a code default lets a bump push the new image and deploy the old one.
+- [Composer] Keep the dbt image with the Cloud Run Job definition, deployed with the image; the DAG names only the Job, so a dbt release never needs a DAG change.
 - Use `postgresql://` in connection URIs (Airflow normalises it), and pass JSON-form connections when extras are needed.
 - Keep lab-default credentials out of real environments (the Helm chart's create-user Job gives `admin`/`admin`), and give an event adapter its own API identity.
 - Keep emulator switches (`STORAGE_EMULATOR_HOST`, `PUBSUB_EMULATOR_HOST`) out of real manifests: they switch clients to anonymous credentials or insecure channels.

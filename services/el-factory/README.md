@@ -97,9 +97,11 @@ The unit tests use in-memory fakes for storage and the warehouse and mock the Op
 
 ## Image
 
+Its reference is `ELF_IMAGE` in the Makefile, the one place the tag lives (PLAN.md D16).
+
 ```bash
-docker build -t localhost:5001/el-factory:0.2.0 services/el-factory
-docker run --rm localhost:5001/el-factory:0.2.0 id -u   # prints 10001
+make build
+docker run --rm "$(make -s print-ELF_IMAGE)" id -u   # prints 10001
 ```
 
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.
