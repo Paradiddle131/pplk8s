@@ -17,12 +17,12 @@
 #   9b crash the triggerer holding a deferred wait       -> claimed once by another job after the threshold
 #   9c stop every triggerer (sustained: scaled to 0)     -> AirflowTriggererDown; the wait stays deferred with
 #      its upstream ready, then resumes on scale-up and finance_daily succeeds
-#   11 git-sync follows a branch that is then deleted   -> AirflowGitSyncFailing, every pod still Ready (#18)
+#   11 block git-sync's SSH egress to GitHub           -> AirflowGitSyncFailing, every pod still Ready (#18)
 # DRILLS="1 9" runs only those drills after the preflight.
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up workloads-up`. Re-runnable and self-restoring: the exit trap (also on
 # SIGINT/SIGTERM) deletes a pod it hung, scales the schedulers and triggerers back, starts the DB, uncordons nodes, and
-# restores the pool, KEDA's query, KEDA's scaling of the workers, git-sync's ref (deleting a drill branch), and the DAGs' paused flags, and
+# restores the pool, KEDA's query, KEDA's scaling of the workers, git-sync's egress, and the DAGs' paused flags, and
 # discards the scheduled runs that unpausing them created.
 set -euo pipefail
 
@@ -36,7 +36,7 @@ OUR_ALERTS='Airflow.*|MetadataDB.*|KubeNode.*|Keda.*'
 say() { echo "[$(date +%T)] $*"; }
 
 # ---- restorable state -------------------------------------------------------------------------------
-load_was_paused="" fin_was_paused="" keda_query="" hung="" sampler="" gitsync_was="" drill_branch=""
+load_was_paused="" fin_was_paused="" keda_query="" hung="" sampler="" git_blocked=""
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 # The replica counts the drills restore (D31: two each); read before any drill changes them.
 SCHEDULERS=$(kc get deploy airflow-scheduler -o jsonpath='{.spec.replicas}')
@@ -55,8 +55,7 @@ cleanup() {
   pool_size 16 >/dev/null 2>&1
   [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
   keda_resume >/dev/null 2>&1
-  [ -z "$gitsync_was" ] || set_gitsync_ref "$gitsync_was" >/dev/null 2>&1
-  [ -z "$drill_branch" ] || git -C "$REPO" push -q origin --delete "$drill_branch" >/dev/null 2>&1
+  [ -z "$git_blocked" ] || kc delete networkpolicy drill-block-git-ssh --ignore-not-found >/dev/null 2>&1
   if [ "$load_was_paused" = true ]; then
     api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
     discard_scheduled_runs "$LOAD" "$STARTED"
@@ -583,64 +582,57 @@ drill_9() {
 }
 
 # ---- 11. git-sync cannot fetch ------------------------------------------------------------------------
-# Every pod that loads DAGs runs a git-sync sidecar (D23). A fetch that fails (a deleted or renamed
-# ref, a revoked deploy key, GitHub unreachable) leaves it Running and Ready on its last good commit,
-# so DAG changes silently stop arriving (#18). The drill points git-sync at a branch made for it at the
-# served commit, deletes the branch, and expects AirflowGitSyncFailing while every pod stays Ready.
-GITSYNC_DEPLOYS="airflow-dag-processor airflow-triggerer airflow-worker"
-gitsync_ref() { # the ref the dag-processor's git-sync follows; empty without git-sync (DAG_DELIVERY=local)
-  kc get deploy airflow-dag-processor \
-    -o jsonpath='{.spec.template.spec.containers[?(@.name=="git-sync")].env[?(@.name=="GITSYNC_REF")].value}'
+# Every pod that loads DAG files runs a git-sync sidecar (D23). A fetch that fails after a good sync (a
+# deleted ref, a revoked deploy key, GitHub unreachable) leaves it retrying (maxFailures -1) on its
+# last good commit, Running and Ready, so DAG changes silently stop arriving (#18). The drill makes
+# GitHub unreachable over SSH for those pods with a NetworkPolicy (every other egress port stays open)
+# and expects AirflowGitSyncFailing for each of them while every pod stays Ready and nothing restarts.
+GIT_PODS='tier=airflow,component in (dag-processor,triggerer,worker)'
+block_git_ssh() {
+  git_blocked=1
+  kc apply -f - >/dev/null <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: drill-block-git-ssh}
+spec:
+  podSelector:
+    matchExpressions: [{key: component, operator: In, values: [dag-processor, triggerer, worker]}]
+  policyTypes: [Egress]
+  egress:
+    - ports: # everything but TCP 22
+        - {protocol: TCP, port: 1, endPort: 21}
+        - {protocol: TCP, port: 23, endPort: 65535}
+        - {protocol: UDP, port: 1, endPort: 65535}
+EOF
 }
-# Returns non-zero instead of failing, because the exit trap restores the ref with it too.
-set_gitsync_ref() { # ref -> every git-sync container (sidecar and init) follows it; waits for the rollouts
-  local d
-  for d in $GITSYNC_DEPLOYS; do
-    kc set env "deploy/$d" -c 'git-sync*' "GITSYNC_REF=$1" "GIT_SYNC_BRANCH=$1" >/dev/null || return 1
-  done
-  for d in $GITSYNC_DEPLOYS; do
-    kc rollout status "deploy/$d" --timeout=300s >/dev/null || return 1
-  done
-}
-gitsync_pods() { kc get pods -l 'tier=airflow,component in (dag-processor,triggerer,worker)' --field-selector=status.phase=Running -o name | wc -l; }
+git_pods() { kc get pods -l "$GIT_PODS" --field-selector=status.phase=Running -o name | wc -l; }
 synced_pods() { prom_value 'count(count by (pod) (increase(git_sync_count_total{status=~"success|noop"}[1m]) > 0))'; }
+ready_pods() { kc get pods -l "$GIT_PODS" -o json | jq '[.items[] | select(all(.status.containerStatuses[]; .ready))] | length'; }
 drill_11() {
-  local served end pods took t firing ready err
-  gitsync_was=$(gitsync_ref)
-  if [ -z "$gitsync_was" ]; then
+  local pods before took t firing err
+  if ! kc get deploy airflow-dag-processor -o jsonpath='{.spec.template.spec.containers[*].name}' | grep -qw git-sync; then
     say "11. skipped: DAGs come from the host-path mount, not git-sync (DAG_DELIVERY=local)"
     return 0
   fi
-  served=$(kc exec deploy/airflow-dag-processor -c dag-processor -- readlink /opt/airflow/dags/repo)
-  served=${served##*/}
-  drill_branch="drill/git-sync-$(date +%s)"
-  say "11. git-sync: follow $drill_branch (at ${served:0:8}) instead of $gitsync_was, then delete it"
-  git -C "$REPO" push -q origin "$served:refs/heads/$drill_branch"
-  set_gitsync_ref "$drill_branch" || fail "git-sync did not roll out on $drill_branch"
-  pods=$(gitsync_pods)
-  end=$((SECONDS + 180))
-  until [ "$(synced_pods)" = "$pods" ]; do # every new sidecar syncing, and scraped
-    [ $SECONDS -lt $end ] || fail "only $(synced_pods) of $pods git-sync sidecars report syncs"
-    sleep 10
-  done
-  [ "$(alert_state AirflowGitSyncFailing)" = inactive ] || fail "AirflowGitSyncFailing fired before the branch was deleted"
-  git -C "$REPO" push -q origin --delete "$drill_branch"
-  drill_branch=""
+  pods=$(git_pods)
+  [ "$(synced_pods)" = "$pods" ] || fail "only $(synced_pods) of $pods git-sync sidecars report syncs before the drill"
+  before=$(restarts)
+  say "11. git-sync: block SSH egress (GitHub) for the $pods pods that sync DAGs"
+  block_git_ssh
   t=$SECONDS
-  took=$(wait_alert AirflowGitSyncFailing firing 360)
+  took=$(wait_alert AirflowGitSyncFailing firing 420)
   firing=$(prom 'ALERTS{alertname="AirflowGitSyncFailing", alertstate="firing"}' | jq length)
-  ready=$(kc get pods -l 'tier=airflow,component in (dag-processor,triggerer,worker)' -o json |
-    jq '[.items[] | select(all(.status.containerStatuses[]; .ready))] | length')
-  err=$(kc logs deploy/airflow-dag-processor -c git-sync --since=5m | grep -o 'couldn.t find remote ref [^"]*' | tail -1 || true)
-  say "  detected: AirflowGitSyncFailing firing for $firing of $pods pods $((SECONDS - t))s after the delete; $ready of $pods pods Ready; git-sync: ${err:-no error line}"
-  [ "$ready" = "$pods" ] || fail "a pod went unready: the failure is not silent, so the drill no longer tests #18"
-  [ "$(alert_state AirflowComponentUnavailable)" = inactive ] || fail "AirflowComponentUnavailable fired; pods should look healthy"
-  # Recovery (runbook drill 11): point git-sync back at a ref that exists.
+  err=$(kc logs deploy/airflow-dag-processor -c git-sync --since=5m | grep -o 'error syncing repo, will retry' | tail -1 || true)
+  say "  detected: AirflowGitSyncFailing firing for $firing of $pods pods $((SECONDS - t))s after the block; $(ready_pods) of $pods pods Ready; git-sync: ${err:-no retry line}"
+  [ "$(ready_pods)" = "$pods" ] || fail "a pod went unready: the failure is not silent, so the drill no longer tests #18"
+  [ -z "$(restarted_since "$before")" ] || fail "pods restarted while git-sync could not fetch: $(restarted_since "$before")"
+  [ "$(alert_state AirflowComponentUnavailable)" = inactive ] || fail "AirflowComponentUnavailable fired; the pods should look healthy"
+  # Recovery (runbook drill 11): make the remote reachable again; git-sync resumes on its next period.
   t=$SECONDS
-  set_gitsync_ref "$gitsync_was" || fail "git-sync did not roll out back on $gitsync_was"
-  gitsync_was=""
+  kc delete networkpolicy drill-block-git-ssh >/dev/null
+  git_blocked=""
   took=$(wait_alert AirflowGitSyncFailing inactive 300)
-  say "  recovered: back on $(gitsync_ref), alert resolved $((SECONDS - t))s after the change"
+  say "  recovered: SSH unblocked, alert resolved $((SECONDS - t))s later"
   canary
   echo "ok: (11) git-sync fetch failure detected and recovered"
 }
