@@ -349,3 +349,20 @@ Entry format:
   Phase 6, drop `pplk8s.celery_config` once the constraints reach Celery ≥ 5.7: still open; the Airflow 3.3.1, 3.3.2, and `main` constraints pin `celery==5.6.3`, and 5.7 is still pre-release (`5.7.0b1`) on PyPI.
 - Open: #18 (git-sync staleness), #20 (two schedulers and triggerers, next), #21 (metadata DB restore, after #20), #23 (workload image tags).
   The 41 crashed triggerer job rows of today stay until their heartbeats are 60 days old.
+
+## 2026-10-12 — Phase 6 — Two schedulers and two triggerers, degraded-HA alerts, re-drilled
+
+- Done: issue #20.
+  Schedulers and triggerers run two replicas each behind PodDisruptionBudgets of `maxUnavailable: 1` (D31); the dag-processor and api-server stay at one.
+  `sql_exporter` beside the metadata DB counts live jobs per type (`airflow_jobs_alive`: `running` with a heartbeat under 30 s), and `AirflowSchedulerDegraded`/`AirflowTriggererDegraded` compare it with the Deployment's desired replicas, because the statsd heartbeat counters are summed over replicas and Deployment availability misses a hung process.
+  `phase6-check.sh` drills became functions (`DRILLS="1 9"` runs a subset); drill 1 crashes, hangs (SIGSTOP), then stops the schedulers; drill 2 samples live jobs through the drain; drill 9 hangs, crashes, then stops the triggerers.
+  Runbook drills 1, 2, 9, the overview dashboard's live/desired tiles, and LESSONS updated.
+- Evidence: `make lint` passed; `make phase6-check` passed end to end in 63 min (12:00–13:03 local), with observability, KEDA, drills 1–9, `db clean`, and the upgrade drill.
+  1a: one of two schedulers SIGKILLed with 12 tasks queued and 4 running; the run succeeded 95 s later with no task instance past try 1 and no history rows.
+  1b: `AirflowSchedulerDegraded` fired after 169 s with the hung pod still Running; resolved 42 s after the delete.
+  1c: `AirflowSchedulerDown` after 145 s.
+  2: 62 samples through the drain of `pplk8s-worker`, never fewer than one live scheduler and one live triggerer; no restarts.
+  9a: the survivor took the hung triggerer's wait 24 s after the SIGSTOP (heartbeat 31 s old), the wait succeeded 2 s after its upstream turned ready; `AirflowTriggererDegraded` after 167 s.
+  9b: claimed once by the other triggerer 24 s after the SIGKILL; 9c: `AirflowTriggererDown` after 194 s, the wait resumed 19 s after the scale-up.
+- Decisions: D31.
+- Open: #21 (metadata DB restore drill, next), #18, #23, #25.
