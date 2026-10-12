@@ -135,6 +135,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Wait with a deferrable sensor: check once on the worker, then defer to a trigger that polls the ledger from the triggerer; the waiting task holds no worker slot.
 - In a custom trigger, wrap the synchronous hook query in `sync_to_async`, serialise only plain values (ISO timestamps), and ship the trigger's module where the triggerer imports it (the image on GKE; the plugins folder or a PyPI package on Composer).
 - Bound every cross-pipeline wait with a sensor timeout, and expect scheduled consumers to time out on intervals whose producers never ran.
+- Expect a triggerer outage to pause deferred waits, not fail them: another triggerer claims a trigger at once after a clean stop but only once the dead one's heartbeat is `triggerer_health_check_threshold` (30 s) old after a crash, and the outage counts against the sensor timeout, which is fixed when the task defers.
+- Alert on the triggerer's heartbeat, not on task failures: a wait whose upstream turned ready during a triggerer outage sits `deferred` and fails nothing until its timeout.
 
 ## Helm chart and Kubernetes
 
@@ -179,6 +181,9 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - [GKE] Give the statsd-exporter a series TTL, or it keeps one series per replaced pod forever (`triggers_running` summed to 8 for 2 triggerers), and restart it when its mappings change.
 - Alert on a heartbeat's rate and on its series going missing: a stopped component leaves its counter frozen, and an exporter restart drops the series entirely (in PromQL, `or vector(0)`).
 - Simulate a crash as a sustained outage (scale to 0) when asserting an alert; a killed pod returns faster than any `for:` window.
+- [GKE] Drill a crash by SIGKILLing the component's process inside its container, not with `kubectl delete pod --force --grace-period=0`: the kubelet still sends SIGTERM, the component exits cleanly, and crash-only behaviour (a triggerer's 30 s wait before taking over a dead one's triggers) never runs.
+- Do not read component health off `/api/v2/monitor/health` alone after a crash: it reports the newest heartbeat among jobs still marked `running`, and a crashed scheduler or triggerer leaves its job row `running` forever.
+- Schedule `airflow db clean` (it covers `job`, `log`, `task_instance`, `trigger`, `xcom`, and more): crashed components' job rows and all run history otherwise grow without bound; on Composer, run it from a maintenance DAG as Google documents.
 - [GKE] Watch the metadata DB from outside the cluster (Cloud SQL monitoring, or `pg_up`): PgBouncer keeps accepting clients while the server is gone, so no probe fails first.
 - [GKE] Detect a stuck rollout by pods above the spec (`status.replicas > spec.replicas`), not by availability or updated replicas: the old pods keep serving, and a crash-looping new pod counts as updated.
 - [GKE] Detect a failing chart migration from its pod's restarts: the Job uses `restartPolicy: OnFailure`, so `kube_job_status_failed` stays 0 until the backoff limit.

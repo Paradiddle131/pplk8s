@@ -299,3 +299,18 @@ Entry format:
   `DAG_DELIVERY=local make phase6-check` passed 20:55–21:41 UTC, upgrade drill included: 8b `say_hello` succeeded 10 s after the broker restart (144–330 s before), 0 worker restarts, the 240 s task `success`.
 - Decisions: D29 amended (socket timeout, backport as a stated stopgap until the constraints reach Celery 5.7).
 - Open: drop `pplk8s.celery_config` when the Airflow constraints move to Celery ≥ 5.7.
+
+## 2026-10-12 — Phase 6 — Drill 9: kill the triggerer under a deferred readiness wait (#17)
+
+- Done: drill 9 in `tests/e2e/phase6-check.sh` and `docs/runbook.md`.
+  A `finance_daily` run on the interval [2026-09-30, 2026-10-01) defers both readiness waits; 9a SIGKILLs the triggerer job process and marks `sales.gold` ready during the gap, 9b scales the triggerer to 0 and marks `returns.silver` ready while it is down.
+  9a asserts the dead job never ended (a real crash) and that the trigger was claimed only after its heartbeat was `triggerer_health_check_threshold` stale; 9b asserts `AirflowTriggererDown` fires, the wait stays `deferred` with its trigger on the stopped job, then resumes on scale-up, the run succeeds, and `finance.exposed` is recorded.
+  `make phase6-check` now also depends on `workloads-up` (the drill builds the finance exposed model).
+  Two LESSONS lines (Cross-pipeline readiness) and the Phase 6 drill list in PLAN updated; issues #20 (two schedulers and triggerers) and #21 (metadata DB restore drill) filed.
+- Evidence: by hand first: `kubectl delete pod --grace-period=0 --force` is not a crash (the job ended cleanly, the new triggerer claimed on its first loop, 19 s from delete to resume); SIGKILL of the job process left the job `running` with no `end_date`, and the new job claimed at a heartbeat age of 31 s; a scale to 0 fired the alert after 175 s with `default_pool` running 0.
+  `task_instance.trigger_timeout` is defer time + 6 h, so an outage eats into the sensor timeout.
+  Drill 9 alone passed in 4 min 10 s; then the full `tests/e2e/phase6-check.sh` passed 09:01–09:34 UTC, drills 1–9: 9a claimed 15 s after the new job started at a dead-job heartbeat age of 31 s, `wait_sales_gold` 3 s later on try 1; 9b fired after 195 s, the wait succeeded 16 s after the scale-up, the alert resolved after 30 s.
+  `make lint` passed.
+- Decisions: none new; the drill follows D28 (sustained outage for the alert, canary after recovery).
+- Open: like phase5-check, the drill unpauses `finance_daily`, so the scheduler creates the latest scheduled run, which defers until its 6 h timeout on an interval whose `returns.silver` never lands; removed by hand after this session's runs.
+  37 triggerer job rows from past crashes stay `running`; harmless, `airflow db clean` removes them.

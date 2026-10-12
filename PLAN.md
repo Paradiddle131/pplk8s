@@ -193,7 +193,7 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - Observability: StatsD → Prometheus + Grafana; dashboards for scheduler heartbeat, queued tasks, pool usage, task durations.
 - Scaling: KEDA for Celery workers; resource tuning; KubernetesExecutor experiment (D5) with a written comparison.
 - Delivery: git-sync from the GitHub remote; GitHub Actions for lint, DagBag test, image builds, and an integration test on kind.
-- Failure drills: kill the scheduler, drain a node, stop the metadata DB, starve a worker, roll the chart and Airflow minor version.
+- Failure drills: kill the scheduler, drain a node, stop the metadata DB, starve a worker, roll the chart and Airflow minor version, restart the Celery broker, kill the triggerer under a deferred wait.
 - **Exit:** every drill is detected from dashboards/logs and recovered via a written runbook entry.
 
 ### Phase 7 — Real GCP touchpoint · Status: parked
