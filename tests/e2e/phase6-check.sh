@@ -17,7 +17,8 @@
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up workloads-up`. Re-runnable and self-restoring: the exit trap (also on
 # SIGINT/SIGTERM) scales the scheduler and triggerer back, starts the DB, uncordons nodes, and
-# restores the pool, KEDA's query, KEDA's scaling of the workers, and the DAGs' paused flags.
+# restores the pool, KEDA's query, KEDA's scaling of the workers, and the DAGs' paused flags, and
+# discards the scheduled runs that unpausing them created.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -31,6 +32,7 @@ say() { echo "[$(date +%T)] $*"; }
 
 # ---- restorable state -------------------------------------------------------------------------------
 load_was_paused="" fin_was_paused="" keda_query=""
+STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 cleanup() {
   local rc=$? node
   set +e
@@ -43,8 +45,14 @@ cleanup() {
   pool_size 16 >/dev/null 2>&1
   [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
   keda_resume >/dev/null 2>&1
-  [ "$load_was_paused" = true ] && api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
-  [ "$fin_was_paused" = true ] && api PATCH "/api/v2/dags/$FIN" '{"is_paused":true}' >/dev/null 2>&1
+  if [ "$load_was_paused" = true ]; then
+    api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
+    discard_scheduled_runs "$LOAD" "$STARTED"
+  fi
+  if [ "$fin_was_paused" = true ]; then
+    api PATCH "/api/v2/dags/$FIN" '{"is_paused":true}' >/dev/null 2>&1
+    discard_scheduled_runs "$FIN" "$STARTED"
+  fi
   stop_prometheus
   stop_port_forward
   exit $rc

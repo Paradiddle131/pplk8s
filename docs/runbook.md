@@ -484,7 +484,7 @@ Observed (2026-10-12):
 
 - Crash (9a): the container restarted in place within 2 s, and the new triggerer job was up within about 8 s of the kill.
   It then waited 15 s, holding none of the triggers, and claimed them only when the dead job's last heartbeat was 30–31 s old; `wait_sales_gold`, whose upstream had turned ready during the gap, succeeded 3 s after the claim on try 1.
-  The dead job's row stays `running` with no `end_date` forever; that is harmless, because assignment checks the heartbeat, and `airflow db clean` removes old rows.
+  The dead job's row stays `running` with no `end_date`; that is harmless, because assignment checks the heartbeat, and the daily `airflow-database-cleanup` CronJob (`airflow db clean`, D30) deletes it once its heartbeat is 60 days old.
 - Pod deletion, even `--grace-period=0 --force`, is not a crash: the kubelet still sends SIGTERM, the job ends cleanly, and its replacement claims the triggers on its first loop (19 s from the delete to the wait resuming).
 - Sustained stop (9b): `AirflowTriggererDown` fired after 175–195 s.
   `wait_returns_silver` stayed `deferred` the whole time with its upstream already `ready`, holding no worker slot (`default_pool` running 0), and its trigger stayed with the stopped job.

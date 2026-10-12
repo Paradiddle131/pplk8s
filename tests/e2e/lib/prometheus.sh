@@ -5,8 +5,9 @@ PROM_PORT=${PROM_PORT:-19090}
 PROM=http://localhost:$PROM_PORT
 prom_pf=""
 start_prometheus() {
-  [ -z "$prom_pf" ] || kill "$prom_pf" 2>/dev/null || true
+  [ -z "$prom_pf" ] || { kill "$prom_pf" 2>/dev/null; wait "$prom_pf" 2>/dev/null; } || true
   kubectl --context "$CTX" -n monitoring rollout status statefulset/prometheus-kps-prometheus --timeout=180s >/dev/null 2>&1 || true
+  port_free "$PROM_PORT"
   kubectl --context "$CTX" -n monitoring port-forward svc/kps-prometheus "$PROM_PORT:9090" >/dev/null 2>&1 &
   prom_pf=$!
   for _ in $(seq 90); do curl -sf -o /dev/null "$PROM/-/ready" 2>/dev/null && return; sleep 2; done

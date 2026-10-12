@@ -1,6 +1,6 @@
 # Shared helpers for e2e checks that drive Airflow through its REST API (source this file).
-# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready, worker_pod, run_hello,
-# require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
+# Provides: kc, fail, start_port_forward, refresh_token, api, wait_dag_ready, discard_scheduled_runs,
+# worker_pod, run_hello, require_synced_dags. Set CTX/NS/API_PORT before sourcing to override.
 CTX=${CTX:-kind-pplk8s}
 NS=${NS:-airflow}
 API_PORT=${API_PORT:-18080}
@@ -14,11 +14,22 @@ dags_checked=""
 start_port_forward() {
   # Every check starts here, so this is where it proves it tests the DAG code it was written for.
   [ -n "$dags_checked" ] || { require_synced_dags; dags_checked=1; }
-  [ -z "$pf" ] || kill "$pf" 2>/dev/null || true
-  kc port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
+  [ -z "$pf" ] || { kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null; } || true
+  # A port-forward leaked by another shell can hold the port (LEDGER, Phase 5); the check would then
+  # talk to whatever pod that one is bound to, and fail confusingly once a rollout replaces it.
+  port_free "$API_PORT"
+  # kubectl itself, not the kc function: a backgrounded function is a subshell, and killing that
+  # left its kubectl child running (the port-forwards that leaked from every check).
+  kubectl --context "$CTX" -n "$NS" port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
   pf=$!
   for _ in $(seq 30); do curl -sf -o /dev/null "$API/api/v2/version" 2>/dev/null && return; sleep 1; done
   fail "API not reachable on $API"
+}
+port_free() { # port -> fails when something already listens on it
+  # ss, not a test connection: on WSL2 a connect to a closed localhost port can hang instead of failing.
+  if [ -n "$(ss -Hltn "sport = :$1")" ]; then
+    fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "port-forward.* $1:" || echo unknown)"
+  fi
 }
 stop_port_forward() { [ -z "$pf" ] || kill "$pf" 2>/dev/null || true; }
 trap stop_port_forward EXIT
@@ -54,6 +65,20 @@ wait_dag_ready() { # dag_id [timeout-seconds]
     sleep 2
   done
   fail "DAG $1 is not parsed (is_stale=${stale:-unknown}); is airflow/dags mounted on the workers? see platform/kind/ensure-dag-mount.sh"
+}
+
+# Unpausing a scheduled DAG makes the scheduler create its latest scheduled run (catchup=False still
+# creates one), which a check never asked for: finance_daily's then defers for 6 h on an interval
+# whose producers never land, fails, and fires a late alert. A check's exit trap discards those
+# runs: fail first (that ends deferred or running tasks and releases their triggers), then delete.
+discard_scheduled_runs() { # dag_id since(UTC, %Y-%m-%dT%H:%M:%SZ) -> discards runs queued since then
+  local id path
+  for id in $(api GET "/api/v2/dags/$1/dagRuns?run_type=scheduled&limit=100&order_by=-run_after" |
+    jq -r --arg s "$2" '.dag_runs[] | select((.queued_at // "" | sub("\\.[0-9]+"; "")) >= $s) | .dag_run_id'); do
+    path="/api/v2/dags/$1/dagRuns/$(jq -rn --arg i "$id" '$i|@uri')"
+    api PATCH "$path" '{"state":"failed"}' >/dev/null
+    api DELETE "$path" >/dev/null && echo "discarded the scheduled run $1/$id"
+  done
 }
 
 # Map a task instance's hostname to the Celery worker pod that ran it, or fail. Workers report their
