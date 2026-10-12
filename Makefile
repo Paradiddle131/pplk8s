@@ -167,4 +167,4 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 	kubectl --context kind-pplk8s -n monitoring port-forward svc/kps-prometheus 9090:9090
 
 lint: ## Lint shell scripts (shellcheck via uvx)
-	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh
+	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh docs/agents/*.sh
