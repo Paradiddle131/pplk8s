@@ -10,6 +10,9 @@
 #     interval, never under its own id: that id belongs to the run the scheduler creates for the
 #     interval, and a manual run holding it would collide with it. The replay rewrites the rows
 #     under the new id.
+#   - Replays run one at a time, in the order the lost runs finished, each waiting for the last:
+#     a replayed consumer finds its producers' readiness rows already `ready` (the lost runs left
+#     them), so replayed together it would build before its producers are rebuilt.
 # Usage: scripts/metadata-reconcile.sh [--replay]
 # Prints one line per lost run: dag_id run_id interval_end products [-> replayed as <run id>].
 set -euo pipefail
@@ -31,12 +34,21 @@ psql_wh() { # stdin closed: `exec -T` forwards it, and inside the loop below it 
 }
 run_path() { echo "/api/v2/dags/$1/dagRuns/$(jq -rn --arg r "$2" '$r|@uri')"; }
 known() { api GET "$(run_path "$1" "$2")" >/dev/null 2>&1; } # dag_id run_id
+wait_done() { # dag_id run_id -> prints the final state; a replay is a whole pipeline run
+  local end=$((SECONDS + 1800)) state=""
+  while [ $SECONDS -lt $end ]; do
+    state=$(api GET "$(run_path "$1" "$2")" | jq -r .state)
+    case "$state" in success | failed) echo "$state"; return 0 ;; esac
+    sleep 5
+  done
+  fail "$1 run $2 is still $state after 30 min"
+}
 
 ensure_port_forward
 refresh_token
 
 lost=0
-# Runs that wrote rows in the same window as the alert, oldest first, so replays queue in order.
+# Runs that wrote rows in the same window as the alert, in the order they finished (last row written).
 while read -r dag run end products; do
   known "$dag" "$run" && continue
   lost=$((lost + 1))
@@ -52,13 +64,16 @@ while read -r dag run end products; do
     event=$(psql_wh "SELECT json_build_object('bucket', bucket, 'object', object, 'generation', generation::text)
                      FROM ops.file_loads WHERE run_id = '${run//\'/\'\'}'")
     [ -z "$event" ] || body=$(jq -c --argjson e "$event" '.conf = $e' <<<"$body")
+    [ "$(api GET "/api/v2/dags/$dag" | jq -r .is_paused)" = false ] || fail "$dag is paused; unpause it to replay $run"
     new=$(api POST "/api/v2/dags/$dag/dagRuns" "$body" | jq -r .dag_run_id) || fail "could not replay $dag $run"
-    line+=" -> replayed as $new"
+    state=$(wait_done "$dag" "$new")
+    line+=" -> replayed as $new: $state"
+    [ "$state" = success ] || { echo "$line"; fail "the replay of $dag $run failed; fix it before replaying the runs after it"; }
   fi
   echo "$line"
 done < <(psql_wh "SELECT dag_id, run_id, to_char(max(interval_end) AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS'),
                          string_agg(product, ',' ORDER BY product)
                   FROM ops.readiness
                   WHERE dag_id IS NOT NULL AND updated_at > now() - interval '7 days'
-                  GROUP BY dag_id, run_id ORDER BY min(updated_at)")
+                  GROUP BY dag_id, run_id ORDER BY max(updated_at)")
 [ "$lost" -gt 0 ] || echo "every run that wrote ops.readiness in the last 7 days is known to Airflow"
