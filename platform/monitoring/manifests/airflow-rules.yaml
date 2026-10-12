@@ -104,6 +104,12 @@ spec:
           labels: {severity: warning}
           annotations:
             summary: No live-job counts from the metadata DB (sql_exporter); the *Degraded alerts are blind.
+        - alert: AirflowReadinessMetricsMissing
+          expr: absent(up{instance="warehouse-sql-exporter:9399"} == 1)
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse is blind.
     - name: airflow.platform
       rules:
         - alert: MetadataDBDown
@@ -113,6 +119,23 @@ spec:
           annotations:
             summary: The Airflow metadata DB (Cloud SQL stand-in) does not answer.
             runbook: docs/runbook.md#3-stop-the-metadata-db
+        - alert: AirflowMetadataBehindWarehouse
+          # A readiness row written by a DAG run the metadata DB has no record of: Airflow's history
+          # is behind the warehouse, as after a metadata DB restore (D32). One alert per vanished run.
+          # Guarded on the metadata DB's exporter answering (its live-job counts exist whenever its
+          # queries succeed), so a metadata DB outage (drill 3) is left to MetadataDBDown; an empty
+          # restored DB still fires. 2m outlasts the two exporters' scrapes of a brand-new run.
+          expr: |
+            count by (dag_id, run_id) (
+              ops_readiness_updated_timestamp_seconds
+                unless on (dag_id, run_id) airflow_dag_run_known
+            )
+            and on () count(airflow_jobs_alive) > 0
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.dag_id }} run {{ $labels.run_id }} wrote {{ $value }} readiness row(s), but the metadata DB has no record of the run."
+            runbook: docs/runbook.md#10-restore-the-metadata-db-to-an-earlier-point
         - alert: KubeNodeUnschedulable
           expr: max by (node) (kube_node_spec_unschedulable) == 1
           for: 30s

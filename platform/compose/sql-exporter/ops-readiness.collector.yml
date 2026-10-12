@@ -1,0 +1,15 @@
+# Readiness rows written by Airflow DAG runs in the last 7 days (D32), keyed like
+# airflow_dag_run_known so PromQL can find the rows whose run the metadata DB does not know.
+# Rows without a dag_id come from other producers (the checks' stand-ins) and are left out.
+collector_name: ops_readiness
+
+metrics:
+  - metric_name: ops_readiness_updated_timestamp_seconds
+    type: gauge
+    help: "Last update of an ops.readiness row written by an Airflow DAG run in the last 7 days."
+    key_labels: [product, dag_id, run_id]
+    values: [updated]
+    query: |
+      SELECT product, dag_id, run_id, extract(epoch FROM updated_at) AS updated
+      FROM ops.readiness
+      WHERE dag_id IS NOT NULL AND updated_at > now() - interval '7 days'

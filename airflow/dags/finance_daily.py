@@ -56,6 +56,7 @@ def finance_daily():
             sales["watermark"],
             ctx["run_id"],
             "ready",
+            dag_id=get_current_context()["dag"].dag_id,
         )
 
     ctx = resolve_context()

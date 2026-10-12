@@ -69,6 +69,18 @@ services:
     depends_on: [warehouse]
     restart: unless-stopped
 
+  # The readiness rows Airflow runs wrote, which AirflowMetadataBehindWarehouse matches against the
+  # runs the metadata DB knows (D32): same image and collector files as the metadata DB's exporter.
+  warehouse-sql-exporter:
+    image: burningalchemist/sql_exporter:0.24.9
+    command: ["-config.file=/etc/sql_exporter/warehouse.yml"]
+    environment:
+      SQLEXPORTER_TARGET_DSN: postgresql://warehouse:${WAREHOUSE_PASSWORD:-warehouse}@warehouse:5432/warehouse?sslmode=disable
+    volumes:
+      - ./sql-exporter:/etc/sql_exporter:ro
+    depends_on: [warehouse]
+    restart: unless-stopped
+
   pubsub: # Pub/Sub stand-in; in-network PUBSUB_EMULATOR_HOST=pubsub:8085, host localhost:8085
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:588.0.0-emulators
     command: [gcloud, beta, emulators, pubsub, start, --project=pplk8s, --host-port=0.0.0.0:8085]

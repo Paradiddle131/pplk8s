@@ -1,0 +1,17 @@
+# The DAG runs Airflow knows, for matching against the warehouse's readiness ledger (D32): a
+# readiness row whose (dag_id, run_id) is not here was written by a run Airflow has no record of,
+# which after a metadata DB restore means Airflow's history is behind the warehouse (runbook drill 10).
+# The window is a day wider than the warehouse side's 7 days, so a long run that wrote a row late is
+# still covered; ~400 series on the lab.
+collector_name: airflow_dag_runs
+
+metrics:
+  - metric_name: airflow_dag_run_known
+    type: gauge
+    help: "1 for every DAG run in the metadata DB created in the last 8 days or still active."
+    key_labels: [dag_id, run_id]
+    values: [known]
+    query: |
+      SELECT dag_id, run_id, 1 AS known
+      FROM dag_run
+      WHERE run_after > now() - interval '8 days' OR state IN ('queued', 'running')

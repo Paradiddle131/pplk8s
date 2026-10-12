@@ -102,6 +102,7 @@ def sales_elt():
                 check["watermark"],
                 ctx["run_id"],
                 "ready",
+                dag_id=get_current_context()["dag"].dag_id,
             )
 
         return record
