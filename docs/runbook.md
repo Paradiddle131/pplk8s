@@ -256,6 +256,7 @@ Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/ai
 Drills 1–4 and 7–9 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
+Drill 10 restores the lab's own metadata DB and lives in `tests/e2e/metadata-restore-drill.sh` (`make metadata-restore-drill`, also in `make phase6-check`).
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
 `KA` stands for `kubectl --context kind-pplk8s -n airflow`.
 
@@ -537,3 +538,41 @@ docker compose -f platform/compose/compose.yaml exec -T metadata-db psql -U airf
 Recovery: for a hang, `KA delete pod <hostname of the stale job>` (the liveness probe restarts it about 5 minutes in otherwise); for an outage, `KA scale deploy/airflow-triggerer --replicas=2`, then `KA rollout status deploy/airflow-triggerer`.
 A live triggerer claims every orphaned trigger, and a trigger whose condition came true during the outage fires on its first poll; nothing needs clearing.
 If the outage outlasted a wait's timeout, the task failed: clear it once its upstream is ready.
+
+### 10. Restore the metadata DB to an earlier point
+
+A metadata DB restore (Cloud SQL backup or point-in-time recovery, a Composer snapshot load) rolls Airflow's history back while the warehouse keeps every row written since.
+Restored Airflow is healthy by every other signal; the drift is visible only where the two histories meet, the readiness ledger (D32).
+
+Trigger: `make metadata-restore-drill`.
+It backs up the metadata DB with `pg_dump -Fc` while Airflow runs, then runs three pipelines past the backup for interval 2026-10-06: `sales_elt`, a returns file through the event path (`returns_file_arrival`), and `finance_daily` waiting on both.
+Then it restores the backup in place, the way drill 5's right way back does: every Airflow Deployment scaled to 0 (KEDA paused at 0 for the workers), the PgBouncer pods deleted, `DROP DATABASE airflow WITH (FORCE)`, `CREATE DATABASE`, `pg_restore --no-owner`, and the Deployments scaled back.
+The interval must not precede the DAGs' `start_date` (2026-10-01): Airflow creates no task instances for a run whose logical date is earlier, and the empty run succeeds at once.
+
+Observed (2026-10-12):
+
+- The restore took 2 min 14 s from stopping Airflow to the canary; the backup was 708K.
+- The three runs were gone from Airflow, and the warehouse was untouched: gold, exposed, `silver.returns`, the interval's `ds_source` rows, `ops.file_loads`, and `ops.readiness` hashed the same before and after.
+- The scheduler re-created nothing for the three manual and event runs.
+  In one of three passes, a scheduled run had been queued just after the backup (`finance_daily`'s latest, from the drill unpausing it), and the scheduler re-created it under the same `scheduled__` id.
+  With `catchup=False` the scheduler only ever creates the latest interval's run, so a restore never backfills the gap; with `catchup=True` it would re-run every interval since the backup.
+- `AirflowMetadataBehindWarehouse` fired once per lost run, 80 seconds after Airflow came back in every pass (the rule's `for: 2m` started while Airflow was still starting).
+- A redelivered file event re-created its run under the same deterministic id (D18), and the run short-circuited on `ops.file_loads` (`load` skipped): no second load, and that run's alert resolved 20–25 seconds later.
+
+Detection: `AirflowMetadataBehindWarehouse`, one alert per run, labelled with its `dag_id` and `run_id`; the Grafana "Firing alerts" table lists them.
+
+Diagnosis: `scripts/metadata-reconcile.sh` lists every run that wrote `ops.readiness` rows in the last 7 days but is unknown to Airflow, with its interval and products.
+`SELECT max(dttm) FROM log` on the restored database shows how far back it went.
+
+Recovery:
+
+1. Unpause the business DAGs the lost runs belong to (a run on a paused DAG never starts; the restore also brought back each DAG's paused flag as of the backup).
+2. `scripts/metadata-reconcile.sh --replay` re-creates the lost runs one at a time, in the order they finished, and waits for each.
+   Manual and event runs keep their own ids, so the ledger matches Airflow again; a lost scheduled run is replayed as a manual run for the same interval, because its `scheduled__` id belongs to the scheduler.
+   An event run gets its event back from `ops.file_loads` and short-circuits on it.
+3. The replays rewrite the same rows (D15): `sales_elt` then `finance_daily` took 76 seconds together, the warehouse and `ops.readiness` hashed the same after them, the alert resolved 10–15 seconds later, and the canary succeeded.
+
+The order matters: replayed together, a consumer starts at once (its producers' readiness rows are already `ready`, left by the lost runs) and builds before its producers are rebuilt.
+In the first attempt `finance_daily`'s replay built `exposed.net_sales_daily` 12 seconds before `sales_elt`'s replay rebuilt `gold.daily_sales`, whose `DROP ... CASCADE` then deleted the finance view (issue #27).
+
+Prevention: before a planned restore, note the backup's timestamp and expect to replay everything that finished after it; on Composer, a snapshot load is the same operation and needs the same reconcile.

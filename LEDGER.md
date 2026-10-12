@@ -366,3 +366,19 @@ Entry format:
   9b: claimed once by the other triggerer 24 s after the SIGKILL; 9c: `AirflowTriggererDown` after 194 s, the wait resumed 19 s after the scale-up.
 - Decisions: D31.
 - Open: #21 (metadata DB restore drill, next), #18, #23, #25.
+
+## 2026-10-12 — Phase 6 — Drill 10: restore the metadata DB to an earlier point
+
+- Done: issue #21, in two PRs.
+  Lineage: `ops.readiness` gained `dag_id`, written by `record_readiness` (now a required keyword) from each business DAG; the metadata DB's `sql_exporter` also exports `airflow_dag_run_known{dag_id, run_id}` (last 8 days), a new `warehouse-sql-exporter` exports `ops_readiness_updated_timestamp_seconds{product, dag_id, run_id}` (last 7 days), and `AirflowMetadataBehindWarehouse` fires per run that wrote rows Airflow does not know (D32), with `AirflowReadinessMetricsMissing` for the new scrape.
+  Drill: `tests/e2e/metadata-restore-drill.sh` (`make metadata-restore-drill`, in `make phase6-check`) backs up, runs `sales_elt`, a returns file, and `finance_daily` past the backup, restores in place, checks the warehouse is unchanged and the alert fires per lost run, redelivers the file event, and recovers with the new `scripts/metadata-reconcile.sh --replay`.
+  Runbook drill 10, PLAN D32 and Phase 6 drill list, LESSONS.
+- Evidence: unit tests 118 passed (including the live-warehouse readiness test); `promtool check rules` and a `promtool test rules` of three cases (a vanished run, a metadata DB outage, an empty restored DB) passed against Prometheus v3.15.
+  With git-sync temporarily on branch `readiness-lineage`: `tests/e2e/phase5-check.sh` passed and its runs wrote `dag_id`; the alert never went pending, through (c)'s deleted-and-recreated run.
+  `tests/e2e/metadata-restore-drill.sh` passed twice (6 min 37 s, 6 min 53 s): restore 2 min 14 s, the alert fired for exactly the three lost runs 80 s after Airflow came back, the redelivered event's run skipped `load` and its alert resolved after 20 s, the replays took 76 s, the warehouse (gold, exposed, `silver.returns`, `ds_source`, `ops.file_loads`, `ops.readiness`) hashed the same throughout, and the alert resolved 15 s after the replays.
+  `tests/e2e/observability-check.sh` afterwards: 23 Airflow rules loaded, none firing; `make lint` clean.
+- Found: a run whose logical date precedes the DAG's `start_date` gets no task instances and succeeds at once (the drill's first interval, 2026-09-28).
+  Replaying lost runs together let `finance_daily` build before `sales_elt`, whose gold rebuild then cascade-dropped `exposed.net_sales_daily`: replays became sequential in finish order, and the cascade drop is issue #27.
+  `docker compose exec -T` forwards stdin, so inside a `while read` loop it ate the loop's input (only the first lost run was replayed); `tee /dev/stderr` with stderr redirected to a file truncated that file.
+- Decisions: D32.
+- Open: switch git-sync back to `main` (`make airflow-up`) once both PRs are merged; #18, #23, #25, #27.

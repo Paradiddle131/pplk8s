@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -117,11 +117,12 @@ phase4-check: airflow-up workloads-up ## Phase 4 exit check: full sales_elt run,
 phase5-check: airflow-up workloads-up ## Phase 5 exit check: one file -> one run, redelivery is a no-op, consumer defers on ops.readiness
 	tests/e2e/phase5-check.sh
 
-phase6-check: airflow-up observability-up workloads-up airflow-drill-image ## Phase 6 exit check: dashboards' series, KEDA scale-out/in, then every failure drill incl. the chart/minor roll (alert fires, runbook recovers, canary) (~35 min)
+phase6-check: airflow-up observability-up workloads-up airflow-drill-image ## Phase 6 exit check: dashboards' series, KEDA scale-out/in, then every failure drill incl. the chart/minor roll and the metadata DB restore (alert fires, runbook recovers, canary) (~70 min)
 	tests/e2e/observability-check.sh
 	tests/e2e/keda-check.sh
 	tests/e2e/phase6-check.sh
 	tests/e2e/db-cleanup-check.sh
+	tests/e2e/metadata-restore-drill.sh
 	tests/e2e/phase6-upgrade-drill.sh
 
 db-cleanup-check: airflow-up ## Run the metadata DB cleanup CronJob once: a 61-day-old crashed job row goes, live jobs stay (D30)
@@ -130,6 +131,9 @@ db-cleanup-check: airflow-up ## Run the metadata DB cleanup CronJob once: a 61-d
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
 	docker build -t $(AIRFLOW_DRILL_IMAGE) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
 	docker push $(AIRFLOW_DRILL_IMAGE)
+
+metadata-restore-drill: airflow-up observability-up workloads-up ## Phase 6 drill 10: restore the metadata DB to an earlier point, detect the drift from the warehouse, replay the lost runs (~6 min)
+	tests/e2e/metadata-restore-drill.sh
 
 phase6-upgrade-drill: airflow-up observability-up airflow-drill-image ## Phase 6 drill 5: chart 1.21.0 + Airflow 3.2.2 -> 1.22.0 + 3.3.1 and back, on a throwaway DB (~10 min)
 	tests/e2e/phase6-upgrade-drill.sh
