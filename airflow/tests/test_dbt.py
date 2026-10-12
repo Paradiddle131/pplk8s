@@ -14,7 +14,6 @@ def test_operator_config(stage):
     assert op.labels["pplk8s/pipeline"] == "sales"
     assert op.random_name_suffix is True
     assert op.env_from[0].secret_ref.name == "warehouse-credentials"
-    assert "localhost:5001/dbt:0.2.0" in op.image
     assert "workloads" in op.namespace
     assert op.container_resources.limits["memory"]
     assert op.retries == 2
@@ -43,10 +42,13 @@ def test_pipeline_names_with_underscores_make_valid_pod_names():
     assert run_dbt("silver", pipeline="partner_returns").name == "dbt-partner-returns-silver"
 
 
-def test_image_and_namespace_are_overridable_by_variables():
-    op = run_dbt("silver", pipeline="sales")
-    assert "var.value.get('dbt_image'" in op.image
-    assert "var.value.get('dbt_namespace'" in op.namespace
+def test_image_comes_only_from_the_dbt_image_variable():
+    # No default tag: a missing Variable fails the task instead of running a stale image (D16).
+    assert run_dbt("silver", pipeline="sales").image == "{{ var.value.dbt_image }}"
+
+
+def test_namespace_is_overridable_by_variable():
+    assert "var.value.get('dbt_namespace'" in run_dbt("silver", pipeline="sales").namespace
 
 
 def test_pod_complies_with_restricted_profile():

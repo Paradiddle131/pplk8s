@@ -15,6 +15,7 @@ CHART_VERSION="${CHART_VERSION:-1.22.0}"
 RELEASE=airflow
 NAMESPACE=airflow
 AIRFLOW_IMAGE="${AIRFLOW_IMAGE:?set AIRFLOW_IMAGE (make airflow-up does)}"
+DBT_IMAGE="${DBT_IMAGE:-$(make -s -C "$REPO" print-DBT_IMAGE)}" # for run_dbt (dbt_image Variable); Makefile default
 METADATA_DB_PASSWORD="${METADATA_DB_PASSWORD:-airflow}"
 WAREHOUSE_PASSWORD="${WAREHOUSE_PASSWORD:-warehouse}" # same default as compose.yaml and workloads-up.sh
 DAG_DELIVERY="${DAG_DELIVERY:-git-sync}"
@@ -135,6 +136,7 @@ fi
   airflow pools set el_factory 7 "EL Factory concurrency" >/dev/null
 "${KUBECTL[@]}" -n "$NAMESPACE" exec deploy/airflow-scheduler -c scheduler -- \
   airflow pools set ops_load 16 "KEDA load fixture (ops_load_test)" >/dev/null
+"$PWD/dbt-image-variable.sh" "$DBT_IMAGE" >/dev/null
 # The event adapter's own API identity (role User: it may trigger runs, nothing more); the password
 # comes from the Secret api-identity.sh generates once, so a re-run never changes it.
 adapter_password=$("$PWD/api-identity.sh")

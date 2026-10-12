@@ -7,11 +7,11 @@ NODE_IMAGE ?= kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16
 export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
+# The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.2.0
 DBT_IMAGE ?= localhost:5001/dbt:0.2.0
-# Keep in step with event-adapter-deployment.yaml (D16: bump on every image change).
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
-export ELF_IMAGE DBT_IMAGE
+export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile or requirements change.
 AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.12
@@ -26,6 +26,10 @@ DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
 .PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill
+
+# `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
+print-%:
+	@echo '$($*)'
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'

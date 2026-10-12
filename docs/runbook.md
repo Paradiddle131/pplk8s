@@ -49,7 +49,7 @@ Warning  Failed   kubelet  Error: ImagePullBackOff
 A connection error instead would point at the registry or the node's containerd mirror config.
 Check what the registry holds with `curl -s localhost:5001/v2/el-factory/tags/list`.
 
-Fix: use a tag that exists (`make push` publishes `0.1.0`), then `workloads-up.sh`.
+Fix: use a tag that exists (`make push` publishes `ELF_IMAGE`, see `make -s print-ELF_IMAGE`), then `workloads-up.sh`.
 
 ### 2. Failing probe
 

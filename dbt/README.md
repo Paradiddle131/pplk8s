@@ -69,16 +69,16 @@ The connection is set in `profiles.yml`, and every value is read from the enviro
 
 ## Image
 
-Build the image from the repository root:
+Build the image from the repository root; its reference is `DBT_IMAGE` in the Makefile, the one place the tag lives (PLAN.md D16):
 
 ```
-docker build -t localhost:5001/dbt:0.2.0 dbt
+make build
 ```
 
 Run a stage against the lab warehouse:
 
 ```
-docker run --rm --network pplk8s localhost:5001/dbt:0.2.0 build --select bronze
+make dbt-build STAGE=bronze
 ```
 
 The image's entrypoint is `dbt` and its default command is `build`.

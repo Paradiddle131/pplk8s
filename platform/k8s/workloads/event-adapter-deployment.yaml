@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: event-adapter
-          image: localhost:5001/event-adapter:0.1.0
+          image: event-adapter # a placeholder; workloads-up.sh sets the real reference from ADAPTER_IMAGE (D16)
           imagePullPolicy: IfNotPresent
           ports:
             - name: health
