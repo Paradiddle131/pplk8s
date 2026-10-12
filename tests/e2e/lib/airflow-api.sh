@@ -10,25 +10,26 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # A port-forward is bound to one api-server pod, so it is restarted after each rollout. Checks call
 # these helpers from command substitutions (subshells) too, so the forward is found by its command
-# line, not by a PID only one shell knows: a subshell that restarted it used to leave its kubectl
-# running after the check, and the LEDGER's leaked port-forwards came from that and from
+# line, not by a PID only one shell knows, and ownership is a flag file keyed by $$, which every
+# subshell of a check shares: a subshell that started or restarted the forward used to leave its
+# kubectl running after the check, and the LEDGER's leaked port-forwards came from that and from
 # backgrounding the kc function (whose PID is a subshell, not kubectl).
-pf_owned=""
+pf_owned="${TMPDIR:-/tmp}/pplk8s-port-forward.$$"
 dags_checked=""
 start_port_forward() {
   # Every check starts here, so this is where it proves it tests the DAG code it was written for.
   [ -n "$dags_checked" ] || { require_synced_dags; dags_checked=1; }
-  [ -z "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"
+  [ ! -e "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"
   # A port-forward leaked by another shell must not stand in for ours: it may be bound to a pod a
   # rollout already replaced.
   port_free "$API_PORT"
   kubectl --context "$CTX" -n "$NS" port-forward svc/airflow-api-server "$API_PORT:8080" >/dev/null 2>&1 &
-  pf_owned=1
+  touch "$pf_owned"
   for _ in $(seq 30); do curl -sf -o /dev/null "$API/api/v2/version" 2>/dev/null && return; sleep 1; done
   fail "API not reachable on $API"
 }
 ensure_port_forward() { # keeps a forward of ours that still answers, else (re)starts one
-  [ -n "$pf_owned" ] && curl -sf -m 5 -o /dev/null "$API/api/v2/version" 2>/dev/null && return
+  [ -e "$pf_owned" ] && curl -sf -m 5 -o /dev/null "$API/api/v2/version" 2>/dev/null && return
   start_port_forward
 }
 stop_forward() { # svc/<name> local-port -> kills that kubectl port-forward and waits for the port
@@ -41,7 +42,11 @@ port_free() { # port -> fails when something already listens on it
     fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "^kubectl .*port-forward.* $1:" || echo unknown)"
   fi
 }
-stop_port_forward() { [ -z "$pf_owned" ] || stop_forward svc/airflow-api-server "$API_PORT"; }
+stop_port_forward() {
+  [ -e "$pf_owned" ] || return 0
+  stop_forward svc/airflow-api-server "$API_PORT"
+  rm -f "$pf_owned"
+}
 trap stop_port_forward EXIT
 # Bash skips the EXIT trap when killed by a signal it does not trap; exiting on them runs it, so a
 # check's cleanup (restoring config and paused flags) also happens on Ctrl-C or a stopped task.
