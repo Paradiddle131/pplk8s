@@ -1,0 +1,19 @@
+# How many schedulers, triggerers and dag-processors are alive, by the rule Airflow itself applies:
+# a job row in state `running` whose heartbeat is younger than the health-check threshold (30 s for
+# schedulers and triggerers, `[scheduler|triggerer] *_health_check_threshold`). The statsd heartbeat
+# counters carry no hostname, so they can tell "none" from "some" but not "one of two" (D31).
+# A crashed component's row stays `running` with an old heartbeat and is not counted (runbook drill 9).
+collector_name: airflow_jobs
+
+metrics:
+  - metric_name: airflow_jobs_alive
+    type: gauge
+    help: "Airflow jobs in state running with a heartbeat younger than 30 s, by job type."
+    key_labels: [job_type]
+    values: [alive]
+    query: |
+      SELECT t.job_type, count(j.id) AS alive
+      FROM (VALUES ('SchedulerJob'), ('TriggererJob'), ('DagProcessorJob')) AS t (job_type)
+      LEFT JOIN job j ON j.job_type = t.job_type AND j.state = 'running'
+        AND j.latest_heartbeat > now() - interval '30 seconds'
+      GROUP BY t.job_type

@@ -48,6 +48,18 @@ services:
     # Stopping the database is a drill; the exporter keeps running and reports pg_up 0.
     restart: unless-stopped
 
+  # Airflow's own view of its components from the metadata DB: live schedulers, triggerers and
+  # dag-processors by heartbeat (D31), which the degraded-HA alerts compare with the desired replicas.
+  metadata-db-sql-exporter:
+    image: burningalchemist/sql_exporter:0.24.9
+    command: ["-config.file=/etc/sql_exporter/sql_exporter.yml"]
+    environment:
+      SQLEXPORTER_TARGET_DSN: postgresql://airflow:${METADATA_DB_PASSWORD:-airflow}@metadata-db:5432/airflow?sslmode=disable
+    volumes:
+      - ./sql-exporter:/etc/sql_exporter:ro
+    depends_on: [metadata-db]
+    restart: unless-stopped
+
   warehouse-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
     environment:
