@@ -42,9 +42,9 @@
     },
     {
       "type": "stat",
-      "title": "Scheduler",
+      "title": "Schedulers",
       "id": 2,
-      "description": "Heartbeats per minute; 0 means the scheduler is down (alert AirflowSchedulerDown).",
+      "description": "Live = SchedulerJob rows heartbeating in the metadata DB within 30 s (sql_exporter); desired = the Deployment's replicas. Green at 2 live (D31), orange at 1 (AirflowSchedulerDegraded), red at 0 (AirflowSchedulerDown).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -57,7 +57,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "suffix: beats/min",
+          "unit": "none",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -68,13 +68,33 @@
                 "value": null
               },
               {
-                "color": "green",
+                "color": "orange",
                 "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "desired"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -84,14 +104,23 @@
         },
         "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(airflow_scheduler_heartbeat[1m]))*60 or vector(0)",
-          "legendFormat": "",
+          "expr": "sum(airflow_jobs_alive{job_type=\"SchedulerJob\"}) or vector(0)",
+          "legendFormat": "live",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(kube_deployment_spec_replicas{namespace=\"airflow\", deployment=\"airflow-scheduler\"})",
+          "legendFormat": "desired",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -160,9 +189,9 @@
     },
     {
       "type": "stat",
-      "title": "Triggerer",
+      "title": "Triggerers",
       "id": 4,
-      "description": "Heartbeats per minute (alert AirflowTriggererDown).",
+      "description": "Live = TriggererJob rows heartbeating in the metadata DB within 30 s (sql_exporter); desired = the Deployment's replicas. Green at 2 live (D31), orange at 1 (AirflowTriggererDegraded), red at 0 (AirflowTriggererDown).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -175,7 +204,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "suffix: beats/min",
+          "unit": "none",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -186,13 +215,33 @@
                 "value": null
               },
               {
-                "color": "green",
+                "color": "orange",
                 "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "desired"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -202,14 +251,23 @@
         },
         "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(airflow_triggerer_heartbeat[1m]))*60 or vector(0)",
-          "legendFormat": "",
+          "expr": "sum(airflow_jobs_alive{job_type=\"TriggererJob\"}) or vector(0)",
+          "legendFormat": "live",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(kube_deployment_spec_replicas{namespace=\"airflow\", deployment=\"airflow-triggerer\"})",
+          "legendFormat": "desired",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"

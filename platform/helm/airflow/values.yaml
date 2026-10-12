@@ -176,14 +176,28 @@ dagProcessor:
   resources:
     requests: {cpu: 200m, memory: 640Mi} # peak 617Mi
     limits: {memory: 1Gi}
+# Two schedulers and two triggerers (D31): Composer recommends two schedulers and runs at least two
+# triggerers in highly resilient environments. Schedulers share work through row locks
+# (`SELECT ... FOR UPDATE [SKIP LOCKED]`), which live inside one transaction and so work through
+# PgBouncer's transaction pooling (D6). A PDB evicts them one at a time in a drain; the chart's
+# default preferred anti-affinity spreads them across the two nodes, soft for the same reason as
+# PgBouncer's. The dag-processor and api-server stay single: losing them stops no running work.
 scheduler:
-  replicas: 1
+  replicas: 2
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
   resources:
     requests: {cpu: 200m, memory: 384Mi} # peak 369Mi
     limits: {memory: 1Gi}
 triggerer:
   enabled: true
-  replicas: 1
+  replicas: 2
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
   # The AssetWatcher spike (D17) pulls from the Pub/Sub emulator inside the triggerer; the client
   # library switches to the emulator when this is set.
   env:

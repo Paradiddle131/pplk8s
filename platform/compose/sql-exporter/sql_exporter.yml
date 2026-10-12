@@ -1,0 +1,17 @@
+# sql_exporter (D31): metrics that only the metadata DB knows, next to the database like Cloud SQL's
+# own monitoring. The DSN comes from SQLEXPORTER_TARGET_DSN (compose.yaml), never from this file.
+global:
+  scrape_timeout_offset: 500ms
+  min_interval: 0s
+  max_connections: 2
+  max_idle_connections: 1
+  max_connection_lifetime: 10m
+
+target:
+  name: metadata-db
+  # Placeholder: SQLEXPORTER_TARGET_DSN (compose.yaml) replaces it, so no password lives in this file.
+  data_source_name: "postgresql://set-by-env"
+  collectors: [airflow_jobs]
+
+collector_files:
+  - "*.collector.yml"

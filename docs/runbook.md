@@ -253,27 +253,49 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4 and 7–9 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4 and 7–9 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Times below are from the passes on 2026-10-10; Prometheus scrapes and evaluates rules every 15 s, so each detection time includes up to one interval on top of the rule's `for:`.
 `KA` stands for `kubectl --context kind-pplk8s -n airflow`.
 
-### 1. Kill the scheduler
+### 1. Lose a scheduler
 
-Trigger: `KA scale deploy/airflow-scheduler --replicas=0`.
-Deleting the pod is not a useful drill: the Deployment replaces it within seconds, faster than any alert window.
+Two schedulers run (D31), each its own `SchedulerJob`; they share the work through row locks, and either can schedule any DAG run.
+Three variants, from mildest:
 
-Observed:
+- 1a crash: SIGKILL one scheduler's `airflow scheduler` process during a 16-task `ops_load_test` run (the image has no `kill`: `KA exec <pod> -c scheduler -- python -c 'import os, signal; os.kill(<pid>, signal.SIGKILL)'`; the job is the lowest-numbered `airflow scheduler` process, PID 1 is dumb-init).
+- 1b hang: SIGSTOP one scheduler's process instead; the pod stays Running and stops heartbeating, which a crash never shows long enough to alert on.
+- 1c outage: `KA scale deploy/airflow-scheduler --replicas=0`.
+  Deleting a pod is not a useful drill: the Deployment replaces it within seconds, faster than any alert window.
 
-- `AirflowSchedulerDown` (no `airflow_scheduler_heartbeat` increase for 1 minute) fired about 2 minutes after the scale-down.
-- `GET /api/v2/monitor/health` reported the scheduler `unhealthy`; the api-server, workers, and triggerer stayed up, and nothing new was scheduled.
-- After scaling back to 1, the alert resolved within about 25 seconds and the canary succeeded.
+Observed (2026-10-12, two schedulers):
 
-Detection: `AirflowSchedulerDown`; panel "Component heartbeats /min" (the scheduler line drops to 0) and "Health".
+- Crash (1a): the 12 queued tasks reached a worker anyway, because the Celery messages were already in Redis; the run succeeded 80–83 s after the kill with every task instance on try 1 and no `task_instance_history` rows, so nothing ran twice.
+  The container restarted in place and its new job heartbeated within about 10 s.
+  The dead job's row stayed `running` until the other scheduler's periodic orphan check (`[scheduler] orphaned_tasks_check_interval`, 300 s) logged `Marked 1 SchedulerJob instances as failed`, about 4 minutes after the kill; that check also adopts the dead job's queued and running task instances.
+  No alert fires, by design: the role never stopped.
+- Hang (1b): `AirflowSchedulerDegraded` fired after 170 s (30 s to go stale, then the rule's 2 minutes), with `AirflowSchedulerDown` and `AirflowComponentUnavailable` quiet, because the survivor kept the summed heartbeat up and the hung pod counted as available.
+  The canary succeeded through the survivor while the other was hung.
+  Left alone, the liveness probe (`airflow jobs check --local`, 5 x 60 s) restarts the hung container about 5 minutes in.
+- Outage (1c): `AirflowSchedulerDown` (no `airflow_scheduler_heartbeat` increase for 1 minute) fired after 111–129 s; `GET /api/v2/monitor/health` reported the scheduler `unhealthy`, and nothing new was scheduled.
+  After scaling back, the alert resolved within about 25 seconds and the canary succeeded.
+- No lock errors in either scheduler's log or in Postgres through PgBouncer's transaction pooling (D6).
 
-Recovery: `KA scale deploy/airflow-scheduler --replicas=1`, then `KA rollout status deploy/airflow-scheduler`.
-A new scheduler adopts or resets the tasks the old one left queued.
+Detection: `AirflowSchedulerDegraded` (fewer live `SchedulerJob` rows than desired replicas, from `airflow_jobs_alive`) and `AirflowSchedulerDown`; the "Schedulers" tile shows live against desired, and "Component heartbeats /min" halves on a hang and drops to 0 on an outage.
+
+Diagnosis: which scheduler stopped heartbeating:
+
+```bash
+docker compose -f platform/compose/compose.yaml exec -T metadata-db psql -U airflow -d airflow -c \
+  "SELECT id, hostname, state, now() - latest_heartbeat AS heartbeat_age FROM job
+   WHERE job_type = 'SchedulerJob' AND state = 'running' ORDER BY id"
+```
+
+The `hostname` is the pod name.
+
+Recovery: for a hang, `KA delete pod <hostname>` (or wait for the liveness probe); for an outage, `KA scale deploy/airflow-scheduler --replicas=2`, then `KA rollout status deploy/airflow-scheduler`.
+A surviving or new scheduler adopts or resets the task instances the lost one had queued.
 
 ### 2. Drain a node
 
@@ -293,10 +315,14 @@ Observed:
 - Prometheus keeps its history: it runs on the control plane with its TSDB on a PVC (D21), so a worker drain never moves it.
   Before issue #9 it used an emptyDir, and a drain that moved it erased every series older than the drain.
   The check restarts Prometheus after the drain and requires a `count(up)` sample from before it to read the same.
-- PgBouncer is the only chart component with a PodDisruptionBudget.
-  The others run one replica each, so a PDB with `minAvailable: 1` would block the drain instead.
+- The schedulers and triggerers run two replicas each behind PodDisruptionBudgets (`maxUnavailable: 1`, D31), so a drain evicts at most one of each at a time.
+  On 2026-10-12 the drain of `pplk8s-worker2` evicted one scheduler and one triggerer; sampled every 2 s through the drain, at least one of each stayed live (a `running` job with a heartbeat under 30 s), and no container restarted.
+  A new scheduler pod is Ready only once its startup probe sees its job heartbeat, so the scheduler PDB waits for real capacity; the triggerer has no startup probe in chart 1.22, so its PDB can count a pod that does not heartbeat yet.
+- Pods do not move back after the uncordon, so after a drain both replicas of a component can share one node until they are replaced; a later drain of that node then evicts them one at a time through the PDB.
+- The dag-processor and api-server still run one replica each without a PDB; a PDB with `minAvailable: 1` would block the drain instead.
+  Their eviction pauses parsing and the UI for the restart, and stops no running work.
 
-Detection: `KubeNodeUnschedulable` (severity `info`); if pods cannot fit elsewhere, `AirflowPodsPending` after 2 minutes.
+Detection: `KubeNodeUnschedulable` (severity `info`); if pods cannot fit elsewhere, `AirflowPodsPending` after 2 minutes, and if a replacement scheduler or triggerer never heartbeats, `AirflowSchedulerDegraded` or `AirflowTriggererDegraded`.
 
 Recovery: `kubectl --context kind-pplk8s uncordon <node>`.
 Pods do not move back on their own; the scheduler spreads new pods again as they are replaced.
@@ -470,40 +496,44 @@ Recovery:
 
 `task_queued_timeout` stays 600 s: lowering it would also requeue, and on the third time fail, tasks that only wait for capacity during a burst.
 
-### 9. Kill the triggerer while a readiness wait is deferred
+### 9. Lose a triggerer while a readiness wait is deferred
 
-Trigger: with a `finance_daily` run's `wait_*` tasks `deferred`, crash the triggerer (9a: SIGKILL its `airflow triggerer` job process; the image has no `kill`, so `KA exec deploy/airflow-triggerer -c triggerer -- python -c 'import os, signal; os.kill(<pid>, signal.SIGKILL)'`), or stop it for longer than the alert window (9b: `KA scale deploy/airflow-triggerer --replicas=0`).
-While it is gone, mark the wait's upstream `ready` in `ops.readiness`.
+Trigger: with a `finance_daily` run's `wait_*` tasks `deferred` on two triggerers (D31), hang the triggerer that holds a wait (9a: SIGSTOP its `airflow triggerer` job process), crash it (9b: SIGKILL; the image has no `kill`, so `KA exec <pod> -c triggerer -- python -c 'import os, signal; os.kill(<pid>, signal.SIGKILL)'`), or stop them all for longer than the alert window (9c: `KA scale deploy/airflow-triggerer --replicas=0`).
+While a wait's triggerer is gone, mark its upstream `ready` in `ops.readiness`.
 The check uses the interval [2026-09-30, 2026-10-01), which no producer builds, and writes its ledger rows with `run_id = 'phase6-check'`.
 
 How a trigger moves: each trigger row belongs to one triggerer job (`trigger.triggerer_id`).
 Another triggerer claims it only when that job has an `end_date` (a clean stop on SIGTERM) or its last heartbeat is older than `[triggerer] triggerer_health_check_threshold` (30 s; `Trigger.assign_unassigned`).
+Every triggerer runs that assignment on each loop, so the survivor and a crashed pod's restarted container race for orphaned triggers.
 Nothing else watches deferred tasks: without a triggerer they stay `deferred`, hold no worker slot, and fail no one.
 
-Observed (2026-10-12):
+Observed with two triggerers (2026-10-12):
 
-- Crash (9a): the container restarted in place within 2 s, and the new triggerer job was up within about 8 s of the kill.
-  It then waited 15 s, holding none of the triggers, and claimed them only when the dead job's last heartbeat was 30–31 s old; `wait_sales_gold`, whose upstream had turned ready during the gap, succeeded 3 s after the claim on try 1.
+- Hang (9a): the survivor claimed the hung job's trigger 23 s after the SIGSTOP, when the hung job's last heartbeat was 31 s old (the hang started part-way through a heartbeat interval), and `wait_sales_gold` succeeded 3 s after its upstream turned ready, on try 1.
+  `AirflowTriggererDegraded` fired 170 s after the hang; `AirflowTriggererDown` stayed quiet, because the survivor kept heartbeating.
+  Deleting the hung pod takes the full 60 s grace period, because a stopped process cannot act on SIGTERM.
+- Crash (9b): the trigger was claimed once, 24 s after the kill, at a dead-job heartbeat age of 32 s; in that run the crashed pod's restarted container won the race against the other triggerer.
   The dead job's row stays `running` with no `end_date`; that is harmless, because assignment checks the heartbeat, and the daily `airflow-database-cleanup` CronJob (`airflow db clean`, D30) deletes it once its heartbeat is 60 days old.
-- Pod deletion, even `--grace-period=0 --force`, is not a crash: the kubelet still sends SIGTERM, the job ends cleanly, and its replacement claims the triggers on its first loop (19 s from the delete to the wait resuming).
-- Sustained stop (9b): `AirflowTriggererDown` fired after 175–195 s.
+  With one triggerer, the restarted container was up within about 8 s and then waited, holding none of the triggers, until the dead job was 30–31 s stale.
+- Pod deletion, even `--grace-period=0 --force`, is not a crash: the kubelet still sends SIGTERM, the job ends cleanly, and another triggerer claims the triggers on its next loop (19 s from the delete to the wait resuming with one triggerer).
+- Outage (9c): `AirflowTriggererDown` fired after 175–195 s.
   `wait_returns_silver` stayed `deferred` the whole time with its upstream already `ready`, holding no worker slot (`default_pool` running 0), and its trigger stayed with the stopped job.
   `/api/v2/monitor/health` reported the triggerer `unhealthy`, with the heartbeat of the most recent job still marked `running` (an earlier crashed one), not of the job that stopped.
-- After the scale-up the triggerer was Ready in 6–8 s and the wait succeeded 15–16 s after the scale-up; the alert resolved 15–30 s after that, and the run built `finance` exposed and recorded `finance.exposed`.
+- After the scale-up the triggerers were Ready in 6–22 s and the wait succeeded 15–25 s after the scale-up; the alert resolved 15–35 s after that, and the run built `finance` exposed and recorded `finance.exposed`, with every task on try 1.
 - The outage counts against the sensor's timeout: `task_instance.trigger_timeout` is fixed when the task defers (defer time + 6 h for `finance_daily`), so an outage longer than the remaining time fails the wait at the next scheduler check.
 - The AssetWatcher spike's `PubsubPullTrigger` (D17) runs in the same triggerer and pauses with it; the event adapter does not.
 
-Detection: `AirflowTriggererDown`; panel "Component heartbeats /min" (the triggerer line drops to 0) and "Pool queued / starving / deferred" (deferred stays flat).
+Detection: `AirflowTriggererDegraded` (fewer live `TriggererJob` rows than desired replicas) and `AirflowTriggererDown`; the "Triggerers" tile shows live against desired, "Component heartbeats /min" halves on a hang and drops to 0 on an outage, and "Pool queued / starving / deferred" keeps deferred flat.
 A crash that the kubelet restarts within the 2-minute window fires nothing; the waits only resume late by up to `triggerer_health_check_threshold`.
 
 Diagnosis: who holds the deferred triggers and how fresh is their job:
 
 ```bash
 docker compose -f platform/compose/compose.yaml exec -T metadata-db psql -U airflow -d airflow -c \
-  "SELECT t.id, t.triggerer_id, j.state, j.end_date, now() - j.latest_heartbeat AS heartbeat_age
+  "SELECT t.id, t.triggerer_id, j.hostname, j.state, j.end_date, now() - j.latest_heartbeat AS heartbeat_age
    FROM trigger t LEFT JOIN job j ON j.id = t.triggerer_id"
 ```
 
-Recovery: `KA scale deploy/airflow-triggerer --replicas=1`, then `KA rollout status deploy/airflow-triggerer`.
-The new triggerer claims every orphaned trigger, and a trigger whose condition came true during the outage fires on its first poll; nothing needs clearing.
+Recovery: for a hang, `KA delete pod <hostname of the stale job>` (the liveness probe restarts it about 5 minutes in otherwise); for an outage, `KA scale deploy/airflow-triggerer --replicas=2`, then `KA rollout status deploy/airflow-triggerer`.
+A live triggerer claims every orphaned trigger, and a trigger whose condition came true during the outage fires on its first poll; nothing needs clearing.
 If the outage outlasted a wait's timeout, the task failed: clear it once its upstream is ready.

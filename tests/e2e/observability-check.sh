@@ -28,9 +28,11 @@ series=(
   "airflow_ti_successes -"
   "airflow_dag_processing_import_errors -"
   "airflow_triggers_running hostname"
+  "airflow_jobs_alive job_type"
   "pg_up database"
   "pgbouncer_exporter_pools_waiting_clients -"
   "kube_deployment_status_replicas_available deployment"
+  "kube_deployment_spec_replicas deployment"
   "container_memory_working_set_bytes pod"
   "keda_scaler_metrics_value scaledObject"
 )

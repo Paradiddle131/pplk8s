@@ -18,7 +18,7 @@ spec:
           labels: {severity: critical, component: scheduler}
           annotations:
             summary: No scheduler heartbeat for over a minute; no task gets scheduled.
-            runbook: docs/runbook.md#1-kill-the-scheduler
+            runbook: docs/runbook.md#1-lose-a-scheduler
         - alert: AirflowDagProcessorDown
           expr: (sum(rate(airflow_dag_processor_heartbeat[1m])) or vector(0)) == 0
           for: 2m
@@ -31,6 +31,34 @@ spec:
           labels: {severity: warning, component: triggerer}
           annotations:
             summary: No triggerer heartbeat for over two minutes; deferred tasks do not resume.
+            runbook: docs/runbook.md#9-lose-a-triggerer-while-a-readiness-wait-is-deferred
+        # Degraded HA (D31): one of several schedulers or triggerers is not heartbeating, so the role
+        # still works but one more loss is an outage. The heartbeat counters above are summed over
+        # every replica and cannot tell one of two from two, so these count live jobs in the metadata
+        # DB (sql_exporter, `airflow_jobs_alive`) against the Deployment's desired replicas. A pod that
+        # runs but hangs counts as lost here, while AirflowComponentUnavailable still sees it as
+        # available. `> 0` leaves a total loss to the *Down alerts. 2m outlasts a rollout's gap
+        # between an old pod leaving and its replacement's first heartbeat.
+        - alert: AirflowSchedulerDegraded
+          expr: |
+            sum(airflow_jobs_alive{job_type="SchedulerJob"})
+              < on () sum(kube_deployment_spec_replicas{namespace="airflow", deployment="airflow-scheduler"})
+            and on () sum(airflow_jobs_alive{job_type="SchedulerJob"}) > 0
+          for: 2m
+          labels: {severity: warning, component: scheduler}
+          annotations:
+            summary: "Only {{ $value }} scheduler(s) heartbeating, fewer than desired; one more loss stops scheduling."
+            runbook: docs/runbook.md#1-lose-a-scheduler
+        - alert: AirflowTriggererDegraded
+          expr: |
+            sum(airflow_jobs_alive{job_type="TriggererJob"})
+              < on () sum(kube_deployment_spec_replicas{namespace="airflow", deployment="airflow-triggerer"})
+            and on () sum(airflow_jobs_alive{job_type="TriggererJob"}) > 0
+          for: 2m
+          labels: {severity: warning, component: triggerer}
+          annotations:
+            summary: "Only {{ $value }} triggerer(s) heartbeating, fewer than desired; deferred tasks of a lost one wait for reassignment."
+            runbook: docs/runbook.md#9-lose-a-triggerer-while-a-readiness-wait-is-deferred
         - alert: AirflowComponentUnavailable
           # StatefulSets too: the Celery broker (Redis) is one, and it was the only component unwatched.
           expr: |
@@ -68,6 +96,14 @@ spec:
           labels: {severity: warning}
           annotations:
             summary: The Airflow statsd-exporter is not scraped; every Airflow alert is blind.
+        - alert: AirflowJobsMetricsMissing
+          # The sql_exporter answers but its query fails while the metadata DB is down (drill 3), so
+          # this also fires then, next to MetadataDBDown.
+          expr: absent(airflow_jobs_alive{job_type="SchedulerJob"})
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: No live-job counts from the metadata DB (sql_exporter); the *Degraded alerts are blind.
     - name: airflow.platform
       rules:
         - alert: MetadataDBDown

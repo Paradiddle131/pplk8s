@@ -41,6 +41,8 @@ spec:
       labels: {database: metadata-db}
     - targets: ["warehouse-exporter:9187"]
       labels: {database: warehouse}
+    - targets: ["metadata-db-sql-exporter:9399"]
+      labels: {database: metadata-db}
 ---
 # The KEDA operator's metrics: scaler errors and the value its worker query returns (D24). It lives
 # here, not in the KEDA chart, so the scrape exists whichever of KEDA and this stack is deployed first.
