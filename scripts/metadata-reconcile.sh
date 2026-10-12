@@ -15,6 +15,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# Its own port, so a check that holds the usual one (drill 10) can call it.
+API_PORT=${API_PORT:-18081}
 # shellcheck source=../tests/e2e/lib/airflow-api.sh
 source "$REPO/tests/e2e/lib/airflow-api.sh"
 REPLAY=""
@@ -23,9 +25,9 @@ case "${1:-}" in
   "") ;;
   *) fail "usage: $0 [--replay]" ;;
 esac
-psql_wh() {
+psql_wh() { # stdin closed: `exec -T` forwards it, and inside the loop below it would eat the loop's input
   docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
-    psql -U warehouse -d warehouse -v ON_ERROR_STOP=1 -AtF ' ' -c "$1"
+    psql -U warehouse -d warehouse -v ON_ERROR_STOP=1 -AtF ' ' -c "$1" </dev/null
 }
 run_path() { echo "/api/v2/dags/$1/dagRuns/$(jq -rn --arg r "$2" '$r|@uri')"; }
 known() { api GET "$(run_path "$1" "$2")" >/dev/null 2>&1; } # dag_id run_id
