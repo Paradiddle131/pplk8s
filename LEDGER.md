@@ -341,7 +341,7 @@ Entry format:
   To lose, the newer generation's whole path (fake-gcs notification, Pub/Sub, adapter, DAG run, `validate_event`, a worker slot, its own load) must finish inside that read-to-lock gap of one HTTP request, milliseconds against the seconds a run takes to be scheduled.
   The outcome would also be visible, not silent: `ops.file_loads` would record the newer generation as loaded.
   Phase 5, the adapter logs in as `admin/admin`: resolved in the Phase 6 preflight (`2768e45`, its own `event-adapter` user with role User).
-  Phase 1 and Phase 5, the unreproduced dbt failures (`unable to infer all dependencies`, one `tag:sales,tag:silver` build): closed as watch items; neither recurred in any dbt build since, across every Phase 4, 5, and 6 check run (well over a hundred stage builds); re-open with the failing log if one does.
+  Phase 1 and Phase 5, the unreproduced dbt failures (`unable to infer all dependencies`, one `tag:sales,tag:silver` build): closed as watch items; neither recurred since: the metadata DB holds 136 successful dbt stage task instances and no failed one; re-open with the failing log if one does.
   Phase 5, leaked port-forwards: root-caused and fixed above; the earlier explanation (ad-hoc shells skip the EXIT trap) was wrong.
   Phase 6, the WSL2 clocksource: deliberately left; it is a host setting outside the repo, and the alert side is handled (D21, #5).
   Phase 6, drop `pplk8s.celery_config` once the constraints reach Celery ≥ 5.7: still open; the Airflow 3.3.1, 3.3.2, and `main` constraints pin `celery==5.6.3`, and 5.7 is still pre-release (`5.7.0b1`) on PyPI.
