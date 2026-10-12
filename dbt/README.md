@@ -12,7 +12,7 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | bronze | `bronze` | view | 1:1 with the `ds_source` landing tables; cast only, keeps every run and the metadata columns; `partner_returns` |
 | silver | `silver` | table | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns` |
 | gold | `gold` | table | `daily_sales`, `customer_lifetime`, `daily_weather` |
-| exposed | `exposed` | view | `sales_by_country_daily`, `daily_sales_with_weather`, `net_sales_daily` |
+| exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather` (views), `net_sales_daily` (table) |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
 Bronze reads `ds_source` through `source()`.
@@ -53,6 +53,10 @@ dbt build --select tag:returns,tag:silver
 ```
 
 The weather models stay in `sales` because `sales_elt` builds them today; they move to their own tag when a weather DAG exists.
+
+A model that reads another pipeline's model is a table, never a view.
+dbt-postgres rebuilds a relation by dropping the old one with `CASCADE`, which drops every view that depends on it, so a view on another pipeline's model would disappear whenever that pipeline rebuilds its stage (issue #27).
+The image build runs `scripts/check_pipeline_views.py` on the parsed manifest and fails on such a view.
 
 ## Environment variables
 
