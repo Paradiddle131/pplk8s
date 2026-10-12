@@ -282,3 +282,20 @@ Entry format:
   `make lint` passed.
 - Decisions: D29 keeps Redis without persistence and `task_queued_timeout` at 600 s, detects lost messages by alert, recovers by clearing the task, and shortens the worker probe.
 - Open: #15 (a worker that ran a task through a broker restart takes no new task until it ends).
+
+## 2026-10-11 — Phase 6 — Worker stall after a Celery broker restart, root-caused and fixed (#15)
+
+- Done: two causes found and fixed for a worker that ran a task through a Redis restart.
+  `platform/helm/airflow/values.yaml` sets `[celery_broker_transport_options] socket_timeout = 10` and points `[celery] celery_config_options` at the new `airflow/include/pplk8s/celery_config.py`: Airflow's default Celery config plus a wrapper around `AsynPool.flush` that backports celery/celery#10346 and switches itself off on Celery ≥ 5.7.
+  `airflow/tests/test_celery_config.py` covers the wrapper.
+  Drill 8b in `tests/e2e/phase6-check.sh` now requires `hello` within 60 s, no worker restart, and the 240 s task to succeed.
+  Image tags bumped (D16): `3.3.1-pplk8s.12`, drill image `3.2.2-pplk8s.3`, both bake the new module for host-path delivery.
+  Runbook drill 8, PLAN D29, and two LESSONS lines updated; issues #17 (triggerer drill) and #18 (git-sync staleness) filed.
+- Evidence: a minimal Celery 5.6.3 + Redis setup outside Airflow reproduced the first cause: `hello` was received 2 s after the reconnect but ran on `ForkPoolWorker-4` only when the 120 s task there ended; it stalled the same with `worker_enable_prefetch_count_reduction=False`, `worker_disable_prefetch=True`, and `task_acks_late=False`, while `worker_cancel_long_running_tasks_on_connection_loss=True` ran it in 4 s by cancelling the long task.
+  The backport ran `hello` 1 ms after receipt on an idle process, and the long task succeeded.
+  Celery 5.7.0b1 (which has the upstream fix) crashed the worker on the first ack after the reconnect (`kombu/transport/redis.py` `_connparams`: `'NoneType' object has no attribute 'hostname'`).
+  In the lab, the second cause dominated: in 4 of 4 runs (baseline and backport alone) the worker stopped answering pings and the probe killed it and the 240 s task; a `SIGUSR1` stack dump showed the main thread blocked in kombu's `_brpop_read` on a dead socket.
+  With `socket_timeout` alone, pings kept working and the task survived, but `hello` waited 234 s; with both fixes, three runs started `hello` 2–5 s after it was queued, with no restart and the 240 s task succeeding on try 1.
+  `DAG_DELIVERY=local make phase6-check` passed 20:55–21:41 UTC, upgrade drill included: 8b `say_hello` succeeded 10 s after the broker restart (144–330 s before), 0 worker restarts, the 240 s task `success`.
+- Decisions: D29 amended (socket timeout, backport as a stated stopgap until the constraints reach Celery 5.7).
+- Open: drop `pplk8s.celery_config` when the Airflow constraints move to Celery ≥ 5.7.
