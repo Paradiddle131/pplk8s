@@ -135,7 +135,7 @@ phase6-upgrade-drill: airflow-up observability-up airflow-drill-image ## Phase 6
 	tests/e2e/phase6-upgrade-drill.sh
 
 ci-integration: ## CI integration test: deploy with this checkout's DAGs, hello on a worker, then the Phase 5 event path
-	$(MAKE) airflow-up workloads-up DAG_DELIVERY=local
+	$(MAKE) airflow-up workloads-up DAG_DELIVERY=local AIRFLOW_OVERLAYS=platform/helm/airflow/values-ci.yaml
 	tests/e2e/smoke-check.sh
 	tests/e2e/phase5-check.sh
 

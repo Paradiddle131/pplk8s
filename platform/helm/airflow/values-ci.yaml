@@ -1,0 +1,9 @@
+# Overlay for the CI integration check only (PLAN.md D26, D31): one scheduler and one triggerer.
+# The GitHub runner has 2 vCPUs; with two of each, every probe on the kind nodes timed out
+# (PgBouncer's 1 s health check, the schedulers' startup probes, the triggerers' liveness) and helm
+# hit its 10-minute timeout. CI checks the hello DAG and the event path, not HA, which the local
+# drills (make phase6-check) prove on the full two-replica release.
+scheduler:
+  replicas: 1
+triggerer:
+  replicas: 1
