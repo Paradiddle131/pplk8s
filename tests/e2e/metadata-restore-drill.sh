@@ -223,9 +223,10 @@ done
 expected=$(printf '%s\n' "$SALES_RUN" "$RET_RUN" "$FIN_RUN" | sort | paste -sd' ')
 took=$(wait_alerting "$expected" 420)
 say "  detected: $ALERT firing for the three runs ${took}s after Airflow came back"
+lost=$("$REPO/scripts/metadata-reconcile.sh" | grep -v '^dags: ')
 say "  metadata-reconcile.sh lists:"
-"$REPO/scripts/metadata-reconcile.sh" | tee /dev/stderr | grep -c . | grep -qx 3 ||
-  fail "metadata-reconcile.sh should list exactly the three lost runs"
+while IFS= read -r line; do echo "    $line"; done <<<"$lost"
+[ "$(grep -c . <<<"$lost")" = 3 ] || fail "metadata-reconcile.sh should list exactly the three lost runs"
 echo "ok: (3) the restore lost three runs, the warehouse kept their rows, and $ALERT fired for each"
 
 # ---- 4. a redelivered event ------------------------------------------------------------------------
@@ -240,11 +241,12 @@ say "4. redelivered generation $GEN: run $RET_RUN re-created, load skipped on op
 echo "ok: (4) the event ledger kept the redelivery from loading twice"
 
 # ---- 5. recover --------------------------------------------------------------------------------------
-say "5. scripts/metadata-reconcile.sh --replay"
-"$REPO/scripts/metadata-reconcile.sh" --replay | sed 's/^/    /'
-took=$(wait_run sales_elt "$SALES_RUN" 900)
-say "  $SALES_RUN replayed in ${took}s"
-wait_run finance_daily "$FIN_RUN" 600 >/dev/null
+say "5. scripts/metadata-reconcile.sh --replay (one run at a time, in the order they finished)"
+start=$SECONDS
+"$REPO/scripts/metadata-reconcile.sh" --replay | grep -v '^dags: ' | while IFS= read -r line; do echo "    $line"; done
+say "  replays done in $((SECONDS - start))s"
+[ "$(run_state sales_elt "$SALES_RUN")/$(run_state finance_daily "$FIN_RUN")" = success/success ] ||
+  fail "the replays did not both succeed"
 [ "$(warehouse_sig)" = "$SIG" ] || fail "the replays changed the warehouse: $(warehouse_sig) vs $SIG"
 [ "$(readiness)" = "$READY" ] || fail "the replays changed ops.readiness: $(readiness) vs $READY"
 took=$(wait_alert "$ALERT" inactive 300)
