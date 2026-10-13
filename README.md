@@ -26,7 +26,7 @@ Phase 7 (a real GCP touchpoint) is parked; see [`PLAN.md`](PLAN.md).
 | `platform/helm/airflow/` | Official Airflow chart values, overlays, and deploy script |
 | `platform/monitoring/` | kube-prometheus-stack, scrape targets, alert rules, Grafana dashboard |
 | `platform/keda/` | KEDA, which scales the Celery workers |
-| `.github/workflows/` | CI (lint, tests, image builds) and the kind integration test |
+| `.github/workflows/` | CI: lint and tests on every PR; image builds and the kind integration test on demand (`make verify` is the local merge gate) |
 | `services/el-factory/` | EL Factory lite, the extraction service (Flask) |
 | `services/event-adapter/` | Pub/Sub file events → exactly-once Airflow runs |
 | `dbt/` | Medallion dbt project and its image |

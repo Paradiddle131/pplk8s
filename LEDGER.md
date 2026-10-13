@@ -525,3 +525,9 @@ Entry format:
 - Found: a plain `@monthly` becomes Airflow 3's `CronTriggerTimetable` (`create_cron_data_intervals = False`), whose runs carry an empty interval and a logical date in the month after the data; the first run from 2026-06-01 would have loaded May. The DAG declares `CronDataIntervalTimetable` instead, as D35 assumes.
 - Decisions: per-entity extract budgets live in the DAG (yellow 20 min, green 5 min, FHVHV 60 min), enforced by the hook, because a mapped task has one `execution_timeout`.
 - Open: the DAG has not run on the lab yet (Phase 8 check, #58); #72, #73.
+
+## 2026-10-13 — Phase 8 — merge #71, #74-#77; the laptop becomes the CI gate
+- Done: merged #71, #74, #75, #76 and #77 into `main` after `make lint` + `make test` passed on each branch rebased on the previous merge (LEDGER, `Makefile` image-tag and hook-test conflicts resolved by keeping both sides). `integration.yaml` runs only on demand and is disabled on GitHub; `ci.yaml` drops the push-to-main run and builds images only on demand, so a PR runs just the `test` job. New `make verify` (lint, tests with `PPLK8S_REQUIRE_WAREHOUSE=1`, every image build) is the merge gate; PLAN D26, the autopilot brief and the README say so.
+- Evidence: every job on #77 failed in 4-5 s ("recent account payments have failed or your spending limit needs to be increased"); a PR push billed ~31 runner minutes (kind ~23, images ~6, test ~2); `make verify` on `main` + this change passed in 32 s with a warm build cache (158 + 101 + 32 tests); the workflows validate against the GitHub workflow schema.
+- Decisions: D26 rewritten (laptop gate, light CI).
+- Open: the `test` job still fails while Actions billing is blocked; #72, #73, #58.
