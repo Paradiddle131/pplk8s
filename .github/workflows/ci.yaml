@@ -28,7 +28,17 @@ jobs:
           cache-dependency-glob: "**/uv.lock"
       - name: Lint shell scripts
         run: make lint
+      # The warehouse-backed readiness tests need the Compose warehouse (issue #50). The schema is
+      # re-applied after the healthcheck, as platform/compose/up.sh does, since pg_isready can
+      # answer while the init scripts still run.
+      - name: Start the warehouse stand-in
+        run: |
+          docker compose -f platform/compose/compose.yaml up -d --wait warehouse
+          docker compose -f platform/compose/compose.yaml exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse \
+            psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/01-schemas.sql
       - name: Lint and test the Python packages (DagBag import test included)
+        env:
+          PPLK8S_REQUIRE_WAREHOUSE: "1" # fail, not skip, the tests that need the warehouse
         run: make test
 
   images:

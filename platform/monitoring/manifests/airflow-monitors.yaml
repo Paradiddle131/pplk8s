@@ -27,6 +27,32 @@ spec:
     - port: pgb-metrics
       interval: 15s
 ---
+# git-sync's own counters (#18), from the sidecar in every pod that loads DAGs. The chart declares no
+# container port for it, so Prometheus discovers one port-free target per container: keep the
+# git-sync sidecar (not its init container) and address it on the chart's httpPort, 1234.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: airflow-git-sync
+  namespace: airflow
+spec:
+  selector:
+    matchExpressions:
+      - {key: tier, operator: In, values: [airflow]}
+      - {key: component, operator: In, values: [dag-processor, triggerer, worker]}
+  podMetricsEndpoints:
+    - interval: 15s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_container_name]
+          regex: git-sync
+          action: keep
+        - sourceLabels: [__meta_kubernetes_pod_ip]
+          regex: (.+)
+          replacement: $1:1234
+          targetLabel: __address__
+        - sourceLabels: [__meta_kubernetes_pod_label_component]
+          targetLabel: component
+---
 # The databases live in Compose, outside the cluster, like Cloud SQL and BigQuery; their exporters
 # run next to them (platform/compose) and pods reach them by Compose name (D13).
 apiVersion: monitoring.coreos.com/v1alpha1
