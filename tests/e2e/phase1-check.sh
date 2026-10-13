@@ -84,3 +84,18 @@ for rel in gold.daily_sales gold.customer_lifetime exposed.sales_by_country_dail
   [ "$n" -gt 0 ] || fail "$rel is empty"
   echo "ok: $rel has $n rows"
 done
+
+# A pipeline's stage rebuild must not drop another pipeline's relation (PLAN.md D20, issue #27):
+# rebuild sales gold and returns silver alone; finance's exposed.net_sales_daily must survive.
+dbt_select() {
+  docker run --rm --network pplk8s "$DBT_IMAGE" build --select "$1" >/tmp/pplk8s-dbt-rebuild.log 2>&1 ||
+    { tail -30 /tmp/pplk8s-dbt-rebuild.log >&2; fail "dbt build --select $1"; }
+}
+for sel in tag:sales,tag:gold tag:returns,tag:silver; do
+  dbt_select "$sel"
+  [ "$(psql_wh "select to_regclass('exposed.net_sales_daily') is not null")" = t ] ||
+    fail "dbt build --select $sel dropped exposed.net_sales_daily"
+done
+echo "ok: rebuilding sales gold and returns silver alone kept exposed.net_sales_daily"
+# Rebuilding sales gold drops sales' own exposed views (docs/runbook.md); sales_elt rebuilds them next.
+dbt_select tag:sales,tag:exposed

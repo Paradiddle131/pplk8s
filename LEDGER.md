@@ -423,6 +423,12 @@ Entry format:
 - Decisions: cloud runs never merge pplk8s PRs; handoffs show only what needs the user outside `<details>` (user, 2026-10-12).
 - Open: #18 (PR #31), #25, #27, #42.
 
+## 2026-10-13 — Phase 5 fix — finance's net_sales_daily survives other pipelines' rebuilds (#27)
+- Done: `exp_net_sales_daily` is a table instead of a view; `dbt/scripts/check_pipeline_views.py` fails the dbt image build when a view reads another pipeline's model or a model lacks exactly one pipeline tag; `tests/e2e/phase1-check.sh` rebuilds `tag:sales,tag:gold` and `tag:returns,tag:silver` alone and asserts the finance relation survives; `DBT_IMAGE` bumped to 0.3.0 (D16). Built by a `pplk8s-worker` cloud run (PR #46), tag bump and verification by a local session.
+- Evidence: local `make services-up build phase1-check` → all `ok:` lines including `ok: rebuilding sales gold and returns silver alone kept exposed.net_sales_daily`; the dbt image build ran the view check; CI `test`, `images`, `kind` green on 037dfc1. On cloud, reverting the model to a view made the check fail with one finding per foreign parent.
+- Decisions: D20 amended (cross-pipeline models are tables; BigQuery note).
+- Open: none.
+
 ## 2026-10-13 — Phase 8 (planning) — TLC monthly pipeline decided and sliced; first cloud runs reviewed
 - Done: resolved the TLC map's decision tickets with the user (time-boxed requests, dataset scope, monthly cadence; #37, #38, #39) and decided the dbt shape (#40); recorded them as D34–D36, amended D9, D15, D20, added Phase 8 (planned), and replaced the EL Factory line of `LESSONS.md` ("deferrable status sensor") with the time-box contract.
   Sliced the build into #52–#59, wired by native `blocked_by`; frontier: #52 (time box) and #55 (dbt models).
@@ -430,4 +436,4 @@ Entry format:
   Cloud workspace: standing rules now come from claude-dotfiles' `cloud/CLAUDE.md` (claude-dotfiles#3, linked by `cloud-setup.sh`, PR #61); the brief gains the no-cap rule (dependencies, not the number of waiting PRs, decide what a run takes), the gate checklist in the handoff (claude-dotfiles#4) and a D16 reminder; the setup script only reaches runs after the environment's Setup field is bumped (`cloud-setup v2`).
 - Evidence: issues and edges visible on GitHub (`gh api repos/Paradiddle131/pplk8s/issues/57/dependencies/blocked_by` → #52, #53, #55, #56); `make lint` clean.
 - Decisions: D34, D35, D36 added; D9, D15, D20 amended.
-- Open: #46 and #51 local verification; PR #31 (git-sync) needs a push of its local rebase; #41 closed by this slicing.
+- Open: PR #51 verified locally, awaiting merge; PR #61 (cloud workspace) awaiting merge; #41 closed by this slicing.
