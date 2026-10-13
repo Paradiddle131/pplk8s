@@ -473,3 +473,10 @@ Entry format:
   A port-forward left on 19090 makes `phase6-check` refuse to start; it says so clearly.
 - Decisions: D21 amended (WSL2 drops the 3d/6h pair; `--unsafe-no-fsync` rejected; GKE keeps all four pairs).
 - Open: #18 (PR #31; this check redeployed the lab from `main`, so its unmerged monitoring changes are off the lab until redeployed), #62.
+
+## 2026-10-13 — Lab hygiene — Compose services bound to a deleted worktree
+- Done: `platform/compose/up.sh` warns when run from a linked worktree (PR #67); the lab's warehouse and both sql-exporters were recreated from the main checkout; three merged worktrees removed; conflicts on #60, #31, #63 resolved by merging `main`.
+- Evidence: `docker inspect` showed three containers with `working_dir` `/tmp/wt62` and bind mounts into it after that worktree was removed; after `up.sh` from the main checkout all eight report the main checkout and pods reach `warehouse:5432`; merged alert rules pass `promtool check rules`.
+- Found: the Compose project name is fixed, so any worktree's `services-up` takes over the lab's containers; `finance_daily` stays paused and nothing alerts on late data (#65, #66).
+- Decisions: none.
+- Open: #65, #66.
