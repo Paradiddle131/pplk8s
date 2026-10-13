@@ -14,6 +14,8 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
   A `cursor` query parameter overrides the body cursor.
   The response is `{"status":"ok","source","entity","page","pages","rows","object","next_url"}`: `page` is the cursor the request started at, `pages` and `rows` count what it loaded, and `object` is the last page it staged.
   Callers POST the same body to `next_url` until it is `null`.
+- `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` asks whether a file source's month is published, with one `HEAD` and no download: 200 `{"status": "published", "source_uri", "etag", "size"}`, or 200 `{"status": "not_published", "source_uri"}` when S3 answers `AccessDenied`.
+  A CloudFront block is a retryable 503, never `not_published` (issue #36); a source that is not file-backed is 400.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
   The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.

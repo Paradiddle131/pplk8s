@@ -497,3 +497,9 @@ Entry format:
 - Found: one real month peaked at 1.33 GiB until batch streaming, Arrow's system allocator and glibc's `MALLOC_ARENA_MAX=2` + fixed mmap threshold (LESSONS); merging PRs from an agent session is blocked by the permission classifier, so stacked PRs wait on the user.
 - Decisions: none new (D34-D35 as planned); EL Factory pod limit 1Gi per D35.
 - Open: merge #60 → #68 → #69, then #55 (dbt), #57 (DAG); #65, #66.
+
+## 2026-10-13 — Phase 8 — EL Factory publication probe (#54)
+- Done: `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` answers `published` (`source_uri`, `etag`, `size`) or `not_published` from one `HEAD`, reusing the 403 classification of #53; a CDN block is a retryable 503. PLAN contract and README updated; `ELF_IMAGE` 0.5.0.
+- Evidence: el-factory pytest 101 passed (10 new against the recorded CloudFront/S3 response shapes, no GET issued); live probe from the lab host: yellow 2026-08 `published` with etag `"29cbf7399f1d6ffc4b505639ccbb0c8d-4"` (the one `ops.file_versions` holds) and 59,043,961 bytes, green 2026-08 `published`, yellow 2026-10 `not_published`.
+- Decisions: `not_published` is a 200, not an error: for the sensor it is an expected answer, and only the retryable 503 means "ask again later for another reason".
+- Open: #56 (PublicationSensor), #57.
