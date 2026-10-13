@@ -1,8 +1,11 @@
+import re
+from pathlib import Path
+
 import pytest
 import requests
 import responses
 from airflow.sdk.exceptions import AirflowFailException
-from pplk8s.el_factory import ElFactoryHook, ElFactoryTransientError
+from pplk8s.el_factory import READ_TIMEOUT_SECONDS, ElFactoryHook, ElFactoryTransientError
 
 BASE = "http://el-factory.test:80"
 ARGS = (
@@ -61,7 +64,13 @@ def test_pagination_follows_next_url_with_same_body():
     responses.post(f"{BASE}/extract", json=page(100, f"{BASE}/extract?cursor=2"))
     responses.post(f"{BASE}/extract", json=page(30))
     summary = ElFactoryHook().extract_entity(*ARGS)
-    assert summary == {"source": "synthetic", "entity": "orders", "pages": 3, "rows": 230}
+    assert summary == {
+        "source": "synthetic",
+        "entity": "orders",
+        "requests": 3,
+        "pages": 3,
+        "rows": 230,
+    }
     urls = [c.request.url for c in responses.calls]
     assert urls == [f"{BASE}/extract", f"{BASE}/extract?cursor=1", f"{BASE}/extract?cursor=2"]
     bodies = {c.request.body for c in responses.calls}
@@ -151,3 +160,30 @@ def test_failure_on_later_page_is_transient_and_restart_begins_at_page_zero():
     responses.replace(responses.POST, f"{BASE}/extract", json=page(5))
     assert hook.extract_entity(*ARGS)["pages"] == 1
     assert responses.calls[-1].request.url == f"{BASE}/extract"
+
+
+@responses.activate
+def test_time_boxed_responses_count_their_pages():
+    responses.post(f"{BASE}/extract", json=page(400, "/extract?cursor=4", pages=4))
+    responses.post(f"{BASE}/extract", json=page(150, None, pages=2))
+    summary = ElFactoryHook().extract_entity(*ARGS)
+    assert (summary["requests"], summary["pages"], summary["rows"]) == (2, 6, 550)
+
+
+@pytest.mark.parametrize("pages", [0, -1, "3", True])
+@responses.activate
+def test_invalid_pages_fail_without_retry(pages):
+    responses.post(f"{BASE}/extract", json=page(1, pages=pages))
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().extract_entity(*ARGS)
+
+
+def test_el_factory_budget_leaves_room_for_one_overrunning_page():
+    """MAX_RUN_TIME (deployed and default) stays at most half the hook's read timeout (D34)."""
+    repo = Path(__file__).resolve().parents[2]
+    configmap = (repo / "platform/k8s/workloads/el-factory-configmap.yaml").read_text()
+    default = (repo / "services/el-factory/src/el_factory/config.py").read_text()
+    deployed = float(re.search(r'MAX_RUN_TIME: "([0-9.]+)"', configmap).group(1))
+    built_in = float(re.search(r"DEFAULT_MAX_RUN_TIME = ([0-9.]+)", default).group(1))
+    for budget in (deployed, built_in):
+        assert 0 < budget <= READ_TIMEOUT_SECONDS / 2

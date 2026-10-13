@@ -9,3 +9,6 @@ data:
   GCS_BUCKET: staging
   PAGE_SIZE: "100" # ConfigMap values are strings, so numbers are quoted.
   FAIL_RATE: "0" # raise above 0 to rehearse Airflow retries
+  # Seconds each /extract request works before answering next_url (PLAN.md D34); at most half the
+  # hook's 120 s read timeout (airflow/tests/test_el_factory.py), since a request overruns by a page.
+  MAX_RUN_TIME: "45"

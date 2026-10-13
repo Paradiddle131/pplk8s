@@ -157,6 +157,7 @@ def test_empty_interval_stages_an_empty_page_and_stops(client, storage, warehous
         "source": "synthetic",
         "entity": "orders",
         "page": 0,
+        "pages": 1,
         "rows": 0,
         "object": "gs://staging/synthetic/orders/dev__1/page-00000.jsonl",
         "next_url": None,
@@ -300,3 +301,63 @@ def test_catalog_omits_disabled_entries(make_client, tmp_path):
     response = make_client(catalog_path=catalog).get("/catalog?pipeline=sales")
 
     assert response.get_json() == [{"source": "synthetic", "entity": "customers"}]
+
+
+class FakeClock:
+    """Each read advances by one second, so a budget of N seconds allows about N pages."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        self.now += 1.0
+        return self.now
+
+
+def test_a_request_works_until_its_budget_and_answers_next_url(make_client, warehouse):
+    client = make_client(page_size=1, max_run_time=3.0, clock=FakeClock())
+
+    response = post(client, ORDERS_BODY).get_json()
+
+    assert response["page"] == 0
+    assert response["pages"] == 3
+    assert response["rows"] == 3
+    assert response["next_url"] == "/extract?cursor=3"
+    assert warehouse.row_count("synthetic_orders") == 3
+
+
+def test_continuations_load_every_row_once_and_a_retry_starts_over(make_client, warehouse):
+    client = make_client(page_size=1, max_run_time=2.0, clock=FakeClock())
+
+    def run() -> list[dict]:
+        responses = [post(client, ORDERS_BODY).get_json()]
+        while responses[-1]["next_url"] is not None:
+            responses.append(post(client, ORDERS_BODY, path=responses[-1]["next_url"]).get_json())
+        return responses
+
+    first = run()
+    retry = run()
+
+    assert len(first) >= 2
+    assert sum(r["rows"] for r in first) == expected_orders()
+    assert [r["page"] for r in retry] == [r["page"] for r in first]
+    assert warehouse.row_count("synthetic_orders") == expected_orders()
+
+
+def test_a_zero_budget_answers_one_page_per_request(make_client):
+    client = make_client(page_size=10, max_run_time=0.0)
+
+    response = post(client, ORDERS_BODY).get_json()
+
+    assert response["pages"] == 1
+    assert response["next_url"] == "/extract?cursor=1"
+
+
+def test_a_large_budget_finishes_in_one_request(make_client, warehouse):
+    client = make_client(page_size=10, max_run_time=3600.0)
+
+    response = post(client, ORDERS_BODY).get_json()
+
+    assert response["next_url"] is None
+    assert response["rows"] == expected_orders()
+    assert warehouse.row_count("synthetic_orders") == expected_orders()

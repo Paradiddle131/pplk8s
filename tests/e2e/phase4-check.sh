@@ -165,7 +165,7 @@ wait_rerun "$RUN" extract/0 "$tries"
 assert_unchanged "clearing and re-running the whole run"
 
 # ---- (c) kill a worker mid-extract: the mapped task recovers via retry --------------------------------
-say "(c) PAGE_SIZE=1 so a mapped extract spans hundreds of requests and can be caught in flight"
+say "(c) PAGE_SIZE=1 so a mapped extract spans hundreds of pages and can be caught in flight"
 set_elf_config 1 0
 kill_drill() { # one attempt; returns 1 if the task finished before it could be killed
   local run caught host pod try seen last="" j end
@@ -181,7 +181,7 @@ kill_drill() { # one attempt; returns 1 if the task finished before it could be 
   j=$(jq -r .map_index <<<"$caught")
   try=$(jq -r .try_number <<<"$caught")
   host=$(jq -r .hostname <<<"$caught")
-  pod=${host%%.*}
+  pod=$(worker_pod "$host")
   say "    extract[$j] try $try running on $pod; killing the pod (SIGKILL, no grace)"
   kc delete pod "$pod" --grace-period=0 --force >/dev/null 2>&1 || fail "could not delete $pod"
   end=$((SECONDS + 900))
@@ -207,7 +207,7 @@ for attempt in 1 2 3 4 5; do
 done
 $killed || fail "could not kill a mapped extract mid-flight in 5 attempts"
 wk rollout status deployment/el-factory --timeout=60s >/dev/null
-kc rollout status statefulset/airflow-worker --timeout=300s >/dev/null || fail "worker pods not Ready"
+kc rollout status deployment/airflow-worker --timeout=300s >/dev/null || fail "worker pods not Ready"
 KILL_COUNTS=$(ds_counts "$KILL_RUN")
 [ "$KILL_COUNTS" = "$BASE_COUNTS" ] || fail "after the kill ds_source has $KILL_COUNTS, expected $BASE_COUNTS"
 [ "$(layer_sig)" = "$BASE_SIG" ] || fail "gold/exposed changed after the kill drill"
