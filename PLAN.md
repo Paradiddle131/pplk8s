@@ -113,7 +113,7 @@ Each decision states its rationale; change the decision here before acting on a 
 ### EL Factory lite contract (as built in Phase 1)
 
 - `GET /catalog?pipeline=<name>` → enabled `[{source, entity}]` for a pipeline (EL Factory owns the catalog; DAGs never copy it); entries marked `enabled: false` are left out.
-- `POST /extract` with `{source, entity, run_id, interval_start, interval_end, cursor?}` → `{status, rows, next_url|null}` plus informational `source, entity, page, object`; the caller POSTs the same body to `next_url` (which carries `?cursor=`) until it is null.
+- `POST /extract` with `{source, entity, run_id, interval_start, interval_end, cursor?}` → `{status, rows, next_url|null}` plus informational `source, entity, page, pages, object`; the caller POSTs the same body to `next_url` (which carries `?cursor=`) until it is null. Since Phase 8 each request loads pages until `MAX_RUN_TIME` (45 s) is spent, then answers `next_url` for the rest (D34); gunicorn runs threaded workers so a long request neither hits the 30 s worker timeout nor blocks `/healthz`.
 - Writes staged files to `gs://staging/<source>/<entity>/<run_id>/page-<NNNNN>.jsonl`, then loads `ds_source` from the staged object idempotently per `(entity, interval, run_id)`: each page replaces itself, and page 0 clears the whole run and interval.
 - Errors are JSON with a `retryable` flag: 400/404 for bad requests, 503 retryable for transient source, warehouse, or GCS faults, 502 non-retryable when a source rejects the request, 500 otherwise. `FAIL_RATE` injects retryable 503s for the Phase 4 retry drills.
 - `ds_source` tables are created by EL Factory (at startup and before each load); their column contract is in `services/el-factory/README.md` and is what the dbt sources read.

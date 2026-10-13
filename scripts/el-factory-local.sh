@@ -13,6 +13,7 @@ case "${1:-}" in
       -e WAREHOUSE_DSN=postgresql://warehouse:warehouse@warehouse:5432/warehouse \
       -e STORAGE_EMULATOR_HOST=http://gcs:4443 \
       ${PAGE_SIZE:+-e PAGE_SIZE="$PAGE_SIZE"} \
+      ${MAX_RUN_TIME:+-e MAX_RUN_TIME="$MAX_RUN_TIME"} \
       "${ELF_IMAGE:?}" >/dev/null
     for _ in $(seq 30); do
       curl -sf "http://localhost:$PORT/healthz" >/dev/null && { echo "EL Factory on http://localhost:$PORT"; exit 0; }

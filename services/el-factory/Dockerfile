@@ -28,4 +28,7 @@ USER 10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/healthz' % os.environ.get('PORT', '8080'), timeout=2)"]
-CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --no-control-socket --access-logfile - 'el_factory.app:create_app_from_env()'"]
+# Threaded workers (D34): a time-boxed /extract holds its thread for up to MAX_RUN_TIME plus a page.
+# Sync workers were killed at gunicorn's 30 s worker timeout, and two busy ones starved /healthz;
+# a gthread worker heartbeats from its main thread, so long requests neither time out nor block probes.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --worker-class gthread --threads 8 --no-control-socket --access-logfile - 'el_factory.app:create_app_from_env()'"]

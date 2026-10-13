@@ -29,3 +29,12 @@ def test_fail_rate_must_be_a_probability(value):
 def test_page_size_must_be_positive():
     with pytest.raises(ConfigError):
         Config.from_env({"WAREHOUSE_DSN": "postgresql://w", "PAGE_SIZE": "0"})
+
+
+def test_max_run_time_defaults_to_45_seconds_and_rejects_negatives():
+    assert Config.from_env({"WAREHOUSE_DSN": "postgresql://w"}).max_run_time == 45.0
+    assert (
+        Config.from_env({"WAREHOUSE_DSN": "postgresql://w", "MAX_RUN_TIME": "0"}).max_run_time == 0
+    )
+    with pytest.raises(ConfigError, match="MAX_RUN_TIME"):
+        Config.from_env({"WAREHOUSE_DSN": "postgresql://w", "MAX_RUN_TIME": "-1"})

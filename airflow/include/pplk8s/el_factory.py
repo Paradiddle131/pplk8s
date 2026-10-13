@@ -16,6 +16,11 @@ It classifies a failure and raises, and the Airflow task retry policy owns the r
 Re-running an entity from page 0 is safe because EL Factory's page 0 resets the whole
 ``(run_id, interval)`` of that entity, so :meth:`ElFactoryHook.extract_entity` always starts
 over at page 0 and a retry never has to resume mid-pagination.
+
+Each ``/extract`` request is time-boxed by EL Factory's ``MAX_RUN_TIME`` (PLAN.md D34): it loads
+pages until the budget is spent and answers ``next_url`` for the rest, so one task attempt loops
+over continuations, not single pages. ``MAX_RUN_TIME`` must stay well below
+``READ_TIMEOUT_SECONDS``, because a request may overrun its budget by one page.
 """
 
 from __future__ import annotations
@@ -35,7 +40,7 @@ CONNECT_TIMEOUT_SECONDS = (
     10  # a blackholed connection (pod just replaced) should fail fast and retry
 )
 READ_TIMEOUT_SECONDS = 120
-MAX_PAGES = 10_000
+MAX_REQUESTS = 10_000
 
 
 class ElFactoryTransientError(Exception):
@@ -83,7 +88,7 @@ class ElFactoryHook(HttpHook):
         interval_start: str | datetime,
         interval_end: str | datetime,
     ) -> dict[str, Any]:
-        """Extract every page of one entity and return ``{source, entity, pages, rows}``."""
+        """Extract every page of one entity; return ``{source, entity, requests, pages, rows}``."""
         if not RUN_ID_PATTERN.match(run_id):
             raise AirflowFailException(f"run_id {run_id!r} does not match {RUN_ID_PATTERN.pattern}")
         payload = {
@@ -94,24 +99,32 @@ class ElFactoryHook(HttpHook):
             "interval_end": _iso(interval_end),
         }
         endpoint = "/extract"
+        calls = 0
         pages = 0
         rows = 0
         seen = {endpoint}
         while True:
             body = self._call("POST", endpoint, json=payload)
-            page_rows = self._validate_page(body, source, entity)
-            pages += 1
-            rows += page_rows
+            response_pages, response_rows = self._validate_page(body, source, entity)
+            calls += 1
+            pages += response_pages
+            rows += response_rows
             next_url = body["next_url"]
             if next_url is None:
                 break
             endpoint = self._same_host_endpoint(next_url)
-            if endpoint in seen or pages >= MAX_PAGES:
+            if endpoint in seen or calls >= MAX_REQUESTS:
                 raise AirflowFailException(
                     f"pagination for {source}.{entity} does not terminate at {next_url!r}"
                 )
             seen.add(endpoint)
-        return {"source": source, "entity": entity, "pages": pages, "rows": rows}
+        return {
+            "source": source,
+            "entity": entity,
+            "requests": calls,
+            "pages": pages,
+            "rows": rows,
+        }
 
     def load_file(
         self, entity: str, bucket: str, name: str, generation: str | int, run_id: str
@@ -181,7 +194,8 @@ class ElFactoryHook(HttpHook):
         raise AirflowFailException(message)
 
     @staticmethod
-    def _validate_page(body: Any, source: str, entity: str) -> int:
+    def _validate_page(body: Any, source: str, entity: str) -> tuple[int, int]:
+        """Return ``(pages, rows)`` of one response; ``pages`` is 1 if EL Factory predates D34."""
         if not isinstance(body, dict):
             raise AirflowFailException(f"extract response is not an object: {body!r}")
         if body.get("status") != "ok":
@@ -193,7 +207,10 @@ class ElFactoryHook(HttpHook):
             body["next_url"] is None or isinstance(body["next_url"], str)
         ):
             raise AirflowFailException(f"extract {source}.{entity} has invalid next_url: {body!r}")
-        return rows
+        pages = body.get("pages", 1)
+        if not isinstance(pages, int) or isinstance(pages, bool) or pages < 1:
+            raise AirflowFailException(f"extract {source}.{entity} has invalid pages: {pages!r}")
+        return pages, rows
 
     def _same_host_endpoint(self, next_url: str) -> str:
         """Return ``next_url`` as a path+query, refusing any other host."""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -102,6 +103,8 @@ def make_config(**overrides: Any) -> Config:
         "gcp_project": "pplk8s",
         "page_size": 100,
         "fail_rate": 0.0,
+        # One page per request, so a test sees each page; budget tests set their own.
+        "max_run_time": 0.0,
         "catalog_path": REPO_CATALOG,
         "open_meteo_url": "http://open-meteo.test/v1/archive",
         "port": 8080,
@@ -122,8 +125,8 @@ def warehouse() -> FakeWarehouse:
 
 @pytest.fixture
 def make_client(storage: FakeStorage, warehouse: FakeWarehouse):
-    def build(**overrides: Any):
-        app = create_app(make_config(**overrides), storage, warehouse)
+    def build(clock: Callable[[], float] = time.monotonic, **overrides: Any):
+        app = create_app(make_config(**overrides), storage, warehouse, clock=clock)
         app.config["TESTING"] = True
         return app.test_client()
 

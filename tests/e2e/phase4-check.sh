@@ -165,7 +165,7 @@ wait_rerun "$RUN" extract/0 "$tries"
 assert_unchanged "clearing and re-running the whole run"
 
 # ---- (c) kill a worker mid-extract: the mapped task recovers via retry --------------------------------
-say "(c) PAGE_SIZE=1 so a mapped extract spans hundreds of requests and can be caught in flight"
+say "(c) PAGE_SIZE=1 so a mapped extract spans hundreds of pages and can be caught in flight"
 set_elf_config 1 0
 kill_drill() { # one attempt; returns 1 if the task finished before it could be killed
   local run caught host pod try seen last="" j end

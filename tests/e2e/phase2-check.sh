@@ -42,11 +42,11 @@ entities = call("/catalog?pipeline=sales")
 assert entities, "empty catalog"
 for e in entities:
     body = {**e, "run_id": os.environ["RUN_ID"], "interval_start": START, "interval_end": END}
-    url, pages = "/extract", 0
+    url, calls, pages = "/extract", 0, 0
     while url:
-        url = call(url, body)["next_url"]
-        pages += 1
-    print("extracted", e["source"], e["entity"], pages, "pages")
+        answer = call(url, body)
+        url, calls, pages = answer["next_url"], calls + 1, pages + answer["pages"]
+    print("extracted", e["source"], e["entity"], pages, "pages in", calls, "requests")
 '
 
 # The pod spec is given whole via --overrides (kubectl run replaces the image CMD otherwise), with a

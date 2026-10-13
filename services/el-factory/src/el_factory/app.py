@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import random
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -44,7 +46,12 @@ class LoadRequest:
     generation: int
 
 
-def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
+def create_app(
+    config: Config,
+    storage: Storage,
+    warehouse: Warehouse,
+    clock: Callable[[], float] = time.monotonic,
+) -> Flask:
     registry = build_registry(config.page_size, config.open_meteo_url)
     catalog = load_catalog(config.catalog_path, registry)
     file_registry = files.FileRegistry(files.entities())
@@ -101,15 +108,22 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
         parsed = _parse_extract(body, request.args.get("cursor"))
         entity = registry.get(parsed.source, parsed.entity)
 
-        page = entity.fetch(parsed.interval, parsed.cursor)
-        uri = object_uri(
-            config.gcs_bucket, entity.source, entity.name, parsed.run_id, parsed.cursor
-        )
-        stage_page(storage, uri, page.rows)
-
+        # Time-boxed (D34): load pages until the budget is spent, then hand back the rest as
+        # next_url. The first page always runs, so every request makes progress, and the budget
+        # is checked between pages, so a request can overrun it by one page.
+        started = clock()
         warehouse.ensure_table(entity.table)
-        load = PageLoad(parsed.run_id, parsed.interval, parsed.cursor, uri)
-        loaded = warehouse.replace_page(entity.table, load, read_staged(storage, uri))
+        cursor, pages, loaded, uri = parsed.cursor, 0, 0, ""
+        while True:
+            page = entity.fetch(parsed.interval, cursor)
+            uri = object_uri(config.gcs_bucket, entity.source, entity.name, parsed.run_id, cursor)
+            stage_page(storage, uri, page.rows)
+            load = PageLoad(parsed.run_id, parsed.interval, cursor, uri)
+            loaded += warehouse.replace_page(entity.table, load, read_staged(storage, uri))
+            pages += 1
+            if page.next_cursor is None or clock() - started >= config.max_run_time:
+                break
+            cursor = page.next_cursor
 
         next_url = None if page.next_cursor is None else f"/extract?cursor={page.next_cursor}"
         return jsonify(
@@ -118,6 +132,7 @@ def create_app(config: Config, storage: Storage, warehouse: Warehouse) -> Flask:
                 "source": entity.source,
                 "entity": entity.name,
                 "page": parsed.cursor,
+                "pages": pages,
                 "rows": loaded,
                 "object": uri,
                 "next_url": next_url,

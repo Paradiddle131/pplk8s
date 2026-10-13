@@ -9,10 +9,10 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
 - `GET /healthz` returns `200 {"status":"ok"}` and makes no dependency calls.
 - `GET /catalog?pipeline=<name>` returns the enabled `[{"source", "entity"}]` pairs from `catalog.yaml`; entries marked `enabled: false` are left out.
   It answers 400 when `pipeline` is missing and 404 when the pipeline is unknown.
-- `POST /extract` with the JSON body `{source, entity, run_id, interval_start, interval_end, cursor?}` extracts one page.
+- `POST /extract` with the JSON body `{source, entity, run_id, interval_start, interval_end, cursor?}` extracts pages from `cursor` on until `MAX_RUN_TIME` is spent (PLAN.md D34).
   Timestamps are ISO-8601 with a timezone offset; the interval is half-open `[start, end)`.
   A `cursor` query parameter overrides the body cursor.
-  The response is `{"status":"ok","source","entity","page","rows","object","next_url"}`.
+  The response is `{"status":"ok","source","entity","page","pages","rows","object","next_url"}`: `page` is the cursor the request started at, `pages` and `rows` count what it loaded, and `object` is the last page it staged.
   Callers POST the same body to `next_url` until it is `null`.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
@@ -36,6 +36,8 @@ A generation that is no longer live, or older than one already loaded, is 409 wi
 5. The staged object is downloaded and parsed, and its rows are loaded.
    The load deletes the rows for `(_run_id, _interval_start, _interval_end, _page)` and inserts the new ones in one transaction, under an advisory lock, so re-running a request leaves row counts unchanged.
    Page 0 deletes every page of that `(_run_id, _interval_start, _interval_end)`, so a re-run that yields fewer pages leaves no stale rows behind.
+6. Steps 3 to 5 repeat for the next page until the source has none or `MAX_RUN_TIME` has passed since the request began.
+   The budget is checked between pages, so the first page always runs and a request can overrun by one page.
 
 ### Loading a file
 
@@ -56,6 +58,7 @@ A generation that is no longer live, or older than one already loaded, is 409 wi
 | `GCP_PROJECT` | `pplk8s` | GCP project passed to the storage client |
 | `PAGE_SIZE` | `100` | Rows per page for the synthetic sources |
 | `FAIL_RATE` | `0` | Probability in `[0, 1]` that `/extract` returns a retryable 503 before doing any work |
+| `MAX_RUN_TIME` | `45` | Seconds one `/extract` request keeps loading pages before it answers `next_url`; `0` gives one page per request. Keep it at most half the caller's read timeout (120 s in `ElFactoryHook`) |
 | `CATALOG_PATH` | `catalog.yaml` next to the package | Catalog file, validated at startup |
 | `OPEN_METEO_URL` | `https://archive-api.open-meteo.com/v1/archive` | Open-Meteo archive endpoint, overridable for tests |
 | `PORT` | `8080` | Port the image's gunicorn binds to |

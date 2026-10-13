@@ -111,6 +111,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - A task on a dead worker stays `running` until `[scheduler] task_instance_heartbeat_timeout` (300 s by default) before it is retried; the lab lowered it to 120 s because supervisors heartbeat every few seconds (on Composer, set it as an Airflow configuration override).
 - Give every task that runs on a worker `retries ≥ 1`: a scale-in, drain, or OOM that outlasts the worker's grace period kills the task, and the scheduler only fails it at the heartbeat timeout; Composer documents the same for removed workers. Bad input still fails at once through `AirflowFailException`, and a DAG test that asserts retries on every business task keeps the rule from eroding.
 - Inject faults before any side effect, and for a "retry then succeed" drill inject 100% failure, then lift it mid-retries; a fractional rate over many requests makes the outcome random.
+- A time-boxed service (`MAX_RUN_TIME` + `next_url`) needs a server built for long requests: gunicorn's default sync workers are killed at its 30 s worker timeout (an HTML 500 the hook classifies as retryable, so every retry dies the same way), and when all are busy they starve `/healthz` until the kubelet restarts the pod. Run threaded workers (`--worker-class gthread --threads N`, the usual gunicorn setup on Cloud Run) and keep the budget well under both the caller's read timeout and the platform's request timeout (D34).
 
 ## Events and file arrival
 
