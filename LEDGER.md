@@ -512,3 +512,9 @@ Entry format:
 - Evidence: airflow pytest 143 passed (16 new: the hook's published, not-published, 503 and malformed answers; the trigger's round trip and its three outcomes; the sensor's immediate return, deferral with the whole timeout, and fail-fast).
 - Decisions: none new (D35 as planned).
 - Open: #57; the sensor runs on a real triggerer only in the Phase 8 check (#58).
+
+## 2026-10-13 — Phase 8 — tlc_monthly DAG (#57)
+- Done: `tlc_monthly` (`@monthly`, `catchup=True` from 2026-06, `max_active_runs=3`): resolve the data month (`resolve_month`, the monthly counterpart of `resolve_interval`) → catalog → mapped `PublicationSensor` per entry → mapped extract in pool `el_factory` → dbt per stage with `--vars {data_month}` → `ops.readiness` `tlc.<stage>` per month with watermark = month end. `ElFactoryHook.extract_entity(budget_seconds=)` enforces a per-entity budget between continuations.
+- Evidence: airflow pytest 158 passed (month resolution for scheduled, manual, December and malformed intervals; the budget stops before the next continuation; DagBag graph, pool, retries and the dbt month selection); `execution_timeout` mapping tried and refused by Airflow 3.3.1 in a scratch `airflow dags test`.
+- Decisions: per-entity extract budgets live in the DAG (yellow 20 min, green 5 min, FHVHV 60 min), enforced by the hook, because a mapped task has one `execution_timeout`.
+- Open: the DAG has not run on the lab yet (Phase 8 check, #58); #72, #73.

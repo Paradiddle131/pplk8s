@@ -258,3 +258,26 @@ def test_publication_malformed_answers_fail_fast(body):
 def test_publication_rejects_a_malformed_month():
     with pytest.raises(AirflowFailException):
         ElFactoryHook().publication("tlc", "yellow", "2026-8")
+
+
+@responses.activate
+def test_a_spent_budget_stops_before_the_next_continuation_and_retries(mocker):
+    # The loop checks the entity's budget between requests: a task retry then resumes (a file
+    # source from its chunk ledger), instead of execution_timeout killing a request mid-chunk.
+    from pplk8s import el_factory
+
+    clock = iter([0.0, 10.0, 70.0])
+    mocker.patch.object(el_factory.time, "monotonic", side_effect=lambda: next(clock))
+    responses.post(f"{BASE}/extract", json=page(100, "/extract?cursor=1"))
+    responses.post(f"{BASE}/extract", json=page(100, "/extract?cursor=2"))
+
+    with pytest.raises(ElFactoryTransientError, match="budget"):
+        ElFactoryHook().extract_entity(*ARGS, budget_seconds=60)
+    assert len(responses.calls) == 2
+
+
+@responses.activate
+def test_no_budget_follows_every_continuation():
+    responses.post(f"{BASE}/extract", json=page(100, "/extract?cursor=1"))
+    responses.post(f"{BASE}/extract", json=page(1))
+    assert ElFactoryHook().extract_entity(*ARGS, budget_seconds=None)["requests"] == 2

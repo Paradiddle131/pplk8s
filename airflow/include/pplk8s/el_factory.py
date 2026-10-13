@@ -26,6 +26,7 @@ over continuations, not single pages. ``MAX_RUN_TIME`` must stay well below
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime
 from typing import Any
 from urllib.parse import urlsplit
@@ -113,8 +114,16 @@ class ElFactoryHook(HttpHook):
         run_id: str,
         interval_start: str | datetime,
         interval_end: str | datetime,
+        *,
+        budget_seconds: float | None = None,
     ) -> dict[str, Any]:
-        """Extract every page of one entity; return ``{source, entity, requests, pages, rows}``."""
+        """Extract every page of one entity; return ``{source, entity, requests, pages, rows}``.
+
+        ``budget_seconds`` bounds the continuation loop per entity: once it is spent, the next
+        request is not sent and :class:`ElFactoryTransientError` hands the rest to a task retry,
+        which a file source resumes from its chunk ledger (D34).  A mapped task has one
+        ``execution_timeout`` for every map index, so this is how a per-entity size applies.
+        """
         if not RUN_ID_PATTERN.match(run_id):
             raise AirflowFailException(f"run_id {run_id!r} does not match {RUN_ID_PATTERN.pattern}")
         payload = {
@@ -129,6 +138,7 @@ class ElFactoryHook(HttpHook):
         pages = 0
         rows = 0
         seen = {endpoint}
+        started = time.monotonic()
         while True:
             body = self._call("POST", endpoint, json=payload)
             response_pages, response_rows = self._validate_page(body, source, entity)
@@ -138,6 +148,11 @@ class ElFactoryHook(HttpHook):
             next_url = body["next_url"]
             if next_url is None:
                 break
+            if budget_seconds is not None and time.monotonic() - started >= budget_seconds:
+                raise ElFactoryTransientError(
+                    f"extract {source}.{entity}: budget of {budget_seconds:.0f} s spent after "
+                    f"{calls} requests; a retry continues"
+                )
             endpoint = self._same_host_endpoint(next_url)
             if endpoint in seen or calls >= MAX_REQUESTS:
                 raise AirflowFailException(
