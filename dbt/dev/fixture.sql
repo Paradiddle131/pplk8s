@@ -2,7 +2,7 @@
 -- Usage (creates the schemas and loads the synthetic ds_source rows into dbt_dev):
 --   docker exec -i pplk8s-warehouse-1 psql -U warehouse -d dbt_dev -v ON_ERROR_STOP=1 < dbt/dev/fixture.sql
 -- The values are synthetic; they are not Open-Meteo or customer data.
--- Re-running this file resets the four ds_source tables; layer schemas and models are left to dbt.
+-- Re-running this file resets the four ds_source tables (CASCADE drops the bronze views over them); dbt rebuilds the layers.
 
 CREATE SCHEMA IF NOT EXISTS ds_source;
 CREATE SCHEMA IF NOT EXISTS bronze;
@@ -10,10 +10,10 @@ CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS gold;
 CREATE SCHEMA IF NOT EXISTS exposed;
 
-DROP TABLE IF EXISTS ds_source.synthetic_customers;
-DROP TABLE IF EXISTS ds_source.synthetic_orders;
-DROP TABLE IF EXISTS ds_source.open_meteo_hourly_weather;
-DROP TABLE IF EXISTS ds_source.partner_returns;
+DROP TABLE IF EXISTS ds_source.synthetic_customers CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_orders CASCADE;
+DROP TABLE IF EXISTS ds_source.open_meteo_hourly_weather CASCADE;
+DROP TABLE IF EXISTS ds_source.partner_returns CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,

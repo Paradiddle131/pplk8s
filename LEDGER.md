@@ -498,6 +498,15 @@ Entry format:
 - Decisions: none new (D34-D35 as planned); EL Factory pod limit 1Gi per D35.
 - Open: merge #60 → #68 → #69, then #55 (dbt), #57 (DAG); #65, #66.
 
+## 2026-10-13 — Phase 8 — tlc dbt models (#55); TLC research on main
+- Done: the `tlc` models from bronze to exposed (PR for #55): bronze views per trip type map whatever columns are landed onto one canonical set (NULL for columns never seen; an empty view before the first load); silver `tlc_trips` + `tlc_trips_quarantine` and gold `tlc_daily_trips` are `delete+insert` on `data_month` from the latest completed `ops.file_versions` row; the zone seed is `seeds/bronze/tlc_taxi_zones.csv`, and the exposed view is `tlc_daily_trips_by_borough`. `run_dbt(..., vars=)` renders `--vars <json>`. `tests/e2e/tlc-dbt-check.sh` (`make tlc-dbt-check`) runs the fixture scenario. `DBT_IMAGE` 0.4.0.
+  `dbt/dev/fixture.sql` re-runs again: its DROPs failed once bronze views existed.
+  The TLC source facts moved from branch `research/tlc-source-facts` onto `main` (PR #71); research findings now land via a docs-only PR (autopilot brief §4).
+- Evidence: `tlc-dbt-check.sh` passed (2024-12 rows unchanged by `xmin` across the 2025-01 builds; the half-loaded version stays invisible; the republished 2025-01 keeps only the new etag; 10.8 % quarantined fails); on the lab warehouse, real yellow 2026-08 built 3,322,146 clean + 14,570 quarantined = 3,336,716 (the footer count) in ~55 s per rebuild; `dbt build --exclude tag:tlc` on the dev fixture 63/63 passed; airflow pytest 127 passed; the dbt image builds (`dbt parse` + view check).
+- Found: `ds_source.tlc_yellow` held 21 GB for 3.5 GB of live rows (bloat from the #53 probe reloads), now reclaimed by `VACUUM FULL`; EL Factory's column widening fails once a view reads the landing table (#72); D35's month scope at ≈ 2.3 GB per yellow month overruns the 15 GB ceiling, and nothing retires old months (#73, needs-user).
+- Decisions: none new (D36 as planned); the zone seed sits under `seeds/bronze/`, so folder selection builds it with bronze.
+- Open: #57 (DAG), #72, #73.
+
 ## 2026-10-13 — Phase 8 — EL Factory publication probe (#54)
 - Done: `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` answers `published` (`source_uri`, `etag`, `size`) or `not_published` from one `HEAD`, reusing the 403 classification of #53; a CDN block is a retryable 503. PLAN contract and README updated; `ELF_IMAGE` 0.5.0.
 - Evidence: el-factory pytest 101 passed (10 new against the recorded CloudFront/S3 response shapes, no GET issued); live probe from the lab host: yellow 2026-08 `published` with etag `"29cbf7399f1d6ffc4b505639ccbb0c8d-4"` (the one `ops.file_versions` holds) and 59,043,961 bytes, green 2026-08 `published`, yellow 2026-10 `not_published`.
