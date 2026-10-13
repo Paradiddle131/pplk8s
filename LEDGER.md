@@ -512,3 +512,9 @@ Entry format:
 - Evidence: el-factory pytest 101 passed (10 new against the recorded CloudFront/S3 response shapes, no GET issued); live probe from the lab host: yellow 2026-08 `published` with etag `"29cbf7399f1d6ffc4b505639ccbb0c8d-4"` (the one `ops.file_versions` holds) and 59,043,961 bytes, green 2026-08 `published`, yellow 2026-10 `not_published`.
 - Decisions: `not_published` is a 200, not an error: for the sensor it is an expected answer, and only the retryable 503 means "ask again later for another reason".
 - Open: #56 (PublicationSensor), #57.
+
+## 2026-10-13 — Phase 8 — deferrable PublicationSensor (#56)
+- Done: `ElFactoryHook.publication()` reads `GET /publication` (#54); `PublicationSensor` checks once on the worker, then defers to `PublicationTrigger`, which asks again every 3 h (configurable) for up to 120 days; "not published" and retryable failures (a CDN block) keep the wait going, a non-retryable answer fails the task; the event carries `source_uri`, `etag`, `size`.
+- Evidence: airflow pytest 143 passed (16 new: the hook's published, not-published, 503 and malformed answers; the trigger's round trip and its three outcomes; the sensor's immediate return, deferral with the whole timeout, and fail-fast).
+- Decisions: none new (D35 as planned).
+- Open: #57; the sensor runs on a real triggerer only in the Phase 8 check (#58).
