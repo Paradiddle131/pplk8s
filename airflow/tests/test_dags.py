@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -95,6 +95,71 @@ def test_every_elt_call_to_el_factory_is_retried(sales):
 
 
 @pytest.fixture(scope="module")
+def tlc(bag):
+    return bag.dags["tlc_monthly"]
+
+
+def test_tlc_runs_monthly_with_catchup_and_three_months_in_flight(tlc):
+    # A data-interval timetable: the first run's interval is the first data month, and its
+    # logical date names it (D35); a trigger timetable would load May in a run dated June.
+    # The SDK class only declares the schedule; the scheduler's core class computes the runs.
+    from airflow.timetables.base import TimeRestriction
+    from airflow.timetables.interval import CronDataIntervalTimetable
+
+    assert type(tlc.timetable).__name__ == "CronDataIntervalTimetable"
+    scheduler_side = CronDataIntervalTimetable(tlc.timetable.expression, tlc.timetable.timezone)
+    first = scheduler_side.next_dagrun_info(
+        last_automated_data_interval=None,
+        restriction=TimeRestriction(tlc.start_date, None, catchup=True),
+    )
+    june = (datetime(2026, 6, 1, tzinfo=UTC), datetime(2026, 7, 1, tzinfo=UTC))
+    assert (first.data_interval.start, first.data_interval.end) == june
+    assert tlc.catchup is True
+    assert tlc.max_active_runs == 3
+    assert tlc.start_date.day == 1
+
+
+def test_tlc_waits_for_publication_before_extracting_then_builds_each_stage(tlc):
+    from pplk8s.sensors import PublicationSensor
+
+    wait = tlc.get_task("wait_published")
+    assert wait.is_mapped
+    assert wait.operator_class.__name__ == PublicationSensor.__name__
+    assert "extract" in wait.downstream_task_ids
+    chain = [
+        "extract",
+        "stage_bronze.dbt_bronze",
+        "stage_bronze.record_bronze",
+        "stage_silver.dbt_silver",
+        "stage_silver.record_silver",
+        "stage_gold.dbt_gold",
+        "stage_gold.record_gold",
+        "stage_exposed.dbt_exposed",
+        "stage_exposed.record_exposed",
+    ]
+    for upstream, downstream in zip(chain, chain[1:], strict=False):
+        assert downstream in tlc.get_task(upstream).downstream_task_ids, (upstream, downstream)
+
+
+def test_tlc_extract_is_mapped_in_the_el_factory_pool_with_a_hard_timeout(tlc):
+    from tlc_monthly import EXTRACT_BUDGETS
+
+    extract = tlc.get_task("extract")
+    assert extract.is_mapped
+    assert extract.partial_kwargs["pool"] == "el_factory"
+    assert extract.partial_kwargs["retries"] >= 1
+    assert extract.partial_kwargs["execution_timeout"] > max(EXTRACT_BUDGETS.values())
+
+
+def test_tlc_dbt_stages_build_only_tlc_models_of_the_run_month(tlc):
+    for stage in ("bronze", "silver", "gold", "exposed"):
+        task = tlc.get_task(f"stage_{stage}.dbt_{stage}")
+        assert task.arguments[:3] == ["build", "--select", f"tag:tlc,tag:{stage}"]
+        assert task.arguments[3] == "--vars"
+        assert "resolve_context" in task.arguments[4] and "data_month" in task.arguments[4]
+
+
+@pytest.fixture(scope="module")
 def returns(bag):
     return bag.dags["returns_file_arrival"]
 
@@ -153,7 +218,9 @@ def test_sales_dbt_stages_select_only_sales_models(sales):
         )
 
 
-@pytest.mark.parametrize("dag_id", ["sales_elt", "returns_file_arrival", "finance_daily"])
+@pytest.mark.parametrize(
+    "dag_id", ["sales_elt", "returns_file_arrival", "finance_daily", "tlc_monthly"]
+)
 def test_every_business_task_survives_a_lost_worker(bag, dag_id):
     """KEDA scale-in, a drain, or an OOM can kill a running task; Celery's warm shutdown only waits
     terminationGracePeriodSeconds (PLAN.md D24). The scheduler fails the orphan after the heartbeat

@@ -40,6 +40,46 @@ def resolve_interval(
     return day - timedelta(days=1), day
 
 
+def resolve_month(
+    start: datetime | None, end: datetime | None, logical_date: datetime
+) -> tuple[datetime, datetime, str]:
+    """Return ``(month_start, month_end, "YYYY-MM")`` of the data month a monthly run processes.
+
+    The monthly counterpart of :func:`resolve_interval` (PLAN.md D35): a scheduled ``@monthly``
+    run's data interval is exactly one calendar month (UTC), and its logical date names that month.
+    A manual run without a usable interval processes the last complete month before
+    ``logical_date``, what the schedule would have processed at that moment.
+    A scheduled interval that spans anything but one calendar month can never become valid on
+    retry, so it fails fast.
+    """
+    if start is not None and end is not None and start < end:
+        start, end = start.astimezone(UTC), end.astimezone(UTC)
+        if start != _month_start(start) or end != _next_month(start):
+            raise AirflowFailException(f"[{start}, {end}) is not one calendar month (UTC)")
+    else:
+        end = _month_start(logical_date.astimezone(UTC))
+        start = _month_start(end - timedelta(days=1))
+    return start, end, f"{start.year:04d}-{start.month:02d}"
+
+
+def _month_start(moment: datetime) -> datetime:
+    return moment.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _next_month(month_start: datetime) -> datetime:
+    return month_start.replace(
+        year=month_start.year + month_start.month // 12, month=month_start.month % 12 + 1
+    )
+
+
+def run_month(context: Mapping[str, Any]) -> tuple[datetime, datetime, str]:
+    """Return the data month of the running monthly DAG run (see ``resolve_month``)."""
+    anchor = context.get("logical_date") or context["dag_run"].run_after
+    return resolve_month(
+        context.get("data_interval_start"), context.get("data_interval_end"), anchor
+    )
+
+
 def run_interval(context: Mapping[str, Any]) -> tuple[datetime, datetime]:
     """Return the interval of the running DAG run, from its task context (see ``resolve_interval``).
 

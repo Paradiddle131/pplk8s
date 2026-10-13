@@ -80,6 +80,8 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Give even trivial first tasks (context resolution, catalog fetch) a retry budget; a transient blip there fails the whole run.
 - Resolve the interval a run processes in one tested helper, not in each DAG: Airflow 3 cron schedules (`create_cron_data_intervals = False`) give a run an empty interval at its fire time, and an API run may have no logical date, so the lab processes the last complete UTC day before the run; a consumer built the wrong day until it used the run whose interval holds that day.
 - Keep shared DAG code in one importable package, and keep DAG files thin enough that the DagBag import test catches every missing module.
+- When a run must name its data period (monthly files, backfills by month), declare `CronDataIntervalTimetable` explicitly: in Airflow 3 a cron string becomes `CronTriggerTimetable` (empty interval, logical date at the fire time, one period after the data).
+- `execution_timeout` cannot be mapped (`expand_kwargs` fails with "unmappable or already specified argument", Airflow 3.3.1): size a mapped extract's per-entity time budget inside the task (the hook stops between continuations), with `execution_timeout` only as the hard stop above the largest budget.
 
 ## DAG design
 
