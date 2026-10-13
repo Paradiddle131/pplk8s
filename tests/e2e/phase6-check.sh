@@ -615,7 +615,13 @@ drill_11() {
     return 0
   fi
   pods=$(git_pods)
-  [ "$(synced_pods)" = "$pods" ] || fail "only $(synced_pods) of $pods git-sync sidecars report syncs before the drill"
+  # Pods an earlier drill recreated (9c scales the triggerers to 0) need a few scrapes before increase()
+  # sees their first syncs, so wait rather than read once.
+  end=$((SECONDS + 180))
+  until [ "$(synced_pods)" = "$pods" ]; do
+    [ $SECONDS -lt $end ] || fail "only $(synced_pods) of $pods git-sync sidecars report syncs before the drill"
+    sleep 10
+  done
   before=$(restarts)
   say "11. git-sync: block SSH egress (GitHub) for the $pods pods that sync DAGs"
   block_git_ssh

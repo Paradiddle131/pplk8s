@@ -442,6 +442,8 @@ Entry format:
   After it: `DRILLS=11 tests/e2e/phase6-check.sh` passed three times; in the last, the alert fired for 4 of 4 pods 186 s after the block, all Ready, no restarts, `error syncing repo, will retry` in the log, and resolved 61 s after the unblock; canary before and after.
   `promtool check rules` (24 rules) and a `promtool test rules` of three sidecars (healthy, stuck mid-life, never synced) passed against Prometheus v3.15; `make lint` clean.
 - Found: the first deploy of the metrics flag put every new DAG-loading pod in `Init:CrashLoopBackOff` (`--http-bind must be specified when --http-metrics is set`) while the old pods kept serving: a bad git-sync flag fails loudly at rollout, unlike a fetch failure later.
+  The first full `make phase6-check` failed drill 11's precondition (2 of 4 sidecars synced): 9c had just recreated both triggerers, and `increase()` needs a few scrapes of a new pod; the drill now waits up to 3 min for it.
+  After that fix, the full run passed every step before drill 11 (on 40c1c05), and `DRILLS="9 11"` passed in the order that failed.
   The CI `kind` job flaked once on #28 (exec probes starved on the 2-vCPU runner, helm timed out) and passed on rerun: issue #30.
 - Settled: the lab's git-sync is back on `main` (the open item of the drill 10 entry).
 - Decisions: D23 amended (retry forever, git-sync metrics, `AirflowGitSyncFailing`).
