@@ -38,6 +38,8 @@ Design every step so the next run can pick up exactly where this one stopped: pu
 - What does not: kind (the VM is cgroup v1 and kubelet 1.36 refuses it; settled 2026-10-12), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
   The `kind` job in `integration.yaml` on GitHub Actions is the cluster check a cloud run can get.
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
+- `~/.claude/CLAUDE.md` is claude-dotfiles' `cloud/CLAUDE.md` (linked by the setup script); Hindsight and the compound-engineer workflow are ignored on cloud.
+- The setup script runs only when the environment's cache is rebuilt (an edit of its Setup field, or ~7 days), so a change to `cloud-setup.sh` reaches runs only after the user bumps the `cloud-setup vN` comment in that field; a change you make to it is a `You:` item in the handoff.
 - Not on cloud: Hindsight, Atrium, the user's `~/.claude`, `localhost` services, the browser at `localhost:8080`.
   Skip Hindsight retains and Atrium registration; put durable facts in the PR/issue instead.
 - Every `<UTC>` you write (board, claim, handoff, feedback) comes from `date -u +%FT%H:%MZ` at the moment you write it; never estimate it.
@@ -85,6 +87,9 @@ A claim on an item is **live** while the item or its PR saw a worker comment, co
 6. **Next best action**: a failing, flaky or skipped test; a lint warning; a `bug` issue; a `lesson` issue that cloud can verify.
    Open an issue first if none exists, so the work is visible.
 
+PRs waiting for local verification never limit new work; only dependencies do (user, 2026-10-13).
+An item whose blocker is an open PR, not yet merged, is takeable: branch from that PR's branch and set your PR's base to it (§5).
+
 If every candidate conflicts with a live run, or three runs are already live: edit your board comment to `⚪ nothing non-conflicting; exiting` and end the run (it costs almost nothing, and the usage window stays for the live runs).
 
 Never pick work only the user can do: a reversal of a recorded decision, anything an issue marks "ask the user", or the local-only checks in §0.
@@ -119,6 +124,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 ## 6. Verify and hand off
 
 **Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; CI builds the images.
+A change to an image's contents (a Dockerfile, dependencies, dbt models, service code) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image.
 Opening the PR runs `ci.yaml` and `integration.yaml` (slim kind check) on GitHub Actions; wait for their check runs and report them.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
@@ -142,7 +148,12 @@ Everything else goes inside the collapsed sections.
 
 **Done:** …
 **Next:** - [ ] … (in order)
-**Verified on cloud:** <commands + outcomes, CI check names + conclusions>
+**Verified on cloud** (each gate ticked with its evidence, or unticked with `n/a (cloud)` / `not run: <why>`):
+- [ ] `make lint` — …
+- [ ] `make test` — <passed/skipped counts>
+- [ ] `make services-up` + host dbt / EL Factory (§0) — <what ran, row counts>
+- [ ] CI `ci` (test, images) — <conclusions>
+- [ ] CI `integration` (kind) — <conclusion>
 **Not verified (needs local):** …
 **Decisions taken and why:** …
 **Ledger entry (paste on merge):** …

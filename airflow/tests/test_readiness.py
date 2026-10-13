@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime
 
 import pytest
@@ -7,6 +8,14 @@ from pplk8s import readiness
 
 START = datetime(2026, 10, 8, tzinfo=UTC)
 END = datetime(2026, 10, 9, tzinfo=UTC)
+
+
+def _warehouse_unreachable(what: str, exc: Exception):
+    """Skip on a laptop without `make services-up`; fail where CI promised a warehouse."""
+    message = f"{what} not reachable at localhost:5433 (make services-up): {exc}"
+    if os.environ.get("PPLK8S_REQUIRE_WAREHOUSE") == "1":
+        pytest.fail(message)
+    pytest.skip(message)
 
 
 def test_upsert_sql_is_keyed_on_the_ledger_primary_key():
@@ -77,7 +86,7 @@ def warehouse():
     try:
         hook.get_first("SELECT 1 FROM ops.readiness LIMIT 1")
     except Exception as exc:  # noqa: BLE001 - any connectivity problem means no warehouse here
-        pytest.skip(f"warehouse not reachable at localhost:5433 (make services-up): {exc}")
+        _warehouse_unreachable("warehouse", exc)
     hook.run("DELETE FROM ops.readiness WHERE product = 'test.readiness'")
     yield hook
     hook.run("DELETE FROM ops.readiness WHERE product = 'test.readiness'")
@@ -133,7 +142,7 @@ def file_ledger():
     try:
         hook.get_first("SELECT 1 FROM ops.file_loads LIMIT 1")
     except Exception as exc:  # noqa: BLE001 - any connectivity problem means no warehouse here
-        pytest.skip(f"ops.file_loads not reachable at localhost:5433 (make services-up): {exc}")
+        _warehouse_unreachable("ops.file_loads", exc)
     hook.run("DELETE FROM ops.file_loads WHERE bucket = 'test-bucket'")
     yield hook
     hook.run("DELETE FROM ops.file_loads WHERE bucket = 'test-bucket'")
