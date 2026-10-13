@@ -480,3 +480,12 @@ Entry format:
 - Found: the Compose project name is fixed, so any worktree's `services-up` takes over the lab's containers; `finance_daily` stays paused and nothing alerts on late data (#65, #66).
 - Decisions: none.
 - Open: #65, #66.
+
+## 2026-10-13 — Phase 8 (planning) — TLC monthly pipeline decided and sliced; first cloud runs reviewed
+- Done: resolved the TLC map's decision tickets with the user (time-boxed requests, dataset scope, monthly cadence; #37, #38, #39) and decided the dbt shape (#40); recorded them as D34–D36, amended D9, D15, D20, added Phase 8 (planned), and replaced the EL Factory line of `LESSONS.md` ("deferrable status sensor") with the time-box contract.
+  Sliced the build into #52–#59, wired by native `blocked_by`; frontier: #52 (time box) and #55 (dbt models).
+  Reviewed the first three `pplk8s-worker` cloud runs (issue #45): all succeeded; PR #48 (Docker on cloud, brief §0, §8) merged with three brief rules added (UTC stamps from `date -u`, user answers are comments without the 🤖 prefix, ignore the harness branch); #49 closed as B (Dockerfiles stay proxy-free).
+  Cloud workspace: standing rules now come from claude-dotfiles' `cloud/CLAUDE.md` (claude-dotfiles#3, linked by `cloud-setup.sh`, PR #61); the brief gains the no-cap rule (dependencies, not the number of waiting PRs, decide what a run takes), the gate checklist in the handoff (claude-dotfiles#4) and a D16 reminder; the setup script only reaches runs after the environment's Setup field is bumped (`cloud-setup v2`).
+- Evidence: issues and edges visible on GitHub (`gh api repos/Paradiddle131/pplk8s/issues/57/dependencies/blocked_by` → #52, #53, #55, #56); `make lint` clean.
+- Decisions: D34, D35, D36 added; D9, D15, D20 amended.
+- Open: PR #51 verified locally, awaiting merge; PR #61 (cloud workspace) awaiting merge; #41 closed by this slicing.
