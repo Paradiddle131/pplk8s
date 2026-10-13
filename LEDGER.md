@@ -422,3 +422,9 @@ Entry format:
 - Found: cloud facts that shape the brief (claude-dotfiles#2): Docker and Compose run on cloud, kind probably does not; GitHub is REST-only; schedules are at most hourly.
 - Decisions: cloud runs never merge pplk8s PRs; handoffs show only what needs the user outside `<details>` (user, 2026-10-12).
 - Open: #18 (PR #31), #25, #27, #42.
+
+## 2026-10-13 — Phase 5 fix — finance's net_sales_daily survives other pipelines' rebuilds (#27)
+- Done: `exp_net_sales_daily` is a table instead of a view; `dbt/scripts/check_pipeline_views.py` fails the dbt image build when a view reads another pipeline's model or a model lacks exactly one pipeline tag; `tests/e2e/phase1-check.sh` rebuilds `tag:sales,tag:gold` and `tag:returns,tag:silver` alone and asserts the finance relation survives; `DBT_IMAGE` bumped to 0.3.0 (D16). Built by a `pplk8s-worker` cloud run (PR #46), tag bump and verification by a local session.
+- Evidence: local `make services-up build phase1-check` → all `ok:` lines including `ok: rebuilding sales gold and returns silver alone kept exposed.net_sales_daily`; the dbt image build ran the view check; CI `test`, `images`, `kind` green on 037dfc1. On cloud, reverting the model to a view made the check fail with one finding per foreign parent.
+- Decisions: D20 amended (cross-pipeline models are tables; BigQuery note).
+- Open: none.
