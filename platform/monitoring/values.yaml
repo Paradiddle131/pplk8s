@@ -30,6 +30,9 @@ defaultRules:
     # so wall time gains one 15 s slot every ~4 min and every group "misses" one evaluation at once.
     # PrometheusRuleGroupOverrun (manifests/prometheus-rules.yaml) alerts on the real cause instead.
     PrometheusMissingRuleEvaluations: true
+    # Fires while any failed Job object exists, so a CronJob's kept failed Job pinned it after later
+    # runs succeeded (issue #62). KubeJobFailed in manifests/prometheus-rules.yaml clears on success.
+    KubeJobFailed: true
 
 prometheus:
   prometheusSpec:

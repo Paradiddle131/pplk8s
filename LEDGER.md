@@ -429,6 +429,15 @@ Entry format:
 - Decisions: D20 amended (cross-pipeline models are tables; BigQuery note).
 - Open: none.
 
+## 2026-10-13 — Phase 6 fix — the cleanup CronJob survives a host boot, and its failures stop pinning KubeJobFailed (#62)
+- Done: `databaseCleanup.command` runs `airflow db check --retry 360 --retry-delay 60` in front of the chart's own `args`, so a catch-up run at host boot waits for the metadata DB instead of failing; kube-prometheus-stack's `KubeJobFailed` is disabled and replaced in `platform/monitoring/manifests/prometheus-rules.yaml` by one that drops a CronJob's failed Job once a later run of that CronJob succeeds; `tests/e2e/db-cleanup-check.sh` seeds a failed Job owned by the CronJob, asserts the alert picks it up, runs the cleanup, and asserts the alert cleared with the failed Job still present and that the run checked the DB first; `make db-cleanup-check` now also brings up observability.
+- Evidence: repro on the old spec: with `metadata-db` stopped, a Job from the CronJob failed both pods in 2m22s.
+  After the fix (deployed from a merge with #18's branch so the live git-sync config stayed): with `metadata-db` stopped the Job was still Running after 3m20s, logging one retry a minute; starting the DB let it connect and complete (4m9s).
+  The new rule's expression returned the seeded failed Job, then nothing after a successful run of the CronJob; `make lint` clean; `tests/e2e/db-cleanup-check.sh` passed in 61 s.
+- Found: the user's manual re-run on 2026-10-13 (`kubectl create job --from=cronjob/...`) set the CronJob's `lastSuccessfulTime`, so hand-run Jobs count as successes of the CronJob.
+- Decisions: D30 amended (wait for the DB rather than `startingDeadlineSeconds`; replacement `KubeJobFailed` rather than a Job TTL).
+- Open: #18 (PR #31), #25.
+
 ## 2026-10-13 — Phase 6 fix — KubeAPIErrorBudgetBurn on the lab (#25)
 
 - Done: the chart's `kube-apiserver-slos` group is off (`defaultRules.rules.kubeApiserverSlos: false`) and `lab-prometheus` keeps its 1h/5m, 6h/30m, and 1d/2h pairs verbatim as group `lab.kube-apiserver-slos`; only the 3d/6h pair is gone (PLAN D21, LESSONS).
