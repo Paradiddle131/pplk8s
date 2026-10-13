@@ -15,9 +15,11 @@ RUN useradd --uid 10001 --create-home --home-dir /home/dbt --shell /usr/sbin/nol
 WORKDIR /dbt
 COPY . /dbt
 
-# Smoke check: the project parses without a database connection.
+# Smoke check: the project parses without a database connection, and no view reads another
+# pipeline's model (scripts/check_pipeline_views.py, PLAN.md D20).
 # Parse output is discarded so the runtime target/ and logs/ start empty and owned by the dbt user.
 RUN dbt parse \
+    && python scripts/check_pipeline_views.py target/manifest.json \
     && rm -rf /dbt/target /dbt/logs \
     && mkdir -p /dbt/target /dbt/logs \
     && chown -R 10001:10001 /dbt/target /dbt/logs
