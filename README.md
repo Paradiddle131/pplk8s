@@ -55,6 +55,7 @@ make test           # unit tests and linters for every Python package, no cluste
 make phase4-check   # sales_elt end to end, idempotent re-runs, failure drills (~15 min)
 make phase5-check   # file event → exactly one run, redelivery no-op, cross-pipeline wait (~3 min)
 make phase6-check   # dashboards, KEDA scaling, every failure drill: alert fires, runbook recovers (~35 min)
+make phase8-check   # tlc_monthly: scheduled + backfilled drift months reconcile, a republished month replaces (~1 h, real TLC downloads)
 
 make cluster-down services-down
 ```
