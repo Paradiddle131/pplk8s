@@ -344,6 +344,18 @@ databaseCleanup:
   schedule: "17 3 * * *"
   retentionDays: 60
   skipArchive: true
+  # A CronJob runs its last missed slot as soon as the cluster starts, which on the lab is a host
+  # boot with the metadata DB (Compose) still down, so the run failed at once (issue #62). It now
+  # waits up to ~6 h for the DB with `airflow db check`, then runs the chart's own args unchanged
+  # ("$@"). The image's entrypoint stays in front, as it is for the chart's default command.
+  command:
+    - /usr/bin/dumb-init
+    - --
+    - /entrypoint
+    - bash
+    - -c
+    - airflow db check --retry 360 --retry-delay 60 && exec "$@"
+    - --
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 512Mi}
