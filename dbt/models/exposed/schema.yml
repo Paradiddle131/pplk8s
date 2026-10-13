@@ -37,3 +37,10 @@ models:
       - name: net_revenue_eur
         description: revenue_eur minus returns_eur.
         tests: [not_null]
+
+  - name: exp_tlc_daily_trips_by_borough
+    description: Daily trips, passengers and revenue per pickup borough and trip type. Alias exposed.tlc_daily_trips_by_borough.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['pickup_date', 'data_month', 'trip_type', 'borough']

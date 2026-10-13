@@ -497,3 +497,12 @@ Entry format:
 - Found: one real month peaked at 1.33 GiB until batch streaming, Arrow's system allocator and glibc's `MALLOC_ARENA_MAX=2` + fixed mmap threshold (LESSONS); merging PRs from an agent session is blocked by the permission classifier, so stacked PRs wait on the user.
 - Decisions: none new (D34-D35 as planned); EL Factory pod limit 1Gi per D35.
 - Open: merge #60 → #68 → #69, then #55 (dbt), #57 (DAG); #65, #66.
+
+## 2026-10-13 — Phase 8 — tlc dbt models (#55); TLC research on main
+- Done: the `tlc` models from bronze to exposed (PR for #55): bronze views per trip type map whatever columns are landed onto one canonical set (NULL for columns never seen; an empty view before the first load); silver `tlc_trips` + `tlc_trips_quarantine` and gold `tlc_daily_trips` are `delete+insert` on `data_month` from the latest completed `ops.file_versions` row; the zone seed is `seeds/bronze/tlc_taxi_zones.csv`, and the exposed view is `tlc_daily_trips_by_borough`. `run_dbt(..., vars=)` renders `--vars <json>`. `tests/e2e/tlc-dbt-check.sh` (`make tlc-dbt-check`) runs the fixture scenario. `DBT_IMAGE` 0.4.0.
+  `dbt/dev/fixture.sql` re-runs again: its DROPs failed once bronze views existed.
+  The TLC source facts moved from branch `research/tlc-source-facts` onto `main` (PR #71); research findings now land via a docs-only PR (autopilot brief §4).
+- Evidence: `tlc-dbt-check.sh` passed (2024-12 rows unchanged by `xmin` across the 2025-01 builds; the half-loaded version stays invisible; the republished 2025-01 keeps only the new etag; 10.8 % quarantined fails); on the lab warehouse, real yellow 2026-08 built 3,322,146 clean + 14,570 quarantined = 3,336,716 (the footer count) in ~55 s per rebuild; `dbt build --exclude tag:tlc` on the dev fixture 63/63 passed; airflow pytest 127 passed; the dbt image builds (`dbt parse` + view check).
+- Found: `ds_source.tlc_yellow` held 21 GB for 3.5 GB of live rows (bloat from the #53 probe reloads), now reclaimed by `VACUUM FULL`; EL Factory's column widening fails once a view reads the landing table (#72); D35's month scope at ≈ 2.3 GB per yellow month overruns the 15 GB ceiling, and nothing retires old months (#73, needs-user).
+- Decisions: none new (D36 as planned); the zone seed sits under `seeds/bronze/`, so folder selection builds it with bronze.
+- Open: #57 (DAG), #72, #73.

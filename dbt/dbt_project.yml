@@ -5,6 +5,7 @@ config-version: 2
 profile: pplk8s
 
 model-paths: ["models"]
+seed-paths: ["seeds"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
 target-path: "target"
@@ -33,3 +34,17 @@ models:
       +schema: exposed
       +tags: [exposed]
       +materialized: view
+
+# Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
+seeds:
+  pplk8s:
+    bronze:
+      +schema: bronze
+      +tags: [bronze]
+      tlc_taxi_zones:
+        +tags: [tlc]
+        +column_types:
+          location_id: integer
+          borough: text
+          zone: text
+          service_zone: text
