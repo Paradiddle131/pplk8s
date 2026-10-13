@@ -35,6 +35,7 @@ from airflow.providers.http.hooks.http import HttpHook
 from airflow.sdk.exceptions import AirflowFailException, AirflowSkipException
 
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:+-]+$")
+MONTH_PATTERN = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 DEFAULT_CONN_ID = "el_factory"
 CONNECT_TIMEOUT_SECONDS = (
     10  # a blackholed connection (pod just replaced) should fail fast and retry
@@ -79,6 +80,31 @@ class ElFactoryHook(HttpHook):
                 raise AirflowFailException(f"malformed catalog entry: {item!r}")
             entries.append({"source": item["source"], "entity": item["entity"]})
         return entries
+
+    def publication(self, source: str, entity: str, month: str) -> dict[str, Any]:
+        """Is a file source's data month published? (``GET /publication``, PLAN.md D34).
+
+        Returns ``{published: True, source_uri, etag, size}`` or ``{published: False, source_uri}``.
+        A CDN block is a retryable 503, so it raises :class:`ElFactoryTransientError` like any
+        transient failure; it never reads as "not published".
+        """
+        if not MONTH_PATTERN.match(month):
+            raise AirflowFailException(f"month {month!r} is not YYYY-MM")
+        params = {"source": source, "entity": entity, "month": month}
+        body = self._call("GET", "/publication", data=params)
+        status = body.get("status") if isinstance(body, dict) else None
+        if status == "not_published":
+            return {"published": False, "source_uri": body.get("source_uri")}
+        etag, size = (body.get("etag"), body.get("size")) if status == "published" else (None, None)
+        if (
+            not isinstance(etag, str)
+            or not etag
+            or not isinstance(size, int)
+            or isinstance(size, bool)
+            or size < 0
+        ):
+            raise AirflowFailException(f"publication of {source}.{entity} {month}: {body!r}")
+        return {"published": True, "source_uri": body.get("source_uri"), "etag": etag, "size": size}
 
     def extract_entity(
         self,

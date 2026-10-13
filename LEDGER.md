@@ -506,3 +506,9 @@ Entry format:
 - Found: `ds_source.tlc_yellow` held 21 GB for 3.5 GB of live rows (bloat from the #53 probe reloads), now reclaimed by `VACUUM FULL`; EL Factory's column widening fails once a view reads the landing table (#72); D35's month scope at ≈ 2.3 GB per yellow month overruns the 15 GB ceiling, and nothing retires old months (#73, needs-user).
 - Decisions: none new (D36 as planned); the zone seed sits under `seeds/bronze/`, so folder selection builds it with bronze.
 - Open: #57 (DAG), #72, #73.
+
+## 2026-10-13 — Phase 8 — deferrable PublicationSensor (#56)
+- Done: `ElFactoryHook.publication()` reads `GET /publication` (#54); `PublicationSensor` checks once on the worker, then defers to `PublicationTrigger`, which asks again every 3 h (configurable) for up to 120 days; "not published" and retryable failures (a CDN block) keep the wait going, a non-retryable answer fails the task; the event carries `source_uri`, `etag`, `size`.
+- Evidence: airflow pytest 143 passed (16 new: the hook's published, not-published, 503 and malformed answers; the trigger's round trip and its three outcomes; the sensor's immediate return, deferral with the whole timeout, and fail-fast).
+- Decisions: none new (D35 as planned).
+- Open: #57; the sensor runs on a real triggerer only in the Phase 8 check (#58).
