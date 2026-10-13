@@ -33,10 +33,10 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   The VM does not start the daemon, the setup snapshot keeps no processes, and anonymous Docker Hub pulls hit 429, so the script starts `dockerd` with `mirror.gcr.io` as registry mirror.
 - What runs on cloud: Docker and `docker compose`, `uv`, Postgres 16 (not started).
   So `make lint`, `make test` (unit + DagBag) and the Compose services (`make services-up`) run here.
-- Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build` and `make phase1-check` do not run; CI's `images` job builds the images.
+- Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build`, `make verify` and `make phase1-check` do not run; the images are built by `make verify` on the laptop before merge (PLAN.md D26).
   Run dbt from the host instead: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …`; run EL Factory with `uv run gunicorn` and the env from `scripts/el-factory-local.sh`.
 - What does not: kind (the VM is cgroup v1 and kubelet 1.36 refuses it; settled 2026-10-12), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
-  The `kind` job in `integration.yaml` on GitHub Actions is the cluster check a cloud run can get.
+  The cluster check is `make ci-integration` on the laptop before merge; `integration.yaml` runs on GitHub Actions only on demand (D26), so do not dispatch it.
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
 - `~/.claude/CLAUDE.md` is claude-dotfiles' `cloud/CLAUDE.md` (linked by the setup script); Hindsight and the compound-engineer workflow are ignored on cloud.
 - The setup script runs only when the environment's cache is rebuilt (an edit of its Setup field, or ~7 days), so a change to `cloud-setup.sh` reaches runs only after the user bumps the `cloud-setup vN` comment in that field; a change you make to it is a `You:` item in the handoff.
@@ -123,9 +123,9 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 
 ## 6. Verify and hand off
 
-**Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; CI builds the images.
+**Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; image builds and kind are left to the local `make verify` / `make ci-integration`.
 A change to an image's contents (a Dockerfile, dependencies, dbt models, service code) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image.
-Opening the PR runs `ci.yaml` and `integration.yaml` (slim kind check) on GitHub Actions; wait for their check runs and report them.
+Opening the PR runs only `ci.yaml`'s `test` job on GitHub Actions (D26); wait for it and report it. Do not dispatch the on-demand `images` or `integration` jobs.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
 **The part outside `<details>` is for the human scanning many PRs: only what needs them, five lines at most.**
@@ -152,9 +152,8 @@ Everything else goes inside the collapsed sections.
 - [ ] `make lint` — …
 - [ ] `make test` — <passed/skipped counts>
 - [ ] `make services-up` + host dbt / EL Factory (§0) — <what ran, row counts>
-- [ ] CI `ci` (test, images) — <conclusions>
-- [ ] CI `integration` (kind) — <conclusion>
-**Not verified (needs local):** …
+- [ ] CI `ci` (test) — <conclusion>
+**Not verified (needs local):** `make verify` (image builds), `make ci-integration` when cluster-facing, …
 **Decisions taken and why:** …
 **Ledger entry (paste on merge):** …
 
@@ -189,7 +188,7 @@ The VM disappears when the run ends, so feedback lives only on GitHub: one comme
   - attribution: after your first commit, `git log -1 --format=%B` (any `Claude-Session:` or co-author trailer?);
   - Docker: `docker info` and `docker run --rm hello-world`;
   - kind: `kind create cluster --name probe --wait 120s` then `kind delete cluster --name probe` (install with `scripts/install-tools.sh` if missing); record the first error verbatim;
-  - GitHub: does `gh api` REST work, does `gh issue list` fail, may the token dispatch a workflow (`gh api -X POST repos/Paradiddle131/pplk8s/actions/workflows/ci.yaml/dispatches -f ref=main`), can it read a job log?
+  - GitHub: does `gh api` REST work, does `gh issue list` fail, can it read a job log? (Do not dispatch a workflow to find out: a dispatch runs the heavy jobs, D26.)
   - network: any host the run needed that was blocked (`curl -sI https://<host>`).
   Skip a probe whose answer an earlier comment on the feedback issue already settled, and say so.
 

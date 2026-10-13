@@ -2,11 +2,11 @@
 # DAGs come from this checkout through the host-path overlay (DAG_DELIVERY=local), so a pull request
 # tests its own DAGs rather than what git-sync would serve from main. The check is the slim one:
 # the hello DAG on a Celery worker and the Phase 5 event path (the full Phase 4 check stays local).
+# On demand only: a run costs ~25 runner minutes, and `make ci-integration` on the laptop is the same
+# check for free.
 name: integration
 
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
