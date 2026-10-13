@@ -422,3 +422,11 @@ Entry format:
 - Found: cloud facts that shape the brief (claude-dotfiles#2): Docker and Compose run on cloud, kind probably does not; GitHub is REST-only; schedules are at most hourly.
 - Decisions: cloud runs never merge pplk8s PRs; handoffs show only what needs the user outside `<details>` (user, 2026-10-12).
 - Open: #18 (PR #31), #25, #27, #42.
+
+## 2026-10-13 — Phase 8 (planning) — TLC monthly pipeline decided and sliced; first cloud runs reviewed
+- Done: resolved the TLC map's decision tickets with the user (time-boxed requests, dataset scope, monthly cadence; #37, #38, #39) and decided the dbt shape (#40); recorded them as D34–D36, amended D9, D15, D20, added Phase 8 (planned), and replaced the EL Factory line of `LESSONS.md` ("deferrable status sensor") with the time-box contract.
+  Sliced the build into #52–#59, wired by native `blocked_by`; frontier: #52 (time box) and #55 (dbt models).
+  Reviewed the first three `pplk8s-worker` cloud runs (issue #45): all succeeded; PR #48 (Docker on cloud, brief §0, §8) merged with three brief rules added (UTC stamps from `date -u`, user answers are comments without the 🤖 prefix, ignore the harness branch); #49 closed as B (Dockerfiles stay proxy-free).
+- Evidence: issues and edges visible on GitHub (`gh api repos/Paradiddle131/pplk8s/issues/57/dependencies/blocked_by` → #52, #53, #55, #56); `make lint` clean.
+- Decisions: D34, D35, D36 added; D9, D15, D20 amended.
+- Open: #46 and #51 local verification; PR #31 (git-sync) needs a push of its local rebase; #41 closed by this slicing.

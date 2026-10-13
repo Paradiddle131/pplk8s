@@ -42,7 +42,7 @@ Inside a section, a line that applies to only one stage starts with **[GKE]** or
 - Cut producers and consumers over independently; the readiness ledger is their only contract (see "Cross-pipeline readiness"), so a migrated producer can feed a consumer still on Workflows, and the other way round.
 - Map every date the workflow passes onto the run's processing interval (see "Airflow 3 code"), and check one known day end to end before trusting a port.
 - Translate each workflow step's retry and timeout policy into the task's `retries`, `retry_delay`, and `execution_timeout`, keeping Airflow as the only retry owner (see "Retries and idempotency").
-- Never hold a worker slot through an hours-long wait: the lab's extraction calls were synchronous requests under two minutes, which does not carry over to multi-hour extractions (a Cloud Run request also stops at 60 minutes); find how the workflow waits today (polling, callback, or one long request), then wait deferrably: `CloudRunExecuteJobOperator(deferrable=True)` for dbt, and a deferrable status sensor for EL Factory.
+- Never hold a worker slot through an hours-long wait: wait deferrably for dbt (`CloudRunExecuteJobOperator(deferrable=True)`). EL Factory needs no status sensor: it time-boxes each request (`MAX_RUN_TIME`) and answers `next_url`, so size the extract task's `execution_timeout` for the whole loop and keep `MAX_RUN_TIME` below the hook's read timeout (D34).
 
 ## Design choices to settle at work
 
