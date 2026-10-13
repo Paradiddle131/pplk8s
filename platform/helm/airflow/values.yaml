@@ -82,7 +82,8 @@ extraEnvFrom: |
       name: airflow-connections
 
 # DAG delivery (D10, D23): git-sync clones `main` of the GitHub remote into every component that
-# parses or runs DAGs (scheduler, dag-processor, triggerer, workers) and refreshes it every 10 s.
+# parses or runs DAG files (dag-processor, triggerer, workers) and refreshes it every 10 s. The
+# scheduler has no copy: in Airflow 3 it reads the serialized DAGs from the metadata DB.
 # subPath `airflow` makes <mount>/repo/airflow the DAG folder; airflow/.airflowignore hides include/
 # and tests/ from the DAG processor, and the image's PYTHONPATH puts <mount>/repo/airflow/include
 # ahead of its baked copy, so DAGs and the shared package always arrive as one commit.
@@ -99,6 +100,11 @@ dags:
     depth: 1
     subPath: airflow
     period: 10s
+    # Retry a failing fetch forever instead of exiting (#18). The chart's 0 made the sidecar exit on
+    # the first failed fetch, even a GitHub blip: it crash-looped and took its pod out of Ready while
+    # Airflow kept serving the last commit, so AirflowComponentUnavailable fired for the wrong reason.
+    # AirflowGitSyncFailing now names the cause; the init container still fails a pod whose ref is bad.
+    maxFailures: -1
     # Read-only deploy key, created as Secret airflow-git-ssh (key gitSshKey) by deploy.sh from a file
     # outside the repo; the private key is never committed.
     sshKeySecret: airflow-git-ssh
@@ -108,6 +114,16 @@ dags:
       github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
       github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
     recommendedProbeSetting: true # silences the chart's deprecation of the old probe behaviour
+    # Retrying, a failing fetch (a deleted ref, a revoked key, GitHub unreachable) leaves the sidecar
+    # Running and Ready on its last good commit, so only git-sync's own counters show it: serve them on the
+    # chart's HTTP port (1234), scraped by PodMonitor airflow-git-sync for AirflowGitSyncFailing.
+    # The chart puts `env` on the init container too, which gets no HTTP_BIND of its own, and git-sync
+    # refuses --http-metrics without --http-bind; repeating the sidecar's bind satisfies both.
+    env:
+      - name: GITSYNC_HTTP_METRICS
+        value: "true"
+      - name: GITSYNC_HTTP_BIND
+        value: ":1234"
     resources:
       requests: {cpu: 10m, memory: 32Mi}
       limits: {memory: 128Mi}
