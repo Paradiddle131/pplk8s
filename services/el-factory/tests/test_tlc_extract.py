@@ -189,6 +189,46 @@ def test_a_newer_schema_adds_columns_without_touching_earlier_rows(db, server, m
     assert rows == [(False, 6, 0, 0.0), (True, 5, 5, 8.75)]
 
 
+def test_widening_keeps_the_views_that_read_the_landing_table(db, server, make_tlc_client):
+    # dbt's bronze views read the landing table; Postgres refuses to retype a column a view uses,
+    # while BigQuery's late-binding views never notice a relaxed column (#72).
+    server.publish("yellow_tripdata_2025-01.parquet", yellow_2025(5, 4, datetime(2025, 1, 1)))
+    server.publish("yellow_tripdata_2023-12.parquet", yellow_2023(6, 4, datetime(2023, 12, 1)))
+    client = make_tlc_client()
+    follow(client, month_body("2025-01", "2025-02"))
+    conn, schema = db
+    conn.execute(
+        f'CREATE VIEW "{schema}".bronze AS SELECT cast(passenger_count AS bigint) AS passengers,'
+        f' vendorid, _source_uri FROM "{schema}".tlc_yellow'
+    )
+    conn.execute(
+        f'CREATE VIEW "{schema}".bronze_count AS SELECT count(*) AS n FROM "{schema}".bronze'
+    )
+
+    responses = follow(client, month_body("2023-12", "2024-01"))
+
+    assert responses[-1]["status"] == "ok", responses[-1]
+    types = dict(
+        conn.execute(
+            "SELECT column_name, data_type FROM information_schema.columns"
+            " WHERE table_schema = %s AND table_name = 'tlc_yellow'",
+            [schema],
+        ).fetchall()
+    )
+    assert types["passenger_count"] == "double precision"
+    assert types["vendorid"] == "bigint"
+    assert conn.execute(f'SELECT n FROM "{schema}".bronze_count').fetchone() == (11,)
+    view_types = dict(
+        conn.execute(
+            "SELECT column_name, data_type FROM information_schema.columns"
+            " WHERE table_schema = %s AND table_name = 'bronze'",
+            [schema],
+        ).fetchall()
+    )
+    # The views keep the column types they had; the next dbt build of bronze re-derives them.
+    assert view_types == {"passengers": "bigint", "vendorid": "integer", "_source_uri": "text"}
+
+
 def test_an_incompatible_retype_fails_without_retry(db, server, make_tlc_client):
     server.publish("yellow_tripdata_2025-10.parquet", yellow_2025(4, 4, OCT))
     server.publish("yellow_tripdata_2025-11.parquet", retyped_flag(4, datetime(2025, 11, 1)))

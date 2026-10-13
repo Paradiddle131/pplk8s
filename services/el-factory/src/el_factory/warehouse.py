@@ -240,10 +240,32 @@ class PostgresWarehouse:
                         qualified, sql.Identifier(name), sql.SQL(kind)
                     )
                 )
+            if not widen:
+                return
+            # Postgres refuses to retype a column a view reads, so the views over the table (dbt's
+            # bronze, and views on those) are dropped and recreated around the change, in this
+            # transaction. BigQuery's views are late-binding and need none of this (#72).
+            views = _dependent_views(cur, self._schema, table_name)
+            for schema, name, _, _ in reversed(views):
+                cur.execute(sql.SQL("DROP VIEW {}").format(sql.Identifier(schema, name)))
             for name, kind in widen:
                 cur.execute(
                     sql.SQL("ALTER TABLE {} ALTER COLUMN {} TYPE {}").format(
                         qualified, sql.Identifier(name), sql.SQL(kind)
+                    )
+                )
+            for schema, name, definition, columns in views:
+                # Postgres stores a cast to a column's current type as a bare column, so the saved
+                # definition would follow the widened type; casting back keeps each view's columns.
+                select = sql.SQL(", ").join(
+                    sql.SQL("cast({} AS {}) AS {}").format(
+                        sql.Identifier(column), sql.SQL(kind), sql.Identifier(column)
+                    )
+                    for column, kind in columns
+                )
+                cur.execute(
+                    sql.SQL("CREATE VIEW {} AS SELECT {} FROM ({}) AS widened").format(
+                        sql.Identifier(schema, name), select, sql.SQL(definition.rstrip("; \n"))
                     )
                 )
 
@@ -314,6 +336,45 @@ class PostgresWarehouse:
                 "DELETE FROM ops.file_chunks WHERE source_uri = %s AND etag <> %s",
                 [source_uri, etag],
             )
+
+
+def _dependent_views(
+    cur: psycopg.Cursor, schema: str, table_name: str
+) -> list[tuple[str, str, str, list[tuple[str, str]]]]:
+    """(schema, name, definition, [(column, type)]) of every view reading the table, directly or
+    through other views, each listed after the views it reads, so they can be recreated in order
+    and dropped in reverse."""
+    cur.execute(
+        """
+        WITH RECURSIVE dependents(oid, depth) AS (
+            SELECT rewrite.ev_class, 1
+            FROM pg_depend dep
+            JOIN pg_rewrite rewrite ON rewrite.oid = dep.objid
+            WHERE dep.classid = 'pg_rewrite'::regclass
+              AND dep.refobjid = format('%%I.%%I', %s::text, %s::text)::regclass
+              AND rewrite.ev_class <> dep.refobjid
+            UNION ALL
+            SELECT rewrite.ev_class, dependents.depth + 1
+            FROM dependents
+            JOIN pg_depend dep
+              ON dep.refobjid = dependents.oid AND dep.classid = 'pg_rewrite'::regclass
+            JOIN pg_rewrite rewrite ON rewrite.oid = dep.objid
+            WHERE rewrite.ev_class <> dependents.oid
+        )
+        SELECT ns.nspname, cls.relname, pg_get_viewdef(cls.oid),
+            (SELECT array_agg(array[att.attname::text, format_type(att.atttypid, att.atttypmod)]
+                              ORDER BY att.attnum)
+             FROM pg_attribute att
+             WHERE att.attrelid = cls.oid AND att.attnum > 0 AND NOT att.attisdropped)
+        FROM (SELECT oid, max(depth) AS depth FROM dependents GROUP BY oid) found
+        JOIN pg_class cls ON cls.oid = found.oid
+        JOIN pg_namespace ns ON ns.oid = cls.relnamespace
+        WHERE cls.relkind = 'v'
+        ORDER BY found.depth, ns.nspname, cls.relname
+        """,
+        [schema, table_name],
+    )
+    return [(row[0], row[1], row[2], [(c, t) for c, t in row[3]]) for row in cur.fetchall()]
 
 
 def _lock_key(schema: str, table_name: str) -> str:
