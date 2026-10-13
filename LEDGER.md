@@ -507,6 +507,12 @@ Entry format:
 - Decisions: none new (D36 as planned); the zone seed sits under `seeds/bronze/`, so folder selection builds it with bronze.
 - Open: #57 (DAG), #72, #73.
 
+## 2026-10-13 — Phase 8 — EL Factory publication probe (#54)
+- Done: `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` answers `published` (`source_uri`, `etag`, `size`) or `not_published` from one `HEAD`, reusing the 403 classification of #53; a CDN block is a retryable 503. PLAN contract and README updated; `ELF_IMAGE` 0.5.0.
+- Evidence: el-factory pytest 101 passed (10 new against the recorded CloudFront/S3 response shapes, no GET issued); live probe from the lab host: yellow 2026-08 `published` with etag `"29cbf7399f1d6ffc4b505639ccbb0c8d-4"` (the one `ops.file_versions` holds) and 59,043,961 bytes, green 2026-08 `published`, yellow 2026-10 `not_published`.
+- Decisions: `not_published` is a 200, not an error: for the sensor it is an expected answer, and only the retryable 503 means "ask again later for another reason".
+- Open: #56 (PublicationSensor), #57.
+
 ## 2026-10-13 — Phase 8 — deferrable PublicationSensor (#56)
 - Done: `ElFactoryHook.publication()` reads `GET /publication` (#54); `PublicationSensor` checks once on the worker, then defers to `PublicationTrigger`, which asks again every 3 h (configurable) for up to 120 days; "not published" and retryable failures (a CDN block) keep the wait going, a non-retryable answer fails the task; the event carries `source_uri`, `etag`, `size`.
 - Evidence: airflow pytest 143 passed (16 new: the hook's published, not-published, 503 and malformed answers; the trigger's round trip and its three outcomes; the sensor's immediate return, deferral with the whole timeout, and fail-fast).

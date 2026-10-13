@@ -14,6 +14,8 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
   A `cursor` query parameter overrides the body cursor.
   The response is `{"status":"ok","source","entity","page","pages","rows","object","next_url"}`: `page` is the cursor the request started at, `pages` and `rows` count what it loaded, and `object` is the last page it staged.
   Callers POST the same body to `next_url` until it is `null`.
+- `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` asks whether a file source's month is published, with one `HEAD` and no download: 200 `{"status": "published", "source_uri", "etag", "size"}`, or 200 `{"status": "not_published", "source_uri"}` when S3 answers `AccessDenied`.
+  A CloudFront block is a retryable 503, never `not_published` (issue #36); a source that is not file-backed is 400.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
   The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.
@@ -85,7 +87,7 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 - `synthetic.orders` is generated per UTC day from a seed of that day, so an order's content never depends on the interval that requested it.
 - `open_meteo.hourly_weather` fetches hourly temperature and precipitation for Amsterdam, Istanbul, and London, one page per location.
 
-- `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: `docs/research/tlc-source-facts.md` on branch `research/tlc-source-facts` (issue #36).
+- `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: [`docs/research/tlc-source-facts.md`](../../docs/research/tlc-source-facts.md) (issue #36).
 
 All synthetic output is deterministic and all data is synthetic or public; TLC data is downloaded at run time and never committed.
 
