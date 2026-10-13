@@ -16,6 +16,10 @@ defaultRules:
     kubeSchedulerAlerting: false
     kubeSchedulerRecording: false
     kubeProxy: false
+    # KubeAPIErrorBudgetBurn's slowest pair (3d/6h) fires on WSL2: the host stalls the virtual disk's
+    # flushes, so etcd writes and the lease renewals behind them take over 1 s, which the SLO counts
+    # as errors (issue #25). manifests/prometheus-rules.yaml keeps the other three pairs.
+    kubeApiserverSlos: false
   # Both fire falsely on WSL2, whose monotonic clock runs ~6.5% slower than wall time: Hyper-V
   # TimeSync steps the wall clock forward ~2 s every ~32 s to catch up with the host (issue #5).
   disabled:
