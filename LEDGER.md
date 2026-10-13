@@ -531,3 +531,9 @@ Entry format:
 - Evidence: every job on #77 failed in 4-5 s ("recent account payments have failed or your spending limit needs to be increased"); a PR push billed ~31 runner minutes (kind ~23, images ~6, test ~2); `make verify` on `main` + this change passed in 32 s with a warm build cache (158 + 101 + 32 tests); the workflows validate against the GitHub workflow schema.
 - Decisions: D26 rewritten (laptop gate, light CI).
 - Open: the `test` job still fails while Actions billing is blocked; #72, #73, #58.
+
+## 2026-10-13 — Phase 8 — the warehouse stand-in stops growing on reloads
+- Done: the Compose warehouse runs autovacuum unthrottled (`autovacuum_vacuum_cost_delay=0`, `autovacuum_naptime=15s`), so rows a reload replaces are reclaimed and reused instead of piling up. Re-running the same data already wrote nothing new: EL Factory skips a file version `ops.file_versions` holds and resumes a partial one, and the dbt `tlc` models replace their month.
+- Evidence: at the defaults, three back-to-back `dbt build --select tag:tlc` of 2026-08 grew `silver.tlc_trips` 1.1 → 2.2 → 3.4 → 4.5 GB (10 M dead tuples); with this setting three more held it at 2.30-2.32 GB. A scratch table replaced by insert-new-then-delete-old (the republish path), 3 M rows, stayed between 313 and 625 MB over four cycles. A dbt post-hook `VACUUM` also worked (16-21 s per build), but with `SKIP_LOCKED` it was a silent no-op whenever autovacuum held the table, and it is redundant once autovacuum keeps up, so it was dropped.
+- Decisions: none in PLAN (stand-in tuning; BigQuery has nothing to vacuum).
+- Open: #73 (retiring old months) still decides the steady-state size.
