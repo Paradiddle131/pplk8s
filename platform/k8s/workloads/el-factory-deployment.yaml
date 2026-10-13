@@ -56,10 +56,10 @@ spec:
           resources:
             requests: # what the scheduler reserves on a node
               cpu: 100m
-              memory: 128Mi
+              memory: 512Mi # one TLC chunk in flight (~400 MB over the ~140 MB idle)
             limits: # the kernel enforces: memory over the limit is OOMKilled, CPU is throttled
               cpu: 500m
-              memory: 256Mi
+              memory: 1Gi # D35's ceiling; two chunks in flight (one per process) peaked at 817 MiB
           securityContext: # container level
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true # the image never writes outside /tmp

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -37,6 +37,31 @@ class FileLoad:
     generation: int
 
 
+# File-source chunks (D34) are keyed by the file version they came from, so a resumed or retried
+# request replaces exactly one chunk and a republished file never mixes with the old one.
+CHUNK_METADATA_COLUMNS = (
+    ("_run_id", "text NOT NULL"),
+    ("_source_uri", "text NOT NULL"),
+    ("_etag", "text NOT NULL"),
+    ("_chunk", "integer NOT NULL"),
+    ("_loaded_at", "timestamptz NOT NULL DEFAULT now()"),
+)
+
+
+@dataclass(frozen=True)
+class ChunkLoad:
+    run_id: str
+    source_uri: str
+    etag: str
+    chunk: int
+
+
+@dataclass(frozen=True)
+class FileProgress:
+    loaded: frozenset[int]
+    completed: bool
+
+
 @dataclass(frozen=True)
 class PageLoad:
     run_id: str
@@ -65,8 +90,9 @@ class Warehouse(Protocol):
 
 
 class PostgresWarehouse:
-    def __init__(self, dsn: str) -> None:
+    def __init__(self, dsn: str, schema: str = SCHEMA) -> None:
         self._dsn = dsn
+        self._schema = schema
 
     def ensure_table(self, table: Table) -> None:
         self._ensure(
@@ -80,13 +106,16 @@ class PostgresWarehouse:
         self, table: Table, metadata: Sequence[tuple[str, str]], key: Sequence[str]
     ) -> None:
         # The advisory lock serialises concurrent gunicorn workers creating the same table.
-        qualified = sql.Identifier(SCHEMA, table.name)
+        qualified = sql.Identifier(self._schema, table.name)
         columns = [*table.columns, *metadata]
         definition = sql.SQL(", ").join(
             sql.SQL("{} {}").format(sql.Identifier(name), sql.SQL(kind)) for name, kind in columns
         )
         with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
-            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [_lock_key(table)])
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [_lock_key(self._schema, table.name)],
+            )
             cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(qualified, definition))
             cur.execute(
                 sql.SQL("CREATE INDEX IF NOT EXISTS {} ON {} ({})").format(
@@ -97,7 +126,7 @@ class PostgresWarehouse:
             )
 
     def replace_page(self, table: Table, load: PageLoad, rows: Sequence[Mapping[str, Any]]) -> int:
-        qualified = sql.Identifier(SCHEMA, table.name)
+        qualified = sql.Identifier(self._schema, table.name)
         names = [name for name, _ in table.columns]
         meta = ["_run_id", "_interval_start", "_interval_end", "_page", "_source_uri"]
         insert = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
@@ -128,7 +157,8 @@ class PostgresWarehouse:
         ]
         with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [_page_key(table, load)]
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [_page_key(self._schema, table, load)],
             )
             cur.execute(delete, delete_params)
             cur.executemany(insert, params)
@@ -137,7 +167,7 @@ class PostgresWarehouse:
     def replace_file(
         self, table: Table, load: FileLoad, rows: Sequence[Mapping[str, Any]]
     ) -> int | None:
-        qualified = sql.Identifier(SCHEMA, table.name)
+        qualified = sql.Identifier(self._schema, table.name)
         names = [name for name, _ in table.columns]
         meta = ["_run_id", "_source_uri", "_generation"]
         insert = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
@@ -153,7 +183,7 @@ class PostgresWarehouse:
             # One lock per object, so loads of two generations never interleave.
             cur.execute(
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
-                [f"{_lock_key(table)}|{load.source_uri}"],
+                [f"{_lock_key(self._schema, table.name)}|{load.source_uri}"],
             )
             cur.execute(
                 sql.SQL("SELECT max(_generation) FROM {} WHERE _source_uri = %s").format(qualified),
@@ -169,13 +199,129 @@ class PostgresWarehouse:
             cur.executemany(insert, params)
         return len(params)
 
+    # ---- file-source chunks (D34) ------------------------------------------------------------
 
-def _lock_key(table: Table) -> str:
-    return f"{SCHEMA}.{table.name}"
+    def landing_columns(self, table_name: str) -> dict[str, str]:
+        """Data columns of a chunk landing table (metadata columns left out); {} if absent."""
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT column_name, data_type FROM information_schema.columns"
+                " WHERE table_schema = %s AND table_name = %s",
+                [self._schema, table_name],
+            )
+            return {name: kind for name, kind in cur.fetchall() if not name.startswith("_")}
+
+    def prepare_landing_table(
+        self,
+        table_name: str,
+        add: Sequence[tuple[str, str]],
+        widen: Sequence[tuple[str, str]],
+    ) -> None:
+        """Create the table if needed, add new columns, widen numeric ones; all under one lock."""
+        qualified = sql.Identifier(self._schema, table_name)
+        metadata = sql.SQL(", ").join(
+            sql.SQL("{} {}").format(sql.Identifier(n), sql.SQL(k))
+            for n, k in CHUNK_METADATA_COLUMNS
+        )
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [_lock_key(self._schema, table_name)],
+            )
+            cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(qualified, metadata))
+            cur.execute(
+                sql.SQL("CREATE INDEX IF NOT EXISTS {} ON {} (_source_uri, _etag, _chunk)").format(
+                    sql.Identifier(f"{table_name}_chunk_idx"), qualified
+                )
+            )
+            for name, kind in add:
+                cur.execute(
+                    sql.SQL("ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {}").format(
+                        qualified, sql.Identifier(name), sql.SQL(kind)
+                    )
+                )
+            for name, kind in widen:
+                cur.execute(
+                    sql.SQL("ALTER TABLE {} ALTER COLUMN {} TYPE {}").format(
+                        qualified, sql.Identifier(name), sql.SQL(kind)
+                    )
+                )
+
+    def file_progress(self, source_uri: str, etag: str) -> FileProgress:
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT chunk FROM ops.file_chunks WHERE source_uri = %s AND etag = %s",
+                [source_uri, etag],
+            )
+            loaded = frozenset(row[0] for row in cur.fetchall())
+            cur.execute(
+                "SELECT 1 FROM ops.file_versions WHERE source_uri = %s AND etag = %s",
+                [source_uri, etag],
+            )
+            return FileProgress(loaded=loaded, completed=cur.fetchone() is not None)
+
+    def replace_chunk(
+        self, table_name: str, load: ChunkLoad, columns: Sequence[str], csv: Iterable[bytes]
+    ) -> int:
+        """Replace one chunk's rows from CSV (data columns then metadata) and record it."""
+        qualified = sql.Identifier(self._schema, table_name)
+        names = [*columns, "_run_id", "_source_uri", "_etag", "_chunk"]
+        copy = sql.SQL("COPY {} ({}) FROM STDIN WITH (FORMAT csv)").format(
+            qualified, sql.SQL(", ").join(sql.Identifier(n) for n in names)
+        )
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [f"{_lock_key(self._schema, table_name)}|{load.source_uri}|{load.chunk}"],
+            )
+            cur.execute(
+                sql.SQL(
+                    "DELETE FROM {} WHERE _source_uri = %s AND _etag = %s AND _chunk = %s"
+                ).format(qualified),
+                [load.source_uri, load.etag, load.chunk],
+            )
+            with cur.copy(copy) as writer:
+                for part in csv:
+                    writer.write(part)
+            rows = cur.rowcount
+            cur.execute(
+                "INSERT INTO ops.file_chunks (source_uri, etag, chunk, rows)"
+                " VALUES (%s, %s, %s, %s)"
+                " ON CONFLICT (source_uri, etag, chunk)"
+                " DO UPDATE SET rows = EXCLUDED.rows, loaded_at = now()",
+                [load.source_uri, load.etag, load.chunk, rows],
+            )
+        return rows
+
+    def complete_version(self, table_name: str, source_uri: str, etag: str) -> None:
+        """Mark a file version complete and drop every other version's rows and chunk records."""
+        qualified = sql.Identifier(self._schema, table_name)
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [f"{_lock_key(self._schema, table_name)}|{source_uri}"],
+            )
+            cur.execute(
+                "INSERT INTO ops.file_versions (source_uri, etag) VALUES (%s, %s)"
+                " ON CONFLICT (source_uri, etag) DO NOTHING",
+                [source_uri, etag],
+            )
+            cur.execute(
+                sql.SQL("DELETE FROM {} WHERE _source_uri = %s AND _etag <> %s").format(qualified),
+                [source_uri, etag],
+            )
+            cur.execute(
+                "DELETE FROM ops.file_chunks WHERE source_uri = %s AND etag <> %s",
+                [source_uri, etag],
+            )
 
 
-def _page_key(table: Table, load: PageLoad) -> str:
+def _lock_key(schema: str, table_name: str) -> str:
+    return f"{schema}.{table_name}"
+
+
+def _page_key(schema: str, table: Table, load: PageLoad) -> str:
     return (
-        f"{_lock_key(table)}|{load.run_id}|{load.interval.start.isoformat()}"
+        f"{_lock_key(schema, table.name)}|{load.run_id}|{load.interval.start.isoformat()}"
         f"|{load.interval.end.isoformat()}|{load.page}"
     )

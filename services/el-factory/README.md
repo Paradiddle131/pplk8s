@@ -48,6 +48,21 @@ A generation that is no longer live, or older than one already loaded, is 409 wi
 4. Under an advisory lock per object, the load deletes every row of that object and inserts the new rows in one transaction.
    Reloading a generation leaves row counts unchanged, a newer generation replaces the rows instead of adding to them, and an older generation never overwrites a newer one.
 
+### Extracting a file source (tlc)
+
+`POST /extract` for source `tlc` fetches the file itself instead of paging an API (PLAN.md D34).
+The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<entity>_tripdata_<YYYY-MM>.parquet`.
+
+1. A `HEAD` reads the file's `ETag` and size; S3's 403 `AccessDenied` (`Server: AmazonS3`) is 502 with `"published": false`, and CloudFront's own 403 block is a retryable 503.
+2. The resume point is the first chunk (Parquet row group) `ops.file_chunks` has not recorded for that `ETag`; the request's cursor is informational.
+   So a retry without a cursor redoes at most the chunk that was in flight, and a republished file (new `ETag`) starts over at chunk 0.
+3. The file's schema is compared with `ds_source.tlc_<entity>`: every typed column lands under its lower-cased name, new columns are added, integer widens to bigint and then to double precision, and any other type change is 502 non-retryable. All-null columns are left out until a file gives them a type.
+4. Each chunk is read with one ranged GET (`If-Match: <ETag>`; a 412 means the file changed and is a retryable 503), staged to `gs://<GCS_BUCKET>/tlc/<entity>/<YYYY-MM>/<etag>/chunk-<NNNNN>.parquet`, and loaded from the staged object with `COPY` in 100,000-row batches.
+   The chunk's rows and its `ops.file_chunks` row are written in one transaction, so a chunk is either loaded and recorded or neither.
+5. Chunks repeat until the file is done or `MAX_RUN_TIME` is spent, as for paged sources; at most one chunk per process is in flight, to stay under the 1 GiB memory ceiling (D35).
+6. The last chunk writes `ops.file_versions` and deletes every other version's rows and chunk records for that file.
+   The response adds `source_uri`, `etag` and `chunks` (the file's row-group count); `page` is the first chunk the request loaded.
+
 ## Configuration
 
 | Variable | Default | Meaning |
@@ -61,6 +76,7 @@ A generation that is no longer live, or older than one already loaded, is 409 wi
 | `MAX_RUN_TIME` | `45` | Seconds one `/extract` request keeps loading pages before it answers `next_url`; `0` gives one page per request. Keep it at most half the caller's read timeout (120 s in `ElFactoryHook`) |
 | `CATALOG_PATH` | `catalog.yaml` next to the package | Catalog file, validated at startup |
 | `OPEN_METEO_URL` | `https://archive-api.open-meteo.com/v1/archive` | Open-Meteo archive endpoint, overridable for tests |
+| `TLC_BASE_URL` | `https://d37ci6vzurychx.cloudfront.net/trip-data` | Where the TLC trip files live; the only egress host the `tlc` source needs |
 | `PORT` | `8080` | Port the image's gunicorn binds to |
 
 ## Sources
@@ -69,7 +85,9 @@ A generation that is no longer live, or older than one already loaded, is 409 wi
 - `synthetic.orders` is generated per UTC day from a seed of that day, so an order's content never depends on the interval that requested it.
 - `open_meteo.hourly_weather` fetches hourly temperature and precipitation for Amsterdam, Istanbul, and London, one page per location.
 
-All synthetic output is deterministic and all data is synthetic or public.
+- `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: `docs/research/tlc-source-facts.md` on branch `research/tlc-source-facts` (issue #36).
+
+All synthetic output is deterministic and all data is synthetic or public; TLC data is downloaded at run time and never committed.
 
 ## Warehouse contract
 
@@ -80,6 +98,9 @@ All metadata columns except `_loaded_at` are `NOT NULL`.
 Each table also has the index `<table>_load_key_idx` on `(_run_id, _interval_start, _interval_end, _page)`.
 
 File entities have their own metadata columns, because a file is keyed by the object it came from rather than by run and interval: `_run_id text`, `_source_uri text`, `_generation bigint`, all `NOT NULL`, plus `_loaded_at timestamptz DEFAULT now()`, and the index `<table>_load_key_idx` on `(_source_uri, _generation)`.
+
+File-source landing tables (`ds_source.tlc_<entity>`) take their data columns from the files themselves (see "Extracting a file source"), followed by `_run_id text`, `_source_uri text`, `_etag text`, `_chunk integer`, all `NOT NULL`, plus `_loaded_at timestamptz DEFAULT now()`, and the index `<table>_chunk_idx` on `(_source_uri, _etag, _chunk)`.
+They are created by their first chunk, not at startup.
 
 | Table | Columns |
 |---|---|
@@ -97,6 +118,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 ```
 
 The unit tests use in-memory fakes for storage and the warehouse and mock the Open-Meteo HTTP call, so they need no network and no services.
+The `tlc` tests serve tiny generated Parquet files from a local HTTP server that answers like the TLC CDN (ranges, `ETag`, `If-Match`, both kinds of 403); `tests/test_tlc_extract.py` also needs the Compose warehouse (`make services-up`), writes to a throwaway schema, and skips without it unless `PPLK8S_REQUIRE_WAREHOUSE=1`.
 
 ## Image
 
