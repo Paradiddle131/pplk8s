@@ -506,3 +506,9 @@ Entry format:
 - Found: `ds_source.tlc_yellow` held 21 GB for 3.5 GB of live rows (bloat from the #53 probe reloads), now reclaimed by `VACUUM FULL`; EL Factory's column widening fails once a view reads the landing table (#72); D35's month scope at ≈ 2.3 GB per yellow month overruns the 15 GB ceiling, and nothing retires old months (#73, needs-user).
 - Decisions: none new (D36 as planned); the zone seed sits under `seeds/bronze/`, so folder selection builds it with bronze.
 - Open: #57 (DAG), #72, #73.
+
+## 2026-10-13 — Phase 8 — EL Factory publication probe (#54)
+- Done: `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` answers `published` (`source_uri`, `etag`, `size`) or `not_published` from one `HEAD`, reusing the 403 classification of #53; a CDN block is a retryable 503. PLAN contract and README updated; `ELF_IMAGE` 0.5.0.
+- Evidence: el-factory pytest 101 passed (10 new against the recorded CloudFront/S3 response shapes, no GET issued); live probe from the lab host: yellow 2026-08 `published` with etag `"29cbf7399f1d6ffc4b505639ccbb0c8d-4"` (the one `ops.file_versions` holds) and 59,043,961 bytes, green 2026-08 `published`, yellow 2026-10 `not_published`.
+- Decisions: `not_published` is a 200, not an error: for the sensor it is an expected answer, and only the retryable 503 means "ask again later for another reason".
+- Open: #56 (PublicationSensor), #57.

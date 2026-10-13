@@ -9,6 +9,7 @@ double, and any other type change is refused.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -20,6 +21,8 @@ from el_factory.model import Interval
 
 SOURCE = "tlc"
 DEFAULT_BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data"
+
+MONTH_PATTERN = re.compile(r"[0-9]{4}-(0[1-9]|1[0-2])")
 
 # Postgres types of landed columns, and the widening order among the numeric ones.
 INTEGER, BIGINT, DOUBLE = "integer", "bigint", "double precision"
@@ -59,6 +62,13 @@ def data_month(interval: Interval) -> str:
     if start != datetime(start.year, start.month, 1, tzinfo=UTC) or end != following:
         raise BadRequest("a tlc interval must span exactly one calendar month (UTC)")
     return f"{start.year:04d}-{start.month:02d}"
+
+
+def parse_month(raw: str | None) -> str:
+    """A data month as ``YYYY-MM`` (a query parameter), or BadRequest."""
+    if raw is None or not MONTH_PATTERN.fullmatch(raw):
+        raise BadRequest("'month' is required and must be YYYY-MM")
+    return raw
 
 
 def postgres_type(name: str, kind: pa.DataType) -> str | None:
