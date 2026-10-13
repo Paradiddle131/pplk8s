@@ -124,6 +124,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 ## 6. Verify and hand off
 
 **Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; CI builds the images.
+A change to an image's contents (a Dockerfile, dependencies, dbt models, service code) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image.
 Opening the PR runs `ci.yaml` and `integration.yaml` (slim kind check) on GitHub Actions; wait for their check runs and report them.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
