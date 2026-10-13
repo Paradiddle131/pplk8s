@@ -17,6 +17,11 @@ Selection (PLAN.md D20): every model carries a pipeline tag next to its layer ta
 builds the intersection ``tag:<pipeline>,tag:<stage>``, so one pipeline's stage never rebuilds
 another pipeline's models.
 
+Vars (PLAN.md D36): ``vars`` becomes one ``--vars <json>`` argument, e.g. the data month a tlc
+build replaces.  ``arguments`` is a templated field, so a value may be a Jinja template that the
+task renders at run time; keep such templates free of double quotes, which JSON escapes.
+On Cloud Run the same list becomes the Job execution's container-override args.
+
 Image (PLAN.md D16): the Airflow Variable ``dbt_image``, required and resolved at task run time
 (so the DAG parse never reads the metadata DB).  The deploy sets it from ``DBT_IMAGE``; no tag is
 written here, because a default would silently run a stale image after a bump.  On Cloud Run the
@@ -26,6 +31,7 @@ Namespace: the Variable ``dbt_namespace``, default below.
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import timedelta
 from typing import Any
@@ -55,20 +61,30 @@ def selection(pipeline: str, stage: str) -> str:
 
 
 def run_dbt(
-    stage: str, *, pipeline: str, task_id: str | None = None, **kwargs: Any
+    stage: str,
+    *,
+    pipeline: str,
+    task_id: str | None = None,
+    vars: dict[str, Any] | None = None,  # noqa: A002 - dbt's own name for them
+    **kwargs: Any,
 ) -> KubernetesPodOperator:
     """Return the operator that runs ``dbt build --select tag:<pipeline>,tag:<stage>``.
+
+    ``vars`` adds ``--vars <json>``.
 
     ``kwargs`` override any operator argument (retries, execution_timeout, pool, ...).
     """
     select = selection(pipeline, stage)
+    arguments = ["build", "--select", select]
+    if vars:
+        arguments += ["--vars", json.dumps(vars)]
     options: dict[str, Any] = {
         "task_id": task_id or f"dbt_{stage}",
         # KPO appends a random suffix, so concurrent runs never collide.
         "name": f"dbt-{pipeline.replace('_', '-')}-{stage}",
         "namespace": _NAMESPACE,
         "image": _IMAGE,
-        "arguments": ["build", "--select", select],
+        "arguments": arguments,
         "service_account_name": SERVICE_ACCOUNT,
         "env_from": [
             k8s.V1EnvFromSource(secret_ref=k8s.V1SecretEnvSource(name=CREDENTIALS_SECRET))

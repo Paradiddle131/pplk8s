@@ -18,6 +18,7 @@ from el_factory.chunks import extract_file
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
 from el_factory.model import Interval
+from el_factory.remote_file import NotPublished, head
 from el_factory.sources import Registry, build_registry, files, load_catalog, tlc
 from el_factory.sources.base import Entity
 from el_factory.staging import object_uri, read_staged, stage_page
@@ -98,6 +99,23 @@ def create_app(
         if entries is None:
             raise NotFound(f"unknown pipeline: {pipeline}")
         return jsonify([{"source": e.source, "entity": e.entity} for e in entries])
+
+    @app.get("/publication")
+    def publication() -> Response:
+        # Is a file source's month published yet (D34)? One HEAD, no download. S3's AccessDenied
+        # answers not_published; a CDN block or an upstream failure is a retryable 503, so a
+        # waiting sensor keeps polling instead of reading a block as "not yet".
+        entity = registry.get(_query(request.args, "source"), _query(request.args, "entity"))
+        if not isinstance(entity, tlc.TlcEntity):
+            raise BadRequest(f"{entity.source}/{entity.name} is not a file source")
+        month = tlc.parse_month(request.args.get("month"))
+        url = entity.url(month)
+        answer = {"source": entity.source, "entity": entity.name, "month": month, "source_uri": url}
+        try:
+            remote = head(url)
+        except NotPublished:
+            return jsonify({"status": "not_published", **answer})
+        return jsonify({"status": "published", **answer, "etag": remote.etag, "size": remote.size})
 
     @app.post("/extract")
     def extract() -> Response:
@@ -259,6 +277,13 @@ def _parse_extract(body: dict[str, Any], query_cursor: str | None) -> ExtractReq
         interval=Interval(start=start, end=end),
         cursor=_cursor(raw_cursor),
     )
+
+
+def _query(args: Any, key: str) -> str:
+    value = args.get(key)
+    if not value:
+        raise BadRequest(f"query parameter '{key}' is required")
+    return str(value)
 
 
 def _required_str(body: dict[str, Any], key: str) -> str:

@@ -8,8 +8,8 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.4.0
-DBT_IMAGE ?= localhost:5001/dbt:0.3.0
+ELF_IMAGE ?= localhost:5001/el-factory:0.5.0
+DBT_IMAGE ?= localhost:5001/dbt:0.4.0
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
 
@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill
+.PHONY: help tools lint cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -67,6 +67,9 @@ el-factory-down: ## Stop the local EL Factory lite container
 	scripts/el-factory-local.sh down
 
 STAGE ?= bronze
+tlc-dbt-check: services-up ## Build the tlc dbt models month by month on dbt/dev/tlc_fixture.sql in dbt_dev and assert month replacement (#55)
+	tests/e2e/tlc-dbt-check.sh
+
 dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed) against the warehouse
 	docker run --rm --network pplk8s $(DBT_IMAGE) build --select $(STAGE)
 

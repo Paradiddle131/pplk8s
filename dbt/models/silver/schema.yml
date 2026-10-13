@@ -59,3 +59,45 @@ models:
       - name: return_date
         description: UTC date of returned_at.
         tests: [not_null]
+
+  - name: slv_tlc_trips
+    description: >
+      Clean yellow and green trips of the latest completed file version of each data month, one month replaced
+      per build (delete+insert on data_month). Alias silver.tlc_trips.
+    columns:
+      - name: trip_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['yellow', 'green']
+      - name: data_month
+        tests: [not_null]
+      - name: pickup_at
+        description: NYC local time, inside data_month.
+        tests: [not_null]
+
+  - name: slv_tlc_trips_quarantine
+    description: >
+      Trips of the same file versions that broke a rule (D36), with the first rule broken. Alias
+      silver.tlc_trips_quarantine. Warns above 2 % of a month quarantined, fails above 10 %.
+    tests:
+      - quarantine_share:
+          name: tlc_quarantine_share_warn
+          arguments:
+            clean: ref('slv_tlc_trips')
+            max_share: 0.02
+          config:
+            severity: warn
+      - quarantine_share:
+          name: tlc_quarantine_share_error
+          arguments:
+            clean: ref('slv_tlc_trips')
+            max_share: 0.10
+    columns:
+      - name: data_month
+        tests: [not_null]
+      - name: quarantine_reason
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['negative_amount', 'pickup_outside_month', 'dropoff_before_pickup', 'over_24_hours']

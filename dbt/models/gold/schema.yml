@@ -38,3 +38,12 @@ models:
         tests: [not_null]
       - name: date
         tests: [not_null]
+
+  - name: gld_tlc_daily_trips
+    description: >
+      One row per (data_month, trip_type, pickup_date, pickup_location_id), one month replaced per build.
+      Alias gold.tlc_daily_trips.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['data_month', 'trip_type', 'pickup_date', 'pickup_location_id']
