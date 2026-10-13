@@ -458,6 +458,29 @@ Entry format:
 - Decisions: D23 amended (retry forever, git-sync metrics, `AirflowGitSyncFailing`).
 - Open: #25, #42.
 
+## 2026-10-13 — Phase 6 fix — KubeAPIErrorBudgetBurn on the lab (#25)
+
+- Done: the chart's `kube-apiserver-slos` group is off (`defaultRules.rules.kubeApiserverSlos: false`) and `lab-prometheus` keeps its 1h/5m, 6h/30m, and 1d/2h pairs verbatim as group `lab.kube-apiserver-slos`; only the 3d/6h pair is gone (PLAN D21, LESSONS).
+- Evidence: the alert fired 2026-10-12 06:41–13:16 UTC (3d/6h pair only).
+  In the 6 hours to 09:00 that day, 776 bad writes and 274 bad reads burned the budget; 749 were lease PUTs slower than 1 s and only 63 were 5xx (`/readyz` 500 ×52, `/livez` 500 ×4, lease PUT 504 ×7).
+  Hour by hour, slow apiserver writes equal slow etcd updates (`etcd_request_duration_seconds`, operation `update`), APF wait is zero, and the disk's average flush time doubled (12–14 ms vs 4–5 ms) in the overnight hours they peaked, with the CPU ~97% idle.
+  The 09:47 reboot's etcd log shows the same shape at startup (`slow fdatasync` 1.46 s, applies up to 1.5 s); pre-reboot logs are gone, as kind's `/var/log` does not survive a node restart.
+  Two minutes of `dd … conv=fdatasync` inside the control-plane node added no slow fsync, so the stalls come from the Windows host below the VM.
+  Harm: at 15:00 on 2026-10-11 (110 slow updates, 31 5xx) the controller-manager and scheduler lost their leases and restarted.
+  Back-test over the 2 days of history: the three kept pairs never fired (peak burn 3.3x, 1.7x, 1.9x below threshold).
+  After the change Grafana's "Firing alerts" panel showed "No alerts firing"; `make phase6-check` passed (EXIT 0, ~66 min), and afterwards nothing fired.
+- Found: the db-cleanup CronJob's catch-up run at host boot fails before the metadata DB is up and pins `KubeJobFailed` until the Job is deleted (#62); re-ran the cleanup by hand and deleted the failed Job to clear the lab.
+  A port-forward left on 19090 makes `phase6-check` refuse to start; it says so clearly.
+- Decisions: D21 amended (WSL2 drops the 3d/6h pair; `--unsafe-no-fsync` rejected; GKE keeps all four pairs).
+- Open: #18 (PR #31; this check redeployed the lab from `main`, so its unmerged monitoring changes are off the lab until redeployed), #62.
+
+## 2026-10-13 — Lab hygiene — Compose services bound to a deleted worktree
+- Done: `platform/compose/up.sh` warns when run from a linked worktree (PR #67); the lab's warehouse and both sql-exporters were recreated from the main checkout; three merged worktrees removed; conflicts on #60, #31, #63 resolved by merging `main`.
+- Evidence: `docker inspect` showed three containers with `working_dir` `/tmp/wt62` and bind mounts into it after that worktree was removed; after `up.sh` from the main checkout all eight report the main checkout and pods reach `warehouse:5432`; merged alert rules pass `promtool check rules`.
+- Found: the Compose project name is fixed, so any worktree's `services-up` takes over the lab's containers; `finance_daily` stays paused and nothing alerts on late data (#65, #66).
+- Decisions: none.
+- Open: #65, #66.
+
 ## 2026-10-13 — Phase 8 (planning) — TLC monthly pipeline decided and sliced; first cloud runs reviewed
 - Done: resolved the TLC map's decision tickets with the user (time-boxed requests, dataset scope, monthly cadence; #37, #38, #39) and decided the dbt shape (#40); recorded them as D34–D36, amended D9, D15, D20, added Phase 8 (planned), and replaced the EL Factory line of `LESSONS.md` ("deferrable status sensor") with the time-box contract.
   Sliced the build into #52–#59, wired by native `blocked_by`; frontier: #52 (time box) and #55 (dbt models).
