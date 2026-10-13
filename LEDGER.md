@@ -417,7 +417,7 @@ Entry format:
 ## 2026-10-13 — Tooling — `pplk8s-worker` cloud routine (v0)
 
 - Done: `docs/agents/autopilot.md`, the standing brief for unattended cloud routine runs (orient, run board, non-conflicting work choice, wayfinder decision packets, draft PRs, at-a-glance handoff, local verification), and `docs/agents/cloud-setup.sh`, the environment's setup script (links dotfiles skills, writes cloud standing rules, turns commit attribution off).
-  Charted [Map: NYC TLC monthly pipeline](https://github.com/Paradiddle131/pplk8s/issues/35) and, in `claude-dotfiles`, [Map: reusable autopilot for cloud routines](https://github.com/Paradiddle131/claude-dotfiles/issues/1); opened the run board #43 and the classification-boundary issue #42.
+  Charted [Map: NYC TLC monthly pipeline](https://github.com/Paradiddle131/pplk8s/issues/35) and, in `claude-dotfiles`, [Map: reusable autopilot for cloud routines](https://github.com/Paradiddle131/claude-dotfiles/issues/1); opened the run board #43, the run-feedback issue #45 (temporary §8: every run leaves a structured retro and environment probes there), and the classification-boundary issue #42.
 - Evidence: `make lint` (now also covering `docs/agents/*.sh`) clean; the protocol is unexercised until the first routine run.
 - Found: cloud facts that shape the brief (claude-dotfiles#2): Docker and Compose run on cloud, kind probably does not; GitHub is REST-only; schedules are at most hourly.
 - Decisions: cloud runs never merge pplk8s PRs; handoffs show only what needs the user outside `<details>` (user, 2026-10-12).
