@@ -58,7 +58,11 @@ EOF
 git config --global user.name >/dev/null || git config --global user.name "Paradiddle131"
 git config --global user.email >/dev/null || git config --global user.email "Paradiddle131@users.noreply.github.com"
 
-# 6. Quick capability report for the run board (the agent reads it from the setup log).
+# 6. Docker: start the daemon with a registry mirror (the snapshot keeps no processes, so
+#    runs call this again; see the script).
+[ -n "$PPLK8S" ] && bash "$PPLK8S/docs/agents/cloud-docker.sh"
+
+# 7. Quick capability report for the run board (the agent reads it from the setup log).
 command -v docker >/dev/null && docker info >/dev/null 2>&1 && echo "docker: ok" || echo "docker: unavailable"
 command -v uv >/dev/null && echo "uv: ok" || echo "uv: missing (the agent installs it: pip install uv)"
 

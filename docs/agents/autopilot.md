@@ -28,10 +28,15 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   - labels: `gh api repos/Paradiddle131/pplk8s/issues/<n>/labels -f 'labels[]=autopilot'`
   - **Bodies from a file need capital `-F body=@file.md`**; `-f` posts the literal path.
     Read every body back after posting (`--jq '.body[0:80]'`).
-  - Draft → ready: REST cannot do it; use the GitHub MCP tool `update_pull_request` with `draft: false`.
+  - Draft → ready: `gh api -X POST repos/Paradiddle131/pplk8s/pulls/<n>/ccr/ready_for_review` (a proxy route; plain REST cannot do it), or the GitHub MCP tool `update_pull_request` with `draft: false`.
+- Start Docker first: `bash docs/agents/cloud-docker.sh` (idempotent).
+  The VM does not start the daemon, the setup snapshot keeps no processes, and anonymous Docker Hub pulls hit 429, so the script starts `dockerd` with `mirror.gcr.io` as registry mirror.
 - What runs on cloud: Docker and `docker compose`, `uv`, Postgres 16 (not started).
-  So `make lint`, `make test` (unit + DagBag), image builds (`docker build`, which runs `dbt parse` for dbt), and the Compose services (`make services-up`, `make phase1-check`) can run here.
-- What does not, as far as we know: kind (no bridge networking/iptables), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
+  So `make lint`, `make test` (unit + DagBag) and the Compose services (`make services-up`) run here.
+- Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build` and `make phase1-check` do not run; CI's `images` job builds the images.
+  Run dbt from the host instead: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …`; run EL Factory with `uv run gunicorn` and the env from `scripts/el-factory-local.sh`.
+- What does not: kind (the VM is cgroup v1 and kubelet 1.36 refuses it; settled 2026-10-12), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
+  The `kind` job in `integration.yaml` on GitHub Actions is the cluster check a cloud run can get.
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
 - Not on cloud: Hindsight, Atrium, the user's `~/.claude`, `localhost` services, the browser at `localhost:8080`.
   Skip Hindsight retains and Atrium registration; put durable facts in the PR/issue instead.
@@ -109,7 +114,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 
 ## 6. Verify and hand off
 
-**Verify what cloud can**, and never claim more: `make lint`, `make test`, the image builds of what you changed, and `make services-up` / `make phase1-check` when you touched EL Factory, dbt or the Compose services.
+**Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; CI builds the images.
 Opening the PR runs `ci.yaml` and `integration.yaml` (slim kind check) on GitHub Actions; wait for their check runs and report them.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
