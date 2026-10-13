@@ -209,6 +209,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - When every rule group misses evaluations at the same moment while each evaluation stays fast, check the node's clocks before tuning intervals: Prometheus counts missed slots on the wall clock, so a stepped clock fakes the misses.
 - [GKE] Keep a component's ServiceMonitor with the monitoring manifests, not behind a "monitoring CRDs exist" switch in its own chart; that switch made deploy order silently decide whether KEDA was scraped.
 - [GKE] Alert on task instances sitting in `queued` for minutes (`airflow_pool_queued_slots`): a broker restart drops the Celery message but not the task's state, and the scheduler only requeues it after `task_queued_timeout` (600 s), silently; lowering that timeout instead turns capacity waits into failures, because the third stuck attempt fails the task.
+- [GKE] When `KubeAPIErrorBudgetBurn` fires, split the burn into 5xx and slow requests before blaming errors: the apiserver SLO counts a write slower than 1 s (and a read slower than 1, 5, or 30 s by scope) as an error, and on the lab slow lease renewals were ~70% of the burn against ~6% for 5xx. Then compare `apiserver_request_sli_duration_seconds` with `etcd_request_duration_seconds` to see whether the time is spent in etcd.
 
 ## Upgrades and rollback
 
