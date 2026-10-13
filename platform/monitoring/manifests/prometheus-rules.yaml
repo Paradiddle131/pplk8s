@@ -1,4 +1,4 @@
-# Lab replacements for kube-prometheus-stack default rules that the values disable (values.yaml).
+# Replacements for kube-prometheus-stack default rules that the values disable (values.yaml).
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -19,3 +19,31 @@ spec:
           labels: {severity: warning}
           annotations:
             summary: "Rule group {{ $labels.rule_group }} took longer than its interval; its evaluations are being skipped."
+    - name: lab.kubernetes-apps
+      rules:
+        - alert: KubeJobFailed
+          # Replaces the default KubeJobFailed, which fires for as long as a failed Job object exists.
+          # A CronJob keeps its last failed Job (failedJobsHistoryLimit), so one failed run pinned the
+          # alert until someone deleted the Job, even after later runs succeeded (issue #62). Here a
+          # failed Job of a CronJob stops alerting once a run of that CronJob succeeds after it
+          # started, including one started by hand (`kubectl create job --from=cronjob/...`).
+          # Other failed Jobs alert as before.
+          expr: |
+            kube_job_failed{job="kube-state-metrics"} > 0
+            unless on (namespace, job_name)
+            (
+              max by (namespace, job_name, cronjob) (
+                label_replace(kube_job_owner{job="kube-state-metrics", owner_kind="CronJob"},
+                              "cronjob", "$1", "owner_name", "(.+)")
+              )
+              * on (namespace, cronjob) group_left
+              max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{job="kube-state-metrics"})
+              > on (namespace, job_name)
+              max by (namespace, job_name) (kube_job_status_start_time{job="kube-state-metrics"})
+            )
+          for: 15m
+          labels: {severity: warning}
+          annotations:
+            description: "Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete, and no later run of its CronJob has succeeded. Removing the failed Job after investigation clears the alert."
+            summary: Job failed to complete.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
