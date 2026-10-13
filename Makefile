@@ -129,7 +129,7 @@ phase6-check: airflow-up observability-up workloads-up airflow-drill-image ## Ph
 	tests/e2e/metadata-restore-drill.sh
 	tests/e2e/phase6-upgrade-drill.sh
 
-db-cleanup-check: airflow-up ## Run the metadata DB cleanup CronJob once: a 61-day-old crashed job row goes, live jobs stay (D30)
+db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup CronJob once: a 61-day-old crashed job row goes, live jobs stay, a failed run's KubeJobFailed clears (D30)
 	tests/e2e/db-cleanup-check.sh
 
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
