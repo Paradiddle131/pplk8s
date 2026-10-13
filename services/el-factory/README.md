@@ -85,7 +85,7 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 - `synthetic.orders` is generated per UTC day from a seed of that day, so an order's content never depends on the interval that requested it.
 - `open_meteo.hourly_weather` fetches hourly temperature and precipitation for Amsterdam, Istanbul, and London, one page per location.
 
-- `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: `docs/research/tlc-source-facts.md` on branch `research/tlc-source-facts` (issue #36).
+- `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: [`docs/research/tlc-source-facts.md`](../../docs/research/tlc-source-facts.md) (issue #36).
 
 All synthetic output is deterministic and all data is synthetic or public; TLC data is downloaded at run time and never committed.
 

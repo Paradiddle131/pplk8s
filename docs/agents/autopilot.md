@@ -98,7 +98,7 @@ Never pick work only the user can do: a reversal of a recorded decision, anythin
 
 Follow the `wayfinder` skill's "Work through the map" mode, with one change for unattended runs:
 
-- **research** (AFK): resolve it fully. Findings go to `docs/research/<name>.md` on a throwaway `research/<name>` branch, pushed, never a PR; post the resolution comment, close the ticket, add the one-line pointer to the map's **Decisions so far**.
+- **research** (AFK): resolve it fully. Findings go to `docs/research/<name>.md` in a docs-only PR from a `research/<name>` branch, so later code and docs can link a path on `main` rather than a branch; post the resolution comment, close the ticket, add the one-line pointer to the map's **Decisions so far**.
 - **grilling / prototype** (HITL): **never resolve these yourself**, and never answer your own questions.
   Prepare a **decision packet** instead: read the code and facts the question needs, then comment on the ticket with the questions (at most three, the most blocking first), each with options **A/B/C**, one line of trade-off each, and **Recommendation:** with a short why.
   For a prototype, build the rough artifact on a `claude/<n>-<slug>` branch and link it by commit sha.
