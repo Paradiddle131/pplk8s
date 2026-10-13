@@ -28,13 +28,20 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   - labels: `gh api repos/Paradiddle131/pplk8s/issues/<n>/labels -f 'labels[]=autopilot'`
   - **Bodies from a file need capital `-F body=@file.md`**; `-f` posts the literal path.
     Read every body back after posting (`--jq '.body[0:80]'`).
-  - Draft → ready: REST cannot do it; use the GitHub MCP tool `update_pull_request` with `draft: false`.
+  - Draft → ready: `gh api -X POST repos/Paradiddle131/pplk8s/pulls/<n>/ccr/ready_for_review` (a proxy route; plain REST cannot do it), or the GitHub MCP tool `update_pull_request` with `draft: false`.
+- Start Docker first: `bash docs/agents/cloud-docker.sh` (idempotent).
+  The VM does not start the daemon, the setup snapshot keeps no processes, and anonymous Docker Hub pulls hit 429, so the script starts `dockerd` with `mirror.gcr.io` as registry mirror.
 - What runs on cloud: Docker and `docker compose`, `uv`, Postgres 16 (not started).
-  So `make lint`, `make test` (unit + DagBag), image builds (`docker build`, which runs `dbt parse` for dbt), and the Compose services (`make services-up`, `make phase1-check`) can run here.
-- What does not, as far as we know: kind (no bridge networking/iptables), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
+  So `make lint`, `make test` (unit + DagBag) and the Compose services (`make services-up`) run here.
+- Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build` and `make phase1-check` do not run; CI's `images` job builds the images.
+  Run dbt from the host instead: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …`; run EL Factory with `uv run gunicorn` and the env from `scripts/el-factory-local.sh`.
+- What does not: kind (the VM is cgroup v1 and kubelet 1.36 refuses it; settled 2026-10-12), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
+  The `kind` job in `integration.yaml` on GitHub Actions is the cluster check a cloud run can get.
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
 - Not on cloud: Hindsight, Atrium, the user's `~/.claude`, `localhost` services, the browser at `localhost:8080`.
   Skip Hindsight retains and Atrium registration; put durable facts in the PR/issue instead.
+- Every `<UTC>` you write (board, claim, handoff, feedback) comes from `date -u +%FT%H:%MZ` at the moment you write it; never estimate it.
+  The 75-minute liveness rule in §3 reads these stamps, so a stamp in the future makes a run look live after it ended.
 - Commits: conventional messages, **no agent co-author trailer and no `Claude-Session:` trailer** (the setup script turns attribution off; check `git log -1` after your first commit and amend if a trailer slipped in).
 
 ## 1. Orient (read-only, keep it short)
@@ -45,6 +52,7 @@ Design every step so the next run can pick up exactly where this one stopped: pu
 4. The maps (labelled `wayfinder:map`): [Map: NYC TLC monthly pipeline](https://github.com/Paradiddle131/pplk8s/issues/35), and in `claude-dotfiles` [Map: reusable autopilot for cloud routines](https://github.com/Paradiddle131/claude-dotfiles/issues/1).
    Read the map bodies (Destination, Notes, Decisions so far), not every ticket.
 5. Items labelled `needs-user` with a user comment newer than the last bot comment: those are fresh answers.
+   The bot and the user post as the same login (`Paradiddle131`), so tell them apart by the body: a bot comment starts with `🤖`, a user comment does not.
 6. [`PLAN.md`](../../PLAN.md) and the newest [`LEDGER.md`](../../LEDGER.md) entry.
 
 Write a 5-line state summary to yourself before deciding.
@@ -59,6 +67,8 @@ item: (choosing)
 areas: (none yet)
 state: orienting
 ```
+
+While §8 is in force, post your run-feedback comment now too (§8), before any real work.
 
 ## 3. Choose work — first match that doesn't conflict wins
 
@@ -98,6 +108,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 2. Re-read the board: if another live run claimed the same item or overlapping areas **earlier** than you, yield: edit your comment, go back to §3.
 3. Comment on the item `🤖 Autopilot claim — <UTC> — <one line of intent>`, add the `autopilot` label.
 4. Branch `claude/<issue>-<slug>` from `main` (or from the branch of the PR you depend on; set the PR base to it).
+   Ignore the session branch the harness assigns (`claude/<adjective>-<name>-<suffix>`); never push it.
 5. Follow `CLAUDE.md` and `PLAN.md`: change a decision in `PLAN.md`, with its rationale, before acting on it.
 6. After the first meaningful commit, push and open a **draft PR** (`Closes #<n>` in the body), so the work survives a cut-off.
    Push after every working step and edit your board comment's `state:` line each time (that edit is your heartbeat).
@@ -107,7 +118,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 
 ## 6. Verify and hand off
 
-**Verify what cloud can**, and never claim more: `make lint`, `make test`, the image builds of what you changed, and `make services-up` / `make phase1-check` when you touched EL Factory, dbt or the Compose services.
+**Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; CI builds the images.
 Opening the PR runs `ci.yaml` and `integration.yaml` (slim kind check) on GitHub Actions; wait for their check runs and report them.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
@@ -146,7 +157,59 @@ A local session resuming a PR reads the handoff's agent section, runs the checkl
 ## 7. End of run
 
 - Leave the tree clean: everything committed and pushed, or deliberately discarded.
+- Finish your §8 feedback comment (while §8 is in force).
 - Edit your board comment to `⚫ ended <UTC>` with the items touched and what the next run should do first.
 - Every problem you found but did not fix gets an issue (symptom, evidence, suspected cause, acceptance).
 - Your final message: what you worked on, links, the next run's first step.
 - With budget left and nothing finished blocking you, go back to §3 instead of ending.
+
+## 8. Run feedback (temporary: the first runs)
+
+**In force until the user removes this section.** These are the first unattended runs; the user learns from each one what to fix in this brief, the setup script and the routine.
+The VM disappears when the run ends, so feedback lives only on GitHub: one comment per run on [🤖 pplk8s-worker run feedback (first runs)](https://github.com/Paradiddle131/pplk8s/issues/45).
+
+- Post it at the start of the run (right after registering on the board), with the probes filled in, then **edit it in place** after every working step, so a run cut off by a usage limit still leaves its feedback.
+- Be specific and honest: a command and its output beats an adjective; say what you guessed.
+- For every blocker or friction, write the answer that would have removed it if you know or found it (a setting, an allowlist host, a missing tool, a corrected sentence in this file), and a concrete patch when it is a text change.
+  Don't apply patches to this file or the setup script yourself unless that is the work item you claimed.
+- Probe the open environment facts once per run (cheap commands only; stop at the first answer):
+  - layout: `pwd` at start, `ls /home/user`, where the two clones are;
+  - skills: `ls -la ~/.claude/skills` (links resolve into the fresh clone?), `cat ~/.claude/settings.json`;
+  - attribution: after your first commit, `git log -1 --format=%B` (any `Claude-Session:` or co-author trailer?);
+  - Docker: `docker info` and `docker run --rm hello-world`;
+  - kind: `kind create cluster --name probe --wait 120s` then `kind delete cluster --name probe` (install with `scripts/install-tools.sh` if missing); record the first error verbatim;
+  - GitHub: does `gh api` REST work, does `gh issue list` fail, may the token dispatch a workflow (`gh api -X POST repos/Paradiddle131/pplk8s/actions/workflows/ci.yaml/dispatches -f ref=main`), can it read a job log?
+  - network: any host the run needed that was blocked (`curl -sI https://<host>`).
+  Skip a probe whose answer an earlier comment on the feedback issue already settled, and say so.
+
+```markdown
+🤖 Run feedback — <UTC start> — <session URL if known> — **<went well | partly | blocked>**
+
+**Outcome:** <one line: what the run achieved>
+**Blockers:** <one line each, or "none">
+**Top fix:** <the single change that would most improve the next run>
+
+<details><summary>How it went</summary>
+
+Timeline: orient → choice (and why) → work → verify → handoff, with rough durations and where time went.
+What in this brief was unclear, wrong or missing; what worked well and should stay.
+
+</details>
+<details><summary>Blockers and how to resolve them</summary>
+
+| Blocker | Evidence (command → output) | Known or likely resolution | Who: brief / setup script / routine config / user |
+|---|---|---|---|
+
+</details>
+<details><summary>Environment probes</summary>
+
+| Probe | Result |
+|---|---|
+
+</details>
+<details><summary>Proposed patches</summary>
+
+Diff-style text changes to `docs/agents/autopilot.md`, `docs/agents/cloud-setup.sh`, the routine prompt, or its network allowlist.
+
+</details>
+```
