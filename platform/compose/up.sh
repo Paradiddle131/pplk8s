@@ -3,6 +3,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# The project name is fixed, so `up` from a linked git worktree recreates the lab's containers with
+# their bind mounts (./sql-exporter, ./warehouse-init) inside that worktree; once it is removed,
+# they mount nothing on their next restart. Say so, so the main checkout takes them back.
+git_dir=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null || true)
+if [ -n "$git_dir" ] && [ "$git_dir" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
+  echo "warning: services now bind-mount files from this worktree ($PWD)." >&2
+  echo "warning: run 'make services-up' from the main checkout before removing it." >&2
+fi
+
 docker compose up -d --wait
 
 # fake-gcs has no healthcheck, so wait for it to answer on the host port.

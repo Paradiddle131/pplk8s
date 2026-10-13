@@ -47,3 +47,34 @@ spec:
             description: "Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete, and no later run of its CronJob has succeeded. Removing the failed Job after investigation clears the alert."
             summary: Job failed to complete.
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+    - name: lab.kube-apiserver-slos
+      # The chart's kube-apiserver-slos group (values.yaml) without its 3d/6h pair, which fires on
+      # WSL2's virtual-disk flush stalls (issue #25). Expressions and labels as chart 92.3.0 ships them.
+      rules:
+        - alert: KubeAPIErrorBudgetBurn
+          expr: |
+            sum by (cluster) (apiserver_request:burnrate1h) > (14.40 * 0.01000)
+            and on (cluster)
+            sum by (cluster) (apiserver_request:burnrate5m) > (14.40 * 0.01000)
+          for: 2m
+          labels: {long: 1h, short: 5m, severity: critical}
+          annotations: &apiserver-slo
+            description: The Kube API server is burning too much error budget on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubeapierrorbudgetburn
+            summary: The Kube API server is burning too much error budget.
+        - alert: KubeAPIErrorBudgetBurn
+          expr: |
+            sum by (cluster) (apiserver_request:burnrate6h) > (6.00 * 0.01000)
+            and on (cluster)
+            sum by (cluster) (apiserver_request:burnrate30m) > (6.00 * 0.01000)
+          for: 15m
+          labels: {long: 6h, short: 30m, severity: critical}
+          annotations: *apiserver-slo
+        - alert: KubeAPIErrorBudgetBurn
+          expr: |
+            sum by (cluster) (apiserver_request:burnrate1d) > (3.00 * 0.01000)
+            and on (cluster)
+            sum by (cluster) (apiserver_request:burnrate2h) > (3.00 * 0.01000)
+          for: 1h
+          labels: {long: 1d, short: 2h, severity: warning}
+          annotations: *apiserver-slo
