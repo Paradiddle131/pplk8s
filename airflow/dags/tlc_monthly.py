@@ -4,9 +4,12 @@ Flow: resolve the data month -> catalog -> one deferrable publication wait per c
 one mapped extract per entry (pool ``el_factory``) -> dbt bronze, silver, gold, exposed for that
 month, with an ``ops.readiness`` row ``tlc.<stage>`` after each stage.
 
-Schedule (PLAN.md D35): ``@monthly``, so a run's data interval is the data month it loads and
-its logical date names that month. ``catchup=True`` from ``START`` heals month boundaries that
-passed while the lab was off; older months come only through Airflow's backfill
+Schedule (PLAN.md D35): monthly with an explicit ``CronDataIntervalTimetable``, so a run's data
+interval is the data month it loads and its logical date names that month. The plain ``@monthly``
+string would give Airflow 3's ``CronTriggerTimetable`` (``create_cron_data_intervals = False``):
+an empty interval at the fire time, and a logical date in the month after the data.
+``catchup=True`` from ``START`` heals month boundaries that passed while the lab was off;
+older months come only through Airflow's backfill
 (``airflow backfill create``). ``max_active_runs=3`` lets the 1-3 months of publication lag wait
 side by side: each run waits deferrably (no worker slot) for up to 120 days, and the wait timing
 out fails the run, which is the missing-month alert.
@@ -21,7 +24,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from airflow.sdk import TaskGroup, dag, get_current_context, task
+from airflow.sdk import CronDataIntervalTimetable, TaskGroup, dag, get_current_context, task
 from pplk8s.context import run_month, safe_run_id
 from pplk8s.dbt import STAGES, run_dbt
 from pplk8s.el_factory import ElFactoryHook
@@ -51,7 +54,7 @@ DATA_MONTH = "{{ ti.xcom_pull(task_ids='resolve_context')['data_month'] }}"
 
 @dag(
     dag_id="tlc_monthly",
-    schedule="@monthly",
+    schedule=CronDataIntervalTimetable("0 0 1 * *", timezone="UTC"),
     start_date=START,
     catchup=True,
     max_active_runs=3,

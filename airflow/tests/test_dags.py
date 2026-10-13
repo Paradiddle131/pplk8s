@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -100,7 +100,20 @@ def tlc(bag):
 
 
 def test_tlc_runs_monthly_with_catchup_and_three_months_in_flight(tlc):
-    assert "monthly" in str(tlc.timetable).lower() or str(tlc.schedule) in ("@monthly",)
+    # A data-interval timetable: the first run's interval is the first data month, and its
+    # logical date names it (D35); a trigger timetable would load May in a run dated June.
+    # The SDK class only declares the schedule; the scheduler's core class computes the runs.
+    from airflow.timetables.base import TimeRestriction
+    from airflow.timetables.interval import CronDataIntervalTimetable
+
+    assert type(tlc.timetable).__name__ == "CronDataIntervalTimetable"
+    scheduler_side = CronDataIntervalTimetable(tlc.timetable.expression, tlc.timetable.timezone)
+    first = scheduler_side.next_dagrun_info(
+        last_automated_data_interval=None,
+        restriction=TimeRestriction(tlc.start_date, None, catchup=True),
+    )
+    june = (datetime(2026, 6, 1, tzinfo=UTC), datetime(2026, 7, 1, tzinfo=UTC))
+    assert (first.data_interval.start, first.data_interval.end) == june
     assert tlc.catchup is True
     assert tlc.max_active_runs == 3
     assert tlc.start_date.day == 1
