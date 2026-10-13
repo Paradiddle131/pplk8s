@@ -187,3 +187,74 @@ def test_el_factory_budget_leaves_room_for_one_overrunning_page():
     built_in = float(re.search(r"DEFAULT_MAX_RUN_TIME = ([0-9.]+)", default).group(1))
     for budget in (deployed, built_in):
         assert 0 < budget <= READ_TIMEOUT_SECONDS / 2
+
+
+PUBLISHED = {
+    "status": "published",
+    "source": "tlc",
+    "entity": "yellow",
+    "month": "2026-08",
+    "source_uri": "https://cdn.test/trip-data/yellow_tripdata_2026-08.parquet",
+    "etag": '"abc-4"',
+    "size": 59043961,
+}
+
+
+@responses.activate
+def test_publication_of_a_published_month():
+    responses.get(f"{BASE}/publication", json=PUBLISHED)
+    assert ElFactoryHook().publication("tlc", "yellow", "2026-08") == {
+        "published": True,
+        "source_uri": PUBLISHED["source_uri"],
+        "etag": '"abc-4"',
+        "size": 59043961,
+    }
+    assert responses.calls[0].request.params == {
+        "source": "tlc",
+        "entity": "yellow",
+        "month": "2026-08",
+    }
+
+
+@responses.activate
+def test_publication_of_an_unpublished_month():
+    responses.get(
+        f"{BASE}/publication",
+        json={"status": "not_published", "source_uri": PUBLISHED["source_uri"]},
+    )
+    assert ElFactoryHook().publication("tlc", "yellow", "2026-10") == {
+        "published": False,
+        "source_uri": PUBLISHED["source_uri"],
+    }
+
+
+@responses.activate
+def test_publication_cdn_block_is_transient():
+    responses.get(
+        f"{BASE}/publication",
+        status=503,
+        json={"status": "error", "retryable": True, "error": "blocked by the CDN"},
+    )
+    with pytest.raises(ElFactoryTransientError):
+        ElFactoryHook().publication("tlc", "yellow", "2026-08")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"status": "maybe"},
+        {**PUBLISHED, "etag": ""},
+        {**PUBLISHED, "size": "big"},
+        ["published"],
+    ],
+)
+@responses.activate
+def test_publication_malformed_answers_fail_fast(body):
+    responses.get(f"{BASE}/publication", json=body)
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().publication("tlc", "yellow", "2026-08")
+
+
+def test_publication_rejects_a_malformed_month():
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().publication("tlc", "yellow", "2026-8")
