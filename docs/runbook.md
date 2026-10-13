@@ -253,7 +253,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4 and 7–9 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4, 7–9, and 11 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Drill 10 restores the lab's own metadata DB and lives in `tests/e2e/metadata-restore-drill.sh` (`make metadata-restore-drill`, also in `make phase6-check`).
@@ -576,3 +576,29 @@ The order matters: replayed together, a consumer starts at once (its producers' 
 In the first attempt `finance_daily`'s replay built `exposed.net_sales_daily` 12 seconds before `sales_elt`'s replay rebuilt `gold.daily_sales`, whose `DROP ... CASCADE` then deleted the finance view (issue #27).
 
 Prevention: before a planned restore, note the backup's timestamp and expect to replay everything that finished after it; on Composer, a snapshot load is the same operation and needs the same reconcile.
+
+### 11. git-sync cannot fetch (DAGs go stale)
+
+Every pod that loads DAG files (dag-processor, triggerers, workers) runs a git-sync sidecar that fetches `main` every 10 s (D23); the schedulers have none, because Airflow 3 schedulers read serialized DAGs from the metadata DB.
+A fetch can start failing at any time: the ref is deleted or renamed, the deploy key is revoked or rotated, or GitHub is unreachable.
+git-sync then keeps serving its last good commit, so Airflow keeps running, but no DAG change arrives.
+
+Trigger: `DRILLS=11 make phase6-check`, or by hand, a NetworkPolicy that leaves every egress port open except TCP 22 for those pods (`tests/e2e/phase6-check.sh`, `block_git_ssh`).
+It stands in for every fetch failure after a good sync; a deleted ref and a revoked key fail the same `git fetch` and take the same path through git-sync.
+
+Observed (2026-10-12):
+
+- Before the fix (#18), the chart's `maxFailures: 0` made git-sync exit on its first failed fetch ("too many failures, aborting", 31 s after the block): the sidecar crash-looped and took its pod out of Ready, while the Airflow container kept serving the old commit.
+  The failure was loud, but as `AirflowComponentUnavailable`, which points at the wrong cause; a GitHub blip of one period would have done the same.
+- With `maxFailures: -1`, git-sync logs `error syncing repo, will retry` and keeps serving the old commit; all 4 pods stayed Ready and nothing restarted.
+- `AirflowGitSyncFailing` fired for all 4 pods 176–186 seconds after the block (2-minute window plus `for: 1m`), and resolved 30–61 seconds after the block was removed, without any restart.
+- A sidecar that cannot sync at all on a new pod still fails loudly: the one-shot init container exits on its failure, so the new pods stay `Init:CrashLoopBackOff` and the old ones keep serving (seen once while building this, with a bad init flag; a bad ref in a deploy takes the same path, and `AirflowRolloutStuck` covers it).
+
+Detection: `AirflowGitSyncFailing`, one alert per pod, from git-sync's own counters (`git_sync_count_total{status="success|noop|error"}`, scraped by PodMonitor `airflow-git-sync` on port 1234).
+Readiness, restarts, and `AirflowComponentUnavailable` stay quiet by design.
+
+Diagnosis: `KA logs <pod> -c git-sync --tail=20` names the failing command and its stderr: `couldn't find remote ref` (ref deleted), `Permission denied (publickey)` (key revoked), or `context deadline exceeded` / `Connection timed out` (unreachable).
+`KA exec deploy/airflow-dag-processor -c dag-processor -- readlink /opt/airflow/dags/repo` shows the commit still served; compare with `git ls-remote origin main`.
+
+Recovery: fix the cause the log names: restore or re-point the ref (`dags.gitSync.ref`, then `make airflow-up`), re-add the deploy key (`gh repo deploy-key add ~/.ssh/pplk8s-deploy.pub`), or restore network access.
+git-sync resumes on its next period with no restart; the alert resolves within about a minute.
