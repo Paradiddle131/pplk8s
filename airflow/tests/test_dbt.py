@@ -62,3 +62,21 @@ def test_pod_complies_with_restricted_profile():
     assert {m.mount_path for m in op.volume_mounts} == {"/dbt/target", "/dbt/logs", "/tmp"}
     assert {v.name for v in op.volumes} == {m.name for m in op.volume_mounts}
     assert op.automount_service_account_token is False
+
+
+def test_vars_are_passed_as_one_json_argument():
+    # Values may be Jinja: KPO renders `arguments`, so a DAG can template the data month (D36).
+    month = "{{ data_interval_start.strftime('%Y-%m') }}"
+    op = run_dbt("silver", pipeline="tlc", vars={"data_month": month})
+    assert op.arguments == [
+        "build",
+        "--select",
+        "tag:tlc,tag:silver",
+        "--vars",
+        '{"data_month": "{{ data_interval_start.strftime(\'%Y-%m\') }}"}',
+    ]
+
+
+def test_no_vars_leaves_the_command_unchanged():
+    op = run_dbt("gold", pipeline="sales", vars=None)
+    assert op.arguments == ["build", "--select", "tag:sales,tag:gold"]
