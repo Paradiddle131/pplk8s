@@ -437,3 +437,10 @@ Entry format:
 - Found: the user's manual re-run on 2026-10-13 (`kubectl create job --from=cronjob/...`) set the CronJob's `lastSuccessfulTime`, so hand-run Jobs count as successes of the CronJob.
 - Decisions: D30 amended (wait for the DB rather than `startingDeadlineSeconds`; replacement `KubeJobFailed` rather than a Job TTL).
 - Open: #18 (PR #31), #25.
+
+## 2026-10-13 — Lab hygiene — Compose services bound to a deleted worktree
+- Done: `platform/compose/up.sh` warns when run from a linked worktree (PR #67); the lab's warehouse and both sql-exporters were recreated from the main checkout; three merged worktrees removed; conflicts on #60, #31, #63 resolved by merging `main`.
+- Evidence: `docker inspect` showed three containers with `working_dir` `/tmp/wt62` and bind mounts into it after that worktree was removed; after `up.sh` from the main checkout all eight report the main checkout and pods reach `warehouse:5432`; merged alert rules pass `promtool check rules`.
+- Found: the Compose project name is fixed, so any worktree's `services-up` takes over the lab's containers; `finance_daily` stays paused and nothing alerts on late data (#65, #66).
+- Decisions: none.
+- Open: #65, #66.
