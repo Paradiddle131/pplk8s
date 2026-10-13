@@ -6,3 +6,8 @@ pipelines:
     - {source: synthetic, entity: orders}
   weather:
     - {source: open_meteo, entity: hourly_weather}
+  # NYC TLC trip files, one data month per run (D35); FHVHV is kept for the big-file drill only.
+  tlc:
+    - {source: tlc, entity: yellow}
+    - {source: tlc, entity: green}
+    - {source: tlc, entity: fhvhv, enabled: false}

@@ -24,6 +24,14 @@ ENV PATH=/app/.venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
     CATALOG_PATH=/app/catalog.yaml
+# Memory under the D35 ceiling (1 GiB), measured with real yellow months (one chunk in flight per
+# process, two processes): Arrow's jemalloc pool kept ~500 MB of freed chunk buffers (1.04 GiB
+# for one month), so Arrow uses the system allocator; glibc then kept freed buffers in per-thread
+# arenas (1.07 GiB for three concurrent months), so two arenas and a fixed mmap threshold return
+# large buffers at once (817 MiB).
+ENV ARROW_DEFAULT_MEMORY_POOL=system \
+    MALLOC_ARENA_MAX=2 \
+    MALLOC_MMAP_THRESHOLD_=1048576
 USER 10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \

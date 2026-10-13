@@ -34,3 +34,24 @@ CREATE TABLE IF NOT EXISTS ops.file_loads (
   loaded_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (bucket, object, generation)
 );
+
+-- File-source chunk ledger (PLAN.md D34): one row per chunk (Parquet row group) of one file version
+-- that EL Factory loaded into ds_source; a request resumes after the chunks recorded for the
+-- file's current etag. EL Factory drops the rows of older versions when a newer one completes.
+CREATE TABLE IF NOT EXISTS ops.file_chunks (
+  source_uri text        NOT NULL,
+  etag       text        NOT NULL,
+  chunk      integer     NOT NULL,
+  rows       bigint      NOT NULL,
+  loaded_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (source_uri, etag, chunk)
+);
+
+-- Completed file versions (PLAN.md D34, D36): written with the last chunk; silver reads only the
+-- latest completed (source_uri, etag) of a month, so a half-loaded version stays invisible.
+CREATE TABLE IF NOT EXISTS ops.file_versions (
+  source_uri   text        NOT NULL,
+  etag         text        NOT NULL,
+  completed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (source_uri, etag)
+);

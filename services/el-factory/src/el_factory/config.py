@@ -7,6 +7,8 @@ from pathlib import Path
 
 DEFAULT_OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
 DEFAULT_MAX_RUN_TIME = 45.0
+# NYC TLC trip files (D34); the one host the TLC page links to (issue #36).
+DEFAULT_TLC_BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data"
 
 
 class ConfigError(ValueError):
@@ -24,6 +26,7 @@ class Config:
     max_run_time: float
     catalog_path: Path
     open_meteo_url: str
+    tlc_base_url: str
     port: int
 
     @classmethod
@@ -51,6 +54,7 @@ class Config:
             max_run_time=max_run_time,
             catalog_path=Path(env.get("CATALOG_PATH", str(_default_catalog_path()))),
             open_meteo_url=env.get("OPEN_METEO_URL", DEFAULT_OPEN_METEO_URL),
+            tlc_base_url=env.get("TLC_BASE_URL", DEFAULT_TLC_BASE_URL),
             port=_int(env, "PORT", 8080),
         )
 

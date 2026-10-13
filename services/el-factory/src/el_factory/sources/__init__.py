@@ -8,7 +8,7 @@ import yaml
 
 from el_factory.config import ConfigError
 from el_factory.errors import NotFound
-from el_factory.sources import open_meteo, synthetic
+from el_factory.sources import open_meteo, synthetic, tlc
 from el_factory.sources.base import Entity
 
 
@@ -19,14 +19,16 @@ class CatalogEntry:
 
 
 class Registry:
-    def __init__(self, entities: list[Entity]) -> None:
+    """Paged entities (``Entity``) and file entities (``tlc.TlcEntity``) by (source, name)."""
+
+    def __init__(self, entities: list[Entity | tlc.TlcEntity]) -> None:
         self._entities = {(e.source, e.name): e for e in entities}
         self._sources = {e.source for e in entities}
 
-    def entities(self) -> list[Entity]:
+    def entities(self) -> list[Entity | tlc.TlcEntity]:
         return list(self._entities.values())
 
-    def get(self, source: str, entity: str) -> Entity:
+    def get(self, source: str, entity: str) -> Entity | tlc.TlcEntity:
         found = self._entities.get((source, entity))
         if found is not None:
             return found
@@ -35,8 +37,14 @@ class Registry:
         raise NotFound(f"unknown entity: {source}/{entity}")
 
 
-def build_registry(page_size: int, open_meteo_url: str) -> Registry:
-    return Registry([*synthetic.entities(page_size), *open_meteo.entities(open_meteo_url)])
+def build_registry(page_size: int, open_meteo_url: str, tlc_base_url: str) -> Registry:
+    return Registry(
+        [
+            *synthetic.entities(page_size),
+            *open_meteo.entities(open_meteo_url),
+            *tlc.entities(tlc_base_url),
+        ]
+    )
 
 
 def load_catalog(path: Path, registry: Registry) -> dict[str, list[CatalogEntry]]:

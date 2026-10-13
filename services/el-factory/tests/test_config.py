@@ -38,3 +38,8 @@ def test_max_run_time_defaults_to_45_seconds_and_rejects_negatives():
     )
     with pytest.raises(ConfigError, match="MAX_RUN_TIME"):
         Config.from_env({"WAREHOUSE_DSN": "postgresql://w", "MAX_RUN_TIME": "-1"})
+
+
+def test_tlc_base_url_defaults_to_the_tlc_cdn():
+    config = Config.from_env({"WAREHOUSE_DSN": "postgresql://w"})
+    assert config.tlc_base_url == "https://d37ci6vzurychx.cloudfront.net/trip-data"

@@ -117,6 +117,7 @@ Each decision states its rationale; change the decision here before acting on a 
 - Writes staged files to `gs://staging/<source>/<entity>/<run_id>/page-<NNNNN>.jsonl`, then loads `ds_source` from the staged object idempotently per `(entity, interval, run_id)`: each page replaces itself, and page 0 clears the whole run and interval.
 - Errors are JSON with a `retryable` flag: 400/404 for bad requests, 503 retryable for transient source, warehouse, or GCS faults, 502 non-retryable when a source rejects the request, 500 otherwise. `FAIL_RATE` injects retryable 503s for the Phase 4 retry drills.
 - `ds_source` tables are created by EL Factory (at startup and before each load); their column contract is in `services/el-factory/README.md` and is what the dbt sources read.
+- File sources (`tlc`, Phase 8, D34): `POST /extract` with a one-month interval reads `<entity>_tripdata_<YYYY-MM>.parquet` by HTTP range, one Parquet row group per chunk, resuming after the chunks `ops.file_chunks` holds for the file's `etag`; the response adds `source_uri, etag, chunks`; an unpublished file is 502 with `published: false`, a CDN block a retryable 503, an incompatible column retype a non-retryable 502.
 - `POST /load` with `{entity, bucket, object, generation, run_id}` (added in Phase 5) loads one landed NDJSON file at exactly that generation into `ds_source.<entity>`, replacing the object's earlier rows; a malformed file is 422, a superseded generation is 409 with `superseded: true` (non-retryable; the caller skips).
 - `GET /healthz` for probes.
 

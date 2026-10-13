@@ -14,10 +14,12 @@ from flask import Flask, Response, jsonify, request
 from google.api_core import exceptions as gcs_exceptions
 from werkzeug.exceptions import HTTPException
 
+from el_factory.chunks import extract_file
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
 from el_factory.model import Interval
-from el_factory.sources import Registry, build_registry, files, load_catalog
+from el_factory.sources import Registry, build_registry, files, load_catalog, tlc
+from el_factory.sources.base import Entity
 from el_factory.staging import object_uri, read_staged, stage_page
 from el_factory.storage import GcsStorage, Storage
 from el_factory.warehouse import FileLoad, PageLoad, PostgresWarehouse, Warehouse
@@ -52,7 +54,7 @@ def create_app(
     warehouse: Warehouse,
     clock: Callable[[], float] = time.monotonic,
 ) -> Flask:
-    registry = build_registry(config.page_size, config.open_meteo_url)
+    registry = build_registry(config.page_size, config.open_meteo_url, config.tlc_base_url)
     catalog = load_catalog(config.catalog_path, registry)
     file_registry = files.FileRegistry(files.entities())
     app = Flask(__name__)
@@ -107,6 +109,20 @@ def create_app(
             raise BadRequest("request body must be a JSON object")
         parsed = _parse_extract(body, request.args.get("cursor"))
         entity = registry.get(parsed.source, parsed.entity)
+        if isinstance(entity, tlc.TlcEntity):
+            # File sources resume from the chunk ledger, not from the cursor (D34).
+            return jsonify(
+                extract_file(
+                    entity,
+                    parsed.run_id,
+                    parsed.interval,
+                    bucket=config.gcs_bucket,
+                    storage=storage,
+                    warehouse=warehouse,  # type: ignore[arg-type]
+                    max_run_time=config.max_run_time,
+                    clock=clock,
+                )
+            )
 
         # Time-boxed (D34): load pages until the budget is spent, then hand back the rest as
         # next_url. The first page always runs, so every request makes progress, and the budget
@@ -178,7 +194,10 @@ def _provision_tables(
 ) -> None:
     # dbt sources expect every ds_source table to exist even before its first extract or load.
     # Best effort: a warehouse outage at boot must not stop the service; each request re-ensures.
-    targets = [(e.table, warehouse.ensure_table) for e in registry.entities()]
+    # File-source landing tables (tlc) are created by their first chunk, from the file's schema.
+    targets = [
+        (e.table, warehouse.ensure_table) for e in registry.entities() if isinstance(e, Entity)
+    ]
     targets += [(e.table, warehouse.ensure_file_table) for e in file_registry.entities()]
     for table, ensure in targets:
         try:

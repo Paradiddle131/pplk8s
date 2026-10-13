@@ -489,3 +489,11 @@ Entry format:
 - Evidence: issues and edges visible on GitHub (`gh api repos/Paradiddle131/pplk8s/issues/57/dependencies/blocked_by` → #52, #53, #55, #56); `make lint` clean.
 - Decisions: D34, D35, D36 added; D9, D15, D20 amended.
 - Open: PR #51 verified locally, awaiting merge; PR #61 (cloud workspace) awaiting merge; #41 closed by this slicing.
+
+## 2026-10-13 — Phase 8 — EL Factory time box (#52) and the tlc file source (#53)
+- Done: `/extract` loads pages until `MAX_RUN_TIME` (45 s) and answers `next_url` (PR #68); gunicorn runs `gthread` workers; the `tlc` file source reads month files by HTTP range, one row group per chunk, resumes from `ops.file_chunks` by `etag`, and evolves `ds_source.tlc_*` additively (PR #69); `ELF_IMAGE` 0.4.0.
+  `phase4-check` runs again: since Phase 6 its kill drill parsed an IP hostname as a pod name and waited on a worker StatefulSet that is now a Deployment.
+- Evidence: sync gunicorn workers died at 30 s (`WORKER TIMEOUT`) with `/healthz` failing 10 of 40 probes, gthread workers answered three concurrent 45 s requests with 0 of 55 probe failures; `tests/e2e/phase4-check.sh` passed on kind with EL Factory 0.3.0; el-factory tests 91 passed incl. 7 against the Compose warehouse; real yellow 2026-06/07/08 loaded exactly their footer row counts; three concurrent months peaked at 753 MiB in the kind pod, 0 OOMs.
+- Found: one real month peaked at 1.33 GiB until batch streaming, Arrow's system allocator and glibc's `MALLOC_ARENA_MAX=2` + fixed mmap threshold (LESSONS); merging PRs from an agent session is blocked by the permission classifier, so stacked PRs wait on the user.
+- Decisions: none new (D34-D35 as planned); EL Factory pod limit 1Gi per D35.
+- Open: merge #60 → #68 → #69, then #55 (dbt), #57 (DAG); #65, #66.

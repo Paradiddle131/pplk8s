@@ -107,6 +107,7 @@ def make_config(**overrides: Any) -> Config:
         "max_run_time": 0.0,
         "catalog_path": REPO_CATALOG,
         "open_meteo_url": "http://open-meteo.test/v1/archive",
+        "tlc_base_url": "http://tlc.test/trip-data",
         "port": 8080,
     }
     values.update(overrides)
