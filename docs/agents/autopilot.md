@@ -40,6 +40,8 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
 - Not on cloud: Hindsight, Atrium, the user's `~/.claude`, `localhost` services, the browser at `localhost:8080`.
   Skip Hindsight retains and Atrium registration; put durable facts in the PR/issue instead.
+- Every `<UTC>` you write (board, claim, handoff, feedback) comes from `date -u +%FT%H:%MZ` at the moment you write it; never estimate it.
+  The 75-minute liveness rule in §3 reads these stamps, so a stamp in the future makes a run look live after it ended.
 - Commits: conventional messages, **no agent co-author trailer and no `Claude-Session:` trailer** (the setup script turns attribution off; check `git log -1` after your first commit and amend if a trailer slipped in).
 
 ## 1. Orient (read-only, keep it short)
@@ -50,6 +52,7 @@ Design every step so the next run can pick up exactly where this one stopped: pu
 4. The maps (labelled `wayfinder:map`): [Map: NYC TLC monthly pipeline](https://github.com/Paradiddle131/pplk8s/issues/35), and in `claude-dotfiles` [Map: reusable autopilot for cloud routines](https://github.com/Paradiddle131/claude-dotfiles/issues/1).
    Read the map bodies (Destination, Notes, Decisions so far), not every ticket.
 5. Items labelled `needs-user` with a user comment newer than the last bot comment: those are fresh answers.
+   The bot and the user post as the same login (`Paradiddle131`), so tell them apart by the body: a bot comment starts with `🤖`, a user comment does not.
 6. [`PLAN.md`](../../PLAN.md) and the newest [`LEDGER.md`](../../LEDGER.md) entry.
 
 Write a 5-line state summary to yourself before deciding.
@@ -105,6 +108,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 2. Re-read the board: if another live run claimed the same item or overlapping areas **earlier** than you, yield: edit your comment, go back to §3.
 3. Comment on the item `🤖 Autopilot claim — <UTC> — <one line of intent>`, add the `autopilot` label.
 4. Branch `claude/<issue>-<slug>` from `main` (or from the branch of the PR you depend on; set the PR base to it).
+   Ignore the session branch the harness assigns (`claude/<adjective>-<name>-<suffix>`); never push it.
 5. Follow `CLAUDE.md` and `PLAN.md`: change a decision in `PLAN.md`, with its rationale, before acting on it.
 6. After the first meaningful commit, push and open a **draft PR** (`Closes #<n>` in the body), so the work survives a cut-off.
    Push after every working step and edit your board comment's `state:` line each time (that edit is your heartbeat).
