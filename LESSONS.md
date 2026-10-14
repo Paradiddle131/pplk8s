@@ -214,6 +214,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - [GKE] When `KubeAPIErrorBudgetBurn` fires, split the burn into 5xx and slow requests before blaming errors: the apiserver SLO counts a write slower than 1 s (and a read slower than 1, 5, or 30 s by scope) as an error, and on the lab slow lease renewals were ~70% of the burn against ~6% for 5xx. Then compare `apiserver_request_sli_duration_seconds` with `etcd_request_duration_seconds` to see whether the time is spent in etcd.
 - [Composer] Alert on each data product's freshness, not only on the platform: compare the end of its newest ready interval with a per-product deadline kept beside the readiness table (on GCP, a Cloud Monitoring alert over the BigQuery table), so a paused DAG or a run the scheduler never creates still fires. Airflow's Deadline Alerts cannot: a deadline is created with a DAG run, so no run means no deadline to miss.
 - Measure a product's freshness by its data interval's end, not by when its readiness row was written: re-running an old interval rewrites the row and would make a stale product look fresh.
+- [GKE] Roll an exporter whenever its config changes (a checksum annotation on the pod template, or a reloader): `sql_exporter` and most exporters read their collectors only at start, and neither a ConfigMap update nor `docker compose up` restarts them, so a new collector exports nothing and its alert can never fire, with no error anywhere.
 
 ## Upgrades and rollback
 
@@ -237,6 +238,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - A DAG whose file vanished still answers `GET /dags/<id>` with `is_stale: true`, but triggering it returns 404; check `is_stale` before you trigger, and alert on it.
 - Check import health from the DAG processor (`airflow dags list-import-errors`), not only from the UI.
 - Make deploy scripts idempotent: create pools and connections on every run.
+- [GKE] Never rebuild an image under a tag that already ran: nodes cache by tag (`imagePullPolicy: IfNotPresent`), so pods keep the old contents without any error. Bump the tag on every content change, including a shared package baked into the image; on the lab the seam changed twice without a bump and a local-delivery deploy could not import `tlc_monthly` (#92).
 - Give each image tag exactly one source that the deploy reads (Kustomize `images:`, a Helm `--set`, an Airflow Variable): a tag repeated across a Makefile, manifests and a code default lets a bump push the new image and deploy the old one.
 - [Composer] Keep the dbt image with the Cloud Run Job definition, deployed with the image; the DAG names only the Job, so a dbt release never needs a DAG change.
 - Use `postgresql://` in connection URIs (Airflow normalises it), and pass JSON-form connections when extras are needed.
