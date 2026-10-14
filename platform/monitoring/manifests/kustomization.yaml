@@ -1,4 +1,4 @@
-# Monitoring objects the kube-prometheus-stack chart does not own: scrape targets, Airflow and lab
+# Monitoring objects the kube-prometheus-stack chart does not own: scrape targets, Airflow, workload and lab
 # alert rules, and Grafana dashboards. Applied by platform/monitoring/deploy.sh (`kubectl apply -k`).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -7,6 +7,7 @@ resources:
   - airflow-monitors.yaml
   - airflow-rules.yaml
   - prometheus-rules.yaml
+  - workloads-rules.yaml
 
 configMapGenerator:
   # The Grafana sidecar loads every ConfigMap labelled grafana_dashboard=1 into the folder named by

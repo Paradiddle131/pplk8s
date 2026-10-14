@@ -1,0 +1,71 @@
+# promtool unit tests for the workload memory alerts (#90), run by `make rules-test`
+# (tests/monitoring/rules-test.sh), which writes each PrometheusRule manifest's spec to
+# <manifest>.rules.yaml beside this file first.
+rule_files:
+  - workloads-rules.rules.yaml
+
+evaluation_interval: 15s
+
+tests:
+  # EL Factory idles at 600 MiB of its 1 GiB limit, and one 15 s scrape at 900 MiB (a chunk's peak)
+  # fires at once and keeps firing while it is inside the 5-minute window. The event adapter at
+  # 100 of 256 MiB stays quiet throughout.
+  - interval: 15s
+    input_series:
+      - series: 'container_memory_working_set_bytes{namespace="workloads", pod="el-factory-a", container="el-factory"}'
+        values: '629145600x39 943718400 629145600x40'
+      - series: 'kube_pod_container_resource_limits{namespace="workloads", pod="el-factory-a", container="el-factory", resource="memory"}'
+        values: '1073741824x80'
+      - series: 'container_memory_working_set_bytes{namespace="workloads", pod="event-adapter-a", container="event-adapter"}'
+        values: '104857600x80'
+      - series: 'kube_pod_container_resource_limits{namespace="workloads", pod="event-adapter-a", container="event-adapter", resource="memory"}'
+        values: '268435456x80'
+    alert_rule_test:
+      - eval_time: 9m45s
+        alertname: WorkloadContainerMemoryNearLimit
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: WorkloadContainerMemoryNearLimit
+        exp_alerts:
+          - exp_labels: {namespace: workloads, pod: el-factory-a, container: el-factory, severity: warning}
+            exp_annotations:
+              summary: "el-factory-a/el-factory reached 87.89% of its memory limit in the last 5 minutes."
+              runbook: docs/runbook.md#1-a-big-month-against-el-factorys-memory-ceiling
+      - eval_time: 14m45s
+        alertname: WorkloadContainerMemoryNearLimit
+        exp_alerts:
+          - exp_labels: {namespace: workloads, pod: el-factory-a, container: el-factory, severity: warning}
+            exp_annotations:
+              summary: "el-factory-a/el-factory reached 87.89% of its memory limit in the last 5 minutes."
+              runbook: docs/runbook.md#1-a-big-month-against-el-factorys-memory-ceiling
+      - eval_time: 15m15s
+        alertname: WorkloadContainerMemoryNearLimit
+        exp_alerts: []
+
+  # EL Factory is OOMKilled at 10 m and restarts: the alert fires while the restart is inside its
+  # 5-minute window, then resolves although the last termination reason stays OOMKilled. An older
+  # OOMKill of the event adapter, with no restart since, stays quiet.
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_last_terminated_reason{namespace="workloads", pod="el-factory-a", container="el-factory", reason="OOMKilled"}'
+        values: '_x9 1x20'
+      - series: 'kube_pod_container_status_restarts_total{namespace="workloads", pod="el-factory-a", container="el-factory"}'
+        values: '0x9 1x20'
+      - series: 'kube_pod_container_status_last_terminated_reason{namespace="workloads", pod="event-adapter-a", container="event-adapter", reason="OOMKilled"}'
+        values: '1x30'
+      - series: 'kube_pod_container_status_restarts_total{namespace="workloads", pod="event-adapter-a", container="event-adapter"}'
+        values: '3x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkloadContainerOOMKilled
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: WorkloadContainerOOMKilled
+        exp_alerts:
+          - exp_labels: {namespace: workloads, pod: el-factory-a, container: el-factory, severity: warning}
+            exp_annotations:
+              summary: "el-factory-a/el-factory was OOMKilled in the last 5 minutes."
+              runbook: docs/runbook.md#1-a-big-month-against-el-factorys-memory-ceiling
+      - eval_time: 16m
+        alertname: WorkloadContainerOOMKilled
+        exp_alerts: []

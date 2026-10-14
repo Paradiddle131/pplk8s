@@ -1,0 +1,42 @@
+# Workload alert rules (PLAN.md D28, D35): the services Airflow calls in namespace workloads (EL
+# Factory, the event adapter). Alertmanager routes them to its null receiver; firing alerts are read
+# from Prometheus (ALERTS{alertstate="firing"}).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: workloads
+  namespace: monitoring
+spec:
+  groups:
+    - name: workloads.memory
+      rules:
+        - alert: WorkloadContainerMemoryNearLimit
+          # Early warning before an OOMKill (#90): EL Factory's working set peaks for a few seconds
+          # per chunk (D35: one chunk in flight per process, 1 GiB per pod), shorter than any `for:`,
+          # so the rule takes the 5-minute maximum and fires on the first scrape over 85 %. The
+          # FHVHV drill peaks near 65 %. cAdvisor reports one series per container instance, so the
+          # max by pod and container also covers a container that restarted.
+          expr: |
+            max by (namespace, pod, container) (
+              max_over_time(container_memory_working_set_bytes{namespace="workloads", container!=""}[5m])
+            )
+              / on (namespace, pod, container)
+            max by (namespace, pod, container) (
+              kube_pod_container_resource_limits{namespace="workloads", resource="memory"}
+            )
+              > 0.85
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.pod }}/{{ $labels.container }} reached {{ $value | humanizePercentage }} of its memory limit in the last 5 minutes."
+            runbook: docs/runbook.md#1-a-big-month-against-el-factorys-memory-ceiling
+        - alert: WorkloadContainerOOMKilled
+          # As AirflowContainerOOMKilled: the last termination was an OOMKill and the container
+          # restarted within 5 minutes.
+          expr: |
+            max by (namespace, pod, container) (kube_pod_container_status_last_terminated_reason{namespace="workloads", reason="OOMKilled"})
+              and on (namespace, pod, container)
+            increase(kube_pod_container_status_restarts_total{namespace="workloads"}[5m]) > 0
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.pod }}/{{ $labels.container }} was OOMKilled in the last 5 minutes."
+            runbook: docs/runbook.md#1-a-big-month-against-el-factorys-memory-ceiling

@@ -62,8 +62,9 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 1. A `HEAD` reads the file's `ETag` and size; S3's 403 `AccessDenied` (`Server: AmazonS3`) is 502 with `"published": false`, and CloudFront's own 403 block is a retryable 503.
 2. The resume point is the first chunk (Parquet row group) `ops.file_chunks` has not recorded for that `ETag`; the request's cursor is informational.
    So a retry without a cursor redoes at most the chunk that was in flight, and a republished file (new `ETag`) starts over at chunk 0.
+   A pending chunk over 64 MiB compressed is 422 non-retryable before anything else happens: staging costs about four times a chunk's compressed size, so FHVHV 2023-01's single 451 MiB row group would be OOMKilled on every retry (#90).
 3. The file's schema is compared with `ds_source.tlc_<entity>`: every typed column lands under its lower-cased name, new columns are added, integer widens to bigint and then to double precision, and any other type change is 502 non-retryable. All-null columns are left out until a file gives them a type.
-4. Each chunk is read with one ranged GET (`If-Match: <ETag>`; a 412 means the file changed and is a retryable 503), staged to `gs://<GCS_BUCKET>/tlc/<entity>/<YYYY-MM>/<etag>/chunk-<NNNNN>.parquet`, and loaded from the staged object with `COPY` in 100,000-row batches.
+4. Each chunk is read with one ranged GET (`If-Match: <ETag>`; a 412 means the file changed and is a retryable 503), staged to `gs://<GCS_BUCKET>/tlc/<entity>/<YYYY-MM>/<etag>/chunk-<NNNNN>.parquet`, and loaded from the staged object with `COPY` in 25,000-row batches (each batch is copied several times on its way into `COPY`, so larger batches cost memory without speed; #90).
    The chunk's rows and its `ops.file_chunks` row are written in one transaction, so a chunk is either loaded and recorded or neither.
 5. Chunks repeat until the file is done or `MAX_RUN_TIME` is spent, as for paged sources; at most one chunk per process is in flight, to stay under the 1 GiB memory ceiling (D35).
 6. The last chunk writes `ops.file_versions` and deletes every other version's rows and chunk records for that file.

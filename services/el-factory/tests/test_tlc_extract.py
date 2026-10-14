@@ -242,6 +242,26 @@ def test_an_incompatible_retype_fails_without_retry(db, server, make_tlc_client)
     assert "store_and_fwd_flag" in response.get_json()["error"]
 
 
+def test_a_chunk_over_the_memory_budget_fails_without_retry(
+    db, server, make_tlc_client, monkeypatch
+):
+    # FHVHV 2023-01 is one 451 MiB row group: staging it peaks at ~1.5 GiB, so EL Factory refuses
+    # it up front instead of being OOMKilled on every retry (D35, #90).
+    server.publish("yellow_tripdata_2025-10.parquet", yellow_2025(12, 4, OCT))
+    monkeypatch.setattr("el_factory.chunks.MAX_CHUNK_BYTES", 64)
+    client = make_tlc_client()
+
+    response = client.post("/extract", json=OCT_BODY)
+
+    assert response.status_code == 422
+    assert response.get_json()["retryable"] is False
+    assert "chunk 0" in response.get_json()["error"]
+    conn, schema = db
+    assert conn.execute(  # refused before the landing table is created
+        "SELECT to_regclass(%s)", [f'"{schema}".tlc_yellow']
+    ).fetchone() == (None,)
+
+
 def test_an_unpublished_month_is_a_non_retryable_502(db, server, make_tlc_client):
     response = make_tlc_client().post("/extract", json=month_body("2099-01", "2099-02"))
 
