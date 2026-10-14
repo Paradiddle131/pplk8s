@@ -236,7 +236,12 @@ spec:
           annotations:
             summary: DAG files fail to import; their DAGs are not updated (or disappear).
         - alert: AirflowTaskFailures
-          expr: sum(increase(airflow_ti_failures[10m])) > 0
+          # The statsd-exporter creates a task's series at 1 on its first failure and drops it 5 minutes
+          # after the last one (statsd.cache.ttl), and increase() needs two samples, so a one-off
+          # failure only ever shows as a new series: the `unless offset` arm catches it (#91).
+          expr: |
+            sum(increase(airflow_ti_failures[10m])) > 0
+            or count(airflow_ti_failures unless airflow_ti_failures offset 10m) > 0
           labels: {severity: info}
           annotations:
             summary: Task instances failed in the last 10 minutes.

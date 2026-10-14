@@ -1,0 +1,56 @@
+# promtool unit tests for AirflowTaskFailures (issue #91), run by `make rules-test`
+# (tests/monitoring/rules-test.sh), which writes each PrometheusRule manifest's spec to
+# <manifest>.rules.yaml beside this file first.
+rule_files:
+  - airflow-rules.rules.yaml
+
+evaluation_interval: 15s
+
+tests:
+  # One failed attempt of a task that had not failed lately: the statsd-exporter creates the series at
+  # 1 and drops it 5 minutes after its last update (statsd.cache.ttl). increase() needs two samples,
+  # so it reads 0 for a series born at 1; the alert must fire on the new series itself (#91).
+  - interval: 15s
+    input_series:
+      - series: 'airflow_ti_failures{dag_id="tlc_monthly", task_id="extract"}'
+        values: '_x20 1x19' # absent until 5m, then 1 until the TTL drops it at 10m
+    alert_rule_test:
+      - eval_time: 4m45s
+        alertname: AirflowTaskFailures
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AirflowTaskFailures
+        exp_alerts:
+          - exp_labels: {severity: info}
+            exp_annotations:
+              summary: Task instances failed in the last 10 minutes.
+      - eval_time: 9m45s
+        alertname: AirflowTaskFailures
+        exp_alerts:
+          - exp_labels: {severity: info}
+            exp_annotations:
+              summary: Task instances failed in the last 10 minutes.
+      - eval_time: 16m
+        alertname: AirflowTaskFailures
+        exp_alerts: []
+
+  # A task that keeps failing: its series lives on (each failure renews the TTL), and each new failure
+  # is an increase. Quiet once no failure is left in the 10-minute window. The series exists from
+  # t=0 here, so the window starts at 10m, when its 10-minutes-ago sample exists.
+  - interval: 15s
+    input_series:
+      - series: 'airflow_ti_failures{dag_id="sales_elt", task_id="extract"}'
+        values: '3x79 4x80'
+    alert_rule_test:
+      - eval_time: 19m45s
+        alertname: AirflowTaskFailures
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: AirflowTaskFailures
+        exp_alerts:
+          - exp_labels: {severity: info}
+            exp_annotations:
+              summary: Task instances failed in the last 10 minutes.
+      - eval_time: 30m15s
+        alertname: AirflowTaskFailures
+        exp_alerts: []
