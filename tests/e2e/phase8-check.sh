@@ -7,7 +7,7 @@
 # that the 2023-01 backfill widened the yellow landing table (the 2023 retype, D34; #82),
 # then forge an older version of one month's file and re-run it: the real file replaces the month,
 # and the re-run retires a stray month planted outside D35's scope from every layer, its ledgers
-# and its readiness rows, while every kept month stays (#87); the warehouse stays under 15 GB.
+# and its readiness rows, while every kept month stays (#87); the warehouse stays under D35's 20 GB ceiling.
 # Downloads real TLC files (~60 MB a yellow month). Expects `make airflow-up workloads-up`.
 # Re-runnable: months that already succeeded are not re-run (backfills reprocess failed runs only),
 # and on exit the DAG's paused flag is restored. Scheduled runs stay: they are the DAG's real
@@ -26,7 +26,7 @@ BACKFILLS=("2023-01 2023-01" "2025-01 2025-01")
 DRIFT_MONTHS=(2023-01 2025-01 2026-06)
 REPUBLISH_ENTITY=green # the smallest file (~1 MB), so the replay is quick
 MONTH_TIMEOUT=${MONTH_TIMEOUT:-3600}
-WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-15} # D35
+WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-20} # D35 (raised from 15 in #87)
 FORGED='"phase8-forged"'
 STRAY=2026-05 # before the schedule's START and no drift month, so every run retires it (D35)
 STRAY_ETAG='"phase8-stray"'
