@@ -113,3 +113,33 @@ where 1 = 0
         where {{ column }} = '{{ month }}'
     {%- endif -%}
 {% endmacro %}
+
+-- Retention (D35, issue #87): delete every data month not in `keep` (comma-separated YYYY-MM) from
+-- the tlc tables dbt owns. Bronze and exposed are views and follow; landing is EL Factory's.
+-- `dbt run-operation tlc_retire --args '{keep: "2023-01,2026-07"}'`. An empty keep is refused, a
+-- table not built yet is skipped, and re-running deletes nothing more.
+-- dialect: BigQuery expires the month partitions instead (or DELETE ... WHERE on the partition column).
+{% macro tlc_retire(keep) %}
+    {%- set months = (keep | string).split(',') | map('trim') | reject('equalto', '') | list -%}
+    {%- if months | length == 0 -%}
+        {{ exceptions.raise_compiler_error("tlc_retire needs at least one month to keep") }}
+    {%- endif -%}
+    {%- for month in months -%}
+        {%- if not modules.re.match('^[0-9]{4}-(0[1-9]|1[0-2])$', month) -%}
+            {{ exceptions.raise_compiler_error("tlc_retire: keep must hold YYYY-MM months, got '" ~ month ~ "'") }}
+        {%- endif -%}
+    {%- endfor -%}
+    {%- for model in ['slv_tlc_trips', 'slv_tlc_trips_quarantine', 'gld_tlc_daily_trips'] -%}
+        {%- set node = graph.nodes.values() | selectattr('name', 'equalto', model) | first -%}
+        {%- set relation = adapter.get_relation(node.database, node.schema, node.alias) -%}
+        {%- if relation is none -%}
+            {{ log("tlc_retire: " ~ model ~ " not built yet, skipped", info=true) }}
+        {%- else -%}
+            {%- call statement('tlc_retire', fetch_result=False, auto_begin=True) -%}
+                delete from {{ relation }} where data_month not in ('{{ months | join("', '") }}')
+            {%- endcall -%}
+            {{ log("tlc_retire: " ~ relation ~ " deleted " ~ load_result('tlc_retire')['response'].rows_affected ~ " rows", info=true) }}
+        {%- endif -%}
+    {%- endfor -%}
+    {%- do adapter.commit() -%}
+{% endmacro %}

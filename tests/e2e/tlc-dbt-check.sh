@@ -5,6 +5,7 @@
 #   - bronze = silver + quarantine per month (the dbt test) and the expected rows land in each,
 #   - a rebuild is idempotent and a half-loaded file version stays invisible,
 #   - a second etag for a month replaces that month,
+#   - retiring a month (the tlc_retire operation, D35) deletes it from every dbt table and nothing else,
 #   - a month above 10 % quarantined fails the build.
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
@@ -81,6 +82,26 @@ expect "exposed trips 2025-01" \
 expect "unknown-zone trips 2025-01" \
   "$(psql_dev -c "select sum(trips) from exposed.tlc_daily_trips_by_borough where data_month = '2025-01' and borough = 'Unknown'")" 1
 echo "ok: a second etag replaces 2025-01 (yellow 253 rows, all y2); exposed reads gold and the zone seed"
+
+# Retention (D35, #87): retiring 2024-12 deletes it from silver, quarantine and gold, leaves the kept
+# month's rows unwritten, and a repeat deletes nothing; an empty keep is refused.
+retire() {
+  (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core \
+    dbt run-operation tlc_retire --args "{keep: '$1'}") >/tmp/pplk8s-tlc-dbt-retire.log 2>&1
+}
+kept_writers=$(writers 2025-01)
+retire "2025-01,2023-01" || { tail -30 /tmp/pplk8s-tlc-dbt-retire.log >&2; fail "tlc_retire keep=2025-01,2023-01"; }
+for table in silver.tlc_trips silver.tlc_trips_quarantine gold.tlc_daily_trips; do
+  expect "$table months after retiring 2024-12" \
+    "$(psql_dev -c "select string_agg(distinct data_month, ',') from $table")" 2025-01
+done
+expect "2025-01 rewritten by the retirement" "$(writers 2025-01)" "$kept_writers"
+retire "2025-01" || fail "repeating tlc_retire failed"
+[ "$(grep -c 'deleted 0 rows' /tmp/pplk8s-tlc-dbt-retire.log)" = 3 ] ||
+  { cat /tmp/pplk8s-tlc-dbt-retire.log >&2; fail "repeating tlc_retire deleted rows again"; }
+if retire ""; then fail "tlc_retire with an empty keep ran"; fi
+echo "ok: retiring 2024-12 leaves only 2025-01 in silver, quarantine and gold; a repeat deletes nothing"
+build 2024-12
 
 # 30 more negative fares: 31 of 288 rows of 2024-12 (10.8 %) are quarantined, above the 10 % error.
 psql_dev -c "insert into ds_source.tlc_yellow (_run_id, _source_uri, _etag, _chunk, tpep_pickup_datetime, tpep_dropoff_datetime, fare_amount, total_amount)

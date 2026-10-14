@@ -107,6 +107,49 @@ class ElFactoryHook(HttpHook):
             raise AirflowFailException(f"publication of {source}.{entity} {month}: {body!r}")
         return {"published": True, "source_uri": body.get("source_uri"), "etag": etag, "size": size}
 
+    def held_months(self, source: str, entity: str) -> list[str]:
+        """Months a file source holds in landing, loading or complete (``GET /months``, D35)."""
+        body = self._call("GET", "/months", data={"source": source, "entity": entity})
+        months = body.get("months") if isinstance(body, dict) else None
+        if not isinstance(months, list) or not all(
+            isinstance(m, str) and MONTH_PATTERN.match(m) for m in months
+        ):
+            raise AirflowFailException(f"months of {source}.{entity}: {body!r}")
+        return months
+
+    def retire_months(self, source: str, entity: str, keep: list[str]) -> dict[str, Any]:
+        """Retire every month of a file source not in ``keep`` (``POST /retire``, D35, #87).
+
+        Returns ``{source, entity, retired: [YYYY-MM, ...], rows}``.  Idempotent: a retry after a
+        lost answer finds nothing more to delete.
+        """
+        if not keep or not all(MONTH_PATTERN.match(m) for m in keep):
+            raise AirflowFailException(f"keep must be a non-empty list of YYYY-MM, got {keep!r}")
+        payload = {"source": source, "entity": entity, "keep": keep}
+        body = self._call("POST", "/retire", json=payload)
+        retired = body.get("retired") if isinstance(body, dict) else None
+        rows = body.get("rows") if isinstance(body, dict) else None
+        if (
+            not isinstance(retired, list)
+            or not all(
+                isinstance(r, dict)
+                and isinstance(r.get("month"), str)
+                and MONTH_PATTERN.match(r["month"])
+                and r["month"] not in keep
+                for r in retired
+            )
+            or not isinstance(rows, int)
+            or isinstance(rows, bool)
+            or rows < 0
+        ):
+            raise AirflowFailException(f"retire {source}.{entity} returned {body!r}")
+        return {
+            "source": source,
+            "entity": entity,
+            "retired": [r["month"] for r in retired],
+            "rows": rows,
+        }
+
     def extract_entity(
         self,
         source: str,

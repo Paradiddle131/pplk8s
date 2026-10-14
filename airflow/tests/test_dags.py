@@ -119,14 +119,18 @@ def test_tlc_runs_monthly_with_catchup_and_three_months_in_flight(tlc):
     assert tlc.start_date.day == 1
 
 
-def test_tlc_waits_for_publication_before_extracting_then_builds_each_stage(tlc):
+def test_tlc_waits_for_publication_retires_then_extracts_and_builds_each_stage(tlc):
     from pplk8s.sensors import PublicationSensor
 
     wait = tlc.get_task("wait_published")
     assert wait.is_mapped
     assert wait.operator_class.__name__ == PublicationSensor.__name__
-    assert "extract" in wait.downstream_task_ids
     chain = [
+        "wait_published",
+        "retire.plan",
+        "retire.landing",
+        "retire.dbt",
+        "retire.readiness",
         "extract",
         "stage_bronze.dbt_bronze",
         "stage_bronze.record_bronze",
@@ -157,6 +161,20 @@ def test_tlc_dbt_stages_build_only_tlc_models_of_the_run_month(tlc):
         assert task.arguments[:3] == ["build", "--select", f"tag:tlc,tag:{stage}"]
         assert task.arguments[3] == "--vars"
         assert "resolve_context" in task.arguments[4] and "data_month" in task.arguments[4]
+
+
+def test_tlc_retires_the_months_outside_d35_before_loading(tlc):
+    # Retention mirrors partition expiration, before the load (D35, #87): landing per catalog
+    # entry, then dbt's own tables with the planned keep list, then the readiness rows.
+    from tlc_monthly import DRIFT_MONTHS, LATEST_MONTHS, START
+
+    assert tlc.get_task("retire.landing").is_mapped
+    dbt = tlc.get_task("retire.dbt")
+    assert dbt.arguments[:3] == ["run-operation", "tlc_retire", "--args"]
+    assert "retire.plan" in dbt.arguments[3] and "keep" in dbt.arguments[3]
+    assert "join(',')" in dbt.arguments[3]
+    assert (START.strftime("%Y-%m"), LATEST_MONTHS) == ("2026-06", 3)
+    assert DRIFT_MONTHS == ("2023-01", "2025-01", "2026-06")
 
 
 @pytest.fixture(scope="module")

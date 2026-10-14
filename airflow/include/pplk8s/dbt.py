@@ -40,7 +40,7 @@ from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperato
 from kubernetes.client import models as k8s
 
 STAGES = ("bronze", "silver", "gold", "exposed")
-_PIPELINE = re.compile(r"^[a-z][a-z0-9_]*$")
+_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 DEFAULT_NAMESPACE = "workloads"
 SERVICE_ACCOUNT = "dbt"
 CREDENTIALS_SECRET = "warehouse-credentials"
@@ -55,7 +55,7 @@ def selection(pipeline: str, stage: str) -> str:
     """The dbt selector for one pipeline's stage: models tagged with both."""
     if stage not in STAGES:
         raise ValueError(f"unknown dbt stage {stage!r}; expected one of {STAGES}")
-    if not _PIPELINE.match(pipeline):
+    if not _NAME.match(pipeline):
         raise ValueError(f"invalid pipeline name {pipeline!r}")
     return f"tag:{pipeline},tag:{stage}"
 
@@ -78,10 +78,40 @@ def run_dbt(
     arguments = ["build", "--select", select]
     if vars:
         arguments += ["--vars", json.dumps(vars)]
+    return _dbt_pod(task_id or f"dbt_{stage}", arguments, pipeline=pipeline, step=stage, **kwargs)
+
+
+def run_dbt_operation(
+    macro: str,
+    *,
+    pipeline: str,
+    args: dict[str, Any] | None = None,
+    task_id: str | None = None,
+    **kwargs: Any,
+) -> KubernetesPodOperator:
+    """Return the operator that runs ``dbt run-operation <macro> [--args <json>]``.
+
+    For work dbt does on its own tables outside a build, e.g. retiring old months (PLAN.md D35).
+    ``args`` values may be Jinja templates, as ``vars`` of :func:`run_dbt`.
+    """
+    if not _NAME.match(macro):
+        raise ValueError(f"invalid macro name {macro!r}")
+    if not _NAME.match(pipeline):
+        raise ValueError(f"invalid pipeline name {pipeline!r}")
+    arguments = ["run-operation", macro]
+    if args:
+        arguments += ["--args", json.dumps(args)]
+    step = macro.replace("_", "-")
+    return _dbt_pod(task_id or f"dbt_{macro}", arguments, pipeline=pipeline, step=step, **kwargs)
+
+
+def _dbt_pod(
+    task_id: str, arguments: list[str], *, pipeline: str, step: str, **kwargs: Any
+) -> KubernetesPodOperator:
     options: dict[str, Any] = {
-        "task_id": task_id or f"dbt_{stage}",
+        "task_id": task_id,
         # KPO appends a random suffix, so concurrent runs never collide.
-        "name": f"dbt-{pipeline.replace('_', '-')}-{stage}",
+        "name": f"dbt-{pipeline.replace('_', '-')}-{step}",
         "namespace": _NAMESPACE,
         "image": _IMAGE,
         "arguments": arguments,
@@ -117,7 +147,7 @@ def run_dbt(
         "labels": {
             "app.kubernetes.io/name": "dbt",
             "pplk8s/pipeline": pipeline,
-            "pplk8s/stage": stage,
+            "pplk8s/stage": step,
         },
         "retries": 2,
         "retry_delay": timedelta(seconds=30),

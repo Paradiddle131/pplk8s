@@ -158,3 +158,58 @@ def test_file_ledger_is_idempotent_against_the_warehouse(file_ledger):
         "SELECT count(*) FROM ops.file_loads WHERE bucket = 'test-bucket'"
     )
     assert count == (1,)
+
+
+def test_retire_readiness_refuses_an_empty_keep():
+    with pytest.raises(AirflowFailException):
+        readiness.retire_readiness(["tlc.silver"], [], "run-1", dag_id="tlc_monthly")
+
+
+@pytest.fixture
+def monthly_ledger():
+    hook = PostgresHook(postgres_conn_id="warehouse")
+    try:
+        hook.get_first("SELECT 1 FROM ops.readiness LIMIT 1")
+    except Exception as exc:  # noqa: BLE001 - any connectivity problem means no warehouse here
+        _warehouse_unreachable("warehouse", exc)
+    cleanup = "DELETE FROM ops.readiness WHERE product LIKE 'test.retire.%'"
+    hook.run(cleanup)
+    yield hook
+    hook.run(cleanup)
+
+
+def test_retire_readiness_marks_months_outside_keep_once(monthly_ledger):
+    months = [
+        (datetime(2026, m, 1, tzinfo=UTC), datetime(2026, m + 1, 1, tzinfo=UTC)) for m in (5, 6, 7)
+    ]
+    for product in ("test.retire.silver", "test.retire.gold"):
+        for start, end in months:
+            readiness.record_readiness(product, start, end, end, "load", "ready", dag_id="tlc")
+    readiness.record_readiness(
+        "test.retire.other", *months[0], months[0][1], "load", "ready", dag_id="tlc"
+    )
+    products = ["test.retire.silver", "test.retire.gold"]
+
+    retired = readiness.retire_readiness(products, ["2026-07", "2023-01"], "r-1", dag_id="tlc")
+    again = readiness.retire_readiness(products, ["2026-07", "2023-01"], "r-2", dag_id="tlc")
+
+    assert sorted(retired) == [
+        ("test.retire.gold", "2026-05"),
+        ("test.retire.gold", "2026-06"),
+        ("test.retire.silver", "2026-05"),
+        ("test.retire.silver", "2026-06"),
+    ]
+    assert again == []
+    rows = monthly_ledger.get_records(
+        "SELECT product, to_char(interval_start AT TIME ZONE 'UTC', 'YYYY-MM'), status, run_id"
+        " FROM ops.readiness WHERE product LIKE 'test.retire.%' ORDER BY 1, 2"
+    )
+    assert rows == [
+        ("test.retire.gold", "2026-05", "retired", "r-1"),
+        ("test.retire.gold", "2026-06", "retired", "r-1"),
+        ("test.retire.gold", "2026-07", "ready", "load"),
+        ("test.retire.other", "2026-05", "ready", "load"),
+        ("test.retire.silver", "2026-05", "retired", "r-1"),
+        ("test.retire.silver", "2026-06", "retired", "r-1"),
+        ("test.retire.silver", "2026-07", "ready", "load"),
+    ]

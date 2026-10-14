@@ -256,6 +256,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - An intermittent "dbt was unable to infer all dependencies" failure was seen and never reproduced; give dbt tasks retries and avoid concurrent builds against the same target.
 - On Postgres, dbt's table materialization drops the old table with `CASCADE`, which deletes every view on it, including another pipeline's (issue #27); BigQuery has no such dependency, so check cross-pipeline views after any rebuild on a Postgres stand-in.
 - For files republished whole (TLC months), replace a partition per build (`insert_overwrite` on the month; `delete+insert` on the stand-in) from the latest *completed* file version only, so a republish swaps its month and a half-loaded version stays invisible; reconcile bronze = silver + quarantine per month.
+- Retire old months before loading the new one, and tell each workload which months to keep, never which to drop: a retry then converges, a backfill of an old month cannot retire the newest ones, and the months a concurrent catch-up run is still loading count as held. On BigQuery this is partition expiration (or a `DELETE` on the partition column) on month-partitioned tables; a Postgres `DELETE` only frees space for reuse, so size plateaus instead of falling (D35, #87).
 - Pass a run's dbt vars (the data month) as one `--vars <json>` argument built from templated operator args; on a Cloud Run Job the same list goes into the execution's container-override args.
 
 ## Testing and verification

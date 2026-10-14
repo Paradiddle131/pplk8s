@@ -5,7 +5,9 @@
 #   - bronze (the month's current file version) = silver + quarantine, quarantine under 10 %,
 #   - silver's cbd_congestion_fee is NULL before 2025-01 and populated from 2025-01 on (yellow),
 # that the 2023-01 backfill widened the yellow landing table (the 2023 retype, D34; #82),
-# then forge an older version of one month's file and re-run it: the real file replaces the month.
+# then forge an older version of one month's file and re-run it: the real file replaces the month,
+# and the re-run retires a stray month planted outside D35's scope from every layer, its ledgers
+# and its readiness rows, while every kept month stays (#87); the warehouse stays under 15 GB.
 # Downloads real TLC files (~60 MB a yellow month). Expects `make airflow-up workloads-up`.
 # Re-runnable: months that already succeeded are not re-run (backfills reprocess failed runs only),
 # and on exit the DAG's paused flag is restored. Scheduled runs stay: they are the DAG's real
@@ -24,8 +26,10 @@ BACKFILLS=("2023-01 2023-01" "2025-01 2025-01")
 DRIFT_MONTHS=(2023-01 2025-01 2026-06)
 REPUBLISH_ENTITY=green # the smallest file (~1 MB), so the replay is quick
 MONTH_TIMEOUT=${MONTH_TIMEOUT:-3600}
-WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-15} # D35; a warning until retention (#87) lands
+WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-15} # D35
 FORGED='"phase8-forged"'
+STRAY=2026-05 # before the schedule's START and no drift month, so every run retires it (D35)
+STRAY_ETAG='"phase8-stray"'
 psql_wh() {
   docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
     psql -U warehouse -d warehouse -v ON_ERROR_STOP=1 -Atc "$1"
@@ -193,6 +197,45 @@ types=$(psql_wh "SELECT string_agg(column_name || ' ' || data_type, ', ' ORDER B
   fail "(c) the 2023-01 retype did not widen ds_source.tlc_yellow: [$types]"
 echo "ok: (c) the 2023-01 backfill widened the yellow landing table [$types]"
 
+# ---- (e, setup) plant a stray month outside D35's scope -------------------------------------------------
+# 1 000 green rows of the newest loaded month, relabelled as 2026-05, in landing (with its chunk and
+# version ledger rows), silver, quarantine and gold, plus tlc.<stage> readiness rows: what a month
+# loaded before retention, or by hand, looks like. (d)'s re-run must retire it everywhere (#87).
+[[ " ${LOADED[*]} " != *" $STRAY "* ]] || fail "(e) $STRAY is a loaded month; pick another stray"
+NEWEST=$(printf '%s\n' "${LOADED[@]}" | sort | tail -1)
+SRC_URI=$(psql_wh "SELECT source_uri FROM ops.file_versions WHERE source_uri LIKE '%/green_tripdata_$NEWEST.parquet' ORDER BY completed_at DESC LIMIT 1")
+[ -n "$SRC_URI" ] || fail "(e) no completed green version for $NEWEST"
+STRAY_URI=${SRC_URI/_$NEWEST.parquet/_$STRAY.parquet}
+plant() { # schema.table extra-SET -> copies rows of $NEWEST into $STRAY
+  echo "CREATE TEMP TABLE stray AS SELECT * FROM $1 WHERE $2 LIMIT 1000;
+    UPDATE stray SET $3; INSERT INTO $1 SELECT * FROM stray; DROP TABLE stray;"
+}
+psql_wh "BEGIN;
+  $(plant ds_source.tlc_green "_source_uri = '$SRC_URI'" "_source_uri = '$STRAY_URI', _etag = '$STRAY_ETAG'")
+  $(plant silver.tlc_trips "data_month = '$NEWEST' AND trip_type = 'green'" "data_month = '$STRAY', _source_uri = '$STRAY_URI', _etag = '$STRAY_ETAG'")
+  $(plant silver.tlc_trips_quarantine "data_month = '$NEWEST'" "data_month = '$STRAY', _source_uri = '$STRAY_URI', _etag = '$STRAY_ETAG'")
+  $(plant gold.tlc_daily_trips "data_month = '$NEWEST'" "data_month = '$STRAY'")
+  INSERT INTO ops.file_chunks (source_uri, etag, chunk, rows) VALUES ('$STRAY_URI', '$STRAY_ETAG', 0, 1000) ON CONFLICT DO NOTHING;
+  INSERT INTO ops.file_versions (source_uri, etag) VALUES ('$STRAY_URI', '$STRAY_ETAG') ON CONFLICT DO NOTHING;
+  INSERT INTO ops.readiness (product, interval_start, interval_end, watermark, run_id, status, dag_id)
+    SELECT 'tlc.' || stage, '$STRAY-01 00:00:00+00', '$(next_month $STRAY)-01 00:00:00+00', '$(next_month $STRAY)-01 00:00:00+00', 'phase8-stray', 'ready', '$DAG'
+    FROM unnest(ARRAY['bronze', 'silver', 'gold', 'exposed']) AS stage
+    ON CONFLICT (product, interval_start, interval_end) DO UPDATE SET status = 'ready', run_id = 'phase8-stray';
+  COMMIT;" >/dev/null
+stray_left() { # -> "landing chunks versions silver quarantine gold not-retired-readiness"
+  psql_wh "SELECT (SELECT count(*) FROM ds_source.tlc_green WHERE _source_uri = '$STRAY_URI')
+    || ' ' || (SELECT count(*) FROM ops.file_chunks WHERE source_uri = '$STRAY_URI')
+    || ' ' || (SELECT count(*) FROM ops.file_versions WHERE source_uri = '$STRAY_URI')
+    || ' ' || (SELECT count(*) FROM silver.tlc_trips WHERE data_month = '$STRAY')
+    || ' ' || (SELECT count(*) FROM silver.tlc_trips_quarantine WHERE data_month = '$STRAY')
+    || ' ' || (SELECT count(*) FROM gold.tlc_daily_trips WHERE data_month = '$STRAY')
+    || ' ' || (SELECT count(*) FROM ops.readiness WHERE product LIKE 'tlc.%'
+                 AND interval_start = '$STRAY-01 00:00:00+00' AND status <> 'retired')"
+}
+planted=$(stray_left)
+for n in $planted; do [ "$n" -gt 0 ] || fail "(e) the stray $STRAY was not planted in every layer: [$planted]"; done
+say "(e) planted stray month $STRAY [landing chunks versions silver quarantine gold readiness: $planted]"
+
 # ---- (d) a republished file replaces its month -----------------------------------------------------------
 # Make the lab believe it holds an older version of the newest loaded month's green file: relabel the
 # landed rows, their chunks and the completed version with a forged etag. Re-running the month then
@@ -202,7 +245,10 @@ URI_LIKE="%/${REPUBLISH_ENTITY}_tripdata_$M.parquet"
 REAL=$(psql_wh "SELECT etag FROM ops.file_versions WHERE source_uri LIKE '$URI_LIKE' ORDER BY completed_at DESC LIMIT 1")
 [ -n "$REAL" ] || fail "(d) no completed $REPUBLISH_ENTITY version for $M"
 before=$(layer_counts "$M")
+# An earlier check's forged version row survives its replacement (EL Factory keeps every completed
+# version in ops.file_versions and silver reads the latest), so clear it before forging again.
 psql_wh "BEGIN;
+  DELETE FROM ops.file_versions WHERE source_uri LIKE '$URI_LIKE' AND etag = '$FORGED';
   UPDATE ds_source.tlc_$REPUBLISH_ENTITY SET _etag = '$FORGED' WHERE _source_uri LIKE '$URI_LIKE' AND _etag = '$REAL';
   UPDATE ops.file_chunks SET etag = '$FORGED' WHERE source_uri LIKE '$URI_LIKE' AND etag = '$REAL';
   UPDATE ops.file_versions SET etag = '$FORGED' WHERE source_uri LIKE '$URI_LIKE' AND etag = '$REAL';
@@ -221,13 +267,20 @@ after=$(layer_counts "$M")
 check_month "$M"
 echo "ok: (d) the republished $REPUBLISH_ENTITY $M replaced the forged version; counts unchanged [$after]"
 
-# ---- storage (#73): report against D35's ceiling ----------------------------------------------------------
+# ---- (e) (d)'s re-run retired the stray month before loading, and nothing it keeps -------------------------
+left=$(stray_left)
+[ "$left" = "0 0 0 0 0 0 0" ] ||
+  fail "(e) the stray $STRAY survived the re-run [landing chunks versions silver quarantine gold readiness: $left]"
+[ "$(psql_wh "SELECT count(*) FROM ops.readiness WHERE product LIKE 'tlc.%' AND interval_start = '$STRAY-01 00:00:00+00' AND status = 'retired'")" = 4 ] ||
+  fail "(e) the stray's 4 tlc.<stage> readiness rows are not 'retired'"
+for m in "${LOADED[@]}"; do check_month "$m"; done
+echo "ok: (e) the re-run retired the stray $STRAY from landing, its ledgers, silver, quarantine, gold and readiness; every kept month stays"
+
+# ---- storage (#73, #87): D35's ceiling ---------------------------------------------------------------------
 bytes=$(psql_wh "SELECT pg_database_size('warehouse')")
 gb=$(awk -v b="$bytes" 'BEGIN { printf "%.1f", b / 1024^3 }')
-if awk -v b="$bytes" -v c="$WAREHOUSE_CEILING_GB" 'BEGIN { exit !(b > c * 1024^3) }'; then
-  echo "WARN: warehouse is $gb GB, over D35's $WAREHOUSE_CEILING_GB GB ceiling (retention, #87, makes this a failure)"
-else
-  echo "ok: warehouse is $gb GB, under D35's $WAREHOUSE_CEILING_GB GB ceiling"
-fi
+awk -v b="$bytes" -v c="$WAREHOUSE_CEILING_GB" 'BEGIN { exit !(b > c * 1024^3) }' &&
+  fail "warehouse is $gb GB, over D35's $WAREHOUSE_CEILING_GB GB ceiling"
+echo "ok: warehouse is $gb GB, under D35's $WAREHOUSE_CEILING_GB GB ceiling"
 
 echo "phase8-check passed (months: $(printf '%s\n' "${LOADED[@]}" | sort | xargs))"

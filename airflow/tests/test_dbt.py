@@ -1,5 +1,5 @@
 import pytest
-from pplk8s.dbt import STAGES, run_dbt
+from pplk8s.dbt import STAGES, run_dbt, run_dbt_operation
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -80,3 +80,32 @@ def test_vars_are_passed_as_one_json_argument():
 def test_no_vars_leaves_the_command_unchanged():
     op = run_dbt("gold", pipeline="sales", vars=None)
     assert op.arguments == ["build", "--select", "tag:sales,tag:gold"]
+
+
+def test_an_operation_runs_its_macro_with_json_args_in_the_same_pod():
+    keep = "{{ ti.xcom_pull(task_ids='retire.plan')['keep'] | join(',') }}"
+    op = run_dbt_operation("tlc_retire", pipeline="tlc", args={"keep": keep})
+    assert op.task_id == "dbt_tlc_retire"
+    assert op.arguments == [
+        "run-operation",
+        "tlc_retire",
+        "--args",
+        "{\"keep\": \"{{ ti.xcom_pull(task_ids='retire.plan')['keep'] | join(',') }}\"}",
+    ]
+    assert op.name == "dbt-tlc-tlc-retire"
+    assert op.labels["pplk8s/stage"] == "tlc-retire"
+    assert op.service_account_name == "dbt"
+    assert op.security_context.run_as_non_root is True
+    assert op.image == run_dbt("gold", pipeline="tlc").image
+
+
+def test_an_operation_without_args_and_with_overrides():
+    op = run_dbt_operation("tlc_retire", pipeline="tlc", task_id="retire_dbt", retries=1)
+    assert op.arguments == ["run-operation", "tlc_retire"]
+    assert (op.task_id, op.retries) == ("retire_dbt", 1)
+
+
+@pytest.mark.parametrize("macro", ["", "Tlc", "tlc-retire", "x; rm -rf /"])
+def test_unsafe_macro_names_are_rejected(macro):
+    with pytest.raises(ValueError, match="macro"):
+        run_dbt_operation(macro, pipeline="tlc")
