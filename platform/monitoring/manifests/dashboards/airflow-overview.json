@@ -1511,7 +1511,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Data product age vs deadline (hours)",
+      "title": "Data product age vs deadline",
       "id": 29,
       "description": "Hours since the newest ready interval of each product with a deadline ended (D37), against its deadline. DataProductLate fires when the age line crosses the deadline line; a product that was never ready has no age line but still alerts.",
       "datasource": {
@@ -1536,7 +1536,30 @@
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".* deadline$"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {

@@ -620,6 +620,11 @@ Observed (2026-10-14, without the cluster: Prometheus v3.15.0 in a container on 
 - Re-applying `01-schemas.sql` resolved it within 10 seconds.
 - With no ready rows at all, both products fired ("it was never ready").
 
+Observed on the lab (2026-10-14, kind + kube-prometheus-stack, `DRILLS=12 tests/e2e/phase6-check.sh`):
+
+- `sales` ready up to 2026-10-14 00:00; tightening its deadline fired `DataProductLate` for `sales` after 139 s (the 1-minute deadline, the 30 s scrape and the rule's `for: 2m`); `finance.exposed` was already firing, as expected while `finance_daily` stays paused.
+- Restoring the deadline and unpausing `sales_elt` resolved it after 16 s; the canary passed.
+
 Detection: `DataProductLate`, one alert per product, labelled `product`; its value is the age of the newest ready interval.
 It comes from the warehouse's `sql_exporter` (`ops_product_ready_interval_end_seconds`, `ops_product_max_age_seconds`); if that exporter is gone, `AirflowReadinessMetricsMissing` fires instead.
 It is left out of the drills' "nothing firing" preflight: `finance_daily` stays paused on the lab (#66), so `finance.exposed` is late by design until a synthetic partner drop exists.
