@@ -35,6 +35,8 @@ series=(
   "kube_deployment_spec_replicas deployment"
   "container_memory_working_set_bytes pod"
   "keda_scaler_metrics_value scaledObject"
+  "ops_product_ready_interval_end_seconds product"
+  "ops_product_max_age_seconds product"
 )
 # The exporter drops counters idle for 5 minutes (histograms after 1 hour), so a series hello just
 # re-created reaches Prometheus only on the next scrape; poll each one instead of one sentinel.

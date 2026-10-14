@@ -18,11 +18,13 @@
 #   9c stop every triggerer (sustained: scaled to 0)     -> AirflowTriggererDown; the wait stays deferred with
 #      its upstream ready, then resumes on scale-up and finance_daily succeeds
 #   11 block git-sync's SSH egress to GitHub           -> AirflowGitSyncFailing, every pod still Ready (#18)
+#   12 pause sales_elt and tighten sales' deadline      -> DataProductLate for product sales (D37, #65)
 # DRILLS="1 9" runs only those drills after the preflight.
 # The chart and Airflow minor roll lives in phase6-upgrade-drill.sh (it reinstalls Airflow).
 # Expects `make airflow-up observability-up workloads-up`. Re-runnable and self-restoring: the exit trap (also on
 # SIGINT/SIGTERM) deletes a pod it hung, scales the schedulers and triggerers back, starts the DB, uncordons nodes, and
-# restores the pool, KEDA's query, KEDA's scaling of the workers, git-sync's egress, and the DAGs' paused flags, and
+# restores the pool, KEDA's query, KEDA's scaling of the workers, git-sync's egress, the data products' deadlines, and the
+# DAGs' paused flags, and
 # discards the scheduled runs that unpausing them created.
 set -euo pipefail
 
@@ -32,11 +34,12 @@ source "$(dirname "$0")/lib/prometheus.sh"
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml")
 LOAD=ops_load_test
 FIN=finance_daily
+SALES=sales_elt
 OUR_ALERTS='Airflow.*|MetadataDB.*|KubeNode.*|Keda.*'
 say() { echo "[$(date +%T)] $*"; }
 
 # ---- restorable state -------------------------------------------------------------------------------
-load_was_paused="" fin_was_paused="" keda_query="" hung="" sampler="" git_blocked=""
+load_was_paused="" fin_was_paused="" sales_was_paused="" keda_query="" hung="" sampler="" git_blocked="" deadline_changed=""
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 # The replica counts the drills restore (D31: two each); read before any drill changes them.
 SCHEDULERS=$(kc get deploy airflow-scheduler -o jsonpath='{.spec.replicas}')
@@ -56,6 +59,8 @@ cleanup() {
   [ -z "$keda_query" ] || keda_set_query "$keda_query" >/dev/null 2>&1
   keda_resume >/dev/null 2>&1
   [ -z "$git_blocked" ] || kc delete networkpolicy drill-block-git-ssh --ignore-not-found >/dev/null 2>&1
+  [ -z "$deadline_changed" ] || reset_deadlines >/dev/null 2>&1
+  [ "$sales_was_paused" != false ] || api PATCH "/api/v2/dags/$SALES" '{"is_paused":false}' >/dev/null 2>&1
   if [ "$load_was_paused" = true ]; then
     api PATCH "/api/v2/dags/$LOAD" '{"is_paused":true}' >/dev/null 2>&1
     discard_scheduled_runs "$LOAD" "$STARTED"
@@ -73,6 +78,23 @@ trap cleanup EXIT
 # ---- helpers ----------------------------------------------------------------------------------------
 psql_meta() { "${COMPOSE[@]}" exec -T metadata-db psql -U airflow -d airflow -Atc "$1"; }
 psql_wh() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d warehouse -Atc "$1"; }
+# The deadlines' source of truth is the warehouse schema file (D37); re-applying it undoes a drill's change.
+reset_deadlines() {
+  "${COMPOSE[@]}" exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse \
+    psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/01-schemas.sql
+}
+late_state() { # product -> firing | pending | inactive for DataProductLate on that product
+  prom "ALERTS{alertname=\"DataProductLate\", product=\"$1\"}" | jq -r 'map(.metric.alertstate) | if any(. == "firing") then "firing" elif any(. == "pending") then "pending" else "inactive" end'
+}
+wait_late() { # product firing|inactive timeout-seconds -> prints the seconds it took
+  local end=$((SECONDS + $3)) start=$SECONDS state=""
+  while [ $SECONDS -lt $end ]; do
+    state=$(late_state "$1")
+    [ "$state" = "$2" ] && { echo $((SECONDS - start)); return 0; }
+    sleep 5
+  done
+  fail "DataProductLate for $1 is '$state', not '$2', after $3 s"
+}
 pool_size() { kc exec deploy/airflow-scheduler -c scheduler -- airflow pools set ops_load "$1" "KEDA load fixture (ops_load_test)" >/dev/null; }
 # Info-level alerts (recent task failures, a cordoned node) describe history, not an outage.
 firing_ours() { prom "ALERTS{alertstate=\"firing\", alertname=~\"$OUR_ALERTS\", severity!=\"info\"}" | jq -r 'map(.metric.alertname) | unique | join(",")'; }
@@ -647,9 +669,40 @@ drill_11() {
   echo "ok: (11) git-sync fetch failure detected and recovered"
 }
 
+# ---- 12. a data product is late ---------------------------------------------------------------------
+# DataProductLate (D37) reads the data contract, not the platform: no run has to exist, so pausing the
+# producer is enough in production. Waiting out sales' 36 h deadline is not, so the drill pauses
+# sales_elt (nothing may land while it runs) and tightens sales' deadline to one minute; the newest
+# ready interval then counts as late, through the same exporter, rule and labels a real miss uses.
+# Recovery re-applies the deadlines from the warehouse schema and unpauses the DAG.
+drill_12() {
+  local newest
+  newest=$(prom_value 'ops_product_ready_interval_end_seconds{product="sales"}')
+  [ -n "$newest" ] && [ "${newest%.*}" != 0 ] ||
+    fail "no ready sales interval exported (${newest:-no series}): run sales_elt once first"
+  [ "$(late_state sales)" = inactive ] ||
+    fail "DataProductLate already fires for sales: sales_elt has not landed for 36 h, so catch up first (runbook drill 12)"
+  sales_was_paused=$(api GET "/api/v2/dags/$SALES" | jq -r .is_paused)
+  say "12. late product: pause $SALES, tighten sales' deadline to 1 minute (newest ready interval ended $(date -u -d "@${newest%.*}" +%FT%H:%MZ))"
+  api PATCH "/api/v2/dags/$SALES" '{"is_paused":true}' >/dev/null
+  deadline_changed=1
+  psql_wh "UPDATE ops.product_deadlines SET max_age = interval '1 minute' WHERE product = 'sales'" >/dev/null
+  took=$(wait_late sales firing 300)
+  say "  detected: DataProductLate firing for product sales after ${took}s ($(prom 'ALERTS{alertname="DataProductLate", alertstate="firing"}' | jq -r 'map(.metric.product) | join(",")') late)"
+  # Recovery (runbook drill 12): the deadline back to its declared value, the producer unpaused.
+  reset_deadlines
+  deadline_changed=""
+  [ "$sales_was_paused" = true ] || api PATCH "/api/v2/dags/$SALES" '{"is_paused":false}' >/dev/null
+  sales_was_paused=""
+  took=$(wait_late sales inactive 180)
+  say "  recovered: deadline restored, $SALES unpaused; DataProductLate for sales resolved after ${took}s"
+  canary
+  echo "ok: (12) late data product detected and recovered"
+}
+
 # ---- run the drills -----------------------------------------------------------------------------------
 # DRILLS="1 9" runs a subset (the preflight always runs); the default is every drill, in this order.
-for d in ${DRILLS:-1 2 3 4a 4b 7 8 9 11}; do
+for d in ${DRILLS:-1 2 3 4a 4b 7 8 9 11 12}; do
   declare -F "drill_$d" >/dev/null || fail "no drill $d (DRILLS=$DRILLS)"
   "drill_$d"
 done
