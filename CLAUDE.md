@@ -21,7 +21,7 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 ## Working files
 
 - [`PLAN.md`](PLAN.md): the roadmap, architecture decisions, and phase exit criteria. Read it before starting work; change a decision there, with its rationale, before acting on the change.
-- [`LEDGER.md`](LEDGER.md): an append-only log of completed work. Append an entry at the end of every working session that changed the repo.
+- [`LEDGER.md`](LEDGER.md): an append-only log of completed work. Every working session that changed the repo adds one entry, as a fragment `ledger.d/YYYY-MM-DD-<issue-or-pr>-<slug>.md` in the PR that carries the work ([`ledger.d/README.md`](ledger.d/README.md)); `make ledger` on `main` folds merged fragments into `LEDGER.md`. Never edit `LEDGER.md` in a PR, so parallel PRs don't conflict on it.
 - [`LESSONS.md`](LESSONS.md): one-line lessons for the real GKE and Composer build (Stages 2-3). Append any lesson a session teaches that applies there; leave out anything that only matters on the local machine.
 - [`docs/agents/autopilot.md`](docs/agents/autopilot.md): the standing brief for unattended cloud routine runs (`pplk8s-worker`); its setup script is `docs/agents/cloud-setup.sh`.
 - GitHub label `lesson`: put it on every issue or PR whose work likely teaches a LESSONS.md lesson for GKE (Stage 2) or Composer (Stage 3); leave lab-only problems (WSL2, kind, local stand-ins, this repo's own CI) unlabelled. `gh issue list -l lesson` is the queue of what to tackle next for the lessons.
