@@ -249,8 +249,15 @@ class ElFactoryHook(HttpHook):
         ):
             raise AirflowFailException(f"extract {source}.{entity} has invalid next_url: {body!r}")
         pages = body.get("pages", 1)
-        if not isinstance(pages, int) or isinstance(pages, bool) or pages < 1:
+        if not isinstance(pages, int) or isinstance(pages, bool) or pages < 0:
             raise AirflowFailException(f"extract {source}.{entity} has invalid pages: {pages!r}")
+        # A file source whose version is already complete loads nothing (issue #92). That is valid
+        # only as an empty final answer, never as a continuation, so a request without progress
+        # cannot loop.
+        if pages == 0 and (body["next_url"] is not None or rows != 0):
+            raise AirflowFailException(
+                f"extract {source}.{entity}: 0 pages must be an empty final page: {body!r}"
+            )
         return pages, rows
 
     def _same_host_endpoint(self, next_url: str) -> str:

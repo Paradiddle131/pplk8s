@@ -170,10 +170,30 @@ def test_time_boxed_responses_count_their_pages():
     assert (summary["requests"], summary["pages"], summary["rows"]) == (2, 6, 550)
 
 
-@pytest.mark.parametrize("pages", [0, -1, "3", True])
+@pytest.mark.parametrize("pages", [-1, "3", True])
 @responses.activate
 def test_invalid_pages_fail_without_retry(pages):
     responses.post(f"{BASE}/extract", json=page(1, pages=pages))
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().extract_entity(*ARGS)
+
+
+@responses.activate
+def test_a_file_already_loaded_answers_zero_pages_and_succeeds():
+    """A file source whose version is complete loads nothing and says so (issue #92)."""
+    responses.post(f"{BASE}/extract", json=page(0, None, pages=0))
+    summary = ElFactoryHook().extract_entity(*ARGS)
+    assert (summary["requests"], summary["pages"], summary["rows"]) == (1, 0, 0)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [page(0, "/extract?cursor=3", pages=0), page(5, None, pages=0)],
+    ids=["no-progress-continuation", "rows-without-pages"],
+)
+@responses.activate
+def test_zero_pages_is_only_valid_as_an_empty_final_answer(body):
+    responses.post(f"{BASE}/extract", json=body)
     with pytest.raises(AirflowFailException):
         ElFactoryHook().extract_entity(*ARGS)
 
