@@ -245,7 +245,10 @@ URI_LIKE="%/${REPUBLISH_ENTITY}_tripdata_$M.parquet"
 REAL=$(psql_wh "SELECT etag FROM ops.file_versions WHERE source_uri LIKE '$URI_LIKE' ORDER BY completed_at DESC LIMIT 1")
 [ -n "$REAL" ] || fail "(d) no completed $REPUBLISH_ENTITY version for $M"
 before=$(layer_counts "$M")
+# An earlier check's forged version row survives its replacement (EL Factory keeps every completed
+# version in ops.file_versions and silver reads the latest), so clear it before forging again.
 psql_wh "BEGIN;
+  DELETE FROM ops.file_versions WHERE source_uri LIKE '$URI_LIKE' AND etag = '$FORGED';
   UPDATE ds_source.tlc_$REPUBLISH_ENTITY SET _etag = '$FORGED' WHERE _source_uri LIKE '$URI_LIKE' AND _etag = '$REAL';
   UPDATE ops.file_chunks SET etag = '$FORGED' WHERE source_uri LIKE '$URI_LIKE' AND etag = '$REAL';
   UPDATE ops.file_versions SET etag = '$FORGED' WHERE source_uri LIKE '$URI_LIKE' AND etag = '$REAL';
