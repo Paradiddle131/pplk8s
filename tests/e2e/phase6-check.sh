@@ -24,8 +24,7 @@
 # Expects `make airflow-up observability-up workloads-up`. Re-runnable and self-restoring: the exit trap (also on
 # SIGINT/SIGTERM) deletes a pod it hung, scales the schedulers and triggerers back, starts the DB, uncordons nodes, and
 # restores the pool, KEDA's query, KEDA's scaling of the workers, git-sync's egress, the data products' deadlines, and the
-# DAGs' paused flags, and
-# discards the scheduled runs that unpausing them created.
+# DAGs' paused flags, and discards the scheduled runs that unpausing them created.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
