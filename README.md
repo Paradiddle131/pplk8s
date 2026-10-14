@@ -6,9 +6,9 @@ A single-machine lab for running Apache Airflow 3 on Kubernetes.
 It rehearses moving a GCP data platform from Cloud Workflows to Airflow, first self-managed on GKE and later on Cloud Composer.
 Every GCP service has a local stand-in, and all data is public or synthetic.
 
-```
-trigger → Airflow DAG → EL Factory (extract, stage in object storage, load warehouse) → dbt (bronze → silver → gold → exposed) → readiness record
-```
+<img width="1929" height="2102" alt="image" src="https://github.com/user-attachments/assets/c9603099-4f1d-47b8-adfe-a0ff00d8fff2" />
+
+<img width="2318" height="1250" alt="image" src="https://github.com/user-attachments/assets/ccacd37d-60c0-47dd-a4ca-8f621519c2c4" />
 
 Airflow only orchestrates: extraction lives in EL Factory and transformation in dbt.
 DAGs reach those workloads through one thin seam (`airflow/include/pplk8s/`), so they can move to Composer unchanged.
