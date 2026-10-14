@@ -1520,7 +1520,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 16,
         "x": 0,
         "y": 56
       },
@@ -1585,6 +1585,71 @@
           "refId": "B",
           "expr": "max by (product) (ops_product_max_age_seconds) / 3600",
           "legendFormat": "{{product}} deadline",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "TLC months awaiting publication",
+      "id": 30,
+      "description": "Days since each data month closed, for every TLC file whose tlc_monthly wait was told it is still unpublished (D35). TLC usually publishes 24-83 days after month end; TlcMonthUnpublished fires past 100 days, and the wait itself gives up at 120. Empty while every open month is inside its usual lag.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "decimals": 0,
+          "min": 0,
+          "max": 120,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 84
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "noValue": "None waiting"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(time() - max by (data_month, file) (airflow_publication_wait_interval_end_seconds{dag_id=\"tlc_monthly\"})) / 86400",
+          "legendFormat": "{{data_month}} {{file}}",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"

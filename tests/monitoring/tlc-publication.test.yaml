@@ -1,0 +1,61 @@
+# promtool unit tests for TlcMonthUnpublished (D35), run by `make rules-test` (tests/monitoring/rules-test.sh),
+# which writes each PrometheusRule manifest's spec to <manifest>.rules.yaml beside this file first.
+# Hourly samples and evaluations: the rule's threshold is 100 days, so minutes would add nothing.
+rule_files:
+  - airflow-rules.rules.yaml
+
+evaluation_interval: 1h
+
+tests:
+  # The 2026-09 month closed at t=0. Yellow stays unpublished throughout: quiet at 99 days, pending
+  # once past 100 days, firing after the 1 h `for:`. Green was published at 50 days, so its wait
+  # left the collector and never fires. 2026-10 closed 30 days later and is still inside the
+  # threshold at 101 days. Another DAG's publication wait is not TLC's and is ignored.
+  - interval: 1h
+    input_series:
+      - series: 'airflow_publication_wait_interval_end_seconds{dag_id="tlc_monthly", run_id="scheduled__2026-10-01T00:00:00+00:00", data_month="2026-09", file="tlc.yellow"}'
+        values: '0x2448'
+      - series: 'airflow_publication_wait_interval_end_seconds{dag_id="tlc_monthly", run_id="scheduled__2026-10-01T00:00:00+00:00", data_month="2026-09", file="tlc.green"}'
+        values: '0x1200 _x1248'
+      - series: 'airflow_publication_wait_interval_end_seconds{dag_id="tlc_monthly", run_id="scheduled__2026-11-01T00:00:00+00:00", data_month="2026-10", file="tlc.yellow"}'
+        values: '2592000x2448'
+      - series: 'airflow_publication_wait_interval_end_seconds{dag_id="other_monthly", run_id="scheduled__2026-10-01T00:00:00+00:00", data_month="2026-09", file="x.y"}'
+        values: '0x2448'
+    alert_rule_test:
+      - eval_time: 99d
+        alertname: TlcMonthUnpublished
+        exp_alerts: []
+      - eval_time: 100d1h
+        alertname: TlcMonthUnpublished
+        exp_alerts: [] # pending, not firing
+      - eval_time: 100d2h
+        alertname: TlcMonthUnpublished
+        exp_alerts:
+          - exp_labels: {dag_id: tlc_monthly, data_month: "2026-09", file: tlc.yellow, severity: warning}
+            exp_annotations:
+              summary: "TLC tlc.yellow 2026-09 is still unpublished 100d 2h 0m 0s after the month closed; TLC usually publishes within three months."
+              runbook: docs/runbook.md#3-a-tlc-month-stays-unpublished
+      - eval_time: 101d
+        alertname: TlcMonthUnpublished
+        exp_alerts:
+          - exp_labels: {dag_id: tlc_monthly, data_month: "2026-09", file: tlc.yellow, severity: warning}
+            exp_annotations:
+              summary: "TLC tlc.yellow 2026-09 is still unpublished 101d 0h 0m 0s after the month closed; TLC usually publishes within three months."
+              runbook: docs/runbook.md#3-a-tlc-month-stays-unpublished
+
+  # Published at last on day 101: the wait succeeds, its series goes, and the alert resolves.
+  - interval: 1h
+    input_series:
+      - series: 'airflow_publication_wait_interval_end_seconds{dag_id="tlc_monthly", run_id="scheduled__2026-10-01T00:00:00+00:00", data_month="2026-09", file="tlc.yellow"}'
+        values: '0x2424 _x48'
+    alert_rule_test:
+      - eval_time: 100d12h
+        alertname: TlcMonthUnpublished
+        exp_alerts:
+          - exp_labels: {dag_id: tlc_monthly, data_month: "2026-09", file: tlc.yellow, severity: warning}
+            exp_annotations:
+              summary: "TLC tlc.yellow 2026-09 is still unpublished 100d 12h 0m 0s after the month closed; TLC usually publishes within three months."
+              runbook: docs/runbook.md#3-a-tlc-month-stays-unpublished
+      - eval_time: 101d2h
+        alertname: TlcMonthUnpublished
+        exp_alerts: []
