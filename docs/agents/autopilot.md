@@ -7,6 +7,7 @@ This is v0: the generic parts move into an `autopilot` skill in `Paradiddle131/c
 
 **Standing permission (granted by the user, 2026-10-13):** on `Paradiddle131/pplk8s`, runs may push `claude/*` branches, open and edit draft PRs and issues, comment, add and remove labels, and mark PRs ready.
 Do these without asking.
+The same holds on `Paradiddle131/claude-dotfiles` for its map's tickets (packets, prototype branches, research and build PRs) (user, 2026-10-14); that repo has no `needs-user` label, so a packet there is marked by assigning the ticket to `Paradiddle131`.
 **Never merge a PR** (user decision, 2026-10-12): pplk8s's real exit checks need the local kind cluster, so every finished PR hands off for local verification (§6).
 
 A run can be cut off at any moment by a 5-hour or weekly usage limit, and other runs may be working beside you (runs start hourly and overlap).
@@ -29,12 +30,21 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   - **Bodies from a file need capital `-F body=@file.md`**; `-f` posts the literal path.
     Read every body back after posting (`--jq '.body[0:80]'`).
   - Draft → ready: `gh api -X POST repos/Paradiddle131/pplk8s/pulls/<n>/ccr/ready_for_review` (a proxy route; plain REST cannot do it), or the GitHub MCP tool `update_pull_request` with `draft: false`.
+  - `gh api search/…` is refused ("sessions are bound to their configured repositories"); list `repos/…/issues?state=all&per_page=100` and filter with `--jq`.
+  - PR review threads: if REST `pulls/<n>/comments` answers 403, read them with the GitHub MCP `pull_request_read` (`method: get_review_comments`).
+- **GitHub Actions does not run** (account billing, since 2026-10-13; the user will not fix it soon): every job fails within seconds with "recent account payments have failed or your spending limit needs to be increased".
+  A red `test` check with that annotation is not a failure of your PR: don't wait for it, don't try to fix it, don't re-file it.
+  The gates are the cloud `make test` with the warehouse up (`make services-up` and `PPLK8S_REQUIRE_WAREHOUSE=1`, as CI would run it) and the laptop's `make verify` before merge (D26).
 - Start Docker first: `bash docs/agents/cloud-docker.sh` (idempotent).
   The VM does not start the daemon, the setup snapshot keeps no processes, and anonymous Docker Hub pulls hit 429, so the script starts `dockerd` with `mirror.gcr.io` as registry mirror.
 - What runs on cloud: Docker and `docker compose`, `uv`, Postgres 16 (not started).
   So `make lint`, `make test` (unit + DagBag) and the Compose services (`make services-up`) run here.
 - Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build`, `make verify` and `make phase1-check` do not run; the images are built by `make verify` on the laptop before merge (PLAN.md D26).
   Run dbt from the host instead: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …`; run EL Factory with `uv run gunicorn` and the env from `scripts/el-factory-local.sh`.
+  Start a host gunicorn with `run_in_background` (or record its PID): one started in a plain Bash call outlives the tool's kill and holds the port.
+- Alert rules over the Compose exporters are cloud-verifiable without kind: run `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file extracted from the PrometheusRule's `spec` (as `tests/monitoring/rules-test.sh` does); read an exporter with `docker run --rm --network pplk8s curlimages/curl …` (exporters publish no host port).
+  So a monitoring change (metric, rule, promtool test, dashboard, runbook) is buildable and mostly verifiable here; only its kind deployment is local.
+- Every `uv` call warns `UV_NATIVE_TLS is deprecated`; the environment sets it, it is harmless, ignore it.
 - What does not: kind (the VM is cgroup v1 and kubelet 1.36 refuses it; settled 2026-10-12), so nothing needing the cluster: `make airflow-up`, `phase2`–`phase6` checks, drills, KEDA, monitoring.
   The cluster check is `make ci-integration` on the laptop before merge; `integration.yaml` runs on GitHub Actions only on demand (D26), so do not dispatch it.
   Probe once per environment and record the result on the run board; don't spend a run fighting it.
@@ -50,6 +60,7 @@ Design every step so the next run can pick up exactly where this one stopped: pu
 
 1. `git fetch --all --prune`; list `claude/*` branches and branches with open PRs.
 2. **The run board** [🤖 pplk8s-worker run board](https://github.com/Paradiddle131/pplk8s/issues/43): its comments edited in the last 75 minutes are **live runs**; note each one's item and areas.
+   The board's issue body holds the **decision digest** (§4a): every question waiting for the user, across both repos.
 3. Open PRs labelled `autopilot`: base, draft state, checks, the user's review comments, the `🤖 Autopilot handoff` comment.
 4. The maps (labelled `wayfinder:map`): [Map: NYC TLC monthly pipeline](https://github.com/Paradiddle131/pplk8s/issues/35), and in `claude-dotfiles` [Map: reusable autopilot for cloud routines](https://github.com/Paradiddle131/claude-dotfiles/issues/1).
    Read the map bodies (Destination, Notes, Decisions so far), not every ticket.
@@ -81,18 +92,25 @@ A claim on an item is **live** while the item or its PR saw a worker comment, co
 
 1. **Fresh user answers**: a `needs-user` item the user replied to. Act on the answer (see §4 for wayfinder tickets), remove `needs-user`.
 2. **Unfinished autopilot work**: an `autopilot` PR whose handoff has open **Next** items and no live claim.
-3. **Broken autopilot PRs**: failing checks, merge conflicts, or the user's review comments. Fix them on their branch.
-4. **The wayfinder frontier**: on each map, open sub-issues that are unblocked and unassigned, in map order (§4).
-5. **Build issues** labelled `autopilot-ready` whose blockers are all closed, lowest number first.
-6. **Next best action**: a failing, flaky or skipped test; a lint warning; a `bug` issue; a `lesson` issue that cloud can verify.
+3. **Broken autopilot PRs**: failing checks (not the Actions billing failure, §0), merge conflicts, or the user's review comments. Fix them on their branch.
+4. **The wayfinder frontier**: on each map (§1.4, both repos), open sub-issues that are unblocked and unassigned, in map order (§4).
+5. **Build issues** labelled `autopilot-ready` whose blockers are all closed, lowest number first; prefer one cloud can verify, and when a local-only build issue depends on a cloud-verifiable bug, take the bug first.
+6. **Next best action**: a failing, flaky or skipped test; a lint warning; a `bug` issue; a `lesson` issue.
    Open an issue first if none exists, so the work is visible.
+   An issue blocked by an architectural fork gets a §4 decision packet and `needs-user` instead of a build.
+7. **Build ahead of an answer** (§4b): a `needs-user` packet whose recommendation is reversible and buildable on cloud, with no speculative PR yet.
+8. **Refill the queue** (§4c) when 1–7 are empty, instead of exiting.
 
 PRs waiting for local verification never limit new work; only dependencies do (user, 2026-10-13).
 An item whose blocker is an open PR, not yet merged, is takeable: branch from that PR's branch and set your PR's base to it (§5).
 
-If every candidate conflicts with a live run, or three runs are already live: edit your board comment to `⚪ nothing non-conflicting; exiting` and end the run (it costs almost nothing, and the usage window stays for the live runs).
+**Build vs verify.** Needing kind or `make verify` to *verify* never makes an item untakeable: build it, verify what cloud can (§0, §6), and hand the rest to the laptop with `needs-local-verify`.
+Only work that needs a live cluster *while building* (tuning against kind, a drill whose design depends on what the cluster does) is local-only, and even then the cloud-buildable parts (metrics, rules, tests, runbook text, scripts) are sliced out into their own tickets (§4c).
 
-Never pick work only the user can do: a reversal of a recorded decision, anything an issue marks "ask the user", or the local-only checks in §0.
+If every candidate conflicts with a live run, or three runs are already live: edit your board comment to `⚪ nothing non-conflicting; exiting` and end the run (it costs almost nothing, and the usage window stays for the live runs).
+Exit for an empty queue only after §4c found nothing to file.
+
+Never pick work only the user can do: a reversal of a recorded decision, anything an issue marks "ask the user", or running the local-only checks in §0.
 
 ## 4. Wayfinder tickets
 
@@ -101,11 +119,53 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 - **research** (AFK): resolve it fully. Findings go to `docs/research/<name>.md` in a docs-only PR from a `research/<name>` branch, so later code and docs can link a path on `main` rather than a branch; post the resolution comment, close the ticket, add the one-line pointer to the map's **Decisions so far**.
 - **grilling / prototype** (HITL): **never resolve these yourself**, and never answer your own questions.
   Prepare a **decision packet** instead: read the code and facts the question needs, then comment on the ticket with the questions (at most three, the most blocking first), each with options **A/B/C**, one line of trade-off each, and **Recommendation:** with a short why.
-  For a prototype, build the rough artifact on a `claude/<n>-<slug>` branch and link it by commit sha.
-  Label the ticket `needs-user` and move on.
+  For a prototype, build the rough artifact on a `claude/<n>-<slug>` branch and link it by commit sha; if the harness insists on a PR, open it as a draft titled `prototype #<n> — do not merge`, and close it when the ticket resolves.
+  End the packet with one line, **If you pick the recommendation, the build is:** (the change, its areas, how cloud verifies it), so §4b can start it.
+  Label the ticket `needs-user`, add it to the digest (§4a), and move on.
   When the user has answered (§3 item 1), post the resolution comment, close the ticket, update the map, and graduate any fog the answer made specifiable into new tickets (create, then wire `blocked_by`).
 - **task**: do it if it is AFK and cloud-verifiable; otherwise write the human a precise checklist on the ticket and label it `needs-user`.
 - Claiming a wayfinder ticket = assigning it to `Paradiddle131` (the dev driving the map) **and** your board comment naming it.
+
+These packets apply to any issue that needs a user decision, not only wayfinder tickets.
+
+### 4a. Decision digest
+
+The run board's **issue body** (#43) is the one place the user reads to unblock runs: every open question, across both repos, one line each, most blocking first.
+
+```markdown
+## Waiting for you (answer on the issue, like `1B 2A`)
+- [ ] #66 — 3 questions: producer location, checks vs unpaused DAG, soak — recommended `1B 2A 3B` — unblocks: the partner producer build
+- [ ] PR #84 — confirm D37 — recommended: yes — unblocks: merge
+## Waiting for the laptop
+- [ ] PR #81 — `make verify`, merge
+```
+
+Edit it whenever you post, answer or resolve a packet, or mark a PR `needs-local-verify`: re-read the body right before you write it (another run may have edited it), change only your lines, write it back with `gh api -X PATCH repos/Paradiddle131/pplk8s/issues/43 -F body=@digest.md`.
+Remove a line when its item is resolved or merged.
+
+### 4b. Build ahead of an answer
+
+A packet's recommendation is usually what the user picks, so an unanswered packet need not stall its build.
+Take it (§3.7) when all hold: the recommended option is reversible (no data deleted outside the lab, no recorded decision reversed), cloud can build it, and it has no speculative PR yet.
+
+- Branch `claude/<n>-<slug>`, draft PR titled `[speculative: <n> = <answer>] …`, body `Refs #<n>` (not `Closes`).
+- Write the PLAN.md decision as the packet recommends, marked `(proposed, awaiting #<n>)`.
+- The handoff's **You:** line: "answer #<n>; if you pick `<answer>`, this PR is its build".
+- Keep `needs-user` on the issue. When the user picks the recommendation, the next run drops `speculative` and `(proposed …)` and finishes the PR as usual; when they pick otherwise, close the PR with a comment and build the chosen option.
+- At most one speculative PR per packet; never stack a speculative PR on another speculative PR.
+
+### 4c. Refill the queue
+
+When §3.1–3.7 are empty, file work instead of exiting, first match wins, **at most three new issues per run**:
+
+1. **Slice** an open issue that mixes cloud-buildable and local-only work (§3, build vs verify) into sub-issues: one per cloud-buildable part, `autopilot-ready`, and the local run as the last one, wired with `blocked_by` (`gh api repos/…/issues/<n>/sub_issues -F sub_issue_id=<sub-issue id, not number>`; `gh api repos/…/issues/<n>/dependencies/blocked_by -F issue_id=<blocker id>`).
+2. **Reality-check** a claim in `PLAN.md` or `docs/research/**` that cloud can measure (a file schema, a size, a version, an upstream behaviour); #82 is the model. A wrong claim becomes a `bug` issue with the evidence.
+3. **Close a test gap**: a code path in `airflow/include/pplk8s/**`, `services/**` or `dbt/**` that no test exercises, or a skipped test.
+4. **Research a lesson**: for an open `lesson` issue, or a `LESSONS.md` line with no GKE/Composer source yet, find the primary-source answer for Stage 2/3 (a docs-only `research/<name>` PR, as §4 research tickets).
+
+Work inside approved scope (a PLAN.md phase's exit criteria or bullet, a §6 risk, an open issue's acceptance) gets `autopilot-ready` and can be taken by the same run.
+New scope (a feature, a phase, a dependency the plan does not name) gets the label `proposed` and a digest line, and is never built until the user removes `proposed`.
+Each filed issue carries symptom or goal, evidence, acceptance and its areas.
 
 ## 5. Claim and work
 
@@ -117,7 +177,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 5. Follow `CLAUDE.md` and `PLAN.md`: change a decision in `PLAN.md`, with its rationale, before acting on it.
 6. After the first meaningful commit, push and open a **draft PR** (`Closes #<n>` in the body), so the work survives a cut-off.
    Push after every working step and edit your board comment's `state:` line each time (that edit is your heartbeat).
-7. **Shared logs:** do not edit `LEDGER.md` from a cloud run (parallel PRs would conflict on it); put the ready-to-paste ledger entry in the handoff's agent section.
+7. **Shared logs:** never edit `LEDGER.md`; add your entry as a fragment `ledger.d/<YYYY-MM-DD>-<n>-<slug>.md` in your PR (`ledger.d/README.md`), so it merges with the work and parallel PRs never conflict.
    Append to `LESSONS.md` only when your areas hold it.
 8. Put the `lesson` label on any issue or PR whose work likely teaches a GKE (Stage 2) or Composer (Stage 3) lesson (see `CLAUDE.md`).
 
@@ -125,7 +185,7 @@ Follow the `wayfinder` skill's "Work through the map" mode, with one change for 
 
 **Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; image builds and kind are left to the local `make verify` / `make ci-integration`.
 A change to an image's contents (a Dockerfile, dependencies, dbt models, service code) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image.
-Opening the PR runs only `ci.yaml`'s `test` job on GitHub Actions (D26); wait for it and report it. Do not dispatch the on-demand `images` or `integration` jobs.
+Opening the PR would run `ci.yaml`'s `test` job, but Actions is blocked by billing (§0): record `CI test — n/a (Actions billing)` and the cloud `make test` counts with `PPLK8S_REQUIRE_WAREHOUSE=1` instead. Do not dispatch the on-demand `images` or `integration` jobs.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
 **The part outside `<details>` is for the human scanning many PRs: only what needs them, five lines at most.**
@@ -141,7 +201,7 @@ Everything else goes inside the collapsed sections.
 
 - [ ] `git fetch && git switch claude/<n>-<slug>`
 - [ ] `make <targets>` — expect: <exact evidence: row counts, alert names, run states>
-- [ ] Append to `LEDGER.md` (entry below), merge.
+- [ ] Merge (the ledger fragment is in the PR).
 
 </details>
 <details><summary>Agent context (resume here)</summary>
@@ -152,23 +212,28 @@ Everything else goes inside the collapsed sections.
 - [ ] `make lint` — …
 - [ ] `make test` — <passed/skipped counts>
 - [ ] `make services-up` + host dbt / EL Factory (§0) — <what ran, row counts>
-- [ ] CI `ci` (test) — <conclusion>
+- [ ] `PPLK8S_REQUIRE_WAREHOUSE=1 make test` with the warehouse up — <passed counts> (stands in for CI `test`, §0)
 **Not verified (needs local):** `make verify` (image builds), `make ci-integration` when cluster-facing, …
 **Decisions taken and why:** …
-**Ledger entry (paste on merge):** …
+**Ledger fragment:** `ledger.d/<file>`
 
 </details>
 ```
 
 When the work is complete and cloud-verified: mark the PR ready (MCP `update_pull_request`, `draft: false`), label it `needs-local-verify`, set the headline to **ready for local verify**.
 
-A local session resuming a PR reads the handoff's agent section, runs the checklist, writes the evidence into the PR, appends `LEDGER.md`, and the user merges.
+**Local resume** (a session on the laptop, user decision 2026-10-14):
+
+1. List open PRs labelled `needs-local-verify`, oldest first, stacked bases before the PRs on top of them; take one.
+2. Read its handoff's agent section, run the checklist.
+3. Edit the handoff **in place**: tick each local box with its evidence; headline → **verified locally — merge**, or **local verify failed** with a `You:` line and new **Next** items (a failed verify hands the PR back to the cloud runs, §3.2).
+4. Remove `needs-local-verify`, update the digest (§4a); after the merge, `make ledger` on `main` folds the fragments.
 
 ## 7. End of run
 
 - Leave the tree clean: everything committed and pushed, or deliberately discarded.
 - Finish your §8 feedback comment (while §8 is in force).
-- Edit your board comment to `⚫ ended <UTC>` with the items touched and what the next run should do first.
+- Edit your board comment to `⚫ ended <UTC>` with the items touched and what the next run should do first; make sure the digest (§4a) matches what you left waiting.
 - Every problem you found but did not fix gets an issue (symptom, evidence, suspected cause, acceptance).
 - Your final message: what you worked on, links, the next run's first step.
 - With budget left and nothing finished blocking you, go back to §3 instead of ending.
@@ -182,6 +247,7 @@ The VM disappears when the run ends, so feedback lives only on GitHub: one comme
 - Be specific and honest: a command and its output beats an adjective; say what you guessed.
 - For every blocker or friction, write the answer that would have removed it if you know or found it (a setting, an allowlist host, a missing tool, a corrected sentence in this file), and a concrete patch when it is a text change.
   Don't apply patches to this file or the setup script yourself unless that is the work item you claimed.
+  A pure correction of a fact in §0 (an environment probe result, a REST route, a recipe that changed) is takeable as §3.6 work: open an issue, apply it in a PR. A change to how runs choose, claim or hand off work stays a proposal for the user.
 - Probe the open environment facts once per run (cheap commands only; stop at the first answer):
   - layout: `pwd` at start, `ls /home/user`, where the two clones are;
   - skills: `ls -la ~/.claude/skills` (links resolve into the fresh clone?), `cat ~/.claude/settings.json`;
