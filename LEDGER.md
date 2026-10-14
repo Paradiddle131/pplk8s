@@ -537,3 +537,46 @@ Entry format:
 - Evidence: at the defaults, three back-to-back `dbt build --select tag:tlc` of 2026-08 grew `silver.tlc_trips` 1.1 → 2.2 → 3.4 → 4.5 GB (10 M dead tuples); with this setting three more held it at 2.30-2.32 GB. A scratch table replaced by insert-new-then-delete-old (the republish path), 3 M rows, stayed between 313 and 625 MB over four cycles. A dbt post-hook `VACUUM` also worked (16-21 s per build), but with `SKIP_LOCKED` it was a silent no-op whenever autovacuum held the table, and it is redundant once autovacuum keeps up, so it was dropped.
 - Decisions: none in PLAN (stand-in tuning; BigQuery has nothing to vacuum).
 - Open: #73 (retiring old months) still decides the steady-state size.
+
+## 2026-10-13 — CI — warehouse-backed tests run in CI (#50)
+
+- Done: `ci.yaml`'s `test` job starts the Compose warehouse and sets `PPLK8S_REQUIRE_WAREHOUSE=1`; the readiness and file-ledger fixtures fail there instead of skipping (PR #51).
+- Evidence: CI `test` log `119 passed` (was 117 passed, 2 skipped); without a warehouse and with the variable, the 2 tests error.
+- Decisions: D26 amended.
+- Open: #18 (PR #31), #25, #42.
+- Note: folded late (2026-10-14, #83); the cloud handoff's paste-at-merge step lost it, which is why `ledger.d/` exists.
+
+## 2026-10-14 — Phase 8 — `make phase8-check`; D35's scope fits its ceiling (#58, #73, #82)
+
+- Done: `tests/e2e/phase8-check.sh` (`make phase8-check`) drives `tlc_monthly` on the lab: catchup of the scheduled months, backfills of the drift months, per-month readiness and bronze = silver + quarantine, the 2023 retype widening the landing table, a forged-etag republish, and the warehouse size against the ceiling (built on a cloud run, PR #80). D35 amended: one drift month per seam (2023-01, 2025-01, 2026-06) and retention before each load; the TLC research says only 2023-01 has the old schema.
+- Evidence: local `make phase8-check` 2026-10-14 (with #93's seam fix and `AIRFLOW_IMAGE` .13, `DAG_DELIVERY=local`): passed for 2023-01, 2025-01, 2026-06, 2026-07, 2026-08 (2026-09 waits deferrably, unpublished); every month bronze = silver + quarantine (e.g. 2026-08: 3,377,403 = 3,362,659 + 14,744; 2025-01 quarantine 4.1 %); 2023-01 widened `ds_source.tlc_yellow` (`vendorid bigint`, `passenger_count double precision`); the forged green 2026-08 version was replaced with unchanged counts; warehouse 13.0 GB under the 15 GB ceiling. The first run failed on 2026-06 (`invalid pages: 0`, #92).
+- Decisions: D35 amended (user, 2026-10-14: #73 = A + one month per seam, #82 = A).
+- Open: #87 (retention; turns the storage warning into a failure), #59 (drills).
+
+## 2026-10-14 — Phase 6 — DataProductLate: alert on late data products (#65)
+
+- Done: `ops.product_deadlines` (sales, finance.exposed: 36 h) and a warehouse sql_exporter collector exporting each product's newest ready interval end and deadline; `DataProductLate` fires when the age passes the deadline (D37), with drill 12, runbook §12, an "Airflow overview" dashboard row, and promtool unit tests in `make test` (`make rules-test`), built on a cloud run (PR #84).
+- Evidence: cloud: `make test` with the warehouse (airflow 158, el-factory 101, event-adapter 32 passed, rules-test SUCCESS); a standalone Prometheus v3.15.0 on the Compose network fired `DataProductLate{product="sales"}` 2 min 18 s after the deadline was tightened, and resolved 10 s after it was restored. Local 2026-10-14: `make verify` (airflow 158, el-factory 101, event-adapter 32, rules-test SUCCESS, images built); `observability-check.sh` 23 series; drill 12 detected after 139 s and recovered after 16 s, canary passed; `finance.exposed` firing as expected. Found locally: `make services-up` never restarted the sql_exporters when a branch changed their collectors, so the new series were missing until a manual restart; `up.sh` now restarts an exporter whose config is newer than its process. The Grafana panel's title promised hours but the axis showed days; title fixed, deadlines dashed.
+- Decisions: D37 (confirmed by the user 2026-10-14): deadlines in the warehouse, Airflow Deadline Alerts not used (a paused DAG creates no run, so it never misses one).
+- Open: `finance.exposed` fires on the lab until #66 unpauses `finance_daily`; a deadline for `tlc.*` is not defined yet.
+
+## 2026-10-14 — Phase 8 — EL Factory widens landed columns under bronze views (#72)
+
+- Done: EL Factory drops and recreates the views over a landing table around a column widening, in one transaction; the views keep their column types (`services/el-factory/src/el_factory/warehouse.py`). `ELF_IMAGE` 0.5.1. Built on a cloud run (PR #81).
+- Evidence: cloud: the new warehouse-backed test red on `main`, green here; real yellow 2023-01 after 2026-08 under the bronze views: `main` HTTP 500 `cannot alter type of a column used by a view or rule`, fixed 3,066,766 rows, `dbt build tag:tlc` 2023-01 PASS=20. Local `make verify` 2026-10-14: lint clean, airflow 158, el-factory 102 (incl. `test_widening_keeps_the_views_that_read_the_landing_table`, no skips), event-adapter 32, every image built (el-factory 0.5.1).
+- Found: only 2023-01 of the 2023 files has the old schema (#82, settled: D35's drift month is 2023-01).
+- Open: #58 (PR #80, stacked on this).
+
+## 2026-10-14 — Agents — autopilot brief v1: work never stalls on the user; ledger fragments (#83)
+
+- Done: `docs/agents/autopilot.md` lets cloud runs keep working while decisions wait: a decision digest in the run board's body (§4a), a speculative build of a packet's recommendation (§4b), a refill lane that slices, reality-checks, closes test gaps and researches lessons before a run may exit (§4c), and "needs kind to verify ≠ local-only" (§3). Actions billing is recorded as a known, lasting blocker (§0, §6, D26) with `PPLK8S_REQUIRE_WAREHOUSE=1 make test` as the light check. Folded in the run-feedback patches of #45 (search API refused, review threads via MCP, standalone Prometheus for alert rules, background gunicorn, claude-dotfiles permission, cloud-verifiable first in §3.5). Local resume edits the handoff in place (claude-dotfiles#6 = 1B 2B). `LEDGER.md` now takes per-PR fragments in `ledger.d/`, folded by `make ledger` (claude-dotfiles#6 3C), and the lost #51 entry comes back as the first fragment (#83).
+- Evidence: `make lint` and `make ledger` on a scratch copy (folds, deletes, refuses a malformed header).
+- Decisions: D26 amended (billing); CLAUDE.md working-files rule for `LEDGER.md` changed.
+- Open: the 06:06Z and 07:06Z runs of 2026-10-14 exited idle for lack of takeable work; the next runs' board comments show whether this fixes it.
+
+## 2026-10-14 — Phase 8 — re-running a loaded TLC month no longer fails in the seam (#92)
+
+- Done: `ElFactoryHook._validate_page` accepts `pages: 0` when it is an empty final answer (`rows` 0, `next_url` null), which is what EL Factory answers for a file version already complete; 0 pages with a continuation or with rows still fails. PLAN's EL Factory contract says so. `AIRFLOW_IMAGE` 3.3.1-pplk8s.13: the image bakes `airflow/include/` for `DAG_DELIVERY=local`, and #56/#57 changed it without a bump, so a local-delivery deploy ran the old seam from the nodes' cached `.12` and could not parse `tlc_monthly` (`cannot import name 'run_month'`); the brief's §6 tag rule now names `airflow/include/**`.
+- Evidence: found by the local `make phase8-check` for PR #80: `extract[tlc.yellow]` for 2026-06 failed with `invalid pages: 0` because the lab already held that version. New tests red before the fix, airflow pytest 160 passed after.
+- Decisions: none (contract clarified).
+- Open: none.

@@ -1,6 +1,0 @@
-## 2026-10-14 — Agents — autopilot brief v1: work never stalls on the user; ledger fragments (#83)
-
-- Done: `docs/agents/autopilot.md` lets cloud runs keep working while decisions wait: a decision digest in the run board's body (§4a), a speculative build of a packet's recommendation (§4b), a refill lane that slices, reality-checks, closes test gaps and researches lessons before a run may exit (§4c), and "needs kind to verify ≠ local-only" (§3). Actions billing is recorded as a known, lasting blocker (§0, §6, D26) with `PPLK8S_REQUIRE_WAREHOUSE=1 make test` as the light check. Folded in the run-feedback patches of #45 (search API refused, review threads via MCP, standalone Prometheus for alert rules, background gunicorn, claude-dotfiles permission, cloud-verifiable first in §3.5). Local resume edits the handoff in place (claude-dotfiles#6 = 1B 2B). `LEDGER.md` now takes per-PR fragments in `ledger.d/`, folded by `make ledger` (claude-dotfiles#6 3C), and the lost #51 entry comes back as the first fragment (#83).
-- Evidence: `make lint` and `make ledger` on a scratch copy (folds, deletes, refuses a malformed header).
-- Decisions: D26 amended (billing); CLAUDE.md working-files rule for `LEDGER.md` changed.
-- Open: the 06:06Z and 07:06Z runs of 2026-10-14 exited idle for lack of takeable work; the next runs' board comments show whether this fixes it.
