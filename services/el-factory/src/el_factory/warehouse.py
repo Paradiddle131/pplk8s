@@ -337,6 +337,41 @@ class PostgresWarehouse:
                 [source_uri, etag],
             )
 
+    def file_uris(self, pattern: str) -> list[str]:
+        """Every file URI the chunk ledgers hold (loading or complete) matching a LIKE pattern."""
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT source_uri FROM ops.file_chunks WHERE source_uri LIKE %(p)s"
+                " UNION SELECT source_uri FROM ops.file_versions WHERE source_uri LIKE %(p)s",
+                {"p": pattern},
+            )
+            return sorted(row[0] for row in cur.fetchall())
+
+    def retire_file(self, table_name: str, source_uri: str) -> int:
+        """Delete every landed row of a file (all versions) and its ledger rows; return the rows.
+
+        The freed space goes back to the table, not the disk: autovacuum reclaims it for the next
+        month's load (D35). BigQuery drops the month's partition instead.
+        """
+        qualified = sql.Identifier(self._schema, table_name)
+        with psycopg.connect(self._dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [f"{_lock_key(self._schema, table_name)}|{source_uri}"],
+            )
+            rows = 0
+            cur.execute("SELECT to_regclass(%s)", [f'"{self._schema}"."{table_name}"'])
+            row = cur.fetchone()
+            if row is not None and row[0] is not None:
+                cur.execute(
+                    sql.SQL("DELETE FROM {} WHERE _source_uri = %s").format(qualified),
+                    [source_uri],
+                )
+                rows = cur.rowcount
+            cur.execute("DELETE FROM ops.file_chunks WHERE source_uri = %s", [source_uri])
+            cur.execute("DELETE FROM ops.file_versions WHERE source_uri = %s", [source_uri])
+        return rows
+
 
 def _dependent_views(
     cur: psycopg.Cursor, schema: str, table_name: str

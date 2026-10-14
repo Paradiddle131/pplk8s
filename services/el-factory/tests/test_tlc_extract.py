@@ -253,3 +253,106 @@ def test_an_unpublished_month_is_a_non_retryable_502(db, server, make_tlc_client
         "not published (S3 AccessDenied)",
         "published": False,
     }
+
+
+# ---- retention (D35, issue #87) -----------------------------------------------------------------
+
+
+def load_months(server, client, *months: str) -> None:
+    for month in months:
+        start = datetime.fromisoformat(f"{month}-01")
+        end = f"{start.year + start.month // 12:04d}-{start.month % 12 + 1:02d}"
+        server.publish(f"yellow_tripdata_{month}.parquet", yellow_2025(6, 4, start))
+        follow(client, month_body(month, end))
+
+
+def held(client) -> list[str]:
+    response = client.get("/months", query_string={"source": "tlc", "entity": "yellow"})
+    assert response.status_code == 200
+    return response.get_json()["months"]
+
+
+def test_months_lists_the_loaded_and_the_half_loaded_months(db, server, make_tlc_client):
+    client = make_tlc_client()
+    load_months(server, client, "2025-09", "2025-10")
+    server.publish("yellow_tripdata_2025-11.parquet", yellow_2025(12, 4, datetime(2025, 11, 1)))
+    partial = make_tlc_client(max_run_time=0.0).post(
+        "/extract", json=month_body("2025-11", "2025-12")
+    )
+    assert partial.get_json()["next_url"] is not None  # one chunk of three, no file_versions row
+
+    assert held(client) == ["2025-09", "2025-10", "2025-11"]
+
+
+def test_retire_drops_every_month_outside_keep_from_landing_and_the_ledgers(
+    db, server, make_tlc_client
+):
+    client = make_tlc_client(max_run_time=3600.0)
+    load_months(server, client, "2025-08", "2025-09", "2025-10")
+    conn, _ = db
+
+    response = client.post(
+        "/retire", json={"source": "tlc", "entity": "yellow", "keep": ["2025-09", "2025-10"]}
+    )
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["retired"] == [{"month": "2025-08", "rows": 6}]
+    assert body["rows"] == 6
+    assert held(client) == ["2025-09", "2025-10"]
+    assert [c for _, _, c in landed(db)] == [4, 2, 4, 2]
+    stale = f"{server.base_url}/yellow_tripdata_2025-08.parquet"
+    for table in ("ops.file_chunks", "ops.file_versions"):
+        assert conn.execute(
+            f"SELECT count(*) FROM {table} WHERE source_uri = %s", [stale]
+        ).fetchone() == (0,)
+
+
+def test_a_retired_month_reloads_from_scratch(db, server, make_tlc_client):
+    client = make_tlc_client(max_run_time=3600.0)
+    load_months(server, client, "2025-09", "2025-10")
+    client.post("/retire", json={"source": "tlc", "entity": "yellow", "keep": ["2025-10"]})
+
+    reload = follow(client, month_body("2025-09", "2025-10"))
+
+    assert (reload[0]["page"], sum(r["rows"] for r in reload)) == (0, 6)
+    assert held(client) == ["2025-09", "2025-10"]
+
+
+def test_retire_is_a_no_op_when_everything_is_kept(db, server, make_tlc_client):
+    client = make_tlc_client(max_run_time=3600.0)
+    load_months(server, client, "2025-10")
+
+    body = client.post(
+        "/retire", json={"source": "tlc", "entity": "yellow", "keep": ["2025-10", "2023-01"]}
+    ).get_json()
+
+    assert (body["retired"], body["rows"]) == ([], 0)
+    assert [c for _, _, c in landed(db)] == [4, 2]
+
+
+@pytest.mark.parametrize(
+    "keep", [None, [], "2025-10", ["2025-13"], ["2025-1"], [202510], ["2025-10", None]]
+)
+def test_retire_refuses_a_missing_or_malformed_keep(db, server, make_tlc_client, keep):
+    client = make_tlc_client()
+    load_months(server, client, "2025-10")
+    body = {"source": "tlc", "entity": "yellow"}
+    if keep is not None:
+        body["keep"] = keep
+
+    response = client.post("/retire", json=body)
+
+    assert response.status_code == 400
+    assert response.get_json()["retryable"] is False
+    assert held(client) == ["2025-10"]
+
+
+def test_retention_refuses_a_paged_source(db, server, make_tlc_client):
+    client = make_tlc_client()
+
+    assert client.get("/months?source=synthetic&entity=orders").status_code == 400
+    response = client.post(
+        "/retire", json={"source": "synthetic", "entity": "orders", "keep": ["2025-10"]}
+    )
+    assert response.status_code == 400

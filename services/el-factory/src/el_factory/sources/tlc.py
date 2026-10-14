@@ -49,6 +49,11 @@ class TlcEntity:
     def url(self, month: str) -> str:
         return f"{self.base_url.rstrip('/')}/{self.name}_tripdata_{month}.parquet"
 
+    def month_of(self, url: str) -> str | None:
+        """The data month of one of this entity's file URLs, or None for any other URL."""
+        found = re.search(r"_([0-9]{4}-[0-9]{2})\.parquet$", url)
+        return found.group(1) if found and self.url(found.group(1)) == url else None
+
 
 def entities(base_url: str) -> list[TlcEntity]:
     # FHVHV stays registered for the big-file drill; the catalog keeps it disabled (D35).

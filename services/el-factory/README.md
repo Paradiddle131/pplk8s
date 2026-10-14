@@ -16,6 +16,10 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
   Callers POST the same body to `next_url` until it is `null`.
 - `GET /publication?source=tlc&entity=<e>&month=YYYY-MM` asks whether a file source's month is published, with one `HEAD` and no download: 200 `{"status": "published", "source_uri", "etag", "size"}`, or 200 `{"status": "not_published", "source_uri"}` when S3 answers `AccessDenied`.
   A CloudFront block is a retryable 503, never `not_published` (issue #36); a source that is not file-backed is 400.
+- `GET /months?source=tlc&entity=<e>` lists the data months the chunk ledgers hold for a file source, loading or complete, oldest first: 200 `{"source", "entity", "months": ["YYYY-MM", ...]}` (PLAN.md D35).
+- `POST /retire` with the JSON body `{source, entity, keep: ["YYYY-MM", ...]}` retires every held month not in `keep`: it deletes the month's landed rows (every version) and its `ops.file_chunks` and `ops.file_versions` rows, so a later load of that month starts over (issue #87).
+  The response is `{"status":"ok","source","entity","kept","retired":[{"month","rows"}],"rows"}`; an empty or malformed `keep` is 400, because retiring everything is never what a caller means.
+  The caller owns the policy and EL Factory only deletes; on BigQuery the same retirement is the month partition's expiration.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
   The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.

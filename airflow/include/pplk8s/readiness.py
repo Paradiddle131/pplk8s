@@ -17,6 +17,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
+from airflow.providers.common.sql.hooks.handlers import fetch_all_handler
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sdk.exceptions import AirflowFailException
 
@@ -86,6 +87,46 @@ def record_readiness(
             "status": status,
         },
     )
+
+
+RETIRE_SQL = """
+UPDATE ops.readiness
+SET status = 'retired', dag_id = %(dag_id)s, run_id = %(run_id)s, updated_at = now()
+WHERE product = ANY(%(products)s)
+  AND to_char(interval_start AT TIME ZONE 'UTC', 'YYYY-MM') <> ALL(%(keep)s)
+  AND status <> 'retired'
+RETURNING product, to_char(interval_start AT TIME ZONE 'UTC', 'YYYY-MM')
+"""
+
+
+def retire_readiness(
+    products: Iterable[str],
+    keep: Iterable[str],
+    run_id: str,
+    *,
+    dag_id: str,
+    conn_id: str = DEFAULT_CONN_ID,
+) -> list[tuple[str, str]]:
+    """Mark every monthly row of ``products`` outside ``keep`` (``YYYY-MM``) as ``retired`` (D35).
+
+    The row stays, naming the run that retired the month, so the ledger tells a retired month from
+    one never loaded; a later load of the month upserts it back to ``ready``.  Returns the
+    ``(product, month)`` pairs it retired; a repeat returns none.
+    """
+    keep = list(keep)
+    if not keep:
+        raise AirflowFailException("retire_readiness needs at least one month to keep")
+    retired = _hook(conn_id).run(
+        RETIRE_SQL,
+        parameters={
+            "products": list(products),
+            "keep": keep,
+            "run_id": run_id,
+            "dag_id": dag_id,
+        },
+        handler=fetch_all_handler,
+    )
+    return [(product, month) for product, month in retired or []]
 
 
 def readiness_state(

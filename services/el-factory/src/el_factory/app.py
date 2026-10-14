@@ -14,6 +14,7 @@ from flask import Flask, Response, jsonify, request
 from google.api_core import exceptions as gcs_exceptions
 from werkzeug.exceptions import HTTPException
 
+from el_factory import retention
 from el_factory.chunks import extract_file
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
@@ -105,9 +106,7 @@ def create_app(
         # Is a file source's month published yet (D34)? One HEAD, no download. S3's AccessDenied
         # answers not_published; a CDN block or an upstream failure is a retryable 503, so a
         # waiting sensor keeps polling instead of reading a block as "not yet".
-        entity = registry.get(_query(request.args, "source"), _query(request.args, "entity"))
-        if not isinstance(entity, tlc.TlcEntity):
-            raise BadRequest(f"{entity.source}/{entity.name} is not a file source")
+        entity = _file_entity(registry, request.args)
         month = tlc.parse_month(request.args.get("month"))
         url = entity.url(month)
         answer = {"source": entity.source, "entity": entity.name, "month": month, "source_uri": url}
@@ -116,6 +115,30 @@ def create_app(
         except NotPublished:
             return jsonify({"status": "not_published", **answer})
         return jsonify({"status": "published", **answer, "etag": remote.etag, "size": remote.size})
+
+    @app.get("/months")
+    def months() -> Response:
+        # The months a file source holds in landing, so the caller can decide what to keep (D35).
+        entity = _file_entity(registry, request.args)
+        held = retention.held_months(entity, warehouse)  # type: ignore[arg-type]
+        return jsonify({"source": entity.source, "entity": entity.name, "months": held})
+
+    @app.post("/retire")
+    def retire() -> Response:
+        # Deletes every held month not in `keep` from landing and the chunk ledgers (D35, #87).
+        # An empty `keep` is refused: retiring everything is never what a run means.
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            raise BadRequest("request body must be a JSON object")
+        entity = _file_entity(registry, body)
+        keep = body.get("keep")
+        if (
+            not isinstance(keep, list)
+            or not keep
+            or not all(isinstance(m, str) and tlc.MONTH_PATTERN.fullmatch(m) for m in keep)
+        ):
+            raise BadRequest("'keep' is required and must be a non-empty list of YYYY-MM months")
+        return jsonify(retention.retire(entity, keep, warehouse))  # type: ignore[arg-type]
 
     @app.post("/extract")
     def extract() -> Response:
@@ -277,6 +300,13 @@ def _parse_extract(body: dict[str, Any], query_cursor: str | None) -> ExtractReq
         interval=Interval(start=start, end=end),
         cursor=_cursor(raw_cursor),
     )
+
+
+def _file_entity(registry: Registry, params: Any) -> tlc.TlcEntity:
+    entity = registry.get(_query(params, "source"), _query(params, "entity"))
+    if not isinstance(entity, tlc.TlcEntity):
+        raise BadRequest(f"{entity.source}/{entity.name} is not a file source")
+    return entity
 
 
 def _query(args: Any, key: str) -> str:

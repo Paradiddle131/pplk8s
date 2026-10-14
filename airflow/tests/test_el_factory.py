@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -301,3 +302,87 @@ def test_no_budget_follows_every_continuation():
     responses.post(f"{BASE}/extract", json=page(100, "/extract?cursor=1"))
     responses.post(f"{BASE}/extract", json=page(1))
     assert ElFactoryHook().extract_entity(*ARGS, budget_seconds=None)["requests"] == 2
+
+
+# ---- retention (D35, issue #87) ----
+
+
+@responses.activate
+def test_held_months():
+    responses.get(
+        f"{BASE}/months",
+        json={"source": "tlc", "entity": "yellow", "months": ["2023-01", "2026-08"]},
+    )
+    assert ElFactoryHook().held_months("tlc", "yellow") == ["2023-01", "2026-08"]
+    assert responses.calls[0].request.params == {"source": "tlc", "entity": "yellow"}
+
+
+@pytest.mark.parametrize(
+    "body", [{"months": "2026-08"}, {"months": ["2026-8"]}, {"months": [None]}, ["2026-08"]]
+)
+@responses.activate
+def test_held_months_malformed_answers_fail_fast(body):
+    responses.get(f"{BASE}/months", json=body)
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().held_months("tlc", "yellow")
+
+
+RETIRED = {
+    "status": "ok",
+    "source": "tlc",
+    "entity": "yellow",
+    "kept": ["2026-07", "2026-08"],
+    "retired": [{"month": "2026-05", "rows": 7}, {"month": "2026-06", "rows": 5}],
+    "rows": 12,
+}
+
+
+@responses.activate
+def test_retire_months_sends_keep_and_summarises():
+    responses.post(f"{BASE}/retire", json=RETIRED)
+    summary = ElFactoryHook().retire_months("tlc", "yellow", ["2026-07", "2026-08"])
+    assert summary == {
+        "source": "tlc",
+        "entity": "yellow",
+        "retired": ["2026-05", "2026-06"],
+        "rows": 12,
+    }
+    assert json.loads(responses.calls[0].request.body) == {
+        "source": "tlc",
+        "entity": "yellow",
+        "keep": ["2026-07", "2026-08"],
+    }
+
+
+@pytest.mark.parametrize("keep", [[], ["2026-8"], ["2026-08", "latest"]])
+def test_retire_months_refuses_a_bad_keep_before_any_request(keep):
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().retire_months("tlc", "yellow", keep)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {**RETIRED, "rows": -1},
+        {**RETIRED, "rows": True},
+        {**RETIRED, "retired": "2026-05"},
+        {**RETIRED, "retired": [{"month": "2026-08", "rows": 1}]},  # a kept month retired
+        ["ok"],
+    ],
+)
+@responses.activate
+def test_retire_months_malformed_answers_fail_fast(body):
+    responses.post(f"{BASE}/retire", json=body)
+    with pytest.raises(AirflowFailException):
+        ElFactoryHook().retire_months("tlc", "yellow", ["2026-07", "2026-08"])
+
+
+@responses.activate
+def test_retire_months_server_errors_are_transient():
+    responses.post(
+        f"{BASE}/retire",
+        status=503,
+        json={"status": "error", "retryable": True, "error": "dependency temporarily unavailable"},
+    )
+    with pytest.raises(ElFactoryTransientError):
+        ElFactoryHook().retire_months("tlc", "yellow", ["2026-08"])
