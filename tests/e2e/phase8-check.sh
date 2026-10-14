@@ -4,6 +4,7 @@
 #   - ops.readiness holds tlc.exposed as ready,
 #   - bronze (the month's current file version) = silver + quarantine, quarantine under 10 %,
 #   - silver's cbd_congestion_fee is NULL before 2025-01 and populated from 2025-01 on (yellow),
+# that the 2023-01 backfill widened the yellow landing table (the 2023 retype, D34; #82),
 # then forge an older version of one month's file and re-run it: the real file replaces the month.
 # Downloads real TLC files (~60 MB a yellow month). Expects `make airflow-up workloads-up`.
 # Re-runnable: months that already succeeded are not re-run (backfills reprocess failed runs only),
@@ -16,13 +17,14 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$(dirname "$0")/lib/airflow-api.sh"
 DAG=tlc_monthly
 FIRST_SCHEDULED=2026-06 # tlc_monthly's START
-# D35's drift months, as backfill ranges of consecutive months (one active backfill per DAG at a time).
-# 2026-06 is a drift month too, but the schedule's catchup already runs it.
-BACKFILLS=("2023-12 2024-01" "2024-12 2025-01")
-DRIFT_MONTHS=(2023-12 2024-01 2024-12 2025-01 2026-06)
+# D35's drift months, one per schema seam (#73, #82), as backfill ranges (one active backfill per DAG at
+# a time): 2023-01 is the only 2023 month with the old types and `airport_fee`, 2025-01 adds
+# `cbd_congestion_fee`, 2026-06 adds `request_source` (the schedule's catchup already runs 2026-06).
+BACKFILLS=("2023-01 2023-01" "2025-01 2025-01")
+DRIFT_MONTHS=(2023-01 2025-01 2026-06)
 REPUBLISH_ENTITY=green # the smallest file (~1 MB), so the replay is quick
 MONTH_TIMEOUT=${MONTH_TIMEOUT:-3600}
-WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-15} # D35; #73 decides whether it holds
+WAREHOUSE_CEILING_GB=${WAREHOUSE_CEILING_GB:-15} # D35; a warning until retention (#87) lands
 FORGED='"phase8-forged"'
 psql_wh() {
   docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
@@ -183,6 +185,13 @@ done
 
 # ---- (c) every loaded month meets the exit criterion ----------------------------------------------------
 for m in "${LOADED[@]}"; do check_month "$m"; done
+# 2023-01 is int64 where 2024+ is int32, and double where 2024+ is int64, so loading it after the
+# scheduled months must have widened the landing columns rather than failing (D34, #72, #82).
+types=$(psql_wh "SELECT string_agg(column_name || ' ' || data_type, ', ' ORDER BY column_name) FROM information_schema.columns
+  WHERE table_schema = 'ds_source' AND table_name = 'tlc_yellow' AND column_name IN ('vendorid', 'passenger_count')")
+[ "$types" = "passenger_count double precision, vendorid bigint" ] ||
+  fail "(c) the 2023-01 retype did not widen ds_source.tlc_yellow: [$types]"
+echo "ok: (c) the 2023-01 backfill widened the yellow landing table [$types]"
 
 # ---- (d) a republished file replaces its month -----------------------------------------------------------
 # Make the lab believe it holds an older version of the newest loaded month's green file: relabel the
@@ -216,7 +225,7 @@ echo "ok: (d) the republished $REPUBLISH_ENTITY $M replaced the forged version; 
 bytes=$(psql_wh "SELECT pg_database_size('warehouse')")
 gb=$(awk -v b="$bytes" 'BEGIN { printf "%.1f", b / 1024^3 }')
 if awk -v b="$bytes" -v c="$WAREHOUSE_CEILING_GB" 'BEGIN { exit !(b > c * 1024^3) }'; then
-  echo "WARN: warehouse is $gb GB, over D35's $WAREHOUSE_CEILING_GB GB ceiling (#73 decides the budget and retention)"
+  echo "WARN: warehouse is $gb GB, over D35's $WAREHOUSE_CEILING_GB GB ceiling (retention, #87, makes this a failure)"
 else
   echo "ok: warehouse is $gb GB, under D35's $WAREHOUSE_CEILING_GB GB ceiling"
 fi

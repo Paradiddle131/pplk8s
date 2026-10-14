@@ -156,16 +156,19 @@ What this means for a resumable cursor:
 
 ## Schema drift, 2023–2026
 
-Measured by comparing footer schemas: every month 2024-01 to 2026-08 for all four types, plus the 2023-01 files as the 2023 baseline (other 2023 months not checked).
+Measured by comparing footer schemas: every month 2024-01 to 2026-08 for all four types, plus the 2023-01 files as the 2023 baseline; every 2023 yellow and green file was probed on 2026-10-13 (#82).
 
 ### 2023 files to 2024 files (all types)
+
+**Only 2023-01 still has the old schema** (probed 2026-10-13, #82): yellow and green 2023-02 to 2023-12 already carry the 2024 types (`VendorID int32`, `passenger_count int64`, `PULocationID int32`), so they were rewritten with the standardised schema; 2023-01 kept `last-modified` 2023-03-20.
+The differences below are those of the 2023-01 files.
 
 - 2023 files were written by pyarrow 8.0.0 (format 1.0, GZIP, pandas metadata embedded); 2024 files by pyarrow 14.0.2 (format 2.6, ZSTD, no pandas metadata).
 - Yellow, retyped: `VendorID` int64→int32, `passenger_count` double→int64, `RatecodeID` double→int64, `PULocationID` and `DOLocationID` int64→int32, `store_and_fwd_flag` string→large_string.
 - Yellow, renamed by case: `airport_fee` (2023) → `Airport_fee` (2024 onward); the data dictionary still spells it `airport_fee`, and FHVHV uses `airport_fee`.
 - Green, retyped: `VendorID` int64→int32, `RatecodeID`, `passenger_count`, `payment_type`, `trip_type` double→int64, `PULocationID`/`DOLocationID` int64→int32, `store_and_fwd_flag` string→large_string, and `ehail_fee` null-typed→double.
 - FHVHV, retyped: `PULocationID`/`DOLocationID` int64→int32 and all string columns string→large_string.
-- The page's warning about standardising the schema "across all years" has not reached 2023: the 2023-01 files still carry `last-modified` 2023-03-20 (measured).
+- The page's warning about standardising the schema "across all years" has reached 2023-02 to 2023-12 but not 2023-01, which still carries `last-modified` 2023-03-20 (measured).
 
 ### Added columns
 
