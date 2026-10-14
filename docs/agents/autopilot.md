@@ -184,7 +184,7 @@ Each filed issue carries symptom or goal, evidence, acceptance and its areas.
 ## 6. Verify and hand off
 
 **Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; image builds and kind are left to the local `make verify` / `make ci-integration`.
-A change to an image's contents (a Dockerfile, dependencies, dbt models, service code) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image.
+A change to an image's contents (a Dockerfile, dependencies, dbt models, service code, and `airflow/include/**`, which the Airflow image bakes in for `DAG_DELIVERY=local` and `make ci-integration`) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image (#92: #56 and #57 changed the seam without a bump).
 Opening the PR would run `ci.yaml`'s `test` job, but Actions is blocked by billing (§0): record `CI test — n/a (Actions billing)` and the cloud `make test` counts with `PPLK8S_REQUIRE_WAREHOUSE=1` instead. Do not dispatch the on-demand `images` or `integration` jobs.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
