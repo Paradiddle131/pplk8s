@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill
+.PHONY: help tools lint verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -144,6 +144,9 @@ phase8-check: airflow-up workloads-up ## Phase 8 exit check: tlc_monthly's sched
 
 el-factory-memory-drill: ## Phase 8 drill 1: FHVHV chunks against EL Factory's 1 GiB ceiling (TIGHT_LIMIT=448Mi: the memory alerts fire)
 	tests/e2e/el-factory-memory-drill.sh
+
+tlc-resume-drill: airflow-up workloads-up observability-up ## Phase 8 drill 2: lose the EL Factory pod mid-file; the extract's retry resumes after the last loaded chunk (~10 min)
+	tests/e2e/tlc-resume-drill.sh
 
 db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup CronJob once: a 61-day-old crashed job row goes, live jobs stay, a failed run's KubeJobFailed clears (D30)
 	tests/e2e/db-cleanup-check.sh

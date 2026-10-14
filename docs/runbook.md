@@ -676,3 +676,34 @@ A 422 `chunk N is ... bytes compressed, over the 67108864-byte limit` is the chu
 
 Recovery: nothing to undo; the kubelet restarts the container and the task's retry resumes after the last loaded chunk (D34).
 If the near-limit alert keeps firing, measure with `make el-factory-memory-drill` before changing anything: lower `CSV_BATCH_ROWS` or `MAX_CHUNK_BYTES` in `services/el-factory/src/el_factory/chunks.py` first, and raise the 1Gi limit only with a matching change to D35.
+
+### 2. Lose EL Factory in the middle of a file
+
+EL Factory loads a TLC file one chunk (one Parquet row group) at a time, and `ops.file_chunks` records each chunk in the same transaction as its rows (D34).
+A pod lost in the middle of a chunk rolls that chunk's transaction back, so the task's retry asks again without a cursor and EL Factory resumes at the first chunk the ledger lacks.
+
+Drill: `make tlc-resume-drill`.
+It forgets the chunk ledger of the newest loaded yellow month, clears that month's `tlc_monthly` run, and once 2 of the file's 4 chunks are recorded force-deletes the EL Factory pod holding the extract's connection (`--grace-period=0 --force`, so the request in flight dies with the pod as on a lost node; a graceful delete gives it up to the pod's 30 s grace period to finish).
+It then asserts that the retry loaded only the missing chunks, that landing rows = ledger rows = the Parquet footer's row count, that the file has one completed version, and that the month's landing, silver and quarantine counts did not change.
+
+Observed (2026-10-14, yellow 2026-08, 4 chunks, 3,336,716 rows):
+
+- The kill came 42 s after the clear, with chunks 0 and 1 recorded; the extract attempt failed at once on the dropped connection (retryable, D15) and went `up_for_retry`.
+- `AirflowTaskFailures` fired 37 s after the kill.
+- The retry started 5 minutes later, loaded chunks 2 and 3 in about 6 s on the surviving pod, and completed the version; chunks 0 and 1 kept their first `loaded_at`.
+- The first run of the drill found `AirflowTaskFailures` blind to a one-off failure (fixed in #91): the statsd-exporter creates a task's `airflow_ti_failures` series at 1 and drops it 5 minutes after its last update, and `increase()` needs two samples, so a single failed attempt never counted.
+  The rule now also fires on a series that did not exist 10 minutes earlier.
+
+Detection: `AirflowTaskFailures` (info) and the task's `up_for_retry` state.
+EL Factory's own pod loss raises no alert: the Deployment replaces the pod, and the second replica served the retry.
+
+Diagnosis: the extract's task log shows the dropped connection (`ElFactoryTransientError`); `ops.file_chunks` shows how far the file got:
+
+```bash
+docker compose -f platform/compose/compose.yaml exec -T warehouse psql -U warehouse -d warehouse -c \
+  "SELECT chunk, rows, loaded_at FROM ops.file_chunks WHERE source_uri LIKE '%yellow_tripdata_2026-08%' ORDER BY chunk"
+```
+
+Recovery: nothing to do; the retry resumes.
+Why it waited 5 minutes: `extract` retries with exponential backoff from 30 s, capped at `max_retry_delay` (5 minutes), and the exponent is the task instance's `try_number`, which keeps counting across clears.
+A first failure waits 30–60 s (Airflow adds up to one more delay of jitter); after a clear or two, the first retry already waits the cap.
