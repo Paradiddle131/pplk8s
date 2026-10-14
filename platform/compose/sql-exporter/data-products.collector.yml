@@ -1,0 +1,30 @@
+# Freshness of the data products that have a deadline (D37): the end of the newest interval each one
+# is `ready` for, from any producer (D19: consumers read the same rows), and its deadline from
+# ops.product_deadlines. DataProductLate fires when the first is older than the second, so the alert
+# needs no DAG run to exist: a paused DAG or a scheduler that never creates the run still trips it.
+# A product with a deadline and no ready row at all exports 0, so it is late from the start.
+collector_name: data_products
+
+queries:
+  - query_name: product_freshness
+    query: |
+      SELECT d.product,
+             coalesce(extract(epoch FROM max(r.interval_end)), 0) AS interval_end,
+             extract(epoch FROM d.max_age) AS max_age
+      FROM ops.product_deadlines d
+      LEFT JOIN ops.readiness r ON r.product = d.product AND r.status = 'ready'
+      GROUP BY d.product, d.max_age
+
+metrics:
+  - metric_name: ops_product_ready_interval_end_seconds
+    type: gauge
+    help: "End of the newest interval a product with a deadline is ready for; 0 if it never was."
+    key_labels: [product]
+    values: [interval_end]
+    query_ref: product_freshness
+  - metric_name: ops_product_max_age_seconds
+    type: gauge
+    help: "How old a product's newest ready interval end may get before DataProductLate fires."
+    key_labels: [product]
+    values: [max_age]
+    query_ref: product_freshness

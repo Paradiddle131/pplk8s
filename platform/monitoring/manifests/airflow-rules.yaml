@@ -109,7 +109,7 @@ spec:
           for: 2m
           labels: {severity: warning}
           annotations:
-            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse is blind.
+            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse and DataProductLate are blind.
         - alert: AirflowGitSyncFailing
           # git-sync retries a failing fetch forever and keeps serving its last good commit, with the
           # sidecar Running and Ready (#18), so DAG changes silently stop arriving. A healthy sidecar
@@ -240,3 +240,19 @@ spec:
           labels: {severity: info}
           annotations:
             summary: Task instances failed in the last 10 minutes.
+    - name: data.products
+      rules:
+        - alert: DataProductLate
+          # The data contract, not the platform (D37): a product's newest `ready` interval ended longer
+          # ago than its deadline in ops.product_deadlines. Needs no DAG run, so a paused DAG, a run the
+          # scheduler never creates, and a run stuck deferred all fire it; Airflow's Deadline Alerts
+          # are created with a run and cannot. The value is the age in seconds. A missing exporter is
+          # AirflowReadinessMetricsMissing's.
+          expr: |
+            time() - ops_product_ready_interval_end_seconds
+              > on (product) ops_product_max_age_seconds
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.product }} is late: {{ if gt $value 1e9 }}it was never ready{{ else }}its newest ready interval ended {{ $value | humanizeDuration }} ago{{ end }}."
+            runbook: docs/runbook.md#12-a-data-product-is-late

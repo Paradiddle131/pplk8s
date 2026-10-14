@@ -14,6 +14,17 @@ fi
 
 docker compose up -d --wait
 
+# sql_exporter reads its config and collectors only at start, and `up` does not recreate a container
+# when a bind-mounted file changes (a branch switch that adds a collector), so restart an exporter
+# whose config is newer than its process.
+for svc in metadata-db-sql-exporter warehouse-sql-exporter; do
+  started=$(docker inspect -f '{{.State.StartedAt}}' "$(docker compose ps -q "$svc")")
+  if [ -n "$(find sql-exporter -newermt "$started" -print -quit)" ]; then
+    docker compose restart "$svc" >/dev/null
+    echo "$svc restarted: its config changed since it started"
+  fi
+done
+
 # fake-gcs has no healthcheck, so wait for it to answer on the host port.
 for _ in $(seq 30); do curl -sf -o /dev/null http://localhost:4480/storage/v1/b && break; sleep 1; done
 

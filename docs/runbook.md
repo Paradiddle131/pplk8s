@@ -253,7 +253,7 @@ Recovery: fix or delete the object; a corrected upload is a new generation with 
 ## Phase 6 drills
 
 Every drill is detected by a Prometheus alert (`platform/monitoring/manifests/airflow-rules.yaml`, PLAN.md D28) and shows on Grafana's "Airflow overview" dashboard (`make grafana-ui`).
-Drills 1–4, 7–9, and 11 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
+Drills 1–4, 7–9, 11, and 12 are automated in `tests/e2e/phase6-check.sh` (`make phase6-check`; `DRILLS="1 9"` runs a subset): inject, wait for the alert to fire, run the recovery below, wait for it to resolve, then run the `hello` canary on a Celery worker.
 Drill 5 reinstalls Airflow and lives in `tests/e2e/phase6-upgrade-drill.sh` (`make phase6-upgrade-drill`).
 Drill 6 is part of the KEDA check, `tests/e2e/keda-check.sh`, which `make phase6-check` runs first.
 Drill 10 restores the lab's own metadata DB and lives in `tests/e2e/metadata-restore-drill.sh` (`make metadata-restore-drill`, also in `make phase6-check`).
@@ -602,3 +602,36 @@ Diagnosis: `KA logs <pod> -c git-sync --tail=20` names the failing command and i
 
 Recovery: fix the cause the log names: restore or re-point the ref (`dags.gitSync.ref`, then `make airflow-up`), re-add the deploy key (`gh repo deploy-key add ~/.ssh/pplk8s-deploy.pub`), or restore network access.
 git-sync resumes on its next period with no restart; the alert resolves within about a minute.
+
+### 12. A data product is late
+
+Every other drill breaks the platform; this one breaks the data contract it serves.
+A product is late when its newest `ready` interval in `ops.readiness` ended longer ago than its deadline in `ops.product_deadlines` (D37): `sales` and `finance.exposed` are due 36 hours after their interval starts, which is 12 hours after it ends (noon UTC).
+Nothing has to fail for that: a paused DAG, a scheduler that never creates the run, a run stuck deferred, or a producer outside Airflow that stopped all look the same.
+
+Trigger: `DRILLS=12 make phase6-check`.
+It pauses `sales_elt` and tightens sales' deadline to one minute (`UPDATE ops.product_deadlines SET max_age = interval '1 minute' WHERE product = 'sales'`), so the newest ready interval counts as late without waiting 36 hours.
+It needs one ready `sales` interval and sales not already late.
+
+Observed (2026-10-14, without the cluster: Prometheus v3.15.0 in a container on the Compose network, scraping `warehouse-sql-exporter` and evaluating `airflow-rules.yaml` every 15 s; the drill itself has not run yet):
+
+- With `sales` and `finance.exposed` ready up to 2026-10-14 00:00 (4 h 18 m old), nothing fired.
+- Tightening sales' deadline to one minute fired `DataProductLate` for `sales` only, 2 min 18 s later ("sales is late: its newest ready interval ended 4h 21m 11s ago."); `finance.exposed` stayed quiet.
+- Re-applying `01-schemas.sql` resolved it within 10 seconds.
+- With no ready rows at all, both products fired ("it was never ready").
+
+Observed on the lab (2026-10-14, kind + kube-prometheus-stack, `DRILLS=12 tests/e2e/phase6-check.sh`):
+
+- `sales` ready up to 2026-10-14 00:00; tightening its deadline fired `DataProductLate` for `sales` after 139 s (the 1-minute deadline, the 30 s scrape and the rule's `for: 2m`); `finance.exposed` was already firing, as expected while `finance_daily` stays paused.
+- Restoring the deadline and unpausing `sales_elt` resolved it after 16 s; the canary passed.
+
+Detection: `DataProductLate`, one alert per product, labelled `product`; its value is the age of the newest ready interval.
+It comes from the warehouse's `sql_exporter` (`ops_product_ready_interval_end_seconds`, `ops_product_max_age_seconds`); if that exporter is gone, `AirflowReadinessMetricsMissing` fires instead.
+It is left out of the drills' "nothing firing" preflight: `finance_daily` stays paused on the lab (#66), so `finance.exposed` is late by design until a synthetic partner drop exists.
+
+Diagnosis: find the product's producer and why it did not land.
+`psql -h localhost -p 5433 -U warehouse warehouse -c "SELECT product, interval_start, interval_end, status, dag_id, run_id, updated_at FROM ops.readiness WHERE product = '<product>' ORDER BY interval_end DESC LIMIT 3"` shows the newest rows and the run that wrote them.
+Then, in Airflow: is the DAG paused, has the scheduler created the interval's run, is the run deferred on an upstream product (the sensor names it), or did a task fail.
+
+Recovery: fix the cause (unpause, clear the failed task, land the upstream product); the alert resolves within about a minute of the interval's `ready` row, after the next scrape.
+A product that is late on purpose (retired, or a source that skipped a day) gets its deadline changed in `platform/compose/warehouse-init/01-schemas.sql`, not silenced; `make services-up` re-applies it.
