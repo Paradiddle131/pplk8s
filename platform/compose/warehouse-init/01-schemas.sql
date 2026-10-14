@@ -22,6 +22,21 @@ CREATE TABLE IF NOT EXISTS ops.readiness (
 -- Run ids are unique per DAG only, so (dag_id, run_id) is what ties a row to Airflow's history.
 ALTER TABLE ops.readiness ADD COLUMN IF NOT EXISTS dag_id text;
 
+-- Freshness deadlines (PLAN.md D37): a product is late once its newest `ready` interval ended more
+-- than max_age ago. The warehouse's sql_exporter exports both sides and DataProductLate compares
+-- them, so a paused DAG or a run that never starts still alerts. This file is the source of truth:
+-- re-applying it (platform/compose/up.sh) resets a deadline a drill tightened.
+CREATE TABLE IF NOT EXISTS ops.product_deadlines (
+  product text     PRIMARY KEY,
+  max_age interval NOT NULL
+);
+-- Daily products: the interval ending at 00:00 is due by 12:00 (one day plus 12 hours of grace,
+-- which covers the laptop's catch-up after boot).
+INSERT INTO ops.product_deadlines (product, max_age) VALUES
+  ('sales', '36 hours'),
+  ('finance.exposed', '36 hours')
+ON CONFLICT (product) DO UPDATE SET max_age = EXCLUDED.max_age;
+
 -- File-load ledger (PLAN.md D18): one row per landed object generation a file-arrival DAG loaded.
 -- Survives Airflow's own metadata (db clean, deleted runs), so a redelivered event is a no-op.
 CREATE TABLE IF NOT EXISTS ops.file_loads (

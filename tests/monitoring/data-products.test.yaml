@@ -1,0 +1,38 @@
+# promtool unit tests for DataProductLate (D37), run by `make rules-test` (tests/monitoring/rules-test.sh),
+# which writes each PrometheusRule manifest's spec to <manifest>.rules.yaml beside this file first.
+rule_files:
+  - airflow-rules.rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # sales is ready up to t=0 with the daily 36 h deadline: quiet at 35 h, pending past 36 h, firing
+  # once the 2 m `for:` has passed. At 38 h a run lands the interval ending at 38 h, which clears it.
+  # finance.exposed landed at 30 h, so it stays quiet throughout.
+  - interval: 1m
+    input_series:
+      - series: 'ops_product_ready_interval_end_seconds{product="sales", target="warehouse"}'
+        values: '0x2280 136800x60'
+      - series: 'ops_product_max_age_seconds{product="sales", target="warehouse"}'
+        values: '129600x2340'
+      - series: 'ops_product_ready_interval_end_seconds{product="finance.exposed", target="warehouse"}'
+        values: '108000x2340'
+      - series: 'ops_product_max_age_seconds{product="finance.exposed", target="warehouse"}'
+        values: '129600x2340'
+    alert_rule_test:
+      - eval_time: 35h
+        alertname: DataProductLate
+        exp_alerts: []
+      - eval_time: 36h1m
+        alertname: DataProductLate
+        exp_alerts: [] # pending, not firing
+      - eval_time: 36h5m
+        alertname: DataProductLate
+        exp_alerts:
+          - exp_labels: {product: sales, severity: warning}
+            exp_annotations:
+              summary: "sales is late: its newest ready interval ended 1d 12h 5m 0s ago."
+              runbook: docs/runbook.md#12-a-data-product-is-late
+      - eval_time: 38h2m
+        alertname: DataProductLate
+        exp_alerts: []
