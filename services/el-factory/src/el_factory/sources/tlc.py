@@ -36,6 +36,13 @@ class SchemaConflict(ApiError):
         super().__init__(502, message, retryable=False)
 
 
+class ChunkTooLarge(ApiError):
+    """A row group too big to stage under the memory ceiling; reloading the file cannot help."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(422, message, retryable=False)
+
+
 @dataclass(frozen=True)
 class TlcEntity:
     source: str

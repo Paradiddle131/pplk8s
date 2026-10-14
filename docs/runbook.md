@@ -635,3 +635,44 @@ Then, in Airflow: is the DAG paused, has the scheduler created the interval's ru
 
 Recovery: fix the cause (unpause, clear the failed task, land the upstream product); the alert resolves within about a minute of the interval's `ready` row, after the next scrape.
 A product that is late on purpose (retired, or a source that skipped a day) gets its deadline changed in `platform/compose/warehouse-init/01-schemas.sql`, not silenced; `make services-up` re-applies it.
+
+## Phase 8 drills
+
+Phase 8 drills exercise the TLC monthly pipeline (PLAN.md D34–D36) under the same contract as Phase 6: each drill is detected by an alert and recovered through its entry here (D28).
+Workload alerts live in `platform/monitoring/manifests/workloads-rules.yaml`; their promtool tests run with `make rules-test`.
+
+### 1. A big month against EL Factory's memory ceiling
+
+EL Factory gets 1 GiB per pod (D35) and stages one TLC chunk (one Parquet row group) at a time per gunicorn process, so a pod holds at most two chunks.
+FHVHV has the heaviest chunks: about 1 M rows and 25 columns in a 23–27 MiB row group.
+
+Measure: `make el-factory-memory-drill`.
+It loads two real chunks of each of three FHVHV months (2026-05, 2026-08, 2025-02) concurrently through one pod, then reports the pod's cgroup `memory.peak` and every process's `VmHWM`.
+It fails if the pod restarted or the peak reached 85 % of the limit, and on exit drops `ds_source.tlc_fhvhv` and its chunk ledgers (FHVHV stays disabled in the catalog).
+
+Observed (2026-10-14, el-factory 0.7.0):
+
+- Peak 530–670 MiB per pod over three runs (51–65 % of the limit), with each process at 345–455 MiB RSS against about 130 MiB idle.
+- Before 0.7.0 the same load peaked at 967 MiB, 57 MiB under the limit: `COPY` read 100,000-row CSV parts, each copied about four times (Arrow table, CSV buffer, `getvalue()`, libpq), about 250 MiB per process; 25,000-row parts run as fast.
+- Yellow 2023-01, the largest chunk in scope (one 45 MiB row group of 3.1 M rows), peaks at 316 MiB in one process.
+- FHVHV 2023-01 is a single 451 MiB row group; staging it alone peaked at 1.5 GiB, so EL Factory refuses any chunk over 64 MiB compressed with a non-retryable 422 before it stages anything or touches the landing table (answered in 0.2 s, pod at 165 MiB).
+
+Detect: `make el-factory-memory-drill TIGHT_LIMIT=448Mi`.
+It shrinks EL Factory's limit to 448Mi, repeats the load until both alerts fire, then patches the saved resources back.
+
+Observed (2026-10-14):
+
+- The first load OOMKilled the container within 40 s (`Empty reply from server` on every in-flight request); `WorkloadContainerOOMKilled` fired 27 s later.
+- `WorkloadContainerMemoryNearLimit` fired only after the second OOMKill, 3 min 40 s in: a chunk climbs from idle to the limit inside one 10 s cAdvisor scrape, so the kill comes before any scrape sees 85 %.
+  The near-limit alert catches a peak that creeps up without crossing the limit (a bigger month, a wider schema), not a single chunk that overshoots; for that, the 64 MiB chunk cap is the guard.
+- Two restarts, last termination `OOMKilled`; the drill then restored 1Gi/512Mi and both pods came back Ready.
+
+Detection: `WorkloadContainerMemoryNearLimit` (the 5-minute maximum working set over 85 % of the container's limit; its value is the ratio) and `WorkloadContainerOOMKilled` (an OOMKill with a restart in the last 5 minutes).
+Both cover every container in `workloads`.
+
+Diagnosis: `$K get pods` (restarts), `$K describe pod <pod>` (`Last State: Terminated, Reason: OOMKilled`), and the Airflow task's log: an OOMKilled EL Factory answers the hook with a dropped connection, which the hook treats as retryable.
+Which month and chunk: EL Factory's access log on the restarted container (`$K logs <pod> --previous`) shows the last `/extract` requests.
+A 422 `chunk N is ... bytes compressed, over the 67108864-byte limit` is the chunk cap, not an OOMKill: that file cannot be loaded by chunks, and retrying cannot help.
+
+Recovery: nothing to undo; the kubelet restarts the container and the task's retry resumes after the last loaded chunk (D34).
+If the near-limit alert keeps firing, measure with `make el-factory-memory-drill` before changing anything: lower `CSV_BATCH_ROWS` or `MAX_CHUNK_BYTES` in `services/el-factory/src/el_factory/chunks.py` first, and raise the 1Gi limit only with a matching change to D35.

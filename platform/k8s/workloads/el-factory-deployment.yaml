@@ -56,10 +56,10 @@ spec:
           resources:
             requests: # what the scheduler reserves on a node
               cpu: 100m
-              memory: 512Mi # one TLC chunk in flight (~400 MB over the ~140 MB idle)
+              memory: 512Mi # ~130 MiB idle; a process with one TLC chunk in flight peaks at ~345-455 MiB RSS
             limits: # the kernel enforces: memory over the limit is OOMKilled, CPU is throttled
               cpu: 500m
-              memory: 1Gi # D35's ceiling; two chunks in flight (one per process) peaked at 817 MiB
+              memory: 1Gi # D35's ceiling; two FHVHV chunks in flight (one per process) peak at 530-670 MiB (#90, make el-factory-memory-drill)
           securityContext: # container level
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true # the image never writes outside /tmp

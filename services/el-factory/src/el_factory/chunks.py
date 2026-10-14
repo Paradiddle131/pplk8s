@@ -21,7 +21,13 @@ import pyarrow.parquet as pq
 
 from el_factory.model import Interval
 from el_factory.remote_file import RangeReader, RemoteFile, head
-from el_factory.sources.tlc import TlcEntity, chunk_span, data_month, plan_columns
+from el_factory.sources.tlc import (
+    ChunkTooLarge,
+    TlcEntity,
+    chunk_span,
+    data_month,
+    plan_columns,
+)
 from el_factory.storage import Storage
 from el_factory.warehouse import ChunkLoad, FileProgress
 
@@ -29,7 +35,15 @@ from el_factory.warehouse import ChunkLoad, FileProgress
 # three concurrent months peaked at 1.24 GiB without this (D35 ceiling: 1 GiB per instance).
 # Waiting for the slot counts against the request's MAX_RUN_TIME like the work itself.
 CHUNK_SLOT = threading.BoundedSemaphore(1)
-CSV_BATCH_ROWS = 100_000  # rows per Arrow batch and per CSV write: bounds memory per chunk
+# Rows per Arrow batch and per CSV part: each part is copied several times on its way into COPY
+# (Arrow table, CSV buffer, libpq), so 100_000 rows (~33 MB of FHVHV CSV) cost ~250 MiB per
+# process; 25_000 cost ~100 MiB at the same speed (#90).
+CSV_BATCH_ROWS = 25_000
+# Largest compressed row group a process stages: staging peaks at ~4x the span over the ~110 MiB
+# baseline, so two processes at this cap stay near 730 MiB of the 1 GiB ceiling (D35). The largest
+# in-scope chunk is yellow 2023-01's single 45 MiB group (316 MiB peak); FHVHV 2023-01's single
+# 451 MiB group peaked at 1.5 GiB and is refused (#90).
+MAX_CHUNK_BYTES = 64 * 2**20
 
 
 class ChunkWarehouse(Protocol):
@@ -65,10 +79,19 @@ def extract_file(
     parquet = pq.ParquetFile(reader)
     total = parquet.metadata.num_row_groups
 
+    # Refused before the landing table changes, so a file EL Factory cannot load leaves nothing.
+    pending = [chunk for chunk in range(total) if chunk not in progress.loaded]
+    for chunk in pending:
+        start, end = chunk_span(parquet.metadata, chunk)
+        if end - start > MAX_CHUNK_BYTES:
+            raise ChunkTooLarge(
+                f"{remote.url}: chunk {chunk} is {end - start} bytes compressed, over the "
+                f"{MAX_CHUNK_BYTES}-byte limit one chunk may stage within EL Factory's memory"
+            )
+
     plan = plan_columns(parquet.schema_arrow, warehouse.landing_columns(entity.table_name))
     warehouse.prepare_landing_table(entity.table_name, plan.add, plan.widen)
 
-    pending = [chunk for chunk in range(total) if chunk not in progress.loaded]
     loaded_chunks, rows, staged = 0, 0, ""
     for chunk in pending:
         load = ChunkLoad(run_id, remote.url, remote.etag, chunk)
