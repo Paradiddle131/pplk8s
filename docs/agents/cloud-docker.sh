@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start Docker on a pplk8s-worker cloud VM (docs/agents/autopilot.md §0). Idempotent.
+# Start Docker on a pplk8s-worker cloud VM (docs/agents/autopilot.md § Known conditions). Idempotent.
 # The VM ships the engine but does not start the daemon, and anonymous Docker Hub pulls
 # hit 429, so pulls go through Google's public mirror. cloud-setup.sh calls this, but the
 # setup result is cached as a file snapshot that keeps no processes, so each run calls it
