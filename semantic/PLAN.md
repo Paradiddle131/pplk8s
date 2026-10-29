@@ -1,7 +1,7 @@
 # Semantic layer and metrics agent — plan
 
 The second track of this repository, separate from the Airflow lab ([`../PLAN.md`](../PLAN.md), sealed for this topic).
-It shares the warehouse, the dbt project and the Compose stand-ins; nothing in it changes a DAG, and nothing here feeds [`../LESSONS.md`](../LESSONS.md).
+It shares the warehouse, the dbt project and the Compose stand-ins; nothing in it changes a DAG.
 Progress lives in the issues under [Map #99](https://github.com/Paradiddle131/pplk8s/issues/99); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
 Decisions are a register: one row per live decision, amended in place, a superseded row deleted in the PR that supersedes it; git is the history.
 
@@ -49,9 +49,9 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 
 ## 5. How this track works
 
-- Issues hold progress; this file changes when a decision, a requirement or a step changes.
-- A session that changes the repo adds a ledger fragment as the Airflow lab does (`../ledger.d/README.md`), prefixed `Semantic —`.
-- Lessons for the work platform (the native data agent, BigQuery descriptions, Knowledge Catalog) go in § 6 here, one line each with evidence; the `lesson` label and `../LESSONS.md` stay the Airflow lab's.
+- Issues hold progress and the PR body is the record of a change (what, evidence, decisions, open); this file changes when a decision, a requirement or a step changes.
+- A research doc is evidence with an expiry: it stays while code does not yet hold what it says, and the PR that absorbs it deletes it (the spike doc goes when S1 and S2 land; its YAML, pins and context schema will live in `dbt/` and the generator).
+- Lessons for the work platform (the native data agent, BigQuery descriptions, Knowledge Catalog) go in § 6, one line each with evidence.
 - Risks: `dbt-metricflow` pins `dbt-core` to a minor range, so the two move together and the parity check re-runs after either moves; the model is a free tier, so every live run is opt-in.
 
 ## 6. Lessons for work
