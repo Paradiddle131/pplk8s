@@ -7,7 +7,10 @@ Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit
 ## Delivery
 
 `per-issue`: branch `claude/<n>-<slug>`, one draft PR per issue; stack on an open PR's branch when the issue depends on it.
-Digest of open owner questions: the body of [#43](https://github.com/Paradiddle131/pplk8s/issues/43), one line each, removed when answered.
+
+## Digest
+
+The body of [#43](https://github.com/Paradiddle131/pplk8s/issues/43) lists open owner questions only; PRs waiting for the laptop are the `needs-local-verify` label, so drop any other section of that body when you next edit it.
 
 ## Merge policy
 
@@ -17,7 +20,9 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 ## Queue
 
 1. [Map #99: dbt semantic layer and a metrics agent](https://github.com/Paradiddle131/pplk8s/issues/99): its sub-issues in order; design in `semantic/PLAN.md`.
-2. Open `bug` issues, then `lesson` issues (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
+2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
+
+Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
 
 ## Gates
 
