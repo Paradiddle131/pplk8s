@@ -9,8 +9,10 @@ models:
             columns: ['order_date', 'country']
     columns:
       - name: order_date
+        description: UTC date the orders were placed.
         tests: [not_null]
       - name: country
+        description: ISO-3166 alpha-2 country of the customer.
         tests:
           - not_null
           - accepted_values:
@@ -27,6 +29,18 @@ models:
       - name: order_date
         description: Natural key.
         tests: [not_null, unique]
+      - name: orders_total
+        description: All orders that day, cancelled included.
+      - name: orders_cancelled
+        description: Cancelled orders that day.
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders.
+      - name: customers_distinct
+        description: Distinct customers with at least one non-cancelled order that day.
+      - name: amsterdam_avg_temperature_c
+        description: Amsterdam's mean hourly temperature that UTC day, in degrees Celsius; NULL without observations.
+      - name: amsterdam_total_precipitation_mm
+        description: Amsterdam's precipitation that UTC day, in millimetres; NULL without observations.
 
   - name: exp_net_sales_daily
     description: Daily revenue net of partner returns, one row per order_date of gold.daily_sales. Alias exposed.net_sales_daily.
@@ -34,6 +48,12 @@ models:
       - name: order_date
         description: Natural key.
         tests: [not_null, unique]
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders.
+      - name: returns_count
+        description: Partner returns recorded that day.
+      - name: returns_eur
+        description: Sum of partner return amounts recorded that day.
       - name: net_revenue_eur
         description: revenue_eur minus returns_eur.
         tests: [not_null]
@@ -44,3 +64,18 @@ models:
       - unique_combination:
           arguments:
             columns: ['pickup_date', 'data_month', 'trip_type', 'borough']
+    columns:
+      - name: pickup_date
+        description: Local date of the pickup.
+      - name: data_month
+        description: The TLC data month (YYYY-MM) the trips were published in.
+      - name: trip_type
+        description: yellow or green.
+      - name: borough
+        description: Pickup borough from the taxi zone lookup; Unknown for zones it lacks.
+      - name: trips
+        description: Number of trips.
+      - name: passengers
+        description: Sum of the passenger counts.
+      - name: total_amount_usd
+        description: Sum of the total amounts charged, in USD.

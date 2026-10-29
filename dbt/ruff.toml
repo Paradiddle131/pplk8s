@@ -1,0 +1,6 @@
+# The dbt project's helper scripts (scripts/*.py), linted by `make lint` as the Python services are.
+line-length = 120
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

@@ -17,6 +17,25 @@ models:
         granularity: day
         tests: [not_null, unique]
 
+  - name: semantic_metrics
+    description: One row per metric of the semantic layer, with its words; the warehouse copy of the agent catalog's metrics (semantic/PLAN.md SL-3). Alias semantic.metrics.
+    columns:
+      - name: metric_name
+        description: The metric's name, as the mf CLI and the agent's query_metrics take it.
+        tests: [not_null, unique]
+      - name: label
+        description: The metric's display name.
+        tests: [not_null]
+      - name: description
+        description: What the metric counts or sums, and what it leaves out.
+        tests: [not_null]
+      - name: metric_type
+        description: MetricFlow metric type (simple, ratio, derived, cumulative or conversion).
+      - name: semantic_models
+        description: Comma-separated semantic models whose measures the metric reads.
+      - name: pipelines
+        description: Comma-separated pipeline tags that own those models; ops.readiness by these tags gives the metric's freshness.
+
 semantic_models:
   - name: orders
     description: One row per order (latest version), from silver.orders.

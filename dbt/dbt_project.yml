@@ -18,28 +18,41 @@ clean-targets: ["target", "dbt_packages"]
 
 models:
   pplk8s:
+    # Trust tiers (semantic/PLAN.md SL-4): gold and exposed are the agent-facing models, public in the
+    # analytics group, with their descriptions persisted as warehouse comments (the catalog's words, SL-3);
+    # bronze, silver and the semantic stage stay protected and out of the agent catalog.
     bronze:
       +schema: bronze
       +tags: [bronze]
       +materialized: view
+      +access: protected
     silver:
       +schema: silver
       +tags: [silver]
       +materialized: table
+      +access: protected
     gold:
       +schema: gold
       +tags: [gold]
       +materialized: table
+      +access: public
+      +group: analytics
+      +persist_docs: {relation: true, columns: true}
     exposed:
       +schema: exposed
       +tags: [exposed]
       +materialized: view
-    # The semantic layer (semantic/PLAN.md SL-1): the time spine, and the semantic models and
-    # metrics in semantic.yml, which live in the manifest rather than the warehouse.
+      +access: public
+      +group: analytics
+      +persist_docs: {relation: true, columns: true}
+    # The semantic layer (semantic/PLAN.md SL-1): the time spine and the metrics table, and the
+    # semantic models and metrics in semantic.yml, which live in the manifest rather than the warehouse.
     semantic:
       +schema: semantic
       +tags: [semantic]
       +materialized: table
+      +access: protected
+      +persist_docs: {relation: true, columns: true}
 
 # Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
 seeds:
