@@ -7,6 +7,11 @@ Every managed GCP service has a local stand-in; all data is public or synthetic.
 
 <img width="2318" height="1250" alt="Architecture: Airflow, workloads and monitoring namespaces in the cluster; metadata DB, Pub/Sub, object storage and warehouse outside it" src="https://github.com/user-attachments/assets/ccacd37d-60c0-47dd-a4ca-8f621519c2c4" />
 
+## Second track: a semantic layer and a metrics agent
+
+The same warehouse and dbt project carry a MetricFlow semantic layer, and an ADK agent answers business questions through metrics instead of SQL; the plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md).
+Everything else on this page is the Airflow lab.
+
 ## Design
 
 - **Airflow orchestrates, never processes.** Extraction runs in EL Factory, transformation in dbt; DAGs pass only identifiers and status.

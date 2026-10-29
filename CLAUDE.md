@@ -18,6 +18,12 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 - **Clean-room only.** Rebuild interfaces from their described behaviour, using public or synthetic data; employer code, data, and credentials never enter this repo.
 - **Simplest thing that teaches the target.** Add a tool only when a phase's learning goal needs it.
 
+## Two tracks
+
+- **The Airflow lab** (everything below, [`PLAN.md`](PLAN.md), [`LESSONS.md`](LESSONS.md), the `lesson` label): sealed for any other topic; new work there is Phase 8 and maintenance.
+- **The semantic layer and metrics agent** ([`semantic/PLAN.md`](semantic/PLAN.md)): a dbt semantic layer over the same warehouse and an ADK agent that answers through metrics; it shares `dbt/` and the Compose stand-ins, never touches a DAG, and keeps its decisions, progress rules and lessons in its plan.
+  Label its issues `semantic`, never `lesson`.
+
 ## Working files
 
 - [`PLAN.md`](PLAN.md): the roadmap, architecture decisions, and phase exit criteria. Read it before starting work; change a decision there, with its rationale, before acting on the change.
