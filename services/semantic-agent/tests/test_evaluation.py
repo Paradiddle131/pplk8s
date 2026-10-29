@@ -42,7 +42,8 @@ def test_numbers_in_an_answer_leave_dates_out(text, numbers):
 
 def test_an_answer_carries_a_number_within_rounding():
     assert carries("about 0.1667 of orders", [0.16666666, 16.67])
-    assert carries("16.7%", [0.16666666, 16.67]) is False
+    assert carries("16.7%", [0.16666666, 16.67])  # rounded to the decimals it states
+    assert not carries("17%", [0.16666666, 16.67])
     assert carries("964.19 EUR", [964.19])
     assert not carries("965 EUR", [964.19])
 

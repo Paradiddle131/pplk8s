@@ -97,15 +97,24 @@ def expected_numbers(questions: list[Question], url: str) -> dict[str, list[floa
     return found
 
 
+def _stated(text: str) -> list[tuple[float, int]]:
+    """The numbers an answer states with their decimals, dates left out."""
+    found = []
+    for raw in NUMBER.findall(DATES.sub(" ", text)):
+        raw = raw.replace(",", "")
+        found.append((float(raw), len(raw.partition(".")[2])))
+    return found
+
+
 def numbers_in(text: str) -> list[float]:
-    """The numbers an answer states, dates left out."""
-    return [float(n.replace(",", "")) for n in NUMBER.findall(DATES.sub(" ", text))]
+    return [n for n, _ in _stated(text)]
 
 
 def carries(text: str, expected: list[float]) -> bool:
+    """An expected number within half a cent, or rounded to the decimals the answer states."""
     return any(
-        abs(n - e) <= 0.006 or round(n, 2) == round(e, 2)
-        for n in numbers_in(text)
+        abs(n - e) <= 0.006 or (decimals >= 1 and round(e, decimals) == n)
+        for n, decimals in _stated(text)
         for e in expected
     )
 
