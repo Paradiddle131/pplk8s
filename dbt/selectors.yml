@@ -23,3 +23,9 @@ selectors:
     definition:
       method: tag
       value: exposed
+
+  - name: semantic
+    description: Semantic layer, MetricFlow's time spine (table); the semantic models and metrics ride along in the manifest.
+    definition:
+      method: tag
+      value: semantic

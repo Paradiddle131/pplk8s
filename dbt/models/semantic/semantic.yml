@@ -1,0 +1,149 @@
+version: 2
+
+# The semantic layer (semantic/PLAN.md SL-1): MetricFlow semantic models over silver, and every
+# calculated field of gold.daily_sales and exposed.net_sales_daily defined once as a metric (R1).
+# The hand-written gold and exposed aggregates stay as the parity oracle (tests/e2e/semantic-check.sh).
+# Every metric carries a description and a label: scripts/check_metrics.py fails the stage otherwise,
+# because they become the agent catalog and the warehouse comments (SL-3).
+
+models:
+  - name: metricflow_time_spine
+    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine. Alias semantic.time_spine.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: The calendar day.
+        granularity: day
+        tests: [not_null, unique]
+
+semantic_models:
+  - name: orders
+    description: One row per order (latest version), from silver.orders.
+    model: ref('slv_orders')
+    defaults:
+      agg_time_dimension: order_date
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+    dimensions:
+      - name: order_date
+        description: UTC date the order was placed.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        description: placed, shipped or cancelled.
+        type: categorical
+      - name: currency
+        description: ISO-4217 code of the order amount.
+        type: categorical
+    measures:
+      - name: orders_total
+        description: All orders, cancelled included.
+        agg: count
+        expr: order_id
+      - name: order_amount
+        description: Order amount in EUR.
+        agg: sum
+        expr: amount
+      - name: customers
+        description: Distinct customers.
+        agg: count_distinct
+        expr: customer_id
+
+  - name: returns
+    description: One row per partner return (latest version), from silver.returns.
+    model: ref('slv_returns')
+    defaults:
+      agg_time_dimension: return_date
+    entities:
+      - name: return
+        type: primary
+        expr: return_id
+      - name: order
+        type: foreign
+        expr: order_id
+    dimensions:
+      - name: return_date
+        description: UTC date the return was recorded.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: reason
+        description: The partner's return reason.
+        type: categorical
+    measures:
+      - name: returns_count
+        description: Number of returns.
+        agg: count
+        expr: return_id
+      - name: returns_amount
+        description: Returned amount in EUR.
+        agg: sum
+        expr: amount
+
+metrics:
+  - name: orders_total
+    description: All orders placed, cancelled included.
+    label: Orders
+    type: simple
+    type_params:
+      measure: orders_total
+  - name: orders_cancelled
+    description: Orders with status cancelled.
+    label: Cancelled orders
+    type: simple
+    type_params:
+      measure: orders_total
+    filter: "{{ Dimension('order__status') }} = 'cancelled'"
+  - name: revenue_eur
+    description: Sum of amount for non-cancelled orders (the one definition of revenue).
+    label: Revenue (EUR)
+    type: simple
+    type_params:
+      measure: order_amount
+    filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+  - name: customers_distinct
+    description: Distinct customers with at least one non-cancelled order.
+    label: Active customers
+    type: simple
+    type_params:
+      measure: customers
+    filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+  - name: returns_eur
+    description: Sum of partner return amounts.
+    label: Returns (EUR)
+    type: simple
+    type_params:
+      measure:
+        name: returns_amount
+        fill_nulls_with: 0
+  - name: returns_count
+    description: Number of partner returns.
+    label: Returns
+    type: simple
+    type_params:
+      measure:
+        name: returns_count
+        fill_nulls_with: 0
+  - name: net_revenue_eur
+    description: Revenue minus partner returns (finance's net sales).
+    label: Net revenue (EUR)
+    type: derived
+    type_params:
+      expr: revenue_eur - returns_eur
+      metrics:
+        - name: revenue_eur
+        - name: returns_eur
+  - name: cancellation_rate
+    description: Share of orders cancelled.
+    label: Cancellation rate
+    type: ratio
+    type_params:
+      numerator: orders_cancelled
+      denominator: orders_total
