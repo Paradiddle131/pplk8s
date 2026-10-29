@@ -13,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-LAYER_TAGS = {"bronze", "silver", "gold", "exposed"}
+LAYER_TAGS = {"bronze", "silver", "gold", "exposed", "semantic"}
 
 
 def pipeline(node: dict) -> str | None:

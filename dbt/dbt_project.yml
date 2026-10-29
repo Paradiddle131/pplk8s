@@ -34,6 +34,12 @@ models:
       +schema: exposed
       +tags: [exposed]
       +materialized: view
+    # The semantic layer (semantic/PLAN.md SL-1): the time spine, and the semantic models and
+    # metrics in semantic.yml, which live in the manifest rather than the warehouse.
+    semantic:
+      +schema: semantic
+      +tags: [semantic]
+      +materialized: table
 
 # Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
 seeds:

@@ -1,7 +1,7 @@
 # pplk8s dbt project
 
 This project builds the medallion layers on the lab warehouse (Postgres, the BigQuery stand-in from PLAN.md D8).
-It runs on `dbt-core` 1.12.5 with `dbt-postgres` 1.11.0.
+It runs on `dbt-core` 1.12.5 with `dbt-postgres` 1.11.0, and carries the semantic layer on `dbt-metricflow[dbt-postgres]` 0.15.0 ([`semantic/PLAN.md`](../semantic/PLAN.md)).
 
 ## Layers
 
@@ -13,6 +13,7 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | silver | `silver` | table, or incremental per data month (`tlc`) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `tlc_trips`, `tlc_trips_quarantine` |
 | gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `tlc_daily_trips` |
 | exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
+| semantic | `semantic` | table | MetricFlow's `time_spine`; the semantic models and metrics of `semantic.yml` live in the manifest, not the warehouse |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
 Bronze reads `ds_source` through `source()`.
@@ -83,6 +84,31 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
 - Zones: `seeds/bronze/tlc_taxi_zones.csv` is TLC's `taxi_zone_lookup.csv` with a snake_case header.
   Seeds sit in a layer folder, so `--select bronze` builds them together with that layer's models.
 
+## The semantic layer
+
+`models/semantic/semantic.yml` holds the MetricFlow semantic models and metrics (semantic/PLAN.md SL-1): `orders` over `slv_orders` and `returns` over `slv_returns`, and eight metrics (`orders_total`, `orders_cancelled`, `revenue_eur`, `customers_distinct`, `returns_eur`, `returns_count`, `net_revenue_eur`, `cancellation_rate`).
+Each calculated field of `gold.daily_sales` and `exposed.net_sales_daily` is defined once there, as a metric; the hand-written tables stay as the parity oracle.
+`metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it.
+
+Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_metrics.py` fails the parse step without them.
+
+The stage check runs with host dbt on the image's pins, against the Compose warehouse (`DBT_DBNAME=warehouse` by default, `dbt_dev` for the fixture):
+
+```
+make dbt-validate DBT_DBNAME=dbt_dev
+```
+
+It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities, measures and metrics against the warehouse's tables.
+The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
+
+Query a metric with the `mf` CLI from this folder, with the same environment:
+
+```
+uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
+```
+
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns and finance models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal `gold.daily_sales` and `exposed.net_sales_daily` row for row, and checks that an undescribed metric fails the validation.
+
 ## Environment variables
 
 The connection is set in `profiles.yml`, and every value is read from the environment with a default.
@@ -135,5 +161,5 @@ It checks that rebuilding one month leaves the other untouched, that the reconci
 ## Dialect notes
 
 Models use only portable SQL except where a line carries a `-- dialect:` comment.
-The Postgres-specific spots are the `AT TIME ZONE 'UTC'` date casts in `slv_orders`, `slv_returns`, and `gld_daily_weather`, and in `macros/tlc.sql` the file-name regex (`substring ... from`) and the `double precision`/`timestamp` types.
+The Postgres-specific spots are the `AT TIME ZONE 'UTC'` date casts in `slv_orders`, `slv_returns`, and `gld_daily_weather`, the `generate_series` of the time spine, and in `macros/tlc.sql` the file-name regex (`substring ... from`) and the `double precision`/`timestamp` types.
 On BigQuery, the tlc incremental models would use `insert_overwrite` on a month-partitioned `pickup_date` (D36).
