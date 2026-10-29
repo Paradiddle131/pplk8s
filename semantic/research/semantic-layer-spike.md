@@ -3,21 +3,13 @@
 Research for [#99](https://github.com/Paradiddle131/pplk8s/issues/99) (Map: dbt semantic layer and a metrics agent), run on 2026-10-29 (UTC) in a cloud session against the Compose warehouse.
 "Measured" means run here; "stated" means read from the linked page; "unverified" means neither.
 
-S1 and S2 absorbed the spike's semantic YAML, pins, results and the authored-context schema into `dbt/` (`models/semantic/`, `scripts/build_catalog.py`, `tests/e2e/semantic-check.sh`); what is left here goes with S3 and S5.
+S1 to S3 absorbed the spike's semantic YAML, pins, results, the authored-context schema and the agent pins into `dbt/` and `services/semantic-agent/`; what is left here, the native patterns and the unverified points, goes with S5.
 
 ## Verdict
 
 The semantic layer runs entirely on open-source dbt: the YAML spec is parsed by `dbt-core`, and the `dbt-metricflow` CLI and Python API validate and query it against Postgres with no dbt Cloud account (measured).
 Only the hosted Semantic Layer API, its MCP tools and dbt Cloud discovery are closed (stated: the `dbt-mcp` semantic-layer tools need platform credentials).
 A derived metric defined once in YAML reproduces the hand-written `exposed.net_sales_daily` to the cent (measured; `make semantic-check` holds it now).
-
-## Pins (measured)
-
-The dbt and MetricFlow pins live in `dbt/requirements.txt` (S1).
-
-| Package | Version | Note |
-|---|---|---|
-| `google-adk` | 2.13.0 | `google.adk.tools.data_agent` (`DataAgentToolset`) and `google.adk.tools.bigquery` present; LiteLLM needs the `extensions` extra, `DatabaseSessionService` the `db` extra |
 
 ## Native patterns (stated, Google docs 2026-10)
 

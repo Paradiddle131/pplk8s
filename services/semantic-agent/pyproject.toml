@@ -1,0 +1,39 @@
+[project]
+name = "semantic-agent"
+version = "0.1.0"
+description = "An ADK agent that answers business questions through the dbt semantic layer's metrics, and its text-to-SQL baseline"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "google-adk[db,eval,extensions]==2.13.0",
+    "dbt-core==1.12.5",
+    "dbt-postgres==1.11.0",
+    "dbt-metricflow[dbt-postgres]==0.15.0",
+    "psycopg[binary]==3.3.6",
+    "asyncpg==0.31.0",
+    "pyyaml",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.uv.build-backend]
+module-name = ["semantic_agent", "sql_baseline"]
+module-root = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
