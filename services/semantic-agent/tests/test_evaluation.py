@@ -40,6 +40,23 @@ def test_numbers_in_an_answer_leave_dates_out(text, numbers):
     assert numbers_in(text) == numbers
 
 
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "The semantic layer has no such metric for weather.",
+        "The semantic layer has no revenue metric that can be filtered by customer country, "
+        "so I can't give a Germany-specific figure.",
+        "I cannot answer the weather question from this data.",
+    ],
+)
+def test_declines_are_recognised(answer):
+    assert evaluation.DECLINE.search(answer)
+
+
+def test_an_answer_is_not_a_decline():
+    assert not evaluation.DECLINE.search("Revenue was 981.69 EUR on 1 October 2026.")
+
+
 def test_an_answer_carries_a_number_within_rounding():
     assert carries("about 0.1667 of orders", [0.16666666, 16.67])
     assert carries("16.7%", [0.16666666, 16.67])  # rounded to the decimals it states

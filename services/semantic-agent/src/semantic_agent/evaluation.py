@@ -66,9 +66,9 @@ DATES = re.compile(
 )
 NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 DECLINE = re.compile(
-    r"no (?:such )?metric|not (?:available|defined|covered|in the semantic layer)|"
+    r"no (?:such |\w+ )?metric|not (?:available|defined|covered|in the semantic layer)|"
     r"(?:does not|doesn't|do not|don't) (?:have|define|include|cover|contain)|"
-    r"cannot (?:answer|be answered)|can't answer|unable to answer|no metric",
+    r"(?:cannot|can't|unable to) (?:answer|be answered|give|report)",
     re.IGNORECASE,
 )
 
