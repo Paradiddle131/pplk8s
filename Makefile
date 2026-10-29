@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-eval
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -99,6 +99,19 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 semantic-check: services-up ## Build the sales, returns and finance models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the eight metrics equal gold.daily_sales and exposed.net_sales_daily (#100)
 	tests/e2e/semantic-check.sh
 
+# The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5).
+agent-test: ## Lint and test the semantic agent with a scripted model (services/semantic-agent); the database tests need services-up
+	cd services/semantic-agent && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
+
+AGENT_DBNAME ?= warehouse
+agent-serve: ## Serve both agents with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
+	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+	  uv run adk api_server --host 127.0.0.1 --port 8000 \
+	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
+
+agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
+	tests/e2e/agent-eval.sh
+
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
 	cd airflow && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
@@ -113,7 +126,7 @@ verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBa
 rules-test: ## Check the Prometheus alert rules and run their promtool unit tests (tests/monitoring)
 	tests/monitoring/rules-test.sh
 
-test: airflow-test rules-test ## Run unit tests and linters
+test: airflow-test rules-test agent-test ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 	cd services/event-adapter && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 

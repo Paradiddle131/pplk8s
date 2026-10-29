@@ -1,0 +1,16 @@
+{
+  "criteria": {
+    "answer_correct": 1.0,
+    "metric_choice": 1.0
+  },
+  "customMetrics": {
+    "answer_correct": {
+      "codeConfig": {"name": "semantic_agent.evaluation.answer_correct"},
+      "description": "The final answer carries the number the warehouse gives, or declines where no metric covers the question."
+    },
+    "metric_choice": {
+      "codeConfig": {"name": "semantic_agent.evaluation.metric_choice"},
+      "description": "The semantic agent's query_metrics calls named every expected metric."
+    }
+  }
+}

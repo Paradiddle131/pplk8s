@@ -39,8 +39,19 @@ done
 
 # warehouse-init runs only on an empty volume; re-apply it (every statement is IF NOT EXISTS) so
 # objects added later, such as ops.file_loads, reach an existing warehouse too.
-docker compose exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 \
-  -f /docker-entrypoint-initdb.d/01-schemas.sql
+for sql in 01-schemas.sql 02-agent-roles.sql; do
+  docker compose exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 \
+    -f "/docker-entrypoint-initdb.d/$sql"
+done
+
+# The semantic agent's ADK sessions (semantic/PLAN.md SL-2): their own database and owner on the
+# metadata DB's instance, as a second database on the same Cloud SQL instance would be.
+docker compose exec -T metadata-db psql -q -U airflow -d airflow -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE ROLE agent_sessions LOGIN PASSWORD ''agent_sessions'''
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'agent_sessions')\gexec
+SELECT 'CREATE DATABASE agent_sessions OWNER agent_sessions'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'agent_sessions')\gexec
+SQL
 
 # Let pods in the kind cluster reach these services by name, if the cluster is up.
 ../kind/join-services-network.sh
