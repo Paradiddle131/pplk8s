@@ -9,12 +9,12 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.0
-DBT_IMAGE ?= localhost:5001/dbt:0.7.0
+DBT_IMAGE ?= localhost:5001/dbt:0.7.1
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.14
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.15
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).

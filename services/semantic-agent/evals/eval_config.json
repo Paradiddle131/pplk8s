@@ -1,7 +1,8 @@
 {
   "criteria": {
     "answer_correct": 1.0,
-    "metric_choice": 1.0
+    "metric_choice": 1.0,
+    "freshness_quoted": 1.0
   },
   "customMetrics": {
     "answer_correct": {
@@ -11,6 +12,10 @@
     "metric_choice": {
       "codeConfig": {"name": "semantic_agent.evaluation.metric_choice"},
       "description": "The semantic agent's query_metrics calls named every expected metric."
+    },
+    "freshness_quoted": {
+      "codeConfig": {"name": "semantic_agent.evaluation.freshness_quoted"},
+      "description": "The semantic agent's answer quotes every freshness statement its query_metrics calls returned."
     }
   }
 }

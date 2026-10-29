@@ -2,10 +2,13 @@
 same questions and the same model, through ADK's own eval engine (`LocalEvalService`).
 
 `evals/questions.yaml` holds the questions; each one's expected numbers come from the warehouse
-when the run starts. Two custom ADK metrics score a run:
+when the run starts. Three custom ADK metrics score a run:
 - `answer_correct`: the final answer carries an expected number; for the semantic agent on a
-  question no metric covers, it says the semantic layer has no such metric instead.
+  question no metric covers, it says the semantic layer has no such metric instead. Numbers inside
+  a quoted freshness statement do not count.
 - `metric_choice` (semantic agent only): its `query_metrics` calls named the expected metrics.
+- `freshness_quoted` (semantic agent only, SL-4): the answer quotes every freshness statement its
+  `query_metrics` calls returned.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
 Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`; a run the
@@ -41,6 +44,7 @@ from google.adk.evaluation.eval_case import (
     Invocation,
     SessionInput,
     get_all_tool_calls,
+    get_all_tool_responses,
 )
 from google.adk.evaluation.eval_config import EvalConfig
 from google.adk.evaluation.eval_metrics import EvalMetric
@@ -150,11 +154,27 @@ def _result(scores: list[float], actual: list[Invocation], expected: list[Invoca
     )
 
 
+def freshness_statements(invocation: Invocation) -> list[str]:
+    """The freshness statements the invocation's query_metrics calls returned, in order."""
+    found = []
+    for response in get_all_tool_responses(invocation.intermediate_data):
+        statement = ((response.response or {}).get("freshness") or {}).get("statement")
+        if response.name == "query_metrics" and statement and statement not in found:
+            found.append(statement)
+    return found
+
+
+def _squash(text: str) -> str:
+    return " ".join(text.split())
+
+
 def answer_correct(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
     """1 when the answer carries an expected number, or declines where it should."""
     scores = []
     for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
-        spec, text = _spec(expected), _text(actual.final_response)
+        spec, text = _spec(expected), _squash(_text(actual.final_response))
+        for statement in freshness_statements(actual):
+            text = text.replace(_squash(statement), " ")
         if spec["decline"]:
             right = bool(DECLINE.search(text)) and not carries(text, spec["expected"])
         else:
@@ -181,8 +201,22 @@ def metric_choice(eval_metric, actual_invocations, expected_invocations, convers
     return _result(scores, actual_invocations, expected_invocations or [])
 
 
+def freshness_quoted(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
+    """1 when the answer quotes each freshness statement its queries returned; a question a metric
+    covers needs at least one."""
+    scores = []
+    for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
+        statements = freshness_statements(actual)
+        text = _squash(_text(actual.final_response))
+        quoted = all(_squash(s) in text for s in statements)
+        needed = bool(_spec(expected)["metrics"])
+        scores.append(1.0 if quoted and (statements or not needed) else 0.0)
+    return _result(scores, actual_invocations, expected_invocations or [])
+
+
 ANSWER_CORRECT = EvalMetric(metric_name="answer_correct", threshold=1.0)
 METRIC_CHOICE = EvalMetric(metric_name="metric_choice", threshold=1.0)
+FRESHNESS_QUOTED = EvalMetric(metric_name="freshness_quoted", threshold=1.0)
 
 
 def eval_cases(
@@ -321,21 +355,23 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
         "| | Semantic agent | Text-to-SQL baseline |",
         "|---|---|---|",
         f"| Questions a metric covers ({len(with_metric)}) | {count(semantic, with_metric)} right, "
-        f"{count(semantic, with_metric, 'metric_choice')} with the expected metric | "
+        f"{count(semantic, with_metric, 'metric_choice')} with the expected metric, "
+        f"{count(semantic, with_metric, 'freshness_quoted')} quoting their freshness | "
         f"{count(baseline, with_metric)} right |",
         f"| Questions no metric covers ({len(without)}) | {count(semantic, without)} said so | "
         f"{count(baseline, without)} right |",
         f"| All ({len(questions)}) | {count(semantic, questions)} | {count(baseline, questions)} |",
         "",
-        "| Question | Expected | Semantic | Metric | Baseline |",
-        "|---|---|---|---|---|",
+        "| Question | Expected | Semantic | Metric | Freshness | Baseline |",
+        "|---|---|---|---|---|---|",
     ]
     for q in questions:
         number = expected[q.id][0]
         chose = mark(semantic.get(q.id), "metric_choice") if q.metrics else "none"
+        quoted = mark(semantic.get(q.id), "freshness_quoted") if q.metrics else "none"
         lines.append(
             f"| `{q.id}` {q.question} | {number:g} | "
-            f"{mark(semantic.get(q.id), 'answer_correct')} | {chose} | "
+            f"{mark(semantic.get(q.id), 'answer_correct')} | {chose} | {quoted} | "
             f"{mark(baseline.get(q.id), 'answer_correct')} |"
         )
     lines += ["", "## Answers", ""]
@@ -365,7 +401,7 @@ async def main(ids: list[str]) -> int:
     semantic = await evaluate(
         build_semantic(),
         eval_cases(questions, expected, "semantic_agent", semantic=True),
-        [ANSWER_CORRECT, METRIC_CHOICE],
+        [ANSWER_CORRECT, METRIC_CHOICE, FRESHNESS_QUOTED],
     )
     spent = next((o for o in semantic.values() if o.skipped), None)
     if spent:

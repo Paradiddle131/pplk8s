@@ -22,6 +22,12 @@ build replaces.  ``arguments`` is a templated field, so a value may be a Jinja t
 task renders at run time; keep such templates free of double quotes, which JSON escapes.
 On Cloud Run the same list becomes the Job execution's container-override args.
 
+Semantic validation (semantic/PLAN.md SL-1, S4): :func:`validate_semantic_layer` runs MetricFlow's
+``mf validate-configs`` from the same image, the semantic models, metrics and dimensions checked
+against the warehouse.  ``mf`` reads ``target/semantic_manifest.json`` and the pod's ``target/``
+starts empty, so ``dbt parse`` runs first in the same shell.  Cloud Run Job overrides change the
+args but not the command, so on Cloud Run it is a second Job on the same image with that command.
+
 Image (PLAN.md D16): the Airflow Variable ``dbt_image``, required and resolved at task run time
 (so the DAG parse never reads the metadata DB).  The deploy sets it from ``DBT_IMAGE``; no tag is
 written here, because a default would silently run a stale image after a bump.  On Cloud Run the
@@ -46,6 +52,8 @@ SERVICE_ACCOUNT = "dbt"
 CREDENTIALS_SECRET = "warehouse-credentials"
 RUN_AS_ID = 10001
 SCRATCH = {"target": "/dbt/target", "logs": "/dbt/logs", "tmp": "/tmp"}  # noqa: S108
+
+SEMANTIC_VALIDATION = "dbt parse --quiet && exec mf validate-configs"
 
 _IMAGE = "{{ var.value.dbt_image }}"
 _NAMESPACE = f"{{{{ var.value.get('dbt_namespace', '{DEFAULT_NAMESPACE}') }}}}"
@@ -103,6 +111,22 @@ def run_dbt_operation(
         arguments += ["--args", json.dumps(args)]
     step = macro.replace("_", "-")
     return _dbt_pod(task_id or f"dbt_{macro}", arguments, pipeline=pipeline, step=step, **kwargs)
+
+
+def validate_semantic_layer(
+    *, pipeline: str, task_id: str = "validate_semantic_layer", **kwargs: Any
+) -> KubernetesPodOperator:
+    """Return the operator that runs ``dbt parse`` and ``mf validate-configs`` on the dbt project.
+
+    The semantic manifest is parsed and validated, then every semantic model, dimension, measure
+    and metric is queried on the warehouse; any breaking issue fails the task.
+    """
+    if not _NAME.match(pipeline):
+        raise ValueError(f"invalid pipeline name {pipeline!r}")
+    options: dict[str, Any] = {"cmds": ["/bin/sh", "-c"], **kwargs}
+    return _dbt_pod(
+        task_id, [SEMANTIC_VALIDATION], pipeline=pipeline, step="semantic-validate", **options
+    )
 
 
 def _dbt_pod(

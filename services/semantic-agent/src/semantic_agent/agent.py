@@ -25,6 +25,7 @@ with a filter on one of the dimensions describe_metric lists, not a missing metr
 If no metric answers the question, say that the semantic layer has no such metric and name the
 closest metrics; do not answer from general knowledge.
 Answer in one or two sentences: the figure with its unit, and the days or period it covers.
+Then add the freshness statement that query_metrics returned, word for word.
 """
 
 

@@ -25,8 +25,19 @@ psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
   uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance --exclude tag:tlc) \
   >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog"; }
-psql_dev -c "set client_min_messages = warning" -f /docker-entrypoint-initdb.d/02-agent-roles.sql
-echo "ok: fixture built in $DB, catalog written, agent roles granted"
+for sql in 01-schemas.sql 02-agent-roles.sql; do
+  psql_dev -c "set client_min_messages = warning" -f "/docker-entrypoint-initdb.d/$sql"
+done
+# The fixture's days as the DAGs would record them, so every answer states a freshness (SL-4):
+# sales.silver takes the sales deadline (36 h) and is long late; returns.silver has none.
+psql_dev <<'SQL'
+INSERT INTO ops.readiness (product, interval_start, interval_end, run_id, status)
+SELECT product, day, day + interval '1 day', 'fixture', 'ready'
+FROM unnest(array['sales.silver', 'returns.silver']) AS product,
+     generate_series(timestamptz '2026-10-01', '2026-10-02', interval '1 day') AS day
+ON CONFLICT (product, interval_start, interval_end) DO NOTHING;
+SQL
+echo "ok: fixture built in $DB, catalog written, agent roles granted, readiness recorded"
 
 cd "$REPO/services/semantic-agent"
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics

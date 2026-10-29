@@ -2,7 +2,8 @@
 
 At work `DataAgentToolset.ask_data_agent` fills this seam; here MetricFlow does. Every tool returns
 a dict, and a request the semantic layer cannot answer comes back as `{"error": ...}` for the model
-to read, never as an exception that ends the turn.
+to read, never as an exception that ends the turn. Every query result carries the freshness of its
+metrics' data (SL-4), with the sentence the answer quotes.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 from functools import cache
 from typing import Any
 
+from semantic_agent.freshness import freshness
 from semantic_agent.metrics import Catalog, Filter, MetricQuery, QueryError, run
 
 
@@ -44,7 +46,16 @@ def describe_metric(name: str) -> dict[str, Any]:
         return {"error": str(e)}
     return {
         key: metric[key]
-        for key in ("name", "label", "description", "type", "time_grain", "pipelines", "dimensions")
+        for key in (
+            "name",
+            "label",
+            "description",
+            "type",
+            "time_grain",
+            "pipelines",
+            "readiness",
+            "dimensions",
+        )
     }
 
 
@@ -57,7 +68,8 @@ def query_metrics(
     order_by: list[str] | None = None,
     limit: int | None = None,
 ) -> dict[str, Any]:
-    """Computes metrics through the semantic layer and returns their rows and the SQL it ran.
+    """Computes metrics through the semantic layer and returns their rows, the SQL it ran, and
+    how fresh their data is: quote `freshness.statement` in the answer.
 
     Args:
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
@@ -81,9 +93,11 @@ def query_metrics(
         limit=limit,
     )
     try:
-        return run(query, catalog())
+        result = run(query, catalog())
     except QueryError as e:
         return {"error": str(e)}
+    products = sorted({p for name in metrics for p in catalog().metric(name).get("readiness", [])})
+    return {**result, "freshness": freshness(products)}
 
 
 TOOLS = [list_metrics, describe_metric, query_metrics]
