@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -88,6 +88,10 @@ semantic-check: services-up ## Build the sales, returns and finance models on db
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
 	cd airflow && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
+
+check: export PPLK8S_REQUIRE_WAREHOUSE := 1
+check: services-up ## Light gate on every change (PLAN.md D26): linters, unit and DagBag tests with the Compose warehouse required
+	$(MAKE) lint test
 
 verify: export PPLK8S_REQUIRE_WAREHOUSE := 1
 verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBag tests, every image build (needs services-up)

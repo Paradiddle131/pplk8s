@@ -32,13 +32,13 @@ Design every step so the next run can pick up exactly where this one stopped: pu
   - Draft → ready: `gh api -X POST repos/Paradiddle131/pplk8s/pulls/<n>/ccr/ready_for_review` (a proxy route; plain REST cannot do it), or the GitHub MCP tool `update_pull_request` with `draft: false`.
   - `gh api search/…` is refused ("sessions are bound to their configured repositories"); list `repos/…/issues?state=all&per_page=100` and filter with `--jq`.
   - PR review threads: if REST `pulls/<n>/comments` answers 403, read them with the GitHub MCP `pull_request_read` (`method: get_review_comments`).
-- **GitHub Actions does not run** (account billing, since 2026-10-13; the user will not fix it soon): every job fails within seconds with "recent account payments have failed or your spending limit needs to be increased".
-  A red `test` check with that annotation is not a failure of your PR: don't wait for it, don't try to fix it, don't re-file it.
-  The gates are the cloud `make test` with the warehouse up (`make services-up` and `PPLK8S_REQUIRE_WAREHOUSE=1`, as CI would run it) and the laptop's `make verify` before merge (D26).
+- **GitHub Actions is off** (PLAN.md D26, since 2026-10-29): no workflow runs on a push or a PR, and the account's Actions billing is blocked anyway, so a dispatched job fails in seconds.
+  A PR shows no checks; that is expected: don't dispatch a workflow, don't re-file it.
+  The gates are `make check` here (lint, unit and DagBag tests with the Compose warehouse up and required) and the laptop's `make verify` before merge.
 - Start Docker first: `bash docs/agents/cloud-docker.sh` (idempotent).
   The VM does not start the daemon, the setup snapshot keeps no processes, and anonymous Docker Hub pulls hit 429, so the script starts `dockerd` with `mirror.gcr.io` as registry mirror.
 - What runs on cloud: Docker and `docker compose`, `uv`, Postgres 16 (not started).
-  So `make lint`, `make test` (unit + DagBag) and the Compose services (`make services-up`) run here.
+  So `make check` (`make lint` and `make test`, unit + DagBag, with the Compose services up) runs here.
 - Image builds that `pip install` fail TLS through the agent proxy (pypi.org: `self-signed certificate in certificate chain`), so `make build`, `make verify` and `make phase1-check` do not run; the images are built by `make verify` on the laptop before merge (PLAN.md D26).
   Run dbt from the host instead: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …`; run EL Factory with `uv run gunicorn` and the env from `scripts/el-factory-local.sh`.
   Start a host gunicorn with `run_in_background` (or record its PID): one started in a plain Bash call outlives the tool's kill and holds the port.
@@ -92,7 +92,7 @@ A claim on an item is **live** while the item or its PR saw a worker comment, co
 
 1. **Fresh user answers**: a `needs-user` item the user replied to. Act on the answer (see §4 for wayfinder tickets), remove `needs-user`.
 2. **Unfinished autopilot work**: an `autopilot` PR whose handoff has open **Next** items and no live claim.
-3. **Broken autopilot PRs**: failing checks (not the Actions billing failure, §0), merge conflicts, or the user's review comments. Fix them on their branch.
+3. **Broken autopilot PRs**: a failing `make check` reported in the handoff, merge conflicts, or the user's review comments. Fix them on their branch.
 4. **The wayfinder frontier**: on each map (§1.4, both repos), open sub-issues that are unblocked and unassigned, in map order (§4).
 5. **Build issues** labelled `autopilot-ready` whose blockers are all closed, lowest number first; prefer one cloud can verify, and when a local-only build issue depends on a cloud-verifiable bug, take the bug first.
 6. **Next best action**: a failing, flaky or skipped test; a lint warning; a `bug` issue; a `lesson` issue.
@@ -183,9 +183,9 @@ Each filed issue carries symptom or goal, evidence, acceptance and its areas.
 
 ## 6. Verify and hand off
 
-**Verify what cloud can**, and never claim more: `make lint`, `make test`, and `make services-up` plus host-side dbt or EL Factory (§0) when you touched them or the Compose services; image builds and kind are left to the local `make verify` / `make ci-integration`.
+**Verify what cloud can**, and never claim more: `make check` (lint, unit and DagBag tests with the warehouse required), and host-side dbt or EL Factory (§0) when you touched them or the Compose services; image builds and kind are left to the local `make verify` / `make ci-integration`.
 A change to an image's contents (a Dockerfile, dependencies, dbt models, service code, and `airflow/include/**`, which the Airflow image bakes in for `DAG_DELIVERY=local` and `make ci-integration`) bumps that image's tag in the `Makefile` (PLAN.md D16), or the lab keeps running the cached old image (#92: #56 and #57 changed the seam without a bump).
-Opening the PR would run `ci.yaml`'s `test` job, but Actions is blocked by billing (§0): record `CI test — n/a (Actions billing)` and the cloud `make test` counts with `PPLK8S_REQUIRE_WAREHOUSE=1` instead. Do not dispatch the on-demand `images` or `integration` jobs.
+Actions is off (§0): `make check` is the PR's light check, quoted in the handoff. Do not dispatch the on-demand `test`, `images` or `integration` jobs.
 
 Keep exactly one comment per PR titled `🤖 Autopilot handoff`, edited in place after every push.
 **The part outside `<details>` is for the human scanning many PRs: only what needs them, five lines at most.**
@@ -209,10 +209,8 @@ Everything else goes inside the collapsed sections.
 **Done:** …
 **Next:** - [ ] … (in order)
 **Verified on cloud** (each gate ticked with its evidence, or unticked with `n/a (cloud)` / `not run: <why>`):
-- [ ] `make lint` — …
-- [ ] `make test` — <passed/skipped counts>
-- [ ] `make services-up` + host dbt / EL Factory (§0) — <what ran, row counts>
-- [ ] `PPLK8S_REQUIRE_WAREHOUSE=1 make test` with the warehouse up — <passed counts> (stands in for CI `test`, §0)
+- [ ] `make check` — <passed counts> (lint, unit and DagBag tests, warehouse required)
+- [ ] host dbt / EL Factory (§0) — <what ran, row counts>
 **Not verified (needs local):** `make verify` (image builds), `make ci-integration` when cluster-facing, …
 **Decisions taken and why:** …
 **Ledger fragment:** `ledger.d/<file>`
