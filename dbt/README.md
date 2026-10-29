@@ -1,7 +1,7 @@
 # pplk8s dbt project
 
 This project builds the medallion layers on the lab warehouse (Postgres, the BigQuery stand-in from PLAN.md D8).
-It runs on `dbt-core` 1.12.5 with `dbt-postgres` 1.11.0.
+It runs on `dbt-core` 1.12.5 with `dbt-postgres` 1.11.0, and carries the semantic layer on `dbt-metricflow[dbt-postgres]` 0.15.0 ([`semantic/PLAN.md`](../semantic/PLAN.md)).
 
 ## Layers
 
@@ -13,6 +13,7 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | silver | `silver` | table, or incremental per data month (`tlc`) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `tlc_trips`, `tlc_trips_quarantine` |
 | gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `tlc_daily_trips` |
 | exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
+| semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics of `semantic.yml` live in the manifest |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
 Bronze reads `ds_source` through `source()`.
@@ -83,6 +84,55 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
 - Zones: `seeds/bronze/tlc_taxi_zones.csv` is TLC's `taxi_zone_lookup.csv` with a snake_case header.
   Seeds sit in a layer folder, so `--select bronze` builds them together with that layer's models.
 
+## The semantic layer
+
+`models/semantic/semantic.yml` holds the MetricFlow semantic models and metrics (semantic/PLAN.md SL-1): `orders` over `slv_orders` and `returns` over `slv_returns`, and eight metrics (`orders_total`, `orders_cancelled`, `revenue_eur`, `customers_distinct`, `returns_eur`, `returns_count`, `net_revenue_eur`, `cancellation_rate`).
+Each calculated field of `gold.daily_sales` and `exposed.net_sales_daily` is defined once there, as a metric; the hand-written tables stay as the parity oracle.
+`metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) is tagged `sales` with it.
+
+Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_metrics.py` fails the parse step without them.
+
+The stage check runs with host dbt on the image's pins, against the Compose warehouse (`DBT_DBNAME=warehouse` by default, `dbt_dev` for the fixture):
+
+```
+make dbt-validate DBT_DBNAME=dbt_dev
+```
+
+It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities, measures and metrics against the warehouse's tables.
+The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
+
+Query a metric with the `mf` CLI from this folder, with the same environment:
+
+```
+uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
+```
+
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns and finance models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal `gold.daily_sales` and `exposed.net_sales_daily` row for row, and checks that an undescribed metric fails the validation.
+
+### Trust tiers and the catalog
+
+Gold and exposed models are `access: public` in the `analytics` group (`models/groups.yml`): the tables agents and people may read (semantic/PLAN.md SL-4).
+Bronze, silver and the semantic stage are `protected` and stay out of the agent catalog; the metrics read silver through the semantic models, so an agent reaches silver only through a metric.
+Every public model and every one of its columns carries a `description`, and `persist_docs` writes them to the warehouse as table and column comments (BigQuery descriptions on a BigQuery target) whenever the model builds.
+
+Naming: a metric is the measure in snake case with its unit as a suffix (`revenue_eur`, `net_revenue_eur`), a count names what it counts and how (`orders_total`, `orders_cancelled`, `customers_distinct`), and its `label` is the business term in plain words with the unit in brackets (`Net revenue (EUR)`).
+A dimension is addressed as `<entity>__<dimension>` (`order__status`), and time as `metric_time__day` (or `__week`, `__month`, `__year`).
+
+`make dbt-catalog` (`DBT_DBNAME=warehouse|dbt_dev`) parses the project, runs `scripts/build_catalog.py`, then `scripts/check_catalog.py`, then builds the semantic stage.
+The generator reads `target/manifest.json` and `target/semantic_manifest.json` and asks MetricFlow, offline, for each metric's dimensions and compiled SQL; it writes, under `target/catalog/`:
+
+| Artefact | For | Holds |
+|---|---|---|
+| `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns) and metrics (label, description, type, pipelines, time grain, dimensions) |
+| `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the measures, `relationships` from the entities, `glossaries` from the metrics, `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
+| `data_agent/example_queries.json` | the data agent's verified queries | one `naturalLanguageQuestion` and `sqlQuery` per metric: the metric by day, as MetricFlow compiles it |
+
+The third artefact lives in the warehouse: the gold and exposed comments, and `semantic.metrics` (`models/semantic/semantic_metrics.sql`), rendered from dbt's graph at build time.
+Table names are `database.schema.table` of the dbt target, so a BigQuery target gives `project.dataset.table` and BigQuery SQL with no change to the generator.
+`check_catalog.py` fails when the catalog misses a public model or a metric, when a public model or column has no description, or when the authored context strays from the documented keys.
+
+`tests/e2e/catalog-check.sh` (`make catalog-check`) builds every public model on both dev fixtures in `dbt_dev`, runs `make dbt-catalog`, and asserts that every gold and exposed relation and column has a comment, that `semantic.metrics` holds every metric, that every example query runs, and that an undocumented key or an undescribed column fails the check.
+
 ## Environment variables
 
 The connection is set in `profiles.yml`, and every value is read from the environment with a default.
@@ -135,5 +185,5 @@ It checks that rebuilding one month leaves the other untouched, that the reconci
 ## Dialect notes
 
 Models use only portable SQL except where a line carries a `-- dialect:` comment.
-The Postgres-specific spots are the `AT TIME ZONE 'UTC'` date casts in `slv_orders`, `slv_returns`, and `gld_daily_weather`, and in `macros/tlc.sql` the file-name regex (`substring ... from`) and the `double precision`/`timestamp` types.
+The Postgres-specific spots are the `AT TIME ZONE 'UTC'` date casts in `slv_orders`, `slv_returns`, and `gld_daily_weather`, the `generate_series` of the time spine, and in `macros/tlc.sql` the file-name regex (`substring ... from`) and the `double precision`/`timestamp` types.
 On BigQuery, the tlc incremental models would use `insert_overwrite` on a month-partitioned `pickup_date` (D36).

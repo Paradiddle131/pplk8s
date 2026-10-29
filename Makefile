@@ -9,7 +9,7 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.0
-DBT_IMAGE ?= localhost:5001/dbt:0.5.0
+DBT_IMAGE ?= localhost:5001/dbt:0.7.0
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
 
@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -70,11 +70,41 @@ STAGE ?= bronze
 tlc-dbt-check: services-up ## Build the tlc dbt models month by month on dbt/dev/tlc_fixture.sql in dbt_dev and assert month replacement (#55)
 	tests/e2e/tlc-dbt-check.sh
 
-dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed) against the warehouse
+dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed|semantic) against the warehouse
 	docker run --rm --network pplk8s $(DBT_IMAGE) build --select $(STAGE)
+
+# The semantic layer's stage check (semantic/PLAN.md SL-1), with host dbt on the image's pins as
+# tlc-dbt-check runs it: the project parses, every metric is described and labelled, and MetricFlow
+# validates the semantic models, dimensions, entities, measures and metrics against the warehouse.
+DBT_DBNAME ?= warehouse
+dbt-validate: ## Validate the semantic layer against the Compose warehouse (DBT_DBNAME=warehouse|dbt_dev): dbt parse, metric descriptions and labels, mf validate-configs
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
+	  && python3 scripts/check_metrics.py target/semantic_manifest.json \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf validate-configs
+
+# The catalog (semantic/PLAN.md SL-3), with the same host dbt: the agent catalog and the BigQuery data
+# agent's authored context under dbt/target/catalog/ (offline), then the semantic stage, whose
+# semantic.metrics table is the warehouse copy; persist_docs comments gold and exposed as they build.
+dbt-catalog: ## Write the agent catalog and the data agent's authored context to dbt/target/catalog, and build semantic.metrics (DBT_DBNAME=warehouse|dbt_dev)
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
+	  && uv run --quiet --no-project --with-requirements requirements.txt python scripts/build_catalog.py \
+	  && uv run --quiet --no-project --with-requirements requirements.txt python scripts/check_catalog.py \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --quiet --select semantic
+
+catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-catalog on it, and assert every gold and exposed column is commented and every metric is in semantic.metrics (#101)
+	tests/e2e/catalog-check.sh
+
+semantic-check: services-up ## Build the sales, returns and finance models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the eight metrics equal gold.daily_sales and exposed.net_sales_daily (#100)
+	tests/e2e/semantic-check.sh
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
 	cd airflow && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
+
+check: export PPLK8S_REQUIRE_WAREHOUSE := 1
+check: services-up ## Light gate on every change (PLAN.md D26): linters, unit and DagBag tests with the Compose warehouse required
+	$(MAKE) lint test
 
 verify: export PPLK8S_REQUIRE_WAREHOUSE := 1
 verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBag tests, every image build (needs services-up)
@@ -188,5 +218,6 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
-lint: ## Lint shell scripts (shellcheck via uvx)
+lint: ## Lint shell scripts (shellcheck via uvx) and the dbt helper scripts (ruff via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh docs/agents/*.sh
+	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts

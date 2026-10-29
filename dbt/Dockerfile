@@ -15,11 +15,15 @@ RUN useradd --uid 10001 --create-home --home-dir /home/dbt --shell /usr/sbin/nol
 WORKDIR /dbt
 COPY . /dbt
 
-# Smoke check: the project parses without a database connection, and no view reads another
-# pipeline's model (scripts/check_pipeline_views.py, PLAN.md D20).
+# Smoke check, all without a database connection: the project parses, no view reads another
+# pipeline's model (scripts/check_pipeline_views.py, PLAN.md D20), every metric is described and
+# labelled (scripts/check_metrics.py, semantic/PLAN.md SL-3), and the semantic manifest validates
+# (`mf validate-configs --skip-dw`; the warehouse half runs in `make dbt-validate`).
 # Parse output is discarded so the runtime target/ and logs/ start empty and owned by the dbt user.
 RUN dbt parse \
     && python scripts/check_pipeline_views.py target/manifest.json \
+    && python scripts/check_metrics.py target/semantic_manifest.json \
+    && mf validate-configs --skip-dw \
     && rm -rf /dbt/target /dbt/logs \
     && mkdir -p /dbt/target /dbt/logs \
     && chown -R 10001:10001 /dbt/target /dbt/logs

@@ -1,0 +1,8 @@
+version: 2
+
+# The agent-facing models (semantic/PLAN.md SL-4): gold and exposed join this group in dbt_project.yml.
+groups:
+  - name: analytics
+    description: Gold and exposed models, the tables agents and people may read.
+    owner:
+      name: Analytics

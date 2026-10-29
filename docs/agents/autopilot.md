@@ -27,8 +27,7 @@ Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-us
 ## Gates
 
 Cloud runs, with their counts in the handoff:
-- `make lint`
-- `make services-up`, then `PPLK8S_REQUIRE_WAREHOUSE=1 make test` (stands in for CI's `test` job)
+- `make check` (`make lint` and `make test` with the Compose warehouse up and required; GitHub Actions is off, PLAN.md D26, so a PR shows no checks)
 - dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
 - EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
 - alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
@@ -37,7 +36,7 @@ Left to the laptop (the handoff's local checklist): `make verify` (image builds)
 
 ## Never
 
-- Dispatch `integration.yaml` or the `images` job (on-demand only, PLAN.md D26).
+- Dispatch a workflow (`ci.yaml` or `integration.yaml`; on-demand only, PLAN.md D26).
 - Edit `LEDGER.md`: add the entry as `ledger.d/<YYYY-MM-DD>-<n>-<slug>.md` in the PR.
 - Change an image's contents without bumping its tag in the `Makefile` (D16): a Dockerfile, dependencies, dbt models, service code, `airflow/include/**`.
 - Change a `PLAN.md` decision without its row in the same PR.

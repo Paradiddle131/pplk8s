@@ -1,11 +1,11 @@
-# Light checks on every pull request (PLAN.md D26): linters, unit and DagBag tests. The image builds
-# (the dbt image build runs `dbt parse`) run only on demand; `make verify` runs both on the laptop,
-# which is the gate before merging. Images are never pushed.
+# Off (PLAN.md D26): nothing here runs on its own; the gate is local, `make check` on every change and
+# `make verify` before a merge. The jobs stay defined so DAG CI for Composer can be rehearsed on demand.
+# test: lint, unit and DagBag tests against the Compose warehouse; images: every image build
+# (the dbt image build runs `dbt parse`). Images are never pushed.
 # Actions are pinned by commit SHA; the tag is in the comment.
 name: ci
 
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -41,7 +41,6 @@ jobs:
         run: make test
 
   images:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:

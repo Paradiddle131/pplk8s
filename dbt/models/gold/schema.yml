@@ -22,6 +22,14 @@ models:
       - name: customer_id
         description: Natural key.
         tests: [not_null, unique]
+      - name: name
+        description: Customer name.
+      - name: country
+        description: ISO-3166 alpha-2 country of the customer.
+      - name: first_order_date
+        description: UTC date of the customer's first order, cancelled included; NULL without orders.
+      - name: last_order_date
+        description: UTC date of the customer's latest order, cancelled included; NULL without orders.
       - name: orders
         description: All orders, cancelled included.
       - name: lifetime_value_eur
@@ -35,9 +43,19 @@ models:
             columns: ['location', 'date']
     columns:
       - name: location
+        description: Weather location name, e.g. Amsterdam.
         tests: [not_null]
       - name: date
+        description: UTC date of the observations.
         tests: [not_null]
+      - name: avg_temperature_c
+        description: Mean of the hourly temperatures that day, in degrees Celsius, two decimals.
+      - name: min_temperature_c
+        description: Lowest hourly temperature that day, in degrees Celsius.
+      - name: max_temperature_c
+        description: Highest hourly temperature that day, in degrees Celsius.
+      - name: total_precipitation_mm
+        description: Sum of the hourly precipitation that day, in millimetres.
 
   - name: gld_tlc_daily_trips
     description: >
@@ -47,3 +65,24 @@ models:
       - unique_combination:
           arguments:
             columns: ['data_month', 'trip_type', 'pickup_date', 'pickup_location_id']
+    columns:
+      - name: data_month
+        description: The TLC data month (YYYY-MM) the trips were published in; one month is replaced per build.
+      - name: trip_type
+        description: yellow or green.
+      - name: pickup_date
+        description: Local date of the pickup.
+      - name: pickup_location_id
+        description: TLC taxi zone id of the pickup (bronze.tlc_taxi_zones).
+      - name: trips
+        description: Number of trips.
+      - name: passengers
+        description: Sum of the passenger counts.
+      - name: trip_distance_mi
+        description: Sum of the trip distances, in miles.
+      - name: fare_amount_usd
+        description: Sum of the metered fares, in USD.
+      - name: tip_amount_usd
+        description: Sum of the tips, in USD.
+      - name: total_amount_usd
+        description: Sum of the total amounts charged, in USD.

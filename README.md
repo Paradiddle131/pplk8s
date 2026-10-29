@@ -76,7 +76,8 @@ make cluster-down services-down
 | Command | Verifies |
 |---|---|
 | `make test` | Unit tests, DAG import, linters, alert-rule tests; no cluster |
-| `make verify` | `test` + every image build; the merge gate |
+| `make check` | `lint` + `test` with the Compose warehouse required; run on every change (GitHub Actions is off) |
+| `make verify` | `check` + every image build; the merge gate |
 | `make phase4-check` | `sales_elt` end to end, idempotent re-runs, retry drills |
 | `make phase5-check` | File event → one run, redelivery is a no-op |
 | `make phase6-check` | Dashboards, KEDA scale-out/in, every failure drill |
