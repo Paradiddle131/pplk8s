@@ -9,7 +9,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.tools import FunctionTool
 
-from semantic_agent.model import build_model
+from semantic_agent.model import answer_model_failure, build_model
 from semantic_agent.tools import TOOLS
 
 INSTRUCTION = """\
@@ -35,6 +35,7 @@ def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
         model=model or build_model(),
         instruction=INSTRUCTION,
         tools=[FunctionTool(tool) for tool in TOOLS],
+        on_model_error_callback=answer_model_failure,
     )
 
 

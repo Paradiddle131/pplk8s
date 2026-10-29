@@ -20,6 +20,9 @@ from pydantic import Field
 FIXTURES = Path(__file__).parent / "fixtures"
 # The catalog `make dbt-catalog` wrote for dbt/dev/fixture.sql (S2), so the tests need no dbt.
 os.environ.setdefault("SEMANTIC_CATALOG", str(FIXTURES / "agent.json"))
+# No test reaches a live model, so none spends the free tier's quota: a stray OpenRouter call goes
+# to a closed local port instead (tests that need a provider answer start their own on localhost).
+os.environ["OPENROUTER_API_BASE"] = "http://127.0.0.1:9/api/v1"
 
 
 class ScriptedLlm(BaseLlm):

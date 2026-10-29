@@ -8,7 +8,8 @@ when the run starts. Two custom ADK metrics score a run:
 - `metric_choice` (semantic agent only): its `query_metrics` calls named the expected metrics.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
-Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`.
+Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`; a run the
+model's daily quota cut short prints what it got, leaves the report as it was and exits 3.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from google.adk.evaluation.base_eval_service import (
     EvaluateRequest,
     InferenceConfig,
     InferenceRequest,
+    InferenceResult,
     InferenceStatus,
 )
 from google.adk.evaluation.eval_case import (
@@ -49,7 +51,10 @@ from google.adk.evaluation.metric_evaluator_registry import (
     MetricEvaluatorRegistry,
     register_custom_metrics_from_config,
 )
+from google.adk.sessions import InMemorySessionService
 from google.genai import types
+
+from semantic_agent.model import ModelFailure, failure_of
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "evals" / "questions.yaml"
@@ -211,38 +216,79 @@ class CaseOutcome:
     answer: str
     scores: dict[str, float | None]
     error: str | None = None
+    skipped: bool = False  # never sent: the model's daily quota was spent before it
+
+
+# A rate-limited question waits out the limit once, at most this long, then runs again.
+MAX_WAIT_S = 90.0
+
+
+async def _wait(seconds: float) -> None:
+    await asyncio.sleep(seconds)
 
 
 async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMetric]):
-    """Runs the cases through ADK's LocalEvalService, one at a time (the free tier's rate limit)."""
+    """Runs the cases through ADK's LocalEvalService, one at a time (the free tier's rate limit).
+
+    A case the model rate-limits waits out the limit (at most MAX_WAIT_S) and runs once more; once
+    the daily quota is spent, the cases left are skipped with that reason, never sent.
+    """
     app_name = agent.name
     manager = InMemoryEvalSetsManager()
     manager.create_eval_set(app_name, "questions")
     for case in cases:
         manager.add_eval_case(app_name, "questions", case)
     registry = register_custom_metrics_from_config(EVAL_CONFIG, MetricEvaluatorRegistry())
+    sessions = InMemorySessionService()
     service = LocalEvalService(
-        root_agent=agent, eval_sets_manager=manager, metric_evaluator_registry=registry
+        root_agent=agent,
+        eval_sets_manager=manager,
+        metric_evaluator_registry=registry,
+        session_service=sessions,
     )
-    request = InferenceRequest(
-        app_name=app_name,
-        eval_set_id="questions",
-        inference_config=InferenceConfig(parallelism=1),
-    )
-    inferences = [r async for r in service.perform_inference(inference_request=request)]
+
+    async def infer(case: EvalCase) -> tuple[InferenceResult, ModelFailure | None]:
+        request = InferenceRequest(
+            app_name=app_name,
+            eval_set_id="questions",
+            eval_case_ids=[case.eval_id],
+            inference_config=InferenceConfig(parallelism=1),
+        )
+        (result,) = [r async for r in service.perform_inference(inference_request=request)]
+        session = None
+        if result.session_id:
+            session = await sessions.get_session(
+                app_name=app_name, user_id="eval", session_id=result.session_id
+            )
+        return result, failure_of(session.events) if session else None
+
     outcomes: dict[str, CaseOutcome] = {}
-    for r in inferences:
-        if r.status != InferenceStatus.SUCCESS:
-            outcomes[r.eval_case_id] = CaseOutcome("", {}, error=r.error_message or "failed")
-    succeeded = [r for r in inferences if r.status == InferenceStatus.SUCCESS]
+    succeeded: list[InferenceResult] = []
+    spent: ModelFailure | None = None
+    for case in cases:
+        if spent:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=spent.answer(), skipped=True)
+            continue
+        result, failure = await infer(case)
+        if failure and failure.kind == "rate_limit":
+            await _wait(min(failure.retry_after_s or 60.0, MAX_WAIT_S) + 1)
+            result, failure = await infer(case)
+        if result.status != InferenceStatus.SUCCESS:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=result.error_message or "failed")
+        elif failure:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=failure.answer())
+            spent = failure if failure.kind == "daily_quota" else None
+        else:
+            succeeded.append(result)
     answers = {r.eval_case_id: _text(r.inferences[-1].final_response) for r in succeeded}
     evaluate_request = EvaluateRequest(
         inference_results=succeeded,
         evaluate_config=EvaluateConfig(eval_metrics=metrics, parallelism=1),
     )
-    async for result in service.evaluate(evaluate_request=evaluate_request):
-        scores = {m.metric_name: m.score for m in result.overall_eval_metric_results}
-        outcomes[result.eval_id] = CaseOutcome(answers.get(result.eval_id, ""), scores)
+    if succeeded:
+        async for result in service.evaluate(evaluate_request=evaluate_request):
+            scores = {m.metric_name: m.score for m in result.overall_eval_metric_results}
+            outcomes[result.eval_id] = CaseOutcome(answers.get(result.eval_id, ""), scores)
     return outcomes
 
 
@@ -250,6 +296,8 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
     def mark(outcome: CaseOutcome | None, metric: str) -> str:
         if outcome is None:
             return "not run"
+        if outcome.skipped:
+            return "skipped"
         if outcome.error:
             return "error"
         return "✓" if outcome.scores.get(metric) == 1.0 else "✗"
@@ -319,15 +367,24 @@ async def main(ids: list[str]) -> int:
         eval_cases(questions, expected, "semantic_agent", semantic=True),
         [ANSWER_CORRECT, METRIC_CHOICE],
     )
-    baseline = await evaluate(
-        build_baseline(),
-        eval_cases(questions, expected, "sql_baseline", semantic=False),
-        [ANSWER_CORRECT],
-    )
+    spent = next((o for o in semantic.values() if o.skipped), None)
+    if spent:
+        baseline = {q.id: CaseOutcome("", {}, error=spent.error, skipped=True) for q in questions}
+    else:
+        baseline = await evaluate(
+            build_baseline(),
+            eval_cases(questions, expected, "sql_baseline", semantic=False),
+            [ANSWER_CORRECT],
+        )
     text = report(
         questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     )
     print(text)
+    not_run = sum(o.skipped for o in [*semantic.values(), *baseline.values()])
+    if not_run:
+        reason = next(o.error for o in [*semantic.values(), *baseline.values()] if o.skipped)
+        print(f"incomplete: {not_run} answers not run. {reason} {REPORT.name} left as it was.")
+        return 3
     if not ids:
         REPORT.write_text(text)
         print(f"written to {REPORT}")
