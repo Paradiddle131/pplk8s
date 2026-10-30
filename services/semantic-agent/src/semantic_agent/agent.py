@@ -9,7 +9,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.tools import FunctionTool
 
-from semantic_agent.model import build_model
+from semantic_agent.model import answer_model_failure, build_model
 from semantic_agent.tools import TOOLS
 
 INSTRUCTION = """\
@@ -25,6 +25,7 @@ with a filter on one of the dimensions describe_metric lists, not a missing metr
 If no metric answers the question, say that the semantic layer has no such metric and name the
 closest metrics; do not answer from general knowledge.
 Answer in one or two sentences: the figure with its unit, and the days or period it covers.
+Then add the freshness statement that query_metrics returned, word for word.
 """
 
 
@@ -35,6 +36,7 @@ def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
         model=model or build_model(),
         instruction=INSTRUCTION,
         tools=[FunctionTool(tool) for tool in TOOLS],
+        on_model_error_callback=answer_model_failure,
     )
 
 

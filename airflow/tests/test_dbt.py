@@ -1,5 +1,5 @@
 import pytest
-from pplk8s.dbt import STAGES, run_dbt, run_dbt_operation
+from pplk8s.dbt import STAGES, run_dbt, run_dbt_operation, validate_semantic_layer
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -109,3 +109,21 @@ def test_an_operation_without_args_and_with_overrides():
 def test_unsafe_macro_names_are_rejected(macro):
     with pytest.raises(ValueError, match="macro"):
         run_dbt_operation(macro, pipeline="tlc")
+
+
+def test_semantic_validation_runs_mf_in_the_dbt_pod():
+    op = validate_semantic_layer(pipeline="finance", retries=1)
+    assert op.task_id == "validate_semantic_layer"
+    assert op.cmds == ["/bin/sh", "-c"]
+    assert op.arguments == ["dbt parse --quiet && exec mf validate-configs"]
+    assert op.name == "dbt-finance-semantic-validate"
+    assert op.labels["pplk8s/stage"] == "semantic-validate"
+    assert op.image == run_dbt("exposed", pipeline="finance").image
+    assert op.env_from == run_dbt("exposed", pipeline="finance").env_from
+    assert op.security_context.run_as_non_root is True
+    assert op.retries == 1
+
+
+def test_semantic_validation_rejects_an_unsafe_pipeline():
+    with pytest.raises(ValueError, match="pipeline"):
+        validate_semantic_layer(pipeline="x; rm -rf /")

@@ -6,7 +6,9 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
 
 - `agent.json`: the catalog the metric toolset reads (S3): the public models (gold and exposed, SL-4)
   with their relation, pipelines, grain and column descriptions, and every metric with its label,
-  description, type, pipelines, time grain and the dimensions it can be grouped by.
+  description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by.
+  A metric's readiness products are the `ops.readiness` products of the models it reads,
+  `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
 - `data_agent/system_instruction.yaml`: the authored context of a BigQuery data agent, in the shape
   Google documents (a list of single-key maps: `system_instruction`, `tables` with fields and their
   aggregations from the measures, `relationships` from the entities, `glossaries` from the metrics,
@@ -109,6 +111,15 @@ class SemanticIndex:
         tags = {tag for model in self.models_of_metric(metric) for tag in self.tags_of_semantic_model[model["name"]]}
         return _pipelines(sorted(tags))
 
+    def readiness(self, metric: dict) -> list[str]:
+        """The readiness products the metric's models are: `<pipeline>.<layer>`, as the DAGs record them."""
+        products = set()
+        for model in self.models_of_metric(metric):
+            tags = self.tags_of_semantic_model[model["name"]]
+            layers = [tag for tag in tags if tag in LAYER_TAGS]
+            products |= {f"{pipeline}.{layer}" for pipeline in _pipelines(tags) for layer in layers}
+        return sorted(products)
+
     def time_grain(self, metric: dict) -> str | None:
         grains = set()
         for model in self.models_of_metric(metric):
@@ -134,6 +145,7 @@ def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[st
                 "description": metric["description"],
                 "type": metric["type"],
                 "pipelines": index.pipelines(metric),
+                "readiness": index.readiness(metric),
                 "time_grain": index.time_grain(metric),
                 "semantic_models": [model["name"] for model in index.models_of_metric(metric)],
                 "dimensions": dimensions(metric["name"]),

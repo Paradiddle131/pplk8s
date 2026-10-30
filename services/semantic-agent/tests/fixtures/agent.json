@@ -342,6 +342,9 @@
       "pipelines": [
         "sales"
       ],
+      "readiness": [
+        "sales.silver"
+      ],
       "time_grain": "day",
       "semantic_models": [
         "orders"
@@ -376,6 +379,9 @@
       "type": "simple",
       "pipelines": [
         "sales"
+      ],
+      "readiness": [
+        "sales.silver"
       ],
       "time_grain": "day",
       "semantic_models": [
@@ -413,6 +419,10 @@
         "returns",
         "sales"
       ],
+      "readiness": [
+        "returns.silver",
+        "sales.silver"
+      ],
       "time_grain": "day",
       "semantic_models": [
         "orders",
@@ -449,6 +459,9 @@
       "pipelines": [
         "sales"
       ],
+      "readiness": [
+        "sales.silver"
+      ],
       "time_grain": "day",
       "semantic_models": [
         "orders"
@@ -484,6 +497,9 @@
       "pipelines": [
         "sales"
       ],
+      "readiness": [
+        "sales.silver"
+      ],
       "time_grain": "day",
       "semantic_models": [
         "orders"
@@ -518,6 +534,9 @@
       "type": "simple",
       "pipelines": [
         "returns"
+      ],
+      "readiness": [
+        "returns.silver"
       ],
       "time_grain": "day",
       "semantic_models": [
@@ -564,6 +583,9 @@
       "pipelines": [
         "returns"
       ],
+      "readiness": [
+        "returns.silver"
+      ],
       "time_grain": "day",
       "semantic_models": [
         "returns"
@@ -608,6 +630,9 @@
       "type": "simple",
       "pipelines": [
         "sales"
+      ],
+      "readiness": [
+        "sales.silver"
       ],
       "time_grain": "day",
       "semantic_models": [

@@ -100,6 +100,7 @@ make dbt-validate DBT_DBNAME=dbt_dev
 
 It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities, measures and metrics against the warehouse's tables.
 The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
+In the cluster, `finance_daily` runs the whole check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `mf validate-configs`, in one pod of this image).
 
 Query a metric with the `mf` CLI from this folder, with the same environment:
 

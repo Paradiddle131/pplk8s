@@ -101,7 +101,8 @@ def test_the_driver_scores_answers_and_metric_choice(monkeypatch):
     assert outcomes["amsterdam_temperature"].scores["answer_correct"] == 1.0
     text = evaluation.report(QUESTIONS, EXPECTED, outcomes, {}, "scripted")
     assert (
-        "| Questions a metric covers (1) | 1 right, 1 with the expected metric | 0 right |" in text
+        "| Questions a metric covers (1) | 1 right, 1 with the expected metric, "
+        "0 quoting their freshness | 0 right |" in text
     )
     assert "| Questions no metric covers (1) | 1 said so | 0 right |" in text
 

@@ -2,13 +2,17 @@
 same questions and the same model, through ADK's own eval engine (`LocalEvalService`).
 
 `evals/questions.yaml` holds the questions; each one's expected numbers come from the warehouse
-when the run starts. Two custom ADK metrics score a run:
+when the run starts. Three custom ADK metrics score a run:
 - `answer_correct`: the final answer carries an expected number; for the semantic agent on a
-  question no metric covers, it says the semantic layer has no such metric instead.
+  question no metric covers, it says the semantic layer has no such metric instead. Numbers inside
+  a quoted freshness statement do not count.
 - `metric_choice` (semantic agent only): its `query_metrics` calls named the expected metrics.
+- `freshness_quoted` (semantic agent only, SL-4): the answer quotes every freshness statement its
+  `query_metrics` calls returned.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
-Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`.
+Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`; a run the
+model's daily quota cut short prints what it got, leaves the report as it was and exits 3.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ from google.adk.evaluation.base_eval_service import (
     EvaluateRequest,
     InferenceConfig,
     InferenceRequest,
+    InferenceResult,
     InferenceStatus,
 )
 from google.adk.evaluation.eval_case import (
@@ -39,6 +44,7 @@ from google.adk.evaluation.eval_case import (
     Invocation,
     SessionInput,
     get_all_tool_calls,
+    get_all_tool_responses,
 )
 from google.adk.evaluation.eval_config import EvalConfig
 from google.adk.evaluation.eval_metrics import EvalMetric
@@ -49,7 +55,10 @@ from google.adk.evaluation.metric_evaluator_registry import (
     MetricEvaluatorRegistry,
     register_custom_metrics_from_config,
 )
+from google.adk.sessions import InMemorySessionService
 from google.genai import types
+
+from semantic_agent.model import ModelFailure, failure_of
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "evals" / "questions.yaml"
@@ -145,11 +154,27 @@ def _result(scores: list[float], actual: list[Invocation], expected: list[Invoca
     )
 
 
+def freshness_statements(invocation: Invocation) -> list[str]:
+    """The freshness statements the invocation's query_metrics calls returned, in order."""
+    found = []
+    for response in get_all_tool_responses(invocation.intermediate_data):
+        statement = ((response.response or {}).get("freshness") or {}).get("statement")
+        if response.name == "query_metrics" and statement and statement not in found:
+            found.append(statement)
+    return found
+
+
+def _squash(text: str) -> str:
+    return " ".join(text.split())
+
+
 def answer_correct(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
     """1 when the answer carries an expected number, or declines where it should."""
     scores = []
     for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
-        spec, text = _spec(expected), _text(actual.final_response)
+        spec, text = _spec(expected), _squash(_text(actual.final_response))
+        for statement in freshness_statements(actual):
+            text = text.replace(_squash(statement), " ")
         if spec["decline"]:
             right = bool(DECLINE.search(text)) and not carries(text, spec["expected"])
         else:
@@ -176,8 +201,22 @@ def metric_choice(eval_metric, actual_invocations, expected_invocations, convers
     return _result(scores, actual_invocations, expected_invocations or [])
 
 
+def freshness_quoted(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
+    """1 when the answer quotes each freshness statement its queries returned; a question a metric
+    covers needs at least one."""
+    scores = []
+    for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
+        statements = freshness_statements(actual)
+        text = _squash(_text(actual.final_response))
+        quoted = all(_squash(s) in text for s in statements)
+        needed = bool(_spec(expected)["metrics"])
+        scores.append(1.0 if quoted and (statements or not needed) else 0.0)
+    return _result(scores, actual_invocations, expected_invocations or [])
+
+
 ANSWER_CORRECT = EvalMetric(metric_name="answer_correct", threshold=1.0)
 METRIC_CHOICE = EvalMetric(metric_name="metric_choice", threshold=1.0)
+FRESHNESS_QUOTED = EvalMetric(metric_name="freshness_quoted", threshold=1.0)
 
 
 def eval_cases(
@@ -211,38 +250,79 @@ class CaseOutcome:
     answer: str
     scores: dict[str, float | None]
     error: str | None = None
+    skipped: bool = False  # never sent: the model's daily quota was spent before it
+
+
+# A rate-limited question waits out the limit once, at most this long, then runs again.
+MAX_WAIT_S = 90.0
+
+
+async def _wait(seconds: float) -> None:
+    await asyncio.sleep(seconds)
 
 
 async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMetric]):
-    """Runs the cases through ADK's LocalEvalService, one at a time (the free tier's rate limit)."""
+    """Runs the cases through ADK's LocalEvalService, one at a time (the free tier's rate limit).
+
+    A case the model rate-limits waits out the limit (at most MAX_WAIT_S) and runs once more; once
+    the daily quota is spent, the cases left are skipped with that reason, never sent.
+    """
     app_name = agent.name
     manager = InMemoryEvalSetsManager()
     manager.create_eval_set(app_name, "questions")
     for case in cases:
         manager.add_eval_case(app_name, "questions", case)
     registry = register_custom_metrics_from_config(EVAL_CONFIG, MetricEvaluatorRegistry())
+    sessions = InMemorySessionService()
     service = LocalEvalService(
-        root_agent=agent, eval_sets_manager=manager, metric_evaluator_registry=registry
+        root_agent=agent,
+        eval_sets_manager=manager,
+        metric_evaluator_registry=registry,
+        session_service=sessions,
     )
-    request = InferenceRequest(
-        app_name=app_name,
-        eval_set_id="questions",
-        inference_config=InferenceConfig(parallelism=1),
-    )
-    inferences = [r async for r in service.perform_inference(inference_request=request)]
+
+    async def infer(case: EvalCase) -> tuple[InferenceResult, ModelFailure | None]:
+        request = InferenceRequest(
+            app_name=app_name,
+            eval_set_id="questions",
+            eval_case_ids=[case.eval_id],
+            inference_config=InferenceConfig(parallelism=1),
+        )
+        (result,) = [r async for r in service.perform_inference(inference_request=request)]
+        session = None
+        if result.session_id:
+            session = await sessions.get_session(
+                app_name=app_name, user_id="eval", session_id=result.session_id
+            )
+        return result, failure_of(session.events) if session else None
+
     outcomes: dict[str, CaseOutcome] = {}
-    for r in inferences:
-        if r.status != InferenceStatus.SUCCESS:
-            outcomes[r.eval_case_id] = CaseOutcome("", {}, error=r.error_message or "failed")
-    succeeded = [r for r in inferences if r.status == InferenceStatus.SUCCESS]
+    succeeded: list[InferenceResult] = []
+    spent: ModelFailure | None = None
+    for case in cases:
+        if spent:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=spent.answer(), skipped=True)
+            continue
+        result, failure = await infer(case)
+        if failure and failure.kind == "rate_limit":
+            await _wait(min(failure.retry_after_s or 60.0, MAX_WAIT_S) + 1)
+            result, failure = await infer(case)
+        if result.status != InferenceStatus.SUCCESS:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=result.error_message or "failed")
+        elif failure:
+            outcomes[case.eval_id] = CaseOutcome("", {}, error=failure.answer())
+            spent = failure if failure.kind == "daily_quota" else None
+        else:
+            succeeded.append(result)
     answers = {r.eval_case_id: _text(r.inferences[-1].final_response) for r in succeeded}
     evaluate_request = EvaluateRequest(
         inference_results=succeeded,
         evaluate_config=EvaluateConfig(eval_metrics=metrics, parallelism=1),
     )
-    async for result in service.evaluate(evaluate_request=evaluate_request):
-        scores = {m.metric_name: m.score for m in result.overall_eval_metric_results}
-        outcomes[result.eval_id] = CaseOutcome(answers.get(result.eval_id, ""), scores)
+    if succeeded:
+        async for result in service.evaluate(evaluate_request=evaluate_request):
+            scores = {m.metric_name: m.score for m in result.overall_eval_metric_results}
+            outcomes[result.eval_id] = CaseOutcome(answers.get(result.eval_id, ""), scores)
     return outcomes
 
 
@@ -250,6 +330,8 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
     def mark(outcome: CaseOutcome | None, metric: str) -> str:
         if outcome is None:
             return "not run"
+        if outcome.skipped:
+            return "skipped"
         if outcome.error:
             return "error"
         return "✓" if outcome.scores.get(metric) == 1.0 else "✗"
@@ -273,21 +355,23 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
         "| | Semantic agent | Text-to-SQL baseline |",
         "|---|---|---|",
         f"| Questions a metric covers ({len(with_metric)}) | {count(semantic, with_metric)} right, "
-        f"{count(semantic, with_metric, 'metric_choice')} with the expected metric | "
+        f"{count(semantic, with_metric, 'metric_choice')} with the expected metric, "
+        f"{count(semantic, with_metric, 'freshness_quoted')} quoting their freshness | "
         f"{count(baseline, with_metric)} right |",
         f"| Questions no metric covers ({len(without)}) | {count(semantic, without)} said so | "
         f"{count(baseline, without)} right |",
         f"| All ({len(questions)}) | {count(semantic, questions)} | {count(baseline, questions)} |",
         "",
-        "| Question | Expected | Semantic | Metric | Baseline |",
-        "|---|---|---|---|---|",
+        "| Question | Expected | Semantic | Metric | Freshness | Baseline |",
+        "|---|---|---|---|---|---|",
     ]
     for q in questions:
         number = expected[q.id][0]
         chose = mark(semantic.get(q.id), "metric_choice") if q.metrics else "none"
+        quoted = mark(semantic.get(q.id), "freshness_quoted") if q.metrics else "none"
         lines.append(
             f"| `{q.id}` {q.question} | {number:g} | "
-            f"{mark(semantic.get(q.id), 'answer_correct')} | {chose} | "
+            f"{mark(semantic.get(q.id), 'answer_correct')} | {chose} | {quoted} | "
             f"{mark(baseline.get(q.id), 'answer_correct')} |"
         )
     lines += ["", "## Answers", ""]
@@ -317,17 +401,26 @@ async def main(ids: list[str]) -> int:
     semantic = await evaluate(
         build_semantic(),
         eval_cases(questions, expected, "semantic_agent", semantic=True),
-        [ANSWER_CORRECT, METRIC_CHOICE],
+        [ANSWER_CORRECT, METRIC_CHOICE, FRESHNESS_QUOTED],
     )
-    baseline = await evaluate(
-        build_baseline(),
-        eval_cases(questions, expected, "sql_baseline", semantic=False),
-        [ANSWER_CORRECT],
-    )
+    spent = next((o for o in semantic.values() if o.skipped), None)
+    if spent:
+        baseline = {q.id: CaseOutcome("", {}, error=spent.error, skipped=True) for q in questions}
+    else:
+        baseline = await evaluate(
+            build_baseline(),
+            eval_cases(questions, expected, "sql_baseline", semantic=False),
+            [ANSWER_CORRECT],
+        )
     text = report(
         questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     )
     print(text)
+    not_run = sum(o.skipped for o in [*semantic.values(), *baseline.values()])
+    if not_run:
+        reason = next(o.error for o in [*semantic.values(), *baseline.values()] if o.skipped)
+        print(f"incomplete: {not_run} answers not run. {reason} {REPORT.name} left as it was.")
+        return 3
     if not ids:
         REPORT.write_text(text)
         print(f"written to {REPORT}")

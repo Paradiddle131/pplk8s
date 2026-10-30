@@ -224,6 +224,14 @@ def test_finance_waits_deferrably_on_both_producers_before_building(finance):
     assert "dbt_exposed" in finance.get_task("record").upstream_task_ids
 
 
+def test_finance_validates_the_semantic_layer_after_exposed_beside_its_record(finance):
+    validate = finance.get_task("validate_semantic_layer")
+    assert validate.upstream_task_ids == {"dbt_exposed"}
+    assert validate.arguments[-1].endswith("mf validate-configs")
+    # A broken semantic layer fails the run but never holds back finance.exposed.
+    assert "validate_semantic_layer" not in finance.get_task("record").upstream_task_ids
+
+
 def test_finance_runs_wait_in_parallel_but_build_one_at_a_time(finance):
     assert finance.max_active_runs > 1
     assert finance.get_task("dbt_exposed").max_active_tis_per_dag == 1

@@ -101,7 +101,7 @@ def problems(target: Path) -> list[str]:
     found += [
         f"agent.json: metric {metric['name']} has no {field}"
         for metric in catalog["metrics"]
-        for field in ("pipelines", "dimensions", "time_grain")
+        for field in ("pipelines", "readiness", "dimensions", "time_grain")
         if not metric.get(field)
     ]
 
