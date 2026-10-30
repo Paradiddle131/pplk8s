@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: semantic-agent-config
+data:
+  # The model seam (services/semantic-agent/src/semantic_agent/model.py): OpenRouter's free tier here, Gemini at work.
+  MODEL_BACKEND: openrouter
+  MODEL_ID: nvidia/nemotron-3.5-super-vl:free
+  MODEL_TIMEOUT_S: "120"
+  MODEL_RETRIES: "2"

@@ -1,6 +1,6 @@
-# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt) and the Eventarc stand-in (event adapter).
+# Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt, the semantic agent) and the Eventarc stand-in (event adapter).
 # Apply through workloads-up.sh, never `kubectl apply -k` here: the Deployments name placeholder images
-# (el-factory, event-adapter) that its overlay maps to ELF_IMAGE and ADAPTER_IMAGE from the Makefile (D16).
+# (el-factory, event-adapter, semantic-agent) that its overlay maps to ELF_IMAGE, ADAPTER_IMAGE and AGENT_IMAGE from the Makefile (D16).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -15,6 +15,9 @@ resources:
   - el-factory-service.yaml
   - event-adapter-configmap.yaml
   - event-adapter-deployment.yaml
+  - semantic-agent-configmap.yaml
+  - semantic-agent-deployment.yaml
+  - semantic-agent-service.yaml
 
 secretGenerator:
   - name: warehouse-credentials
@@ -25,6 +28,10 @@ secretGenerator:
     # The Airflow API login the adapter triggers runs with; written by workloads-up.sh and git-ignored.
     envs:
       - airflow-api.secret.env
+  - name: semantic-agent-credentials
+    # The agents' read-only warehouse roles, the session store and the model key; written by workloads-up.sh and git-ignored.
+    envs:
+      - semantic-agent.secret.env
 
 generatorOptions:
   # Keep the name fixed: Phase 4's KubernetesPodOperator references `warehouse-credentials` literally.

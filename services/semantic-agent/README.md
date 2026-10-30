@@ -52,6 +52,16 @@ make agent-serve AGENT_DBNAME=dbt_dev
 ```
 
 `agent-serve` runs `adk api_server` on `localhost:8000` with both agents, sessions in the `agent_sessions` database of the metadata DB (ADK's `DatabaseSessionService`; `make services-up` creates it).
+
+## Deploy
+
+`make workloads-up` builds the image (`Dockerfile`, tagged `AGENT_IMAGE` in the Makefile), pushes it to the local registry and deploys it in the kind cluster's `workloads` namespace beside EL Factory: the Cloud Run stand-in of SL-2 (`platform/k8s/workloads/semantic-agent-*.yaml`).
+- The image holds both agents (`/app/agents`, what `adk api_server` serves on 8080) and the dbt project; the build parses it once as a smoke check.
+- An initContainer runs `dbt parse` and `build_catalog.py` at pod start, for the database the pod reads (`AGENT_DBNAME`, default `warehouse`): MetricFlow's compiled SQL names that database.
+- The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics` and `agent_sql` logins, the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
+- `EGRESS_PROXY` and `EGRESS_CA` route the model calls through a TLS-intercepting proxy (the cloud sandbox); unset elsewhere.
+
+`make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts 861.4 through `query_metrics` and the session's events in `agent_sessions` (one model turn).
 `uv run adk web src` from this folder is the demo surface.
 
 ## Checks
