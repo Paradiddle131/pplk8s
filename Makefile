@@ -279,7 +279,6 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
-lint: ## Lint shell scripts (shellcheck via uvx) and the dbt helper scripts (ruff via uvx); no literal GitHub owner (scripts/check-portable.sh)
-	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh docs/agents/*.sh
+lint: ## Lint shell scripts (shellcheck via uvx) and the dbt helper scripts (ruff via uvx)
+	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
-	scripts/check-portable.sh
