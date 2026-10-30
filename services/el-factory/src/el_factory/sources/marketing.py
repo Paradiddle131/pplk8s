@@ -39,6 +39,11 @@ SPEND_CENTS = {
 }
 BOOKING_RATE = 0.3
 MAX_BOOKING_LAG_DAYS = 21
+# The leads extract looks back past the longest booking lag, as a CRM extract re-reads recent
+# records: every booking of an interval then names a lead the same run lands, so a fresh warehouse
+# never holds a booking without its lead. Overlapping runs are idempotent (silver keeps the latest
+# row per lead).
+LEADS_LOOKBACK = timedelta(days=MAX_BOOKING_LAG_DAYS + 1)
 
 CAMPAIGNS_TABLE = Table(
     "synthetic_campaigns",
@@ -172,14 +177,15 @@ def _day_leads(day: date) -> list[dict[str, object]]:
 
 
 def build_leads(interval: Interval) -> list[dict[str, object]]:
-    """Leads with created_ts in [start, end), ordered by time then id."""
-    start_day = interval.start.astimezone(UTC).date()
+    """Leads with created_ts in [start - LEADS_LOOKBACK, end), ordered by time then id."""
+    since = interval.start - LEADS_LOOKBACK
+    start_day = since.astimezone(UTC).date()
     end_day = interval.end.astimezone(UTC).date()
     leads = [
         lead
         for offset in range((end_day - start_day).days + 1)
         for lead in _day_leads(start_day + timedelta(days=offset))
-        if interval.start <= datetime.fromisoformat(str(lead["created_ts"])) < interval.end
+        if since <= datetime.fromisoformat(str(lead["created_ts"])) < interval.end
     ]
     return sorted(leads, key=lambda r: (r["created_ts"], r["lead_id"]))
 

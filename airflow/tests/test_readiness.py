@@ -40,6 +40,33 @@ def test_record_readiness_passes_parameters(mocker):
     }
 
 
+def test_marketing_extraction_has_a_watermark(mocker):
+    lead, booking = (
+        datetime(2026, 10, 1, 19, 5, tzinfo=UTC),
+        datetime(2026, 10, 1, 17, 0, tzinfo=UTC),
+    )
+    get_first = mocker.patch.object(
+        PostgresHook, "get_first", side_effect=[(8, None), (8, None), (190, lead), (12, booking)]
+    )
+    result = readiness.check_extraction(
+        [
+            {"source": "synthetic", "entity": entity, "pages": 1, "rows": rows}
+            for entity, rows in (
+                ("campaigns", 8),
+                ("ad_spend", 8),
+                ("leads", 190),
+                ("bookings", 12),
+            )
+        ],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == lead.isoformat()
+    assert "max(created_ts)" in get_first.call_args_list[2].args[0]
+    assert "max(booked_ts)" in get_first.call_args_list[3].args[0]
+
+
 def test_check_extraction_matches_rows_and_returns_watermark(mocker):
     latest = datetime(2026, 10, 8, 23, 59, tzinfo=UTC)
     get_first = mocker.patch.object(
