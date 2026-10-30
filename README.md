@@ -9,7 +9,12 @@ Every managed GCP service has a local stand-in; all data is public or synthetic.
 
 ## Second track: a semantic layer and a metrics agent
 
-The same warehouse and dbt project carry a MetricFlow semantic layer, and an ADK agent answers business questions through metrics instead of SQL; the plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md).
+A dbt semantic layer over the same warehouse, queried by an ADK agent through metrics instead of SQL.
+Every calculated field is defined once, every answer carries its freshness, and the same YAML feeds BigQuery's descriptions, catalog and data agent.
+
+<img width="2400" height="1120" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, generates the agent catalog and a BigQuery data agent's context; the ADK agent answers through MetricFlow over the semantic layer with freshness from the ops ledger, a text-to-SQL baseline reads the public tier, and adk eval scores both" src="assets/semantic-track.png" />
+
+The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md); the diagram's interactive version is [`assets/semantic-track.html`](assets/semantic-track.html), with the GCP name of every stand-in behind a switch.
 Everything else on this page is the Airflow lab.
 
 ## Design
