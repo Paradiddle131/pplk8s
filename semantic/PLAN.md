@@ -2,7 +2,7 @@
 
 The second track of this repository, separate from the Airflow lab ([`../PLAN.md`](../PLAN.md), sealed for this topic).
 It shares the warehouse, the dbt project and the Compose stand-ins; nothing in it changes a DAG.
-Progress lives in the issues under [Map #99](https://github.com/Paradiddle131/pplk8s/issues/99); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
+Progress lives in the issues under [Map #99](../../../issues/99); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
 Decisions are a register: one row per live decision, amended in place, a superseded row deleted in the PR that supersedes it; git is the history.
 
 ## 1. Goal
@@ -40,12 +40,12 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 | Step | Issue | Delivers |
 |---|---|---|
 | S0 | done 2026-10-29 | The spike: pins, parity, the Python API (absorbed by S1 to S5) |
-| S1 | [#100](https://github.com/Paradiddle131/pplk8s/issues/100) | The semantic stage in dbt: time spine, semantic models, eight metrics, `make dbt-validate`, the parity check |
-| S2 | [#101](https://github.com/Paradiddle131/pplk8s/issues/101) | The catalog generator: agent catalog, warehouse comments, native authored context; public models marked |
-| S3 | [#102](https://github.com/Paradiddle131/pplk8s/issues/102) | The agent on metric tools, the eval set, the text-to-SQL baseline, `make agent-eval` |
-| S3b | [#111](https://github.com/Paradiddle131/pplk8s/issues/111) | The agent deployed as the Cloud Run stand-in in `workloads`: `make workloads-up`, checked by `make agent-deploy-check` |
-| S4 | [#103](https://github.com/Paradiddle131/pplk8s/issues/103) | Freshness in every answer; semantic validation after the finance pipeline's exposed stage |
-| S5 | [#104](https://github.com/Paradiddle131/pplk8s/issues/104) | The BigQuery path: compile target, work mapping, the ten-minute demo script |
+| S1 | [#100](../../../issues/100) | The semantic stage in dbt: time spine, semantic models, eight metrics, `make dbt-validate`, the parity check |
+| S2 | [#101](../../../issues/101) | The catalog generator: agent catalog, warehouse comments, native authored context; public models marked |
+| S3 | [#102](../../../issues/102) | The agent on metric tools, the eval set, the text-to-SQL baseline, `make agent-eval` |
+| S3b | [#111](../../../issues/111) | The agent deployed as the Cloud Run stand-in in `workloads`: `make workloads-up`, checked by `make agent-deploy-check` |
+| S4 | [#103](../../../issues/103) | Freshness in every answer; semantic validation after the finance pipeline's exposed stage |
+| S5 | [#104](../../../issues/104) | The BigQuery path: compile target, work mapping, the ten-minute demo script |
 
 **Exit:** `make dbt-validate` and the parity check pass; `make dbt-catalog` writes the three artefacts and every gold column has a comment in the warehouse; `make agent-eval` reports the semantic agent answering every question whose metric exists, with the baseline's score beside it; a BigQuery target parses the project unchanged; the demo script runs end to end.
 

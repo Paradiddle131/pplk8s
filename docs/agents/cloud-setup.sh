@@ -17,11 +17,11 @@ find_clone() {
     while read -r d; do [ -d "$d/.git" ] && echo "$d" && break; done
 }
 PPLK8S=$(find_clone pplk8s)
-DOTFILES=$(find_clone claude-dotfiles)
+DOTFILES=$(find_clone "${DOTFILES_REPO:-claude-dotfiles}")
 echo "pplk8s: ${PPLK8S:-MISSING}  claude-dotfiles: ${DOTFILES:-MISSING}"
 
 # 2. The user's skills, linked from the dotfiles clone (local-only skills are left out:
-#    hindsight, atrium, house-style and localhost tooling do not exist on cloud).
+#    laptop-only memory, artifact and design tooling, and localhost services do not exist on cloud).
 mkdir -p ~/.claude/skills
 if [ -n "$DOTFILES" ]; then
   for s in wayfinder grilling domain-modeling prototype to-tickets tdd diagnosing-bugs \
@@ -41,7 +41,7 @@ cat > ~/.claude/settings.json <<'EOF'
 }
 EOF
 
-# 4. The standing rules for cloud: claude-dotfiles' cloud/CLAUDE.md (claude-dotfiles#3),
+# 4. The standing rules for cloud: claude-dotfiles' cloud/CLAUDE.md,
 #    symlinked so each session reads the fresh clone's version, never a cached copy.
 if [ -n "$DOTFILES" ] && [ -f "$DOTFILES/cloud/CLAUDE.md" ]; then
   ln -sfn "$DOTFILES/cloud/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -52,8 +52,9 @@ else
 fi
 
 # 5. Git identity for commits made by the agent.
-git config --global user.name >/dev/null || git config --global user.name "Paradiddle131"
-git config --global user.email >/dev/null || git config --global user.email "Paradiddle131@users.noreply.github.com"
+owner=$(git -C "${PPLK8S:-.}" remote get-url origin 2>/dev/null | sed -E 's#^(git@|[a-z]+://)([^@/]*@)?github\.com[:/]##; s#/.*##')
+git config --global user.name >/dev/null || git config --global user.name "$owner"
+git config --global user.email >/dev/null || git config --global user.email "$owner@users.noreply.github.com"
 
 # 6. Docker: start the daemon with a registry mirror (the snapshot keeps no processes, so
 #    runs call this again; see the script).

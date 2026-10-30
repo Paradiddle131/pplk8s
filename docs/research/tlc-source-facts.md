@@ -1,6 +1,6 @@
 # NYC TLC trip record data: source facts
 
-Research for [#36](https://github.com/Paradiddle131/pplk8s/issues/36), part of the map [#35](https://github.com/Paradiddle131/pplk8s/issues/35).
+Research for [#36](../../../../issues/36), part of the map [#35](../../../../issues/35).
 All facts were checked on 2026-10-12 (UTC) unless a line says otherwise.
 "Measured" means observed directly with `curl` or `pyarrow` against the live files; "stated" means read from a TLC or NYC page; "unverified" means neither.
 

@@ -37,3 +37,4 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 - Put each sentence of Markdown prose on its own line.
 - Every component comes up and down through a single scripted entry point; a fresh clone plus documented prerequisites reproduces the lab.
 - Work counts as done when its check passes: the phase's exit criterion, a test, or an observed run.
+- Name the GitHub owner and repo through the origin remote (Makefile `GITHUB_REPO`), and link this repo's issues relatively (`../../issues/N`), so a fork works against itself; `make lint` checks it. History (`LEDGER.md`, `ledger.d/`, dated decisions) keeps its facts.

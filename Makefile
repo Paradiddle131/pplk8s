@@ -21,12 +21,16 @@ BUILD_CA ?= $(wildcard /root/.ccr/ca-bundle.crt)
 BUILD_SECRET = id=build_ca,src=$(BUILD_CA)
 DOCKER_BUILD = docker build $(if $(BUILD_CA),--network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --build-arg NO_PROXY --secret $(BUILD_SECRET))
 
-# A layer cache in a registry, shared by every session that builds (claude-dotfiles cloud/skills/image-cache):
-# each image reads and writes $(BUILD_CACHE)/<cache name>:buildcache, so a fresh cloud session rebuilds only
-# what changed. On by default where BUILD_CA is (the cloud, whose proxy holds the ghcr.io login); a laptop opts
-# in with BUILD_CACHE=ghcr.io/paradiddle131/pplk8s after `docker login ghcr.io`. A failed cache write never
-# fails a build.
-BUILD_CACHE ?= $(if $(BUILD_CA),ghcr.io/paradiddle131/pplk8s)
+# This checkout's GitHub <owner>/<repo>, from the origin remote: the registry cache and Airflow's git-sync
+# name it from here, so a fork builds, caches and syncs against itself.
+GITHUB_REPO ?= $(shell git remote get-url origin 2>/dev/null | sed -E 's#^(git@|[a-z]+://)([^@/]*@)?github\.com[:/]##; s#\.git$$##')
+export GITHUB_REPO
+
+# A layer cache in a registry, shared by every session that builds (the image-cache skill): each image reads
+# and writes $(BUILD_CACHE)/<cache name>:buildcache, so a fresh cloud session rebuilds only what changed.
+# On by default where BUILD_CA is (the cloud, whose proxy holds the ghcr.io login); a laptop opts in with
+# BUILD_CACHE=ghcr.io/<owner>/<repo> after `docker login ghcr.io`. A failed cache write never fails a build.
+BUILD_CACHE ?= $(if $(and $(BUILD_CA),$(GITHUB_REPO)),ghcr.io/$(shell echo '$(GITHUB_REPO)' | tr '[:upper:]' '[:lower:]'))
 comma := ,
 cache_flags = $(if $(BUILD_CACHE),--cache-from type=registry$(comma)ref=$(BUILD_CACHE)/$(1):buildcache --cache-to type=registry$(comma)ref=$(BUILD_CACHE)/$(1):buildcache$(comma)mode=max$(comma)ignore-error=true)
 # $(call docker_build,<image ref>[,<cache name>]): the cache name defaults to the image's repository name.
@@ -275,6 +279,7 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
-lint: ## Lint shell scripts (shellcheck via uvx) and the dbt helper scripts (ruff via uvx)
+lint: ## Lint shell scripts (shellcheck via uvx) and the dbt helper scripts (ruff via uvx); no literal GitHub owner (scripts/check-portable.sh)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh docs/agents/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
+	scripts/check-portable.sh

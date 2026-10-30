@@ -93,7 +93,7 @@ dags:
     enabled: false
   gitSync:
     enabled: true
-    repo: git@github.com:Paradiddle131/pplk8s.git
+    repo: git@github.com:<owner>/<repo>.git # deploy.sh sets this checkout's origin (Makefile GITHUB_REPO)
     ref: main # git-sync v4 reads `ref`; the chart's default is an Airflow 2 branch
     branch: main
     rev: HEAD
