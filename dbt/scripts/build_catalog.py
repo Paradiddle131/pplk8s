@@ -11,7 +11,7 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
 - `data_agent/system_instruction.yaml`: the authored context of a BigQuery data agent, in the shape
   Google documents (a list of single-key maps: `system_instruction`, `tables` with fields and their
-  aggregations from the measures, `relationships` from the entities, `glossaries` from the metrics,
+  aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics,
   `additional_descriptions` from the derived and ratio metrics' formulas).
 - `data_agent/example_queries.json`: one verified query per metric (`naturalLanguageQuestion`,
   `sqlQuery`), the metric by day as MetricFlow compiles it.
@@ -29,6 +29,7 @@ Usage, from dbt/ with the image's pins: python scripts/build_catalog.py [target_
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -95,16 +96,22 @@ class SemanticIndex:
     def __init__(self, manifest: dict, semantic_manifest: dict) -> None:
         self.semantic_models = {model["name"]: model for model in semantic_manifest["semantic_models"]}
         self.metrics = sorted(semantic_manifest["metrics"], key=lambda metric: metric["name"])
-        self.model_of_measure = {
-            measure["name"]: model for model in self.semantic_models.values() for measure in model["measures"]
-        }
         self.tags_of_semantic_model = {}
         for node in manifest["semantic_models"].values():
             tags = [tag for node_id in node["depends_on"]["nodes"] for tag in manifest["nodes"][node_id]["tags"]]
             self.tags_of_semantic_model[node["name"]] = tags
+        self._nodes = {**manifest["metrics"], **manifest["semantic_models"]}
+        self._metric_ids = {node["name"]: unique_id for unique_id, node in manifest["metrics"].items()}
+
+    def _semantic_model_names(self, unique_id: str) -> set[str]:
+        """A simple metric depends on its semantic model, any other metric on the metrics it combines."""
+        node = self._nodes[unique_id]
+        if unique_id.startswith("semantic_model."):
+            return {node["name"]}
+        return set().union(*(self._semantic_model_names(parent) for parent in node["depends_on"]["nodes"]))
 
     def models_of_metric(self, metric: dict) -> list[dict]:
-        names = {self.model_of_measure[measure["name"]]["name"] for measure in metric["type_params"]["input_measures"]}
+        names = self._semantic_model_names(self._metric_ids[metric["name"]])
         return [self.semantic_models[name] for name in sorted(names)]
 
     def pipelines(self, metric: dict) -> list[str]:
@@ -160,13 +167,28 @@ def _item(**fields: object) -> list[dict]:
     return [{key: value} for key, value in fields.items() if value not in (None, [], "")]
 
 
+def _primary_key(model: dict) -> str:
+    entity = next(entity for entity in model["entities"] if entity["type"] == "primary")
+    return entity.get("expr") or entity["name"]
+
+
 def system_instruction(index: SemanticIndex) -> list[dict]:
+    aggregations: dict[str, dict[str, list[str]]] = {name: {} for name in index.semantic_models}
+    for metric in index.metrics:
+        params = metric["type_params"]["metric_aggregation_params"]
+        if params is None:
+            continue
+        model = index.semantic_models[params["semantic_model"]]
+        # A row count (`expr: 1`) is a count of the primary key, which is never NULL.
+        field = metric["type_params"]["expr"]
+        field = _primary_key(model) if field == "1" else field
+        aggregation = params["agg"].replace("count_distinct", "count distinct")
+        if aggregation not in aggregations[model["name"]].setdefault(field, []):
+            aggregations[model["name"]][field].append(aggregation)
+
     tables = []
     for model in index.semantic_models.values():
-        fields: dict[str, list[str]] = {}
-        for measure in model["measures"]:
-            aggregation = measure["agg"].replace("count_distinct", "count distinct")
-            fields.setdefault(measure.get("expr") or measure["name"], []).append(aggregation)
+        fields = aggregations[model["name"]]
         tables.append(
             {
                 "table": _item(
@@ -218,7 +240,8 @@ def system_instruction(index: SemanticIndex) -> list[dict]:
     for metric in index.metrics:
         params = metric["type_params"]
         if metric["type"] == "derived":
-            formula = params["expr"]
+            # The formula in words: a coalesce that only fills a missing input with 0 says nothing to a reader.
+            formula = re.sub(r"coalesce\((\w+), 0\)", r"\1", params["expr"])
             for name in sorted(labels, key=len, reverse=True):
                 formula = formula.replace(name, labels[name])
             descriptions.append({"text": f"{metric['label']} = {formula}."})

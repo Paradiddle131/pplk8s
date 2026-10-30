@@ -1,5 +1,12 @@
 version: 2
 
+# The semantic layer (semantic/PLAN.md SL-1) lives on these models in dbt's latest YAML spec: a model's
+# `semantic_model` makes it a MetricFlow semantic model, its columns carry the entities and dimensions,
+# and its `metrics` are the simple metrics over it. Metrics across models are in models/semantic/semantic.yml.
+# A dimension's description is its column's: it reaches the agent catalog (SL-3).
+# No metric sets `fill_nulls_with`: dbt-core 1.12.6 drops it in this spec (#137), so a simple metric reads NULL,
+# not 0, in a day or group where it has no rows, and a derived metric coalesces the inputs it adds or subtracts.
+
 models:
   - name: slv_customers
     description: One row per customer, latest load wins. Alias silver.customers.
@@ -16,10 +23,17 @@ models:
 
   - name: slv_orders
     description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.
+    semantic_model:
+      enabled: true
+      name: orders
+    agg_time_dimension: order_date
     columns:
       - name: order_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: order
       - name: customer_id
         description: Must exist in slv_customers.
         tests:
@@ -28,15 +42,63 @@ models:
               arguments:
                 to: ref('slv_customers')
                 field: customer_id
+        entity:
+          type: foreign
+          name: customer
       - name: order_date
+        description: UTC date the order was placed.
         tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
       - name: status
+        description: placed, shipped or cancelled.
         tests:
           - accepted_values:
               arguments:
                 values: ['placed', 'shipped', 'cancelled']
+        dimension:
+          type: categorical
       - name: amount
         tests: [not_null]
+      - name: currency
+        description: ISO-4217 code of the order amount.
+        dimension:
+          type: categorical
+    metrics:
+      - name: orders_total
+        description: All orders placed, cancelled included.
+        label: Orders
+        type: simple
+        agg: count
+        expr: order_id
+      - name: orders_cancelled
+        description: Orders with status cancelled.
+        label: Cancelled orders
+        type: simple
+        agg: count
+        expr: order_id
+        filter: "{{ Dimension('order__status') }} = 'cancelled'"
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders (the one definition of revenue).
+        label: Revenue (EUR)
+        type: simple
+        agg: sum
+        expr: amount
+        filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      - name: customers_distinct
+        description: Distinct customers with at least one non-cancelled order.
+        label: Active customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      - name: cancellation_rate
+        description: Share of orders cancelled.
+        label: Cancellation rate
+        type: ratio
+        numerator: orders_cancelled
+        denominator: orders_total
 
   - name: slv_hourly_weather
     description: One row per (location, observed_at), latest load wins. Alias silver.hourly_weather.
@@ -52,13 +114,45 @@ models:
 
   - name: slv_returns
     description: Latest row per return_id across landed files. Alias silver.returns.
+    semantic_model:
+      enabled: true
+      name: returns
+    agg_time_dimension: return_date
     columns:
       - name: return_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: return
+      - name: order_id
+        description: The returned order.
+        entity:
+          type: foreign
+          name: order
       - name: return_date
-        description: UTC date of returned_at.
+        description: UTC date the return was recorded (returned_at in UTC).
         tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: reason
+        description: The partner's return reason.
+        dimension:
+          type: categorical
+    metrics:
+      - name: returns_eur
+        description: Sum of partner return amounts.
+        label: Returns (EUR)
+        type: simple
+        agg: sum
+        expr: amount
+      - name: returns_count
+        description: Number of partner returns.
+        label: Returns
+        type: simple
+        agg: count
+        expr: return_id
 
   - name: slv_tlc_trips
     description: >
@@ -102,24 +196,47 @@ models:
               arguments:
                 values: ['negative_amount', 'pickup_outside_month', 'dropoff_before_pickup', 'over_24_hours']
 
+  # Marketing (semantic/PLAN.md SL-8): campaigns, their daily spend, the leads they bring and the
+  # bookings those leads make, all reachable by the campaign entity.
   - name: slv_campaigns
     description: One row per ad campaign, latest load wins. Alias silver.campaigns.
+    semantic_model:
+      enabled: true
+      name: campaigns
     columns:
       - name: campaign_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: campaign
       - name: channel
-        description: Marketing channel of the campaign.
+        description: Marketing channel (search, social, display, email, partner).
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['search', 'social', 'display', 'email', 'partner']
+        dimension:
+          type: categorical
       - name: market
         description: ISO-2 country the campaign targets.
+        dimension:
+          type: categorical
+      - name: name
+        description: The campaign's name.
+        dimension:
+          type: categorical
+          name: campaign_name
 
   - name: slv_ad_spend
     description: One row per (spend_date, campaign), latest load wins. Alias silver.ad_spend.
+    semantic_model:
+      enabled: true
+      name: ad_spend
+    agg_time_dimension: spend_date
+    # One row per (spend_date, campaign) has no single-column key; MetricFlow needs a primary entity.
+    primary_entity: ad_spend_day
     tests:
       - unique_combination:
           arguments:
@@ -128,6 +245,9 @@ models:
       - name: spend_date
         description: UTC day of the spend.
         tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
       - name: campaign_id
         description: Must exist in slv_campaigns.
         tests:
@@ -136,16 +256,39 @@ models:
               arguments:
                 to: ref('slv_campaigns')
                 field: campaign_id
+        entity:
+          type: foreign
+          name: campaign
       - name: spend
         description: Spend that day in EUR.
         tests: [not_null]
+    metrics:
+      - name: ad_spend_eur
+        description: Ad spend across campaigns, in EUR.
+        label: Ad spend (EUR)
+        type: simple
+        agg: sum
+        expr: spend
+      - name: ad_clicks
+        description: Clicks on ads across campaigns.
+        label: Ad clicks
+        type: simple
+        agg: sum
+        expr: clicks
 
   - name: slv_leads
     description: One row per CRM lead, latest load wins. created_date is created_ts in UTC. Alias silver.leads.
+    semantic_model:
+      enabled: true
+      name: leads
+    agg_time_dimension: created_date
     columns:
       - name: lead_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: lead
       - name: campaign_id
         description: The campaign the lead came from; must exist in slv_campaigns.
         tests:
@@ -154,18 +297,44 @@ models:
               arguments:
                 to: ref('slv_campaigns')
                 field: campaign_id
+        entity:
+          type: foreign
+          name: campaign
       - name: created_date
+        description: UTC date the lead was created.
         tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: country
+        description: ISO-2 country of the lead.
+        dimension:
+          type: categorical
+    metrics:
+      - name: leads
+        description: CRM leads created, on the day they were created.
+        label: Leads
+        type: simple
+        agg: count
+        expr: 1
 
   - name: slv_bookings
     description: >
       One row per booking, latest load wins, with its lead's campaign. booked_date is booked_ts in UTC.
       A booking whose lead is not loaded yet (leads arrive per interval, a booking up to three weeks
-      later) keeps a NULL campaign_id; its lead tests warn rather than fail. Alias silver.bookings.
+      later) keeps a NULL campaign_id, so it groups under an empty channel; its lead tests warn rather
+      than fail. Alias silver.bookings.
+    semantic_model:
+      enabled: true
+      name: bookings
+    agg_time_dimension: booked_date
     columns:
       - name: booking_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: booking
       - name: lead_id
         description: The lead that booked; each lead books at most once.
         tests:
@@ -177,14 +346,37 @@ models:
                 field: lead_id
               config:
                 severity: warn
+        entity:
+          type: foreign
+          name: lead
       - name: campaign_id
         description: The lead's campaign; NULL while the lead is not loaded.
         tests:
           - not_null:
               config:
                 severity: warn
+        entity:
+          type: foreign
+          name: campaign
       - name: booked_date
+        description: UTC date the booking was made.
         tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
       - name: amount
         description: Booking value in EUR.
         tests: [not_null]
+    metrics:
+      - name: bookings
+        description: Bookings made by leads, on the day they were made.
+        label: Bookings
+        type: simple
+        agg: count
+        expr: 1
+      - name: booking_value_eur
+        description: Value of the bookings made, in EUR.
+        label: Booking value (EUR)
+        type: simple
+        agg: sum
+        expr: amount

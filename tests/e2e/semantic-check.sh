@@ -45,6 +45,8 @@ echo "ok: make dbt-validate (parse, check_metrics, mf validate-configs) passes a
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
 # the hand-written aggregates (R1: the metric is the one definition; gold and exposed are the oracle).
+# A simple metric is NULL where gold says 0, in a day or group it has no rows (dbt-core 1.12.6 drops
+# fill_nulls_with, #137), so the counts and sums are compared through coalesce.
 mf_ query --metrics orders_total,orders_cancelled,revenue_eur,customers_distinct,cancellation_rate \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/sales.csv" >"$OUT/query.log" 2>&1 ||
   { cat "$OUT/query.log" >&2; fail "mf query of the order metrics"; }
@@ -69,7 +71,7 @@ expect "order metrics vs gold.daily_sales (rows differing)" "$(psql_dev -c "
   select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
 expect "net metrics vs exposed.net_sales_daily (rows differing)" "$(psql_dev -c "
   with exposed as (select order_date, revenue_eur, returns_eur, returns_count, net_revenue_eur from exposed.net_sales_daily),
-       mf as (select * from semantic_check.net)
+       mf as (select day, revenue_eur, coalesce(returns_eur, 0), coalesce(returns_count, 0), net_revenue_eur from semantic_check.net)
   select count(*) from ((select * from exposed except select * from mf) union all (select * from mf except select * from exposed)) d")" 0
 echo "ok: the eight sales metrics equal gold.daily_sales and exposed.net_sales_daily on $days days"
 
@@ -88,7 +90,8 @@ psql_dev -c "\\copy semantic_check.marketing from stdin with (format csv, header
 psql_dev -c "\\copy semantic_check.marketing_period from stdin with (format csv, header true)" <"$OUT/marketing_period.csv"
 expect "marketing metrics vs gold.marketing_daily (rows differing)" "$(psql_dev -c "
   with gold as (select activity_date, channel, ad_spend_eur, ad_clicks, leads, bookings, booking_value_eur from gold.marketing_daily),
-       mf as (select day, channel, ad_spend_eur, ad_clicks, leads, bookings, booking_value_eur from semantic_check.marketing)
+       mf as (select day, channel, coalesce(ad_spend_eur, 0), coalesce(ad_clicks, 0), coalesce(leads, 0), coalesce(bookings, 0),
+                     coalesce(booking_value_eur, 0) from semantic_check.marketing)
   select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
 expect "marketing ratios vs exposed.channel_performance_daily (rows differing)" "$(psql_dev -c "
   with exposed as (select activity_date, channel, round(cost_per_lead_eur, 4), round(cost_per_booking_eur, 4) from exposed.channel_performance_daily),
@@ -110,9 +113,9 @@ version: 2
 metrics:
   - name: zz_stray_orders
     label: Stray
-    type: simple
-    type_params:
-      measure: orders_total
+    type: derived
+    expr: orders_total
+    input_metrics: [orders_total]
 YAML
 if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/stray.log" 2>&1; then fail "dbt-validate passed with an undescribed metric"; fi
 grep -q "check_metrics: metric zz_stray_orders: no description" "$OUT/stray.log" ||
