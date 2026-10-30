@@ -19,7 +19,7 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 
 ## Queue
 
-1. [Map #99: dbt semantic layer and a metrics agent](../../../../issues/99): its sub-issues in order; design in `semantic/PLAN.md`.
+1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
 2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.

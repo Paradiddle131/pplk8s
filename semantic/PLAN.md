@@ -61,10 +61,10 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 | S5 | [#104](../../../issues/104) | The BigQuery path: compile target, work mapping, the ten-minute demo script |
 | U6 | [#125](../../../issues/125) | The semantic path executed on the BigQuery emulator: `make bigquery-emulator-check` |
 | U1 | [#126](../../../issues/126), [#127](../../../issues/127) | A marketing domain with cost per lead and per booking as metrics; a customer semantic model |
-| U2 | [#128](../../../issues/128), [#129](../../../issues/129) | The documentation and naming standard with its check; a glossary for terms that are not metrics |
+| U2 | [#128](../../../issues/128), [#129](../../../issues/129), [#140](../../../issues/140) | The documentation and naming standard with its check; a glossary for terms that are not metrics; model contracts on every model agents read |
 | U3 | [#130](../../../issues/130), [#131](../../../issues/131) | Source freshness alerts; discrepancy checks between layers on every build |
 | U4 | [#132](../../../issues/132) | An audit row per agent query; a per-agent access proposal |
-| U5 | [#133](../../../issues/133) | A side-by-side migration rehearsal with a parity report per consumer |
+| U5 | [#133](../../../issues/133), [#141](../../../issues/141) | A side-by-side migration rehearsal with a parity report per consumer; where scheduled queries and routines fit beside dbt |
 | all | [#134](../../../issues/134) | The demo of the whole use case on the emulator |
 
 **Exit:** `make dbt-validate` and the parity check pass; `make dbt-catalog` writes the three artefacts and every gold column has a comment in the warehouse; `make agent-eval` reports the semantic agent answering every question whose metric exists, with the baseline's score beside it; a BigQuery target parses the project unchanged; the demo script runs end to end.
