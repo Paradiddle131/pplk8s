@@ -146,6 +146,8 @@ The connection is set in `profiles.yml`, and every value is read from the enviro
 | `DBT_PASSWORD` | `warehouse` | Database password (lab-only default) |
 | `DBT_DBNAME` | `warehouse` | Database name; development uses `dbt_dev` |
 | `DBT_SCHEMA` | `public` | Target schema for models without a custom schema; the layer models always use their own schema |
+| `DBT_TARGET` | `dev` | The profile output: `dev` (Postgres), or `bigquery`, compile-only (below) |
+| `BQ_PROJECT`, `BQ_LOCATION` | `pplk8s-lab`, `EU` | The `bigquery` target's project and location |
 
 ## Image
 
@@ -183,8 +185,12 @@ It holds two months of yellow and green rows in the D34 landing contract, a half
 `tests/e2e/tlc-dbt-check.sh` loads both into `dbt_dev` and builds the months with host dbt (`uvx`, the image's pins).
 It checks that rebuilding one month leaves the other untouched, that the reconciliation holds, that a republished month replaces the old one, and that a month above 10 % quarantined fails the build.
 
-## Dialect notes
+## Dialect
 
-Models use only portable SQL except where a line carries a `-- dialect:` comment.
-The Postgres-specific spots are the `AT TIME ZONE 'UTC'` date casts in `slv_orders`, `slv_returns`, and `gld_daily_weather`, the `generate_series` of the time spine, and in `macros/tlc.sql` the file-name regex (`substring ... from`) and the `double precision`/`timestamp` types.
-On BigQuery, the tlc incremental models would use `insert_overwrite` on a month-partitioned `pickup_date` (D36).
+The sales, returns, finance and semantic models compile on Postgres and BigQuery unchanged.
+Each construct the two spell differently is a dispatch macro in `macros/dialect.sql` (`utc_date`, `day_spine`, `type_timestamptz`), or dbt's own `dbt.type_string()`.
+The tlc models keep Postgres forms, each marked with a `-- dialect:` comment: the file-name regex (`substring ... from`), the `double precision`/`timestamp` types, and on BigQuery `insert_overwrite` on a month-partitioned `pickup_date` instead of `delete+insert` (D36).
+
+`profiles.yml` has a compile-only `bigquery` output (`DBT_TARGET=bigquery`).
+Its placeholder `oauth-secrets` token lets dbt build a client offline; nothing runs against GCP.
+`make bigquery-check` parses, validates and compiles the semantic path on it, checks that the compiled SQL is BigQuery's, and writes the BigQuery catalog to `target/bigquery/catalog` ([the mapping](../docs/semantic-layer-on-bigquery.md)).

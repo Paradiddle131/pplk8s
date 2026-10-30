@@ -1,0 +1,6 @@
+## 2026-10-30 — Semantic — S5 on main: the BigQuery path, the work mapping and the demo script (#104)
+
+- Done: the S5 work merged in #114 lands on `main`; #114 merged it into its stacked base `claude/jolly-wright-vov4ym` after that branch had already landed, so it never reached `main`. Dialect macros (`dbt/macros/dialect.sql`, SL-6), a compile-only `bigquery` output, `make bigquery-check`, `docs/semantic-layer-on-bigquery.md`, `docs/demo.md`; the spike doc folded in and deleted. Also: `catalog-check` gives `agent_sql` and `agent_metrics` their grants back after it drops `gold` and `exposed` in `dbt_dev`.
+- Evidence: on this branch, `make bigquery-check` (16 compiled models parse as BigQuery; build_catalog and check_catalog pass on the target), `make semantic-check` and `make catalog-check` pass. Before the grants fix, `agent_sql` got "permission denied for schema gold" in `dbt_dev` after `catalog-check`; after it, it reads `gold.daily_sales`. The owner's local rehearsal of #114 passed every step but the two that need a model key (steps 6 and 7, the 401s of #116, fixed in #117).
+- Decisions: re-apply #114 rather than a second S5 written in this session: #114 also compiles offline and checks the dialect with sqlglot, and was already rehearsed.
+- Open: steps 6 and 7 of the demo on the laptop with a key, once #117 is in.

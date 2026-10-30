@@ -15,8 +15,7 @@ select
     order_id,
     customer_id,
     order_ts,
-    -- dialect: Postgres converts the timestamptz to UTC with AT TIME ZONE; BigQuery uses DATE(order_ts, 'UTC').
-    cast(order_ts at time zone 'UTC' as date) as order_date,
+    {{ utc_date('order_ts') }} as order_date,
     status,
     amount,
     currency,

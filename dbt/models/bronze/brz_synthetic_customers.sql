@@ -2,9 +2,9 @@
 
 select
     cast(customer_id as integer) as customer_id,
-    cast(name as text) as name,
-    cast(email as text) as email,
-    cast(country as text) as country,
+    cast(name as {{ dbt.type_string() }}) as name,
+    cast(email as {{ dbt.type_string() }}) as email,
+    cast(country as {{ dbt.type_string() }}) as country,
     cast(signup_date as date) as signup_date,
     _run_id,
     _interval_start,
