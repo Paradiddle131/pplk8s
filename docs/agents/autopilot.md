@@ -33,6 +33,7 @@ Cloud runs, with their counts in the handoff:
 - alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
 
 Left to the laptop (the handoff's local checklist): `make verify` (image builds), `make ci-integration` and the phase checks (kind).
+A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: the default git-sync serves `main`, so the run would test the old DAG (seen on #113).
 
 ## Never
 
