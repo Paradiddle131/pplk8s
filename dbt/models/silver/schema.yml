@@ -8,18 +8,33 @@ version: 2
 # not 0, in a day or group where it has no rows, and a derived metric coalesces the inputs it adds or subtracts.
 
 models:
+  # Customers carry no metric of their own: the customer entity lets every orders metric group and
+  # filter by the customer's country and signup cohort (customer__signup_date__month).
   - name: slv_customers
     description: One row per customer, latest load wins. Alias silver.customers.
+    semantic_model:
+      enabled: true
+      name: customers
     columns:
       - name: customer_id
         description: Natural key.
         tests: [not_null, unique]
+        entity:
+          type: primary
+          name: customer
       - name: country
-        description: ISO-2 country code.
+        description: ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).
         tests:
           - accepted_values:
               arguments:
                 values: ['NL', 'TR', 'GB', 'DE', 'FR', 'US']
+        dimension:
+          type: categorical
+      - name: signup_date
+        description: UTC date the customer signed up; group by its month for signup cohorts.
+        dimension:
+          type: time
+        granularity: day
 
   - name: slv_orders
     description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.

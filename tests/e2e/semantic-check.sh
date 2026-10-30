@@ -8,6 +8,8 @@
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, and over the whole fixture cost per lead and per booking are
 #     total spend over the total count, not an average of the daily ratios (SL-8),
+#   - the order metrics by customer country equal exposed.sales_by_country_daily, and revenue by
+#     signup cohort equals a direct join of silver (the customers semantic model),
 #   - a metric without a description or a label fails the validation.
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
@@ -104,6 +106,30 @@ expect "spend over count, from gold" "$(psql_dev -c "
 expect "the average of exposed's daily cost per booking (what the metric is not)" "$(psql_dev -c "
   select round(avg(cost_per_booking_eur), 2) from (select activity_date, sum(ad_spend_eur) / nullif(sum(bookings), 0) as cost_per_booking_eur from exposed.channel_performance_daily group by activity_date) d")" "152.50"
 echo "ok: the marketing metrics equal gold.marketing_daily and exposed.channel_performance_daily; cost per booking 130.00 over the fixture, not the daily average 152.50"
+
+# Customers: the orders metrics group by the customer's country and signup cohort through the
+# customer entity alone, and equal exposed.sales_by_country_daily and a direct join of silver.
+mf_ query --metrics orders_total,revenue_eur --group-by metric_time__day,customer__country \
+  --order metric_time__day --csv "$OUT/country.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the order metrics by customer country"; }
+mf_ query --metrics revenue_eur --group-by customer__signup_date__month \
+  --csv "$OUT/cohort.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of revenue by signup cohort"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.country" \
+  -c "create table semantic_check.country (day date, country text, orders_total bigint, revenue_eur numeric)" \
+  -c "drop table if exists semantic_check.cohort" -c "create table semantic_check.cohort (signup_month date, revenue_eur numeric)"
+psql_dev -c "\\copy semantic_check.country from stdin with (format csv, header true)" <"$OUT/country.csv"
+psql_dev -c "\\copy semantic_check.cohort from stdin with (format csv, header true)" <"$OUT/cohort.csv"
+[ "$(psql_dev -c "select count(*) from exposed.sales_by_country_daily")" -ge 2 ] || fail "exposed.sales_by_country_daily has fewer than 2 rows"
+expect "order metrics by country vs exposed.sales_by_country_daily (rows differing)" "$(psql_dev -c "
+  with exposed as (select order_date, country, orders, revenue_eur from exposed.sales_by_country_daily),
+       mf as (select day, country, orders_total, coalesce(revenue_eur, 0) from semantic_check.country)
+  select count(*) from ((select * from exposed except select * from mf) union all (select * from mf except select * from exposed)) d")" 0
+expect "revenue by signup cohort vs silver (rows differing)" "$(psql_dev -c "
+  with silver as (select date_trunc('month', c.signup_date)::date, coalesce(sum(case when o.status <> 'cancelled' then o.amount end), 0)
+                  from silver.orders o join silver.customers c on c.customer_id = o.customer_id group by 1),
+       mf as (select signup_month, coalesce(revenue_eur, 0) from semantic_check.cohort)
+  select count(*) from ((select * from silver except select * from mf) union all (select * from mf except select * from silver)) d")" 0
+echo "ok: orders metrics by customer country equal exposed.sales_by_country_daily; revenue by signup cohort equals silver"
 
 # A metric without words fails the stage: drop a labelled, undescribed metric beside the real ones.
 stray="$REPO/dbt/models/semantic/zz_semantic_check_stray.yml"

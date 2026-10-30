@@ -89,6 +89,7 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
 
 The semantic layer is written in dbt's [latest YAML spec](https://docs.getdbt.com/docs/build/latest-metrics-spec) (semantic/PLAN.md SL-1).
 A silver model in `models/silver/schema.yml` becomes a MetricFlow semantic model through its `semantic_model` key (`orders` over `slv_orders`, `returns`, `campaigns`, `ad_spend`, `leads`, `bookings`); its columns carry the entities and dimensions, and its `metrics` the simple metrics and the ratios within it.
+`customers` and `campaigns` carry no metric of their own: their entity lets the metrics of the models that reference it group and filter by their dimensions (`customer__country`, `customer__signup_date__month` for signup cohorts, `campaign__channel`).
 `models/semantic/semantic.yml` holds the metrics that combine semantic models (`net_revenue_eur`, `cost_per_lead_eur`, `cost_per_booking_eur`, `lead_to_booking_rate`).
 Each calculated field of the gold and exposed models is defined once, as a metric; the hand-written tables stay as the parity oracle.
 No metric sets `fill_nulls_with`, because dbt-core 1.12.6 drops it in this spec: a simple metric reads NULL, not 0, in a day or group where it has no rows, and `net_revenue_eur` coalesces its inputs.
