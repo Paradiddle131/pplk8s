@@ -1,10 +1,10 @@
 {{ config(alias='open_meteo_hourly_weather', tags=['sales']) }}
 
 select
-    cast(location as text) as location,
+    cast(location as {{ dbt.type_string() }}) as location,
     cast(latitude as numeric(8,4)) as latitude,
     cast(longitude as numeric(8,4)) as longitude,
-    cast(observed_at as timestamptz) as observed_at,
+    cast(observed_at as {{ type_timestamptz() }}) as observed_at,
     cast(temperature_c as numeric(5,2)) as temperature_c,
     cast(precipitation_mm as numeric(6,2)) as precipitation_mm,
     _run_id,
