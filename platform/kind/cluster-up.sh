@@ -23,6 +23,18 @@ else
   config="$(mktemp)"
   trap 'rm -f "$config"' EXIT
   sed "s|__REPO__|$(cd ../.. && pwd)|g" cluster.yaml >"$config"
+  # Hosts unlike a laptop (the cloud sandbox): on cgroup v1 the kubelet
+  # (1.35+) refuses to start unless told otherwise; without CAP_SYS_RESOURCE no process may lower
+  # its OOM score, so containerd must not ask for the negative scores it gives pod sandboxes.
+  if [ "$(stat -fc %T /sys/fs/cgroup)" != cgroup2fs ]; then
+    printf '%s\n' 'kubeadmConfigPatches:' '  - |' '    kind: KubeletConfiguration' '    failCgroupV1: false' >>"$config"
+    echo "cgroup v1 host: kubelet failCgroupV1=false"
+  fi
+  if (( !(0x$(awk '/^CapEff/ {print $2}' /proc/self/status) >> 24 & 1) )); then
+    printf '%s\n' 'containerdConfigPatches:' '  - |-' '    [plugins."io.containerd.grpc.v1.cri"]' \
+      '      restrict_oom_score_adj = true' >>"$config"
+    echo "no CAP_SYS_RESOURCE: containerd restrict_oom_score_adj=true"
+  fi
   kind create cluster --config "$config" --image "$NODE_IMAGE" --wait 120s
 fi
 
