@@ -32,7 +32,7 @@ An unreadable ledger is said in the statement ("Freshness unknown: ..."), never 
 
 ## Model
 
-`model.py` is the only place that names a provider: `MODEL_BACKEND` (`openrouter`, the lab default, or `gemini`) and `MODEL_ID` (default `nvidia/nemotron-3.5-super-vl:free`), bounded by `MODEL_TIMEOUT_S` (120) and `MODEL_RETRIES` (2).
+`model.py` is the only place that names a provider: `MODEL_BACKEND` (`openrouter`, the lab default, or `gemini`) and `MODEL_ID` (default `nvidia/nemotron-3.5-super-vl:free`; on OpenRouter only a free model, an id ending `:free`, builds), bounded by `MODEL_TIMEOUT_S` (120) and `MODEL_RETRIES` (2).
 The OpenRouter key is `OPENROUTER_API_KEY`; on cloud the environment's network secret injects it, so the variable only needs a placeholder.
 
 A model call that still fails after its retries ends the turn with an answer, not an exception: both agents set ADK's `on_model_error_callback` to `answer_model_failure`.
