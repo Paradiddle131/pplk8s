@@ -63,3 +63,43 @@ models:
     columns:
       - name: hail_type
         description: Green's own trip_type column (1 = street hail, 2 = dispatch), renamed so trip_type can name yellow or green.
+
+  - name: brz_synthetic_campaigns
+    description: Ad campaigns as landed, cast only. Alias bronze.synthetic_campaigns. Keeps every run, so campaign_id repeats.
+    columns:
+      - name: campaign_id
+        tests: [not_null]
+      - name: _run_id
+        tests: [not_null]
+
+  - name: brz_synthetic_ad_spend
+    description: Daily ad spend per campaign as landed, cast only. Alias bronze.synthetic_ad_spend.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'spend_date', 'campaign_id']
+    columns:
+      - name: spend_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: brz_synthetic_leads
+    description: CRM leads as landed, cast only. Alias bronze.synthetic_leads.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'lead_id']
+    columns:
+      - name: lead_id
+        tests: [not_null]
+
+  - name: brz_synthetic_bookings
+    description: Bookings as landed, cast only. Alias bronze.synthetic_bookings.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'booking_id']
+    columns:
+      - name: booking_id
+        tests: [not_null]

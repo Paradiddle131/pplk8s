@@ -1,7 +1,7 @@
 # The semantic layer on BigQuery
 
 How each piece of the lab's semantic track maps to its work counterpart on GCP, and what the lab proves about getting there ([`semantic/PLAN.md`](../semantic/PLAN.md) R7, S5).
-"Measured" means run in this repo (`make bigquery-check` and the checks it names); "stated" means read from Google's or dbt's documentation (2026-10); "unverified" means neither.
+"Measured" means run in this repo (`make bigquery-check` and the checks it names); "measured (emulator)" means run on the BigQuery emulator by `make bigquery-emulator-check`; "stated" means read from Google's or dbt's documentation (2026-10); "unverified" means neither.
 
 ## What carries over unchanged
 
@@ -9,6 +9,11 @@ The dbt project, its semantic YAML and the catalog generator run on BigQuery's a
 - `dbt parse` and `mf validate-configs --skip-dw` pass on the compile-only `bigquery` target of `dbt/profiles.yml`.
 - `dbt compile` of the semantic path (sales, returns, finance, semantic) passes, and all 16 compiled models parse as BigQuery SQL.
 - `build_catalog.py` writes the agent catalog with `project.dataset.table` relations, and verified queries that read `` `pplk8s-lab`.`silver`.`orders` `` in BigQuery's dialect; `check_catalog.py` passes.
+
+It also runs (measured (emulator), `make bigquery-emulator-check`, [`semantic/PLAN.md`](../semantic/PLAN.md) SL-7):
+- `dbt build` of the semantic path, tests included, on the `bigquery_emulator` output: every model and test passes on GoogleSQL, as the emulator's ZetaSQL analyzer checks it.
+- MetricFlow queries the eight metrics there, and they equal the hand-written gold and exposed tables the same build wrote, day by day.
+- The emulator needs a shim for two gaps dbt-bigquery hits (`routines.list`, and DDL jobs reported as `SELECT`); real BigQuery has neither.
 
 The target is compile-only: `method: oauth-secrets` with a placeholder token lets dbt build its client offline, and `--no-introspect --no-populate-cache` keeps compile from querying.
 At work the same output takes `method: oauth` (application default credentials) and a real project.
@@ -71,8 +76,7 @@ Their bronze models also read the landed table's columns at compile time (`adapt
 
 ## Unverified
 
-- That the compiled SQL runs on BigQuery: it parses with sqlglot's BigQuery dialect, but no query ran on BigQuery.
-  One spot to watch: MetricFlow renders `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; if BigQuery rejects it, `order_date` becomes a `TIMESTAMP` or the time dimension gets its own granularity.
+- That the compiled SQL runs on BigQuery itself: it runs on the emulator, whose analyzer is ZetaSQL's, including MetricFlow's `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; real BigQuery stays the final word.
 - The exact `ask_data_agent` arguments: the ADK page does not list them; the lab toolset's contract is a question in, and text, rows and SQL out, as the docs describe.
 - Whether a native data agent can use the freshness tables, and how: as a knowledge source, a verified query, or a tool beside `DataAgentToolset`.
 - Cloud Run Job overrides: read from the Jobs API reference, not tried.

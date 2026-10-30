@@ -106,6 +106,112 @@ semantic_models:
         agg: sum
         expr: amount
 
+  # Marketing (semantic/PLAN.md SL-8): campaigns, their daily spend, the leads they bring and the
+  # bookings those leads make, all reachable by the campaign entity.
+  - name: campaigns
+    description: One row per ad campaign, from silver.campaigns.
+    model: ref('slv_campaigns')
+    entities:
+      - name: campaign
+        type: primary
+        expr: campaign_id
+    dimensions:
+      - name: channel
+        description: Marketing channel (search, social, display, email, partner).
+        type: categorical
+      - name: market
+        description: ISO-2 country the campaign targets.
+        type: categorical
+      - name: campaign_name
+        description: The campaign's name.
+        type: categorical
+        expr: name
+
+  - name: ad_spend
+    description: One row per campaign per day of spend, from silver.ad_spend.
+    model: ref('slv_ad_spend')
+    defaults:
+      agg_time_dimension: spend_date
+    # One row per (spend_date, campaign) has no single-column key; MetricFlow needs a primary entity.
+    primary_entity: ad_spend_day
+    entities:
+      - name: campaign
+        type: foreign
+        expr: campaign_id
+    dimensions:
+      - name: spend_date
+        description: UTC day of the spend.
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: ad_spend_amount
+        description: Ad spend in EUR.
+        agg: sum
+        expr: spend
+      - name: ad_clicks
+        description: Ad clicks.
+        agg: sum
+        expr: clicks
+
+  - name: leads
+    description: One row per CRM lead (latest version), from silver.leads.
+    model: ref('slv_leads')
+    defaults:
+      agg_time_dimension: created_date
+    entities:
+      - name: lead
+        type: primary
+        expr: lead_id
+      - name: campaign
+        type: foreign
+        expr: campaign_id
+    dimensions:
+      - name: created_date
+        description: UTC date the lead was created.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: country
+        description: ISO-2 country of the lead.
+        type: categorical
+    measures:
+      - name: leads_count
+        description: Number of leads.
+        agg: count
+        expr: lead_id
+
+  - name: bookings
+    description: One row per booking (latest version), from silver.bookings, with its lead's campaign; a booking whose lead is not loaded yet has no campaign, so it groups under an empty channel.
+    model: ref('slv_bookings')
+    defaults:
+      agg_time_dimension: booked_date
+    entities:
+      - name: booking
+        type: primary
+        expr: booking_id
+      - name: lead
+        type: foreign
+        expr: lead_id
+      - name: campaign
+        type: foreign
+        expr: campaign_id
+    dimensions:
+      - name: booked_date
+        description: UTC date the booking was made.
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: bookings_count
+        description: Number of bookings.
+        agg: count
+        expr: booking_id
+      - name: booking_amount
+        description: Booking value in EUR.
+        agg: sum
+        expr: amount
+
 metrics:
   - name: orders_total
     description: All orders placed, cancelled included.
@@ -166,3 +272,71 @@ metrics:
     type_params:
       numerator: orders_cancelled
       denominator: orders_total
+  - name: ad_spend_eur
+    description: Ad spend across campaigns, in EUR.
+    label: Ad spend (EUR)
+    type: simple
+    type_params:
+      measure:
+        name: ad_spend_amount
+        fill_nulls_with: 0
+  - name: ad_clicks
+    description: Clicks on ads across campaigns.
+    label: Ad clicks
+    type: simple
+    type_params:
+      measure:
+        name: ad_clicks
+        fill_nulls_with: 0
+  - name: leads
+    description: CRM leads created, on the day they were created.
+    label: Leads
+    type: simple
+    type_params:
+      measure:
+        name: leads_count
+        fill_nulls_with: 0
+  - name: bookings
+    description: Bookings made by leads, on the day they were made.
+    label: Bookings
+    type: simple
+    type_params:
+      measure:
+        name: bookings_count
+        fill_nulls_with: 0
+  - name: booking_value_eur
+    description: Value of the bookings made, in EUR.
+    label: Booking value (EUR)
+    type: simple
+    type_params:
+      measure:
+        name: booking_amount
+        fill_nulls_with: 0
+  - name: cost_per_lead_eur
+    description: Ad spend divided by leads over the whole period asked (total spend over total leads, never an average of daily ratios); the one definition of cost per lead.
+    label: Cost per lead (EUR)
+    type: ratio
+    type_params:
+      numerator: ad_spend_eur
+      denominator: leads
+  - name: cost_per_booking_eur
+    description: Ad spend divided by bookings over the whole period asked (total spend over total bookings, never an average of daily ratios); the one definition of cost per conversion.
+    label: Cost per booking (EUR)
+    type: ratio
+    type_params:
+      numerator: ad_spend_eur
+      denominator: bookings
+  - name: lead_to_booking_rate
+    description: Share of leads that booked within 30 days of being created, counted on the lead's creation day.
+    label: Lead-to-booking rate
+    type: conversion
+    type_params:
+      conversion_type_params:
+        entity: lead
+        calculation: conversion_rate
+        base_measure:
+          name: leads_count
+        conversion_measure:
+          name: bookings_count
+          fill_nulls_with: 0
+        window: 30 days

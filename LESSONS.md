@@ -252,6 +252,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Create every landing table at service startup (best effort) and again before each load, so dbt sources resolve on a fresh warehouse before the first extract.
 - Load the warehouse from the staged object, not from in-memory rows, to mirror a GCS-to-BigQuery load.
 - Keep file-sourced tables keyed by object and generation, not by run interval.
+- Expect late-arriving parents when parent and child are extracted per interval (a booking names a lead from three weeks before): a fresh warehouse holds children whose parent was never loaded, so a strict relationship test fails every run, a backfill included; decide per pipeline between a parent lookback and a warning with an `unknown` bucket (#136: the lab warns).
 - Dedupe silver with a deterministic order (latest `_loaded_at`, then a tie-breaker) so re-landed rows resolve the same way every time.
 - Keep dbt SQL portable to BigQuery, and mark each dialect-specific line with a comment naming the BigQuery form.
 - Run `dbt parse` in the image build as a smoke check, and drive connection settings from env vars so one image serves every environment.

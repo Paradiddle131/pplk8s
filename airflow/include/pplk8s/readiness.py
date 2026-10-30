@@ -27,6 +27,10 @@ DEFAULT_CONN_ID = "warehouse"
 WATERMARK_COLUMNS = {
     "synthetic_orders": "order_ts",
     "open_meteo_hourly_weather": "observed_at",
+    # Marketing (D38): the newest lead or booking; a lead's lookback rows are older, so they never
+    # move the watermark past the interval.
+    "synthetic_leads": "created_ts",
+    "synthetic_bookings": "booked_ts",
 }
 
 UPSERT_SQL = """

@@ -4,6 +4,12 @@ pipelines:
   sales:
     - {source: synthetic, entity: customers}
     - {source: synthetic, entity: orders}
+  # Synthetic marketing (PLAN.md D38): campaigns, daily ad spend, CRM leads and their bookings.
+  marketing:
+    - {source: synthetic, entity: campaigns}
+    - {source: synthetic, entity: ad_spend}
+    - {source: synthetic, entity: leads}
+    - {source: synthetic, entity: bookings}
   weather:
     - {source: open_meteo, entity: hourly_weather}
   # NYC TLC trip files, one data month per run (D35); FHVHV is kept for the big-file drill only.

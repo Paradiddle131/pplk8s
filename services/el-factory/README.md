@@ -90,6 +90,7 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 
 - `synthetic.customers` is a fixed snapshot of 200 customers, identical for every interval.
 - `synthetic.orders` is generated per UTC day from a seed of that day, so an order's content never depends on the interval that requested it.
+- `synthetic.campaigns` is a fixed snapshot of 8 ad campaigns; `synthetic.ad_spend` has one row per campaign per UTC day whose midnight is in the interval; `synthetic.leads` are generated per UTC day from a seed of that day; `synthetic.bookings` are the leads that book (about 30 %), within 21 days of the lead, each decided by the lead's own seed (PLAN.md D38).
 - `open_meteo.hourly_weather` fetches hourly temperature and precipitation for Amsterdam, Istanbul, and London, one page per location.
 
 - `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: [`docs/research/tlc-source-facts.md`](../../docs/research/tlc-source-facts.md) (issue #36).
@@ -113,6 +114,10 @@ They are created by their first chunk, not at startup.
 |---|---|
 | `ds_source.synthetic_customers` | `customer_id integer`, `name text`, `email text`, `country text`, `signup_date date` |
 | `ds_source.synthetic_orders` | `order_id text`, `customer_id integer`, `order_ts timestamptz`, `status text`, `amount numeric(12,2)`, `currency text` |
+| `ds_source.synthetic_campaigns` | `campaign_id integer`, `name text`, `channel text`, `market text`, `start_date date` |
+| `ds_source.synthetic_ad_spend` | `spend_date date`, `campaign_id integer`, `impressions integer`, `clicks integer`, `spend numeric(12,2)`, `currency text` |
+| `ds_source.synthetic_leads` | `lead_id text`, `campaign_id integer`, `created_ts timestamptz`, `country text` |
+| `ds_source.synthetic_bookings` | `booking_id text`, `lead_id text`, `booked_ts timestamptz`, `amount numeric(12,2)`, `currency text` |
 | `ds_source.partner_returns` (file entity `partner_returns`) | `return_id text`, `order_id text`, `returned_at timestamptz`, `amount numeric(12,2)`, `reason text` |
 | `ds_source.open_meteo_hourly_weather` | `location text`, `latitude numeric(8,4)`, `longitude numeric(8,4)`, `observed_at timestamptz`, `temperature_c numeric(5,2)`, `precipitation_mm numeric(6,2)` |
 

@@ -22,6 +22,28 @@ sources:
             tests: [not_null]
           - name: status
             description: placed, shipped or cancelled.
+      - name: synthetic_campaigns
+        description: Full ad-campaign snapshot per run (synthetic marketing, PLAN.md D38).
+        columns:
+          - name: campaign_id
+            tests: [not_null]
+      - name: synthetic_ad_spend
+        description: One row per campaign per day of the run's interval (synthetic).
+        columns:
+          - name: campaign_id
+            tests: [not_null]
+          - name: spend_date
+            tests: [not_null]
+      - name: synthetic_leads
+        description: CRM leads created in the run's interval (synthetic).
+        columns:
+          - name: lead_id
+            tests: [not_null]
+      - name: synthetic_bookings
+        description: Bookings made in the run's interval, each from one lead (synthetic).
+        columns:
+          - name: booking_id
+            tests: [not_null]
       - name: partner_returns
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).

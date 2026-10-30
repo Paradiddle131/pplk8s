@@ -19,7 +19,7 @@ make bigquery-check
   - it grants the agents' read-only roles;
   - it records the fixture's days in `ops.readiness`.
   It ends with `written to …/docs/research/semantic-agent-eval.md`; exit 3 means the model's daily quota ran out, and the last report stays.
-- `semantic-check` ends `ok: the eight metrics equal gold.daily_sales and exposed.net_sales_daily on 2 days`.
+- `semantic-check` ends `PASS: semantic check`, after `ok: the eight sales metrics equal gold.daily_sales and exposed.net_sales_daily on 2 days` and the marketing parity line.
 - `bigquery-check` ends `ok: build_catalog and check_catalog pass on the bigquery target`.
 
 ## The script
@@ -59,7 +59,7 @@ make warehouse-sql DBT_DBNAME=dbt_dev SQL='\d+ gold.daily_sales'
 make warehouse-sql DBT_DBNAME=dbt_dev SQL='select metric_name, label, description from semantic.metrics'
 ```
 
-Expect a description on every column (`revenue_eur | Sum of amount for non-cancelled orders.`) and eight metrics.
+Expect a description on every column (`revenue_eur | Sum of amount for non-cancelled orders.`) and sixteen metrics, eight of them marketing.
 Then open `dbt/target/catalog/data_agent/system_instruction.yaml`: the BigQuery data agent's authored context (tables, aggregations, relationships, glossary), generated from the same YAML.
 
 **5. On BigQuery (1 min).**
