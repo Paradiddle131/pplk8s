@@ -1,5 +1,6 @@
-"""A spent quota, per minute or per day, ends the turn with an answer that says so, and the eval
-waits out a per-minute limit once and stops sending at a per-day one (semantic/PLAN.md SL-5)."""
+"""A spent quota, per minute or per day, or a refused key ends the turn with an answer that says so,
+and the eval waits out a per-minute limit once, stops sending at a per-day one or a refused key, and
+keeps the last report when a run is no score (semantic/PLAN.md SL-5)."""
 
 import asyncio
 import json
@@ -13,11 +14,17 @@ from google.genai import errors
 
 from semantic_agent import agent as semantic
 from semantic_agent import evaluation, tools
-from semantic_agent.evaluation import ANSWER_CORRECT, METRIC_CHOICE, eval_cases
+from semantic_agent.evaluation import ANSWER_CORRECT, METRIC_CHOICE, CaseOutcome, eval_cases
 from semantic_agent.model import build_model, classify, failure_of
 from sql_baseline import agent as baseline
 from tests.conftest import ScriptedLlm, final_text, run_turn
 from tests.test_evaluation import EXPECTED, QUESTIONS, AnswersByQuestion
+
+
+def litellm_response(status: int):
+    import httpx
+
+    return httpx.Response(status, request=httpx.Request("POST", "http://127.0.0.1:9/api/v1"))
 
 
 def openrouter_429(limit: str, reset_s: float) -> dict:
@@ -41,15 +48,16 @@ def openrouter_429(limit: str, reset_s: float) -> dict:
 
 @pytest.fixture
 def openrouter(monkeypatch):
-    """A local stand-in for OpenRouter that answers every request with `served["body"]` and 429."""
-    served = {"body": {}, "requests": 0}
+    """A local stand-in for OpenRouter that answers every request with `served["body"]` and
+    `served["status"]` (429 unless a test sets it)."""
+    served = {"body": {}, "status": 429, "requests": 0}
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             self.rfile.read(int(self.headers.get("content-length", 0)))
             served["requests"] += 1
             body = json.dumps(served["body"]).encode()
-            self.send_response(429)
+            self.send_response(served["status"])
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(body)))
             self.end_headers()
@@ -114,6 +122,22 @@ def test_gemini_quota_errors_are_read_too(quota_id, kind):
     )
     failure = classify(error)
     assert (failure.kind, failure.retry_after_s) == (kind, 40.0)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        litellm.AuthenticationError("Missing Authentication header", "openrouter", "some/model"),
+        litellm.PermissionDeniedError(
+            "forbidden", "openrouter", "some/model", response=litellm_response(403)
+        ),
+        errors.ClientError(401, {"error": {"code": 401, "message": "API key not valid."}}),
+    ],
+)
+def test_a_refused_key_ends_the_run(error):
+    failure = classify(error)
+    assert failure.kind == "auth" and failure.ends_run
+    assert "OPENROUTER_API_KEY" in failure.answer()
 
 
 def test_any_other_model_error_is_answered_too():
@@ -190,3 +214,40 @@ def test_the_eval_stops_sending_once_the_daily_quota_is_spent(waits):
 def test_a_scripted_model_never_carries_a_failure():
     events = run_turn(semantic.build_agent(ScriptedLlm(steps=["fine"])), "q")
     assert failure_of(events) is None
+
+
+@pytest.fixture
+def last_report(monkeypatch, tmp_path):
+    """main() on the test questions with their expected numbers, the report in a temp file."""
+    report = tmp_path / "semantic-agent-eval.md"
+    report.write_text("the last good report\n")
+    monkeypatch.setattr(evaluation, "REPORT", report)
+    monkeypatch.setattr(evaluation, "load_questions", lambda ids: QUESTIONS)
+    monkeypatch.setattr(evaluation, "expected_numbers", lambda questions, url: EXPECTED)
+    return report
+
+
+def test_a_refused_key_stops_the_eval_and_keeps_the_last_report(openrouter, last_report, capsys):
+    """Issue #116: through the real LiteLLM client, every call answered 401."""
+    openrouter["status"] = 401
+    openrouter["body"] = {"error": {"message": "Missing Authentication header", "code": 401}}
+    assert asyncio.run(evaluation.main([])) == 3
+    sent = openrouter["requests"]
+    assert 0 < sent <= 2  # the first question only (MODEL_RETRIES=1): the rest never sent
+    out = capsys.readouterr().out
+    assert "incomplete: 3 answers not run" in out
+    assert "refused the credentials" in out
+    assert last_report.read_text() == "the last good report\n"
+
+
+def test_a_run_without_a_single_answer_keeps_the_last_report(monkeypatch, last_report, capsys):
+    async def every_call_fails(agent, cases, metrics):
+        return {
+            c.eval_id: CaseOutcome("", {}, error="No answer: the model call failed (500).")
+            for c in cases
+        }
+
+    monkeypatch.setattr(evaluation, "evaluate", every_call_fails)
+    assert asyncio.run(evaluation.main([])) == 3
+    assert "no answers: every model call failed" in capsys.readouterr().out
+    assert last_report.read_text() == "the last good report\n"

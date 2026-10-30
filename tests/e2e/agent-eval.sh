@@ -19,6 +19,19 @@ psql_dev() {
 }
 
 mkdir -p "$OUT"
+# A key OpenRouter refuses fails every question (issue #116): check it before the build, on the
+# endpoint that describes the key and spends no model request. The cloud proxy adds the key itself.
+if [ "${MODEL_BACKEND:-openrouter}" = openrouter ]; then
+  base=${OPENROUTER_API_BASE:-https://openrouter.ai/api/v1}
+  auth=()
+  [ -z "${OPENROUTER_API_KEY:-}" ] || auth=(-H "Authorization: Bearer $OPENROUTER_API_KEY")
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "${auth[@]}" "$base/key") || true
+  case $code in
+    200) ;;
+    401 | 403) fail "OpenRouter refused the key (HTTP $code from $base/key): set OPENROUTER_API_KEY" ;;
+    *) fail "OpenRouter's key check answered HTTP ${code:-none} ($base/key; 000: unreachable)" ;;
+  esac
+fi
 psql_dev -c "select 1" >/dev/null 2>&1 || docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse createdb -U warehouse "$DB"
 psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 (cd "$REPO/dbt" && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" \

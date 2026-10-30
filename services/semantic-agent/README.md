@@ -58,7 +58,7 @@ make agent-serve AGENT_DBNAME=dbt_dev
 
 | Command | What it proves | Model |
 |---|---|---|
-| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the eval driver, a spent quota through the real LiteLLM client against a local 429 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout) and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
+| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout) and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
 | `make agent-eval` | the scored eval below | live, ~2 x 15 turns |
 
 `make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
@@ -71,3 +71,5 @@ The scores go to stdout and [`docs/research/semantic-agent-eval.md`](../../docs/
 A failed model call is reported per question with its answer, never dropped.
 A rate-limited question waits out the limit once (at most 90 s) and runs again.
 Once the daily quota is spent, the questions left are skipped with that reason and never sent, the baseline included; the run prints what it got, leaves the report as it was and exits 3.
+A refused key (401 or 403) does the same, and so does a run where no question got an answer; `agent-eval.sh` asks OpenRouter's `/key` endpoint about the key before the build, which spends no model request.
+Every agent sends its `MODEL_RETRIES` with each request (`request_config()`), since ADK's eval engine otherwise gives the request its own 7 attempts.

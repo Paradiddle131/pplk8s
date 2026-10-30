@@ -11,8 +11,9 @@ when the run starts. Three custom ADK metrics score a run:
   `query_metrics` calls returned.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
-Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`; a run the
-model's daily quota cut short prints what it got, leaves the report as it was and exits 3.
+Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`. A run that
+is no score prints what it got, leaves the report as it was and exits 3: the model's daily quota or
+a refused key cut it short, or no question got an answer at all.
 """
 
 from __future__ import annotations
@@ -250,7 +251,9 @@ class CaseOutcome:
     answer: str
     scores: dict[str, float | None]
     error: str | None = None
-    skipped: bool = False  # never sent: the model's daily quota was spent before it
+    skipped: bool = (
+        False  # never sent: a failure that ends the run (ModelFailure.ends_run) came first
+    )
 
 
 # A rate-limited question waits out the limit once, at most this long, then runs again.
@@ -265,7 +268,8 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
     """Runs the cases through ADK's LocalEvalService, one at a time (the free tier's rate limit).
 
     A case the model rate-limits waits out the limit (at most MAX_WAIT_S) and runs once more; once
-    the daily quota is spent, the cases left are skipped with that reason, never sent.
+    the daily quota is spent or the key refused, the cases left are skipped with that reason, never
+    sent.
     """
     app_name = agent.name
     manager = InMemoryEvalSetsManager()
@@ -311,7 +315,7 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
             outcomes[case.eval_id] = CaseOutcome("", {}, error=result.error_message or "failed")
         elif failure:
             outcomes[case.eval_id] = CaseOutcome("", {}, error=failure.answer())
-            spent = failure if failure.kind == "daily_quota" else None
+            spent = failure if failure.ends_run else None
         else:
             succeeded.append(result)
     answers = {r.eval_case_id: _text(r.inferences[-1].final_response) for r in succeeded}
@@ -416,10 +420,15 @@ async def main(ids: list[str]) -> int:
         questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     )
     print(text)
-    not_run = sum(o.skipped for o in [*semantic.values(), *baseline.values()])
+    outcomes = [*semantic.values(), *baseline.values()]
+    not_run = sum(o.skipped for o in outcomes)
     if not_run:
-        reason = next(o.error for o in [*semantic.values(), *baseline.values()] if o.skipped)
+        reason = next(o.error for o in outcomes if o.skipped)
         print(f"incomplete: {not_run} answers not run. {reason} {REPORT.name} left as it was.")
+        return 3
+    if outcomes and all(o.error for o in outcomes):
+        reasons = " ".join(sorted({o.error or "" for o in outcomes}))
+        print(f"no answers: every model call failed. {reasons} {REPORT.name} left as it was.")
         return 3
     if not ids:
         REPORT.write_text(text)
