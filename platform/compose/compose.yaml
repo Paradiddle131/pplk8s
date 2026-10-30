@@ -145,6 +145,31 @@ services:
     volumes:
       - gcs-data:/storage
 
+  # BigQuery engine stand-in for the semantic path's dialect (semantic/PLAN.md SL-7), beside the
+  # Postgres warehouse rather than in its place; profile `bigquery`, so `make services-up` skips it
+  # and `make bigquery-emulator-check` starts it. In memory: a restart empties it.
+  bigquery:
+    profiles: [bigquery]
+    image: ghcr.io/goccy/bigquery-emulator:0.8.1
+    command: [--project=pplk8s-lab, --port=9050, --grpc-port=9060]
+
+  bigquery-api: # host http://localhost:9050: the emulator behind the shim for dbt-bigquery's two gaps
+    profiles: [bigquery]
+    image: python:3.13-slim
+    command: [python, -I, /shim/shim.py]
+    environment:
+      UPSTREAM: http://bigquery:9050
+    depends_on: [bigquery]
+    ports:
+      - "127.0.0.1:9050:9050"
+    volumes:
+      - ./bigquery-shim:/shim:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:9050/bigquery/v2/projects/pplk8s-lab/datasets', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 volumes:
   warehouse-data:
   gcs-data:

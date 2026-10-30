@@ -2,13 +2,15 @@
 
 The second track of this repository, separate from the Airflow lab ([`../PLAN.md`](../PLAN.md), sealed for this topic).
 It shares the warehouse, the dbt project and the Compose stand-ins; nothing in it changes a DAG.
-Progress lives in the issues under [Map #99](../../../issues/99); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
+Progress lives in the issues under the maps: [Map #99](../../../issues/99) (R1-R7, done) and [Map #135](../../../issues/135) (the use case, U1-U6, labels `semantic` and `use-case`); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
 Decisions are a register: one row per live decision, amended in place, a superseded row deleted in the PR that supersedes it; git is the history.
 
 ## 1. Goal
 
 Prove that an open-source dbt project can carry a semantic layer that an LLM agent queries instead of writing SQL, on the lab warehouse, and that the same YAML feeds the warehouse catalog and the authored context a native BigQuery data agent takes at work.
 The audience is a team whose data already lands in BigQuery, whose agents guess which table to trust, and who will not run dbt Cloud.
+
+The use case widens it: show, end to end and on a BigQuery engine, a warehouse such a team's agents read correctly, from raw to business-ready, with the documentation, monitoring, access and migration around it (U1-U6).
 
 ## 2. Requirements
 
@@ -20,7 +22,16 @@ The audience is a team whose data already lands in BigQuery, whose agents guess 
 - R6 Agents read gold, exposed and metrics only, marked in dbt.
 - R7 Dialect-neutral SQL, a compile-only `dbt-bigquery` target, and a written mapping to BigQuery descriptions, Knowledge Catalog and the native data agent's context.
 
-Out of scope: real GCP spend, IAM, Gemini Enterprise, dbt Cloud, dbt Fusion, a custom chat UI, writes or approvals.
+The use case (Map #135):
+
+- U1 Layers and metric home: raw → clean → business-ready models over several domains; each calculated field defined once as a metric.
+- U2 Agent-readable documentation: descriptions, naming, a glossary, and their mapping to BigQuery descriptions and Knowledge Catalog, as a standard with a check.
+- U3 Monitoring: an alert when a source stops flowing; discrepancy checks between layers.
+- U4 Access and audit: which agent reads which data; every agent query logged.
+- U5 Migration: new layers built beside the old, consumers switched one at a time on a parity report.
+- U6 BigQuery executed, not only compiled.
+
+Out of scope: real GCP spend, paid models, IAM, Gemini Enterprise, dbt Cloud, dbt Fusion, a custom chat UI, writes or approvals.
 
 ## 3. Decisions
 
@@ -32,6 +43,7 @@ Out of scope: real GCP spend, IAM, Gemini Enterprise, dbt Cloud, dbt Fusion, a c
 | SL-4 | **Agents read gold, exposed and metrics only**, marked `access: public` (group `analytics`) in dbt; silver and bronze stay `protected` and out of the catalog. The semantic models sit on silver, so an agent reaches silver only through a metric's definition: MetricFlow for the lab agent, the authored context's aggregations, glossary and verified queries for a native data agent. **Every answer carries the freshness of its metrics:** the catalog names each metric's readiness products, `<pipeline>.<layer>` of the models it reads (`sales.silver`); `query_metrics` returns their newest `ready` interval end from `ops.readiness`, late by the lab's D37 rule against `ops.product_deadlines` (a layer without a deadline of its own takes its pipeline's), and one statement the answer quotes word for word; a late product is said so. `agent_metrics` reads those two `ops` tables and no other. | Trust is marked in dbt, not in a prompt. Freshness is a tool result the model quotes, checked by a test, never prompt logic. The product is the layer the metric reads, because that is the row the DAGs write for it (`returns` has no pipeline-level row); the pipeline's deadline covers its layers, since the pipeline is not ready before they are. |
 | SL-5 | **Proof is a scored eval, not a demo:** about fifteen business questions with expected numbers computed from the warehouse, through the semantic agent and through a baseline agent with one `execute_sql` tool over the same gold and exposed tables (the "ADK schema-driven" pattern), same model, both scores side by side. ADK's own eval engine (`LocalEvalService`) runs it, scored by three custom metrics in `evals/eval_config.json`: `answer_correct` (the answer carries the warehouse's number, or declines where no metric covers the question), `metric_choice` (the semantic agent queried the expected metrics) and `freshness_quoted` (its answer quotes the freshness its queries returned); `make agent-eval` writes `docs/research/semantic-agent-eval.md`. Live runs are opt-in and use OpenRouter's free models only, never a paid one even when the free quota is spent (the model seam refuses an id without `:free`); a spent quota skips with its reason, never silently: a model call that fails after its retries ends the turn with an answer naming the failure (ADK's `on_model_error_callback`), the eval waits out a per-minute limit once (at most 90 s), and a spent daily quota or a refused key (401, 403) skips the questions left, keeps the last report and exits 3, as does a run where no question got an answer; `make agent-eval` checks the key on OpenRouter's `/key` endpoint before it builds. Unit tests never reach a live model. | Shows the semantic layer's value, not the model's; the baseline is what most teams run today. ADK's built-in `tool_trajectory_avg_score` compares every tool argument, which free-form group-bys and filters never match exactly, and its LLM-judged metrics would double the free-tier spend; the two custom metrics check what matters, the number and the metric. |
 | SL-6 | **One project, two dialects: each construct Postgres and BigQuery spell differently is a dbt `adapter.dispatch` macro (`dbt/macros/dialect.sql`), and `profiles.yml` carries a compile-only `bigquery` output.** It builds its client offline from a placeholder `oauth-secrets` token, and `dbt compile --no-introspect --no-populate-cache` never queries. `make bigquery-check` parses, validates and compiles the semantic path on it, parses every compiled model as BigQuery SQL (sqlglot), and runs the catalog generator, whose verified queries come out in BigQuery's dialect. The tlc models stay Postgres-only, marked `-- dialect:`. | R7 asks for dialect-neutral SQL; dispatch is dbt's own mechanism, and the Postgres SQL stays as it was apart from type-name case. `dbt.date_spine` counts its days with a warehouse query, so the spine is a two-line macro instead. A real BigQuery run is out of scope (no GCP spend); sqlglot is the strongest offline check of the dialect, and the doc names what only a real run can show. |
+| SL-7 | **The semantic path also runs on a BigQuery engine: the goccy BigQuery emulator (`ghcr.io/goccy/bigquery-emulator`, Compose profile `bigquery`) behind a small standard-library shim (`platform/compose/bigquery-shim/`), reached by dbt-bigquery's `api_endpoint` on a `bigquery_emulator` output.** `make bigquery-emulator-check` copies the fixture's sources in from Postgres, runs `dbt build` of the semantic path with its tests, and asserts the eight metrics equal gold and exposed there. The Postgres warehouse stays the lab's warehouse; the emulator proves the dialect. The shim answers `routines.list` (unsupported, and dbt-bigquery lists routines in every dataset it caches) and reports DDL jobs as `SCRIPT` (the emulator calls every job `SELECT`, so dbt reads a destination a DDL job lacks). | The emulator runs ZetaSQL's analyzer, so it type-checks GoogleSQL as BigQuery does, which sqlglot (SL-6) cannot; its spike (#125) built 66 of 66 nodes and matched every metric. Rejected: real BigQuery (GCP spend, out of scope), sqlglot alone (parses, never runs). The shim is a stated stopgap: fixing both gaps upstream in the emulator retires it. The emulator cannot show IAM, console descriptions, Knowledge Catalog or data agents. |
 
 ## 4. Steps
 
@@ -46,8 +58,16 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 | S3b | [#111](../../../issues/111) | The agent deployed as the Cloud Run stand-in in `workloads`: `make workloads-up`, checked by `make agent-deploy-check` |
 | S4 | [#103](../../../issues/103) | Freshness in every answer; semantic validation after the finance pipeline's exposed stage |
 | S5 | [#104](../../../issues/104) | The BigQuery path: compile target, work mapping, the ten-minute demo script |
+| U6 | [#125](../../../issues/125) | The semantic path executed on the BigQuery emulator: `make bigquery-emulator-check` |
+| U1 | [#126](../../../issues/126), [#127](../../../issues/127) | A marketing domain with cost per lead and per booking as metrics; a customer semantic model |
+| U2 | [#128](../../../issues/128), [#129](../../../issues/129) | The documentation and naming standard with its check; a glossary for terms that are not metrics |
+| U3 | [#130](../../../issues/130), [#131](../../../issues/131) | Source freshness alerts; discrepancy checks between layers on every build |
+| U4 | [#132](../../../issues/132) | An audit row per agent query; a per-agent access proposal |
+| U5 | [#133](../../../issues/133) | A side-by-side migration rehearsal with a parity report per consumer |
+| all | [#134](../../../issues/134) | The demo of the whole use case on the emulator |
 
 **Exit:** `make dbt-validate` and the parity check pass; `make dbt-catalog` writes the three artefacts and every gold column has a comment in the warehouse; `make agent-eval` reports the semantic agent answering every question whose metric exists, with the baseline's score beside it; a BigQuery target parses the project unchanged; the demo script runs end to end.
+The use case's exit: every issue under Map #135 closed, and the extended demo runs end to end on the emulator.
 
 ## 5. How this track works
 
@@ -65,3 +85,4 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 - Put freshness in the toolset's result, not the prompt: the tool reads the readiness ledger and its deadlines for the products a metric reads and returns one sentence the model quotes; a free model quoted it word for word in every answer (S4: 13 of 13, ten of them "Late: ...").
 - Give an ADK agent its retry options in its own request config: ADK's eval engine adds 7 attempts to a request without them, and its LiteLLM wrapper turns those into `num_retries`, so a refused key was sent 8 times per question whatever the model was built with (#116).
 - A dbt project can prove its BigQuery path with no GCP account: a `bigquery` output with a placeholder `oauth-secrets` token compiles offline with `--no-introspect`, and MetricFlow then writes the data agent's verified queries in BigQuery's dialect (S5: 16 models and 8 verified queries, parsed as BigQuery SQL).
+- A dbt project's BigQuery path can run, not only compile, with no GCP account: dbt-bigquery's `api_endpoint` reaches the goccy BigQuery emulator, which builds and tests the models and serves MetricFlow, once a shim answers `routines.list` and reports DDL jobs as scripts (#125: 66 of 66 nodes, eight metrics equal to gold and exposed).

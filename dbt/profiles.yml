@@ -24,3 +24,16 @@ pplk8s:
       dataset: "{{ env_var('DBT_SCHEMA', 'public') }}"
       location: "{{ env_var('BQ_LOCATION', 'EU') }}"
       threads: 4
+    # The same adapter against the BigQuery emulator (semantic/PLAN.md SL-7): runs, not only
+    # compiles. The emulator takes any token; one thread, as it serialises jobs anyway, and no job
+    # retries, so an unsupported statement fails at once instead of after the adapter's backoff.
+    bigquery_emulator:
+      type: bigquery
+      method: oauth-secrets
+      token: emulator
+      project: pplk8s-lab
+      dataset: "{{ env_var('DBT_SCHEMA', 'public') }}"
+      location: US
+      api_endpoint: "{{ env_var('BQ_API_ENDPOINT', 'http://localhost:9050') }}"
+      threads: 1
+      job_retries: 0
