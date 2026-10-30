@@ -101,3 +101,82 @@ models:
           - accepted_values:
               arguments:
                 values: ['negative_amount', 'pickup_outside_month', 'dropoff_before_pickup', 'over_24_hours']
+
+  - name: slv_campaigns
+    description: One row per ad campaign, latest load wins. Alias silver.campaigns.
+    columns:
+      - name: campaign_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: channel
+        description: Marketing channel of the campaign.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['search', 'social', 'display', 'email', 'partner']
+      - name: market
+        description: ISO-2 country the campaign targets.
+
+  - name: slv_ad_spend
+    description: One row per (spend_date, campaign), latest load wins. Alias silver.ad_spend.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['spend_date', 'campaign_id']
+    columns:
+      - name: spend_date
+        description: UTC day of the spend.
+        tests: [not_null]
+      - name: campaign_id
+        description: Must exist in slv_campaigns.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_campaigns')
+                field: campaign_id
+      - name: spend
+        description: Spend that day in EUR.
+        tests: [not_null]
+
+  - name: slv_leads
+    description: One row per CRM lead, latest load wins. created_date is created_ts in UTC. Alias silver.leads.
+    columns:
+      - name: lead_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: campaign_id
+        description: The campaign the lead came from; must exist in slv_campaigns.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_campaigns')
+                field: campaign_id
+      - name: created_date
+        tests: [not_null]
+
+  - name: slv_bookings
+    description: One row per booking, latest load wins, with its lead's campaign. booked_date is booked_ts in UTC. Alias silver.bookings.
+    columns:
+      - name: booking_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: lead_id
+        description: The lead that booked; each lead books at most once.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('slv_leads')
+                field: lead_id
+      - name: campaign_id
+        description: The lead's campaign.
+        tests: [not_null]
+      - name: booked_date
+        tests: [not_null]
+      - name: amount
+        description: Booking value in EUR.
+        tests: [not_null]

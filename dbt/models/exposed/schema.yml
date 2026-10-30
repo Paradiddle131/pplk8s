@@ -79,3 +79,27 @@ models:
         description: Sum of the passenger counts.
       - name: total_amount_usd
         description: Sum of the total amounts charged, in USD.
+
+  - name: exp_channel_performance_daily
+    description: Daily cost per lead and per booking per channel. Per-day ratios; over a period use the metrics cost_per_lead_eur and cost_per_booking_eur. Alias exposed.channel_performance_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['activity_date', 'channel']
+    columns:
+      - name: activity_date
+        description: UTC day.
+        tests: [not_null]
+      - name: channel
+        description: Marketing channel.
+        tests: [not_null]
+      - name: ad_spend_eur
+        description: Ad spend that day, EUR.
+      - name: leads
+        description: Leads created that day.
+      - name: bookings
+        description: Bookings made that day.
+      - name: cost_per_lead_eur
+        description: ad_spend_eur / leads for that day; NULL without leads.
+      - name: cost_per_booking_eur
+        description: ad_spend_eur / bookings for that day; NULL without bookings.

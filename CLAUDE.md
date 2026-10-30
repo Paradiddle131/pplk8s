@@ -20,8 +20,8 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 
 ## Two tracks
 
-- **The Airflow lab** (everything below, [`PLAN.md`](PLAN.md), [`LESSONS.md`](LESSONS.md), the `lesson` label): sealed for any other topic; new work there is Phase 8 and maintenance.
-- **The semantic layer and metrics agent** ([`semantic/PLAN.md`](semantic/PLAN.md)): a dbt semantic layer over the same warehouse and an ADK agent that answers through metrics; it shares `dbt/` and the Compose stand-ins, never touches a DAG, and keeps its decisions, progress rules and lessons in its plan.
+- **The Airflow lab** (everything below, [`PLAN.md`](PLAN.md), [`LESSONS.md`](LESSONS.md), the `lesson` label): sealed for any other topic; new work there is Phase 8, maintenance, and a pipeline the use case adds for a new domain (D38), built on the existing ELT pattern.
+- **The semantic layer and metrics agent** ([`semantic/PLAN.md`](semantic/PLAN.md)): a dbt semantic layer over the same warehouse and an ADK agent that answers through metrics; it shares `dbt/` and the Compose stand-ins, touches a DAG only to give a new domain its lineage (D38), and keeps its decisions, progress rules and lessons in its plan.
   Label its issues `semantic`, never `lesson`.
 
 ## Working files

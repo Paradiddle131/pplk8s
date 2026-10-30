@@ -2,10 +2,12 @@
 # BigQuery emulator check (issue #125, semantic/PLAN.md SL-7): the semantic path runs on a BigQuery
 # engine, not only compiles for one. On an empty emulator (Compose profile `bigquery`) it
 #   - copies the dev fixture's sources from Postgres dbt_dev into the emulator,
-#   - runs `dbt build` of the sales, returns, finance and semantic models, tests included, on the
-#     `bigquery_emulator` target, with the project unchanged,
-#   - queries the eight metrics by day through MetricFlow on the emulator, and asserts they equal
-#     the hand-written gold.daily_sales and exposed.net_sales_daily the same build wrote there.
+#   - runs `dbt build` of the sales, returns, finance, marketing and semantic models, tests
+#     included, on the `bigquery_emulator` target, with the project unchanged,
+#   - queries the metrics through MetricFlow on the emulator, and asserts they equal the
+#     hand-written aggregates the same build wrote there: the eight sales metrics by day against
+#     gold.daily_sales and exposed.net_sales_daily, the marketing metrics by day and channel against
+#     gold.marketing_daily, and the fixture's cost per lead and per booking (39.00, 130.00).
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050 (`docker compose
 # --profile bigquery down` in platform/compose stops it).
@@ -40,7 +42,7 @@ run_ --with 'psycopg[binary]==3.3.6' python -I scripts/fixture_to_bigquery.py \
   fail "copying the fixture into the emulator"
 echo "ok: fixture sources copied into the emulator"
 
-run_ dbt build --select tag:sales tag:returns tag:finance tag:semantic --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:semantic --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
@@ -51,6 +53,11 @@ run_ mf query --metrics orders_total,orders_cancelled,revenue_eur,customers_dist
 run_ mf query --metrics revenue_eur,returns_eur,returns_count,net_revenue_eur \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/net.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the net revenue metrics on the emulator"; }
+run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \
+  --group-by metric_time__day,campaign__channel --order metric_time__day --csv "$OUT/marketing.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing metrics on the emulator"; }
+run_ mf query --metrics cost_per_lead_eur,cost_per_booking_eur --csv "$OUT/marketing_period.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing ratios on the emulator"; }
 
 # Parity on the emulator itself: each metric by day against the hand-written aggregate, both ways.
 run_ python -I - "$ENDPOINT" "$OUT" <<'EOF' || fail "metrics differ from gold and exposed on the emulator"
@@ -69,9 +76,10 @@ def num(v):
 def rows(sql):
     return {str(r[0]): tuple(num(v) for v in r[1:]) for r in client.query(sql).result()}
 
-def metrics(name, columns):
+def metrics(name, columns, keys=("metric_time__day",)):
     with open(f"{out}/{name}.csv") as f:
-        return {r["metric_time__day"][:10]: tuple(num(r[c]) for c in columns) for r in csv.DictReader(f)}
+        return {"|".join(r[k][:10] for k in keys): tuple(num(r[c] or 0) for c in columns)
+                for r in csv.DictReader(f)}
 
 sales = ["orders_total", "orders_cancelled", "revenue_eur", "customers_distinct", "cancellation_rate"]
 net = ["revenue_eur", "returns_eur", "returns_count", "net_revenue_eur"]
@@ -79,14 +87,26 @@ gold = rows("select order_date, orders_total, orders_cancelled, revenue_eur, cus
             " orders_cancelled / orders_total from `pplk8s-lab.gold.daily_sales`")
 exposed = rows("select order_date, revenue_eur, returns_eur, returns_count, net_revenue_eur"
                " from `pplk8s-lab.exposed.net_sales_daily`")
+marketing = ["ad_spend_eur", "ad_clicks", "leads", "bookings", "booking_value_eur"]
+gold_marketing = {k.replace(" ", "|"): v for k, v in rows(
+    "select concat(cast(activity_date as string), ' ', channel), ad_spend_eur, ad_clicks, leads, bookings,"
+    " booking_value_eur from `pplk8s-lab.gold.marketing_daily`").items()}
 bad = []
+with open(f"{out}/marketing_period.csv") as f:
+    period = next(csv.DictReader(f))
+got = (round(decimal.Decimal(period["cost_per_lead_eur"]), 2), round(decimal.Decimal(period["cost_per_booking_eur"]), 2))
+if got != (decimal.Decimal("39.00"), decimal.Decimal("130.00")):
+    bad.append(f"cost per lead and per booking over the fixture: {got} != (39.00, 130.00)")
 for label, oracle, got in (("gold.daily_sales", gold, metrics("sales", sales)),
-                           ("exposed.net_sales_daily", exposed, metrics("net", net))):
+                           ("exposed.net_sales_daily", exposed, metrics("net", net)),
+                           ("gold.marketing_daily", gold_marketing,
+                            metrics("marketing", marketing, ("metric_time__day", "campaign__channel")))):
     if len(oracle) < 2:
         bad.append(f"{label} has {len(oracle)} days; the fixture gives at least 2")
     bad += [f"{label} {day}: metrics {got.get(day)} != {oracle.get(day)}"
             for day in sorted(set(oracle) | set(got)) if got.get(day) != oracle.get(day)]
-print("\n".join(bad) or f"ok: the eight metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, on the emulator")
+print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days,"
+      f" the marketing metrics gold.marketing_daily on {len(gold_marketing)} day-channels, on the emulator")
 sys.exit(1 if bad else 0)
 EOF
 

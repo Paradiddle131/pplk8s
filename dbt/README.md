@@ -46,6 +46,7 @@ Every model also carries the tag of the pipeline that owns it (PLAN.md D20), set
 | `sales` | `sales_elt` | every customers, orders, and weather model, and the gold reconciliation test |
 | `returns` | `returns_file_arrival` | `brz_partner_returns`, `slv_returns` |
 | `finance` | `finance_daily` | `exp_net_sales_daily` (reads `sales` gold and `returns` silver) |
+| `marketing` | `marketing_elt` | every campaigns, ad spend, leads and bookings model: `gld_marketing_daily`, `exp_channel_performance_daily` (PLAN.md D38) |
 | `tlc` | `tlc_monthly` | every `tlc` model, the `tlc_taxi_zones` seed, and the tlc reconciliation tests |
 
 Airflow's `run_dbt` builds the intersection of the two tags, so one pipeline's stage never rebuilds another pipeline's models:

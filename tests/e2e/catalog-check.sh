@@ -35,17 +35,17 @@ echo "ok: fixtures loaded into $DB"
 
 # Rebuilt from scratch, so a comment can only come from this build's persist_docs.
 psql_dev -c "set client_min_messages = warning" -c "drop schema if exists gold cascade" -c "drop schema if exists exposed cascade"
-dbt_ build --select tag:sales tag:returns tag:finance tag:tlc --vars '{data_month: 2024-12}' >"$OUT/build.log" 2>&1 ||
+dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:tlc --vars '{data_month: 2024-12}' >"$OUT/build.log" 2>&1 ||
   { tail -30 "$OUT/build.log" >&2; fail "dbt build of the sales, returns, finance and tlc models"; }
 # The drop took the agents' schema grants with it; give them back, as make agent-eval does.
 for sql in 01-schemas.sql 02-agent-roles.sql; do
   psql_dev -c "set client_min_messages = warning" -f "/docker-entrypoint-initdb.d/$sql"
 done
-echo "ok: sales, returns, finance and tlc (2024-12) built; agent roles granted again"
+echo "ok: sales, returns, finance, marketing and tlc (2024-12) built; agent roles granted again"
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
   { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog against $DB"; }
-grep -q "8 public models and 8 metrics" "$OUT/catalog.log" || { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 8 public models and 8 metrics"; }
+grep -q "10 public models and 16 metrics" "$OUT/catalog.log" || { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 10 public models and 16 metrics"; }
 grep -q "check_catalog: every public model and metric is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
 echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 
@@ -64,7 +64,7 @@ expect "columns without a comment" "$(psql_dev -c "
 echo "ok: $(echo "$built" | wc -l) gold and exposed relations, each and every column commented"
 
 metrics=$(py_ -c "import json; print('\n'.join(sorted(m['name'] for m in json.load(open('target/semantic_manifest.json'))['metrics'])))")
-expect "semantic.metrics vs the semantic manifest" "$(psql_dev -c "select metric_name from semantic.metrics order by 1")" "$metrics"
+expect "semantic.metrics vs the semantic manifest" "$(psql_dev -c "select metric_name from semantic.metrics order by metric_name collate \"C\"")" "$metrics"
 expect "semantic.metrics rows without words" "$(psql_dev -c "select count(*) from semantic.metrics where label = '' or description = '' or pipelines = ''")" 0
 echo "ok: semantic.metrics holds the $(echo "$metrics" | wc -l) metrics"
 

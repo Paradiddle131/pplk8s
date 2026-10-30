@@ -2,7 +2,7 @@
 -- Usage (creates the schemas and loads the synthetic ds_source rows into dbt_dev):
 --   docker exec -i pplk8s-warehouse-1 psql -U warehouse -d dbt_dev -v ON_ERROR_STOP=1 < dbt/dev/fixture.sql
 -- The values are synthetic; they are not Open-Meteo or customer data.
--- Re-running this file resets the four ds_source tables (CASCADE drops the bronze views over them); dbt rebuilds the layers.
+-- Re-running this file resets its ds_source tables (CASCADE drops the bronze views over them); dbt rebuilds the layers.
 
 CREATE SCHEMA IF NOT EXISTS ds_source;
 CREATE SCHEMA IF NOT EXISTS bronze;
@@ -15,6 +15,10 @@ DROP TABLE IF EXISTS ds_source.synthetic_customers CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_orders CASCADE;
 DROP TABLE IF EXISTS ds_source.open_meteo_hourly_weather CASCADE;
 DROP TABLE IF EXISTS ds_source.partner_returns CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_campaigns CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_ad_spend CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_leads CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_bookings CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -163,3 +167,94 @@ INSERT INTO ds_source.partner_returns VALUES
     ('R-1', 'O-1', '2026-10-01 10:00+00', 12.50, 'damaged', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
     ('R-2', 'O-2', '2026-10-01 15:30+00', 5.00, 'wrong size', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
     ('R-3', 'O-3', '2026-10-02 09:15+00', 7.25, 'late delivery', 'gcs-run-b', 'gs://landing/returns/2026-10-02.jsonl', 1, '2026-10-03 06:00+00');
+
+-- Marketing (PLAN.md D38, semantic/PLAN.md SL-8): three campaigns, two days of spend, ten leads and
+-- three bookings. run-mkt-d1-rerun re-lands campaign 1's spend on 2026-10-01 corrected to 130.00
+-- (loaded later), so silver must keep 130.00: spend is 220.00 on day 1 and 170.00 on day 2.
+-- Leads 6 + 4; bookings 1 on day 1 (L-0001) and 2 on day 2 (L-0004, L-0007), all within 30 days.
+CREATE TABLE ds_source.synthetic_campaigns (
+    campaign_id integer,
+    name text,
+    channel text,
+    market text,
+    start_date date,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+CREATE TABLE ds_source.synthetic_ad_spend (
+    spend_date date,
+    campaign_id integer,
+    impressions integer,
+    clicks integer,
+    spend numeric(12,2),
+    currency text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+CREATE TABLE ds_source.synthetic_leads (
+    lead_id text,
+    campaign_id integer,
+    created_ts timestamptz,
+    country text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+CREATE TABLE ds_source.synthetic_bookings (
+    booking_id text,
+    lead_id text,
+    booked_ts timestamptz,
+    amount numeric(12,2),
+    currency text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_campaigns VALUES
+    (1, 'Search NL always-on', 'search', 'NL', '2026-01-01', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaigns', '2026-10-02 00:40+00'),
+    (4, 'Social TR spring', 'social', 'TR', '2026-01-01', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaigns', '2026-10-02 00:40+00'),
+    (7, 'Newsletter monthly', 'email', 'NL', '2026-01-01', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaigns', '2026-10-02 00:40+00');
+
+INSERT INTO ds_source.synthetic_ad_spend VALUES
+    ('2026-10-01', 1, 9000, 300, 120.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://ad_spend', '2026-10-02 00:40+00'),
+    ('2026-10-01', 4, 12000, 150, 80.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://ad_spend', '2026-10-02 00:40+00'),
+    ('2026-10-01', 7, 3000, 40, 10.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://ad_spend', '2026-10-02 00:40+00'),
+    ('2026-10-01', 1, 9000, 310, 130.00, 'EUR', 'run-mkt-d1-rerun', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 06:10+00'),
+    ('2026-10-02', 1, 8000, 250, 100.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00'),
+    ('2026-10-02', 4, 10000, 120, 60.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00'),
+    ('2026-10-02', 7, 2500, 35, 10.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00');
+
+INSERT INTO ds_source.synthetic_leads VALUES
+    ('L-0001', 1, '2026-10-01 08:10+00', 'NL', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0002', 1, '2026-10-01 09:30+00', 'NL', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0003', 1, '2026-10-01 11:45+00', 'NL', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0004', 4, '2026-10-01 13:00+00', 'TR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0005', 4, '2026-10-01 16:20+00', 'TR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0006', 7, '2026-10-01 19:05+00', 'NL', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),
+    ('L-0007', 1, '2026-10-02 07:50+00', 'NL', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://leads', '2026-10-03 00:40+00'),
+    ('L-0008', 1, '2026-10-02 10:15+00', 'NL', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://leads', '2026-10-03 00:40+00'),
+    ('L-0009', 4, '2026-10-02 14:40+00', 'TR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://leads', '2026-10-03 00:40+00'),
+    ('L-0010', 7, '2026-10-02 20:30+00', 'NL', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://leads', '2026-10-03 00:40+00');
+
+INSERT INTO ds_source.synthetic_bookings VALUES
+    ('B-0001', 'L-0001', '2026-10-01 17:00+00', 3000.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://bookings', '2026-10-02 00:40+00'),
+    ('B-0004', 'L-0004', '2026-10-02 11:00+00', 2500.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00'),
+    ('B-0007', 'L-0007', '2026-10-02 18:30+00', 4000.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00');

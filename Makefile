@@ -135,10 +135,10 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
 	tests/e2e/bigquery-check.sh
 
-bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the eight metrics equal gold and exposed there (#125)
+bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there (#125)
 	tests/e2e/bigquery-emulator-check.sh
 
-semantic-check: services-up ## Build the sales, returns and finance models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the eight metrics equal gold.daily_sales and exposed.net_sales_daily (#100)
+semantic-check: services-up ## Build the sales, returns, finance and marketing models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models (#100, #126)
 	tests/e2e/semantic-check.sh
 
 # The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5).

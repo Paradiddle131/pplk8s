@@ -16,7 +16,16 @@ from google.auth.credentials import AnonymousCredentials
 from google.cloud import bigquery
 
 # The tables the semantic path reads; tlc stays Postgres-only (its models are marked `-- dialect:`).
-SOURCES = ("synthetic_customers", "synthetic_orders", "partner_returns", "open_meteo_hourly_weather")
+SOURCES = (
+    "synthetic_customers",
+    "synthetic_orders",
+    "partner_returns",
+    "open_meteo_hourly_weather",
+    "synthetic_campaigns",
+    "synthetic_ad_spend",
+    "synthetic_leads",
+    "synthetic_bookings",
+)
 DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic")
 TYPES = {
     "text": "STRING",

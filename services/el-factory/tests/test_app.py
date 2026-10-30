@@ -46,6 +46,16 @@ def test_catalog_lists_the_pipeline_entries(client):
     ]
 
 
+def test_catalog_lists_the_marketing_pipeline(client):
+    response = client.get("/catalog?pipeline=marketing")
+
+    assert response.status_code == 200
+    assert response.get_json() == [
+        {"source": "synthetic", "entity": entity}
+        for entity in ("campaigns", "ad_spend", "leads", "bookings")
+    ]
+
+
 def test_catalog_requires_a_pipeline_parameter(client):
     response = client.get("/catalog")
 
@@ -226,7 +236,11 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
     assert sorted(set(warehouse.ensured)) == [
         "open_meteo_hourly_weather",
         "partner_returns",
+        "synthetic_ad_spend",
+        "synthetic_bookings",
+        "synthetic_campaigns",
         "synthetic_customers",
+        "synthetic_leads",
         "synthetic_orders",
     ]
 

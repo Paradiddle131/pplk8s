@@ -60,8 +60,8 @@ fi
 
 AGENT_DBNAME=dbt_dev "$REPO/platform/k8s/workloads-up.sh" >"$OUT/workloads.log" 2>&1 ||
   { tail -30 "$OUT/workloads.log" >&2; fail "workloads-up.sh"; }
-"${K[@]}" logs deploy/semantic-agent -c catalog | grep -q "8 public models and 8 metrics" ||
-  fail "the catalog initContainer did not write 8 public models and 8 metrics"
+"${K[@]}" logs deploy/semantic-agent -c catalog | grep -q "10 public models and 16 metrics" ||
+  fail "the catalog initContainer did not write 10 public models and 16 metrics"
 echo "ok: workloads up; the agent's initContainer wrote its catalog for dbt_dev"
 
 "${K[@]}" port-forward svc/semantic-agent "$LOCAL_PORT:80" >"$OUT/port-forward.log" 2>&1 &

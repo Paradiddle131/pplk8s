@@ -32,27 +32,37 @@ def test_hello_structure(bag):
     assert list(hello.task_ids) == ["say_hello"]
 
 
-@pytest.fixture(scope="module")
-def sales(bag):
-    return bag.dags["sales_elt"]
+@pytest.fixture(scope="module", params=["sales", "marketing"])
+def elt(request, bag):
+    """The ELT DAGs the shared builder makes (PLAN.md D38): (pipeline, DAG)."""
+    return request.param, bag.dags[f"{request.param}_elt"]
 
 
-def test_sales_dag_settings(sales):
+def test_elt_dag_settings(elt):
+    pipeline, sales = elt
     assert sales.catchup is False
     assert sales.max_active_runs == 1
-    assert "sales" in sales.tags
+    assert pipeline in sales.tags
     assert str(sales.schedule) in ("@daily", "0 0 * * *") or "daily" in str(sales.timetable).lower()
 
 
-def test_sales_task_ids(sales):
+def test_elt_task_ids(elt):
+    pipeline, sales = elt
     ids = set(sales.task_ids)
-    assert {"resolve_context", "get_catalog", "extract", "check_extracted", "record_sales"} <= ids
+    assert {
+        "resolve_context",
+        "get_catalog",
+        "extract",
+        "check_extracted",
+        f"record_{pipeline}",
+    } <= ids
     for stage in ("bronze", "silver", "gold", "exposed"):
         assert f"stage_{stage}.dbt_{stage}" in ids
         assert f"stage_{stage}.record_{stage}" in ids
 
 
-def test_extract_is_mapped_in_pool_with_retries(sales):
+def test_extract_is_mapped_in_pool_with_retries(elt):
+    _, sales = elt
     extract = sales.get_task("extract")
     assert extract.is_mapped
     assert extract.partial_kwargs["pool"] == "el_factory"
@@ -61,7 +71,8 @@ def test_extract_is_mapped_in_pool_with_retries(sales):
     assert extract.partial_kwargs["execution_timeout"] == timedelta(minutes=15)
 
 
-def test_stage_order(sales):
+def test_stage_order(elt):
+    pipeline, sales = elt
     chain = [
         "check_extracted",
         "stage_bronze.dbt_bronze",
@@ -72,21 +83,23 @@ def test_stage_order(sales):
         "stage_gold.record_gold",
         "stage_exposed.dbt_exposed",
         "stage_exposed.record_exposed",
-        "record_sales",
+        f"record_{pipeline}",
     ]
     for upstream, downstream in zip(chain, chain[1:], strict=False):
         assert downstream in sales.get_task(upstream).downstream_task_ids, (upstream, downstream)
     assert "extract" in sales.get_task("check_extracted").upstream_task_ids
 
 
-def test_dbt_tasks_use_retries_and_timeouts(sales):
+def test_dbt_tasks_use_retries_and_timeouts(elt):
+    _, sales = elt
     for stage in ("bronze", "silver", "gold", "exposed"):
         task = sales.get_task(f"stage_{stage}.dbt_{stage}")
         assert task.retries >= 1
         assert task.execution_timeout is not None
 
 
-def test_every_elt_call_to_el_factory_is_retried(sales):
+def test_every_elt_call_to_el_factory_is_retried(elt):
+    _, sales = elt
     for task_id in ("get_catalog", "check_extracted"):
         task = sales.get_task(task_id)
         assert task.retries >= 2, task_id
@@ -237,15 +250,15 @@ def test_finance_runs_wait_in_parallel_but_build_one_at_a_time(finance):
     assert finance.get_task("dbt_exposed").max_active_tis_per_dag == 1
 
 
-def test_sales_dbt_stages_select_only_sales_models(sales):
+def test_elt_dbt_stages_select_only_their_pipelines_models(elt):
+    pipeline, dag = elt
     for stage in ("bronze", "silver", "gold", "exposed"):
-        assert (
-            sales.get_task(f"stage_{stage}.dbt_{stage}").arguments[-1] == f"tag:sales,tag:{stage}"
-        )
+        task = dag.get_task(f"stage_{stage}.dbt_{stage}")
+        assert task.arguments[-1] == f"tag:{pipeline},tag:{stage}"
 
 
 @pytest.mark.parametrize(
-    "dag_id", ["sales_elt", "returns_file_arrival", "finance_daily", "tlc_monthly"]
+    "dag_id", ["sales_elt", "marketing_elt", "returns_file_arrival", "finance_daily", "tlc_monthly"]
 )
 def test_every_business_task_survives_a_lost_worker(bag, dag_id):
     """KEDA scale-in, a drain, or an OOM can kill a running task; Celery's warm shutdown only waits
