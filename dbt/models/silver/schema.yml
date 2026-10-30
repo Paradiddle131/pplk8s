@@ -158,7 +158,10 @@ models:
         tests: [not_null]
 
   - name: slv_bookings
-    description: One row per booking, latest load wins, with its lead's campaign. booked_date is booked_ts in UTC. Alias silver.bookings.
+    description: >
+      One row per booking, latest load wins, with its lead's campaign. booked_date is booked_ts in UTC.
+      A booking whose lead is not loaded yet (leads arrive per interval, a booking up to three weeks
+      later) keeps a NULL campaign_id; its lead tests warn rather than fail. Alias silver.bookings.
     columns:
       - name: booking_id
         description: Natural key.
@@ -172,9 +175,14 @@ models:
               arguments:
                 to: ref('slv_leads')
                 field: lead_id
+              config:
+                severity: warn
       - name: campaign_id
-        description: The lead's campaign.
-        tests: [not_null]
+        description: The lead's campaign; NULL while the lead is not loaded.
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: booked_date
         tests: [not_null]
       - name: amount

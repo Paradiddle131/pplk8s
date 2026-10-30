@@ -98,12 +98,12 @@ models:
         description: UTC day of the spend, of the lead's creation, or of the booking.
         tests: [not_null]
       - name: channel
-        description: Marketing channel (search, social, display, email, partner).
+        description: Marketing channel (search, social, display, email, partner); unknown for bookings whose lead is not loaded.
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['search', 'social', 'display', 'email', 'partner']
+                values: ['search', 'social', 'display', 'email', 'partner', 'unknown']
       - name: ad_spend_eur
         description: Ad spend that day on the channel's campaigns, EUR.
       - name: ad_clicks

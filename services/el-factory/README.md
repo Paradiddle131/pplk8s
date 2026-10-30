@@ -90,7 +90,7 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 
 - `synthetic.customers` is a fixed snapshot of 200 customers, identical for every interval.
 - `synthetic.orders` is generated per UTC day from a seed of that day, so an order's content never depends on the interval that requested it.
-- `synthetic.campaigns` is a fixed snapshot of 8 ad campaigns; `synthetic.ad_spend` has one row per campaign per UTC day whose midnight is in the interval; `synthetic.leads` are generated per UTC day from a seed of that day, and an extract returns the interval's leads plus the 22 days before it, past the longest booking lag, so every booking it lands names a lead the same run lands (rows repeat across runs; silver keeps the latest); `synthetic.bookings` are the leads that book (about 30 %), within 21 days of the lead, each decided by the lead's own seed (PLAN.md D38).
+- `synthetic.campaigns` is a fixed snapshot of 8 ad campaigns; `synthetic.ad_spend` has one row per campaign per UTC day whose midnight is in the interval; `synthetic.leads` are generated per UTC day from a seed of that day; `synthetic.bookings` are the leads that book (about 30 %), within 21 days of the lead, each decided by the lead's own seed (PLAN.md D38).
 - `open_meteo.hourly_weather` fetches hourly temperature and precipitation for Amsterdam, Istanbul, and London, one page per location.
 
 - `tlc.yellow`, `tlc.green` and `tlc.fhvhv` are the NYC TLC trip record files, one Parquet file per data month; FHVHV is disabled in the catalog and kept for the big-file drill (D35). Source facts: [`docs/research/tlc-source-facts.md`](../../docs/research/tlc-source-facts.md) (issue #36).

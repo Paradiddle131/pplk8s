@@ -3,7 +3,7 @@
 -- One row per (activity_date, channel) with any spend, lead or booking: the hand-written daily
 -- marketing aggregate, kept as the parity oracle for the marketing metrics (semantic/PLAN.md SL-8).
 -- Leads count on the day they were created, bookings on the day they were made, both under the
--- channel of the campaign they came from.
+-- channel of the campaign they came from; a booking whose lead is not loaded counts as `unknown`.
 with spend as (
     select s.spend_date as activity_date, c.channel,
            sum(s.spend) as ad_spend_eur, sum(s.clicks) as ad_clicks, sum(s.impressions) as ad_impressions
@@ -20,10 +20,11 @@ leads as (
 ),
 
 bookings as (
-    select b.booked_date as activity_date, c.channel, count(*) as bookings, sum(b.amount) as booking_value_eur
+    select b.booked_date as activity_date, coalesce(c.channel, 'unknown') as channel,
+           count(*) as bookings, sum(b.amount) as booking_value_eur
     from {{ ref('slv_bookings') }} as b
-    inner join {{ ref('slv_campaigns') }} as c on c.campaign_id = b.campaign_id
-    group by b.booked_date, c.channel
+    left join {{ ref('slv_campaigns') }} as c on c.campaign_id = b.campaign_id
+    group by b.booked_date, coalesce(c.channel, 'unknown')
 ),
 
 days as (

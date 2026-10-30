@@ -182,7 +182,7 @@ semantic_models:
         expr: lead_id
 
   - name: bookings
-    description: One row per booking (latest version), from silver.bookings, with its lead's campaign.
+    description: One row per booking (latest version), from silver.bookings, with its lead's campaign; a booking whose lead is not loaded yet has no campaign, so it groups under an empty channel.
     model: ref('slv_bookings')
     defaults:
       agg_time_dimension: booked_date
