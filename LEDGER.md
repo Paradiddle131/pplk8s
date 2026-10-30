@@ -608,3 +608,31 @@ Entry format:
 - Evidence: the first drill run showed `airflow_ti_failures{dag_id="tlc_monthly",task_id="extract"} = 1` with `sum(increase(...[10m]))` empty, so the alert could not fire; the new promtool case failed against the old rule and passes against the new one. Clean re-run on the lab (yellow 2026-08, 3,336,716 rows): kill 42 s after the clear with chunks 0-1 recorded, alert firing 37 s after the kill, retry (try 8, after a 5-minute backoff) loaded chunks 2-3 in about 6 s and passed every assertion. `make lint`, `make test`.
 - Decisions: the drill forgets the ledger rather than forging an older etag (as phase8-check's republish does), since `replace_chunk` replaces each chunk in place and forging would rewrite 3.3 M landing rows. Force-delete, not a graceful delete, so the request in flight dies mid-chunk. Detection is the existing `AirflowTaskFailures` (fixed), not a new alert: EL Factory's own pod loss is healed by the Deployment and the second replica.
 - Open: after a clear, `extract`'s first retry waits the full 5-minute `max_retry_delay`, because the exponential backoff counts `try_number` across clears (runbook, LESSONS).
+
+## 2026-10-29 — Maintenance — GitHub Actions off; `make check` is the light gate
+
+- Done: `ci.yaml` no longer runs on pull requests; its `test` and `images` jobs, like `integration.yaml`, run only on `workflow_dispatch`. New `make check`: `services-up`, then `lint` and `test` with `PPLK8S_REQUIRE_WAREHOUSE=1`, the local twin of the old per-PR job. PLAN.md D26, the autopilot brief and the README say so.
+- Evidence: `make check` on cloud (see the PR).
+- Decisions: D26 amended at the owner's request ("we won't run CI on GH remote, we need to verify things locally"); the workflows stay defined, dispatch-only, so DAG CI for Composer can still be rehearsed, rather than deleted.
+- Open: none.
+
+## 2026-10-29 — Agents — The v0 autopilot brief becomes a thin profile over the shared skill (claude-dotfiles#7, #13)
+
+- Done: `docs/agents/autopilot.md` shrinks from 291 to 44 lines: the slots of the `autopilot` skill in claude-dotfiles (delivery per issue, never merge, queue = the semantic-layer map, cloud gates and laptop-only checks, never-list, known conditions). The run board, run feedback, heartbeat and claim sections move into the skill or go (claude-dotfiles `ways/lessons.md`). `CLAUDE.md` and `cloud-docker.sh` point at the profile.
+- Evidence: a dry wake on cloud read only the skill and this profile (labels mapped as the profile says): step 3 found #98 as the open agent PR to look at first; step 4 found #100 pickable (no blockers, no open PR closing it), though #106 holds its build on `claude/dbt-semantic-layer-agents-4mnlhv`, merged there after #105 had merged, so it never reached `main`; `claim.sh 100 --dry-run` and `file_issue.sh --epic 99 --dry-run` printed the right writes against this repo.
+- Decisions: none in `PLAN.md`; the owner's 2026-10-29 review decided the pruning.
+- Open: the label renames (`autopilot-ready` → `agent:ready`, `needs-user` → `needs-owner`) right after merge, and retiring this ledger under the placement rule (the adoption issue).
+
+## 2026-10-30 — Semantic — S5 on main: the BigQuery path, the work mapping and the demo script (#104)
+
+- Done: the S5 work merged in #114 lands on `main`; #114 merged it into its stacked base `claude/jolly-wright-vov4ym` after that branch had already landed, so it never reached `main`. Dialect macros (`dbt/macros/dialect.sql`, SL-6), a compile-only `bigquery` output, `make bigquery-check`, `docs/semantic-layer-on-bigquery.md`, `docs/demo.md`; the spike doc folded in and deleted. Also: `catalog-check` gives `agent_sql` and `agent_metrics` their grants back after it drops `gold` and `exposed` in `dbt_dev`.
+- Evidence: on this branch, `make bigquery-check` (16 compiled models parse as BigQuery; build_catalog and check_catalog pass on the target), `make semantic-check` and `make catalog-check` pass. Before the grants fix, `agent_sql` got "permission denied for schema gold" in `dbt_dev` after `catalog-check`; after it, it reads `gold.daily_sales`. The owner's local rehearsal of #114 passed every step but the two that need a model key (steps 6 and 7, the 401s of #116, fixed in #117).
+- Decisions: re-apply #114 rather than a second S5 written in this session: #114 also compiles offline and checks the dialect with sqlglot, and was already rehearsed.
+- Open: steps 6 and 7 of the demo on the laptop with a key, once #117 is in.
+
+## 2026-10-30 — Semantic — `make agent-eval` fails on a refused key and keeps the last report (#116)
+
+- Done: a 401 or 403 from the model is a failure that ends the run (`ModelFailure` kind `auth`), like a spent daily quota: the questions left are never sent and the eval exits 3 with the report untouched; so does a run where no question got an answer. `agent-eval.sh` asks OpenRouter's `/key` endpoint about the key before the dbt build and fails naming `OPENROUTER_API_KEY`. Both agents send `MODEL_RETRIES` in their request config (`request_config()`), because ADK's eval engine gave every request 7 attempts, which ADK's LiteLlm passes to LiteLLM as `num_retries`. semantic/PLAN.md SL-5 amended; a § 6 lesson.
+- Evidence: the bug reproduced through `make agent-eval` against a local 401 stand-in for OpenRouter: exit 0, the report rewritten with 30 `AuthenticationError` answers, each `Retried: 7 times` under `MODEL_RETRIES=1`. After the fix the preflight fails on 401 and on an unreachable base; the Python step alone exits 3 in 12 s with the report untouched and `Retried: 4 times`. New tests: an all-401 `main()` run through the real LiteLLM client (one question sent, at most 2 requests, report kept), a run with no answer, 401/403 classification for LiteLLM and Gemini. A live `tests/e2e/agent-eval.sh revenue_one_day` through the cloud proxy: both agents 868.65.
+- Decisions: exit 3 keeps one meaning, "not a score, report kept", rather than a new code per cause; the preflight uses `/key` because it costs no free-tier request.
+- Open: none.
