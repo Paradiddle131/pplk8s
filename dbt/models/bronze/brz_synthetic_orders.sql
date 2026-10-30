@@ -1,12 +1,12 @@
 {{ config(alias='synthetic_orders', tags=['sales']) }}
 
 select
-    cast(order_id as text) as order_id,
+    cast(order_id as {{ dbt.type_string() }}) as order_id,
     cast(customer_id as integer) as customer_id,
-    cast(order_ts as timestamptz) as order_ts,
-    cast(status as text) as status,
+    cast(order_ts as {{ type_timestamptz() }}) as order_ts,
+    cast(status as {{ dbt.type_string() }}) as status,
     cast(amount as numeric(12,2)) as amount,
-    cast(currency as text) as currency,
+    cast(currency as {{ dbt.type_string() }}) as currency,
     _run_id,
     _interval_start,
     _interval_end,
