@@ -11,14 +11,8 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DB=dbt_dev
-OUT=${TMPDIR:-/tmp}/pplk8s-agent-eval
 fail() { echo "FAIL: $*" >&2; exit 1; }
-psql_dev() {
-  docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
-    psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"
-}
 
-mkdir -p "$OUT"
 # A key OpenRouter refuses fails every question (issue #116): check it before the build, on the
 # endpoint that describes the key and spends no model request. The cloud proxy adds the key itself.
 if [ "${MODEL_BACKEND:-openrouter}" = openrouter ]; then
@@ -32,25 +26,7 @@ if [ "${MODEL_BACKEND:-openrouter}" = openrouter ]; then
     *) fail "OpenRouter's key check answered HTTP ${code:-none} ($base/key; 000: unreachable)" ;;
   esac
 fi
-psql_dev -c "select 1" >/dev/null 2>&1 || docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse createdb -U warehouse "$DB"
-psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
-(cd "$REPO/dbt" && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" \
-  uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance --exclude tag:tlc) \
-  >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }
-make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog"; }
-for sql in 01-schemas.sql 02-agent-roles.sql; do
-  psql_dev -c "set client_min_messages = warning" -f "/docker-entrypoint-initdb.d/$sql"
-done
-# The fixture's days as the DAGs would record them, so every answer states a freshness (SL-4):
-# sales.silver takes the sales deadline (36 h) and is long late; returns.silver has none.
-psql_dev <<'SQL'
-INSERT INTO ops.readiness (product, interval_start, interval_end, run_id, status)
-SELECT product, day, day + interval '1 day', 'fixture', 'ready'
-FROM unnest(array['sales.silver', 'returns.silver']) AS product,
-     generate_series(timestamptz '2026-10-01', '2026-10-02', interval '1 day') AS day
-ON CONFLICT (product, interval_start, interval_end) DO NOTHING;
-SQL
-echo "ok: fixture built in $DB, catalog written, agent roles granted, readiness recorded"
+DB="$DB" "$REPO/tests/e2e/agent-fixture.sh"
 
 cd "$REPO/services/semantic-agent"
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics

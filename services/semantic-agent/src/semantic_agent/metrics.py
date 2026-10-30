@@ -40,8 +40,9 @@ class Filter(BaseModel):
 
 
 def project_dir() -> Path:
-    default = Path(__file__).resolve().parents[4] / "dbt"
-    return Path(os.environ.get("DBT_PROJECT_DIR", default))
+    if found := os.environ.get("DBT_PROJECT_DIR"):
+        return Path(found)
+    return Path(__file__).resolve().parents[4] / "dbt"  # the repo's dbt/, for a checkout
 
 
 @dataclass(frozen=True)

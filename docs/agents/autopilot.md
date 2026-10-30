@@ -31,8 +31,10 @@ Cloud runs, with their counts in the handoff:
 - dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.5 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
 - EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
 - alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
+- `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
+- the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make tools`, `make cluster-up`, `make workloads-up`, and `make agent-deploy-check` for the semantic agent
 
-Left to the laptop (the handoff's local checklist): `make verify` (image builds), `make ci-integration` and the phase checks (kind).
+Left to the laptop (the handoff's local checklist): `make ci-integration` and the phase checks that deploy Airflow or monitoring, whose images the kind nodes cannot pull on cloud (#119).
 A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: the default git-sync serves `main`, so the run would test the old DAG (seen on #113).
 
 ## Never
@@ -44,6 +46,8 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 
 ## Known conditions
 
-- `docker build` steps that `pip install` fail TLS, so `make build`, `make verify` and `make phase1-check` don't run on cloud: use the host-side gates above; seen 2026-10-12.
+- `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists; a plain `docker build` still fails TLS; seen 2026-10-30.
+- ghcr.io answers 403 to public images (the proxy injects the account's own credential): `cloud-docker.sh` tags `astral/uv` from Docker Hub as the `ghcr.io/astral-sh/uv` stage the Dockerfiles name; seen 2026-10-30.
+- kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; its nodes cannot pull from the internet, so only images in the local registry run (#119); seen 2026-10-30.
 - Run Docker first with `bash docs/agents/cloud-docker.sh` when `docker info` fails (this repo's setup script predates the shared one); seen 2026-10-13.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.

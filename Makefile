@@ -8,24 +8,32 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.0
-DBT_IMAGE ?= localhost:5001/dbt:0.7.2
-ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
-export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
+ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
+DBT_IMAGE ?= localhost:5001/dbt:0.7.3
+ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.0
+export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
+
+# Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
+# every dependency step mounts as the BuildKit secret `build_ca` (never a layer), and builds use the host
+# network to reach the proxy. Unset, as on the laptop, builds are plain.
+BUILD_CA ?= $(wildcard /root/.ccr/ca-bundle.crt)
+BUILD_SECRET = id=build_ca,src=$(BUILD_CA)
+DOCKER_BUILD = docker build $(if $(BUILD_CA),--network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --build-arg NO_PROXY --secret $(BUILD_SECRET))
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.15
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.16
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
-AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.3
+AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.4
 export AIRFLOW_DRILL_IMAGE
 
 # DAG delivery (PLAN.md D23): git-sync of `main` from GitHub, or `local` for this checkout's DAGs.
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-eval bigquery-check metric-query warehouse-sql agent-web
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check metric-query warehouse-sql agent-web
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -55,10 +63,11 @@ services-down: ## Stop the out-of-cluster services, keeping their data
 services-reset: ## Stop the out-of-cluster services and delete their data
 	docker compose -f platform/compose/compose.yaml down -v
 
-build: ## Build the EL Factory lite, dbt, and event adapter images
-	docker build -t $(ELF_IMAGE) services/el-factory
-	docker build -t $(DBT_IMAGE) dbt
-	docker build -t $(ADAPTER_IMAGE) services/event-adapter
+build: ## Build the EL Factory lite, dbt, event adapter and semantic agent images
+	$(DOCKER_BUILD) -t $(ELF_IMAGE) services/el-factory
+	$(DOCKER_BUILD) -t $(DBT_IMAGE) dbt
+	$(DOCKER_BUILD) -t $(ADAPTER_IMAGE) services/event-adapter
+	$(DOCKER_BUILD) -t $(AGENT_IMAGE) --build-context dbt=dbt services/semantic-agent
 
 el-factory-up: services-up ## Run EL Factory lite on localhost:8090 against the Compose services
 	scripts/el-factory-local.sh up
@@ -129,6 +138,9 @@ agent-web: ## Serve both agents in ADK's dev UI on localhost:8000, the demo surf
 	  uv run adk web --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
 
+agent-deploy-check: services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
+	tests/e2e/agent-deploy-check.sh
+
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
 	tests/e2e/agent-eval.sh
 
@@ -141,7 +153,7 @@ check: services-up ## Light gate on every change (PLAN.md D26): linters, unit an
 
 verify: export PPLK8S_REQUIRE_WAREHOUSE := 1
 verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBag tests, every image build (needs services-up)
-	docker build -t $(AIRFLOW_IMAGE) airflow
+	$(DOCKER_BUILD) -t $(AIRFLOW_IMAGE) airflow
 
 rules-test: ## Check the Prometheus alert rules and run their promtool unit tests (tests/monitoring)
 	tests/monitoring/rules-test.sh
@@ -150,12 +162,13 @@ test: airflow-test rules-test agent-test ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 	cd services/event-adapter && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
-push: build ## Push the EL Factory, dbt, and event adapter images to the local registry (localhost:5001)
+push: build ## Push the EL Factory, dbt, event adapter and semantic agent images to the local registry (localhost:5001)
 	docker push $(ELF_IMAGE)
 	docker push $(DBT_IMAGE)
 	docker push $(ADAPTER_IMAGE)
+	docker push $(AGENT_IMAGE)
 
-workloads-up: services-up push ## Apply the workloads namespace (EL Factory, Secret, ConfigMap) and wait for rollout
+workloads-up: services-up push ## Apply the workloads namespace (EL Factory, event adapter, semantic agent, Secrets, ConfigMaps) and wait for rollout
 	platform/k8s/workloads-up.sh
 
 workloads-down: ## Delete the workloads namespace and everything in it
@@ -171,7 +184,7 @@ phase1-check: services-up build ## Phase 1 exit check: extract via curl, re-run 
 	tests/e2e/phase1-check.sh
 
 airflow-image: ## Build and push the Airflow image to the local registry
-	docker build -t $(AIRFLOW_IMAGE) airflow
+	$(DOCKER_BUILD) -t $(AIRFLOW_IMAGE) airflow
 	docker push $(AIRFLOW_IMAGE)
 
 # Extra values files from platform/helm/airflow, e.g. AIRFLOW_OVERLAYS=values-multi-executor.yaml.
@@ -215,7 +228,7 @@ db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup Cro
 	tests/e2e/db-cleanup-check.sh
 
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
-	docker build -t $(AIRFLOW_DRILL_IMAGE) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
+	$(DOCKER_BUILD) -t $(AIRFLOW_DRILL_IMAGE) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
 	docker push $(AIRFLOW_DRILL_IMAGE)
 
 metadata-restore-drill: airflow-up observability-up workloads-up ## Phase 6 drill 10: restore the metadata DB to an earlier point, detect the drift from the warehouse, replay the lost runs (~6 min)

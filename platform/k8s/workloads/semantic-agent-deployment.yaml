@@ -1,0 +1,95 @@
+# The semantic agent and its text-to-SQL baseline, served by `adk api_server` (semantic/PLAN.md SL-2):
+# the Cloud Run stand-in. Airflow never calls it; people and the eval do, through the Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: semantic-agent
+  labels:
+    app.kubernetes.io/name: semantic-agent
+spec:
+  replicas: 1 # sessions live in the metadata DB, so more replicas would only need more model quota
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: semantic-agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: semantic-agent
+    spec:
+      serviceAccountName: semantic-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # The manifest and the agent catalog for the database this pod reads (SL-3): relations in the
+        # compiled SQL name that database, so they are written here rather than baked into the image.
+        - name: catalog
+          image: semantic-agent # a placeholder; workloads-up.sh sets the real reference from AGENT_IMAGE (D16)
+          imagePullPolicy: IfNotPresent
+          command: [sh, -c, "cd /app/dbt && dbt parse --quiet && python scripts/build_catalog.py target"]
+          envFrom: &env
+            - configMapRef:
+                name: semantic-agent-config
+            - secretRef:
+                name: semantic-agent-credentials
+          resources: &resources
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext: &containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts: &mounts
+            - name: dbt-target
+              mountPath: /app/dbt/target
+            - name: dbt-logs
+              mountPath: /app/dbt/logs
+            - name: tmp
+              mountPath: /tmp
+            - name: egress-ca # empty unless workloads-up.sh was given EGRESS_CA
+              mountPath: /etc/egress-ca
+              readOnly: true
+      containers:
+        - name: semantic-agent
+          image: semantic-agent
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom: *env
+          startupProbe: # ADK loads both agents and MetricFlow on start
+            httpGet: {path: /list-apps, port: http}
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /list-apps, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: {path: /list-apps, port: http}
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources: *resources
+          securityContext: *containerSecurity
+          volumeMounts: *mounts
+      volumes:
+        - name: dbt-target
+          emptyDir: {}
+        - name: dbt-logs
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: egress-ca
+          configMap:
+            name: egress-ca # the CA of an egress proxy between the cluster and the model's API, if any
+            optional: true

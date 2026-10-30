@@ -107,3 +107,12 @@ def test_a_request_carries_the_checked_parts():
 def test_requests_outside_the_catalog_are_refused(query, message):
     with pytest.raises(QueryError, match=message):
         query.request(CATALOG)
+
+
+def test_dbt_project_dir_comes_from_the_env_outside_the_repo(monkeypatch):
+    """In the image the agents sit at /app/agents, with no repo around them (issue #111)."""
+    from semantic_agent import metrics
+
+    monkeypatch.setattr(metrics, "__file__", "/app/agents/semantic_agent/metrics.py")
+    monkeypatch.setenv("DBT_PROJECT_DIR", "/app/dbt")
+    assert str(metrics.project_dir()) == "/app/dbt"

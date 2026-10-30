@@ -8,7 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DBT_SEND_ANONYMOUS_USAGE_STATS=False
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
+# `build_ca`: the TLS-intercepting proxy's CA where one sits between the build and PyPI (Makefile BUILD_CA).
+RUN --mount=type=secret,id=build_ca \
+    if [ -f /run/secrets/build_ca ]; then export PIP_CERT=/run/secrets/build_ca SSL_CERT_FILE=/run/secrets/build_ca; fi \
+    && pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 RUN useradd --uid 10001 --create-home --home-dir /home/dbt --shell /usr/sbin/nologin dbt
 

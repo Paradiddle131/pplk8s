@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: semantic-agent
+spec:
+  type: ClusterIP # reachable only inside the cluster; `kubectl port-forward` for a person
+  selector:
+    app.kubernetes.io/name: semantic-agent
+  ports:
+    - name: http
+      port: 80
+      targetPort: http # adk api_server on 8080
