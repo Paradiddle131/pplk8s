@@ -100,10 +100,20 @@ def test_the_baseline_has_only_execute_sql():
     assert [t.name for t in baseline.build_agent(ScriptedLlm()).tools] == ["execute_sql"]
 
 
-@pytest.mark.parametrize("backend", ["openrouter", "gemini"])
-def test_the_model_seam_builds_each_backend(backend):
-    model = build_model(backend, "some-model")
-    assert model.model.endswith("some-model")
+@pytest.mark.parametrize(
+    ("backend", "model_id"), [("openrouter", "some/model:free"), ("gemini", "some-model")]
+)
+def test_the_model_seam_builds_each_backend(backend, model_id):
+    model = build_model(backend, model_id)
+    assert model.model.endswith(model_id)
+
+
+@pytest.mark.parametrize(
+    "model_id", ["anthropic/claude-sonnet-4.5", "some/model:free-ish", "some/model"]
+)
+def test_the_model_seam_refuses_a_paid_openrouter_model(model_id):
+    with pytest.raises(ValueError, match=":free"):
+        build_model("openrouter", model_id)
 
 
 def test_the_model_seam_refuses_an_unknown_backend():

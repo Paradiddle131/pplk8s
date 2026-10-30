@@ -43,6 +43,10 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
         raise ValueError(f"MODEL_BACKEND must be one of {BACKENDS}, got {backend!r}")
     if not model_id:
         raise ValueError("MODEL_ID is empty")
+    # OpenRouter's free tier only, whatever the key's budget allows: a spent free quota waits for
+    # its reset, it never falls back to a paid model.
+    if backend == "openrouter" and not model_id.endswith(":free"):
+        raise ValueError(f"OpenRouter models must be free (an id ending ':free'), got {model_id!r}")
     timeout = float(os.environ.get("MODEL_TIMEOUT_S", "120"))
     retries = int(os.environ.get("MODEL_RETRIES", "2"))
 
