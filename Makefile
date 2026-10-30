@@ -21,6 +21,17 @@ BUILD_CA ?= $(wildcard /root/.ccr/ca-bundle.crt)
 BUILD_SECRET = id=build_ca,src=$(BUILD_CA)
 DOCKER_BUILD = docker build $(if $(BUILD_CA),--network host --build-arg HTTPS_PROXY --build-arg HTTP_PROXY --build-arg NO_PROXY --secret $(BUILD_SECRET))
 
+# A layer cache in a registry, shared by every session that builds (claude-dotfiles cloud/skills/image-cache):
+# each image reads and writes $(BUILD_CACHE)/<cache name>:buildcache, so a fresh cloud session rebuilds only
+# what changed. On by default where BUILD_CA is (the cloud, whose proxy holds the ghcr.io login); a laptop opts
+# in with BUILD_CACHE=ghcr.io/paradiddle131/pplk8s after `docker login ghcr.io`. A failed cache write never
+# fails a build.
+BUILD_CACHE ?= $(if $(BUILD_CA),ghcr.io/paradiddle131/pplk8s)
+comma := ,
+cache_flags = $(if $(BUILD_CACHE),--cache-from type=registry$(comma)ref=$(BUILD_CACHE)/$(1):buildcache --cache-to type=registry$(comma)ref=$(BUILD_CACHE)/$(1):buildcache$(comma)mode=max$(comma)ignore-error=true)
+# $(call docker_build,<image ref>[,<cache name>]): the cache name defaults to the image's repository name.
+docker_build = $(DOCKER_BUILD) -t $(1) $(call cache_flags,$(or $(2),$(firstword $(subst :, ,$(notdir $(1))))))
+
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
 AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.16
 export AIRFLOW_IMAGE
@@ -64,10 +75,10 @@ services-reset: ## Stop the out-of-cluster services and delete their data
 	docker compose -f platform/compose/compose.yaml down -v
 
 build: ## Build the EL Factory lite, dbt, event adapter and semantic agent images
-	$(DOCKER_BUILD) -t $(ELF_IMAGE) services/el-factory
-	$(DOCKER_BUILD) -t $(DBT_IMAGE) dbt
-	$(DOCKER_BUILD) -t $(ADAPTER_IMAGE) services/event-adapter
-	$(DOCKER_BUILD) -t $(AGENT_IMAGE) --build-context dbt=dbt services/semantic-agent
+	$(call docker_build,$(ELF_IMAGE)) services/el-factory
+	$(call docker_build,$(DBT_IMAGE)) dbt
+	$(call docker_build,$(ADAPTER_IMAGE)) services/event-adapter
+	$(call docker_build,$(AGENT_IMAGE)) --build-context dbt=dbt services/semantic-agent
 
 el-factory-up: services-up ## Run EL Factory lite on localhost:8090 against the Compose services
 	scripts/el-factory-local.sh up
@@ -153,7 +164,7 @@ check: services-up ## Light gate on every change (PLAN.md D26): linters, unit an
 
 verify: export PPLK8S_REQUIRE_WAREHOUSE := 1
 verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBag tests, every image build (needs services-up)
-	$(DOCKER_BUILD) -t $(AIRFLOW_IMAGE) airflow
+	$(call docker_build,$(AIRFLOW_IMAGE)) airflow
 
 rules-test: ## Check the Prometheus alert rules and run their promtool unit tests (tests/monitoring)
 	tests/monitoring/rules-test.sh
@@ -184,7 +195,7 @@ phase1-check: services-up build ## Phase 1 exit check: extract via curl, re-run 
 	tests/e2e/phase1-check.sh
 
 airflow-image: ## Build and push the Airflow image to the local registry
-	$(DOCKER_BUILD) -t $(AIRFLOW_IMAGE) airflow
+	$(call docker_build,$(AIRFLOW_IMAGE)) airflow
 	docker push $(AIRFLOW_IMAGE)
 
 # Extra values files from platform/helm/airflow, e.g. AIRFLOW_OVERLAYS=values-multi-executor.yaml.
@@ -228,7 +239,7 @@ db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup Cro
 	tests/e2e/db-cleanup-check.sh
 
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
-	$(DOCKER_BUILD) -t $(AIRFLOW_DRILL_IMAGE) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
+	$(call docker_build,$(AIRFLOW_DRILL_IMAGE),airflow-drill) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
 	docker push $(AIRFLOW_DRILL_IMAGE)
 
 metadata-restore-drill: airflow-up observability-up workloads-up ## Phase 6 drill 10: restore the metadata DB to an earlier point, detect the drift from the warehouse, replay the lost runs (~6 min)

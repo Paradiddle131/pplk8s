@@ -28,14 +28,6 @@ if ! docker info >/dev/null 2>&1; then
   done
 fi
 
-# ghcr.io answers 403 to public images here (the proxy injects the account's own GHCR credential),
-# so the uv stage the Dockerfiles name comes from Astral's Docker Hub copy, tagged under its ghcr name.
-uv=$(grep -ho 'ghcr.io/astral-sh/uv:[0-9.]*' "$(dirname "$0")"/../../services/*/Dockerfile | sort -u)
-for image in $uv; do
-  docker image inspect "$image" >/dev/null 2>&1 ||
-    { docker pull -q "astral/uv:${image##*:}" >/dev/null && docker tag "astral/uv:${image##*:}" "$image" && echo "docker: $image from astral/uv"; }
-done
-
 if docker info >/dev/null 2>&1; then
   echo "docker: ok (mirrors: $(docker info --format '{{.RegistryConfig.Mirrors}}'))"
 else

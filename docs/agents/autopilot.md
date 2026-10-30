@@ -47,7 +47,7 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 ## Known conditions
 
 - `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists; a plain `docker build` still fails TLS; seen 2026-10-30.
-- ghcr.io answers 403 to public images (the proxy injects the account's own credential): `cloud-docker.sh` tags `astral/uv` from Docker Hub as the `ghcr.io/astral-sh/uv` stage the Dockerfiles name; seen 2026-10-30.
+- Builds read and write a per-image layer cache at `ghcr.io/paradiddle131/pplk8s/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
 - kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; its nodes cannot pull from the internet, so only images in the local registry run (#119); seen 2026-10-30.
 - Run Docker first with `bash docs/agents/cloud-docker.sh` when `docker info` fails (this repo's setup script predates the shared one); seen 2026-10-13.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.
