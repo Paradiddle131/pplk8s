@@ -21,7 +21,13 @@ COPY --chown=airflow:0 ${REQUIREMENTS} /tmp/requirements.txt
 # google-cloud-aiplatform>=1.164 while the constraints freeze 1.163.0, so those
 # constraint lines are dropped; pip still resolves everything else against the
 # remaining constraints, and `pip check` proves the result is consistent.
-RUN curl -fsSL -o /tmp/constraints.txt \
+# `build_ca`: the TLS-intercepting proxy's CA where one sits between the build and the internet (Makefile
+# BUILD_CA); readable by the airflow user the base image runs as.
+RUN --mount=type=secret,id=build_ca,mode=0444 \
+    if [ -f /run/secrets/build_ca ]; then \
+      export CURL_CA_BUNDLE=/run/secrets/build_ca PIP_CERT=/run/secrets/build_ca SSL_CERT_FILE=/run/secrets/build_ca; \
+    fi \
+ && curl -fsSL -o /tmp/constraints.txt \
       "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt" \
  && sed -i -E "/^(${DROP_CONSTRAINTS})==/d" /tmp/constraints.txt \
  && pip install --no-cache-dir -r /tmp/requirements.txt -c /tmp/constraints.txt \
