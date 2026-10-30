@@ -212,7 +212,7 @@ Each phase ends on its exit criterion; a phase is done only when that check pass
 - dbt: the `tlc` models from bronze to exposed, month by month, with quarantine and a zone seed (D36).
 - Airflow: `tlc_monthly` with catchup, a deferrable publication wait, and backfills of the drift months (D35).
 - Drills: a mid-file failure resumes from the last chunk; an unpublished month waits, then alerts; a large month stays under EL Factory's memory ceiling.
-- Build issues: sliced from [Slice the TLC design into build issues](https://github.com/Paradiddle131/pplk8s/issues/41).
+- Build issues: sliced from [Slice the TLC design into build issues](../../issues/41).
 - **Exit:** for the scheduled months and every drift month, `ops.readiness` holds `tlc.exposed` and each layer's monthly row counts reconcile (bronze = silver + quarantine); a republished file replaces its month; each drill is detected and recovered via a runbook entry.
 
 ### Phase 7 — Real GCP touchpoint · Status: parked

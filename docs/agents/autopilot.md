@@ -10,7 +10,7 @@ Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit
 
 ## Digest
 
-The body of [#43](https://github.com/Paradiddle131/pplk8s/issues/43) lists open owner questions only; PRs waiting for the laptop are the `needs-local-verify` label, so drop any other section of that body when you next edit it.
+The body of [#43](../../../../issues/43) lists open owner questions only; PRs waiting for the laptop are the `needs-local-verify` label, so drop any other section of that body when you next edit it.
 
 ## Merge policy
 
@@ -19,7 +19,7 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 
 ## Queue
 
-1. [Map #99: dbt semantic layer and a metrics agent](https://github.com/Paradiddle131/pplk8s/issues/99): its sub-issues in order; design in `semantic/PLAN.md`.
+1. [Map #99: dbt semantic layer and a metrics agent](../../../../issues/99): its sub-issues in order; design in `semantic/PLAN.md`.
 2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
@@ -47,7 +47,7 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 ## Known conditions
 
 - `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists; a plain `docker build` still fails TLS; seen 2026-10-30.
-- Builds read and write a per-image layer cache at `ghcr.io/paradiddle131/pplk8s/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
+- Builds read and write a per-image layer cache at `ghcr.io/<owner>/<repo>/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
 - kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; its nodes cannot pull from the internet, so only images in the local registry run (#119); seen 2026-10-30.
 - Run Docker first with `bash docs/agents/cloud-docker.sh` when `docker info` fails (this repo's setup script predates the shared one); seen 2026-10-13.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.

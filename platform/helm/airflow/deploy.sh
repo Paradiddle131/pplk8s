@@ -15,6 +15,7 @@ CHART_VERSION="${CHART_VERSION:-1.22.0}"
 RELEASE=airflow
 NAMESPACE=airflow
 AIRFLOW_IMAGE="${AIRFLOW_IMAGE:?set AIRFLOW_IMAGE (make airflow-up does)}"
+GITHUB_REPO="${GITHUB_REPO:-$(make -s -C "$REPO" print-GITHUB_REPO)}" # git-sync clones this checkout's origin
 DBT_IMAGE="${DBT_IMAGE:-$(make -s -C "$REPO" print-DBT_IMAGE)}" # for run_dbt (dbt_image Variable); Makefile default
 METADATA_DB_PASSWORD="${METADATA_DB_PASSWORD:-airflow}"
 WAREHOUSE_PASSWORD="${WAREHOUSE_PASSWORD:-warehouse}" # same default as compose.yaml and workloads-up.sh
@@ -109,6 +110,7 @@ statsd_before=$(statsd_cm)
   -f values.yaml "${overlays[@]}" \
   --set "images.airflow.repository=${AIRFLOW_IMAGE%:*}" \
   --set "images.airflow.tag=${AIRFLOW_IMAGE##*:}" \
+  --set "dags.gitSync.repo=git@github.com:${GITHUB_REPO:?no GitHub origin remote}.git" \
   --set "data.metadataConnection.pass=${METADATA_DB_PASSWORD}" \
   --wait --wait-for-jobs --timeout 10m "$@" >/dev/null
 
