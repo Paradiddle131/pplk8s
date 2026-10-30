@@ -13,7 +13,7 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | silver | `silver` | table, or incremental per data month (`tlc`) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `tlc_trips`, `tlc_trips_quarantine` |
 | gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `tlc_daily_trips` |
 | exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
-| semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics of `semantic.yml` live in the manifest |
+| semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics live in the manifest |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
 Bronze reads `ds_source` through `source()`.
@@ -87,8 +87,11 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
 
 ## The semantic layer
 
-`models/semantic/semantic.yml` holds the MetricFlow semantic models and metrics (semantic/PLAN.md SL-1): `orders` over `slv_orders` and `returns` over `slv_returns`, and eight metrics (`orders_total`, `orders_cancelled`, `revenue_eur`, `customers_distinct`, `returns_eur`, `returns_count`, `net_revenue_eur`, `cancellation_rate`).
-Each calculated field of `gold.daily_sales` and `exposed.net_sales_daily` is defined once there, as a metric; the hand-written tables stay as the parity oracle.
+The semantic layer is written in dbt's [latest YAML spec](https://docs.getdbt.com/docs/build/latest-metrics-spec) (semantic/PLAN.md SL-1).
+A silver model in `models/silver/schema.yml` becomes a MetricFlow semantic model through its `semantic_model` key (`orders` over `slv_orders`, `returns`, `campaigns`, `ad_spend`, `leads`, `bookings`); its columns carry the entities and dimensions, and its `metrics` the simple metrics and the ratios within it.
+`models/semantic/semantic.yml` holds the metrics that combine semantic models (`net_revenue_eur`, `cost_per_lead_eur`, `cost_per_booking_eur`, `lead_to_booking_rate`).
+Each calculated field of the gold and exposed models is defined once, as a metric; the hand-written tables stay as the parity oracle.
+No metric sets `fill_nulls_with`, because dbt-core 1.12.6 drops it in this spec: a simple metric reads NULL, not 0, in a day or group where it has no rows, and `net_revenue_eur` coalesces its inputs.
 `metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) is tagged `sales` with it.
 
 Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_metrics.py` fails the parse step without them.
@@ -99,7 +102,7 @@ The stage check runs with host dbt on the image's pins, against the Compose ware
 make dbt-validate DBT_DBNAME=dbt_dev
 ```
 
-It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities, measures and metrics against the warehouse's tables.
+It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities and metrics against the warehouse's tables.
 The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
 In the cluster, `finance_daily` runs the whole check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `mf validate-configs`, in one pod of this image).
 
@@ -109,7 +112,7 @@ Query a metric with the `mf` CLI from this folder, with the same environment:
 uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
-`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns and finance models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal `gold.daily_sales` and `exposed.net_sales_daily` row for row, and checks that an undescribed metric fails the validation.
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance and marketing models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), and checks that an undescribed metric fails the validation.
 
 ### Trust tiers and the catalog
 
@@ -117,7 +120,7 @@ Gold and exposed models are `access: public` in the `analytics` group (`models/g
 Bronze, silver and the semantic stage are `protected` and stay out of the agent catalog; the metrics read silver through the semantic models, so an agent reaches silver only through a metric.
 Every public model and every one of its columns carries a `description`, and `persist_docs` writes them to the warehouse as table and column comments (BigQuery descriptions on a BigQuery target) whenever the model builds.
 
-Naming: a metric is the measure in snake case with its unit as a suffix (`revenue_eur`, `net_revenue_eur`), a count names what it counts and how (`orders_total`, `orders_cancelled`, `customers_distinct`), and its `label` is the business term in plain words with the unit in brackets (`Net revenue (EUR)`).
+Naming: a metric is the quantity in snake case with its unit as a suffix (`revenue_eur`, `net_revenue_eur`), a count names what it counts and how (`orders_total`, `orders_cancelled`, `customers_distinct`), and its `label` is the business term in plain words with the unit in brackets (`Net revenue (EUR)`).
 A dimension is addressed as `<entity>__<dimension>` (`order__status`), and time as `metric_time__day` (or `__week`, `__month`, `__year`).
 
 `make dbt-catalog` (`DBT_DBNAME=warehouse|dbt_dev`) parses the project, runs `scripts/build_catalog.py`, then `scripts/check_catalog.py`, then builds the semantic stage.
@@ -126,7 +129,7 @@ The generator reads `target/manifest.json` and `target/semantic_manifest.json` a
 | Artefact | For | Holds |
 |---|---|---|
 | `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns) and metrics (label, description, type, pipelines, time grain, dimensions) |
-| `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the measures, `relationships` from the entities, `glossaries` from the metrics, `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
+| `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics, `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
 | `data_agent/example_queries.json` | the data agent's verified queries | one `naturalLanguageQuestion` and `sqlQuery` per metric: the metric by day, as MetricFlow compiles it |
 
 The third artefact lives in the warehouse: the gold and exposed comments, and `semantic.metrics` (`models/semantic/semantic_metrics.sql`), rendered from dbt's graph at build time.

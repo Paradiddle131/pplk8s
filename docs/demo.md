@@ -25,7 +25,7 @@ make bigquery-check
 ## The script
 
 **1. One definition (1 min).**
-Open `dbt/models/semantic/semantic.yml` at `net_revenue_eur`: `revenue_eur - returns_eur`, a derived metric over two semantic models.
+Open `dbt/models/semantic/semantic.yml` at `net_revenue_eur`: `coalesce(revenue_eur, 0) - coalesce(returns_eur, 0)`, a derived metric over two semantic models; `revenue_eur` itself sits on its model, `slv_orders` in `dbt/models/silver/schema.yml`.
 Say: revenue, orders, returns and net revenue each have exactly one definition, here, in the open-source dbt project.
 
 **2. It is checked (1 min).**

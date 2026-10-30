@@ -5,7 +5,7 @@ description = "An ADK agent that answers business questions through the dbt sema
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "google-adk[db,eval,extensions]==2.13.0",
-    "dbt-core==1.12.5",
+    "dbt-core==1.12.6",
     "dbt-postgres==1.11.0",
     "dbt-metricflow[dbt-postgres]==0.15.0",
     "psycopg[binary]==3.3.6",
