@@ -29,7 +29,7 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 - [`PLAN.md`](PLAN.md): the roadmap, architecture decisions, and phase exit criteria. Read it before starting work; change a decision there, with its rationale, before acting on the change.
 - [`LEDGER.md`](LEDGER.md): an append-only log of completed work. Every working session that changed the repo adds one entry, as a fragment `ledger.d/YYYY-MM-DD-<issue-or-pr>-<slug>.md` in the PR that carries the work ([`ledger.d/README.md`](ledger.d/README.md)); `make ledger` on `main` folds merged fragments into `LEDGER.md`. Never edit `LEDGER.md` in a PR, so parallel PRs don't conflict on it.
 - [`LESSONS.md`](LESSONS.md): one-line lessons for the real GKE and Composer build (Stages 2-3). Append any lesson a session teaches that applies there; leave out anything that only matters on the local machine.
-- [`docs/agents/autopilot.md`](docs/agents/autopilot.md): the profile for unattended cloud wakes (the `autopilot` skill in claude-dotfiles plus this repo's slots); its setup script is `docs/agents/cloud-setup.sh`.
+- [`docs/agents/autopilot.md`](docs/agents/autopilot.md): the profile for unattended cloud wakes (the `autopilot` skill in claude-dotfiles plus this repo's slots); claude-dotfiles provisions cloud sessions (`bin/cloud-setup.sh pplk8s`), so this repo keeps no setup script of its own.
 - GitHub label `lesson`: put it on every issue or PR whose work likely teaches a LESSONS.md lesson for GKE (Stage 2) or Composer (Stage 3); leave lab-only problems (WSL2, kind, local stand-ins, this repo's own CI) unlabelled. `gh issue list -l lesson` is the queue of what to tackle next for the lessons.
 
 ## Conventions
@@ -37,4 +37,4 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 - Put each sentence of Markdown prose on its own line.
 - Every component comes up and down through a single scripted entry point; a fresh clone plus documented prerequisites reproduces the lab.
 - Work counts as done when its check passes: the phase's exit criterion, a test, or an observed run.
-- Name the GitHub owner and repo through the origin remote (Makefile `GITHUB_REPO`), and link this repo's issues relatively (`../../issues/N`), so a fork works against itself; `make lint` checks it. History (`LEDGER.md`, `ledger.d/`, dated decisions) keeps its facts.
+- Name the GitHub owner and repo through the origin remote (Makefile `GITHUB_REPO`), and link this repo's issues relatively (`../../issues/N`), so a fork works against itself; on cloud, claude-dotfiles' pre-commit guard (`bin/check-portable.sh`) refuses a commit that adds the owner's login. History (`LEDGER.md`, `ledger.d/`, dated decisions) keeps its facts.
