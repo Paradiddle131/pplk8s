@@ -23,14 +23,15 @@ else
   config="$(mktemp)"
   trap 'rm -f "$config"' EXIT
   sed "s|__REPO__|$(cd ../.. && pwd)|g" cluster.yaml >"$config"
-  # Hosts unlike a laptop (the cloud sandbox): on cgroup v1 the kubelet
-  # (1.35+) refuses to start unless told otherwise; without CAP_SYS_RESOURCE no process may lower
-  # its OOM score, so containerd must not ask for the negative scores it gives pod sandboxes.
-  if [ "$(stat -fc %T /sys/fs/cgroup)" != cgroup2fs ]; then
+  # Hosts unlike a laptop (the cloud sandbox), asked of Docker, whose containers the nodes are: on
+  # cgroup v1 the kubelet (1.35+) refuses to start unless told otherwise; where even a privileged
+  # container may not lower its OOM score (no CAP_SYS_RESOURCE), containerd must not ask for the
+  # negative scores it gives pod sandboxes.
+  if [ "$(docker info --format '{{.CgroupVersion}}')" = 1 ]; then
     printf '%s\n' 'kubeadmConfigPatches:' '  - |' '    kind: KubeletConfiguration' '    failCgroupV1: false' >>"$config"
     echo "cgroup v1 host: kubelet failCgroupV1=false"
   fi
-  if (( !(0x$(awk '/^CapEff/ {print $2}' /proc/self/status) >> 24 & 1) )); then
+  if ! docker run --rm --privileged --entrypoint sh "$NODE_IMAGE" -c 'echo -999 >/proc/self/oom_score_adj' 2>/dev/null; then
     printf '%s\n' 'containerdConfigPatches:' '  - |-' '    [plugins."io.containerd.grpc.v1.cri"]' \
       '      restrict_oom_score_adj = true' >>"$config"
     echo "no CAP_SYS_RESOURCE: containerd restrict_oom_score_adj=true"
