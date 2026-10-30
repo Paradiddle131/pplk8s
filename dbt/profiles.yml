@@ -1,7 +1,7 @@
 # Connection profile used by the dbt image (DBT_PROFILES_DIR=/dbt).
 # Every value is overridable by environment variable; the defaults target the lab's Compose warehouse.
 pplk8s:
-  target: dev
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"  # bigquery: the compile-only target below
   outputs:
     dev:
       type: postgres
@@ -11,4 +11,16 @@ pplk8s:
       password: "{{ env_var('DBT_PASSWORD', 'warehouse') }}"
       dbname: "{{ env_var('DBT_DBNAME', 'warehouse') }}"
       schema: "{{ env_var('DBT_SCHEMA', 'public') }}"
+      threads: 4
+    # Compile-only (semantic/PLAN.md R7, S5): the same project and semantic YAML on BigQuery's
+    # adapter, for `dbt parse` and MetricFlow's offline SQL; nothing here runs against GCP.
+    bigquery:
+      type: bigquery
+      # A placeholder token lets dbt build its client offline; a compile without introspection
+      # never sends it. At work: `method: oauth` (application default credentials).
+      method: oauth-secrets
+      token: "{{ env_var('BQ_TOKEN', 'compile-only') }}"
+      project: "{{ env_var('BQ_PROJECT', 'pplk8s-lab') }}"
+      dataset: "{{ env_var('DBT_SCHEMA', 'public') }}"
+      location: "{{ env_var('BQ_LOCATION', 'EU') }}"
       threads: 4

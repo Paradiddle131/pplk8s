@@ -15,8 +15,7 @@ select
     return_id,
     order_id,
     returned_at,
-    -- dialect: Postgres converts the timestamptz to UTC with AT TIME ZONE; BigQuery uses DATE(returned_at, 'UTC').
-    cast(returned_at at time zone 'UTC' as date) as return_date,
+    {{ utc_date('returned_at') }} as return_date,
     amount,
     reason,
     _source_uri,

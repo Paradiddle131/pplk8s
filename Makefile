@@ -9,7 +9,7 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.0
-DBT_IMAGE ?= localhost:5001/dbt:0.7.1
+DBT_IMAGE ?= localhost:5001/dbt:0.7.2
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.0
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE
 
@@ -25,7 +25,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-eval
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-eval bigquery-check metric-query warehouse-sql agent-web
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -93,8 +93,23 @@ dbt-catalog: ## Write the agent catalog and the data agent's authored context to
 	  && uv run --quiet --no-project --with-requirements requirements.txt python scripts/check_catalog.py \
 	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --quiet --select semantic
 
+# Query metrics through MetricFlow from the host, as an agent's query_metrics does (docs/demo.md).
+METRICS ?= revenue_eur,returns_eur,net_revenue_eur
+GROUP_BY ?= metric_time__day
+metric-query: ## Query metrics with `mf query` on the Compose warehouse (METRICS=a,b GROUP_BY=metric_time__day DBT_DBNAME=warehouse|dbt_dev)
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf query --metrics $(METRICS) --group-by $(GROUP_BY) --order $(GROUP_BY)
+
+SQL ?= select 1
+warehouse-sql: ## Run one psql command on the Compose warehouse as its owner (SQL='\d+ gold.daily_sales' DBT_DBNAME=warehouse|dbt_dev)
+	docker compose -f platform/compose/compose.yaml exec -T warehouse psql -U warehouse -d $(DBT_DBNAME) -c '$(SQL)'
+
 catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-catalog on it, and assert every gold and exposed column is commented and every metric is in semantic.metrics (#101)
 	tests/e2e/catalog-check.sh
+
+bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
+	tests/e2e/bigquery-check.sh
 
 semantic-check: services-up ## Build the sales, returns and finance models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the eight metrics equal gold.daily_sales and exposed.net_sales_daily (#100)
 	tests/e2e/semantic-check.sh
@@ -107,6 +122,11 @@ AGENT_DBNAME ?= warehouse
 agent-serve: ## Serve both agents with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk api_server --host 127.0.0.1 --port 8000 \
+	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
+
+agent-web: ## Serve both agents in ADK's dev UI on localhost:8000, the demo surface (needs services-up and dbt-catalog)
+	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+	  uv run adk web --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
 
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)

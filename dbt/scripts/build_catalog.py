@@ -277,7 +277,7 @@ def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, compiled_sql = _metricflow(target.resolve().parent)
+    dimensions, compiled_sql = _metricflow(Path(__file__).resolve().parents[1])
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
