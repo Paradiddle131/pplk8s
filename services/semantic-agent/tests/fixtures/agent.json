@@ -428,7 +428,7 @@
   "glossary": [
     {
       "term": "Channel",
-      "description": "The marketing channel a campaign runs on, search, social, display, email or partner. Leads and bookings take their campaign's channel; a booking whose lead is not loaded yet has none.",
+      "description": "The marketing channel a campaign runs on: search, social, display, email or partner. Leads and bookings take their campaign's channel; a booking whose lead is not loaded yet has none.",
       "synonyms": [
         "marketing channel",
         "acquisition channel"
@@ -462,7 +462,7 @@
     },
     {
       "term": "Customer country",
-      "description": "The ISO-2 country a customer is registered in. It is the customer's, not the market a campaign targets nor a lead's country, so revenue or orders by country group by it.",
+      "description": "The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so revenue or orders by country group by it.",
       "synonyms": [
         "country"
       ],
@@ -495,7 +495,7 @@
     },
     {
       "term": "Order status",
-      "description": "Where an order stands, placed, shipped or cancelled. A cancelled order counts in orders and the cancellation rate, never in revenue or active customers.",
+      "description": "Where an order stands: placed, shipped or cancelled. A cancelled order counts in orders and the cancellation rate, never in revenue or active customers.",
       "synonyms": [
         "cancelled order",
         "shipped order",

@@ -2,7 +2,9 @@ version: 2
 
 # The semantic layer (semantic/PLAN.md SL-1) lives on these models in dbt's latest YAML spec: a model's
 # `semantic_model` makes it a MetricFlow semantic model, its columns carry the entities and dimensions,
-# and its `metrics` are the simple metrics over it. Metrics across models are in models/semantic/semantic.yml.
+# and its `metrics` are the simple metrics over it. Metrics over other metrics (ratio, derived, conversion) are in
+# models/semantic/semantic.yml, even over one model's: dbt-core 1.12.6's partial parse duplicates one declared on a
+# model after any edit of that model's entry here.
 # A dimension's description is its column's: it reaches the agent catalog (SL-3).
 # No metric sets `fill_nulls_with`: dbt-core 1.12.6 drops it in this spec (#137), so a simple metric reads NULL,
 # not 0, in a day or group where it has no rows, and a derived metric coalesces the inputs it adds or subtracts.
@@ -159,12 +161,6 @@ models:
         agg: count_distinct
         expr: customer_id
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
-      - name: cancellation_rate
-        description: Share of orders cancelled.
-        label: Cancellation rate
-        type: ratio
-        numerator: orders_cancelled
-        denominator: orders_total
 
   - name: slv_hourly_weather
     description: One row per (location, observed_at), latest load wins. Alias silver.hourly_weather.
