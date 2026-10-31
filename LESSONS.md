@@ -286,3 +286,4 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Keep project instructions to invariants; versions and status belong in the plan and the work log.
 - Surface genuine forks (event adapter vs AssetWatcher) to the owner instead of deciding silently; a spike built side by side settled it with evidence.
 - Treat identity, IAM, Workload Identity, and private networking as their own workstream on real GCP; the lab deferred them on purpose.
+- Give automation on a real project no role that can enable APIs, change IAM or quotas or buy capacity, and check its permissions with `testIamPermissions`: IAM changes take minutes to apply, so testing a fence by attempting the forbidden action can do it (an agent enabled the Compute Engine API on the lab project that way).

@@ -22,14 +22,19 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 
 1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
 2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
-3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200), [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (`semantic/PLAN.md` SL-13: touch the lab project only through `gcp-` targets, after #205's guard rails are applied; never raise a quota, a spend cap or the budget, and stop at the first non-zero cost on the billing report).
+3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200).
 4. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
+
+**Parked (owner, 2026-10-31): the real GCP project.** Skip [Map #212](../../../../issues/212) and every issue that runs against the lab project, until the owner unparks it here; work locally (Compose, kind, the BigQuery emulator).
+No live `gcp-` target, `gcloud`, `bq` or call to `*.googleapis.com` against `$GCP_PROJECT`, even read-only (the session-start cost line is the hook's, not the wake's); `make gcp-validate` (offline, in `make lint`) still runs.
+When unparked, it slots in after Map #200, under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-cost-check` before and after every live step, its exit 1 (a cost) or 3 (not provable yet) ending the wake's GCP work with the SKU or the reason in the handoff; `make gcp-up` is a `needs-owner` step.
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
 
 ## Gates
 
 Cloud runs, with their counts in the handoff:
+- `make tools` first in each session: `make lint` runs `make gcp-validate`, which needs the pinned OpenTofu and tflint
 - `make check` (`make lint` and `make test` with the Compose warehouse up and required; GitHub Actions is off, PLAN.md D26, so a PR shows no checks)
 - dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
 - EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`

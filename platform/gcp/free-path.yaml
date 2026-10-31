@@ -1,0 +1,65 @@
+# The free path (semantic/PLAN.md SL-13): every API the lab project may enable and every OpenTofu
+# resource type platform/gcp/infra/ may declare, each with the page that shows why it costs nothing.
+# `enable: true` APIs are the ones infra/ turns on now (it reads this file); the rest wait for the issue
+# that needs them and are turned on by flipping the flag in that issue's PR.
+# check_free_path.py (in `make gcp-validate`) fails on an API or resource type missing here, an entry
+# without a source, and anything on `paid` below, so a paid service cannot slip in by review fatigue.
+# Free tiers are counted per billing account, in us-central1 and BigQuery's US multi-region.
+
+apis:
+  # Control plane: no usage charge.
+  serviceusage.googleapis.com: {enable: true, source: https://cloud.google.com/service-usage/docs/overview}
+  cloudresourcemanager.googleapis.com: {enable: true, source: https://cloud.google.com/resource-manager/docs/resource-manager-api}
+  iam.googleapis.com: {enable: true, source: https://cloud.google.com/iam/pricing}
+  cloudquotas.googleapis.com: {enable: true, source: https://cloud.google.com/docs/quotas/overview}
+  billingbudgets.googleapis.com: {enable: true, source: https://cloud.google.com/billing/docs/how-to/budgets}
+  cloudbilling.googleapis.com: {enable: true, source: https://cloud.google.com/billing/docs/reference/rest}
+  # BigQuery: 1 TiB of queries and 10 GiB of storage a month; load jobs, DML and the Storage Write API's first 2 TiB free.
+  bigquery.googleapis.com: {enable: true, source: https://cloud.google.com/bigquery/pricing#free-tier}
+  bigquerystorage.googleapis.com: {enable: true, source: https://cloud.google.com/bigquery/pricing#data_ingestion_pricing}
+  bigquerydatatransfer.googleapis.com: {enable: true, source: https://cloud.google.com/bigquery/pricing#data_transfer_service_pricing}
+  # Observability: logs 50 GiB a month per project, Google Cloud metrics free.
+  logging.googleapis.com: {enable: true, source: https://cloud.google.com/stackdriver/pricing}
+  monitoring.googleapis.com: {enable: true, source: https://cloud.google.com/stackdriver/pricing}
+  # Cloud Storage: 5 GB-months of Standard storage in us-central1 (the OpenTofu state bucket; landing files later, #227).
+  storage.googleapis.com: {enable: true, source: https://cloud.google.com/storage/pricing}
+  # The kill switch: Pub/Sub's first 10 GiB a month, Eventarc's Pub/Sub-sourced events at $0,
+  # Workflows' 5,000 internal steps a month (about one per budget notification).
+  pubsub.googleapis.com: {enable: true, source: https://cloud.google.com/pubsub/pricing}
+  eventarc.googleapis.com: {enable: true, source: https://cloud.google.com/eventarc/pricing}
+  workflows.googleapis.com: {enable: true, source: https://cloud.google.com/workflows/pricing}
+  workflowexecutions.googleapis.com: {enable: true, source: https://cloud.google.com/workflows/pricing}
+  # Later issues on Map #212, off until their PR turns them on.
+  run.googleapis.com: {enable: false, source: https://cloud.google.com/run/pricing, issue: 209}
+  artifactregistry.googleapis.com: {enable: false, source: https://cloud.google.com/artifact-registry/pricing, issue: 230}
+  firestore.googleapis.com: {enable: false, source: https://cloud.google.com/firestore/pricing, issue: 209}
+  cloudscheduler.googleapis.com: {enable: false, source: https://cloud.google.com/scheduler/pricing, issue: 228}
+  modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
+  # The one dated exception: free until 2026-12-31, switched off by #232.
+  geminidataanalytics.googleapis.com: {enable: false, source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview, issue: 207, until: 2026-12-31}
+
+resources:
+  google_project_service: serviceusage.googleapis.com
+  google_service_account: iam.googleapis.com
+  google_project_iam_member: cloudresourcemanager.googleapis.com
+  google_pubsub_topic: pubsub.googleapis.com
+  google_workflows_workflow: workflows.googleapis.com
+  google_eventarc_trigger: eventarc.googleapis.com
+
+# No Always Free tier, or a free tier the lab cannot hold: never on the list above.
+paid:
+  - compute.googleapis.com
+  - container.googleapis.com
+  - composer.googleapis.com
+  - sqladmin.googleapis.com
+  - redis.googleapis.com
+  - alloydb.googleapis.com
+  - spanner.googleapis.com
+  - bigtableadmin.googleapis.com
+  - file.googleapis.com
+  - dataproc.googleapis.com
+  - dataflow.googleapis.com
+  - notebooks.googleapis.com
+  - aiplatform.googleapis.com
+  - bigqueryreservation.googleapis.com
+  - cloudfunctions.googleapis.com

@@ -1,0 +1,22 @@
+# One step when the budget is under the threshold (the common case, inside Workflows' free 5,000
+# internal steps a month); two more when it passes it. The event is Eventarc's Pub/Sub CloudEvent, whose
+# message data is the budget notification (costAmount is the month-to-date cost after credits).
+main:
+  params: [event]
+  steps:
+    - check:
+        switch:
+          - condition: $${json.decode(base64.decode(event.data.message.data)).costAmount > ${threshold}}
+            next: unlink
+        next: end
+    - unlink:
+        call: http.put
+        args:
+          url: https://cloudbilling.googleapis.com/v1/projects/${project}/billingInfo
+          auth:
+            type: OAuth2
+          body:
+            billingAccountName: ""
+        result: unlinked
+    - report:
+        return: $${unlinked.body}
