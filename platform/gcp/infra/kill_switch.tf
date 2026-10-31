@@ -35,6 +35,8 @@ resource "google_workflows_workflow" "kill_switch" {
   description     = "Unlink billing from ${var.project} once the budget's month-to-date cost passes ${var.kill_switch_usd} USD."
   service_account = google_service_account.kill_switch.id
   call_log_level  = "LOG_ERRORS_ONLY"
+  # `make gcp-down` removes the lab in one step; the provider's default would refuse.
+  deletion_protection = false
   source_contents = templatefile("${path.module}/kill_switch.workflow.yaml", {
     project   = var.project
     threshold = var.kill_switch_usd

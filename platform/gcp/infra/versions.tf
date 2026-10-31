@@ -12,9 +12,9 @@ terraform {
 
   # State in the project's own bucket (Cloud Storage's free 5 GB in us-central1), named by
   # `make gcp-plan` / `gcp-up` as `<project>-tfstate`; `make gcp-validate` runs without a backend.
-  backend "gcs" {
-    prefix = "infra"
-  }
+  # No prefix: the object is `default.tfstate`, a name without a slash, because the cloud sessions'
+  # egress proxy decodes the `%2F` the storage JSON API needs, and a slashed name reads as 404 there.
+  backend "gcs" {}
 }
 
 provider "google" {

@@ -328,8 +328,9 @@ lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts and the
 gcp-validate: ## Offline: tofu fmt and validate, tflint, and the free-path allowlist on platform/gcp/ (no credentials; needs `make tools`)
 	@command -v tofu >/dev/null && command -v tflint >/dev/null || { echo "gcp-validate: tofu and tflint are missing: run make tools" >&2; exit 1; }
 	tofu -chdir=platform/gcp/infra fmt -check -recursive
-	tofu -chdir=platform/gcp/infra init -backend=false -input=false >/dev/null
-	tofu -chdir=platform/gcp/infra validate
+	# Its own working directory: one a live gcp- target initialised remembers the gcs backend and its credentials.
+	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra init -backend=false -input=false >/dev/null
+	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra validate
 	cd platform/gcp/infra && tflint --init >/dev/null && tflint
 	uvx ruff@0.17.0 check platform/gcp && uvx ruff@0.17.0 format --check platform/gcp
 	uv run --no-project --with pyyaml==6.0.2 python platform/gcp/check_free_path.py

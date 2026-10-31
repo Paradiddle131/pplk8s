@@ -28,6 +28,7 @@ dbt/.user.yml
 
 # OpenTofu working directories (platform/gcp/infra; the lock file is committed)
 .terraform/
+.terraform-validate/
 *.tfstate
 *.tfstate.backup
 *.tfplan
