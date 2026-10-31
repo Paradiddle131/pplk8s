@@ -20,10 +20,11 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 
 ## Queue
 
-1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
-2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
-3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200), [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (`semantic/PLAN.md` SL-13: touch the lab project only through `gcp-` targets, after #205's guard rails are applied; never raise a quota, a spend cap or the budget, and stop at the first non-zero cost on the billing report).
-4. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
+1. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212), first (owner, 2026-10-31): its `autopilot-ready` sub-issues in its table's order. `semantic/PLAN.md` SL-13 binds it: touch the lab project only through `gcp-` targets, after #205's guard rails are applied; run `make gcp-cost-check` (#233) before and after every target that changes the project once it exists; never raise a quota, a spend cap or the budget; stop the wake at the first non-zero cost.
+2. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
+3. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
+4. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200).
+5. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
 

@@ -2,7 +2,7 @@
 
 The second track of this repository, separate from the Airflow lab ([`../PLAN.md`](../PLAN.md), sealed for this topic).
 It shares the warehouse, the dbt project and the Compose stand-ins; it changes a DAG only to give a domain it adds a full lineage (SL-8, the lab's D38).
-Progress lives in the issues under the maps: [Map #99](../../../issues/99) (R1-R7, done) and [Map #135](../../../issues/135) (the use case, U1-U6, labels `semantic` and `use-case`), then, in the owner's order of 2026-10-31, [Map #199](../../../issues/199) (more domains), [Map #197](../../../issues/197) (the questions business users ask), [Map #200](../../../issues/200) (one governed semantic layer for every agent), [Map #212](../../../issues/212) (the semantic track on a free-tier GCP project, SL-13) and, low priority, [Map #198](../../../issues/198) (the eval); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
+Progress lives in the issues under the maps: [Map #99](../../../issues/99) (R1-R7, done) and [Map #135](../../../issues/135) (the use case, U1-U6, labels `semantic` and `use-case`), then, in the owner's order of 2026-10-31, [Map #212](../../../issues/212) first (the semantic track on a free-tier GCP project, SL-13), [Map #199](../../../issues/199) (more domains), [Map #197](../../../issues/197) (the questions business users ask), [Map #200](../../../issues/200) (one governed semantic layer for every agent) and, low priority, [Map #198](../../../issues/198) (the eval); this file holds what binds the work: the goal, the requirements, the decisions and the exit.
 Decisions are a register: one row per live decision, amended in place, a superseded row deleted in the PR that supersedes it; git is the history.
 
 ## 1. Goal
