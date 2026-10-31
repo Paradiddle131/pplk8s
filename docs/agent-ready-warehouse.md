@@ -51,6 +51,7 @@ Every model that builds a relation has a description; every public model also de
 Bronze and silver columns may stay undescribed: no agent reads them, and their meaning reaches agents through the metrics.
 A categorical dimension whose column takes a fixed set of codes declares them with `accepted_values`: the catalog lists them under the dimension, and the metric tools refuse a filter value outside them instead of answering a guessed value with a confident zero.
 A dimension with an open set (a campaign's name) declares none, and any value passes.
+Declaring values on a column that already holds rows covers those rows too: silver maps each older code to a declared one (bronze keeps the raw value), so the test holds over all history and every value a group-by shows is one the filter accepts.
 
 ## The glossary
 
