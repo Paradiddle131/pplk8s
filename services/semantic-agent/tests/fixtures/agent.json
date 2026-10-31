@@ -338,7 +338,7 @@
         },
         {
           "name": "channel",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner); unknown for bookings whose lead is not loaded."
         },
         {
           "name": "ad_spend_eur",
@@ -423,6 +423,128 @@
           "description": "Sum of the total amounts charged, in USD."
         }
       ]
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Channel",
+      "description": "The marketing channel a campaign runs on, search, social, display, email or partner. Leads and bookings take their campaign's channel; a booking whose lead is not loaded yet has none.",
+      "synonyms": [
+        "marketing channel",
+        "acquisition channel"
+      ],
+      "metrics": [
+        "ad_spend_eur",
+        "leads",
+        "bookings",
+        "cost_per_lead_eur",
+        "cost_per_booking_eur"
+      ],
+      "dimensions": [
+        "campaign__channel"
+      ],
+      "model": "slv_campaigns"
+    },
+    {
+      "term": "Conversion",
+      "description": "A lead that books. Bookings count conversions on the day they are made; the lead-to-booking rate counts a lead as converted when it books within 30 days of being created; cost per conversion is cost per booking.",
+      "synonyms": [
+        "converted lead",
+        "booked lead"
+      ],
+      "metrics": [
+        "bookings",
+        "lead_to_booking_rate",
+        "cost_per_booking_eur"
+      ],
+      "dimensions": [],
+      "model": "slv_bookings"
+    },
+    {
+      "term": "Customer country",
+      "description": "The ISO-2 country a customer is registered in. It is the customer's, not the market a campaign targets nor a lead's country, so revenue or orders by country group by it.",
+      "synonyms": [
+        "country"
+      ],
+      "metrics": [
+        "orders_total",
+        "revenue_eur",
+        "customers_distinct"
+      ],
+      "dimensions": [
+        "customer__country"
+      ],
+      "model": "slv_customers"
+    },
+    {
+      "term": "Market",
+      "description": "The ISO-2 country a campaign targets. It can differ from a lead's own country and a customer's country, so spend, leads and bookings by market group by the campaign, not the person.",
+      "synonyms": [
+        "target market",
+        "campaign country"
+      ],
+      "metrics": [
+        "ad_spend_eur",
+        "leads",
+        "bookings"
+      ],
+      "dimensions": [
+        "campaign__market"
+      ],
+      "model": "slv_campaigns"
+    },
+    {
+      "term": "Order status",
+      "description": "Where an order stands, placed, shipped or cancelled. A cancelled order counts in orders and the cancellation rate, never in revenue or active customers.",
+      "synonyms": [
+        "cancelled order",
+        "shipped order",
+        "placed order"
+      ],
+      "metrics": [
+        "orders_total",
+        "orders_cancelled",
+        "cancellation_rate",
+        "revenue_eur",
+        "customers_distinct"
+      ],
+      "dimensions": [
+        "order__status"
+      ],
+      "model": "slv_orders"
+    },
+    {
+      "term": "Partner return",
+      "description": "An order a partner reports as returned, with the amount and the partner's reason, on the UTC day it was recorded. Returns lower net revenue; revenue itself keeps the order.",
+      "synonyms": [
+        "return"
+      ],
+      "metrics": [
+        "returns_eur",
+        "returns_count",
+        "net_revenue_eur"
+      ],
+      "dimensions": [
+        "return__reason"
+      ],
+      "model": "slv_returns"
+    },
+    {
+      "term": "Signup cohort",
+      "description": "The customers who signed up in the same calendar month. A metric by cohort groups by the month its customer signed up, not the month the order was placed.",
+      "synonyms": [
+        "cohort",
+        "acquisition cohort"
+      ],
+      "metrics": [
+        "orders_total",
+        "revenue_eur",
+        "customers_distinct"
+      ],
+      "dimensions": [
+        "customer__signup_date"
+      ],
+      "model": "slv_customers"
     }
   ],
   "metrics": [
@@ -665,6 +787,16 @@
       ],
       "dimensions": [
         {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
@@ -780,6 +912,16 @@
         "orders"
       ],
       "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
         {
           "name": "metric_time",
           "type": "time",
@@ -957,6 +1099,16 @@
       ],
       "dimensions": [
         {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
@@ -994,6 +1146,16 @@
         "orders"
       ],
       "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
         {
           "name": "metric_time",
           "type": "time",
@@ -1043,6 +1205,16 @@
           "description": "ISO-4217 code of the order amount."
         },
         {
+          "name": "order__customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "order__customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "order__order_date",
           "type": "time",
           "description": "UTC date the order was placed."
@@ -1060,7 +1232,7 @@
         {
           "name": "return__return_date",
           "type": "time",
-          "description": "UTC date the return was recorded."
+          "description": "UTC date the return was recorded (returned_at in UTC)."
         }
       ]
     },
@@ -1091,6 +1263,16 @@
           "description": "ISO-4217 code of the order amount."
         },
         {
+          "name": "order__customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "order__customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "order__order_date",
           "type": "time",
           "description": "UTC date the order was placed."
@@ -1108,7 +1290,7 @@
         {
           "name": "return__return_date",
           "type": "time",
-          "description": "UTC date the return was recorded."
+          "description": "UTC date the return was recorded (returned_at in UTC)."
         }
       ]
     },
@@ -1128,6 +1310,16 @@
         "orders"
       ],
       "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
         {
           "name": "metric_time",
           "type": "time",

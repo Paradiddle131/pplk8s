@@ -14,7 +14,7 @@ Each layer is one folder under `dbt/models/` and one schema in the warehouse, wh
 | silver | `silver` | `slv_` | One row per natural key, latest load wins; the semantic models sit here | only through a metric |
 | gold | `gold` | `gld_` | Business aggregates at a stated grain | yes, `access: public` |
 | exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public` |
-| semantic | `semantic` | none | MetricFlow's `time_spine` and `metrics`, one row per metric | `metrics`, as the glossary |
+| semantic | `semantic` | none | MetricFlow's `time_spine`, `metrics` (one row per metric) and `glossary` (one row per term) | `metrics` and `glossary` |
 
 A model builds in its layer's dataset, never in one it chooses (`generate_schema_name` uses the layer verbatim).
 The landing dataset (`ds_source`) belongs to the extraction service; dbt reads it only through `source()` in bronze.
@@ -24,7 +24,7 @@ The landing dataset (`ds_source`) belongs to the extraction service; dbt reads i
 - A model in bronze, silver, gold or exposed starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
   The prefix keeps names unique across the project; the dataset already says the layer, so the table does not repeat it.
   An ephemeral model builds no relation and needs only the prefix.
-- A semantic-stage model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`).
+- A semantic-stage model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`, `glossary`).
 - Models, columns, semantic models, entities, dimensions and metrics are lower snake case; a metadata column the loader adds starts with an underscore (`_loaded_at`, `_run_id`).
 - A metric is the quantity with its unit as a suffix (`revenue_eur`, `cost_per_lead_eur`); a count names what it counts, and how when there is more than one way (`leads`, `orders_total`, `orders_cancelled`, `customers_distinct`); a ratio of two counts ends in `_rate`.
 - A dimension is asked for as `<entity>__<dimension>` (`order__status`, `customer__country`), and time as `metric_time__day` (or `__week`, `__month`, `__year`).
@@ -43,9 +43,29 @@ A description is written for a reader who sees only it: an agent choosing a tabl
 | Semantic model, entity, dimension | What the rows are, and what grouping by it means | `UTC date the customer signed up; group by its month for signup cohorts.` |
 | Metric `label` | The business term in plain words, the unit in brackets | `Net revenue (EUR)` |
 | Metric `description` | What it counts or sums, what it leaves out, and how a ratio divides | `Ad spend divided by bookings over the whole period asked (total spend over total bookings, never an average of daily ratios); the one definition of cost per conversion.` |
+| Glossary term | What the term means, what it is not (the term it is confused with), and the metrics and dimensions it maps to | `Market`: `The ISO-2 country a campaign targets. It can differ from a lead's own country and a customer's country, …` with `dimensions: [campaign__market]` |
 
 Every model that builds a relation has a description; every public model also describes every column; every semantic model describes itself, its entities, dimensions and measures; every metric has a description and a label.
 Bronze and silver columns may stay undescribed: no agent reads them, and their meaning reaches agents through the metrics.
+
+## The glossary
+
+A business term that is not a metric (a cohort, a channel, a market, what a conversion is) is a glossary term, kept in `config.meta.glossary` on the model that holds the concept, usually the silver model under its semantic model:
+
+```yaml
+- name: slv_campaigns
+  config:
+    meta:
+      glossary:
+        - term: Market
+          description: The ISO-2 country a campaign targets. …
+          synonyms: [target market, campaign country]
+          metrics: [ad_spend_eur, leads, bookings]
+          dimensions: [campaign__market]
+```
+
+A term maps to at least one metric or dimension, names metrics by their name and dimensions as `<entity>__<dimension>`, and never repeats a metric: a metric's label and description are already its glossary entry, and a second definition is how two agents come to disagree.
+dbt has no glossary node; `meta` on the model keeps the term beside the columns it explains, in the YAML the catalog already reads.
 
 ## Which layer agents read
 
@@ -68,6 +88,7 @@ A ratio is never stored per day for agents to average: the metric divides the to
 |---|---|---|
 | Public model and column descriptions | BigQuery table and column descriptions, which Knowledge Catalog shows | `persist_docs` on gold and exposed, written as the models build |
 | Metric labels and descriptions | `semantic.metrics`, and the data agent's glossary | `semantic_metrics.sql` from dbt's graph; `build_catalog.py` |
+| Glossary terms | `semantic.glossary`, the agent catalog's `glossary` (the lab agent's `list_metrics`), and the data agent's glossary with the mapping in its description | `semantic_glossary.sql` from dbt's graph; `build_catalog.py` |
 | Semantic models, entities and dimensions | The data agent's tables, fields, aggregations and relationships | `build_catalog.py` (`system_instruction.yaml`) |
 | Each metric's compiled SQL | The data agent's verified queries | `build_catalog.py` (`example_queries.json`) |
 
@@ -82,7 +103,7 @@ A ratio is never stored per day for agents to average: the metric divides the to
 - a missing description on any of the things the rules above name, or a metric without a label.
 
 It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric and on an unprefixed, undescribed gold model.
-`check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
+`check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, glossary terms included (an unknown metric, a dimension none of the term's metrics has, a term repeating a metric), and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
 
 What it cannot see: a column the SQL selects but the YAML does not name is absent from the manifest, so its missing description shows only in the warehouse (`make catalog-check`) until model contracts declare every column ([#140](../../../issues/140)).
 

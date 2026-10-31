@@ -6,12 +6,33 @@ version: 2
 # A dimension's description is its column's: it reaches the agent catalog (SL-3).
 # No metric sets `fill_nulls_with`: dbt-core 1.12.6 drops it in this spec (#137), so a simple metric reads NULL,
 # not 0, in a day or group where it has no rows, and a derived metric coalesces the inputs it adds or subtracts.
+# Business terms that are not metrics live in `config.meta.glossary` on the model that holds the concept: a term,
+# what it means, its synonyms, and the metrics and dimensions it maps to (docs/agent-ready-warehouse.md). They
+# reach the agent catalog, the data agent's glossary and semantic.glossary; check_catalog.py fails on a term
+# that names an unknown metric or dimension, or repeats a metric.
 
 models:
   # Customers carry no metric of their own: the customer entity lets every orders metric group and
   # filter by the customer's country and signup cohort (customer__signup_date__month).
   - name: slv_customers
     description: One row per customer, latest load wins. Alias silver.customers.
+    config:
+      meta:
+        glossary:
+          - term: Signup cohort
+            description: >-
+              The customers who signed up in the same calendar month. A metric by cohort groups by the month
+              its customer signed up, not the month the order was placed.
+            synonyms: [cohort, acquisition cohort]
+            metrics: [orders_total, revenue_eur, customers_distinct]
+            dimensions: [customer__signup_date]
+          - term: Customer country
+            description: >-
+              The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so
+              revenue or orders by country group by it.
+            synonyms: [country]
+            metrics: [orders_total, revenue_eur, customers_distinct]
+            dimensions: [customer__country]
     semantic_model:
       enabled: true
       name: customers
@@ -38,6 +59,16 @@ models:
 
   - name: slv_orders
     description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.
+    config:
+      meta:
+        glossary:
+          - term: Order status
+            description: >-
+              Where an order stands: placed, shipped or cancelled. A cancelled order counts in orders and the
+              cancellation rate, never in revenue or active customers.
+            synonyms: [cancelled order, shipped order, placed order]
+            metrics: [orders_total, orders_cancelled, cancellation_rate, revenue_eur, customers_distinct]
+            dimensions: [order__status]
     semantic_model:
       enabled: true
       name: orders
@@ -129,6 +160,16 @@ models:
 
   - name: slv_returns
     description: Latest row per return_id across landed files. Alias silver.returns.
+    config:
+      meta:
+        glossary:
+          - term: Partner return
+            description: >-
+              An order a partner reports as returned, with the amount and the partner's reason, on the UTC day
+              it was recorded. Returns lower net revenue; revenue itself keeps the order.
+            synonyms: [return]
+            metrics: [returns_eur, returns_count, net_revenue_eur]
+            dimensions: [return__reason]
     semantic_model:
       enabled: true
       name: returns
@@ -215,6 +256,23 @@ models:
   # bookings those leads make, all reachable by the campaign entity.
   - name: slv_campaigns
     description: One row per ad campaign, latest load wins. Alias silver.campaigns.
+    config:
+      meta:
+        glossary:
+          - term: Channel
+            description: >-
+              The marketing channel a campaign runs on: search, social, display, email or partner. Leads and
+              bookings take their campaign's channel; a booking whose lead is not loaded yet has none.
+            synonyms: [marketing channel, acquisition channel]
+            metrics: [ad_spend_eur, leads, bookings, cost_per_lead_eur, cost_per_booking_eur]
+            dimensions: [campaign__channel]
+          - term: Market
+            description: >-
+              The ISO-2 country a campaign targets. It can differ from a lead's own country and a customer's
+              country, so spend, leads and bookings by market group by the campaign, not the person.
+            synonyms: [target market, campaign country]
+            metrics: [ad_spend_eur, leads, bookings]
+            dimensions: [campaign__market]
     semantic_model:
       enabled: true
       name: campaigns
@@ -339,6 +397,16 @@ models:
       A booking whose lead is not loaded yet (leads arrive per interval, a booking up to three weeks
       later) keeps a NULL campaign_id, so it groups under an empty channel; its lead tests warn rather
       than fail. Alias silver.bookings.
+    config:
+      meta:
+        glossary:
+          - term: Conversion
+            description: >-
+              A lead that books. Bookings count conversions on the day they are made; the lead-to-booking rate
+              counts a lead as converted when it books within 30 days of being created; cost per conversion is
+              cost per booking.
+            synonyms: [converted lead, booked lead]
+            metrics: [bookings, lead_to_booking_rate, cost_per_booking_eur]
     semantic_model:
       enabled: true
       name: bookings

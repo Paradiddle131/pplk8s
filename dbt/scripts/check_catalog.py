@@ -5,7 +5,11 @@ Checks, against the manifests the artefacts were built from (semantic/PLAN.md SL
   columns is described (persist_docs turns the words into warehouse comments);
 - system_instruction.yaml parses and uses only the keys Google documents for a BigQuery data agent's
   authored context, with the documented relationship and join types;
-- example_queries.json holds one verified query per metric, with the documented keys only.
+- example_queries.json holds one verified query per metric, with the documented keys only;
+- every glossary term (`config.meta.glossary` on a model) is in agent.json, has a description, maps to at
+  least one metric or dimension, names only metrics the semantic manifest defines and dimensions one of its
+  metrics groups by, and neither repeats another term nor a metric's name or label (a metric is its own
+  glossary entry).
 
 Usage: python scripts/check_catalog.py [target_dir]  (after build_catalog.py)
 """
@@ -45,6 +49,46 @@ ENUMS = {
     "join_type": {"inner", "outer", "left", "right", "full"},
 }
 EXAMPLE_QUERY_KEYS = {"naturalLanguageQuestion", "sqlQuery", "parameters"}
+GLOSSARY_KEYS = {"term", "description", "synonyms", "metrics", "dimensions"}
+
+
+def _key(term: str) -> str:
+    """A term as a reader matches it: case, spacing and a plural s do not make another term."""
+    return " ".join(term.lower().split()).removesuffix("s")
+
+
+def glossary_problems(manifest: dict, catalog: dict) -> list[str]:
+    metrics = {metric["name"]: metric for metric in catalog["metrics"]}
+    taken = {_key(name): f"metric {name}" for name in metrics}
+    taken |= {_key(metric["label"]): f"metric {name}" for name, metric in metrics.items()}
+    dimensions = {name: {d["name"] for d in metric["dimensions"]} for name, metric in metrics.items()}
+    found, count = [], 0
+    for node in sorted(manifest["nodes"].values(), key=lambda n: n["name"]):
+        if node["resource_type"] != "model":
+            continue
+        for entry in node["config"].get("meta", {}).get("glossary", []):
+            count += 1
+            term = entry.get("term") or "?"
+            where = f"glossary term {term!r} on {node['name']}"
+            found += [f"{where}: unknown key {key!r}" for key in sorted(entry.keys() - GLOSSARY_KEYS)]
+            if not (entry.get("description") or "").strip():
+                found.append(f"{where}: no description")
+            named_metrics, named_dimensions = entry.get("metrics", []), entry.get("dimensions", [])
+            if not named_metrics and not named_dimensions:
+                found.append(f"{where}: maps to no metric or dimension")
+            found += [f"{where}: unknown metric {name}" for name in named_metrics if name not in metrics]
+            reachable = set().union(*(dimensions[name] for name in named_metrics or metrics if name in dimensions))
+            found += [
+                f"{where}: dimension {name} is not a dimension of {'its metrics' if named_metrics else 'any metric'}"
+                for name in named_dimensions
+                if name not in reachable
+            ]
+            if _key(term) in taken:
+                found.append(f"{where}: repeats {taken[_key(term)]}")
+            taken.setdefault(_key(term), where)
+    if len(catalog.get("glossary", [])) != count:
+        found.append(f"agent.json: {len(catalog.get('glossary', []))} glossary terms for {count} in the manifest")
+    return found
 
 
 def authored_context_problems(document: object, parent: str | None = None, path: str = "") -> list[str]:
@@ -105,6 +149,8 @@ def problems(target: Path) -> list[str]:
         if not metric.get(field)
     ]
 
+    found += glossary_problems(manifest, catalog)
+
     context = yaml.safe_load((catalog_dir / "data_agent" / "system_instruction.yaml").read_text())
     found += [f"system_instruction.yaml: {problem}" for problem in authored_context_problems(context)]
 
@@ -124,7 +170,10 @@ def main() -> int:
     for problem in found:
         print(f"check_catalog: {problem}", file=sys.stderr)
     if not found:
-        print("check_catalog: every public model and metric is catalogued; the authored context uses documented keys")
+        print(
+            "check_catalog: every public model, metric and glossary term is catalogued; "
+            "the authored context uses documented keys"
+        )
     return 1 if found else 0
 
 

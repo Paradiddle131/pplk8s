@@ -49,6 +49,7 @@ def project_dir() -> Path:
 class Catalog:
     metrics: dict[str, dict[str, Any]]
     models: list[dict[str, Any]] = field(default_factory=list)
+    glossary: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -58,7 +59,11 @@ class Catalog:
         if not path.exists():
             raise FileNotFoundError(f"{path}: run `make dbt-catalog` first")
         data = json.loads(path.read_text())
-        return cls(metrics={m["name"]: m for m in data["metrics"]}, models=data["models"])
+        return cls(
+            metrics={m["name"]: m for m in data["metrics"]},
+            models=data["models"],
+            glossary=data.get("glossary", []),
+        )
 
     def metric(self, name: str) -> dict[str, Any]:
         if name not in self.metrics:

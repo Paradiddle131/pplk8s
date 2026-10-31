@@ -56,6 +56,15 @@ def test_a_question_is_answered_from_query_metrics(metricflow):
     assert results[1]["response"]["rows"] == ROWS["rows"]
 
 
+def test_list_metrics_also_gives_the_glossary_of_terms_that_are_not_metrics():
+    listed = tools.list_metrics()
+    terms = {term["term"]: term for term in listed["glossary"]}
+    assert terms["Signup cohort"]["dimensions"] == ["customer__signup_date"]
+    assert "Signup cohort" not in {metric["label"] for metric in listed["metrics"]}
+    metrics = {metric["name"] for metric in listed["metrics"]}
+    assert all(set(term["metrics"]) <= metrics for term in terms.values())
+
+
 def test_filters_from_the_model_reach_metricflow_as_checked_literals(metricflow):
     args = {
         "metrics": ["orders_total"],

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Catalog check (issue #101, semantic/PLAN.md SL-3, SL-4): host dbt builds every public model on the
 # dev fixtures in the Compose warehouse's dbt_dev database, runs `make dbt-catalog` on it, and asserts that
-#   - check_catalog.py passes: agent.json lists exactly the public models and every metric, and the data
-#     agent's authored context uses the documented keys only,
+#   - check_catalog.py passes: agent.json lists exactly the public models, every metric and every glossary
+#     term, and the data agent's authored context uses the documented keys only,
 #   - every gold and exposed relation, and every one of its columns, carries a comment (persist_docs),
-#   - semantic.metrics holds one row per metric of the semantic manifest,
+#   - semantic.metrics holds one row per metric of the semantic manifest, semantic.glossary one per term,
 #   - every example query (a metric's compiled SQL) runs on the warehouse and returns rows,
-#   - an undocumented authored-context key and an undescribed public column fail check_catalog.py.
+#   - an undocumented authored-context key, an undescribed public column, and a glossary term that names an
+#     unknown metric, a dimension its metrics lack, or repeats a metric fail check_catalog.py.
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
 
@@ -45,8 +46,9 @@ echo "ok: sales, returns, finance, marketing and tlc (2024-12) built; agent role
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
   { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog against $DB"; }
-grep -q "10 public models and 16 metrics" "$OUT/catalog.log" || { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 10 public models and 16 metrics"; }
-grep -q "check_catalog: every public model and metric is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
+grep -q "10 public models, 16 metrics and 7 glossary terms" "$OUT/catalog.log" ||
+  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 10 public models, 16 metrics and 7 glossary terms"; }
+grep -q "check_catalog: every public model, metric and glossary term is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
 echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 
 # Every public relation built, and no relation or column of gold or exposed without a comment.
@@ -67,6 +69,17 @@ metrics=$(py_ -c "import json; print('\n'.join(sorted(m['name'] for m in json.lo
 expect "semantic.metrics vs the semantic manifest" "$(psql_dev -c "select metric_name from semantic.metrics order by metric_name collate \"C\"")" "$metrics"
 expect "semantic.metrics rows without words" "$(psql_dev -c "select count(*) from semantic.metrics where label = '' or description = '' or pipelines = ''")" 0
 echo "ok: semantic.metrics holds the $(echo "$metrics" | wc -l) metrics"
+
+terms=$(py_ -c "import json; print('\n'.join(sorted(t['term'] for t in json.load(open('target/catalog/agent.json'))['glossary'])))")
+expect "semantic.glossary vs the catalog's glossary" "$(psql_dev -c "select term from semantic.glossary order by term collate \"C\"")" "$terms"
+expect "semantic.glossary rows without words or a mapping" "$(psql_dev -c "select count(*) from semantic.glossary where description = '' or metrics || dimensions = ''")" 0
+expect "the data agent's glossary terms" "$(py_ -c "
+import yaml
+context = yaml.safe_load(open('target/catalog/data_agent/system_instruction.yaml'))
+glossaries = next(item['glossaries'] for item in context if 'glossaries' in item)
+print(len(glossaries))
+")" "$(( $(echo "$metrics" | wc -l) + $(echo "$terms" | wc -l) ))"
+echo "ok: semantic.glossary and the data agent's glossaries hold the $(echo "$terms" | wc -l) glossary terms beside the metrics"
 
 # The verified queries are the metrics' compiled SQL: each must run and return the fixture's days.
 py_ -c "
@@ -97,6 +110,27 @@ json.dump(manifest, open(path, 'w'))
 if py_ scripts/check_catalog.py "$stray" >"$OUT/stray.log" 2>&1; then fail "check_catalog passed with an undescribed gold column"; fi
 grep -q "public model gld_daily_sales: column revenue_eur has no description" "$OUT/stray.log" ||
   { cat "$OUT/stray.log" >&2; fail "check_catalog failed, but not on the undescribed column"; }
-echo "ok: an undocumented authored-context key and an undescribed public column fail check_catalog"
+
+# A glossary term that names an unknown metric, a dimension none of its metrics has, or a metric's own label.
+py_ -c "
+import json
+path = '$stray/manifest.json'
+manifest = json.load(open(path))
+manifest['nodes']['model.pplk8s.gld_daily_sales']['columns']['revenue_eur']['description'] = 'restored'
+glossary = manifest['nodes']['model.pplk8s.slv_orders']['config']['meta']['glossary']
+glossary += [
+    {'term': 'Gross margin', 'description': 'Made up.', 'metrics': ['gross_margin_eur']},
+    {'term': 'Ad market', 'description': 'Made up.', 'metrics': ['revenue_eur'], 'dimensions': ['campaign__market']},
+    {'term': 'Revenue (EUR)', 'description': 'A second definition.', 'metrics': ['revenue_eur']},
+]
+json.dump(manifest, open(path, 'w'))
+"
+if py_ scripts/check_catalog.py "$stray" >"$OUT/stray.log" 2>&1; then fail "check_catalog passed with stray glossary terms"; fi
+for problem in "glossary term 'Gross margin' on slv_orders: unknown metric gross_margin_eur" \
+  "glossary term 'Ad market' on slv_orders: dimension campaign__market is not a dimension of its metrics" \
+  "glossary term 'Revenue (EUR)' on slv_orders: repeats metric revenue_eur"; do
+  grep -qF "$problem" "$OUT/stray.log" || { cat "$OUT/stray.log" >&2; fail "check_catalog did not report: $problem"; }
+done
+echo "ok: an undocumented authored-context key, an undescribed public column and stray glossary terms fail check_catalog"
 
 echo "PASS: catalog check"
