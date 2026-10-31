@@ -24,7 +24,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 
 | Who | Roles on the project | Does |
 |---|---|---|
-| The owner, from Cloud Shell | Owner | `make gcp-up` / `gcp-down`, enabling APIs, IAM, quotas, the budget |
+| The owner, from their own signed-in shell | Owner | `make gcp-up` / `gcp-down`, enabling APIs, IAM, quotas, the budget |
 | `pplk8s-automation`, the cloud sessions' credential (injected by the egress proxy, no key) | Viewer, BigQuery Job User and Data Editor, Service Usage Consumer; Storage Object Viewer on the state bucket | reads, `make gcp-plan`, `make gcp-cost-check`, BigQuery work |
 | `kill-switch` (created by `infra/`) | Project Billing Manager, Workflows Invoker, Eventarc Event Receiver, Logs Writer | unlinks billing when the budget passes `kill_switch_usd` |
 
@@ -45,7 +45,7 @@ Unlinking billing stops every resource and may delete some, which for a lab of s
 It costs nothing: Pub/Sub's first 10 GiB a month, Eventarc's Pub/Sub-sourced events ($0) and Workflows' 5,000 free internal steps a month, at one step per notification; nothing is built or stored.
 Billing data lags by hours, so it limits a runaway rather than preventing one; Workflows' free steps are shared with the orchestration of #228, which must count them.
 
-## Owner's runbook (Cloud Shell)
+## Owner's runbook (a shell signed in to gcloud: WSL or Cloud Shell)
 
 1. Once: the state bucket, readable by the cloud sessions' credential.
 
@@ -55,7 +55,7 @@ gcloud storage buckets create "gs://$P-tfstate" --project="$P" --location=us-cen
 gcloud storage buckets add-iam-policy-binding "gs://$P-tfstate" --member="serviceAccount:pplk8s-automation@$P.iam.gserviceaccount.com" --role=roles/storage.objectViewer
 ```
 
-2. Apply: `git clone` this repo, `make tools` (OpenTofu into `~/.local/bin`), then `GCP_PROJECT=$P make gcp-up`.
+2. Apply: `make tools` (OpenTofu into `~/.local/bin`), then `GCP_PROJECT=$P make gcp-up`; `tofu.sh` borrows a short-lived token from the active gcloud account (it prints which; `GCP_ACCOUNT=<account>` picks another), so no `gcloud auth application-default login` is needed.
 3. Connect the budget to the kill switch (console): Billing → Budgets & alerts → the lab's budget → Manage notifications → Connect a Pub/Sub topic → the project's `budget-alerts` → Save.
 4. Check: `GCP_PROJECT=$P make gcp-plan` from a cloud session shows no changes; the workflow's executions (Workflows → `kill-switch`) end after one step.
 
