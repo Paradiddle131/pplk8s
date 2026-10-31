@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the pinned cluster toolchain (kind, kubectl, helm, helm-diff, k9s) into $BIN_DIR.
+# Install the pinned toolchain (kind, kubectl, helm, helm-diff, k9s; OpenTofu and tflint for platform/gcp/) into $BIN_DIR.
 # Each artifact is verified against a checksum recorded here, so a fresh
 # clone installs exactly the binaries the lab was built with.
 set -euo pipefail
@@ -18,6 +18,11 @@ KUBECTL_VERSION=v1.36.5
 KUBECTL_SHA256=33bc88a24c3b09cf55bfd59e6ca977881b61fc3f25ab65bc80c65b430248648e
 K9S_VERSION=v0.51.0
 K9S_SHA256=c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7
+# platform/gcp/ (semantic/PLAN.md SL-13): OpenTofu validates and applies the GCP root, tflint lints it.
+TOFU_VERSION=1.10.7
+TOFU_SHA256=c79bb458e7d7fa08c44be98b373ab3434647598808fc2a75dc9338aef7432ae6
+TFLINT_VERSION=v0.59.1
+TFLINT_SHA256=6108d84282292f11d793dc8038ce08fbc629dcd25324d6f13c63d8100b52e01f
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -68,6 +73,20 @@ if installed k9s "$K9S_VERSION"; then echo "k9s $K9S_VERSION already installed";
   tar -xzf "$tmp/k9s.tgz" -C "$tmp" k9s
   install -m 0755 "$tmp/k9s" "$BIN_DIR/k9s"
   echo "installed k9s $K9S_VERSION"
+fi
+
+if installed tofu "v$TOFU_VERSION"; then echo "tofu $TOFU_VERSION already installed"; else
+  fetch "https://github.com/opentofu/opentofu/releases/download/v$TOFU_VERSION/tofu_${TOFU_VERSION}_linux_amd64.zip" "$TOFU_SHA256" "$tmp/tofu.zip"
+  python3 -m zipfile -e "$tmp/tofu.zip" "$tmp/tofu-dist"
+  install -m 0755 "$tmp/tofu-dist/tofu" "$BIN_DIR/tofu"
+  echo "installed tofu $TOFU_VERSION"
+fi
+
+if command -v tflint >/dev/null && tflint --version 2>/dev/null | grep -q -- "${TFLINT_VERSION#v}"; then echo "tflint $TFLINT_VERSION already installed"; else
+  fetch "https://github.com/terraform-linters/tflint/releases/download/$TFLINT_VERSION/tflint_linux_amd64.zip" "$TFLINT_SHA256" "$tmp/tflint.zip"
+  python3 -m zipfile -e "$tmp/tflint.zip" "$tmp/tflint-dist"
+  install -m 0755 "$tmp/tflint-dist/tflint" "$BIN_DIR/tflint"
+  echo "installed tflint $TFLINT_VERSION"
 fi
 
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "note: add $BIN_DIR to PATH" >&2 ;; esac

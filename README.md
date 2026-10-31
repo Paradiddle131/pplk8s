@@ -113,6 +113,7 @@ make cluster-down services-down
 | `services/event-adapter/` | Pub/Sub → Airflow REST, exactly once |
 | `dbt/` | dbt project and image |
 | `platform/` | kind, Compose, Helm values, workloads manifests, KEDA, monitoring |
+| [`platform/gcp/`](platform/gcp/README.md) | The semantic track's real GCP project at $0.00: the free-path allowlist, the OpenTofu root, the kill switch, the cost check |
 | `tests/` | End-to-end checks and alert-rule tests |
 | `docs/` | [Runbook](docs/runbook.md), [event path](docs/events.md), [executors](docs/executors.md) |
 | [`PLAN.md`](PLAN.md) | Architecture decisions and version pins |

@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -321,3 +321,28 @@ lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts and the
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
 	uvx ruff@0.17.0 check platform/compose/bigquery-shim && uvx ruff@0.17.0 format --check platform/compose/bigquery-shim
+	$(MAKE) --no-print-directory gcp-validate
+
+# The lab project on GCP (semantic/PLAN.md SL-13, platform/gcp/README.md): validated offline in `make lint`;
+# every other gcp- target needs GCP_PROJECT and refuses without it.
+gcp-validate: ## Offline: tofu fmt and validate, tflint, and the free-path allowlist on platform/gcp/ (no credentials; needs `make tools`)
+	@command -v tofu >/dev/null && command -v tflint >/dev/null || { echo "gcp-validate: tofu and tflint are missing: run make tools" >&2; exit 1; }
+	tofu -chdir=platform/gcp/infra fmt -check -recursive
+	tofu -chdir=platform/gcp/infra init -backend=false -input=false >/dev/null
+	tofu -chdir=platform/gcp/infra validate
+	cd platform/gcp/infra && tflint --init >/dev/null && tflint
+	uvx ruff@0.17.0 check platform/gcp && uvx ruff@0.17.0 format --check platform/gcp
+	uv run --no-project --with pyyaml==6.0.2 python platform/gcp/check_free_path.py
+	uvx --from pytest==8.4.2 --with pyyaml==6.0.2 pytest -q platform/gcp/tests
+
+gcp-plan: ## Live, read-only: show what `gcp-up` would change on the lab project (GCP_PROJECT)
+	platform/gcp/tofu.sh plan
+
+gcp-up: ## Live, the owner's step: apply platform/gcp/infra to the lab project from Cloud Shell (GCP_PROJECT; agents' credentials cannot)
+	platform/gcp/tofu.sh apply
+
+gcp-down: ## Live, the owner's step: destroy what platform/gcp/infra created on the lab project (GCP_PROJECT)
+	platform/gcp/tofu.sh destroy
+
+gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
+	platform/gcp/cost-check.sh
