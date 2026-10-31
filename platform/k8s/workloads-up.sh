@@ -24,7 +24,7 @@ DBT_USER=warehouse
 DBT_PASSWORD=${pw}
 DBT_DBNAME=warehouse
 ENV
-# The semantic agent's read-only roles (platform/compose/warehouse-init/02-agent-roles.sql), its session store
+# The semantic agent's read-only roles and its audit writer (platform/compose/warehouse-init/02-agent-roles.sql), its session store
 # (the metadata DB's agent_sessions database, platform/compose/up.sh) and the model key (semantic/PLAN.md SL-2).
 agent_db="${AGENT_DBNAME:-warehouse}"
 cat > semantic-agent.secret.env <<ENV
@@ -34,6 +34,7 @@ DBT_USER=agent_metrics
 DBT_PASSWORD=agent_metrics
 DBT_DBNAME=${agent_db}
 WAREHOUSE_SQL_URL=postgresql://agent_sql:agent_sql@warehouse:5432/${agent_db}
+AUDIT_URL=postgresql://agent_audit:agent_audit@warehouse:5432/${agent_db}
 SESSION_SERVICE_URI=postgresql+asyncpg://agent_sessions:agent_sessions@metadata-db:5432/agent_sessions
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-placeholder-replaced-by-the-proxy}
 ENV

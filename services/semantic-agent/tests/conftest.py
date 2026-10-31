@@ -38,6 +38,16 @@ def no_ledger(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def audit(monkeypatch) -> list[dict[str, Any]]:
+    """The audit rows the agents wrote, kept here instead of in ops.agent_queries."""
+    from semantic_agent import audit
+
+    rows: list[dict[str, Any]] = []
+    monkeypatch.setattr(audit, "record", rows.append)
+    return rows
+
+
 class ScriptedLlm(BaseLlm):
     """The agent loop without a live model: one scripted step per model turn, a step being a tool
     call `(name, args)` or the final answer text. Keeps every request it was sent."""

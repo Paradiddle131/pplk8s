@@ -90,4 +90,10 @@ events=$(docker compose -f "$REPO/platform/compose/compose.yaml" exec -T metadat
   psql -U agent_sessions -d agent_sessions -qAt -c "select count(*) from events where session_id = '$session'")
 [ "${events:-0}" -gt 0 ] || fail "session $session has no events in agent_sessions"
 echo "ok: session $session and its $events events are in agent_sessions"
+
+audited=$(docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
+  psql -U warehouse -d dbt_dev -qAt -c "select count(*) from ops.agent_queries
+    where session_id = '$session' and agent = 'semantic_agent' and tool = 'query_metrics' and rows_returned > 0")
+[ "${audited:-0}" -gt 0 ] || fail "session $session has no query_metrics row in ops.agent_queries"
+echo "ok: $audited query_metrics call(s) of session $session are audited in ops.agent_queries"
 echo "PASS: agent deploy check"
