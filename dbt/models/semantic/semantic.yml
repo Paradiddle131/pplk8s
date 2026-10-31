@@ -5,7 +5,7 @@ version: 2
 # the metrics table and the metrics that combine other metrics. Every calculated field of the gold and
 # exposed models is defined once as a metric (R1).
 # The hand-written gold and exposed aggregates stay as the parity oracle (tests/e2e/semantic-check.sh).
-# Every metric carries a description and a label: scripts/check_metrics.py fails the stage otherwise,
+# Every metric carries a description and a label: scripts/check_standard.py fails the stage otherwise,
 # because they become the agent catalog and the warehouse comments (SL-3).
 
 models:

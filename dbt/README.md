@@ -1,7 +1,7 @@
 # pplk8s dbt project
 
 This project builds the medallion layers on the lab warehouse (Postgres, the BigQuery stand-in from PLAN.md D8).
-It runs on `dbt-core` 1.12.5 with `dbt-postgres` 1.11.0, and carries the semantic layer on `dbt-metricflow[dbt-postgres]` 0.15.0 ([`semantic/PLAN.md`](../semantic/PLAN.md)).
+It runs on `dbt-core` 1.12.6 with `dbt-postgres` 1.11.0, and carries the semantic layer on `dbt-metricflow[dbt-postgres]` 0.15.0 ([`semantic/PLAN.md`](../semantic/PLAN.md)).
 
 ## Layers
 
@@ -10,12 +10,13 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | Layer | Schema | Materialization | Content |
 |---|---|---|---|
 | bronze | `bronze` | view | 1:1 with the `ds_source` landing tables; cast only, keeps every run and the metadata columns; `partner_returns`, `tlc_yellow_trips`, `tlc_green_trips`, and the `tlc_taxi_zones` seed |
-| silver | `silver` | table, or incremental per data month (`tlc`) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `tlc_trips`, `tlc_trips_quarantine` |
-| gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `tlc_daily_trips` |
-| exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
+| silver | `silver` | table, or incremental per data month (`tlc`) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `campaigns`, `ad_spend`, `leads`, `bookings`, `tlc_trips`, `tlc_trips_quarantine` |
+| gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `marketing_daily`, `tlc_daily_trips` |
+| exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `channel_performance_daily`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
 | semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics live in the manifest |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
+The [agent-ready standard](../docs/agent-ready-warehouse.md) holds the naming and description rules, and `scripts/check_standard.py` enforces them on every parse.
 Bronze reads `ds_source` through `source()`.
 
 ## Selecting a stage
@@ -95,7 +96,8 @@ Each calculated field of the gold and exposed models is defined once, as a metri
 No metric sets `fill_nulls_with`, because dbt-core 1.12.6 drops it in this spec: a simple metric reads NULL, not 0, in a day or group where it has no rows, and `net_revenue_eur` coalesces its inputs.
 `metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) is tagged `sales` with it.
 
-Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_metrics.py` fails the parse step without them.
+Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_standard.py` fails the parse step without them.
+It checks the whole [agent-ready standard](../docs/agent-ready-warehouse.md): naming by layer, which models are public, and the descriptions agents read.
 
 The stage check runs with host dbt on the image's pins, against the Compose warehouse (`DBT_DBNAME=warehouse` by default, `dbt_dev` for the fixture):
 
@@ -103,7 +105,7 @@ The stage check runs with host dbt on the image's pins, against the Compose ware
 make dbt-validate DBT_DBNAME=dbt_dev
 ```
 
-It parses the project, runs `check_metrics.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities and metrics against the warehouse's tables.
+It parses the project, runs `check_standard.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities and metrics against the warehouse's tables.
 The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
 In the cluster, `finance_daily` runs the whole check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `mf validate-configs`, in one pod of this image).
 
@@ -113,7 +115,7 @@ Query a metric with the `mf` CLI from this folder, with the same environment:
 uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
-`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance and marketing models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), and checks that an undescribed metric fails the validation.
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance and marketing models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), and checks that an undescribed metric and an unprefixed, undescribed gold model fail the validation.
 
 ### Trust tiers and the catalog
 
