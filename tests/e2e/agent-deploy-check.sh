@@ -7,7 +7,7 @@
 # Behind a TLS-intercepting HTTPS proxy on the host's loopback (the cloud sandbox: HTTPS_PROXY on
 # 127.0.0.1 and the Makefile's BUILD_CA), pods cannot reach the proxy, so a forwarder on the kind
 # network's gateway relays to it and workloads-up.sh gets EGRESS_PROXY and EGRESS_CA.
-# Expects `make cluster-up`; `make agent-deploy-check` runs services-up and push first.
+# Expects `make cluster-up`; `make agent-deploy-check` runs the key check, services-up and push first.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -23,6 +23,8 @@ cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; }
 trap cleanup EXIT
 mkdir -p "$OUT"
 
+# A key OpenRouter refuses fails only after the deploy and a model turn (issue #158): check it first.
+"$REPO/tests/e2e/openrouter-key-check.sh"
 DB=dbt_dev "$REPO/tests/e2e/agent-fixture.sh"
 
 ca=${BUILD_CA:-$(make -s -C "$REPO" print-BUILD_CA)}
