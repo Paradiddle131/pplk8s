@@ -91,6 +91,22 @@ def test_a_filter_value_is_a_quoted_literal_whatever_it_holds():
 
 
 @pytest.mark.parametrize(
+    "value", ["{{ 7*7 }}", "{% if 1 %}x{% endif %}", "{# note #}x", "EUR{{ undefined_thing }}"]
+)
+def test_a_filter_value_holding_a_jinja_delimiter_is_refused(value):
+    """Issue #161: MetricFlow renders the where filter, so '{{ 7*7 }}' filtered on '49'."""
+    item = Filter(dimension="order__currency", operator="in", values=["EUR", value])
+    with pytest.raises(QueryError, match=r"holds a template delimiter.*plain text") as refused:
+        where_clause(item, ORDER_DIMENSIONS, CATALOG.known_values(["revenue_eur"]))
+    assert repr(value) in str(refused.value)
+
+
+def test_braces_without_a_delimiter_stay_a_literal():
+    item = Filter(dimension="order__currency", values=["{EUR} }}"])
+    assert where_clause(item, ORDER_DIMENSIONS) == "{{ Dimension('order__currency') }} = '{EUR} }}'"
+
+
+@pytest.mark.parametrize(
     ("operator", "values", "expected"),
     [
         ("!=", ["cancelled"], "{{ Dimension('order__status') }} <> 'cancelled'"),

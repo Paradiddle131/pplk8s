@@ -25,6 +25,9 @@ from pydantic import BaseModel
 
 MAX_ROWS = 200
 OPERATORS = ("=", "!=", "in", "not in")
+# MetricFlow renders a where filter as a Jinja template before it becomes SQL, so a value holding a
+# delimiter would be evaluated ('{{ 7*7 }}' filters on '49'), not compared as the text sent.
+JINJA_DELIMITERS = ("{{", "{%", "{#")
 
 
 class QueryError(ValueError):
@@ -111,7 +114,8 @@ def where_clause(
     """A MetricFlow where filter built from checked parts, never from the model's text.
 
     A value the dimension does not declare is refused with the values it does: a guessed value
-    ("damaged goods" for "damaged") would match no row and come back as a confident zero.
+    ("damaged goods" for "damaged") would match no row and come back as a confident zero. A value
+    holding a Jinja delimiter is refused too: MetricFlow would render it, and filter on the result.
     """
     categorical = sorted(name for name, kind in dimensions.items() if kind == "categorical")
     if item.dimension not in categorical:
@@ -121,6 +125,11 @@ def where_clause(
         )
     if not item.values:
         raise QueryError(f"filter on {item.dimension!r} has no values")
+    if templated := [v for v in item.values if any(d in v for d in JINJA_DELIMITERS)]:
+        raise QueryError(
+            f"filter value {', '.join(map(repr, templated))} on {item.dimension!r} holds a "
+            f"template delimiter ({', '.join(JINJA_DELIMITERS)}); send the value as plain text"
+        )
     values = (known or {}).get(item.dimension)
     if values is not None and (unknown := [v for v in item.values if v not in values]):
         raise QueryError(

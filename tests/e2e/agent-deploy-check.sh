@@ -69,7 +69,8 @@ pids+=($!)
 url="http://127.0.0.1:$LOCAL_PORT"
 for _ in $(seq 30); do curl -sf "$url/list-apps" >/dev/null 2>&1 && break; sleep 1; done
 apps=$(curl -sf "$url/list-apps" | jq -c 'sort') || fail "no answer from the port-forwarded Service"
-[ "$apps" = '["semantic_agent","sql_baseline"]' ] || fail "apps: expected semantic_agent and sql_baseline, got $apps"
+# One deployed agent: the text-to-SQL baseline is the eval's control, never served (semantic/PLAN.md SL-5).
+[ "$apps" = '["semantic_agent"]' ] || fail "apps: expected semantic_agent only, got $apps"
 echo "ok: the Service serves $apps"
 
 session="deploy-check-$(date -u +%Y%m%dT%H%M%S)"

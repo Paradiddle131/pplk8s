@@ -11,7 +11,7 @@ export NODE_IMAGE
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
 DBT_IMAGE ?= localhost:5001/dbt:0.7.14
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.13
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -145,17 +145,18 @@ semantic-check: services-up ## Build the sales, returns, finance and marketing m
 migration-check: services-up ## Build the legacy tables, the new layers and migration.parity on dbt/dev/fixture.sql in dbt_dev, and assert the parity report and the gate on each consumer's switch
 	tests/e2e/migration-check.sh
 
-# The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5).
+# The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5). Only the semantic agent is
+# deployed (workloads-up); the baseline is the eval's control, served here only beside it for the local demo.
 agent-test: ## Lint and test the semantic agent with a scripted model (services/semantic-agent); the database tests need services-up
 	cd services/semantic-agent && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
 AGENT_DBNAME ?= warehouse
-agent-serve: ## Serve both agents with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
+agent-serve: ## Serve both agents locally (the semantic agent and the eval's baseline) with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk api_server --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
 
-agent-web: ## Serve both agents in ADK's dev UI on localhost:8000, the demo surface (needs services-up and dbt-catalog)
+agent-web: ## Serve both agents locally (the semantic agent and the eval's baseline) in ADK's dev UI on localhost:8000, the demo surface (needs services-up and dbt-catalog)
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk web --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src

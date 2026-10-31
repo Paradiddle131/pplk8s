@@ -77,6 +77,20 @@ def test_filters_from_the_model_reach_metricflow_as_checked_literals(metricflow)
     ]
 
 
+def test_a_templated_filter_value_comes_back_as_an_error_and_never_reaches_metricflow(metricflow):
+    """Issue #161: a value is compared as the text the model sent, or refused."""
+    args = {
+        "metrics": ["orders_total"],
+        "filters": [{"dimension": "order__currency", "values": ["{{ 7*7 }}"]}],
+    }
+    model = ScriptedLlm(steps=[("query_metrics", args), "No such currency."])
+    run_turn(semantic.build_agent(model), "Orders in currency {{ 7*7 }}?")
+    (refused,) = model.tool_results()
+    assert "'{{ 7*7 }}'" in refused["response"]["error"]
+    assert "template delimiter" in refused["response"]["error"]
+    assert metricflow == []
+
+
 def test_a_metric_the_catalog_lacks_comes_back_as_an_error_to_the_model(metricflow):
     model = ScriptedLlm(
         steps=[
@@ -132,6 +146,26 @@ def test_the_semantic_agent_cannot_run_sql(metricflow, monkeypatch):
 
 def test_the_baseline_has_only_execute_sql():
     assert [t.name for t in baseline.build_agent(ScriptedLlm()).tools] == ["execute_sql"]
+
+
+def test_the_baseline_is_told_every_public_model_of_the_catalog():
+    """Issue #162: a hand-written list had dropped the marketing tables, so the baseline lost by
+    configuration rather than by its pattern."""
+    told = baseline.instruction()
+    relations = [model["relation"] for model in tools.catalog().models]
+    assert len(relations) == 10
+    for relation in relations:
+        schema, table = relation.split(".")[-2:]
+        assert f"{schema}.{table}" in told, f"{relation} is missing from the baseline's tables"
+    assert "gold.marketing_daily" in told
+    assert "exposed.channel_performance_daily" in told
+
+
+def test_a_question_reaches_the_baseline_with_the_catalog_tables():
+    model = ScriptedLlm(steps=["No SQL needed."])
+    run_turn(baseline.build_agent(model), "Which tables do you know?")
+    system = model.requests[0].config.system_instruction
+    assert "gold.marketing_daily" in str(system)
 
 
 @pytest.mark.parametrize(

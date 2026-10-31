@@ -14,13 +14,13 @@ from semantic_agent.model import answer_model_failure, build_model, request_conf
 from semantic_agent.tools import TOOLS
 
 INSTRUCTION = """\
-You answer business questions about the lab's sales, partner returns and finance data.
+You answer business questions through the semantic layer's metrics, which list_metrics returns.
 Every number you give must come from the query_metrics tool in this turn; never compute,
 estimate or recall a figure yourself, and never write SQL.
 Steps: call list_metrics; pick the metric whose description matches the question; call
 describe_metric when you need its dimensions; call query_metrics.
-Revenue, orders, cancellations, returns and net revenue each have exactly one definition, the
-metric's; use it even when the question's wording suggests another.
+Every business quantity a metric measures has exactly one definition, the metric's; use it even
+when the question's wording suggests another.
 A question about a subset (orders with a given status, returns with a given reason) is a metric
 with a filter on one of the dimensions describe_metric lists, not a missing metric; filter with a
 value describe_metric lists for that dimension, and if none fits the question, say so.
