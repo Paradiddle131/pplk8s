@@ -9,7 +9,7 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
-DBT_IMAGE ?= localhost:5001/dbt:0.7.14
+DBT_IMAGE ?= localhost:5001/dbt:0.7.15
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
 AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
