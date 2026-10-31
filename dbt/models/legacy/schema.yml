@@ -1,0 +1,12 @@
+version: 2
+
+# Tables built the old way, beside the layers, for the migration rehearsal (semantic/PLAN.md SL-11):
+# each is what one consumer read before the layers existed, with that consumer's column names.
+# No agent reads them; migration.parity compares each with its new model.
+models:
+  - name: lgc_daily_net_sales
+    description: One row per sales_date (UTC), the finance dashboard's net sales as a scheduled query wrote them. Alias legacy.daily_net_sales; replaced by exposed.net_sales_daily.
+  - name: lgc_country_sales
+    description: One row per sales_date (UTC) and customer country, the sales agent's table as a scheduled query wrote it; its revenue includes cancelled orders. Alias legacy.country_sales; replaced by exposed.sales_by_country_daily.
+  - name: lgc_channel_daily
+    description: One row per day (UTC) and channel with any spend, lead or booking, the marketing budget automation's table as a scheduled query wrote it. Alias legacy.channel_daily; replaced by exposed.channel_performance_daily.

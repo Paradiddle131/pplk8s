@@ -14,11 +14,14 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `marketing_daily`, `tlc_daily_trips` |
 | exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `channel_performance_daily`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
 | semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics live in the manifest |
+| legacy | `legacy` | table | The migration rehearsal's tables built the old way: `daily_net_sales`, `country_sales`, `channel_daily` |
+| migration | `migration` | table | `parity`, each consumer's legacy table against its new model; the consumers are exposures in `models/migration/consumers.yml` |
 
-Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
+Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`, `lgc_`) so they stay unique across the project; the `alias` config gives the clean table name.
 The [agent-ready standard](../docs/agent-ready-warehouse.md) holds the naming, description and contract rules, and `scripts/check_standard.py` enforces them on every parse.
 Gold and exposed enforce model contracts: every column declares its `data_type` in `schema.yml`, and a model whose SQL renames, drops, adds or retypes one fails `dbt build`.
 Bronze reads `ds_source` through `source()`.
+No DAG builds legacy or migration: `dbt build --select +tag:migration` does, and `make migration-check` runs the rehearsal on the fixture ([`docs/migration-rehearsal.md`](../docs/migration-rehearsal.md)).
 
 ## Selecting a stage
 

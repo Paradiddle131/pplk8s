@@ -9,6 +9,8 @@
 #     hand-written aggregates the same build wrote there: the eight sales metrics by day against
 #     gold.daily_sales and exposed.net_sales_daily, the marketing metrics by day and channel against
 #     gold.marketing_daily, and the fixture's cost per lead and per booking (39.00, 130.00).
+#   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
+#     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050 (`docker compose
 # --profile bigquery down` in platform/compose stops it).
@@ -43,13 +45,14 @@ run_ --with 'psycopg[binary]==3.3.6' python -I scripts/fixture_to_bigquery.py \
   fail "copying the fixture into the emulator"
 echo "ok: fixture sources copied into the emulator"
 
-run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:semantic --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
 [ "$hops" -eq 26 ] || fail "expected the 26 layer hops to pass on the emulator, got $hops"
 echo "ok: the 26 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+grep -q " PASS consumers_switch_on_parity " "$OUT/build.log" || fail "the migration gate did not pass on the emulator"
 
 run_ mf query --metrics orders_total,orders_cancelled,revenue_eur,customers_distinct,cancellation_rate \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/sales.csv" >"$OUT/query.log" 2>&1 ||
@@ -109,8 +112,21 @@ for label, oracle, got in (("gold.daily_sales", gold, metrics("sales", sales)),
         bad.append(f"{label} has {len(oracle)} days; the fixture gives at least 2")
     bad += [f"{label} {day}: metrics {got.get(day)} != {oracle.get(day)}"
             for day in sorted(set(oracle) | set(got)) if got.get(day) != oracle.get(day)]
+# The migration rehearsal's report, as tests/e2e/migration-check.sh asserts it on Postgres.
+parity = "; ".join(" ".join(str(v) for v in r) for r in client.query(
+    "select consumer, field, keys_compared, keys_differing, status from `pplk8s-lab.migration.parity`"
+    " order by consumer, field").result())
+expected = ("finance_dashboard gross_revenue 2 0 match; finance_dashboard net_revenue 2 0 match; "
+            "finance_dashboard returns_amount 2 0 match; finance_dashboard row_count 2 0 match; "
+            "marketing_automation bookings 6 0 match; marketing_automation cost_per_booking 6 0 match; "
+            "marketing_automation cost_per_lead 6 0 match; marketing_automation leads 6 0 match; "
+            "marketing_automation row_count 6 0 match; marketing_automation spend 6 0 match; "
+            "sales_agent orders 12 0 match; sales_agent revenue 12 4 differs; sales_agent row_count 12 0 match")
+if parity != expected:
+    bad.append(f"migration.parity on the emulator: {parity}")
 print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days,"
-      f" the marketing metrics gold.marketing_daily on {len(gold_marketing)} day-channels, on the emulator")
+      f" the marketing metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity"
+      " reports as on Postgres, on the emulator")
 sys.exit(1 if bad else 0)
 EOF
 
