@@ -14,6 +14,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 # subshell of a check shares: a subshell that started or restarted the forward used to leave its
 # kubectl running after the check, and the LEDGER's leaked port-forwards came from that and from
 # backgrounding the kc function (whose PID is a subshell, not kubectl).
+LIB_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 pf_owned="${TMPDIR:-/tmp}/pplk8s-port-forward.$$"
 dags_checked=""
 start_port_forward() {
@@ -34,11 +35,20 @@ ensure_port_forward() { # keeps a forward of ours that still answers, else (re)s
 }
 stop_forward() { # svc/<name> local-port -> kills that kubectl port-forward and waits for the port
   pkill -f "^kubectl .*port-forward $1 $2:" 2>/dev/null
-  for _ in $(seq 20); do [ -z "$(ss -Hltn "sport = :$2")" ] && return 0; sleep 0.5; done
+  for _ in $(seq 20); do listening "$2" || return 0; sleep 0.5; done
+}
+listening() { # port -> succeeds when a TCP socket listens on it (ss where installed, else /proc/net/tcp*)
+  if command -v ss >/dev/null; then
+    [ -n "$(ss -Hltn "sport = :$1")" ]
+  else # state 0A is LISTEN; the local port is hex after the colon
+    local tables=(/proc/net/tcp)
+    [ -r /proc/net/tcp6 ] && tables+=(/proc/net/tcp6)
+    awk -v p="$(printf '%04X' "$1")" 'FNR > 1 && $4 == "0A" && substr($2, length($2) - 3) == p { found = 1 } END { exit !found }' "${tables[@]}"
+  fi
 }
 port_free() { # port -> fails when something already listens on it
-  # ss, not a test connection: on WSL2 a connect to a closed localhost port can hang instead of failing.
-  if [ -n "$(ss -Hltn "sport = :$1")" ]; then
+  # A socket table, not a test connection: on WSL2 a connect to a closed localhost port can hang instead of failing.
+  if listening "$1"; then
     fail "port $1 is already in use, e.g. by a leaked port-forward: $(pgrep -fa "^kubectl .*port-forward.* $1:" || echo unknown)"
   fi
 }
@@ -93,6 +103,10 @@ discard_scheduled_runs() { # dag_id since(UTC, %Y-%m-%dT%H:%M:%SZ) -> discards r
     path="/api/v2/dags/$1/dagRuns/$(jq -rn --arg i "$id" '$i|@uri')"
     api PATCH "$path" '{"state":"failed"}' >/dev/null
     api DELETE "$path" >/dev/null && echo "discarded the scheduled run $1/$id"
+    # A run that already wrote ops.readiness would leave rows no Airflow run owns, which
+    # AirflowMetadataBehindWarehouse reports and the metadata restore drill refuses to start on.
+    docker compose -f "$LIB_REPO/platform/compose/compose.yaml" exec -T warehouse psql -U warehouse -d warehouse -qAt \
+      -c "DELETE FROM ops.readiness WHERE dag_id = '$1' AND run_id = '$id'" >/dev/null
   done
 }
 
