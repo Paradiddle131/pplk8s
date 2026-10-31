@@ -94,7 +94,10 @@ A silver model in `models/silver/schema.yml` becomes a MetricFlow semantic model
 `models/semantic/semantic.yml` holds the metrics that combine semantic models (`net_revenue_eur`, `cost_per_lead_eur`, `cost_per_booking_eur`, `lead_to_booking_rate`).
 Each calculated field of the gold and exposed models is defined once, as a metric; the hand-written tables stay as the parity oracle.
 No metric sets `fill_nulls_with`, because dbt-core 1.12.6 drops it in this spec: a simple metric reads NULL, not 0, in a day or group where it has no rows, and `net_revenue_eur` coalesces its inputs.
-`metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) is tagged `sales` with it.
+`metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) and `semantic_glossary.sql` (`semantic.glossary`) are tagged `sales` with it.
+
+Business terms that are not metrics (`Signup cohort`, `Channel`, `Market`, `Conversion`) are a glossary in `config.meta.glossary` on the silver model that holds the concept: each term has a description, synonyms, and the metrics and dimensions it maps to.
+A term never repeats a metric: the metric's label and description are already its glossary entry.
 
 Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_standard.py` fails the parse step without them.
 It checks the whole [agent-ready standard](../docs/agent-ready-warehouse.md): naming by layer, which models are public, and the descriptions agents read.
@@ -131,15 +134,15 @@ The generator reads `target/manifest.json` and `target/semantic_manifest.json` a
 
 | Artefact | For | Holds |
 |---|---|---|
-| `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns) and metrics (label, description, type, pipelines, time grain, dimensions) |
-| `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics, `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
+| `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns), metrics (label, description, type, pipelines, time grain, dimensions) and the glossary (term, description, synonyms, metrics, dimensions, the model that defines it) |
+| `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics and the glossary terms (whose description names their metrics and dimensions), `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
 | `data_agent/example_queries.json` | the data agent's verified queries | one `naturalLanguageQuestion` and `sqlQuery` per metric: the metric by day, as MetricFlow compiles it |
 
-The third artefact lives in the warehouse: the gold and exposed comments, and `semantic.metrics` (`models/semantic/semantic_metrics.sql`), rendered from dbt's graph at build time.
+The third artefact lives in the warehouse: the gold and exposed comments, `semantic.metrics` and `semantic.glossary` (`models/semantic/`), rendered from dbt's graph at build time.
 Table names are `database.schema.table` of the dbt target, so a BigQuery target gives `project.dataset.table` and BigQuery SQL with no change to the generator.
-`check_catalog.py` fails when the catalog misses a public model or a metric, when a public model or column has no description, or when the authored context strays from the documented keys.
+`check_catalog.py` fails when the catalog misses a public model, a metric or a glossary term, when a public model or column has no description, when the authored context strays from the documented keys, or when a glossary term has no description, maps to nothing, names a metric the semantic manifest lacks or a dimension none of its metrics groups by, or repeats a metric or another term.
 
-`tests/e2e/catalog-check.sh` (`make catalog-check`) builds every public model on both dev fixtures in `dbt_dev`, runs `make dbt-catalog`, and asserts that every gold and exposed relation and column has a comment, that `semantic.metrics` holds every metric, that every example query runs, and that an undocumented key or an undescribed column fails the check.
+`tests/e2e/catalog-check.sh` (`make catalog-check`) builds every public model on both dev fixtures in `dbt_dev`, runs `make dbt-catalog`, and asserts that every gold and exposed relation and column has a comment, that `semantic.metrics` holds every metric and `semantic.glossary` every term, that every example query runs, and that an undocumented key, an undescribed column or a stray glossary term fails the check.
 
 ## Environment variables
 
