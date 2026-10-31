@@ -14,6 +14,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 # subshell of a check shares: a subshell that started or restarted the forward used to leave its
 # kubectl running after the check, and the LEDGER's leaked port-forwards came from that and from
 # backgrounding the kc function (whose PID is a subshell, not kubectl).
+LIB_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 pf_owned="${TMPDIR:-/tmp}/pplk8s-port-forward.$$"
 dags_checked=""
 start_port_forward() {
@@ -102,6 +103,10 @@ discard_scheduled_runs() { # dag_id since(UTC, %Y-%m-%dT%H:%M:%SZ) -> discards r
     path="/api/v2/dags/$1/dagRuns/$(jq -rn --arg i "$id" '$i|@uri')"
     api PATCH "$path" '{"state":"failed"}' >/dev/null
     api DELETE "$path" >/dev/null && echo "discarded the scheduled run $1/$id"
+    # A run that already wrote ops.readiness would leave rows no Airflow run owns, which
+    # AirflowMetadataBehindWarehouse reports and the metadata restore drill refuses to start on.
+    docker compose -f "$LIB_REPO/platform/compose/compose.yaml" exec -T warehouse psql -U warehouse -d warehouse -qAt \
+      -c "DELETE FROM ops.readiness WHERE dag_id = '$1' AND run_id = '$id'" >/dev/null
   done
 }
 
