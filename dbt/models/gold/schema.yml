@@ -15,15 +15,39 @@ models:
       - name: orders_total
         description: All orders that day, cancelled included.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_orders_total_to_gld_daily_sales
+              arguments:
+                metric: orders_total
+                time_column: order_date
       - name: orders_cancelled
         description: Cancelled orders that day.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_orders_cancelled_to_gld_daily_sales
+              arguments:
+                metric: orders_cancelled
+                time_column: order_date
       - name: revenue_eur
         description: Sum of amount for non-cancelled orders.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_revenue_eur_to_gld_daily_sales
+              arguments:
+                metric: revenue_eur
+                time_column: order_date
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order that day.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_customers_distinct_to_gld_daily_sales
+              arguments:
+                metric: customers_distinct
+                time_column: order_date
 
   - name: gld_customer_lifetime
     description: One row per customer. Alias gold.customer_lifetime.
@@ -141,18 +165,48 @@ models:
       - name: ad_spend_eur
         description: Ad spend that day on the channel's campaigns, EUR.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_ad_spend_eur_to_gld_marketing_daily
+              arguments:
+                metric: ad_spend_eur
+                time_column: activity_date
       - name: ad_clicks
         description: Ad clicks that day on the channel's campaigns.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_ad_clicks_to_gld_marketing_daily
+              arguments:
+                metric: ad_clicks
+                time_column: activity_date
       - name: ad_impressions
         description: Ad impressions that day on the channel's campaigns.
         data_type: bigint
       - name: leads
         description: CRM leads created that day from the channel's campaigns.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_leads_to_gld_marketing_daily
+              arguments:
+                metric: leads
+                time_column: activity_date
       - name: bookings
         description: Bookings made that day by leads from the channel's campaigns.
         data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_bookings_to_gld_marketing_daily
+              arguments:
+                metric: bookings
+                time_column: activity_date
       - name: booking_value_eur
         description: Value of those bookings, EUR.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_booking_value_eur_to_gld_marketing_daily
+              arguments:
+                metric: booking_value_eur
+                time_column: activity_date

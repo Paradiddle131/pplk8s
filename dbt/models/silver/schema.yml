@@ -10,6 +10,7 @@ version: 2
 # what it means, its synonyms, and the metrics and dimensions it maps to (docs/agent-ready-warehouse.md). They
 # reach the agent catalog, the data agent's glossary and semantic.glossary; check_catalog.py fails on a term
 # that names an unknown metric or dimension, or repeats a metric.
+# Each model's `hop_bronze_to_<model>` test reconciles it with bronze's latest load of each key (SL-9).
 
 models:
   # Customers carry no metric of their own: the customer entity lets every orders metric group and
@@ -36,6 +37,15 @@ models:
     semantic_model:
       enabled: true
       name: customers
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_customers
+          arguments:
+            bronze: ref('brz_synthetic_customers')
+            keys: [customer_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, sales]
     columns:
       - name: customer_id
         description: Natural key.
@@ -73,6 +83,16 @@ models:
       enabled: true
       name: orders
     agg_time_dimension: order_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_orders
+          arguments:
+            bronze: ref('brz_synthetic_orders')
+            keys: [order_id]
+            tie_breaker: _run_id
+            amount: amount
+          config:
+            tags: [silver, sales]
     columns:
       - name: order_id
         description: Natural key.
@@ -152,6 +172,14 @@ models:
       - unique_combination:
           arguments:
             columns: ['location', 'observed_at']
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_hourly_weather
+          arguments:
+            bronze: ref('brz_open_meteo_hourly_weather')
+            keys: [location, observed_at]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, sales]
     columns:
       - name: location
         tests: [not_null]
@@ -174,6 +202,16 @@ models:
       enabled: true
       name: returns
     agg_time_dimension: return_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_returns
+          arguments:
+            bronze: ref('brz_partner_returns')
+            keys: [return_id]
+            tie_breaker: _generation
+            amount: amount
+          config:
+            tags: [silver, returns]
     columns:
       - name: return_id
         description: Natural key.
@@ -276,6 +314,15 @@ models:
     semantic_model:
       enabled: true
       name: campaigns
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_campaigns
+          arguments:
+            bronze: ref('brz_synthetic_campaigns')
+            keys: [campaign_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, marketing]
     columns:
       - name: campaign_id
         description: Natural key.
@@ -314,6 +361,15 @@ models:
       - unique_combination:
           arguments:
             columns: ['spend_date', 'campaign_id']
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_ad_spend
+          arguments:
+            bronze: ref('brz_synthetic_ad_spend')
+            keys: [spend_date, campaign_id]
+            tie_breaker: _run_id
+            amount: spend
+          config:
+            tags: [silver, marketing]
     columns:
       - name: spend_date
         description: UTC day of the spend.
@@ -355,6 +411,15 @@ models:
       enabled: true
       name: leads
     agg_time_dimension: created_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_leads
+          arguments:
+            bronze: ref('brz_synthetic_leads')
+            keys: [lead_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, marketing]
     columns:
       - name: lead_id
         description: Natural key.
@@ -411,6 +476,16 @@ models:
       enabled: true
       name: bookings
     agg_time_dimension: booked_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_bookings
+          arguments:
+            bronze: ref('brz_synthetic_bookings')
+            keys: [booking_id]
+            tie_breaker: _run_id
+            amount: amount
+          config:
+            tags: [silver, marketing]
     columns:
       - name: booking_id
         description: Natural key.

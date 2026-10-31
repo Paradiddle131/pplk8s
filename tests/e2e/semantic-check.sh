@@ -11,7 +11,9 @@
 #   - the order metrics by customer country equal exposed.sales_by_country_daily, and revenue by
 #     signup cohort equals a direct join of silver (the customers semantic model),
 #   - a public model whose SQL renames or retypes a column its contract declares fails dbt build,
-#   - a metric without a description or a label, or a public column without a data_type, fails the validation.
+#   - a metric without a description or a label, or a public column without a data_type, fails the validation,
+#   - every layer hop reconciles in dbt build, and a return seeded on a day without orders fails the build
+#     on the hops that lose it (semantic/PLAN.md SL-9).
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
 
@@ -40,6 +42,8 @@ dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude ta
   { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
 echo "ok: sales, returns, finance and marketing built; semantic.time_spine has 1461 days"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 26
+echo "ok: the 26 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
@@ -163,6 +167,22 @@ done
   { tail -40 "$OUT/contract.log" >&2; fail "expected both models to fail on their contract"; }
 rm -f "$contract_yml" "$renamed" "$retyped"
 echo "ok: a renamed and a retyped column of a public model fail dbt build on its contract"
+
+# A discrepancy fails the build on the hop that loses it: a return recorded on a day without orders has
+# no row of exposed.net_sales_daily to land on, so the returns metrics and finance's table disagree.
+psql_dev -c "insert into ds_source.partner_returns values ('R-SEEDED', 'O-9', '2026-10-03 11:00+00', 9.00, 'damaged',
+  'gcs-run-c', 'gs://landing/returns/2026-10-03.jsonl', 1, '2026-10-04 06:00+00')"
+if dbt_ build --select tag:returns tag:finance >"$OUT/hop.log" 2>&1; then
+  psql_dev -c "delete from ds_source.partner_returns where return_id = 'R-SEEDED'"
+  fail "dbt build passed a return that exposed.net_sales_daily drops"
+fi
+psql_dev -c "delete from ds_source.partner_returns where return_id = 'R-SEEDED'"
+for hop in hop_metric_returns_count_to_exp_net_sales_daily hop_metric_returns_eur_to_exp_net_sales_daily; do
+  grep -Eq "FAIL 1 $hop " "$OUT/hop.log" || { tail -30 "$OUT/hop.log" >&2; fail "the build failed, but not on $hop"; }
+done
+[ "$(grep -c " FAIL " "$OUT/hop.log")" -eq 2 ] || { grep " FAIL " "$OUT/hop.log" >&2; fail "expected exactly the two returns hops to fail"; }
+dbt_ build --select tag:returns tag:finance >"$OUT/hop.log" 2>&1 || { tail -30 "$OUT/hop.log" >&2; fail "rebuild after the seeded return"; }
+echo "ok: a return on a day without orders fails dbt build on the returns hops into exposed.net_sales_daily"
 
 # Straying from the standard fails the stage: a labelled, undescribed metric beside the real ones, and
 # a gold model without the layer's prefix, a description, a described column or a column type.

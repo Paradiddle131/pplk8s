@@ -70,9 +70,23 @@ models:
       - name: returns_count
         description: Partner returns recorded that day.
         data_type: bigint
+        # The returns metrics are silver's returns by return_date: a return recorded on a day without
+        # orders has no row here to land on, and fails these hops instead of vanishing from net revenue.
+        tests:
+          - matches_metric:
+              name: hop_metric_returns_count_to_exp_net_sales_daily
+              arguments:
+                metric: returns_count
+                time_column: order_date
       - name: returns_eur
         description: Sum of partner return amounts recorded that day.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_returns_eur_to_exp_net_sales_daily
+              arguments:
+                metric: returns_eur
+                time_column: order_date
       - name: net_revenue_eur
         description: revenue_eur minus returns_eur.
         data_type: numeric
