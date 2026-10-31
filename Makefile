@@ -48,7 +48,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -145,6 +145,13 @@ semantic-check: services-up ## Build the sales, returns, finance and marketing m
 migration-check: services-up ## Build the legacy tables, the new layers and migration.parity on dbt/dev/fixture.sql in dbt_dev, and assert the parity report and the gate on each consumer's switch
 	tests/e2e/migration-check.sh
 
+# The semantic agent's warehouse objects (semantic/PLAN.md SL-4, SL-10; #166): its roles, their grants and the
+# audit table, from one dbt macro (dbt/macros/agent_warehouse.sql) on any database the dbt project builds in,
+# with its own target path so a catalog built for another database stays. services-up runs it on warehouse.
+agent-warehouse: ## Create the semantic agent's roles, grants and ops.agent_queries in a database dbt builds in (DBT_DBNAME=warehouse|dbt_dev|...)
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/agent-warehouse \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation agent_warehouse
+
 # The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5). Only the semantic agent is
 # deployed (workloads-up); the baseline is the eval's control, served here only beside it for the local demo.
 agent-test: ## Lint and test the semantic agent with a scripted model (services/semantic-agent); the database tests need services-up
@@ -160,6 +167,9 @@ agent-web: ## Serve both agents locally (the semantic agent and the eval's basel
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk web --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
+
+agent-standalone-check: services-up ## Run the semantic agent on an empty database with only the dbt project: make agent-warehouse, the fixture, one scripted turn; asserts its audit row and "Freshness unknown" (#166; no model quota)
+	tests/e2e/agent-standalone-check.sh
 
 agent-deploy-check: services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
 	tests/e2e/agent-deploy-check.sh

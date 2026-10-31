@@ -24,7 +24,7 @@ DBT_USER=warehouse
 DBT_PASSWORD=${pw}
 DBT_DBNAME=warehouse
 ENV
-# The semantic agent's read-only role and its audit writer (platform/compose/warehouse-init/02-agent-roles.sql), its session store
+# The semantic agent's read-only role and its audit writer (dbt/macros/agent_warehouse.sql, make agent-warehouse), its session store
 # (the metadata DB's agent_sessions database, platform/compose/up.sh) and the model key (semantic/PLAN.md SL-2).
 # No agent_sql login: the text-to-SQL baseline is the eval's control, never deployed (SL-5).
 agent_db="${AGENT_DBNAME:-warehouse}"

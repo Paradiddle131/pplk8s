@@ -111,6 +111,7 @@ Add B only for an agent that must see part of a dataset, and C only when the age
 | Kept as long as the table is | `INFORMATION_SCHEMA.JOBS` keeps 180 days of job history (stated); the audit log's retention is its log bucket's |
 
 So at work the platform's audit log is the record of what each agent read, and the agent keeps a thin record of its own for what a job cannot carry: the conversation it served, the metrics asked for, the freshness it quoted and the calls it refused; labels join the two.
+That record's table comes from the dbt project, `dbt run-operation agent_warehouse` (`dbt/macros/agent_warehouse.sql`), which creates `ops.agent_queries` with BigQuery's types wherever the project builds (measured (emulator)); the agents' identities and their grants stay IAM, outside dbt.
 
 ## Unverified
 

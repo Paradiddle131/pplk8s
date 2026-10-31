@@ -42,9 +42,9 @@ psql_dev -c "set client_min_messages = warning" -c "drop schema if exists gold c
 dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:tlc --vars '{data_month: 2024-12}' >"$OUT/build.log" 2>&1 ||
   { tail -30 "$OUT/build.log" >&2; fail "dbt build of the sales, returns, finance and tlc models"; }
 # The drop took the agents' schema grants with it; give them back, as make agent-eval does.
-for sql in 01-schemas.sql 02-agent-roles.sql; do
-  psql_dev -c "set client_min_messages = warning" -f "/docker-entrypoint-initdb.d/$sql"
-done
+psql_dev -c "set client_min_messages = warning" -f /docker-entrypoint-initdb.d/01-schemas.sql
+make -s -C "$REPO" agent-warehouse DBT_DBNAME="$DB" >"$OUT/agent-warehouse.log" 2>&1 ||
+  { tail -30 "$OUT/agent-warehouse.log" >&2; fail "make agent-warehouse"; }
 echo "ok: sales, returns, finance, marketing and tlc (2024-12) built; agent roles granted again"
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||

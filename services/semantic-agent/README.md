@@ -23,7 +23,7 @@ A request the semantic layer cannot answer (an unknown metric, a dimension the m
 `list_metrics` also returns the dbt saved queries (`dbt/models/semantic/saved_queries.yml`, #164): the recurring questions, each with its fixed metrics, group-bys and filters.
 `query_metrics(saved_query=...)` runs one by name, narrowed by the call's dates, filters, order and limit (MetricFlow refuses other metrics or group-bys beside a saved query); the result names the saved query's metrics, which its freshness, the audit row and the eval's `metric_choice` use.
 
-The roles live in `platform/compose/warehouse-init/02-agent-roles.sql`, which `make services-up` applies to `warehouse` and `make agent-eval` to `dbt_dev`.
+The roles, their grants and the audit table come from the dbt macro `agent_warehouse` (`make agent-warehouse`), which `make services-up` runs on `warehouse` and `make agent-eval` on `dbt_dev`.
 The database, not the prompt, keeps each agent in its tables (SL-4).
 
 ## Audit
@@ -47,6 +47,24 @@ Every `query_metrics` result carries a `freshness` field (SL-4, S4), which `fres
 The field holds each product's facts and one `statement` ("Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.").
 The instruction tells the model to quote that statement word for word; no freshness rule is in the prompt.
 An unreadable ledger is said in the statement ("Freshness unknown: ..."), never raised.
+
+## Run with only the dbt project and a warehouse
+
+The agent needs no Airflow, no readiness ledger and no Compose stand-in: a Postgres database the dbt project builds in, and a model key (#166).
+Everything it needs in the warehouse beside the models comes from one dbt macro, `agent_warehouse` (`dbt/macros/agent_warehouse.sql`): the `agent_metrics`, `agent_sql` and `agent_audit` roles, their grants and `ops.agent_queries`.
+
+```bash
+make agent-warehouse DBT_DBNAME=mydb      # dbt run-operation agent_warehouse; idempotent
+# build the models into mydb, e.g. dbt build --select tag:sales tag:returns tag:finance tag:marketing
+make dbt-catalog DBT_DBNAME=mydb
+cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=mydb DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+  uv run adk web src                      # in-memory sessions without --session_service_uri
+```
+
+Run `make agent-warehouse` again after a schema is dropped and rebuilt, or after the readiness ledger appears, so the roles get their grants back.
+Without the ledger every answer says "Freshness unknown: the readiness ledger could not be read (...)", and every data query still leaves its audit row.
+`make agent-standalone-check` (`tests/e2e/agent-standalone-check.sh`) proves it on an empty database with one scripted turn: 861.4 through `query_metrics`, its audit row, "Freshness unknown".
+On BigQuery the same macro creates `ops.agent_queries` (checked on the emulator by `make bigquery-emulator-check`); the roles there are IAM, one service account per deployed agent.
 
 ## Model
 
