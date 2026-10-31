@@ -70,6 +70,7 @@ images:
   - {name: el-factory, newName: "${elf_image%:*}", newTag: "${elf_image##*:}"}
   - {name: event-adapter, newName: "${adapter_image%:*}", newTag: "${adapter_image##*:}"}
   - {name: semantic-agent, newName: "${agent_image%:*}", newTag: "${agent_image##*:}"}
+  - {name: dbt, newName: "${dbt_image%:*}", newTag: "${dbt_image##*:}"}
 YAML
 kubectl --context kind-pplk8s apply -k "$overlay"
 # The generated Secret keeps a fixed name, so a changed login does not roll the adapter by itself.
@@ -81,5 +82,6 @@ kubectl --context kind-pplk8s -n workloads rollout status deployment/event-adapt
 # The agent's Secret also keeps a fixed name: restart it so a changed database or key takes effect.
 kubectl --context kind-pplk8s -n workloads rollout restart deployment/semantic-agent >/dev/null
 kubectl --context kind-pplk8s -n workloads rollout status deployment/semantic-agent --timeout=300s
-# dbt has no Deployment: Airflow's run_dbt reads the image from the dbt_image Variable at task run time.
+# dbt has no Deployment: Airflow's run_dbt reads the image from the dbt_image Variable at task run time;
+# the source-freshness CronJob (#130) takes it from the overlay above.
 ../../helm/airflow/dbt-image-variable.sh "$dbt_image"

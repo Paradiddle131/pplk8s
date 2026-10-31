@@ -1,0 +1,69 @@
+# `dbt source freshness` every hour on the dbt image (#130, semantic/PLAN.md SL-12): the Cloud Scheduler →
+# Cloud Run Job stand-in. Its on-run-end hook (dbt/macros/source_freshness.sql) writes each landed table's
+# verdict into ops.source_freshness, which the warehouse's sql_exporter turns into SourceStale.
+# The image is the placeholder `dbt`, which workloads-up.sh maps to DBT_IMAGE (D16), like every workload.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: source-freshness
+  labels:
+    app.kubernetes.io/name: dbt
+    pplk8s/stage: source-freshness
+spec:
+  schedule: "17 * * * *" # off the hour, away from the ELT DAGs' 00:00 runs and the other jobs on the minute
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid # one check at a time; a slow warehouse skips a run rather than piling them up
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0 # the next hour is the retry; SourceFreshnessNotChecked fires after two hours without a result
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: dbt
+            pplk8s/stage: source-freshness
+        spec:
+          restartPolicy: Never
+          serviceAccountName: dbt
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: dbt
+              image: dbt
+              imagePullPolicy: IfNotPresent
+              # dbt exits 1 when a source is past its error_after: the verdict is recorded and SourceStale
+              # carries it, so the Job succeeds rather than also firing KubeJobFailed. Exit 2 is dbt failing
+              # to run at all (the warehouse unreachable, a broken project): the Job fails.
+              command: [sh, -c, 'dbt source freshness; rc=$?; [ "$rc" -le 1 ]']
+              envFrom:
+                - secretRef:
+                    name: warehouse-credentials # DBT_HOST, DBT_PORT, DBT_USER, DBT_PASSWORD, DBT_DBNAME read by profiles.yml
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts: # dbt writes the manifest, sources.json and logs; scratch space on a read-only root
+                - {name: target, mountPath: /dbt/target}
+                - {name: logs, mountPath: /dbt/logs}
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: target, emptyDir: {}}
+            - {name: logs, emptyDir: {}}
+            - {name: tmp, emptyDir: {}}

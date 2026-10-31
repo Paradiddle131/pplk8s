@@ -109,7 +109,7 @@ spec:
           for: 2m
           labels: {severity: warning}
           annotations:
-            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse and DataProductLate are blind.
+            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse, DataProductLate, SourceStale and SourceFreshnessNotChecked are blind.
         - alert: AirflowGitSyncFailing
           # git-sync retries a failing fetch forever and keeps serving its last good commit, with the
           # sidecar Running and Ready (#18), so DAG changes silently stop arriving. A healthy sidecar
@@ -261,3 +261,28 @@ spec:
           annotations:
             summary: "{{ $labels.product }} is late: {{ if gt $value 1e9 }}it was never ready{{ else }}its newest ready interval ended {{ $value | humanizeDuration }} ago{{ end }}."
             runbook: docs/runbook.md#12-a-data-product-is-late
+        - alert: SourceStale
+          # A landed source stopped flowing (#130, semantic/PLAN.md SL-12): `dbt source freshness`, run by
+          # the source-freshness CronJob, last found its newest _loaded_at past the table's error_after in
+          # dbt/models/sources.yml, or could not read the table at all (`runtime error`). The thresholds
+          # live in dbt only; this rule reads dbt's verdict. One alert per table, before any product it
+          # feeds is late; the value is the age of its newest row in seconds (meaningless for `runtime error`).
+          expr: |
+            max by (source, table, status) (ops_source_freshness_checked_timestamp_seconds{status=~"error|runtime error"}) * 0
+              + on (source, table) group_left()
+            (time() - max by (source, table) (ops_source_max_loaded_at_seconds))
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.source }}.{{ $labels.table }} {{ if eq $labels.status \"runtime error\" }}could not be checked for freshness{{ else }}stopped flowing: its newest row landed {{ $value | humanizeDuration }} ago{{ end }}."
+            runbook: docs/runbook.md#13-a-source-stops-flowing
+        - alert: SourceFreshnessNotChecked
+          # SourceStale only knows what the last check recorded: a CronJob that stopped running (suspended,
+          # its Jobs failing, the dbt image missing) would leave the last verdict standing. The check runs
+          # hourly, so two hours without a new row means it missed at least one run.
+          expr: time() - max(ops_source_freshness_checked_timestamp_seconds) > 7200
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "dbt source freshness last recorded a result {{ $value | humanizeDuration }} ago; SourceStale is blind."
+            runbook: docs/runbook.md#13-a-source-stops-flowing

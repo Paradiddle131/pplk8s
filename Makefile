@@ -9,9 +9,9 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.2
-DBT_IMAGE ?= localhost:5001/dbt:0.7.16
+DBT_IMAGE ?= localhost:5001/dbt:0.7.17
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.15
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -150,6 +150,9 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, and the migration rehearsal reports as on Postgres (#125)
 	tests/e2e/bigquery-emulator-check.sh
 
+source-freshness-check: services-up ## Run dbt source freshness on the dev fixtures in dbt_freshness: fresh data passes, a stopped source errors, and the warehouse sql_exporter exports each verdict (#130)
+	tests/e2e/source-freshness-check.sh
+
 semantic-check: services-up ## Build the sales, returns, finance and marketing models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models (#100, #126)
 	tests/e2e/semantic-check.sh
 
@@ -162,6 +165,10 @@ migration-check: services-up ## Build the legacy tables, the new layers and migr
 agent-warehouse: ## Create the semantic agent's roles, grants and ops.agent_queries in a database dbt builds in (DBT_DBNAME=warehouse|dbt_dev|...)
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/agent-warehouse \
 	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation agent_warehouse
+
+source-freshness-table: ## Create ops.source_freshness, which the source-freshness CronJob fills, in a database dbt builds in (DBT_DBNAME=warehouse|...; #130)
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/source-freshness-table \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation source_freshness_table
 
 # The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5). Only the semantic agent is
 # deployed (workloads-up); the baseline is the eval's control, served here only beside it for the local demo.
