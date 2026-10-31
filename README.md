@@ -19,9 +19,9 @@ Every calculated field is defined once, every answer carries its freshness, and 
 
 | Here | On GCP |
 |---|---|
-| Postgres warehouse, with the BigQuery emulator for the dialect | BigQuery |
+| Postgres warehouse; the BigQuery emulator builds and queries the same models and metrics | BigQuery |
 | ADK agent in the `workloads` namespace, MetricFlow as its query path | Cloud Run, `DataAgentToolset` on a BigQuery data agent |
-| Warehouse comments from `persist_docs`, `semantic.metrics` | Table and column descriptions, Knowledge Catalog |
+| Warehouse comments from `persist_docs`, `semantic.metrics` and `semantic.glossary` | Table and column descriptions, Knowledge Catalog |
 | OpenRouter free model; sessions in the metadata DB | Gemini; Cloud SQL |
 | Prometheus and Alertmanager | Cloud Monitoring |
 
