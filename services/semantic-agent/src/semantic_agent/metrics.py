@@ -53,6 +53,7 @@ class Catalog:
     metrics: dict[str, dict[str, Any]]
     models: list[dict[str, Any]] = field(default_factory=list)
     glossary: list[dict[str, Any]] = field(default_factory=list)
+    saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -66,6 +67,7 @@ class Catalog:
             metrics={m["name"]: m for m in data["metrics"]},
             models=data["models"],
             glossary=data.get("glossary", []),
+            saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
         )
 
     def metric(self, name: str) -> dict[str, Any]:
@@ -76,6 +78,13 @@ class Catalog:
                 "say that the semantic layer has no such metric."
             )
         return self.metrics[name]
+
+    def saved_query(self, name: str) -> dict[str, Any]:
+        if name not in self.saved_queries:
+            raise QueryError(
+                f"no saved query named {name!r}; the saved queries are {sorted(self.saved_queries)}"
+            )
+        return self.saved_queries[name]
 
     def known_values(self, metric_names: list[str]) -> dict[str, list[str]]:
         """The values a categorical dimension's column declares (an accepted_values test), by name;
@@ -174,27 +183,49 @@ class MetricQuery:
     end_date: str | None = None
     order_by: list[str] = field(default_factory=list)
     limit: int | None = None
+    saved_query: str | None = None
+
+    def resolved_metrics(self, catalog: Catalog) -> list[str]:
+        """The metrics the query reads: its own, or its saved query's."""
+        if self.saved_query is None:
+            return self.metrics
+        return list(catalog.saved_query(self.saved_query)["metrics"])
 
     def request(self, catalog: Catalog):  # -> MetricFlowQueryRequest
         from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
 
-        if not self.metrics:
+        if self.saved_query is not None:
+            if self.metrics or self.group_by:
+                raise QueryError(
+                    f"saved query {self.saved_query!r} fixes its metrics and group-bys; send "
+                    "metrics and group_by without saved_query to choose them"
+                )
+            saved = catalog.saved_query(self.saved_query)
+            metrics, group_by = list(saved["metrics"]), list(saved["group_by"])
+        else:
+            metrics, group_by = self.metrics, self.group_by
+        if not metrics:
             raise QueryError("name at least one metric")
-        dimensions = catalog.dimensions(self.metrics)
-        for name in self.group_by:
+        dimensions = catalog.dimensions(metrics)
+        for name in group_by:
             if not _group_by_allowed(name, dimensions):
                 raise QueryError(
                     f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}"
                 )
-        allowed_order = set(self.metrics) | set(self.group_by)
+        allowed_order = set(metrics) | set(group_by)
         for name in self.order_by:
             if name.removeprefix("-") not in allowed_order:
                 raise QueryError(f"can only order by a requested metric or group-by, not {name!r}")
         limit = min(self.limit or MAX_ROWS, MAX_ROWS)
-        known = catalog.known_values(self.metrics)
+        known = catalog.known_values(metrics)
+        if self.saved_query is not None:
+            # MetricFlow refuses metrics or group-bys beside a saved query; filters, dates, order
+            # and limit narrow it.
+            selection: dict[str, Any] = {"saved_query_name": self.saved_query}
+        else:
+            selection = {"metric_names": metrics, "group_by_names": group_by or None}
         return MetricFlowQueryRequest.create(
-            metric_names=self.metrics,
-            group_by_names=self.group_by or None,
+            **selection,
             where_constraints=[where_clause(f, dimensions, known) for f in self.filters] or None,
             time_constraint_start=_date(self.start_date, "start_date"),
             time_constraint_end=_date(self.end_date, "end_date"),

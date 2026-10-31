@@ -81,12 +81,27 @@ def test_every_keyword_the_agent_passes_is_one_create_accepts(monkeypatch):
     assert {"metric_names", "group_by_names", "where_constraints", "order_by_names"} <= sent.keys()
 
 
+def test_a_saved_query_request_uses_keywords_create_accepts(monkeypatch):
+    from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
+
+    signature = inspect.signature(MetricFlowQueryRequest.create)
+    sent: dict = {}
+    monkeypatch.setattr(MetricFlowQueryRequest, "create", lambda **kwargs: sent.update(kwargs))
+    MetricQuery(metrics=[], saved_query="daily_sales", start_date="2026-10-01").request(
+        metrics.Catalog.load(FIXTURES / "agent.json")
+    )
+    unknown = sorted(sent.keys() - signature.parameters.keys())
+    assert not unknown, f"MetricFlowQueryRequest.create no longer takes {unknown}: {SURFACE}"
+    assert sent["saved_query_name"] == "daily_sales"
+
+
 def test_the_catalog_generator_keywords_are_ones_create_accepts():
     """build_catalog.py's compiled SQL request: one metric per day, ordered by day."""
     from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
 
     parameters = inspect.signature(MetricFlowQueryRequest.create).parameters
-    assert {"metric_names", "group_by_names", "order_by_names"} <= parameters.keys(), SURFACE
+    keywords = {"metric_names", "group_by_names", "order_by_names", "saved_query_name"}
+    assert keywords <= parameters.keys(), SURFACE
 
 
 @pytest.mark.parametrize(

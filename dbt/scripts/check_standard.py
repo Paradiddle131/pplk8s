@@ -8,7 +8,9 @@ Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3,
   contract that types every column; semantic models sit on silver, so an agent reaches silver only through
   a metric;
 - words: every model that builds a relation is described, every public model's column too, every
-  semantic model with its entities, dimensions and measures, and every metric has a description and a label.
+  semantic model with its entities, dimensions and measures, and every metric has a description and a label;
+  every saved query a description, a label and the business question it answers (`config.meta.question`),
+  which becomes its verified query's question.
 
 Usage: python scripts/check_standard.py [target_dir]  (after `dbt parse`)
 """
@@ -106,10 +108,26 @@ def semantic_problems(semantic_manifest: dict) -> list[str]:
     return found
 
 
+def saved_query_problems(manifest: dict) -> list[str]:
+    found = []
+    for query in sorted(manifest.get("saved_queries", {}).values(), key=lambda q: q["name"]):
+        name = query["name"]
+        if not SNAKE.fullmatch(name):
+            found.append(f"saved query {name}: name is not snake case")
+        found += [
+            f"saved query {name}: no {field}"
+            for field in ("description", "label")
+            if not (query.get(field) or "").strip()
+        ]
+        if not str((query["config"].get("meta") or {}).get("question") or "").strip():
+            found.append(f"saved query {name}: no config.meta.question")
+    return found
+
+
 def problems(manifest: dict, semantic_manifest: dict) -> list[str]:
     models = sorted((n for n in manifest["nodes"].values() if n["resource_type"] == "model"), key=lambda n: n["name"])
     found = [problem for node in models for problem in model_problems(node)]
-    return found + semantic_problems(semantic_manifest)
+    return found + semantic_problems(semantic_manifest) + saved_query_problems(manifest)
 
 
 def main() -> int:
@@ -124,8 +142,9 @@ def main() -> int:
         public = sum(n.get("access") == "public" for n in models)
         print(
             f"check_standard: {len(models)} models named by layer; {public} public models, "
-            f"{len(semantic_manifest['semantic_models'])} semantic models and "
-            f"{len(semantic_manifest['metrics'])} metrics described"
+            f"{len(semantic_manifest['semantic_models'])} semantic models, "
+            f"{len(semantic_manifest['metrics'])} metrics and "
+            f"{len(manifest.get('saved_queries', {}))} saved queries described"
         )
     return 1 if found else 0
 

@@ -12,14 +12,15 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
-  that hold them, each with the metrics and dimensions it maps to.
+  that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
+  its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
 - `data_agent/system_instruction.yaml`: the authored context of a BigQuery data agent, in the shape
   Google documents (a list of single-key maps: `system_instruction`, `tables` with fields and their
   aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics
   and the glossary terms,
   `additional_descriptions` from the derived and ratio metrics' formulas).
-- `data_agent/example_queries.json`: one verified query per metric (`naturalLanguageQuestion`,
-  `sqlQuery`), the metric by day as MetricFlow compiles it.
+- `data_agent/example_queries.json`: the verified queries (`naturalLanguageQuestion`, `sqlQuery`): one per
+  metric, the metric by day, and one per saved query, its question, each as MetricFlow compiles it.
 
 The third artefact, the warehouse comments, is built by dbt itself: `persist_docs` on gold and exposed,
 and the `semantic.metrics` and `semantic.glossary` models (models/semantic/).
@@ -44,9 +45,9 @@ import yaml
 LAYER_TAGS = {"bronze", "silver", "gold", "exposed", "semantic"}
 
 SYSTEM_INSTRUCTION = (
-    "You answer questions about the lab's sales, partner returns and finance data. "
+    "You answer business questions about the data these tables describe. "
     "Compute a business figure only as its metric is defined in the glossary and the example queries; "
-    "never invent another definition of revenue, orders or returns. Dates are UTC days. "
+    "never invent another definition of a figure a metric defines. Dates are UTC days. "
     "A glossary term that is not a metric names the metrics and dimensions it maps to."
 )
 
@@ -133,6 +134,10 @@ class SemanticIndex:
     def __init__(self, manifest: dict, semantic_manifest: dict) -> None:
         self.semantic_models = {model["name"]: model for model in semantic_manifest["semantic_models"]}
         self.metrics = sorted(semantic_manifest["metrics"], key=lambda metric: metric["name"])
+        self.saved_queries = sorted(semantic_manifest.get("saved_queries", []), key=lambda query: query["name"])
+        self._saved_query_meta = {
+            node["name"]: node["config"].get("meta") or {} for node in manifest.get("saved_queries", {}).values()
+        }
         self.tags_of_semantic_model = {}
         for node in manifest["semantic_models"].values():
             tags = [tag for node_id in node["depends_on"]["nodes"] for tag in manifest["nodes"][node_id]["tags"]]
@@ -182,10 +187,45 @@ class SemanticIndex:
         """The values a dimension's column declares, or None when it declares none."""
         return self.accepted_values.get((self.model_of_semantic_model.get(semantic_model, ""), column))
 
+    def question(self, saved_query: dict) -> str:
+        """The business question a saved query answers, from its `config.meta.question`."""
+        return (self._saved_query_meta.get(saved_query["name"], {}).get("question") or "").strip()
+
     @staticmethod
     def table(model: dict) -> str:
         relation = model["node_relation"]
         return _relation(relation.get("database"), relation["schema_name"], relation["alias"])
+
+
+def group_by_name(item: str) -> str:
+    """A saved query's group-by as query_metrics names it: `Dimension('order__status')` is `order__status`,
+    `TimeDimension('metric_time', 'day')` is `metric_time__day`."""
+    found = re.fullmatch(r"\s*(?:Time)?Dimension\(\s*'(\w+)'\s*(?:,\s*'(\w+)'\s*)?\)\s*", item)
+    if not found:
+        raise ValueError(f"saved query group-by {item!r}: only Dimension(...) and TimeDimension(...) are supported")
+    name, grain = found.groups()
+    return f"{name}__{grain}" if grain else name
+
+
+def saved_queries(index: SemanticIndex) -> list[dict]:
+    metrics = {metric["name"]: metric for metric in index.metrics}
+    found = []
+    for query in index.saved_queries:
+        params = query["query_params"]
+        names = list(params["metrics"])
+        found.append(
+            {
+                "name": query["name"],
+                "label": query.get("label") or query["name"],
+                "description": query.get("description") or "",
+                "question": index.question(query),
+                "metrics": names,
+                "group_by": [group_by_name(item) for item in params.get("group_by") or []],
+                "where": [item["where_sql_template"] for item in (params.get("where") or {}).get("where_filters", [])],
+                "readiness": sorted({p for name in names for p in index.readiness(metrics[name])}),
+            }
+        )
+    return found
 
 
 def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[str], list[dict]]) -> dict:
@@ -206,6 +246,7 @@ def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[st
             }
             for metric in index.metrics
         ],
+        "saved_queries": saved_queries(index),
     }
 
 
@@ -314,18 +355,29 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
     )
 
 
-def example_queries(index: SemanticIndex, compiled_sql: Callable[[str], str]) -> list[dict]:
-    return [
+def example_queries(
+    index: SemanticIndex, compiled_sql: Callable[[str], str], compiled_saved_query: Callable[[str], str]
+) -> list[dict]:
+    """The data agent's verified queries: each metric by day, then each saved query with its question."""
+    by_metric = [
         {
             "naturalLanguageQuestion": f"What is {metric['label'][0].lower() + metric['label'][1:]} by day?",
             "sqlQuery": compiled_sql(metric["name"]),
         }
         for metric in index.metrics
     ]
+    by_saved_query = [
+        {"naturalLanguageQuestion": index.question(query), "sqlQuery": compiled_saved_query(query["name"])}
+        for query in index.saved_queries
+    ]
+    return by_metric + by_saved_query
 
 
-def _metricflow(project_dir: Path, index: SemanticIndex) -> tuple[Callable[[str], list[dict]], Callable[[str], str]]:
-    """Dimensions and compiled SQL from MetricFlow's engine, set up as the mf CLI sets it up."""
+def _metricflow(
+    project_dir: Path, index: SemanticIndex
+) -> tuple[Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
+    """Dimensions and compiled SQL, of a metric and of a saved query, from MetricFlow's engine, set up as the
+    mf CLI sets it up."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
     from metricflow.engine.metricflow_engine import MetricFlowEngine, MetricFlowQueryRequest
 
@@ -356,14 +408,17 @@ def _metricflow(project_dir: Path, index: SemanticIndex) -> tuple[Callable[[str]
         )
         return engine.explain(request).sql_statement.sql
 
-    return dimensions, compiled_sql
+    def compiled_saved_query(name: str) -> str:
+        return engine.explain(MetricFlowQueryRequest.create(saved_query_name=name)).sql_statement.sql
+
+    return dimensions, compiled_sql, compiled_saved_query
 
 
 def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, compiled_sql = _metricflow(Path(__file__).resolve().parents[1], index)
+    dimensions, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
@@ -373,11 +428,11 @@ def main() -> int:
         yaml.safe_dump(system_instruction(index, catalog["glossary"]), sort_keys=False, allow_unicode=True, width=110)
     )
     (out / "data_agent" / "example_queries.json").write_text(
-        json.dumps(example_queries(index, compiled_sql), indent=2) + "\n"
+        json.dumps(example_queries(index, compiled_sql, compiled_saved_query), indent=2) + "\n"
     )
     print(
         f"build_catalog: {len(catalog['models'])} public models, {len(catalog['metrics'])} metrics "
-        f"and {len(catalog['glossary'])} glossary terms in {out}"
+        f"and {len(catalog['glossary'])} glossary terms in {out}; {len(catalog['saved_queries'])} saved queries"
     )
     return 0
 

@@ -169,6 +169,74 @@ def test_requests_outside_the_catalog_are_refused(query, message):
         query.request(CATALOG)
 
 
+def test_the_catalog_holds_the_saved_queries_with_their_questions():
+    """Issue #164: the recurring questions live in dbt as saved queries, not beside the code."""
+    assert sorted(CATALOG.saved_queries) == [
+        "channel_performance",
+        "daily_sales",
+        "damaged_returns_daily",
+        "net_sales_daily",
+        "orders_by_status",
+        "returns_by_reason",
+        "sales_by_country_daily",
+    ]
+    damaged = CATALOG.saved_query("damaged_returns_daily")
+    assert damaged["metrics"] == ["returns_count", "returns_eur"]
+    assert damaged["group_by"] == ["metric_time__day"]
+    assert damaged["where"] == ["{{ Dimension('return__reason') }} = 'damaged'"]
+    assert damaged["question"].endswith("by day?")
+    assert damaged["readiness"] == ["returns.silver"]
+
+
+def test_a_saved_query_request_names_it_and_takes_dates_filters_and_order():
+    query = MetricQuery(
+        metrics=[],
+        saved_query="daily_sales",
+        filters=[Filter(dimension="order__status", values=["shipped"])],
+        start_date="2026-10-02",
+        end_date="2026-10-02",
+        order_by=["-revenue_eur", "metric_time__day"],
+        limit=5,
+    )
+    request = query.request(CATALOG)
+    assert request.saved_query_name == "daily_sales"
+    assert request.metric_names is None and request.group_by_names is None
+    assert request.where_constraints == ["{{ Dimension('order__status') }} = 'shipped'"]
+    assert request.time_constraint_end == datetime.datetime(2026, 10, 2)
+    assert request.order_by_names == ["-revenue_eur", "metric_time__day"]
+    assert query.resolved_metrics(CATALOG) == [
+        "revenue_eur",
+        "orders_total",
+        "orders_cancelled",
+        "customers_distinct",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("query", "message"),
+    [
+        (MetricQuery(metrics=[], saved_query="weekly_sales"), "no saved query named"),
+        (MetricQuery(metrics=["leads"], saved_query="daily_sales"), "fixes its metrics"),
+        (
+            MetricQuery(metrics=[], group_by=["order__status"], saved_query="daily_sales"),
+            "fixes its metrics and group-bys",
+        ),
+        (MetricQuery(metrics=[], saved_query="orders_by_status", order_by=["x"]), "order by"),
+        (
+            MetricQuery(
+                metrics=[],
+                saved_query="returns_by_reason",
+                filters=[Filter(dimension="return__reason", values=["damaged goods"])],
+            ),
+            "its values are",
+        ),
+    ],
+)
+def test_a_saved_query_is_checked_like_any_request(query, message):
+    with pytest.raises(QueryError, match=message):
+        query.request(CATALOG)
+
+
 def test_dbt_project_dir_comes_from_the_env_outside_the_repo(monkeypatch):
     """In the image the agents sit at /app/agents, with no repo around them (issue #111)."""
     from semantic_agent import metrics

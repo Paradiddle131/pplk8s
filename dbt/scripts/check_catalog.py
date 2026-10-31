@@ -5,7 +5,8 @@ Checks, against the manifests the artefacts were built from (semantic/PLAN.md SL
   columns is described (persist_docs turns the words into warehouse comments);
 - system_instruction.yaml parses and uses only the keys Google documents for a BigQuery data agent's
   authored context, with the documented relationship and join types;
-- example_queries.json holds one verified query per metric, with the documented keys only;
+- example_queries.json holds one verified query per metric and one per saved query, with the documented keys only;
+- agent.json lists every saved query with its question, metrics and group-bys (#164);
 - every glossary term (`config.meta.glossary` on a model) is in agent.json, has a description, maps to at
   least one metric or dimension, names only metrics the semantic manifest defines and dimensions one of its
   metrics groups by, and neither repeats another term nor a metric's name or label (a metric is its own
@@ -154,9 +155,22 @@ def problems(target: Path) -> list[str]:
     context = yaml.safe_load((catalog_dir / "data_agent" / "system_instruction.yaml").read_text())
     found += [f"system_instruction.yaml: {problem}" for problem in authored_context_problems(context)]
 
+    saved = sorted(query["name"] for query in semantic_manifest.get("saved_queries", []))
+    listed_saved = {query["name"]: query for query in catalog.get("saved_queries", [])}
+    if sorted(listed_saved) != saved:
+        found.append(f"agent.json: saved queries {sorted(listed_saved)} != manifest {saved}")
+    found += [
+        f"agent.json: saved query {name} has no {field}"
+        for name, query in sorted(listed_saved.items())
+        for field in ("question", "metrics", "readiness")
+        if not query.get(field)
+    ]
+
     queries = json.loads((catalog_dir / "data_agent" / "example_queries.json").read_text())
-    if len(queries) != len(metrics):
-        found.append(f"example_queries.json: {len(queries)} queries for {len(metrics)} metrics")
+    if len(queries) != len(metrics) + len(saved):
+        found.append(
+            f"example_queries.json: {len(queries)} queries for {len(metrics)} metrics and {len(saved)} saved queries"
+        )
     for position, query in enumerate(queries):
         required = {"naturalLanguageQuestion", "sqlQuery"}
         if not isinstance(query, dict) or not required <= query.keys() <= EXAMPLE_QUERY_KEYS:
@@ -171,7 +185,7 @@ def main() -> int:
         print(f"check_catalog: {problem}", file=sys.stderr)
     if not found:
         print(
-            "check_catalog: every public model, metric and glossary term is catalogued; "
+            "check_catalog: every public model, metric, glossary term and saved query is catalogued; "
             "the authored context uses documented keys"
         )
     return 1 if found else 0

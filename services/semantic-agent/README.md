@@ -20,6 +20,9 @@ MetricFlow renders that condition as a Jinja template before it compiles SQL, so
 A categorical dimension whose column declares its values (an `accepted_values` test, which the catalog carries as `values`) shows them in `describe_metric`, and a filter value outside them comes back as an error naming them: a guessed value ("damaged goods" for `damaged`) would match no row and read as a confident zero.
 A request the semantic layer cannot answer (an unknown metric, a dimension the metric lacks) comes back as `{"error": ...}` for the model to read.
 
+`list_metrics` also returns the dbt saved queries (`dbt/models/semantic/saved_queries.yml`, #164): the recurring questions, each with its fixed metrics, group-bys and filters.
+`query_metrics(saved_query=...)` runs one by name, narrowed by the call's dates, filters, order and limit (MetricFlow refuses other metrics or group-bys beside a saved query); the result names the saved query's metrics, which its freshness, the audit row and the eval's `metric_choice` use.
+
 The roles live in `platform/compose/warehouse-init/02-agent-roles.sql`, which `make services-up` applies to `warehouse` and `make agent-eval` to `dbt_dev`.
 The database, not the prompt, keeps each agent in its tables (SL-4).
 

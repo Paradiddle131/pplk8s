@@ -65,6 +65,38 @@ def test_list_metrics_also_gives_the_glossary_of_terms_that_are_not_metrics():
     assert all(set(term["metrics"]) <= metrics for term in terms.values())
 
 
+def test_list_metrics_also_gives_the_saved_queries_with_their_questions():
+    listed = {query["name"]: query for query in tools.list_metrics()["saved_queries"]}
+    assert listed["orders_by_status"] == {
+        "name": "orders_by_status",
+        "question": "How many orders are there in each status?",
+        "metrics": ["orders_total"],
+        "group_by": ["order__status"],
+        "where": [],
+    }
+
+
+def test_a_saved_query_runs_through_query_metrics_with_its_metrics_freshness(metricflow, audit):
+    """Issue #164: the model names a saved query; its metrics give the freshness and the audit."""
+    args = {"saved_query": "net_sales_daily", "start_date": "2026-10-01", "end_date": "2026-10-01"}
+    model = ScriptedLlm(steps=[("query_metrics", args), "Net revenue was 981.69 EUR."])
+    run_turn(semantic.build_agent(model), "What were revenue, returns and net revenue on 1 Oct?")
+    (request,) = metricflow
+    assert request.saved_query_name == "net_sales_daily"
+    (result,) = model.tool_results()
+    assert result["response"]["metrics"] == [
+        "revenue_eur",
+        "returns_count",
+        "returns_eur",
+        "net_revenue_eur",
+    ]
+    assert "returns.silver" in result["response"]["freshness"]["statement"]
+    assert "sales.silver" in result["response"]["freshness"]["statement"]
+    (row,) = audit
+    assert row["metrics"] == result["response"]["metrics"]
+    assert row["arguments"] == args
+
+
 def test_filters_from_the_model_reach_metricflow_as_checked_literals(metricflow):
     args = {
         "metrics": ["orders_total"],

@@ -21,8 +21,10 @@ def catalog() -> Catalog:
 
 
 def list_metrics() -> dict[str, Any]:
-    """Lists every business metric the semantic layer defines, with its label and meaning, and the
-    glossary: business terms that are not metrics, each with the metrics and dimensions it maps to.
+    """Lists every business metric the semantic layer defines, with its label and meaning; the
+    glossary: business terms that are not metrics, each with the metrics and dimensions it maps to;
+    and the saved queries: recurring questions answered the same way every time, each a fixed set
+    of metrics, group-bys and filters that query_metrics runs by name.
 
     Call this first: an answer may only use these metrics.
     """
@@ -34,6 +36,10 @@ def list_metrics() -> dict[str, Any]:
         "glossary": [
             {key: term[key] for key in ("term", "description", "synonyms", "metrics", "dimensions")}
             for term in catalog().glossary
+        ],
+        "saved_queries": [
+            {key: query[key] for key in ("name", "question", "metrics", "group_by", "where")}
+            for query in catalog().saved_queries.values()
         ],
     }
 
@@ -66,13 +72,14 @@ def describe_metric(name: str) -> dict[str, Any]:
 
 
 def query_metrics(
-    metrics: list[str],
+    metrics: list[str] | None = None,
     group_by: list[str] | None = None,
     filters: list[Filter] | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
     order_by: list[str] | None = None,
     limit: int | None = None,
+    saved_query: str | None = None,
 ) -> dict[str, Any]:
     """Computes metrics through the semantic layer and returns their rows, the SQL it ran, and
     how fresh their data is: quote `freshness.statement` in the answer.
@@ -89,22 +96,28 @@ def query_metrics(
         end_date: Last day to include (YYYY-MM-DD), inclusive.
         order_by: Requested metrics or group-bys to sort by; prefix "-" for descending.
         limit: Maximum rows to return (at most 200).
+        saved_query: A saved query's name from list_metrics, instead of metrics and group_by: it
+            fixes them, and filters, dates, order_by and limit narrow it.
     """
     query = MetricQuery(
-        metrics=metrics,
+        metrics=metrics or [],
         group_by=group_by or [],
         filters=[f if isinstance(f, Filter) else Filter.model_validate(f) for f in filters or []],
         start_date=start_date,
         end_date=end_date,
         order_by=order_by or [],
         limit=limit,
+        saved_query=saved_query,
     )
     try:
         result = run(query, catalog())
+        names = query.resolved_metrics(catalog())
     except QueryError as e:
         return {"error": str(e)}
-    products = sorted({p for name in metrics for p in catalog().metric(name).get("readiness", [])})
-    return {**result, "freshness": freshness(products)}
+    products = sorted({p for name in names for p in catalog().metric(name).get("readiness", [])})
+    # A saved query's metrics are not in the call's arguments, so the result names them (the audit).
+    named = {"metrics": names} if saved_query is not None else {}
+    return {**result, **named, "freshness": freshness(products)}
 
 
 TOOLS = [list_metrics, describe_metric, query_metrics]

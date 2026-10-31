@@ -26,6 +26,8 @@ with a filter on one of the dimensions describe_metric lists, not a missing metr
 value describe_metric lists for that dimension, and if none fits the question, say so.
 A term the question uses may be in the glossary list_metrics returns: use the metrics and
 dimensions the term names.
+When a saved query list_metrics returns answers the question, run it with query_metrics'
+saved_query, narrowed by start_date, end_date and filters as the question asks.
 If no metric answers the question, say that the semantic layer has no such metric and name the
 closest metrics; do not answer from general knowledge.
 Answer in one or two sentences: the figure with its unit, and the days or period it covers.
