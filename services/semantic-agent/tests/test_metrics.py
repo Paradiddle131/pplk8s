@@ -71,8 +71,8 @@ def test_filter_operators(operator, values, expected):
     ("item", "message"),
     [
         (
-            Filter(dimension="customer__country", values=["NL"]),
-            "cannot filter by 'customer__country'",
+            Filter(dimension="campaign__channel", values=["search"]),
+            "cannot filter by 'campaign__channel'",
         ),
         (Filter(dimension="metric_time", values=["2026-10-01"]), "start_date and end_date"),
         (Filter(dimension="order__status", values=[]), "has no values"),
@@ -106,7 +106,7 @@ def test_a_request_carries_the_checked_parts():
     ("query", "message"),
     [
         (MetricQuery(metrics=[]), "at least one metric"),
-        (MetricQuery(metrics=["revenue_eur"], group_by=["customer__country"]), "cannot group by"),
+        (MetricQuery(metrics=["revenue_eur"], group_by=["campaign__channel"]), "cannot group by"),
         (MetricQuery(metrics=["revenue_eur"], group_by=["order__status__day"]), "cannot group by"),
         (MetricQuery(metrics=["revenue_eur"], order_by=["amount"]), "can only order by"),
         (MetricQuery(metrics=["revenue_eur"], start_date="last week"), "must be a date"),

@@ -9,15 +9,18 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by.
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
+  And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
+  that hold them, each with the metrics and dimensions it maps to.
 - `data_agent/system_instruction.yaml`: the authored context of a BigQuery data agent, in the shape
   Google documents (a list of single-key maps: `system_instruction`, `tables` with fields and their
-  aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics,
+  aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics
+  and the glossary terms,
   `additional_descriptions` from the derived and ratio metrics' formulas).
 - `data_agent/example_queries.json`: one verified query per metric (`naturalLanguageQuestion`,
   `sqlQuery`), the metric by day as MetricFlow compiles it.
 
 The third artefact, the warehouse comments, is built by dbt itself: `persist_docs` on gold and exposed,
-and the `semantic.metrics` model (models/semantic/semantic_metrics.sql).
+and the `semantic.metrics` and `semantic.glossary` models (models/semantic/).
 
 Table names are `database.schema.table` of the dbt target, so a BigQuery target yields
 `project.dataset.table` and the compiled SQL its dialect, with no change here.
@@ -41,7 +44,8 @@ LAYER_TAGS = {"bronze", "silver", "gold", "exposed", "semantic"}
 SYSTEM_INSTRUCTION = (
     "You answer questions about the lab's sales, partner returns and finance data. "
     "Compute a business figure only as its metric is defined in the glossary and the example queries; "
-    "never invent another definition of revenue, orders or returns. Dates are UTC days."
+    "never invent another definition of revenue, orders or returns. Dates are UTC days. "
+    "A glossary term that is not a metric names the metrics and dimensions it maps to."
 )
 
 
@@ -88,6 +92,26 @@ def public_models(manifest: dict) -> list[dict]:
             }
         )
     return models
+
+
+def glossary(manifest: dict) -> list[dict]:
+    """The business terms that are not metrics, from `config.meta.glossary` on the models that hold them."""
+    terms = []
+    for node in manifest["nodes"].values():
+        if node["resource_type"] != "model":
+            continue
+        for entry in node["config"].get("meta", {}).get("glossary", []):
+            terms.append(
+                {
+                    "term": entry.get("term", ""),
+                    "description": " ".join(entry.get("description", "").split()),
+                    "synonyms": entry.get("synonyms", []),
+                    "metrics": entry.get("metrics", []),
+                    "dimensions": entry.get("dimensions", []),
+                    "model": node["name"],
+                }
+            )
+    return sorted(terms, key=lambda term: term["term"].lower())
 
 
 class SemanticIndex:
@@ -145,6 +169,7 @@ class SemanticIndex:
 def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[str], list[dict]]) -> dict:
     return {
         "models": public_models(manifest),
+        "glossary": glossary(manifest),
         "metrics": [
             {
                 "name": metric["name"],
@@ -172,7 +197,7 @@ def _primary_key(model: dict) -> str:
     return entity.get("expr") or entity["name"]
 
 
-def system_instruction(index: SemanticIndex) -> list[dict]:
+def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
     aggregations: dict[str, dict[str, list[str]]] = {name: {} for name in index.semantic_models}
     for metric in index.metrics:
         params = metric["type_params"]["metric_aggregation_params"]
@@ -230,12 +255,21 @@ def system_instruction(index: SemanticIndex) -> list[dict]:
                 }
             )
 
+    labels = {metric["name"]: metric["label"] for metric in index.metrics}
     glossaries = [
         {"glossary": _item(term=metric["label"], description=metric["description"], synonyms=[metric["name"]])}
         for metric in index.metrics
     ]
+    for term in terms:
+        # The data agent's glossary has no field for a mapping, so the term's description names it.
+        mapping = []
+        if term["metrics"]:
+            mapping.append(f"Metrics: {', '.join(labels.get(name, name) for name in term['metrics'])}.")
+        if term["dimensions"]:
+            mapping.append(f"Dimensions: {', '.join(term['dimensions'])}.")
+        description = " ".join([term["description"], *mapping])
+        glossaries.append({"glossary": _item(term=term["term"], description=description, synonyms=term["synonyms"])})
 
-    labels = {metric["name"]: metric["label"] for metric in index.metrics}
     descriptions = []
     for metric in index.metrics:
         params = metric["type_params"]
@@ -307,12 +341,15 @@ def main() -> int:
     catalog = agent_catalog(manifest, index, dimensions)
     (out / "agent.json").write_text(json.dumps(catalog, indent=2) + "\n")
     (out / "data_agent" / "system_instruction.yaml").write_text(
-        yaml.safe_dump(system_instruction(index), sort_keys=False, allow_unicode=True, width=110)
+        yaml.safe_dump(system_instruction(index, catalog["glossary"]), sort_keys=False, allow_unicode=True, width=110)
     )
     (out / "data_agent" / "example_queries.json").write_text(
         json.dumps(example_queries(index, compiled_sql), indent=2) + "\n"
     )
-    print(f"build_catalog: {len(catalog['models'])} public models and {len(catalog['metrics'])} metrics in {out}")
+    print(
+        f"build_catalog: {len(catalog['models'])} public models, {len(catalog['metrics'])} metrics "
+        f"and {len(catalog['glossary'])} glossary terms in {out}"
+    )
     return 0
 
 

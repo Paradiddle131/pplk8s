@@ -21,7 +21,8 @@ def catalog() -> Catalog:
 
 
 def list_metrics() -> dict[str, Any]:
-    """Lists every business metric the semantic layer defines, with its label and meaning.
+    """Lists every business metric the semantic layer defines, with its label and meaning, and the
+    glossary: business terms that are not metrics, each with the metrics and dimensions it maps to.
 
     Call this first: an answer may only use these metrics.
     """
@@ -29,7 +30,11 @@ def list_metrics() -> dict[str, Any]:
         "metrics": [
             {"name": m["name"], "label": m["label"], "description": m["description"]}
             for m in catalog().metrics.values()
-        ]
+        ],
+        "glossary": [
+            {key: term[key] for key in ("term", "description", "synonyms", "metrics", "dimensions")}
+            for term in catalog().glossary
+        ],
     }
 
 

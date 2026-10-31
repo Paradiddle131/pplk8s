@@ -2,7 +2,7 @@ version: 2
 
 # The semantic layer (semantic/PLAN.md SL-1), in dbt's latest YAML spec: the semantic models and their
 # simple metrics live on the silver models (models/silver/schema.yml); this file holds the time spine,
-# the metrics table and the metrics that combine other metrics. Every calculated field of the gold and
+# the metrics and glossary tables, and the metrics that combine other metrics. Every calculated field of the gold and
 # exposed models is defined once as a metric (R1).
 # The hand-written gold and exposed aggregates stay as the parity oracle (tests/e2e/semantic-check.sh).
 # Every metric carries a description and a label: scripts/check_standard.py fails the stage otherwise,
@@ -37,6 +37,24 @@ models:
         description: Comma-separated semantic models the metric reads.
       - name: pipelines
         description: Comma-separated pipeline tags that own those models; ops.readiness by these tags gives the metric's freshness.
+
+  - name: semantic_glossary
+    description: One row per glossary term, a business term that is not a metric, with the metrics and dimensions it maps to; the warehouse copy of the agent catalog's glossary (semantic/PLAN.md SL-3). Alias semantic.glossary.
+    columns:
+      - name: term
+        description: The business term, as people ask for it.
+        tests: [not_null, unique]
+      - name: description
+        description: What the term means and how it differs from terms it is confused with.
+        tests: [not_null]
+      - name: synonyms
+        description: Comma-separated other words for the term.
+      - name: metrics
+        description: Comma-separated metrics the term maps to, as the mf CLI and the agent's query_metrics take them.
+      - name: dimensions
+        description: Comma-separated dimensions the term maps to, as `<entity>__<dimension>`.
+      - name: model_name
+        description: The dbt model whose YAML defines the term.
 
 # Metrics over other metrics, across semantic models.
 metrics:
