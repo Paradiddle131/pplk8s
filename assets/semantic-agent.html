@@ -20,6 +20,7 @@
    between the sheet:css markers; edit it here, never in a copy. */
 :root {
   --paper: #fbfbf9;
+  --tint: #f1f0eb;
   --card: #ffffff;
   --pkg: #ebeae5;
   --ink: #1b1b1d;
@@ -27,20 +28,20 @@
   --hair: #cfcec9;
   --muted: #5d5d65;
   --cobalt: #2f4bc4;
-  --vermilion: #c3421a;
+  --vermilion: #b83d16;
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
   --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: rgb(20, 21, 23); --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --paper: rgb(20, 21, 23); --tint: #1c1d21; --card: #222327; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
     --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: rgb(20, 21, 23); --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --paper: rgb(20, 21, 23); --tint: #1c1d21; --card: #222327; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
   --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
   color-scheme: dark;
 }
@@ -66,7 +67,11 @@ figure { margin: 0; overflow-x: auto; }
 svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
 
 .frame { fill: none; stroke: var(--rule); stroke-width: 1; }
+/* depth banding: second, fourth, ... levels screened with a tint; the levels between back on paper */
+.frame.band-tint { fill: var(--tint); }
+.frame.band-paper { fill: var(--paper); }
 .knock { fill: var(--paper); }
+.knock.tint { fill: var(--tint); }
 .card { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 .card.pkg { fill: var(--pkg); stroke: none; }
 .card.behind { stroke: var(--rule); }
@@ -170,6 +175,10 @@ function Sheet(svg, opt = {}) {
   const logos = opt.logos ?? {};
   const swaps = []; // run in creation order on every mode change
   const phantoms = []; // chain-line outlines that go solid in opt.solidIn
+  const frames = []; // every frame, for the depth banding done() applies
+  const knocks = []; // every knock-out, painted by done() to match what lies behind each half
+  const edges = []; // every edge, for the bridges done() draws where two cross
+  const HOP = 4; // a bridge's radius
 
   const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
   const pick = v => (isModal(v) ? v[mode] : v);
@@ -187,6 +196,15 @@ function Sheet(svg, opt = {}) {
     return t;
   };
   const len = t => (t.textContent ? t.getBBox().width : 0); // the glyphs' box, wider than the advance in some fonts
+  // A knock-out: the patch of a line a title sits on, in two halves (above and below the line), so each
+  // half takes the fill of whatever surrounds it once done() knows the banding.
+  const knock = (y, parent = svg, before = null) => {
+    const g = document.createElementNS(NS, 'g');
+    parent.insertBefore(g, before);
+    const halves = [el('rect', { y: y - 8, height: 8, class: 'knock' }, g), el('rect', { y, height: 8, class: 'knock' }, g)];
+    knocks.push(...halves);
+    return { set: (x, w) => halves.forEach(r => { r.setAttribute('x', x); r.setAttribute('width', w); }) };
+  };
 
   // A logo: a registry mark in a fixed 14-unit box, drawn only through a card's or a frame's slot.
   const logo = (parent, id, slot) => {
@@ -218,8 +236,8 @@ function Sheet(svg, opt = {}) {
   // edge: 'bottom' (a title block, for a frame that edges enter from above).
   const frame = ({ x, y: top, w, h, title, note, logo: id, edge: side = 'top' }) => {
     const y = side === 'bottom' ? top + h : top;
-    el('rect', { x, y: top, width: w, height: h, rx: 2, class: 'frame' });
-    const knock = el('rect', { x: x + 10, y: y - 8, height: 16, class: 'knock' });
+    frames.push({ x, y: top, w, h, rect: el('rect', { x, y: top, width: w, height: h, rx: 2, class: 'frame' }) });
+    const k = knock(y);
     const g = el('g');
     const lg = id ? logo(g, id, 'frame') : null;
     const t = text(g, 0, y + 4.5, title, 'ftitle');
@@ -229,7 +247,7 @@ function Sheet(svg, opt = {}) {
       if (lg?.present()) { lg.box.setAttribute('x', cx); lg.box.setAttribute('y', y - LOGO / 2); cx += LOGO + 6; }
       t.setAttribute('x', cx); cx += len(t);
       if (n) { n.setAttribute('x', cx + 10); cx += 10 + len(n); }
-      knock.setAttribute('width', cx - x - 4);
+      k.set(x + 10, cx - x - 4);
     };
     fit(); swaps.push(fit);
   };
@@ -260,9 +278,9 @@ function Sheet(svg, opt = {}) {
     const r = el('rect', { x, y, width: w, height: h, rx: 2, class: 'outline phantom' }); // solid in solidIn: 'outline' alone
     phantoms.push(r);
     if (label) {
-      const knock = el('rect', { y: y - 8, height: 16, class: 'knock' });
+      const k = knock(y);
       const t = text(svg, x + w - 16, y + 4.5, label, 'mono', { 'text-anchor': 'end' });
-      const fit = () => { const l = len(t); knock.setAttribute('x', x + w - 22 - l); knock.setAttribute('width', l + 12); };
+      const fit = () => { const l = len(t); k.set(x + w - 22 - l, l + 12); };
       fit(); swaps.push(fit);
     }
     return r;
@@ -279,9 +297,8 @@ function Sheet(svg, opt = {}) {
     if (title) parts.push([text(g, x + 12, y + 4.5, title, 'title' + tc), 'start']);
     if (role) parts.push([text(g, x + w - 12, y + 4, role, 'mono' + tc, { 'text-anchor': 'end' }), 'end']);
     for (const [t, side] of parts) {
-      const k = el('rect', { y: y - 8, height: 16, class: 'knock' });
-      g.parentNode.insertBefore(k, g);
-      const fit = () => { const l = len(t); k.setAttribute('x', side === 'start' ? x + 6 : x + w - 18 - l); k.setAttribute('width', l + 12); };
+      const k = knock(y, svg, g);
+      const fit = () => { const l = len(t); k.set(side === 'start' ? x + 6 : x + w - 18 - l, l + 12); };
       fit(); swaps.push(fit);
     }
   };
@@ -291,7 +308,7 @@ function Sheet(svg, opt = {}) {
     const tone = o.tone ?? (o.thin ? 'rule' : 'ink');
     const cls = ['edge', o.reads ? 'reads' : '', o.thin ? 'thin' : '', o.tone ?? ''].join(' ');
     const marker = `url(#arrow-${tone})`;
-    el('path', { d, class: cls, 'marker-end': o.noEnd ? null : marker, 'marker-start': o.both ? marker : null });
+    edges.push({ d, path: el('path', { d, class: cls, 'marker-end': o.noEnd ? null : marker, 'marker-start': o.both ? marker : null }) });
     for (const l of o.labels ?? (o.label ? [o.label] : [])) {
       const t = text(svg, l.at[0], l.at[1], l.text, `elabel${l.mono ? ' mono' : ''}${o.tone ? ` ${o.tone}-text` : ''}`, { 'text-anchor': l.anchor ?? 'middle' });
       t.dataset.edgeLabel = '1';
@@ -342,8 +359,78 @@ function Sheet(svg, opt = {}) {
     opt.bar?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
     try { if (opt.storageKey) localStorage.setItem(opt.storageKey, m); } catch (e) { /* storage off */ }
   };
+  // Depth banding: a frame inside an odd number of frames (a second, fourth, ... level) is screened with
+  // a faint tint, the levels between stay paper, the outermost have no fill. Frames move beneath
+  // everything, outermost first, and each knock-out half takes the fill of the frame it sits in.
+  const inside = (a, b) => a !== b && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
+  const band = () => {
+    for (const f of frames) f.depth = frames.filter(o => inside(f, o)).length;
+    for (const f of frames) f.rect.classList.add(f.depth === 0 ? 'band-open' : f.depth % 2 ? 'band-tint' : 'band-paper');
+    const first = svg.querySelector('defs')?.nextSibling ?? svg.firstChild;
+    for (const f of [...frames].sort((a, b) => a.depth - b.depth)) svg.insertBefore(f.rect, first);
+    for (const r of knocks) {
+      const c = { x: +r.getAttribute('x') + 1, y: +r.getAttribute('y') + 4, w: 0, h: 0 };
+      const home = frames.filter(f => inside(c, f) || (c.x >= f.x && c.x <= f.x + f.w && c.y > f.y && c.y < f.y + f.h)).sort((a, b) => b.depth - a.depth)[0];
+      r.classList.toggle('tint', !!home && home.depth % 2 === 1);
+    }
+  };
+
+  // Bridges: where two edges cross at right angles, one hops over the other with a small arc, the way a
+  // circuit drawing shows wires that do not join. The horizontal one hops, unless the crossing sits too
+  // close to its ends, then the vertical one; a crossing neither can take is reported to the checker.
+  const bridge = () => {
+    const polys = edges.map(e => {
+      const out = []; let cur = null, x = 0, y = 0;
+      for (const [, c, a] of e.d.matchAll(/([MLHV])\s*([-\d.,\s]+)/gi)) {
+        const n = a.trim().split(/[\s,]+/).map(Number);
+        if (/m/i.test(c)) { x = n[0]; y = n[1]; cur = [[x, y]]; out.push(cur); continue; }
+        if (/h/i.test(c)) x = n[0]; else if (/v/i.test(c)) y = n[0]; else { x = n[0]; y = n[1]; }
+        cur.push([x, y]);
+      }
+      return out;
+    });
+    const segs = [];
+    polys.forEach((ps, ei) => ps.forEach((p, pi) => p.slice(1).forEach((b, si) => {
+      const a = p[si];
+      const o = a[1] === b[1] ? 'h' : a[0] === b[0] ? 'v' : 'o';
+      segs.push({ ei, pi, si, a, b, o, hops: [] });
+    })));
+    const between = (v, a, b, m) => v > Math.min(a, b) + m && v < Math.max(a, b) - m;
+    let unbridged = 0;
+    for (const s1 of segs) for (const s2 of segs) {
+      if (s1.ei >= s2.ei || s1.o === s2.o || s1.o === 'o' || s2.o === 'o') continue;
+      const [h, v] = s1.o === 'h' ? [s1, s2] : [s2, s1];
+      const px = v.a[0], py = h.a[1];
+      if (!between(px, h.a[0], h.b[0], 0.5) || !between(py, v.a[1], v.b[1], 0.5)) continue;
+      if (between(px, h.a[0], h.b[0], HOP + 2)) h.hops.push(px);
+      else if (between(py, v.a[1], v.b[1], HOP + 2)) v.hops.push(py);
+      else unbridged++;
+    }
+    edges.forEach((e, ei) => {
+      let d = '', hops = 0;
+      polys[ei].forEach((p, pi) => {
+        d += `M${p[0][0]},${p[0][1]}`;
+        p.slice(1).forEach((b, si) => {
+          const sg = segs.find(q => q.ei === ei && q.pi === pi && q.si === si);
+          const a = p[si], dir = sg.o === 'h' ? Math.sign(b[0] - a[0]) : Math.sign(b[1] - a[1]);
+          for (const at of [...sg.hops].sort((m, n) => (m - n) * dir)) {
+            hops++;
+            if (sg.o === 'h') d += ` L${at - HOP * dir},${a[1]} A${HOP},${HOP} 0 0 ${dir > 0 ? 1 : 0} ${at + HOP * dir},${a[1]}`;
+            else d += ` L${a[0]},${at - HOP * dir} A${HOP},${HOP} 0 0 ${dir > 0 ? 1 : 0} ${a[0]},${at + HOP * dir}`;
+          }
+          d += ` L${b[0]},${b[1]}`;
+        });
+      });
+      e.path.setAttribute('d', d);
+      e.path.dataset.hops = hops;
+    });
+    svg.dataset.unbridged = unbridged;
+  };
+
   // done({unmarked: {id: 'why'}}): a technology the sheet names without its logo, and why.
   const done = ({ unmarked = {} } = {}) => {
+    band();
+    bridge();
     const params = new URLSearchParams(location.search);
     if (opt.bar && modes.length > 1) {
       if (params.has('static')) opt.bar.hidden = true;
@@ -427,9 +514,9 @@ Sheet.ready().then(() => {
 
   S.frame({ x: 908, y: 160, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
   S.region({ x: 916, y: 172, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
-  S.card({ x: 924, y: 178, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
+  S.card({ x: 924, y: 180, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
   S.region({ x: 916, y: 252, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
-  S.card({ x: 924, y: 258, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
+  S.card({ x: 924, y: 260, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
   S.card({ x: 924, y: 360, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
   S.region({ x: 916, y: 484, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
   S.card({ x: 924, y: 492, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
