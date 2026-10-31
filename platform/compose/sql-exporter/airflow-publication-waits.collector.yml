@@ -1,0 +1,26 @@
+# The source files Airflow is still waiting for (D35): one series per `wait_published` task instance
+# that has asked and been told "not published" (deferred, or between retries) or gave up (failed,
+# past the sensor's 120-day timeout), valued at its run's data interval end, i.e. when the data month
+# closed. TlcMonthUnpublished compares that with TLC's publication lag. A wait that has not asked yet
+# is left out: a backfilled old month queued behind max_active_runs is not late, only unscheduled.
+# A failed wait stays here until the run is cleared, so the alert keeps naming the missing month.
+# A handful of series on the lab: one per open month and file.
+collector_name: airflow_publication_waits
+
+metrics:
+  - metric_name: airflow_publication_wait_interval_end_seconds
+    type: gauge
+    help: "Data interval end (Unix seconds) of every publication wait told its file is unpublished, by DAG run and file."
+    key_labels: [dag_id, run_id, data_month, file]
+    values: [interval_end]
+    query: |
+      SELECT ti.dag_id,
+             ti.run_id,
+             to_char(dr.data_interval_start AT TIME ZONE 'UTC', 'YYYY-MM') AS data_month,
+             coalesce(ti.rendered_map_index, ti.map_index::text) AS file,
+             extract(epoch FROM dr.data_interval_end) AS interval_end
+      FROM task_instance ti
+      JOIN dag_run dr ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
+      WHERE ti.task_id = 'wait_published'
+        AND dr.data_interval_end IS NOT NULL
+        AND ti.state IN ('deferred', 'up_for_reschedule', 'up_for_retry', 'failed')

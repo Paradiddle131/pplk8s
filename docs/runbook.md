@@ -707,3 +707,30 @@ docker compose -f platform/compose/compose.yaml exec -T warehouse psql -U wareho
 Recovery: nothing to do; the retry resumes.
 Why it waited 5 minutes: `extract` retries with exponential backoff from 30 s, capped at `max_retry_delay` (5 minutes), and the exponent is the task instance's `try_number`, which keeps counting across clears.
 A first failure waits 30–60 s (Airflow adds up to one more delay of jitter); after a clear or two, the first retry already waits the cap.
+
+### 3. A TLC month stays unpublished
+
+`tlc_monthly` opens a run for each data month as soon as the month closes, and its `wait_published` tasks wait deferrably for TLC to publish the month's files (D35): the triggerer asks EL Factory's `GET /publication` every few hours, and the sensor gives up after 120 days.
+TLC states a two-month delay; the observed lag from month end to publication is 24–83 days (`docs/research/tlc-source-facts.md`), so a wait of a few weeks is normal and raises nothing.
+A month still unpublished 100 days after it closed is not normal: TLC skipped or withdrew the file, renamed it, or EL Factory's check is wrong.
+
+Not drilled yet: no real month stays unpublished for 100 days, so the rule is covered by its promtool test (`tests/monitoring/tlc-publication.test.yaml`, `make rules-test`) and its query by the lab's metadata DB (2026-10-14: the 2026-09 run's yellow and green waits, deferred, 13 days after the month closed); the drill comes with #59.
+
+Detection: `TlcMonthUnpublished`, one alert per file and month, labelled `data_month` and `file` (`tlc.yellow`, `tlc.green`); its value is the time since the month closed.
+It reads `airflow_publication_wait_interval_end_seconds` from the metadata DB's `sql_exporter`: one series per `wait_published` task instance that is deferred, waiting to retry or failed, valued at its run's data interval end.
+A wait that has not asked yet is left out, so a backfill of an old, published month never fires it; a failed wait (past the 120-day timeout) keeps it firing until the run is cleared.
+Grafana's "Airflow overview" shows every waiting month's age in "TLC months awaiting publication".
+
+Diagnosis: ask the source the same question EL Factory asks, then EL Factory itself.
+
+```bash
+curl -sI https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-09.parquet | head -1   # 200 published, 403 not (S3's AccessDenied)
+$K exec deploy/el-factory -- python -c "import urllib.request as u; print(u.urlopen('http://localhost:8080/publication?source=tlc&entity=yellow&month=2026-09').read().decode())"
+```
+
+A 200 from the source but `not_published` from EL Factory is an EL Factory bug (the URL pattern in its catalog); a 403 from both means TLC has not published the month: check the [TLC trip record page](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) for a notice or a renamed file.
+
+Recovery: usually nothing; keep waiting, and the alert resolves on the scrape after the wait succeeds.
+If TLC has dropped the month for good, mark each of the run's `wait_published` instances `skipped` through the REST API (the UI's "Mark as" offers only success and failed): `PATCH /api/v2/dags/tlc_monthly/dagRuns/<run>/taskInstances/wait_published/<map_index>` with `{"new_state": "skipped"}`.
+Everything downstream skips, no readiness row is written, the run ends, and the alert resolves.
+If the wait failed at 120 days and the month then appears, clear the failed `wait_published` instances; the run loads the month as usual.
