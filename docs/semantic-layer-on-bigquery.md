@@ -23,6 +23,7 @@ At work the same output takes `method: oauth` (application default credentials) 
 | Lab piece | Work counterpart | How it gets there |
 |---|---|---|
 | Warehouse comments (`persist_docs` on gold and exposed) | BigQuery table and column descriptions, which Knowledge Catalog shows | The same dbt models with `persist_docs`; dbt-bigquery writes descriptions as it builds (stated) |
+| Model contracts on gold and exposed (`contract: {enforced: true}`, a `data_type` on every column) | The BigQuery table schema, which Knowledge Catalog shows beside the descriptions | Contracts act at build time: dbt compares the model's columns with the contract before it builds, and dbt-bigquery creates a contracted table with the declared types (measured (emulator)); the schema and Knowledge Catalog are what agents read at query time. A view gets the name and type check but no constraints (stated) |
 | `semantic.metrics` (one row per metric: name, label, description, type, models, pipelines) | Glossary terms: BigQuery custom glossary or Knowledge Catalog | The same model builds on BigQuery; the authored context's `glossaries` carry the same words |
 | `semantic.glossary` (one row per business term that is not a metric: term, description, synonyms, metrics, dimensions) | The same glossary, for terms such as a cohort or a channel | `config.meta.glossary` on the dbt models; the same model builds on BigQuery, and the authored context's `glossaries` carry each term with its metrics and dimensions in the description (the documented glossary item has no field for them) |
 | `target/catalog/data_agent/system_instruction.yaml` | The data agent's authored context: tables, fields and aggregations, relationships, glossary, additional descriptions | Generated from the manifests by `build_catalog.py` (S2); set as the agent's staging context, then published (`stagingContext`, `publishedContext`; stated) |
@@ -68,6 +69,8 @@ Each construct Postgres and BigQuery spell differently on the semantic path is o
 | `dbt.type_string()` (dbt's own) | `TEXT` | `STRING` | bronze |
 
 `dbt.date_spine` was not used: it counts its days with a warehouse query, so it cannot compile offline.
+
+Contract types in the YAML cannot call a macro, so they are spelled for both: `date` and `numeric`, and `bigint` and `integer`, which GoogleSQL takes as aliases of `INT64` (measured (emulator)); a string is a YAML anchor whose Jinja renders `text` on Postgres and `string` on BigQuery.
 
 The TLC models are off the semantic path and keep Postgres forms, marked `-- dialect:` where they stand:
 - `tlc_columns`: `double precision` and `timestamp` are `FLOAT64` and `DATETIME`.

@@ -10,7 +10,8 @@
 #     total spend over the total count, not an average of the daily ratios (SL-8),
 #   - the order metrics by customer country equal exposed.sales_by_country_daily, and revenue by
 #     signup cohort equals a direct join of silver (the customers semantic model),
-#   - a metric without a description or a label fails the validation.
+#   - a public model whose SQL renames or retypes a column its contract declares fails dbt build,
+#   - a metric without a description or a label, or a public column without a data_type, fails the validation.
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
 
@@ -131,8 +132,40 @@ expect "revenue by signup cohort vs silver (rows differing)" "$(psql_dev -c "
   select count(*) from ((select * from silver except select * from mf) union all (select * from mf except select * from silver)) d")" 0
 echo "ok: orders metrics by customer country equal exposed.sales_by_country_daily; revenue by signup cohort equals silver"
 
+# Contracts: gold.daily_sales as an agent reads it, with its SQL changed under the same YAML, fails the
+# build before it replaces the table: one model renames order_date, the other casts revenue_eur to text.
+contract_yml="$REPO/dbt/models/gold/zz_semantic_check_contract.yml"
+renamed="$REPO/dbt/models/gold/gld_zz_contract_renamed.sql"
+retyped="$REPO/dbt/models/gold/gld_zz_contract_retyped.sql"
+trap 'rm -f "$contract_yml" "$renamed" "$retyped"' EXIT
+echo "select order_date as sale_date, revenue_eur from {{ ref('gld_daily_sales') }}" >"$renamed"
+echo "select order_date, cast(revenue_eur as text) as revenue_eur from {{ ref('gld_daily_sales') }}" >"$retyped"
+{ printf 'version: 2\nmodels:\n'; for model in gld_zz_contract_renamed gld_zz_contract_retyped; do cat <<YAML; done; } >"$contract_yml"
+  - name: $model
+    description: gold.daily_sales with a changed column.
+    columns:
+      - name: order_date
+        description: Natural key.
+        data_type: date
+      - name: revenue_eur
+        description: Sum of amount for non-cancelled orders.
+        data_type: numeric
+YAML
+if dbt_ build --select gld_zz_contract_renamed gld_zz_contract_retyped >"$OUT/contract.log" 2>&1; then
+  fail "dbt build passed a public model off its contract"
+fi
+# dbt's mismatch table: the renamed column is missing in the contract, the retyped one mismatches.
+for row in "order_date *\| *\| DATE *\| missing in definition" "sale_date *\| DATE *\| *\| missing in contract" \
+  "revenue_eur *\| TEXT *\| DECIMAL *\| data type mismatch"; do
+  grep -Eq "\| $row" "$OUT/contract.log" || { tail -40 "$OUT/contract.log" >&2; fail "the build failed, but not on: $row"; }
+done
+[ "$(grep -c "This model has an enforced contract that failed" "$OUT/contract.log")" -eq 2 ] ||
+  { tail -40 "$OUT/contract.log" >&2; fail "expected both models to fail on their contract"; }
+rm -f "$contract_yml" "$renamed" "$retyped"
+echo "ok: a renamed and a retyped column of a public model fail dbt build on its contract"
+
 # Straying from the standard fails the stage: a labelled, undescribed metric beside the real ones, and
-# a gold model without the layer's prefix, a description or a described column.
+# a gold model without the layer's prefix, a description, a described column or a column type.
 stray="$REPO/dbt/models/semantic/zz_semantic_check_stray.yml"
 stray_model="$REPO/dbt/models/gold/zz_semantic_check_stray.sql"
 trap 'rm -f "$stray" "$stray_model"' EXIT
@@ -154,11 +187,12 @@ if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/stray.log" 2>&1; then
 for problem in "metric zz_stray_orders: no description" \
   "model zz_semantic_check_stray: in gold, so its name starts with gld_" \
   "public model zz_semantic_check_stray: no description" \
-  "public model zz_semantic_check_stray: column stray_id has no description"; do
+  "public model zz_semantic_check_stray: column stray_id has no description" \
+  "public model zz_semantic_check_stray: column stray_id has no data_type"; do
   grep -qF "check_standard: $problem" "$OUT/stray.log" ||
     { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on: $problem"; }
 done
 rm -f "$stray" "$stray_model"
-echo "ok: an undescribed metric and an unprefixed, undescribed gold model fail make dbt-validate"
+echo "ok: an undescribed metric and an unprefixed, undescribed, untyped gold model fail make dbt-validate"
 
 echo "PASS: semantic check"
