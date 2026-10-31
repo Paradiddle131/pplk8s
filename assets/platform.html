@@ -11,8 +11,7 @@
 <style>
 /* The whole lab once both tracks are done, at the level of an architecture: the Airflow platform, its
    pipelines and the dbt project, the semantic agent and its inner flow, monitoring, the managed-service
-   stand-ins outside the cluster (PLAN.md's stand-in map) and the internet above. assets/semantic-track.html
-   and assets/semantic-agent.html go one and two levels down. Drawn with the draw-architecture kit (claude-dotfiles: its CSS, API and logos sit between the sheet: markers, refreshed by its bin/build.cjs
+   stand-ins outside the cluster (PLAN.md's stand-in map) and the internet above. assets/semantic-agent.html goes one level down, into the agent's code. Drawn with the draw-architecture kit (claude-dotfiles: its CSS, API and logos sit between the sheet: markers, refreshed by its bin/build.cjs
    and checked by its bin/check.cjs). On this sheet cobalt is what the agent reads as agent_metrics,
    vermilion what the eval's text-to-SQL baseline reads as agent_sql; a chain line is what the work
    platform replaces or adds, solid in the On GCP mode, which relabels every stand-in. */
@@ -127,7 +126,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <div class="stage">
   <div class="bar" id="bar"></div>
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 1172" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: the agent pod's initContainer parses it into the catalog; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, and every result passes the guard, outside the toolset, which attaches freshness from the readiness ledger and writes its row into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 1172" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: build_catalog.py writes two things from it: the agent pod's initContainer runs it for the agent's catalog, and for work the BigQuery data agent's context and verified queries come from the same generator; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, and every result passes the guard, outside the toolset, which attaches freshness from the readiness ledger and writes its row into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
   </figure>
 </div>
 <script>
@@ -590,7 +589,7 @@ Sheet.ready().then(() => {
   S.card({ x: 776, y: 504, w: 204, h: 44, title: 'tests', lines: ['contracts, hops, the standard'] });
 
   S.frame({ x: 536, y: 588, w: 456, h: 204, title: 'semantic agent pod', note: 'adk api_server', logo: 'adk' });
-  S.card({ x: 548, y: 616, w: 132, h: 64, title: 'initContainer', lines: ['dbt parse, then', 'the catalog'] });
+  S.card({ x: 548, y: 616, w: 132, h: 64, title: 'initContainer', lines: [{ mono: 'build_catalog.py' }, 'writes the catalog'] });
   S.card({ x: 692, y: 616, w: 156, h: 64, title: 'LlmAgent', lines: ['Runner, sessions'], pkg: 'google.adk' });
   S.phantom({ x: 548, y: 700, w: 312, h: 80, label: 'DataAgentToolset' });
   S.card({ x: 560, y: 716, w: 120, h: 52, title: 'MetricFlow', pkg: 'metricflow' });
@@ -603,7 +602,7 @@ Sheet.ready().then(() => {
   S.card({ x: 208, y: 880, w: 144, h: 64, title: 'object storage', lines: [{ lab: 'fake-gcs-server', gcp: 'Cloud Storage' }, 'staging, task logs'], logo: { gcp: 'googlecloudstorage' } });
   S.card({ x: 360, y: 880, w: 144, h: 64, title: 'image registry', lines: [{ lab: 'kind registry', gcp: 'Artifact Registry' }] });
   S.card({ x: 56, y: 960, w: 296, h: 64, title: 'metadata DB', lines: [{ lab: 'Postgres', gcp: 'Cloud SQL' }, { mono: 'airflow, agent_sessions' }] });
-  S.card({ x: 360, y: 960, w: 144, h: 64, title: 'data agent', lines: ['BigQuery, at work', 'context from the catalog'], cls: 'phantom' });
+  S.card({ x: 360, y: 960, w: 144, h: 64, title: 'data agent', lines: [{ mono: 'build_catalog.py' }, 'context, verified queries'], cls: 'phantom' });
   S.card({ x: 208, y: 1048, w: 296, h: 64, title: 'eval', lines: [{ mono: 'make agent-eval' }, 'the agent against text-to-SQL'] });
 
   S.frame({ x: 536, y: 880, w: 456, h: 248, title: 'warehouse', note: { lab: 'Postgres', gcp: 'BigQuery' }, logo: { lab: 'postgresql', gcp: 'googlebigquery' }, edge: 'bottom' });
@@ -650,7 +649,7 @@ Sheet.ready().then(() => {
   S.edge('M926,768 V912', { label: { text: 'insert', at: [934, 840], anchor: 'start' } });
 
   S.legend(1048, 160, [['card', 'a component'], ['pkg', 'a package'], ['hatch', 'the model'], ['phantom', 'at work'], ['calls', 'calls, writes'], ['reads', 'reads'], ['tick', 'checked hop'], ['cobalt', 'agent reads'], ['vermilion', 'eval reads']], { column: true });
-  S.done({ unmarked: { googlebigquery: 'in the lab, named only as the work target of the data agent' } });
+  S.done();
 });
 </script>
 </body>

@@ -15,7 +15,7 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 
 The picture runs top to bottom in the order a question travels.
 Grey cards are a package's code, named above their title, and white cards this repo's; the hatched card is the model, the only part that is not code; a chain (dash-dot) line marks what the work platform replaces; cobalt is what the agent reads as `agent_metrics`, vermilion what the baseline reads as `agent_sql`; a logo marks a core technology once, at one size.
-The source is [`assets/semantic-agent.html`](../../assets/semantic-agent.html), one level below [`assets/semantic-track.html`](../../assets/semantic-track.html) and [`assets/platform.html`](../../assets/platform.html).
+The source is [`assets/semantic-agent.html`](../../assets/semantic-agent.html), one level below the whole lab, [`assets/platform.html`](../../assets/platform.html).
 Most of the agent is reuse: ADK owns the runner, the sessions, the event loop, serving and the eval engine; MetricFlow owns the metric definitions and compiles every query; dbt's parse owns the manifests the catalog and the warehouse objects come from.
 This repo's code is the places it steps in:
 - `agent.py` hands ADK's `LlmAgent` the three tools and two callbacks: `after_tool_callback` (`audit.py`) and `on_model_error_callback` (`model.py`), so the tools stay plain functions.
