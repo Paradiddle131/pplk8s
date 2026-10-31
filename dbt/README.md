@@ -31,7 +31,10 @@ dbt build --selector bronze
 ```
 
 `--select <layer>` matches the folder, and `--selector <layer>` matches the tag.
-Tests follow their models; the gold reconciliation test lives in `tests/gold/` and carries the `gold` tag.
+Tests follow their models; a test that reads two stages lives in the later stage's folder of `tests/` and carries that stage's tag and its pipeline's.
+Every hand-off between layers reconciles in `dbt build` (semantic/PLAN.md SL-9), as tests named `hop_<from>_to_<to>` that fail with the mismatching keys led by the hop's name:
+`hop_bronze_to_<silver model>` (the generic `latest_load_reconciles`: silver holds bronze's latest load of each key, rows and amounts), `tests/gold/hop_silver_to_gold_*` and `tests/exposed/hop_gold_to_exposed_*` (counts and sums per key), and `hop_metric_<metric>_to_<model>` (the generic `matches_metric`: a hand-written column equals its simple metric per day, rendered from dbt's graph).
+They share `macros/hops.sql`.
 
 The project sets `indirect_selection: cautious` in `dbt_project.yml`.
 A test runs only when all of its parents are selected, so `build --select silver` does not run tests that need gold.
@@ -45,7 +48,7 @@ Every model also carries the tag of the pipeline that owns it (PLAN.md D20), set
 
 | Pipeline | DAG | Models |
 |---|---|---|
-| `sales` | `sales_elt` | every customers, orders, and weather model, and the gold reconciliation test |
+| `sales` | `sales_elt` | every customers, orders, and weather model, and their layer hops |
 | `returns` | `returns_file_arrival` | `brz_partner_returns`, `slv_returns` |
 | `finance` | `finance_daily` | `exp_net_sales_daily` (reads `sales` gold and `returns` silver) |
 | `marketing` | `marketing_elt` | every campaigns, ad spend, leads and bookings model: `gld_marketing_daily`, `exp_channel_performance_daily` (PLAN.md D38) |
@@ -81,7 +84,7 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
   Both are `incremental` with `delete+insert` on `data_month`, so a build swaps whole months: a republished file (a new `etag`) replaces its month, and a rebuild never duplicates rows.
   A row breaks at most one rule, the first that fails: `negative_amount`, `pickup_outside_month`, `dropoff_before_pickup`, `over_24_hours`.
   The `quarantine_share` test warns above 2 % of a month quarantined and fails above 10 %.
-- Reconciliation: `tests/silver/assert_tlc_bronze_equals_silver_plus_quarantine.sql` checks bronze = silver + quarantine for each month, and `tests/gold/assert_tlc_gold_trips_match_silver.sql` checks gold against silver.
+- Reconciliation: `tests/silver/assert_tlc_bronze_equals_silver_plus_quarantine.sql` checks bronze = silver + quarantine for each month, and `tests/gold/assert_tlc_gold_trips_match_silver.sql` checks gold against silver; `tests/exposed/hop_gold_to_exposed_tlc_daily_trips_by_borough.sql` checks the boroughs add up to gold.
 - Retention (`macros/tlc.sql`, `tlc_retire`, PLAN.md D35): `dbt run-operation tlc_retire --args "{keep: '2023-01,2026-08'}"` deletes every month not in `keep` from silver, quarantine and gold; bronze and exposed are views and follow.
   `tlc_monthly` runs it before each load with the months it keeps; an empty `keep` fails, a table not built yet is skipped, and a repeat deletes nothing.
 - Zones: `seeds/bronze/tlc_taxi_zones.csv` is TLC's `taxi_zone_lookup.csv` with a snake_case header.
@@ -119,7 +122,7 @@ Query a metric with the `mf` CLI from this folder, with the same environment:
 uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
-`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance and marketing models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), and checks that an undescribed metric and an unprefixed, undescribed gold model fail the validation.
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance and marketing models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 26 layer hops pass and that a return seeded on a day without orders fails the returns hops, and checks that an undescribed metric and an unprefixed, undescribed gold model fail the validation.
 
 ### Trust tiers and the catalog
 
