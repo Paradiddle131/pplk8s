@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: parity
+    description: One row per consumer of the migration rehearsal and field it reads (plus row_count), comparing the consumer's legacy relation with its new model. Alias migration.parity.
+    columns:
+      - name: consumer
+        description: The exposure that reads the field (migration/consumers.yml).
+        tests: [not_null]
+      - name: field
+        description: The column as the consumer names it; row_count counts the keys present on one side only, or more than once on a side.
+        tests: [not_null]
+      - name: legacy_relation
+        description: The table the consumer read before the layers, schema.table.
+      - name: new_relation
+        description: The model that replaces it, schema.table.
+      - name: keys_compared
+        description: Keys found on either side.
+      - name: keys_differing
+        description: Keys whose value differs between the two sides; 0 means the field matches.
+      - name: status
+        description: match when no key differs, else differs.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['match', 'differs']
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['consumer', 'field']

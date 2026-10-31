@@ -15,16 +15,18 @@ Each layer is one folder under `dbt/models/` and one schema in the warehouse, wh
 | gold | `gold` | `gld_` | Business aggregates at a stated grain | yes, `access: public` |
 | exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public` |
 | semantic | `semantic` | none | MetricFlow's `time_spine`, `metrics` (one row per metric) and `glossary` (one row per term) | `metrics` and `glossary` |
+| legacy | `legacy` | `lgc_` | During a migration only: what a consumer read before the layers, rebuilt as it was, in the consumer's column names | no |
+| migration | `migration` | none | During a migration only: `parity`, each consumer's legacy table against its new model ([`migration-rehearsal.md`](migration-rehearsal.md)) | no |
 
 A model builds in its layer's dataset, never in one it chooses (`generate_schema_name` uses the layer verbatim).
 The landing dataset (`ds_source`) belongs to the extraction service; dbt reads it only through `source()` in bronze.
 
 ## Naming
 
-- A model in bronze, silver, gold or exposed starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
+- A model in bronze, silver, gold, exposed or legacy starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
   The prefix keeps names unique across the project; the dataset already says the layer, so the table does not repeat it.
   An ephemeral model builds no relation and needs only the prefix.
-- A semantic-stage model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`, `glossary`).
+- A semantic-stage or migration model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`, `glossary`, `parity`).
 - Models, columns, semantic models, entities, dimensions and metrics are lower snake case; a metadata column the loader adds starts with an underscore (`_loaded_at`, `_run_id`).
 - A metric is the quantity with its unit as a suffix (`revenue_eur`, `cost_per_lead_eur`); a count names what it counts, and how when there is more than one way (`leads`, `orders_total`, `orders_cancelled`, `customers_distinct`); a ratio of two counts ends in `_rate`.
 - A dimension is asked for as `<entity>__<dimension>` (`order__status`, `customer__country`), and time as `metric_time__day` (or `__week`, `__month`, `__year`).

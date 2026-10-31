@@ -56,6 +56,21 @@ models:
       +materialized: table
       +access: protected
       +persist_docs: {relation: true, columns: true}
+    # The migration rehearsal (semantic/PLAN.md SL-11): legacy holds tables built the old way, as
+    # scheduled queries wrote them, beside the layers; migration holds the parity report that gates
+    # each consumer's switch (consumers are exposures in migration/consumers.yml). Both are tables:
+    # they read several pipelines' models (PLAN.md D20). `migration` is their one pipeline tag, and
+    # no DAG builds them: `dbt build --select +tag:migration` does.
+    legacy:
+      +schema: legacy
+      +tags: [legacy, migration]
+      +materialized: table
+      +access: protected
+    migration:
+      +schema: migration
+      +tags: [migration]
+      +materialized: table
+      +access: protected
 
 # Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
 seeds:

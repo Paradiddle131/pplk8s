@@ -1,0 +1,46 @@
+version: 2
+
+# The consumers of the migration rehearsal (semantic/PLAN.md SL-11), one exposure each: what it is,
+# who owns it and, in depends_on, the one relation it reads today, its legacy table or its new model.
+# Switching a consumer is changing its depends_on to the new model in the same change that repoints
+# the consumer itself; rolling back is changing it back, since the legacy table keeps being built.
+# meta.migration names the pair and the consumer's kind: dashboards switch first, then agents, then
+# automations. `accepted` lists the fields whose difference the consumer's owner accepted, with why.
+# The test consumers_switch_on_parity fails a build where a consumer reads its new model while a
+# field differs unaccepted in migration.parity, or before every consumer of an earlier kind.
+exposures:
+  - name: finance_dashboard
+    label: Finance daily net sales dashboard
+    type: dashboard
+    maturity: high
+    owner:
+      name: Finance
+    description: Finance's daily revenue, returns and net revenue. Switched to exposed.net_sales_daily; every field matched.
+    depends_on: [ref('exp_net_sales_daily')]
+    config:
+      meta:
+        migration: {kind: dashboard, legacy: lgc_daily_net_sales, new: exp_net_sales_daily}
+
+  - name: sales_agent
+    label: Sales questions agent
+    type: application
+    maturity: medium
+    owner:
+      name: Sales operations
+    description: An agent that answers sales questions by country from a table named in its context. Still on legacy.country_sales; its revenue differs (legacy counts cancelled orders).
+    depends_on: [ref('lgc_country_sales')]
+    config:
+      meta:
+        migration: {kind: agent, legacy: lgc_country_sales, new: exp_sales_by_country_daily}
+
+  - name: marketing_automation
+    label: Marketing budget automation
+    type: application
+    maturity: medium
+    owner:
+      name: Marketing
+    description: A job that moves budget between channels on the day's cost per lead and per booking. Still on legacy.channel_daily; every field matches, and it waits for the agents to switch first.
+    depends_on: [ref('lgc_channel_daily')]
+    config:
+      meta:
+        migration: {kind: automation, legacy: lgc_channel_daily, new: exp_channel_performance_daily}
