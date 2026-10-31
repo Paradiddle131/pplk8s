@@ -44,6 +44,42 @@ def test_dimensions_are_the_ones_every_requested_metric_shares():
     assert shared["metric_time"] == "time"
 
 
+def test_a_categorical_dimension_carries_the_values_its_column_declares():
+    known = CATALOG.known_values(["returns_eur"])
+    assert "damaged" in known["return__reason"]
+    assert known["order__status"] == ["placed", "shipped", "cancelled"]
+    assert "order__currency" not in known  # declares no values, so any value is passed on
+
+
+@pytest.mark.parametrize(
+    ("operator", "values"),
+    [("=", ["damaged goods"]), ("!=", ["Damaged"]), ("in", ["damaged", "broken"])],
+)
+def test_a_value_the_dimension_does_not_declare_is_refused_with_the_ones_it_does(operator, values):
+    item = Filter(dimension="return__reason", operator=operator, values=values)
+    dimensions = CATALOG.dimensions(["returns_eur"])
+    with pytest.raises(
+        QueryError, match=r"'return__reason' has no value .*its values are \[.*'damaged'"
+    ):
+        where_clause(item, dimensions, CATALOG.known_values(["returns_eur"]))
+
+
+def test_a_declared_value_and_a_dimension_without_declared_values_pass():
+    dimensions = CATALOG.dimensions(["returns_eur"])
+    known = CATALOG.known_values(["returns_eur"])
+    assert where_clause(Filter(dimension="return__reason", values=["damaged"]), dimensions, known)
+    assert where_clause(Filter(dimension="order__currency", values=["XYZ"]), dimensions, known)
+
+
+def test_a_request_with_a_guessed_value_never_reaches_metricflow():
+    query = MetricQuery(
+        metrics=["returns_eur"],
+        filters=[Filter(dimension="return__reason", values=["damaged goods"])],
+    )
+    with pytest.raises(QueryError, match="its values are"):
+        query.request(CATALOG)
+
+
 def test_a_filter_value_is_a_quoted_literal_whatever_it_holds():
     clause = where_clause(
         Filter(dimension="order__status", values=["x' or 1=1; drop table silver.orders; --"]),

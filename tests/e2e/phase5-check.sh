@@ -51,7 +51,7 @@ upload() { # NDJSON lines on stdin -> prints the new object generation
 returns_file() { # count amount-prefix -> NDJSON of `count` return lines on $DAY
   local i
   for i in $(seq "$1"); do
-    printf '{"return_id":"P5-%s","order_id":"O-%s","returned_at":"%sT%02d:00:00+00:00","amount":"%s.%02d","reason":"check"}\n' \
+    printf '{"return_id":"P5-%s","order_id":"O-%s","returned_at":"%sT%02d:00:00+00:00","amount":"%s.%02d","reason":"damaged"}\n' \
       "$i" "$i" "$DAY" "$i" "$2" "$i"
   done
 }

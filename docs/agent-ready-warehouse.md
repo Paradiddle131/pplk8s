@@ -41,7 +41,7 @@ A description is written for a reader who sees only it: an agent choosing a tabl
 | Model | Its grain (one row per what), the time zone of its dates, and the relation it builds | `One row per order_date (UTC). Alias gold.daily_sales.` |
 | Column | What the value is, its unit, and what is in or out of it | `Sum of amount for non-cancelled orders.` |
 | Key column | That it is the key, and of what | `Natural key.` |
-| Code column | The codes it takes | `ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).` |
+| Code column | The codes it takes, also declared as an `accepted_values` test when the set is fixed | `ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).` |
 | Semantic model, entity, dimension | What the rows are, and what grouping by it means | `UTC date the customer signed up; group by its month for signup cohorts.` |
 | Metric `label` | The business term in plain words, the unit in brackets | `Net revenue (EUR)` |
 | Metric `description` | What it counts or sums, what it leaves out, and how a ratio divides | `Ad spend divided by bookings over the whole period asked (total spend over total bookings, never an average of daily ratios); the one definition of cost per conversion.` |
@@ -49,6 +49,8 @@ A description is written for a reader who sees only it: an agent choosing a tabl
 
 Every model that builds a relation has a description; every public model also describes every column; every semantic model describes itself, its entities, dimensions and measures; every metric has a description and a label.
 Bronze and silver columns may stay undescribed: no agent reads them, and their meaning reaches agents through the metrics.
+A categorical dimension whose column takes a fixed set of codes declares them with `accepted_values`: the catalog lists them under the dimension, and the metric tools refuse a filter value outside them instead of answering a guessed value with a confident zero.
+A dimension with an open set (a campaign's name) declares none, and any value passes.
 
 ## The glossary
 
