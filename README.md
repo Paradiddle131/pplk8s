@@ -5,17 +5,19 @@
 Apache Airflow 3 on Kubernetes, orchestrating a GCP-style ELT platform on one machine.
 Every managed GCP service has a local stand-in; all data is public or synthetic.
 
-<img width="2318" height="1250" alt="Architecture: Airflow, workloads and monitoring namespaces in the cluster; metadata DB, Pub/Sub, object storage and warehouse outside it" src="https://github.com/user-attachments/assets/ccacd37d-60c0-47dd-a4ca-8f621519c2c4" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/platform-dark.png">
+    <img width="2400" height="2344" alt="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines, and PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project is in both the dbt and the agent images: the semantic agent pod's initContainer parses it into the catalog, the LlmAgent asks the model for a tool, its metric tools query MetricFlow as agent_metrics and quote freshness from the readiness ledger, and every result passes the audit gate into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana; the eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql; an analyst asks the agent" src="assets/platform.png">
+</picture>
+
+Its source, with a switch to the GCP names, is [`assets/platform.html`](assets/platform.html); the semantic agent's code is drawn one level down, in [its README](services/semantic-agent/README.md#how-it-is-built).
 
 ## Second track: a semantic layer and a metrics agent
 
 A dbt semantic layer over the same warehouse, queried by an ADK agent through metrics instead of SQL.
 Every calculated field is defined once, every answer carries its freshness, and the same YAML feeds BigQuery's descriptions, catalog and data agent.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/semantic-track-dark.png">
-  <img width="2400" height="1160" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, generates the agent catalog and a BigQuery data agent's context; the ADK agent answers through MetricFlow over the semantic layer with freshness from the ops ledger, a text-to-SQL baseline reads the public tier, and adk eval scores both" src="assets/semantic-track.png">
-</picture>
+It is drawn with the rest of the lab in the picture at the top of this page: the dbt project in both images, the agent pod in `workloads`, and the warehouse's semantic layer and read-only regions.
 
 | Here | On GCP |
 |---|---|
@@ -25,7 +27,8 @@ Every calculated field is defined once, every answer carries its freshness, and 
 | OpenRouter free model; sessions in the metadata DB | Gemini; Cloud SQL |
 | Prometheus and Alertmanager | Cloud Monitoring |
 
-The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md) and the full mapping in [`docs/semantic-layer-on-bigquery.md`](docs/semantic-layer-on-bigquery.md); the diagram's interactive version is [`assets/semantic-track.html`](assets/semantic-track.html), with the GCP names behind a switch.
+The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md) and the full mapping in [`docs/semantic-layer-on-bigquery.md`](docs/semantic-layer-on-bigquery.md).
+One level down, the agent's code and what it reuses from ADK, MetricFlow and dbt is drawn in [the semantic agent's README](services/semantic-agent/README.md#how-it-is-built).
 Everything else on this page is the Airflow lab.
 
 ## Design

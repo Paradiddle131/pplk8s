@@ -6,6 +6,25 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 **One agent is deployed: `semantic_agent`.**
 `sql_baseline` is the eval's control, not a second production agent: `make agent-eval` runs it in-process beside the semantic agent to measure what the semantic layer adds, and `make agent-web` shows it locally for the demo's comparison; the image, the Deployment and its Secret leave it out (#163).
 
+## How it is built
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../assets/semantic-agent-dark.png">
+  <img width="2400" height="1232" alt="Inside the semantic agent, in the order a question travels: a caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py; the agent calls the model through model.py, and the model, hatched, is the only part that is not code: it chooses the tool and its arguments; tools.py's query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics; every result passes through guard.py, ADK's after_tool_callback outside the toolset, which attaches its metrics' freshness from the readiness ledger and inserts one row as agent_audit, or withholds the result; an initContainer runs dbt parse and build_catalog.py into target/; a chain line marks the toolset the work platform replaces with DataAgentToolset; the eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService" src="../../assets/semantic-agent.png">
+</picture>
+
+The picture runs top to bottom in the order a question travels.
+Grey cards are a package's code, named above their title, and white cards this repo's; the hatched card is the model, the only part that is not code; a chain (dash-dot) line marks what the work platform replaces; cobalt is what the agent reads as `agent_metrics`, vermilion what the baseline reads as `agent_sql`; a logo marks a core technology once, at one size.
+The source is [`assets/semantic-agent.html`](../../assets/semantic-agent.html), one level below the whole lab, [`assets/platform.html`](../../assets/platform.html).
+Most of the agent is reuse: ADK owns the runner, the sessions, the event loop, serving and the eval engine; MetricFlow owns the metric definitions and compiles every query; dbt's parse owns the manifests the catalog and the warehouse objects come from.
+This repo's code is the places it steps in:
+- `agent.py` hands ADK's `LlmAgent` the three tools and two callbacks: `after_tool_callback` (`audit.py`) and `on_model_error_callback` (`model.py`), so the tools stay plain functions.
+- `metrics.py` checks every part of a request against the catalog before MetricFlow sees it, then builds `MetricFlowQueryRequest` and runs it on a `MetricFlowEngine` set up the way the `mf` CLI sets one up (`CLIConfiguration`); the same engine serves `build_catalog.py` offline, for the dimensions and the compiled SQL of each metric.
+  That Python surface is undocumented and held by the pin: `tests/test_metricflow_surface.py` checks it offline.
+- `dbt/macros/agent_warehouse.sql` creates the roles and the audit table through `dbt run-operation`, dispatched per adapter, and `dbt/macros/test_matches_metric.sql` renders a metric from dbt's graph as a build-time test.
+- The work platform swaps three things: the model (`MODEL_BACKEND=gemini`, a setting of `model.py`), the warehouse roles (IAM), and the whole metric toolset (`tools.py`, `metrics.py` and MetricFlow's engine) for `DataAgentToolset` on a BigQuery data agent.
+  The audit and the freshness statement stay: they are the agent's after-tool callback (`guard.py`), outside the toolset (#177).
+
 ## The two packages
 
 | Package | Tools | Reads |
