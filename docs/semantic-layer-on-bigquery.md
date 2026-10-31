@@ -38,6 +38,8 @@ What does not carry over: a native data agent does not run MetricFlow.
 The metric definitions reach it as words and SQL: the glossary, the aggregations in the authored context, and one verified query per metric.
 The lab's agent queries through MetricFlow itself, so its eval shows what the definitions are worth when they are enforced, not only described.
 
+Scheduled queries and routines (stored procedures, UDFs, table functions) map onto dbt models, functions, macros and metrics as [`routines-and-scheduled-queries.md`](routines-and-scheduled-queries.md) sets out, with the rule for moving them one at a time.
+
 ## Integration patterns (stated)
 
 The Conversational Analytics API's [integration patterns](https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/integration-patterns) page names ten; three shape the lab:
