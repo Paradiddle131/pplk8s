@@ -6,6 +6,22 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 **One agent is deployed: `semantic_agent`.**
 `sql_baseline` is the eval's control, not a second production agent: `make agent-eval` runs it in-process beside the semantic agent to measure what the semantic layer adds, and `make agent-web` shows it locally for the demo's comparison; the image, the Deployment and its Secret leave it out (#163).
 
+## How it is built
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../assets/semantic-agent-dark.png">
+  <img width="2400" height="1480" alt="Inside the semantic agent: at build time dbt parse turns the semantic YAML into manifests, build_catalog.py writes the agent catalog and a data agent's context with MetricFlow's engine, and the agent_warehouse macro creates the agent roles and the audit table; in the pod an ADK LlmAgent carries three function tools, a model seam and two callbacks; query_metrics checks each part of a request against the catalog, builds a MetricFlowQueryRequest and runs it on MetricFlow's engine as agent_metrics, freshness.py reads the readiness ledger and audit.py inserts one row per query as agent_audit; the eval runs the agent and a text-to-SQL baseline on ADK's LocalEvalService with three custom metrics" src="../../assets/semantic-agent.png">
+</picture>
+
+Tinted cards are a package's code, white cards this repo's, and the tab on a card names the package it is or calls; the interactive version is [`assets/semantic-agent.html`](../../assets/semantic-agent.html).
+Most of the agent is reuse: ADK owns the runner, the sessions, the event loop, serving and the eval engine; MetricFlow owns the metric definitions and compiles every query; dbt's parse owns the manifests the catalog and the warehouse objects come from.
+This repo's code is the places it steps in:
+- `agent.py` hands ADK's `LlmAgent` the three tools and two callbacks: `after_tool_callback` (`audit.py`) and `on_model_error_callback` (`model.py`), so the tools stay plain functions.
+- `metrics.py` checks every part of a request against the catalog before MetricFlow sees it, then builds `MetricFlowQueryRequest` and runs it on a `MetricFlowEngine` set up the way the `mf` CLI sets one up (`CLIConfiguration`); the same engine serves `build_catalog.py` offline, for the dimensions and the compiled SQL of each metric.
+  That Python surface is undocumented and held by the pin: `tests/test_metricflow_surface.py` checks it offline.
+- `dbt/macros/agent_warehouse.sql` creates the roles and the audit table through `dbt run-operation`, dispatched per adapter, and `dbt/macros/test_matches_metric.sql` renders a metric from dbt's graph as a build-time test.
+- `model.py`, the MetricFlow engine and the warehouse roles are the three seams the work platform swaps: Gemini, `DataAgentToolset` on a BigQuery data agent, IAM.
+
 ## The two packages
 
 | Package | Tools | Reads |

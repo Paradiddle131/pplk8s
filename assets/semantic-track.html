@@ -10,8 +10,11 @@
 <style>
 /* Layout: one schematic in the manner of a cloud reference architecture: tinted zones with a title,
    two-line cards (what it is / what runs it), grey chrome, and colour only where it carries meaning:
-   the two warehouse roles the agents read as, and the question's path. A Here / On GCP switch above
-   it relabels every stand-in with its GCP counterpart. Light first; dark is a palette swap. */
+   the two warehouse roles the agents read as, and the question's path. A Lab / On GCP switch above
+   it relabels every stand-in with its GCP counterpart. Light first; dark is a palette swap.
+   Text hierarchy: a card's title is the only bold word; its second line is small and muted, sans for
+   what runs it, mono for an identifier; an arrow carries a word only where the arrow alone would not
+   say it. The companion assets/semantic-agent.html goes one level down, into the agent's code. */
 :root {
   --bg: #f4f5f8;
   --zone: #eaedf2;
@@ -61,15 +64,14 @@ body {
 .bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; }
 .bar[hidden] { display: none; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card); }
-.seg button, .act {
+.seg button {
   font: 500 12px/1 var(--sans); letter-spacing: .01em; color: var(--muted); background: transparent; border: 0;
   padding: 8px 12px; cursor: pointer; min-height: 32px;
 }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { color: var(--fg); background: var(--zone-2); }
-.seg button:hover, .act:hover { color: var(--fg); }
-.seg button:focus-visible, .act:focus-visible { outline: 2px solid var(--metrics); outline-offset: -2px; }
-.act { border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
+.seg button:hover { color: var(--fg); }
+.seg button:focus-visible { outline: 2px solid var(--metrics); outline-offset: -2px; }
 figure { margin: 0; overflow-x: auto; }
 svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
 .zone { fill: var(--zone); stroke: var(--hair); stroke-width: 1; }
@@ -77,29 +79,23 @@ svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: 
 .card { fill: var(--card); stroke: var(--line); stroke-width: 1; }
 .card.ghost { fill: none; stroke: var(--muted); stroke-dasharray: 3 3; }
 .ztitle { font-size: 12px; font-weight: 600; fill: var(--fg); }
-.title { font-size: 11px; font-weight: 600; fill: var(--fg); }
-.sub { font-size: 9.5px; fill: var(--muted); }
+.title { font-size: 11.5px; font-weight: 600; fill: var(--fg); }
+.sub { font-size: 9px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 9.5px; fill: var(--fg); }
-.mono.dim { fill: var(--muted); }
-.mono.xs { font-size: 8.5px; }
+.mono.dim { font-size: 9px; fill: var(--muted); }
 .ico { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .edge { fill: none; stroke: var(--muted); stroke-width: 1.3; }
 .edge.reads { stroke-dasharray: 3 3; }
 .edge.thin { stroke-width: 1; }
 .edge.ink { stroke: var(--fg); stroke-width: 1.5; }
 .elabel { font-size: 9px; fill: var(--muted); }
-svg .n, svg .e { transition: opacity .18s ease; }
-svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
-.tracer { fill: var(--fg); stroke: var(--bg); stroke-width: 1.5; }
-@media (prefers-reduced-motion: reduce) { svg .n, svg .e { transition: none; } }
 </style>
 </head>
 <body>
 <div class="stage">
   <div class="bar" id="bar">
-    <button class="act" id="ask" type="button">Trace a question</button>
     <div class="seg" role="group" aria-label="Which names to show">
-      <button type="button" id="here" aria-pressed="true">Here</button>
+      <button type="button" id="here" aria-pressed="true">Lab</button>
       <button type="button" id="gcp" aria-pressed="false">On GCP</button>
     </div>
   </div>
@@ -121,8 +117,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
     if (typeof s === 'string') t.textContent = s; else { t.textContent = s.here; t.dataset.here = s.here; t.dataset.gcp = s.gcp; }
     return t;
   };
-  const nodes = {};
-  const node = (id, cls = '') => { const g = el('g', { class: `n ${cls}`, 'data-id': id }); nodes[id] = g; return g; };
+  const node = (id, cls = '') => el('g', { class: cls, 'data-id': id });
 
   const defs = el('defs');
   for (const [id, color] of [['arrow', 'var(--muted)'], ['arrowInk', 'var(--fg)'], ['arrowM', 'var(--metrics)'], ['arrowS', 'var(--sql)']]) {
@@ -137,7 +132,6 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
     gear: (g, x, y) => { el('circle', { cx: x + 7, cy: y + 7, r: 2.4, class: 'ico' }, g); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; el('path', { d: `M${x + 7 + Math.cos(a) * 4.2},${y + 7 + Math.sin(a) * 4.2} L${x + 7 + Math.cos(a) * 6.3},${y + 7 + Math.sin(a) * 6.3}`, class: 'ico' }, g); } },
     bell: (g, x, y) => { el('path', { d: `M${x + 3},${y + 10} h8 l-1.2,-1.6 V${y + 5.5} a2.8,2.8 0 0 0 -5.6,0 V${y + 8.4} z M${x + 5.8},${y + 12} h2.4`, class: 'ico' }, g); },
     lock: (g, x, y) => { el('path', { d: `M${x + 4},${y + 6.5} v-2 a3,3 0 0 1 6,0 v2 M${x + 2.5},${y + 6.5} h9 v6.5 h-9 z`, class: 'ico' }, g); },
-    clock: (g, x, y) => { el('circle', { cx: x + 7, cy: y + 7, r: 5.5, class: 'ico' }, g); el('path', { d: `M${x + 7},${y + 4} v3.2 l2.2,1.6`, class: 'ico' }, g); },
     chat: (g, x, y) => { el('path', { d: `M${x + 2},${y + 2} h10 v7 h-5.5 l-2.5,2.5 v-2.5 h-2 z`, class: 'ico' }, g); },
     bolt: (g, x, y) => { el('path', { d: `M${x + 8},${y + 1} l-5,7 h4 l-1,5 l5,-7 h-4 z`, class: 'ico' }, g); },
     check: (g, x, y) => { el('path', { d: `M${x + 2.5},${y + 7.5} l3,3 l6,-7`, class: 'ico' }, g); },
@@ -160,20 +154,18 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
     if (sub) txt(g, tx, y + 31, sub, o.scls ?? 'sub');
     return r;
   };
-  const edges = [];
-  const edge = (id, d, ends, o = {}) => {
-    const p = el('path', { id, d, class: `e edge ${o.cls ?? ''}`, 'data-ends': ends.join(' '),
+  const edge = (id, d, o = {}) => {
+    const p = el('path', { id, d, class: `edge ${o.cls ?? ''}`,
       'marker-end': o.noEnd ? null : `url(#${o.marker ?? 'arrow'})`, 'marker-start': o.both ? `url(#${o.marker ?? 'arrow'})` : null });
     if (o.stroke) p.style.stroke = o.stroke;
-    edges.push(p);
     if (o.label) {
       const [lx, ly] = o.label.at;
-      txt(svg, lx, ly, o.label.text, 'e elabel', { 'text-anchor': o.label.anchor ?? 'middle', 'data-ends': ends.join(' ') });
+      txt(svg, lx, ly, o.label.text, 'elabel', { 'text-anchor': o.label.anchor ?? 'middle' });
     }
     return p;
   };
   const tick = (x, y) => { // a discrepancy check on a hop
-    const g = el('g', { class: 'n', 'data-id': 'checks' });
+    const g = el('g');
     el('circle', { cx: x, cy: y, r: 6, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, g);
     el('path', { d: `M${x - 3},${y} l2,2.2 l4,-4.4`, fill: 'none', stroke: 'var(--ok)', 'stroke-width': 1.4, 'stroke-linecap': 'round' }, g);
   };
@@ -186,12 +178,11 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   });
   el('rect', { x: 28, y: 408, width: 112, height: 24, rx: 4, class: 'card ghost' }, S);
   txt(S, 38, 423.5, '+ domain', 'sub');
-  edge('e-src', 'M140,300 H146 V393 H150 M140,330 H146 M140,360 H146 M140,390 H146 M140,420 H146 V393', ['sources', 'elf'], { cls: 'thin' });
+  edge('e-src', 'M140,300 H146 V393 H150 M140,330 H146 M140,360 H146 M140,390 H146 M140,420 H146 V393', { cls: 'thin' });
 
   // ---- left: alerts
   const M = node('alerts');
-  card(M, 150, 124, 135, 54, 'alerts', { here: 'Prometheus', gcp: 'Cloud Monitoring' }, { icon: 'bell' });
-  txt(M, 178, 168, { here: 'Alertmanager', gcp: '' }, 'sub');
+  card(M, 150, 124, 135, 44, 'alerts', { here: 'Prometheus', gcp: 'Cloud Monitoring' }, { icon: 'bell' });
 
   // ---- left: the Airflow lab (track one)
   const A = node('airflow');
@@ -200,7 +191,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   txt(A, 273, 500, 'track one', 'sub', { 'text-anchor': 'end' });
   card(A, 162, 214, 111, 42, 'dbt job', { here: 'pod on the cluster', gcp: 'Cloud Run Job' }, { icon: 'box' });
   card(A, 162, 300, 111, 42, 'DAG', '<pipeline>_elt', { icon: 'cal', scls: 'mono dim' });
-  card(A, 162, 372, 111, 42, 'EL Factory', { here: 'Flask on the cluster', gcp: 'Cloud Run' }, { icon: 'bolt' });
+  card(A, 162, 372, 111, 42, 'EL Factory', { here: 'Flask Deployment', gcp: 'Cloud Run' }, { icon: 'bolt' });
 
   // ---- centre top: dbt project
   const D = node('dbt');
@@ -215,14 +206,14 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   txt(D, 618, 86.5, '1×', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--card)';
   card(D, 651, 70, 112, 44, 'documentation', 'glossary · naming', { icon: 'doc' });
   card(D, 327, 128, 436, 34, 'checks', '', { icon: 'check' });
-  txt(D, 400, 149, 'source freshness · discrepancy · contracts · docs · parity', 'mono dim');
+  txt(D, 400, 149, 'freshness · discrepancy · contracts · docs · parity', 'mono dim');
 
   // ---- centre: warehouse
   const W = node('warehouse');
   zone(W, 315, 232, 460, 278, 'blue');
   icons.db(W, 327, 243); txt(W, 347, 254, 'warehouse', 'ztitle');
   txt(W, 414, 254, { here: 'Postgres', gcp: 'BigQuery' }, 'sub');
-  const emu = el('g', { class: 'n gcp-hide', 'data-id': 'warehouse' }, W);
+  const emu = el('g', { class: 'gcp-hide' }, W);
   el('rect', { x: 650, y: 240, width: 112, height: 20, rx: 4, class: 'card ghost' }, emu);
   txt(emu, 706, 253.5, 'BigQuery emulator', 'mono dim', { 'text-anchor': 'middle' });
 
@@ -232,7 +223,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
 
   // row 1: the semantic layer, read as agent_metrics
   const Z1 = node('semantic');
-  const z1 = el('rect', { x: 433, y: 314, width: 329, height: 82, rx: 6, fill: 'var(--metrics-soft)', stroke: 'var(--metrics)', 'stroke-dasharray': '4 3' }, Z1);
+  el('rect', { x: 433, y: 314, width: 329, height: 82, rx: 6, fill: 'var(--metrics-soft)', stroke: 'var(--metrics)', 'stroke-dasharray': '4 3' }, Z1);
   txt(Z1, 714, 351, 'semantic layer', 'title', { 'text-anchor': 'middle' }).style.fill = 'var(--metrics)';
   txt(Z1, 714, 367, 'agent_metrics', 'mono dim', { 'text-anchor': 'middle' });
   const L = (id, x, y, w, title, sub, stripe) => { const g = node(id); card(g, x, y, w, 44, title, sub, { stripe }); return g; };
@@ -246,22 +237,22 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   const lk = el('g', {}, Z2); icons.lock(lk, 676, 437); lk.querySelectorAll('.ico').forEach(p => p.style.stroke = 'var(--sql)');
   txt(Z2, 696, 448, 'public', 'title').style.fill = 'var(--sql)';
   txt(Z2, 710, 464, 'agent_sql', 'mono dim', { 'text-anchor': 'middle' });
-  const Dsc = node('descriptions'); card(Dsc, 326, 429, 98, 44, { here: 'comments', gcp: 'descriptions' }, { here: 'persist_docs', gcp: 'Knowledge Catalog' }, { scls: 'mono dim xs' });
+  const Dsc = node('descriptions'); card(Dsc, 326, 429, 98, 44, { here: 'comments', gcp: 'descriptions' }, { here: 'persist_docs', gcp: 'Knowledge Catalog' }, { scls: 'sub' });
   L('gold', 443, 429, 88, 'gold', 'business-ready', 'var(--gold)');
   const Lg = node('legacy'); el('rect', { x: 552, y: 435, width: 108, height: 44, rx: 5, class: 'card ghost' }, Lg);
   L('exposed', 546, 429, 108, 'exposed', 'views', 'var(--fg)');
-  const par = el('g', { class: 'n', 'data-id': 'legacy' });
+  const par = node('legacy');
   el('circle', { cx: 660, cy: 477, r: 6.5, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, par);
   txt(par, 660, 480.5, '=', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--ok)';
 
-  edge('e-b-s', 'M424,355 H443', ['bronze', 'silver']);
-  edge('e-s-g', 'M487,377 V429', ['silver', 'gold']);
-  edge('e-g-e', 'M531,451 H546', ['gold', 'exposed']);
+  edge('e-b-s', 'M424,355 H443');
+  edge('e-s-g', 'M487,377 V429');
+  edge('e-g-e', 'M531,451 H546');
   tick(433.5, 347); tick(495, 403); tick(538.5, 443);
 
   // ---- top right: the generator and its artefacts
-  const G = node('generator'); card(G, 820, 70, 120, 44, 'generator', 'build_catalog.py', { icon: 'gear', scls: 'mono dim' });
-  const A2 = node('context'); card(A2, 960, 48, 130, 42, 'data agent context', 'verified queries', { scls: 'mono dim' });
+  const G = node('generator'); card(G, 820, 70, 124, 44, 'generator', 'build_catalog.py', { icon: 'gear', scls: 'mono dim' });
+  const A2 = node('context'); card(A2, 960, 48, 130, 42, 'data agent context', 'verified queries', { scls: 'sub' });
   const A1 = node('catalog'); card(A1, 960, 108, 130, 42, 'agent catalog', 'agent.json', { scls: 'mono dim' });
   const N = node('native'); const nr = card(N, 1108, 48, 87, 42, 'data agent', 'BigQuery', { cls: 'ghost' });
 
@@ -270,20 +261,17 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   zone(R, 805, 232, 295, 278);
   txt(R, 817, 254, 'workloads', 'ztitle'); txt(R, 892, 254, { here: 'kind', gcp: 'Cloud Run' }, 'sub');
   const C1 = node('agent');
-  el('rect', { x: 818, y: 262, width: 269, height: 130, rx: 5, class: 'card' }, C1);
-  icons.chat(C1, 828, 268); txt(C1, 848, 279, 'semantic agent', 'title'); txt(C1, 942, 279, 'ADK', 'sub');
-  const fr = el('g', {}, C1); icons.clock(fr, 828, 282); txt(C1, 848, 293, 'freshness', 'mono');
-  txt(C1, 978, 283, 'tools', 'sub');
-  el('path', { d: 'M972,289 V339', fill: 'none', stroke: 'var(--hair)' }, C1);
-  [['list_metrics', 300], ['describe_metric', 318], ['query_metrics', 336]].forEach(([t, y]) => txt(C1, 980, y, t, 'mono'));
+  el('rect', { x: 818, y: 262, width: 269, height: 104, rx: 5, class: 'card' }, C1);
+  icons.chat(C1, 828, 268); txt(C1, 848, 279, 'semantic agent', 'title'); txt(C1, 948, 279, 'ADK', 'sub');
+  txt(C1, 828, 297, 'list_metrics · describe_metric · query_metrics', 'mono dim');
   const MF = node('metricflow');
-  card(MF, 830, 335, 104, 40, { here: 'MetricFlow', gcp: 'DataAgentToolset' }, 'query path', { tcls: 'mono', stroke: 'var(--metrics)' });
-  edge('e-q-mf', 'M972,332 H934', ['agent', 'metricflow'], { cls: 'thin', stroke: 'var(--metrics)', marker: 'arrowM' });
+  card(MF, 828, 314, 136, 40, { here: 'MetricFlow', gcp: 'DataAgentToolset' }, 'query path', { tcls: 'mono', stroke: 'var(--metrics)' });
+  edge('e-q-mf', 'M1012,301 V307 H896 V314', { cls: 'thin', stroke: 'var(--metrics)', marker: 'arrowM' });
+  txt(C1, 990, 331, 'sessions', 'sub'); txt(C1, 990, 345, { here: 'metadata DB', gcp: 'Cloud SQL' }, 'mono dim');
   const C2 = node('baseline');
   card(C2, 818, 429, 269, 44, 'text-to-SQL baseline', 'execute_sql · gold and exposed', { scls: 'mono dim' });
   const EV = node('eval');
-  txt(EV, 818, 490, { here: 'adk eval  ·  OpenRouter :free', gcp: 'adk eval  ·  Gemini' }, 'mono dim');
-  txt(EV, 818, 503, { here: 'sessions  ·  metadata DB', gcp: 'sessions  ·  Cloud SQL' }, 'mono dim');
+  txt(EV, 818, 492, { here: 'adk eval scores both  ·  OpenRouter :free', gcp: 'adk eval scores both  ·  Gemini' }, 'mono dim');
 
   // ---- far right: the person
   const P = node('person');
@@ -293,21 +281,21 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   txt(P, 1171, 279, '?', 'title', { 'text-anchor': 'middle' });
 
   // ---- edges across regions
-  edge('e-dag-ops', 'M285,321 H300 V289 H330', ['airflow', 'ops'], { label: { text: 'ready', at: [302, 281], anchor: 'start' } });
-  edge('e-elf-brz', 'M285,393 H306 V355 H326', ['airflow', 'bronze'], { label: { text: 'lands', at: [302, 389], anchor: 'start' } });
-  edge('e-job-build', 'M285,235 H302 V204 H538', ['airflow', 'dbt'], { label: { text: 'runs per stage', at: [420, 198] } });
-  edge('e-build', 'M545,176 V232', ['dbt', 'warehouse'], { label: { text: 'dbt build · tests · comments', at: [552, 208], anchor: 'start' } });
-  edge('e-alert', 'M327,151 H285', ['dbt', 'alerts'], { stroke: 'var(--alert)' });
-  edge('e-manifests', 'M775,92 H820', ['dbt', 'generator'], { label: { text: 'manifests', at: [800, 85] } });
-  edge('e-g-a2', 'M940,92 H950 V69 H960', ['generator', 'context']);
-  edge('e-g-a1', 'M940,92 H950 V129 H960', ['generator', 'catalog']);
-  edge('e-a2-n', 'M1090,69 H1108', ['context', 'native']);
-  edge('e-a1-agent', 'M1025,150 V262', ['catalog', 'agent'], { label: { text: 'reads', at: [1031, 210], anchor: 'start' } });
-  edge('e-mf-sem', 'M830,355 H762', ['metricflow', 'semantic'], { cls: 'reads', stroke: 'var(--metrics)', marker: 'arrowM' });
-  edge('e-ops-agent', 'M818,289 H762', ['agent', 'ops'], { both: true, label: { text: 'audit', at: [790, 301] } });
-  edge('e-sql-pub', 'M818,451 H762', ['baseline', 'public'], { cls: 'reads', stroke: 'var(--sql)', marker: 'arrowS' });
-  edge('e-ask', 'M1128,300 H1087', ['person', 'agent'], { cls: 'ink', marker: 'arrowInk', label: { text: 'asks', at: [1107, 294] } });
-  edge('e-answer', 'M1087,346 H1128', ['agent', 'person'], { cls: 'ink', marker: 'arrowInk', label: { text: 'answer · freshness', at: [1107, 361] } });
+  edge('e-dag-ops', 'M285,321 H300 V289 H330');
+  edge('e-elf-brz', 'M285,393 H306 V355 H326');
+  edge('e-job-build', 'M285,235 H302 V204 H538', { label: { text: 'runs', at: [530, 198], anchor: 'end' } });
+  edge('e-build', 'M545,176 V232', { label: { text: 'dbt build', at: [552, 208], anchor: 'start' } });
+  edge('e-alert', 'M327,151 H285', { stroke: 'var(--alert)' });
+  edge('e-manifests', 'M775,92 H820', { label: { text: 'manifests', at: [797, 85] } });
+  edge('e-g-a2', 'M944,92 H950 V69 H960');
+  edge('e-g-a1', 'M944,92 H950 V129 H960');
+  edge('e-a2-n', 'M1090,69 H1108');
+  edge('e-a1-agent', 'M1025,150 V262', { cls: 'reads' });
+  edge('e-mf-sem', 'M828,334 H762', { cls: 'reads', stroke: 'var(--metrics)', marker: 'arrowM' });
+  edge('e-ops-agent', 'M818,289 H762', { both: true, label: { text: 'audit', at: [790, 301] } });
+  edge('e-sql-pub', 'M818,451 H762', { cls: 'reads', stroke: 'var(--sql)', marker: 'arrowS' });
+  edge('e-ask', 'M1128,300 H1087', { cls: 'ink', marker: 'arrowInk', label: { text: 'asks', at: [1107, 294] } });
+  edge('e-answer', 'M1087,346 H1128', { cls: 'ink', marker: 'arrowInk', label: { text: 'answer · freshness', at: [1107, 361] } });
 
   // ---- legend
   const Lg2 = el('g', { class: 'legend' });
@@ -318,7 +306,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   li(330, x => el('rect', { x, y: 542, width: 30, height: 14, rx: 3, class: 'card ghost' }, Lg2), 'legacy view, in parity');
   li(490, x => { el('circle', { cx: x + 15, cy: 549, r: 6, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, Lg2); el('path', { d: `M${x + 12},549 l2,2.2 l4,-4.4`, fill: 'none', stroke: 'var(--ok)', 'stroke-width': 1.4 }, Lg2); }, 'checked on every build');
 
-  // ---- behaviour: Here / On GCP
+  // ---- behaviour: Lab / On GCP
   const setMode = gcp => {
     svg.querySelectorAll('text[data-gcp]').forEach(t => { t.textContent = gcp ? t.dataset.gcp : t.dataset.here; });
     svg.querySelectorAll('.gcp-hide').forEach(g => { g.style.opacity = gcp ? 0 : 1; });
@@ -331,51 +319,11 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
   document.getElementById('here').addEventListener('click', () => setMode(false));
   document.getElementById('gcp').addEventListener('click', () => setMode(true));
 
-  // ---- behaviour: hover lights what a part talks to
-  const related = id => {
-    const ids = new Set([id]);
-    svg.querySelectorAll(`[data-ends~="${id}"]`).forEach(e => e.dataset.ends.split(' ').forEach(i => ids.add(i)));
-    return ids;
-  };
-  svg.querySelectorAll('.n').forEach(g => {
-    g.addEventListener('mouseenter', () => {
-      const ids = related(g.dataset.id);
-      svg.classList.add('focus');
-      svg.querySelectorAll('.n').forEach(n => n.classList.toggle('lit', ids.has(n.dataset.id)));
-      svg.querySelectorAll('.e').forEach(e => e.classList.toggle('lit', e.dataset.ends.split(' ').includes(g.dataset.id)));
-    });
-    g.addEventListener('mouseleave', () => { svg.classList.remove('focus'); svg.querySelectorAll('.lit').forEach(n => n.classList.remove('lit')); });
-  });
-
-  // ---- behaviour: trace a question through the system
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const steps = [['e-ask', 1], ['e-q-mf', 1], ['e-mf-sem', 1], ['e-mf-sem', -1], ['e-ops-agent', 1], ['e-ops-agent', -1], ['e-answer', 1]];
-  let running = false;
-  const trace = () => {
-    if (running) return; running = true;
-    const dot = el('circle', { r: 4.5, class: 'tracer' });
-    let i = 0;
-    const run = () => {
-      if (i >= steps.length) { dot.remove(); running = false; return; }
-      const [id, dir] = steps[i++]; const p = document.getElementById(id); const len = p.getTotalLength();
-      const dur = Math.max(260, len * 4.5); const t0 = performance.now();
-      const frame = now => {
-        const k = Math.min(1, (now - t0) / dur); const pt = p.getPointAtLength(dir > 0 ? k * len : (1 - k) * len);
-        dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
-        if (k < 1) requestAnimationFrame(frame); else run();
-      };
-      requestAnimationFrame(frame);
-    };
-    run();
-  };
-  document.getElementById('ask').addEventListener('click', trace);
-
   const params = new URLSearchParams(location.search);
   if (params.has('static')) { document.getElementById('bar').hidden = true; }
   else {
     let mode = null; try { mode = localStorage.getItem('semantic-track-mode'); } catch (e) {}
     if (mode === 'gcp') setMode(true);
-    if (!reduced) setTimeout(trace, 900);
   }
   if (params.get('mode') === 'gcp') setMode(true);
 })();

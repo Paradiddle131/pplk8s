@@ -26,6 +26,7 @@ Every calculated field is defined once, every answer carries its freshness, and 
 | Prometheus and Alertmanager | Cloud Monitoring |
 
 The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md) and the full mapping in [`docs/semantic-layer-on-bigquery.md`](docs/semantic-layer-on-bigquery.md); the diagram's interactive version is [`assets/semantic-track.html`](assets/semantic-track.html), with the GCP names behind a switch.
+One level down, the agent's code and what it reuses from ADK, MetricFlow and dbt is drawn in [the semantic agent's README](services/semantic-agent/README.md#how-it-is-built).
 Everything else on this page is the Airflow lab.
 
 ## Design
