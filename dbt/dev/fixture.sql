@@ -151,6 +151,7 @@ CROSS JOIN generate_series(
 
 -- Partner returns: file returns/2026-10-01.jsonl landed twice; generation 2 replaced generation 1
 -- in ds_source (so only its rows remain), and a second file covers 2026-10-02.
+-- R-3 carries the legacy code 'late', which silver conforms to 'late delivery' (#157).
 CREATE TABLE ds_source.partner_returns (
     return_id text,
     order_id text,
@@ -166,7 +167,7 @@ CREATE TABLE ds_source.partner_returns (
 INSERT INTO ds_source.partner_returns VALUES
     ('R-1', 'O-1', '2026-10-01 10:00+00', 12.50, 'damaged', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
     ('R-2', 'O-2', '2026-10-01 15:30+00', 5.00, 'wrong size', 'gcs-run-a', 'gs://landing/returns/2026-10-01.jsonl', 2, '2026-10-02 06:00+00'),
-    ('R-3', 'O-3', '2026-10-02 09:15+00', 7.25, 'late delivery', 'gcs-run-b', 'gs://landing/returns/2026-10-02.jsonl', 1, '2026-10-03 06:00+00');
+    ('R-3', 'O-3', '2026-10-02 09:15+00', 7.25, 'late', 'gcs-run-b', 'gs://landing/returns/2026-10-02.jsonl', 1, '2026-10-03 06:00+00');
 
 -- Marketing (PLAN.md D38, semantic/PLAN.md SL-8): three campaigns, two days of spend, ten leads and
 -- three bookings. run-mkt-d1-rerun re-lands campaign 1's spend on 2026-10-01 corrected to 130.00

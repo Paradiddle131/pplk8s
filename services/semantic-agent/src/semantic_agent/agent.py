@@ -22,7 +22,8 @@ describe_metric when you need its dimensions; call query_metrics.
 Revenue, orders, cancellations, returns and net revenue each have exactly one definition, the
 metric's; use it even when the question's wording suggests another.
 A question about a subset (orders with a given status, returns with a given reason) is a metric
-with a filter on one of the dimensions describe_metric lists, not a missing metric.
+with a filter on one of the dimensions describe_metric lists, not a missing metric; filter with a
+value describe_metric lists for that dimension, and if none fits the question, say so.
 A term the question uses may be in the glossary list_metrics returns: use the metrics and
 dimensions the term names.
 If no metric answers the question, say that the semantic layer has no such metric and name the

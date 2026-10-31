@@ -6,7 +6,9 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
 
 - `agent.json`: the catalog the metric toolset reads (S3): the public models (gold and exposed, SL-4)
   with their relation, pipelines, grain and column descriptions, and every metric with its label,
-  description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by.
+  description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by,
+  a categorical one with its known values when its column declares them (an `accepted_values` test), so the
+  agent filters on a value the data holds instead of guessing one.
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
@@ -94,6 +96,17 @@ def public_models(manifest: dict) -> list[dict]:
     return models
 
 
+def accepted_values(manifest: dict) -> dict[tuple[str, str], list[str]]:
+    """The values each model column declares with an `accepted_values` test, by (model, column)."""
+    found = {}
+    for node in manifest["nodes"].values():
+        test = node.get("test_metadata") or {}
+        if node["resource_type"] == "test" and test.get("name") == "accepted_values" and node.get("attached_node"):
+            model = manifest["nodes"][node["attached_node"]]["name"]
+            found[(model, node["column_name"])] = [str(value) for value in test["kwargs"]["values"]]
+    return found
+
+
 def glossary(manifest: dict) -> list[dict]:
     """The business terms that are not metrics, from `config.meta.glossary` on the models that hold them."""
     terms = []
@@ -124,6 +137,11 @@ class SemanticIndex:
         for node in manifest["semantic_models"].values():
             tags = [tag for node_id in node["depends_on"]["nodes"] for tag in manifest["nodes"][node_id]["tags"]]
             self.tags_of_semantic_model[node["name"]] = tags
+        self.model_of_semantic_model = {
+            node["name"]: manifest["nodes"][node["depends_on"]["nodes"][0]]["name"]
+            for node in manifest["semantic_models"].values()
+        }
+        self.accepted_values = accepted_values(manifest)
         self._nodes = {**manifest["metrics"], **manifest["semantic_models"]}
         self._metric_ids = {node["name"]: unique_id for unique_id, node in manifest["metrics"].items()}
 
@@ -159,6 +177,10 @@ class SemanticIndex:
                 if dimension["name"] == time_dimension:
                     grains.add(dimension["type_params"]["time_granularity"])
         return grains.pop() if len(grains) == 1 else None
+
+    def known_values(self, semantic_model: str, column: str) -> list[str] | None:
+        """The values a dimension's column declares, or None when it declares none."""
+        return self.accepted_values.get((self.model_of_semantic_model.get(semantic_model, ""), column))
 
     @staticmethod
     def table(model: dict) -> str:
@@ -302,7 +324,7 @@ def example_queries(index: SemanticIndex, compiled_sql: Callable[[str], str]) ->
     ]
 
 
-def _metricflow(project_dir: Path) -> tuple[Callable[[str], list[dict]], Callable[[str], str]]:
+def _metricflow(project_dir: Path, index: SemanticIndex) -> tuple[Callable[[str], list[dict]], Callable[[str], str]]:
     """Dimensions and compiled SQL from MetricFlow's engine, set up as the mf CLI sets it up."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
     from metricflow.engine.metricflow_engine import MetricFlowEngine, MetricFlowQueryRequest
@@ -318,7 +340,14 @@ def _metricflow(project_dir: Path) -> tuple[Callable[[str], list[dict]], Callabl
             description = dimension.description
             if name == "metric_time":
                 description = "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
-            found.append({"name": name, "type": dimension.type.value, "description": description})
+            entry = {"name": name, "type": dimension.type.value, "description": description}
+            if dimension.type.value == "categorical" and dimension.semantic_model_reference is not None:
+                # A dimension's column is its expr when that is a plain column name, else its own name.
+                column = dimension.expr if dimension.expr and dimension.expr.isidentifier() else dimension.name
+                values = index.known_values(dimension.semantic_model_reference.semantic_model_name, column)
+                if values is not None:
+                    entry["values"] = values
+            found.append(entry)
         return sorted(found, key=lambda dimension: dimension["name"])
 
     def compiled_sql(metric: str) -> str:
@@ -334,7 +363,7 @@ def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, compiled_sql = _metricflow(Path(__file__).resolve().parents[1])
+    dimensions, compiled_sql = _metricflow(Path(__file__).resolve().parents[1], index)
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)

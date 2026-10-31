@@ -68,11 +68,12 @@ def test_list_metrics_also_gives_the_glossary_of_terms_that_are_not_metrics():
 def test_filters_from_the_model_reach_metricflow_as_checked_literals(metricflow):
     args = {
         "metrics": ["orders_total"],
-        "filters": [{"dimension": "order__status", "values": ["cancelled'; drop table x; --"]}],
+        # A dimension that declares no values passes any value on, as a quoted literal.
+        "filters": [{"dimension": "order__currency", "values": ["EUR'; drop table x; --"]}],
     }
     run_turn(semantic.build_agent(ScriptedLlm(steps=[("query_metrics", args), "done"])), "q")
     assert metricflow[0].where_constraints == [
-        "{{ Dimension('order__status') }} = 'cancelled''; drop table x; --'"
+        "{{ Dimension('order__currency') }} = 'EUR''; drop table x; --'"
     ]
 
 
@@ -90,6 +91,30 @@ def test_a_metric_the_catalog_lacks_comes_back_as_an_error_to_the_model(metricfl
     assert "no metric named 'average_basket_eur'" in queried["response"]["error"]
     assert metricflow == []
     assert "no metric" in final_text(events)
+
+
+def test_a_guessed_filter_value_comes_back_with_the_known_ones_and_the_model_retries(metricflow):
+    """Issue #157: "damaged goods" matched no row and was answered as a confident zero."""
+    guessed = {"dimension": "return__reason", "operator": "=", "values": ["damaged goods"]}
+    known = {**guessed, "values": ["damaged"]}
+    model = ScriptedLlm(
+        steps=[
+            ("describe_metric", {"name": "returns_eur"}),
+            ("query_metrics", {"metrics": ["returns_eur"], "filters": [guessed]}),
+            ("query_metrics", {"metrics": ["returns_eur"], "filters": [known]}),
+            "Returns of damaged goods cost 12.5 EUR.",
+        ]
+    )
+    run_turn(semantic.build_agent(model), "How much did returns of damaged goods cost us?")
+    described, refused, answered = model.tool_results()
+    reason = next(d for d in described["response"]["dimensions"] if d["name"] == "return__reason")
+    assert "damaged" in reason["values"]
+    assert "'return__reason' has no value 'damaged goods'" in refused["response"]["error"]
+    assert "'damaged'" in refused["response"]["error"]
+    assert "error" not in answered["response"]
+    assert [r.where_constraints for r in metricflow] == [
+        ["{{ Dimension('return__reason') }} = 'damaged'"]
+    ]
 
 
 def test_the_semantic_agent_cannot_run_sql(metricflow, monkeypatch):

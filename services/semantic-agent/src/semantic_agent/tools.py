@@ -40,7 +40,8 @@ def list_metrics() -> dict[str, Any]:
 
 def describe_metric(name: str) -> dict[str, Any]:
     """Describes one metric: its definition, time grain, and the dimensions it can be grouped or
-    filtered by.
+    filtered by, with the values of each categorical dimension that declares them: filter on one of
+    those values exactly.
 
     Args:
         name: The metric's name, as list_metrics returns it.
@@ -82,7 +83,8 @@ def query_metrics(
             day, ["metric_time__month"] per month, or ["order__status"]. Omit for one total row.
         filters: Conditions on categorical dimensions, e.g.
             [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}];
-            operator is one of =, !=, in, not in.
+            operator is one of =, !=, in, not in. A value must be one describe_metric lists for
+            the dimension, when it lists any.
         start_date: First day to include (YYYY-MM-DD), inclusive.
         end_date: Last day to include (YYYY-MM-DD), inclusive.
         order_by: Requested metrics or group-bys to sort by; prefix "-" for descending.

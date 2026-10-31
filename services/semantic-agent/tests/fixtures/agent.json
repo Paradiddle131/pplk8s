@@ -95,18 +95,18 @@
       "pipelines": [
         "finance"
       ],
-      "description": "Daily revenue net of partner returns, one row per order_date of gold.daily_sales. Alias exposed.net_sales_daily.",
+      "description": "Daily revenue net of partner returns, one row per UTC day with orders (gold.daily_sales) or returns (silver.returns); a day with returns only has revenue 0. Alias exposed.net_sales_daily.",
       "grain": [
         "order_date"
       ],
       "columns": [
         {
           "name": "order_date",
-          "description": "Natural key."
+          "description": "Natural key, the UTC day; it keeps its name on a day with returns only, for its consumers."
         },
         {
           "name": "revenue_eur",
-          "description": "Sum of amount for non-cancelled orders."
+          "description": "Sum of amount for non-cancelled orders; 0 on a day without orders."
         },
         {
           "name": "returns_count",
@@ -577,7 +577,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -620,7 +627,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -663,7 +677,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -678,7 +699,14 @@
         {
           "name": "lead__campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "lead__campaign__market",
@@ -731,7 +759,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -746,7 +781,14 @@
         {
           "name": "lead__campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "lead__campaign__market",
@@ -789,7 +831,15 @@
         {
           "name": "customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "customer__signup_date",
@@ -814,7 +864,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     },
@@ -843,7 +898,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -882,7 +944,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -915,7 +984,15 @@
         {
           "name": "customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "customer__signup_date",
@@ -940,7 +1017,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     },
@@ -969,7 +1051,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -1017,7 +1106,14 @@
         {
           "name": "campaign__channel",
           "type": "categorical",
-          "description": "Marketing channel (search, social, display, email, partner)."
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
         },
         {
           "name": "campaign__market",
@@ -1078,7 +1174,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     },
@@ -1101,7 +1202,15 @@
         {
           "name": "customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "customer__signup_date",
@@ -1126,7 +1235,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     },
@@ -1149,7 +1263,15 @@
         {
           "name": "customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "customer__signup_date",
@@ -1174,7 +1296,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     },
@@ -1207,7 +1334,15 @@
         {
           "name": "order__customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "order__customer__signup_date",
@@ -1222,12 +1357,22 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         },
         {
           "name": "return__reason",
           "type": "categorical",
-          "description": "The partner's return reason."
+          "description": "The partner's return reason (damaged, wrong size, late delivery).",
+          "values": [
+            "damaged",
+            "wrong size",
+            "late delivery"
+          ]
         },
         {
           "name": "return__return_date",
@@ -1265,7 +1410,15 @@
         {
           "name": "order__customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "order__customer__signup_date",
@@ -1280,12 +1433,22 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         },
         {
           "name": "return__reason",
           "type": "categorical",
-          "description": "The partner's return reason."
+          "description": "The partner's return reason (damaged, wrong size, late delivery).",
+          "values": [
+            "damaged",
+            "wrong size",
+            "late delivery"
+          ]
         },
         {
           "name": "return__return_date",
@@ -1313,7 +1476,15 @@
         {
           "name": "customer__country",
           "type": "categorical",
-          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US)."
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
         },
         {
           "name": "customer__signup_date",
@@ -1338,7 +1509,12 @@
         {
           "name": "order__status",
           "type": "categorical",
-          "description": "placed, shipped or cancelled."
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
         }
       ]
     }

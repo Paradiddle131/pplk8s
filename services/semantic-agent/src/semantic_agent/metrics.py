@@ -74,6 +74,16 @@ class Catalog:
             )
         return self.metrics[name]
 
+    def known_values(self, metric_names: list[str]) -> dict[str, list[str]]:
+        """The values a categorical dimension's column declares (an accepted_values test), by name;
+        a dimension that declares none is absent."""
+        return {
+            d["name"]: d["values"]
+            for name in metric_names
+            for d in self.metric(name)["dimensions"]
+            if d.get("values")
+        }
+
     def dimensions(self, metric_names: list[str]) -> dict[str, str]:
         """Dimensions every one of the metrics can be grouped or filtered by, with their type."""
         found = [
@@ -95,8 +105,14 @@ def _literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def where_clause(item: Filter, dimensions: dict[str, str]) -> str:
-    """A MetricFlow where filter built from checked parts, never from the model's text."""
+def where_clause(
+    item: Filter, dimensions: dict[str, str], known: dict[str, list[str]] | None = None
+) -> str:
+    """A MetricFlow where filter built from checked parts, never from the model's text.
+
+    A value the dimension does not declare is refused with the values it does: a guessed value
+    ("damaged goods" for "damaged") would match no row and come back as a confident zero.
+    """
     categorical = sorted(name for name, kind in dimensions.items() if kind == "categorical")
     if item.dimension not in categorical:
         raise QueryError(
@@ -105,6 +121,12 @@ def where_clause(item: Filter, dimensions: dict[str, str]) -> str:
         )
     if not item.values:
         raise QueryError(f"filter on {item.dimension!r} has no values")
+    values = (known or {}).get(item.dimension)
+    if values is not None and (unknown := [v for v in item.values if v not in values]):
+        raise QueryError(
+            f"{item.dimension!r} has no value {', '.join(map(repr, unknown))}; "
+            f"its values are {values}"
+        )
     reference = "{{ Dimension('" + item.dimension + "') }}"
     if item.operator in ("=", "!="):
         if len(item.values) != 1:
@@ -160,10 +182,11 @@ class MetricQuery:
             if name.removeprefix("-") not in allowed_order:
                 raise QueryError(f"can only order by a requested metric or group-by, not {name!r}")
         limit = min(self.limit or MAX_ROWS, MAX_ROWS)
+        known = catalog.known_values(self.metrics)
         return MetricFlowQueryRequest.create(
             metric_names=self.metrics,
             group_by_names=self.group_by or None,
-            where_constraints=[where_clause(f, dimensions) for f in self.filters] or None,
+            where_constraints=[where_clause(f, dimensions, known) for f in self.filters] or None,
             time_constraint_start=_date(self.start_date, "start_date"),
             time_constraint_end=_date(self.end_date, "end_date"),
             order_by_names=self.order_by or None,

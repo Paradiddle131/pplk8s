@@ -6,6 +6,9 @@
 #   - every gold and exposed relation, and every one of its columns, carries a comment (persist_docs),
 #   - semantic.metrics holds one row per metric of the semantic manifest, semantic.glossary one per term,
 #   - every example query (a metric's compiled SQL) runs on the warehouse and returns rows,
+#   - a categorical dimension carries the values its column declares, and the agent's query_metrics answers
+#     a declared value on the fixture through MetricFlow and refuses a guessed one with the declared values
+#     (#157),
 #   - an undocumented authored-context key, an undescribed public column, and a glossary term that names an
 #     unknown metric, a dimension its metrics lack, or repeats a metric fail check_catalog.py.
 # Expects `make services-up`; never touches the `warehouse` database.
@@ -132,5 +135,26 @@ for problem in "glossary term 'Gross margin' on slv_orders: unknown metric gross
   grep -qF "$problem" "$OUT/stray.log" || { cat "$OUT/stray.log" >&2; fail "check_catalog did not report: $problem"; }
 done
 echo "ok: an undocumented authored-context key, an undescribed public column and stray glossary terms fail check_catalog"
+
+# The declared values reach the agent's tools (#157): on the fixture, as agent_metrics, through MetricFlow.
+expect "return__reason's values in agent.json" "$(py_ -c "
+import json
+metric = next(m for m in json.load(open('target/catalog/agent.json'))['metrics'] if m['name'] == 'returns_eur')
+print(next(d for d in metric['dimensions'] if d['name'] == 'return__reason').get('values'))
+")" "['damaged', 'wrong size', 'late delivery']"
+agent_py() {
+  (cd "$REPO/services/semantic-agent" && DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+    SEMANTIC_CATALOG="$TARGET/catalog/agent.json" uv run --quiet python -c "$1")
+}
+answer=$(agent_py "
+from semantic_agent.tools import query_metrics
+for value in ('damaged', 'damaged goods'):
+    result = query_metrics(['returns_eur'], filters=[{'dimension': 'return__reason', 'operator': '=', 'values': [value]}])
+    print(result.get('error') or result['rows'])
+")
+expect "query_metrics on return__reason = damaged, then = damaged goods" "$answer" \
+  "[{'returns_eur': 12.5}]
+'return__reason' has no value 'damaged goods'; its values are ['damaged', 'wrong size', 'late delivery']"
+echo "ok: return__reason carries its declared values; query_metrics answers damaged (12.5) and refuses damaged goods"
 
 echo "PASS: catalog check"
