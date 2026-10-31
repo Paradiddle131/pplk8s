@@ -32,7 +32,8 @@ At work the same output takes `method: oauth` (application default credentials) 
 | `sql_baseline` (`execute_sql` over gold and exposed) | `BigQueryToolset.ask_data_insights` with inline table references | The "ADK schema-driven" pattern: what most teams run first, and what the eval scores against |
 | `MODEL_BACKEND=openrouter` (free model) | `MODEL_BACKEND=gemini` | `model.py` is the only place naming a provider |
 | ADK `DatabaseSessionService` on the metadata DB's `agent_sessions` | The same on Cloud SQL, or `VertexAiSessionService` | ADK's session URI |
-| `agent_metrics` and `agent_sql` roles | IAM: dataset-level read on the datasets each agent may see (out of scope here) | Trust stays in the warehouse, not the prompt (SL-4) |
+| `agent_metrics` and `agent_sql` roles | A service account per agent with dataset-level read on the datasets it may see | Trust stays in the warehouse, not the prompt (SL-4); [Agent access and audit](#agent-access-and-audit) is the proposal |
+| `ops.agent_queries`, written as the insert-only `agent_audit` role | BigQuery's Data Access audit log and `INFORMATION_SCHEMA.JOBS`, with the agent's session in job labels | [Agent access and audit](#agent-access-and-audit) |
 | Freshness from `ops.readiness` and `ops.product_deadlines` | The same two tables in BigQuery | The tool reads them; a native data agent needs them as a knowledge source or a verified query (unverified) |
 | `validate_semantic_layer` in `finance_daily` | A Cloud Run Job on the dbt image whose command is `dbt parse && mf validate-configs` | Job overrides change args, not the command, so it is its own Job (unverified) |
 
@@ -80,9 +81,41 @@ The TLC models are off the semantic path and keep Postgres forms, marked `-- dia
 
 Their bronze models also read the landed table's columns at compile time (`adapter.get_relation`), so they need a live connection to compile.
 
+## Agent access and audit
+
+The lab gives each agent its own read-only warehouse role and audits every data query it runs as a row in `ops.agent_queries`, written by a role that may only insert there ([`semantic/PLAN.md`](../semantic/PLAN.md) SL-4, SL-10).
+This is how that maps to BigQuery; IAM on a real project stays out of scope, so it is a proposal, not a measurement.
+
+### Who sees what
+
+| Option | What it is | For | Against |
+|---|---|---|---|
+| A. Dataset-level read per agent identity | One service account per agent; BigQuery Data Viewer on each dataset it reads, Job User in the project its queries run in | Maps one to one onto the lab's roles; one grant per dataset; the audit names the agent by its service account | A grant covers the whole dataset: the semantic agent reads every column of silver, which MetricFlow needs for its semantic models |
+| B. Authorized views or an authorized dataset | The agent reads a dataset of views and has no grant on the source datasets; the views are authorized on them ([stated](https://docs.cloud.google.com/bigquery/docs/authorized-views): principals "can view the shared data and run queries on it, but they can't access the source dataset directly") | Narrows an agent to chosen columns and rows; dbt-bigquery grants a view model access with `grant_access_to` ([stated](https://docs.getdbt.com/reference/resource-configs/bigquery-configs)) | A view per table an agent reads, and the semantic models would have to sit on those views instead of silver |
+| C. A separate project for the agents | The agents' service accounts run their jobs in an agent project and read the data project's datasets through A or B | Separates the agents' jobs, quotas and billing from the pipelines' | A second project to run, and it still needs A or B for the reads |
+
+**Recommendation: A**, one service account per agent with dataset-level read, which is what the lab's roles already rehearse: the semantic agent on silver and semantic (plus the two `ops` tables its freshness reads, as table-level grants), the baseline on gold and exposed.
+Add B only for an agent that must see part of a dataset, and C only when the agents' query cost or quota needs its own budget.
+
+### What is logged where
+
+| Lab (`ops.agent_queries`) | BigQuery |
+|---|---|
+| Every `query_metrics` and `execute_sql` call, refused ones included | A query job's `JobInsertion` and `JobChange` events in the `data_access` audit log stream ([stated](https://docs.cloud.google.com/bigquery/docs/reference/auditlogs)), which BigQuery cannot turn off ([stated](https://docs.cloud.google.com/logging/docs/audit/configure-data-access): "BigQuery Data Access audit logs can't be disabled"); a refused call that never ran a job is only in the agent's own record |
+| `agent` | The caller's identity on the audit entry, and `user_email` in `INFORMATION_SCHEMA.JOBS` ([stated](https://docs.cloud.google.com/bigquery/docs/information-schema-jobs)): the agent's service account under option A |
+| `sql` | The SQL text on the audit entry, and `query` in `INFORMATION_SCHEMA.JOBS` (stated, same pages) |
+| The tables read (implied by the metrics or SQL) | `referenced_tables` in `INFORMATION_SCHEMA.JOBS` (stated) |
+| `user_id`, `session_id`, `call_id`, `metrics` | Job labels set at submission (`labels` in the job configuration, [stated](https://docs.cloud.google.com/bigquery/docs/adding-labels); a label cannot be added to a job once it is submitted), which `INFORMATION_SCHEMA.JOBS` shows as `labels`; dbt-bigquery turns a query comment into job labels with `query-comment: {job-label: true}` (stated, dbt's BigQuery configs) |
+| `rows_returned`, `freshness`, `error` | Not a job attribute: the agent's own record keeps them |
+| Kept as long as the table is | `INFORMATION_SCHEMA.JOBS` keeps 180 days of job history (stated); the audit log's retention is its log bucket's |
+
+So at work the platform's audit log is the record of what each agent read, and the agent keeps a thin record of its own for what a job cannot carry: the conversation it served, the metrics asked for, the freshness it quoted and the calls it refused; labels join the two.
+
 ## Unverified
 
 - That the compiled SQL runs on BigQuery itself: it runs on the emulator, whose analyzer is ZetaSQL's, including MetricFlow's `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; real BigQuery stays the final word.
 - The exact `ask_data_agent` arguments: the ADK page does not list them; the lab toolset's contract is a question in, and text, rows and SQL out, as the docs describe.
 - Whether a native data agent can use the freshness tables, and how: as a knowledge source, a verified query, or a tool beside `DataAgentToolset`.
 - Cloud Run Job overrides: read from the Jobs API reference, not tried.
+- Whose identity a native data agent's queries run as (the caller's or a service account's), and so what the audit log names; and whether MetricFlow's BigQuery client lets each query set its own job labels.
+- In which project's audit log a cross-project read (option C) lands.

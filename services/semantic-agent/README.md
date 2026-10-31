@@ -18,6 +18,16 @@ A request the semantic layer cannot answer (an unknown metric, a dimension the m
 The roles live in `platform/compose/warehouse-init/02-agent-roles.sql`, which `make services-up` applies to `warehouse` and `make agent-eval` to `dbt_dev`.
 The database, not the prompt, keeps each agent in its tables (SL-4).
 
+## Audit
+
+Every `query_metrics` and `execute_sql` call, answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
+`audit.py` does it as both agents' ADK `after_tool_callback`, so the tools themselves stay unchanged; listing and describing metrics read only the catalog and are not audited.
+- The row is written as `agent_audit`, a role that may only insert into that table: it cannot read, change or delete a row, or write anywhere else.
+- The agents' own roles write nothing, the audit included: the baseline runs whatever SQL its model writes, and that SQL can leave its read-only transaction (`commit; begin read write`), so only a role's privileges, not the transaction mode, keep the audit unforged.
+- An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
+
+The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
+
 ## Freshness
 
 Every `query_metrics` result carries a `freshness` field (SL-4, S4), which `freshness.py` builds:
@@ -58,17 +68,17 @@ make agent-serve AGENT_DBNAME=dbt_dev
 `make workloads-up` builds the image (`Dockerfile`, tagged `AGENT_IMAGE` in the Makefile), pushes it to the local registry and deploys it in the kind cluster's `workloads` namespace beside EL Factory: the Cloud Run stand-in of SL-2 (`platform/k8s/workloads/semantic-agent-*.yaml`).
 - The image holds both agents (`/app/agents`, what `adk api_server` serves on 8080) and the dbt project; the build parses it once as a smoke check.
 - An initContainer runs `dbt parse` and `build_catalog.py` at pod start, for the database the pod reads (`AGENT_DBNAME`, default `warehouse`): MetricFlow's compiled SQL names that database.
-- The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics` and `agent_sql` logins, the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
+- The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics`, `agent_sql` and `agent_audit` logins, the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
 - `EGRESS_PROXY` and `EGRESS_CA` route the model calls through a TLS-intercepting proxy (the cloud sandbox); unset elsewhere.
 
-`make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts 861.4 through `query_metrics` and the session's events in `agent_sessions` (one model turn).
+`make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts 861.4 through `query_metrics`, the session's events in `agent_sessions` and its audit row in `ops.agent_queries` (one model turn).
 `uv run adk web src` from this folder is the demo surface.
 
 ## Checks
 
 | Command | What it proves | Model |
 |---|---|---|
-| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout) and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
+| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
 | `make agent-eval` | the scored eval below | live, ~2 x 15 turns |
 
 `make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.

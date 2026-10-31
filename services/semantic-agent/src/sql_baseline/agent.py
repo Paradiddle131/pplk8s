@@ -20,6 +20,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.tools import FunctionTool
 
+from semantic_agent.audit import audit_tool_call
 from semantic_agent.model import answer_model_failure, build_model, request_config
 
 MAX_ROWS = 200
@@ -86,6 +87,7 @@ def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
         generate_content_config=request_config(),
         instruction=INSTRUCTION,
         tools=[FunctionTool(execute_sql)],
+        after_tool_callback=audit_tool_call,
         on_model_error_callback=answer_model_failure,
     )
 
