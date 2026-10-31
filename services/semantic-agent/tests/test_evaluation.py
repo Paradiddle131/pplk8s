@@ -107,6 +107,32 @@ def test_the_driver_scores_answers_and_metric_choice(monkeypatch):
     assert "| Questions no metric covers (1) | 1 said so | 0 right |" in text
 
 
+class RunsASavedQuery(ScriptedLlm):
+    """Answers the revenue question through the daily_sales saved query (#164)."""
+
+    async def generate_content_async(self, llm_request, stream=False):
+        answered = any(p.function_response for c in llm_request.contents for p in c.parts or [])
+        self.steps = (
+            ["Revenue was 868.65 EUR on 2 October 2026."]
+            if answered
+            else [("query_metrics", {"saved_query": "daily_sales", "start_date": "2026-10-02"})]
+        )
+        self.requests = []
+        async for response in super().generate_content_async(llm_request, stream):
+            yield response
+
+
+def test_a_saved_query_counts_as_querying_its_metrics(monkeypatch):
+    monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": [{"revenue_eur": 868.65}]})
+    cases = eval_cases(QUESTIONS[:1], EXPECTED, "semantic_agent", semantic=True)
+    outcomes = asyncio.run(
+        evaluation.evaluate(
+            semantic.build_agent(RunsASavedQuery()), cases, [ANSWER_CORRECT, METRIC_CHOICE]
+        )
+    )
+    assert outcomes["revenue_one_day"].scores == {"answer_correct": 1.0, "metric_choice": 1.0}
+
+
 def test_a_wrong_number_or_an_answer_where_it_should_decline_fails(monkeypatch):
     monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": []})
     cases = eval_cases(QUESTIONS, EXPECTED, "semantic_agent", semantic=True)

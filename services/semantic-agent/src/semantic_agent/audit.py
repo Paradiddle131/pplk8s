@@ -57,7 +57,7 @@ def audit_row(
         "session_id": context.session.id,
         "invocation_id": context.invocation_id,
         "call_id": context.function_call_id,
-        "metrics": args.get("metrics"),
+        "metrics": args.get("metrics") or response.get("metrics"),
         "filters": args.get("filters"),
         "arguments": args,
         # The model's own SQL for the baseline, the SQL MetricFlow compiled for the semantic agent.

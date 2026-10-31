@@ -99,6 +99,7 @@ A ratio is never stored per day for agents to average: the metric divides the to
 | Glossary terms | `semantic.glossary`, the agent catalog's `glossary` (the lab agent's `list_metrics`), and the data agent's glossary with the mapping in its description | `semantic_glossary.sql` from dbt's graph; `build_catalog.py` |
 | Semantic models, entities and dimensions | The data agent's tables, fields, aggregations and relationships | `build_catalog.py` (`system_instruction.yaml`) |
 | Each metric's compiled SQL | The data agent's verified queries | `build_catalog.py` (`example_queries.json`) |
+| Saved queries (`models/semantic/saved_queries.yml`): a recurring question with its metrics, group-bys and filters | The data agent's verified queries, with the question as asked; the lab agent's `list_metrics`, run by name through `query_metrics` | `build_catalog.py` (`example_queries.json`, `agent.json`) |
 
 [`semantic-layer-on-bigquery.md`](semantic-layer-on-bigquery.md) has the mapping in full, with what is measured, stated and unverified.
 

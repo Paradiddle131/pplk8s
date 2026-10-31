@@ -11,6 +11,8 @@
 #     gold.marketing_daily, and the fixture's cost per lead and per booking (39.00, 130.00).
 #   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
 #     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
+#   - creates the semantic agent's audit table there with the same entry point as on Postgres
+#     (`dbt run-operation agent_warehouse`, #166), twice, and writes and reads back one row.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050 (`docker compose
 # --profile bigquery down` in platform/compose stops it).
@@ -53,6 +55,27 @@ hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
 [ "$hops" -eq 26 ] || fail "expected the 26 layer hops to pass on the emulator, got $hops"
 echo "ok: the 26 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 grep -q " PASS consumers_switch_on_parity " "$OUT/build.log" || fail "the migration gate did not pass on the emulator"
+
+# The agent's warehouse objects through the same macro as on Postgres; a second run changes nothing.
+for _ in 1 2; do
+  run_ dbt run-operation agent_warehouse >"$OUT/agent-warehouse.log" 2>&1 ||
+    { tail -20 "$OUT/agent-warehouse.log" >&2; fail "dbt run-operation agent_warehouse on the emulator"; }
+done
+run_ python -I - "$ENDPOINT" <<'EOF' || fail "ops.agent_queries on the emulator"
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+table = "`pplk8s-lab.ops.agent_queries`"
+client.query(f"insert into {table} (called_at, agent, tool, metrics, arguments, rows_returned)"
+             " values (current_timestamp(), 'semantic_agent', 'query_metrics', ['orders_total'], json '{}', 1)").result()
+rows = [(r[0], list(r[1]), r[2]) for r in client.query(f"select agent, metrics, called_at is not null from {table}").result()]
+assert rows == [("semantic_agent", ["orders_total"], True)], rows
+EOF
+echo "ok: the agent_warehouse macro created ops.agent_queries on the emulator; a row writes and reads back"
 
 run_ mf query --metrics orders_total,orders_cancelled,revenue_eur,customers_distinct,cancellation_rate \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/sales.csv" >"$OUT/query.log" 2>&1 ||

@@ -21,9 +21,9 @@ psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
   uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc) \
   >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog"; }
-for sql in 01-schemas.sql 02-agent-roles.sql; do
-  psql_dev -c "set client_min_messages = warning" -f "/docker-entrypoint-initdb.d/$sql"
-done
+psql_dev -c "set client_min_messages = warning" -f /docker-entrypoint-initdb.d/01-schemas.sql
+make -s -C "$REPO" agent-warehouse DBT_DBNAME="$DB" >"$OUT/agent-warehouse.log" 2>&1 ||
+  { tail -30 "$OUT/agent-warehouse.log" >&2; fail "make agent-warehouse"; }
 # The fixture's days as the DAGs would record them, so every answer states a freshness (SL-4):
 # sales.silver and marketing.silver take their pipelines' deadlines (36 h) and are long late;
 # returns.silver has none.

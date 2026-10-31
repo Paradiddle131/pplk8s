@@ -47,7 +47,8 @@ echo "ok: the 26 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "7 semantic models and 16 metrics described" "$OUT/validate.log" || fail "check_standard did not report the 7 semantic models and 16 metrics"
+grep -q "7 semantic models, 16 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 7 semantic models, 16 metrics and 7 saved queries"
 echo "ok: make dbt-validate (parse, check_standard, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with

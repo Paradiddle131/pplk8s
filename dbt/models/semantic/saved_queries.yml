@@ -1,0 +1,81 @@
+version: 2
+
+# Saved queries: the business questions answered the same way every time (semantic/PLAN.md SL-3, #164).
+# Each is a set of metrics, group-bys and filters, versioned beside the metrics and validated by the parse and
+# `mf validate-configs`. scripts/build_catalog.py turns each into a verified query of the native data agent
+# (example_queries.json: `config.meta.question` and the SQL MetricFlow compiles) and lists it in the agent
+# catalog, where the lab agent runs one through query_metrics with its own date range.
+# scripts/check_standard.py fails one without a description, a label or a question.
+
+saved_queries:
+  - name: daily_sales
+    label: Daily sales
+    description: Revenue, orders, cancellations and distinct customers per day; the metrics behind gold.daily_sales.
+    config:
+      meta:
+        question: What were revenue, orders, cancelled orders and distinct customers by day?
+    query_params:
+      metrics: [revenue_eur, orders_total, orders_cancelled, customers_distinct]
+      group_by: ["TimeDimension('metric_time', 'day')"]
+
+  - name: net_sales_daily
+    label: Net sales per day
+    description: Revenue, partner returns and net revenue per day; finance's net sales, the metrics behind exposed.net_sales_daily.
+    config:
+      meta:
+        question: What were revenue, returns and net revenue by day?
+    query_params:
+      metrics: [revenue_eur, returns_count, returns_eur, net_revenue_eur]
+      group_by: ["TimeDimension('metric_time', 'day')"]
+
+  - name: sales_by_country_daily
+    label: Sales by country per day
+    description: Revenue and orders per day and customer country; the metrics behind exposed.sales_by_country_daily.
+    config:
+      meta:
+        question: What were revenue and orders by day and customer country?
+    query_params:
+      metrics: [revenue_eur, orders_total]
+      group_by: ["TimeDimension('metric_time', 'day')", "Dimension('customer__country')"]
+
+  - name: orders_by_status
+    label: Orders by status
+    description: Orders per status (placed, shipped, cancelled).
+    config:
+      meta:
+        question: How many orders are there in each status?
+    query_params:
+      metrics: [orders_total]
+      group_by: ["Dimension('order__status')"]
+
+  - name: returns_by_reason
+    label: Returns by reason
+    description: Partner returns and their amount per return reason.
+    config:
+      meta:
+        question: How many partner returns were there, and how much did they cost, by reason?
+    query_params:
+      metrics: [returns_count, returns_eur]
+      group_by: ["Dimension('return__reason')"]
+
+  - name: damaged_returns_daily
+    label: Damaged-goods returns per day
+    description: Partner returns of damaged goods and their amount per day.
+    config:
+      meta:
+        question: How many returns of damaged goods were there, and how much did they cost, by day?
+    query_params:
+      metrics: [returns_count, returns_eur]
+      group_by: ["TimeDimension('metric_time', 'day')"]
+      where:
+        - "{{ Dimension('return__reason') }} = 'damaged'"
+
+  - name: channel_performance
+    label: Channel performance
+    description: Ad spend, leads, bookings, cost per lead and cost per booking per marketing channel, as ratios of the period's totals.
+    config:
+      meta:
+        question: What were ad spend, leads, bookings, cost per lead and cost per booking by channel?
+    query_params:
+      metrics: [ad_spend_eur, leads, bookings, cost_per_lead_eur, cost_per_booking_eur]
+      group_by: ["Dimension('campaign__channel')"]

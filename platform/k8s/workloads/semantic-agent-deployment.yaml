@@ -1,5 +1,6 @@
-# The semantic agent and its text-to-SQL baseline, served by `adk api_server` (semantic/PLAN.md SL-2):
-# the Cloud Run stand-in. Airflow never calls it; people and the eval do, through the Service.
+# The semantic agent, served by `adk api_server` (semantic/PLAN.md SL-2): the Cloud Run stand-in and the
+# lab's one deployed agent. Airflow never calls it; people do, through the Service. The text-to-SQL
+# baseline is the eval's control (SL-5): `make agent-eval` runs it in-process and it is never deployed.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,7 +67,7 @@ spec:
             - name: http
               containerPort: 8080
           envFrom: *env
-          startupProbe: # ADK loads both agents and MetricFlow on start
+          startupProbe: # ADK loads the agent and MetricFlow on start
             httpGet: {path: /list-apps, port: http}
             periodSeconds: 2
             failureThreshold: 60

@@ -1518,5 +1518,136 @@
         }
       ]
     }
+  ],
+  "saved_queries": [
+    {
+      "name": "channel_performance",
+      "label": "Channel performance",
+      "description": "Ad spend, leads, bookings, cost per lead and cost per booking per marketing channel, as ratios of the period's totals.",
+      "question": "What were ad spend, leads, bookings, cost per lead and cost per booking by channel?",
+      "metrics": [
+        "ad_spend_eur",
+        "leads",
+        "bookings",
+        "cost_per_lead_eur",
+        "cost_per_booking_eur"
+      ],
+      "group_by": [
+        "campaign__channel"
+      ],
+      "where": [],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "daily_sales",
+      "label": "Daily sales",
+      "description": "Revenue, orders, cancellations and distinct customers per day; the metrics behind gold.daily_sales.",
+      "question": "What were revenue, orders, cancelled orders and distinct customers by day?",
+      "metrics": [
+        "revenue_eur",
+        "orders_total",
+        "orders_cancelled",
+        "customers_distinct"
+      ],
+      "group_by": [
+        "metric_time__day"
+      ],
+      "where": [],
+      "readiness": [
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "damaged_returns_daily",
+      "label": "Damaged-goods returns per day",
+      "description": "Partner returns of damaged goods and their amount per day.",
+      "question": "How many returns of damaged goods were there, and how much did they cost, by day?",
+      "metrics": [
+        "returns_count",
+        "returns_eur"
+      ],
+      "group_by": [
+        "metric_time__day"
+      ],
+      "where": [
+        "{{ Dimension('return__reason') }} = 'damaged'"
+      ],
+      "readiness": [
+        "returns.silver"
+      ]
+    },
+    {
+      "name": "net_sales_daily",
+      "label": "Net sales per day",
+      "description": "Revenue, partner returns and net revenue per day; finance's net sales, the metrics behind exposed.net_sales_daily.",
+      "question": "What were revenue, returns and net revenue by day?",
+      "metrics": [
+        "revenue_eur",
+        "returns_count",
+        "returns_eur",
+        "net_revenue_eur"
+      ],
+      "group_by": [
+        "metric_time__day"
+      ],
+      "where": [],
+      "readiness": [
+        "returns.silver",
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "orders_by_status",
+      "label": "Orders by status",
+      "description": "Orders per status (placed, shipped, cancelled).",
+      "question": "How many orders are there in each status?",
+      "metrics": [
+        "orders_total"
+      ],
+      "group_by": [
+        "order__status"
+      ],
+      "where": [],
+      "readiness": [
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "returns_by_reason",
+      "label": "Returns by reason",
+      "description": "Partner returns and their amount per return reason.",
+      "question": "How many partner returns were there, and how much did they cost, by reason?",
+      "metrics": [
+        "returns_count",
+        "returns_eur"
+      ],
+      "group_by": [
+        "return__reason"
+      ],
+      "where": [],
+      "readiness": [
+        "returns.silver"
+      ]
+    },
+    {
+      "name": "sales_by_country_daily",
+      "label": "Sales by country per day",
+      "description": "Revenue and orders per day and customer country; the metrics behind exposed.sales_by_country_daily.",
+      "question": "What were revenue and orders by day and customer country?",
+      "metrics": [
+        "revenue_eur",
+        "orders_total"
+      ],
+      "group_by": [
+        "metric_time__day",
+        "customer__country"
+      ],
+      "where": [],
+      "readiness": [
+        "sales.silver"
+      ]
+    }
   ]
 }

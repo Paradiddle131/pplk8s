@@ -26,7 +26,8 @@ SOURCES = (
     "synthetic_leads",
     "synthetic_bookings",
 )
-DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration")
+# ops: the agent's audit table (macros/agent_warehouse.sql); the emulator takes `create schema` but creates nothing.
+DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration", "ops")
 TYPES = {
     "text": "STRING",
     "integer": "INT64",

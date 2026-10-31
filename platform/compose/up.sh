@@ -39,10 +39,12 @@ done
 
 # warehouse-init runs only on an empty volume; re-apply it (every statement is IF NOT EXISTS) so
 # objects added later, such as ops.file_loads, reach an existing warehouse too.
-for sql in 01-schemas.sql 02-agent-roles.sql; do
-  docker compose exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 \
-    -f "/docker-entrypoint-initdb.d/$sql"
-done
+docker compose exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse psql -q -U warehouse -d warehouse -v ON_ERROR_STOP=1 \
+  -f /docker-entrypoint-initdb.d/01-schemas.sql
+# The semantic agent's roles, grants and audit table come from the dbt project, so they land wherever it
+# builds (dbt/macros/agent_warehouse.sql, semantic/PLAN.md SL-10); after 01, whose ledger they grant.
+make -s -C ../.. agent-warehouse DBT_DBNAME=warehouse >/dev/null
+echo "warehouse: the semantic agent's roles and audit table ready"
 
 # The semantic agent's ADK sessions (semantic/PLAN.md SL-2): their own database and owner on the
 # metadata DB's instance, as a second database on the same Cloud SQL instance would be.
