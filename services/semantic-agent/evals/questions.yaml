@@ -62,7 +62,7 @@ questions:
   - id: revenue_germany
     question: What was our revenue from customers in Germany on 1 October 2026?
     expected_sql: select revenue_eur from exposed.sales_by_country_daily where order_date = '2026-10-01' and country = 'DE'
-    metrics: []
+    metrics: [revenue_eur]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'
