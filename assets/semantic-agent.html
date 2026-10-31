@@ -6,79 +6,88 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Semantic agent, inside</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap">
 <style>
-/* One level below assets/semantic-track.html: the semantic agent's code (services/semantic-agent/src) and
-   what it reuses. The same chrome as the track diagram, with two additions: a card tinted like a zone
-   is a package's code, not this repo's, and a tab on a card names the package it is or calls. A card
-   with a blue dashed border is a seam the work platform swaps. The hook edges, in the metrics colour,
-   are the extension points the packages offer; each card's second and third lines name them. */
+/* One level below assets/semantic-track.html: the semantic agent's code (services/semantic-agent/src),
+   laid out in the order a question travels, top to bottom.
+
+   The sheet is a draughtsman's: black ink on paper, frames without fill whose title sits in the top line,
+   and two coloured pencils that each mean one thing: cobalt for what the agent reads as agent_metrics
+   (the governed path), vermilion for what the text-to-SQL baseline reads as agent_sql. Meaning beyond
+   that comes from drawing conventions, not colour: hatching marks the model, the one part that is not
+   code; a chain (dash-dot) line, a phantom line in drafting, marks what the work platform replaces; a
+   grey card is a package's code, a white one this repo's. Text is never smaller than 11 px, so the 2x
+   export stays legible when a README scales it down. */
 :root {
-  --bg: #f4f5f8;
-  --zone: #eaedf2;
-  --zone-2: #e6ebf4;
+  --paper: #fbfbf9;
   --card: #ffffff;
-  --line: #aab2c0;
-  --hair: #cfd5df;
-  --fg: #1a2030;
-  --muted: #5b6577;
-  --metrics: #0f766e;
-  --sql: #b45309;
-  --gcp: #1a56c4;
-  --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --pkg: #ebeae5;
+  --ink: #1b1b1d;
+  --rule: #85858b;
+  --hair: #cfcec9;
+  --muted: #5d5d65;
+  --gov: #2f4bc4;
+  --raw: #c3421a;
+  --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1218; --zone: #171b23; --zone-2: #1d2636; --card: #1e242f; --line: #46505f; --hair: #2f3745;
-    --fg: #e8ebf1; --muted: #9aa3b5; --metrics: #5fd3c4; --sql: #e8a94a; --gcp: #7aa7ff;
+    --paper: #141517; --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --muted: #a6a6ae; --gov: #93a5ff; --raw: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1218; --zone: #171b23; --zone-2: #1d2636; --card: #1e242f; --line: #46505f; --hair: #2f3745;
-  --fg: #e8ebf1; --muted: #9aa3b5; --metrics: #5fd3c4; --sql: #e8a94a; --gcp: #7aa7ff;
+  --paper: #141517; --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --muted: #a6a6ae; --gov: #93a5ff; --raw: #ff8f6b;
   color-scheme: dark;
 }
 html, body { margin: 0; }
 body {
-  background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px;
+  background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px;
   padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   min-height: 100%;
 }
 .stage { max-width: 1200px; margin: 0 auto; }
 figure { margin: 0; overflow-x: auto; }
 svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
-.zone { fill: var(--zone); stroke: var(--hair); stroke-width: 1; }
-.card { fill: var(--card); stroke: var(--line); stroke-width: 1; }
-.card.pkg { fill: var(--zone-2); }
-.card.ghost { fill: none; stroke: var(--muted); stroke-dasharray: 3 3; }
-.card.seam { stroke: var(--gcp); stroke-width: 1.3; stroke-dasharray: 6 3; }
-.tab { fill: var(--card); stroke: var(--line); stroke-width: 1; }
-.tabtext { font-family: var(--mono); font-size: 8px; fill: var(--muted); }
-.ztitle { font-size: 12px; font-weight: 600; fill: var(--fg); }
-.title { font-size: 11.5px; font-weight: 600; fill: var(--fg); }
-.sub { font-size: 9px; fill: var(--muted); }
-.mono { font-family: var(--mono); font-size: 9.5px; fill: var(--fg); }
-.mono.dim { font-size: 9px; fill: var(--muted); }
-.mono.xs { font-size: 8.5px; }
-.ico { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-.edge { fill: none; stroke: var(--muted); stroke-width: 1.3; }
-.edge.reads { stroke-dasharray: 3 3; }
-.edge.hook { stroke: var(--metrics); }
-.edge.sql { stroke: var(--sql); }
-.elabel { font-size: 9px; fill: var(--muted); }
+.frame { fill: none; stroke: var(--rule); stroke-width: 1; }
+.knock { fill: var(--paper); }
+.card { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.card.pkg { fill: var(--pkg); stroke: none; }
+.hatch-line { stroke: var(--hair); stroke-width: 1.2; }
+.phantom { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 14 3 2 3; }
+.role { fill: none; stroke-width: 1.2; }
+.role.gov { stroke: var(--gov); }
+.role.raw { stroke: var(--raw); }
+.ftitle { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.title { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.sub { font-size: 11px; fill: var(--muted); }
+.mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.mono.dim { fill: var(--muted); }
+.over { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.halo { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+.edge { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.edge.reads { stroke-dasharray: 4 3; }
+.edge.gov { stroke: var(--gov); }
+.edge.raw { stroke: var(--raw); }
+.elabel { font-size: 11px; fill: var(--muted); }
+.elabel.mono { font-family: var(--mono); }
+.elabel.gov { fill: var(--gov); }
+.elabel.raw { fill: var(--raw); }
 </style>
 </head>
 <body>
 <div class="stage">
   <figure>
-    <svg id="d" viewBox="0 0 1200 740" role="img" aria-label="Inside the semantic agent: at build time the dbt project's semantic YAML is parsed into manifests, from which build_catalog.py writes the agent catalog and a data agent's context with MetricFlow's engine, and the agent_warehouse macro creates the agent roles and the audit table; in the pod an ADK LlmAgent carries three function tools, a model seam and two callbacks; query_metrics checks every part of a request against the catalog, builds a MetricFlowQueryRequest and runs it on MetricFlow's engine as the agent_metrics role, freshness.py reads the readiness ledger, and audit.py inserts one row per query as agent_audit; the eval runs the agent and a text-to-SQL baseline on ADK's LocalEvalService with three custom metrics."></svg>
+    <svg id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; freshness.py reads the readiness ledger as agent_metrics. Every result passes through audit.py, ADK's after_tool_callback, which inserts one row into ops.agent_queries as agent_audit and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
-(() => {
+document.fonts.ready.then(() => {
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.getElementById('d');
   const el = (tag, attrs = {}, parent = svg) => {
@@ -89,124 +98,133 @@ svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: 
   const txt = (parent, x, y, s, cls, attrs = {}) => { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; };
 
   const defs = el('defs');
-  for (const [id, color] of [['arrow', 'var(--muted)'], ['arrowM', 'var(--metrics)'], ['arrowS', 'var(--sql)']]) {
+  for (const [id, cls] of [['arrow', ''], ['arrowGov', 'gov'], ['arrowRaw', 'raw']]) {
     const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
-    el('path', { d: 'M1,1 L9,5 L1,9 z', fill: color }, m);
+    const p = el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m);
+    p.style.fill = cls ? `var(--${cls})` : 'var(--ink)';
   }
+  const hatch = el('pattern', { id: 'hatch', patternUnits: 'userSpaceOnUse', width: 7, height: 7, patternTransform: 'rotate(45)' }, defs);
+  el('line', { x1: 0, y1: 0, x2: 0, y2: 7, class: 'hatch-line' }, hatch);
 
-  const icons = {
-    db: (g, x, y) => { el('ellipse', { cx: x + 7, cy: y + 3.5, rx: 6, ry: 2.6, class: 'ico' }, g); el('path', { d: `M${x + 1},${y + 3.5} V${y + 11} a6,2.6 0 0 0 12,0 V${y + 3.5}`, class: 'ico' }, g); },
-    doc: (g, x, y) => { el('path', { d: `M${x + 2},${y + 1} h7 l3,3 v9 h-10 z M${x + 9},${y + 1} v3 h3 M${x + 4.5},${y + 7} h5 M${x + 4.5},${y + 10} h5`, class: 'ico' }, g); },
-    check: (g, x, y) => { el('path', { d: `M${x + 2.5},${y + 7.5} l3,3 l6,-7`, class: 'ico' }, g); },
-    chat: (g, x, y) => { el('path', { d: `M${x + 2},${y + 2} h10 v7 h-5.5 l-2.5,2.5 v-2.5 h-2 z`, class: 'ico' }, g); },
-    box: (g, x, y) => { el('path', { d: `M${x + 2},${y + 4} l5,-2.5 l5,2.5 v6.5 l-5,2.5 l-5,-2.5 z M${x + 2},${y + 4} l5,2.5 l5,-2.5 M${x + 7},${y + 6.5} v6.5`, class: 'ico' }, g); },
+  // A frame: no fill, its title knocked into the top line, an optional note after it.
+  const frame = (x, y, w, h, title, note) => {
+    el('rect', { x, y, width: w, height: h, rx: 2, class: 'frame' });
+    const g = el('g');
+    const t = txt(g, x + 16, y + 4.5, title, 'ftitle');
+    let end = x + 16 + t.getComputedTextLength();
+    if (note) { const n = txt(g, end + 10, y + 4, note, 'mono dim'); end = end + 10 + n.getComputedTextLength(); }
+    svg.insertBefore(el('rect', { x: x + 10, y: y - 8, width: end - x - 4, height: 16, class: 'knock' }), g);
   };
-
-  const zone = (x, y, w, h, title, note) => {
-    el('rect', { x, y, width: w, height: h, rx: 8, class: 'zone' });
-    const t = txt(svg, x + 12, y + 20, title, 'ztitle');
-    if (note) txt(svg, x + 12 + title.length * 7.2 + 8, y + 20, note, 'mono dim');
-  };
-  // A card: a title, up to two more lines (a string is sans, {m: '...'} is mono), an optional tab naming a package.
+  // A card: an optional overline (the package a grey card is), a title, then lines; a string line is
+  // sans, {m: '...'} is mono.
   const card = (x, y, w, h, title, lines = [], o = {}) => {
     const g = el('g');
-    el('rect', { x, y, width: w, height: h, rx: 5, class: `card ${o.cls ?? ''}` }, g);
-    let tx = x + 10;
-    if (o.icon) { icons[o.icon](g, tx - 2, y + 8); tx += 18; }
-    txt(g, tx, y + 17, title, o.tcls ?? 'title');
+    el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${o.pkg ? 'pkg' : ''}` }, g);
+    if (o.hatch) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
+    const halo = o.hatch ? ' halo' : '';
+    let ty = y + 19;
+    if (o.pkg) { txt(g, x + 12, y + 17, o.pkg, 'over'); ty = y + 34; }
+    txt(g, x + 12, ty, title, (o.tcls ?? 'title') + halo);
     lines.forEach((line, i) => {
-      const y1 = y + 31 + i * 13;
-      if (typeof line === 'string') txt(g, tx, y1, line, 'sub'); else txt(g, tx, y1, line.m, `mono dim ${line.cls ?? ''}`);
+      const y1 = ty + 16 + i * 15;
+      if (typeof line === 'string') txt(g, x + 12, y1, line, 'sub' + halo); else txt(g, x + 12, y1, line.m, 'mono dim' + halo);
     });
-    if (o.tab) {
-      const tw = o.tab.length * 5 + 12;
-      el('rect', { x: x + w - tw - 8, y: y - 8, width: tw, height: 15, rx: 7.5, class: 'tab' }, g);
-      txt(g, x + w - 8 - tw / 2, y + 3, o.tab, 'tabtext', { 'text-anchor': 'middle' });
-    }
     return g;
   };
   const edge = (d, o = {}) => {
-    const p = el('path', { d, class: `edge ${o.cls ?? ''}`, 'marker-end': `url(#${o.marker ?? 'arrow'})` });
-    if (o.label) { const [lx, ly] = o.label.at; txt(svg, lx, ly, o.label.text, o.label.cls ?? 'elabel', { 'text-anchor': o.label.anchor ?? 'middle' }); }
-    return p;
+    const cls = o.cls ?? '';
+    const marker = cls.includes('gov') ? 'arrowGov' : cls.includes('raw') ? 'arrowRaw' : 'arrow';
+    el('path', { d, class: `edge ${cls}`, 'marker-end': `url(#${marker})` });
+    if (o.label) {
+      const [lx, ly] = o.label.at;
+      txt(svg, lx, ly, o.label.text, `elabel ${o.label.mono ? 'mono' : ''} ${cls.includes('gov') ? 'gov' : cls.includes('raw') ? 'raw' : ''}`, { 'text-anchor': o.label.anchor ?? 'middle' });
+    }
   };
 
-  // ---- build time: the dbt project
-  zone(28, 36, 832, 170, 'dbt project', 'build time · make dbt-catalog · make agent-warehouse');
-  card(40, 72, 172, 44, 'semantic YAML', ['models/silver · models/semantic'], { icon: 'doc' });
-  card(232, 72, 170, 44, 'dbt parse', [{ m: 'manifest · semantic_manifest' }], { cls: 'pkg', tab: 'dbt-core' });
-  card(424, 72, 180, 44, 'build_catalog.py', [{ m: 'explain() → SQL · dimensions' }], { tab: 'metricflow' });
-  card(626, 58, 160, 30, 'data agent context', [], { tcls: 'title' });
-  card(626, 96, 160, 30, 'agent.json', [], { tcls: 'mono' });
-  card(40, 132, 362, 44, 'checks on parse', [{ m: 'check_standard · check_catalog · matches_metric' }], { icon: 'check' });
-  card(424, 132, 180, 44, 'agent_warehouse', [{ m: 'macro · adapter.dispatch' }]);
-  edge('M212,94 H232');
-  edge('M402,94 H424');
-  edge('M604,94 H614 V73 H626');
-  edge('M604,94 H614 V111 H626');
-  edge('M604,154 H902', { label: { text: 'dbt run-operation', at: [753, 148] } });
+  // ---- the caller, outside the pod
+  card(24, 74, 112, 52, 'caller', [{ m: 'adk web, curl' }]);
+  edge('M136,92 H200', { label: { text: 'asks', at: [160, 86] } });
+  edge('M200,112 H136', { label: { text: 'answer', at: [160, 128] } });
 
-  // ---- run time: the agent pod
-  zone(28, 226, 832, 340, 'semantic agent pod', 'adk api_server · initContainer: dbt parse → build_catalog.py, into target/');
-  card(40, 270, 165, 52, 'ADK runtime', ['Runner · sessions · events'], { cls: 'pkg', tab: 'google.adk' });
-  el('rect', { x: 40, y: 334, width: 165, height: 26, rx: 4, class: 'card ghost' });
-  txt(svg, 122, 351, 'agent_sessions · metadata DB', 'mono dim xs', { 'text-anchor': 'middle' });
-  edge('M120,322 V334');
-  const ag = card(235, 270, 190, 86, 'semantic_agent', [{ m: 'agent.py · LlmAgent' }], { icon: 'chat', tab: 'google.adk' });
-  [['model = build_model()', 316], ['tools = 3 × FunctionTool', 329], ['after_tool_callback', 342], ['on_model_error_callback', 355]].forEach(([s, y]) => {
-    txt(ag, 263, y - 4, s, `mono ${s.includes('callback') ? '' : 'dim'}`).style.fill = s.includes('callback') ? 'var(--metrics)' : '';
-  });
-  card(465, 270, 170, 86, 'model.py', [{ m: 'LiteLlm | Gemini' }, 'retries · timeout', 'a failure → an answer'], { cls: 'seam', tab: 'google.adk' });
-  card(665, 270, 180, 52, 'model API', [{ m: 'OpenRouter :free · Gemini' }], { cls: 'ghost' });
-  card(40, 380, 165, 64, 'audit.py', [{ m: 'insert as agent_audit' }, 'unwritable → result withheld'], { cls: '' });
-  card(235, 380, 190, 64, 'tools.py', [{ m: 'list_metrics · describe_metric' }, { m: 'query_metrics' }]);
-  card(465, 380, 180, 64, 'metrics.py', [{ m: 'Catalog · MetricQuery' }, { m: '→ MetricFlowQueryRequest' }], { tab: 'metricflow' });
-  card(665, 380, 180, 64, 'MetricFlowEngine', ['set up as the mf CLI does', { m: 'query() · explain()' }], { cls: 'pkg seam', tab: 'metricflow' });
-  card(235, 470, 190, 52, 'freshness.py', ['ledger → one statement'], { icon: 'box' });
+  // ---- the pod: three columns, top to bottom in the order a question travels
+  frame(184, 32, 700, 412, 'semantic-agent pod', 'adk api_server');
+  card(200, 68, 164, 72, 'Runner', [{ m: 'sessions, events' }], { pkg: 'google.adk' });
+  card(396, 68, 220, 72, 'semantic_agent', [{ m: 'agent.py' }, { m: 'LlmAgent, 3 tools' }]);
+  card(648, 68, 216, 72, 'model.py', [{ m: 'MODEL_BACKEND' }, { m: 'on_model_error_callback' }]);
+  edge('M364,100 H396');
+  edge('M616,100 H648');
+  edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
 
-  edge('M205,296 H235');
-  edge('M425,309 H465', { cls: 'hook', marker: 'arrowM' });
-  edge('M425,348 H465', { cls: 'hook', marker: 'arrowM' });
-  edge('M330,356 V380', { cls: 'hook', marker: 'arrowM' });
-  edge('M235,335 H222 V370 H120 V380', { cls: 'hook', marker: 'arrowM' });
-  edge('M635,296 H665');
-  edge('M425,412 H465');
-  edge('M645,412 H665', { cls: 'hook', marker: 'arrowM' });
-  edge('M330,444 V470');
-  edge('M845,412 H902', { cls: 'reads hook', marker: 'arrowM', label: { text: 'SQL', at: [873, 406] } });
-  edge('M425,496 H902', { cls: 'reads hook', marker: 'arrowM' });
-  edge('M120,444 V540 H902');
+  // the audit gate: every tool result passes through it on its way back to the agent
+  card(456, 168, 160, 56, 'audit.py', ['no row, no result']);
+  edge('M420,140 V252');
+  edge('M536,252 V224');
+  edge('M536,168 V140', { label: { text: 'after_tool_callback', at: [548, 158], anchor: 'start', mono: true } });
+  edge('M616,196 H924', { label: { text: 'insert', at: [770, 190] } });
 
-  // ---- the warehouse
-  zone(890, 36, 282, 600, 'warehouse');
-  icons.db(svg, 1140, 46);
-  card(902, 132, 258, 44, 'roles', [{ m: 'agent_metrics · agent_sql · agent_audit' }], { cls: 'seam' });
-  txt(svg, 902, 196, 'each agent gets a read-only role;', 'sub');
-  txt(svg, 902, 208, 'the audit writer may only insert', 'sub');
-  card(902, 392, 258, 40, 'silver · semantic', [{ m: 'read as agent_metrics' }]);
-  card(902, 476, 258, 40, 'ops.readiness · product_deadlines', [{ m: 'read as agent_metrics' }]);
-  card(902, 520, 258, 40, 'ops.agent_queries', [{ m: 'one row per query, as agent_audit' }]);
-  card(902, 580, 258, 40, 'gold · exposed', [{ m: 'read as agent_sql' }]);
+  // the toolset, which the work platform replaces
+  el('rect', { x: 384, y: 240, width: 492, height: 184, rx: 2, class: 'phantom' });
+  const pl = txt(svg, 860, 244.5, 'at work: DataAgentToolset', 'mono', { 'text-anchor': 'end' });
+  const plw = pl.getComputedTextLength();
+  svg.insertBefore(el('rect', { x: 860 - plw - 6, y: 236, width: plw + 12, height: 16, class: 'knock' }), pl);
+  card(396, 256, 220, 80, 'tools.py', [{ m: 'list_metrics' }, { m: 'describe_metric' }, { m: 'query_metrics' }]);
+  card(648, 256, 216, 56, 'freshness.py', ['the sentence the answer quotes']);
+  card(396, 348, 220, 64, 'metrics.py', ['checks a request against', 'the catalog']);
+  card(648, 348, 216, 64, 'MetricFlowEngine', ['compiles the SQL'], { pkg: 'metricflow' });
+  edge('M616,284 H648');
+  edge('M506,336 V348');
+  edge('M616,380 H648');
+  edge('M864,284 H924', { cls: 'reads gov' });
+  edge('M864,380 H924', { cls: 'reads gov', label: { text: 'SQL', at: [897, 374] } });
 
-  // ---- the eval
-  zone(28, 600, 832, 100, 'eval', 'make agent-eval · both agents in-process, same model, same questions');
-  card(40, 636, 270, 52, 'evaluation.py', [{ m: 'answer_correct · metric_choice · freshness_quoted', cls: 'xs' }]);
-  card(330, 636, 170, 52, 'LocalEvalService', ['runs both agents'], { cls: 'pkg', tab: 'google.adk' });
-  card(520, 636, 230, 52, 'sql_baseline', [{ m: 'execute_sql · never deployed' }]);
-  edge('M310,662 H330');
-  edge('M500,662 H520');
-  edge('M750,662 H875 V600 H902', { cls: 'reads sql', marker: 'arrowS' });
+  // the initContainer: the catalog the toolset reads, built for the database the pod reads
+  frame(192, 168, 172, 260, 'initContainer');
+  card(200, 188, 152, 64, 'dbt parse', [{ m: 'manifests' }], { pkg: 'dbt-core' });
+  card(200, 272, 152, 52, 'build_catalog.py', ["MetricFlow's engine"]);
+  card(200, 344, 152, 72, 'target/', [{ m: 'agent.json' }, { m: 'semantic_manifest' }]);
+  edge('M276,252 V272');
+  edge('M276,324 V344');
+  edge('M352,380 H396');
+
+  // ---- outside the cluster
+  frame(900, 16, 276, 556, 'outside the cluster');
+  card(916, 28, 244, 40, 'metadata DB', [], {});
+  txt(svg, 1148, 47, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
+  card(916, 76, 244, 66, 'the model', [{ m: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], { hatch: true });
+  edge('M864,100 H916');
+
+  frame(908, 160, 260, 404, 'warehouse', 'IAM at work');
+  el('rect', { x: 916, y: 172, width: 244, height: 64, rx: 2, class: 'role' }).style.stroke = 'var(--muted)';
+  card(924, 178, 228, 36, 'ops.agent_queries', [], { tcls: 'mono' });
+  txt(svg, 1152, 228, 'agent_audit: insert only', 'mono dim', { 'text-anchor': 'end' });
+  el('rect', { x: 916, y: 252, width: 244, height: 168, rx: 2, class: 'role gov' });
+  card(924, 258, 228, 52, 'ops.readiness', [{ m: 'ops.product_deadlines' }], { tcls: 'mono' });
+  card(924, 360, 228, 40, 'silver, semantic', [], { tcls: 'mono' });
+  txt(svg, 1152, 338, 'agent_metrics: read-only', 'mono', { 'text-anchor': 'end' }).style.fill = 'var(--gov)';
+  el('rect', { x: 916, y: 484, width: 244, height: 68, rx: 2, class: 'role raw' });
+  card(924, 492, 228, 40, 'gold, exposed', [], { tcls: 'mono' });
+  txt(svg, 1152, 546, 'agent_sql: read-only', 'mono', { 'text-anchor': 'end' }).style.fill = 'var(--raw)';
+
+  // ---- the eval, in-process
+  frame(24, 468, 860, 104, 'eval', 'make agent-eval, in-process');
+  card(40, 492, 196, 64, 'evaluation.py', ['three custom metrics']);
+  card(268, 492, 196, 64, 'LocalEvalService', ['runs both agents'], { pkg: 'google.adk' });
+  card(496, 492, 260, 64, 'sql_baseline', ['reuses model.py, audit.py, the catalog']);
+  edge('M236,524 H268');
+  edge('M464,524 H496');
+  edge('M384,492 V444', { label: { text: 'runs semantic_agent', at: [392, 460], anchor: 'start' } });
+  edge('M756,512 H924', { cls: 'reads raw', label: { text: 'execute_sql', at: [836, 506], mono: true } });
 
   // ---- legend
-  const ly = 722;
-  const li = (x, draw, label) => { draw(x); txt(svg, x + 40, ly + 3.5, label, 'elabel'); };
-  li(28, x => el('rect', { x, y: ly - 7, width: 30, height: 14, rx: 3, class: 'card' }), 'this repo');
-  li(110, x => el('rect', { x, y: ly - 7, width: 30, height: 14, rx: 3, class: 'card pkg' }), 'a package');
-  li(200, x => el('rect', { x, y: ly - 7, width: 30, height: 14, rx: 3, class: 'card seam' }), 'swapped at work: Gemini, DataAgentToolset, IAM');
-  li(480, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge hook', 'marker-end': 'url(#arrowM)' }), 'a hook the package offers');
-  li(650, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow)' }), 'reads');
-  li(730, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge', 'marker-end': 'url(#arrow)' }), 'writes');
-})();
+  const ly = 596;
+  const li = (x, draw, label) => { draw(x); txt(svg, x + 40, ly + 4, label, 'sub'); };
+  li(24, x => el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card' }), "this repo's code");
+  li(176, x => el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card pkg' }), 'a package');
+  li(300, x => { el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card' }); el('rect', { x: x + 0.5, y: ly - 7.5, width: 29, height: 15, fill: 'url(#hatch)' }); }, 'the model: the only part that is not code');
+  li(620, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'phantom' }), 'replaced at work');
+  li(780, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge', 'marker-end': 'url(#arrow)' }), 'calls, writes');
+  li(924, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow)' }), 'reads');
+});
 </script>
 </body>
 </html>

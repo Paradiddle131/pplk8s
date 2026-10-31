@@ -14,7 +14,7 @@ Every calculated field is defined once, every answer carries its freshness, and 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/semantic-track-dark.png">
-  <img width="2400" height="1160" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, generates the agent catalog and a BigQuery data agent's context; the ADK agent answers through MetricFlow over the semantic layer with freshness from the ops ledger, a text-to-SQL baseline reads the public tier, and adk eval scores both" src="assets/semantic-track.png">
+  <img width="2400" height="1144" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, and its generator writes the agent catalog and, for work, a BigQuery data agent's context; the ADK agent answers an analyst through MetricFlow over the semantic layer, read as agent_metrics, with freshness from the ops ledger, where it also writes its audit; in the eval, run in-process, a text-to-SQL baseline reads the public tier as agent_sql and adk eval scores both" src="assets/semantic-track.png">
 </picture>
 
 | Here | On GCP |
