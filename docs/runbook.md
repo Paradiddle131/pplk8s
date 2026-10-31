@@ -662,6 +662,11 @@ Observed (2026-10-31, without the cluster: `make source-freshness-check` against
 - `synthetic_orders` 40 h old recorded `error` with its age, `synthetic_leads` 30 h old `warn`, a dropped `tlc_green` `runtime error`; dbt exited 1, one row per table.
 - The warehouse `sql_exporter`'s collector exported the nine verdicts and each table's newest load; the rules' promtool tests (`make rules-test`) fire `SourceStale` 2 minutes after a check records `error` and clear it on the next `pass`.
 
+Observed on the lab (2026-10-31, kind, `make workloads-up` then a Job created from the CronJob, nothing landed yet):
+
+- The Job completed although dbt exited 1, and wrote nine rows to `ops.source_freshness` in `warehouse`: the seven existing but empty tables `error`, the two TLC tables `runtime error` (not created until `tlc_monthly` first loads).
+- dbt-postgres reports an empty table's newest load as 2001-01-01, so `SourceStale` reads it as stopped about 25 years ago: on a fresh lab that means "never loaded".
+
 Detection: `SourceStale`, one alert per table, labelled `source`, `table` and `status`; its value is the age of the table's newest row ("could not be checked" for a `runtime error`).
 `SourceFreshnessNotChecked` fires when no verdict has landed for two hours: the CronJob is suspended, its Jobs fail (`kubectl -n workloads get jobs -l pplk8s/stage=source-freshness`), or the dbt image is missing; until it clears, `SourceStale` shows the last verdict.
 Both come from the warehouse's `sql_exporter` (`ops_source_freshness_checked_timestamp_seconds`, `ops_source_max_loaded_at_seconds`); if that exporter is gone, `AirflowReadinessMetricsMissing` fires instead.
