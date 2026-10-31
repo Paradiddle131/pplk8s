@@ -3,7 +3,7 @@
 The "ADK schema-driven" pattern (semantic/PLAN.md SL-5): the agent is told which tables exist and
 infers their columns and the SQL itself, with no semantic guardrails. The database enforces the
 scope: the lab's `agent_sql` role may only read `gold`, `exposed` and their `information_schema`
-rows, and every statement runs read-only under a timeout.
+rows, and every call runs one statement, read-only under a timeout.
 
 Env: `WAREHOUSE_SQL_URL` (default the Compose warehouse as `agent_sql`, database `DBT_DBNAME`).
 """
@@ -65,7 +65,9 @@ def execute_sql(sql: str) -> dict[str, Any]:
             conn.read_only = True
             with conn.cursor() as cursor:
                 cursor.execute("SET LOCAL statement_timeout = '10s'")
-                cursor.execute(sql.strip().rstrip(";"))  # type: ignore[arg-type]
+                # The extended protocol (prepare) refuses a second statement, which could
+                # otherwise end the read-only transaction or lift the timeout.
+                cursor.execute(sql.strip().rstrip(";"), prepare=True)  # type: ignore[arg-type]
                 if cursor.description is None:
                     return {"error": "the statement returned no rows; send a SELECT"}
                 columns = [c.name for c in cursor.description]
