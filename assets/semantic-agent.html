@@ -10,13 +10,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap">
 <style>
 /* One level below assets/semantic-track.html: the semantic agent's code (services/semantic-agent/src), in
-   the order a question travels, top to bottom. A drafting sheet (the drafting-sheet kit in claude-dotfiles:
+   the order a question travels, top to bottom. Drawn with the draw-architecture kit (claude-dotfiles:
    its CSS, API and logos sit between the sheet: markers, refreshed by its bin/build.cjs and checked by its
    bin/check.cjs). On this sheet cobalt is what the agent reads as agent_metrics, vermilion what the
    text-to-SQL baseline reads as agent_sql; the chain line is what the work platform replaces; the hatched
    card is the model, the one part that is not code. */
 /* sheet:css */
-/* drafting-sheet: the sheet's tokens and classes. bin/build.cjs inlines this file into each diagram
+/* draw-architecture: the sheet's tokens and classes. bin/build.cjs inlines this file into each diagram
    between the sheet:css markers; edit it here, never in a copy. */
 :root {
   --paper: #fbfbf9;
@@ -166,7 +166,7 @@ const LOGOS = window.LOGOS = {
 };
 /* /sheet:logos */
 /* sheet:js */
-/* drafting-sheet: the drawing API. bin/build.cjs inlines this file into each diagram between the
+/* draw-architecture: the drawing API. bin/build.cjs inlines this file into each diagram between the
    sheet:js markers; edit it here, never in a copy. SKILL.md documents the calls. */
 function Sheet(svg, opt = {}) {
   const NS = 'http://www.w3.org/2000/svg';
@@ -214,7 +214,7 @@ function Sheet(svg, opt = {}) {
     const box = el('svg', { width: LOGO, height: LOGO, viewBox: '0 0 24 24', class: 'logo', 'data-slot': slot }, parent);
     const set = () => {
       const now = pick(id);
-      if (now && !logos[now]) throw new Error(`drafting-sheet: no logo "${now}" in the registry`);
+      if (now && !logos[now]) throw new Error(`draw-architecture: no logo "${now}" in the registry`);
       // both copies are drawn; the sheet's CSS shows the colour one, or the one-ink copy in a theme where
       // the registry measured the colours as not reading against the card
       box.innerHTML = now ? `<g class="lc">${logos[now].body}</g><g class="lm">${logos[now].mono}</g>` : '';
