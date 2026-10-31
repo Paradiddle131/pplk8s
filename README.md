@@ -7,7 +7,7 @@ Every managed GCP service has a local stand-in; all data is public or synthetic.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/platform-dark.png">
-    <img width="2400" height="2344" alt="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines, and PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project is in both the dbt and the agent images: the semantic agent pod's initContainer parses it into the catalog, the LlmAgent asks the model for a tool, its metric tools query MetricFlow as agent_metrics and quote freshness from the readiness ledger, and every result passes the audit gate into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana; the eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql; an analyst asks the agent" src="assets/platform.png">
+    <img width="1200" alt="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines, and PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project is in both the dbt and the agent images: the semantic agent pod's initContainer parses it into the catalog, the LlmAgent asks the model for a tool, its metric tools query MetricFlow as agent_metrics and quote freshness from the readiness ledger, and every result passes the audit gate into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana; the eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql; an analyst asks the agent" src="assets/platform.png">
 </picture>
 
 Its source, with a switch to the GCP names, is [`assets/platform.html`](assets/platform.html); the semantic agent's code is drawn one level down, in [its README](services/semantic-agent/README.md#how-it-is-built).
@@ -67,7 +67,7 @@ Everything else on this page is the Airflow lab.
 | Observability | kube-prometheus-stack, StatsD and SQL exporters, ~30 alert rules, Grafana dashboard |
 | Platform | Kubernetes 1.36 (kind), local registry, Docker Compose for the out-of-cluster services |
 
-<img width="1929" height="2102" alt="k9s: all pods running across the airflow, keda, monitoring and workloads namespaces" src="https://github.com/user-attachments/assets/c9603099-4f1d-47b8-adfe-a0ff00d8fff2" />
+<img width="1929" alt="k9s: all pods running across the airflow, keda, monitoring and workloads namespaces" src="https://github.com/user-attachments/assets/c9603099-4f1d-47b8-adfe-a0ff00d8fff2" />
 
 ## Prerequisites
 
