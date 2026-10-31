@@ -2,8 +2,9 @@
 
 At work `DataAgentToolset.ask_data_agent` fills this seam; here MetricFlow does. Every tool returns
 a dict, and a request the semantic layer cannot answer comes back as `{"error": ...}` for the model
-to read, never as an exception that ends the turn. Every query result carries the freshness of its
-metrics' data (SL-4), with the sentence the answer quotes.
+to read, never as an exception that ends the turn. A query result names the metrics it ran; the
+agent's after-tool callback (guard.py), not this toolset, attaches their freshness (SL-4) and
+audits the call (SL-10), so both survive a swap of the toolset (#177).
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from __future__ import annotations
 from functools import cache
 from typing import Any
 
-from semantic_agent.freshness import freshness
 from semantic_agent.metrics import Catalog, Filter, MetricQuery, QueryError, run
 
 
@@ -81,8 +81,8 @@ def query_metrics(
     limit: int | None = None,
     saved_query: str | None = None,
 ) -> dict[str, Any]:
-    """Computes metrics through the semantic layer and returns their rows, the SQL it ran, and
-    how fresh their data is: quote `freshness.statement` in the answer.
+    """Computes metrics through the semantic layer and returns their rows, the SQL it ran, the
+    metrics it computed, and how fresh their data is: quote `freshness.statement` in the answer.
 
     Args:
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
@@ -114,10 +114,13 @@ def query_metrics(
         names = query.resolved_metrics(catalog())
     except QueryError as e:
         return {"error": str(e)}
-    products = sorted({p for name in names for p in catalog().metric(name).get("readiness", [])})
-    # A saved query's metrics are not in the call's arguments, so the result names them (the audit).
-    named = {"metrics": names} if saved_query is not None else {}
-    return {**result, **named, "freshness": freshness(products)}
+    # A saved query's metrics are not in the call's arguments, so the result names them: the
+    # metrics its freshness is looked up for and its audit row holds.
+    return {**result, "metrics": names}
 
 
 TOOLS = [list_metrics, describe_metric, query_metrics]
+
+CATALOG_TOOLS = ("list_metrics", "describe_metric")
+"""The tools that read only the catalog; every other tool is a data tool, audited and given its
+metrics' freshness. At work: `list_accessible_data_agents` and `get_data_agent_info`."""

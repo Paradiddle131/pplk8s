@@ -1,11 +1,11 @@
 """One audit row per data query an agent runs (semantic/PLAN.md SL-10).
 
-Both agents set `audit_tool_call` as ADK's `after_tool_callback`, so the tools stay as they are and
-every `query_metrics` and `execute_sql` call, answered or refused, lands in `ops.agent_queries`:
-which agent, user, session and call; the metrics, filters and dates or the SQL; the rows returned;
-the freshness statement; the error. The row is written as `agent_audit`, a role that may only
-insert into that table, never as the agent's own read role: the baseline runs whatever SQL its
-model writes, so a role that could write the audit could also forge it.
+Both agents' `after_tool_callback` (guard.py) calls `audit` for every call to a data tool, every
+tool but the catalog ones, so the tools stay as they are and each call, answered or refused, lands
+in `ops.agent_queries`: which agent, user, session and call; the metrics, filters and dates or the
+SQL; the rows returned; the freshness statement; the error. The row is written as `agent_audit`,
+a role that may only insert into that table, never as the agent's own read role: the baseline runs
+whatever SQL its model writes, so a role that could write the audit could also forge it.
 
 An audit that cannot be written withholds the result: the model gets an error instead of rows.
 
@@ -19,11 +19,8 @@ import os
 from typing import Any
 
 import psycopg
-from google.adk.tools import BaseTool, ToolContext
+from google.adk.tools import ToolContext
 from psycopg.types.json import Jsonb
-
-AUDITED = ("query_metrics", "execute_sql")
-"""The tools that read the warehouse; listing and describing metrics read only the catalog."""
 
 SQL = """
 insert into ops.agent_queries (
@@ -79,15 +76,12 @@ def record(row: dict[str, Any]) -> None:
         conn.execute(SQL, params)
 
 
-def audit_tool_call(
-    tool: BaseTool, args: dict[str, Any], tool_context: ToolContext, tool_response: Any
+def audit(
+    tool: str, args: dict[str, Any], tool_context: ToolContext, response: dict[str, Any]
 ) -> dict[str, Any] | None:
-    """ADK's after_tool_callback: audits a data query, and withholds its result if it can't."""
-    if tool.name not in AUDITED:
-        return None
-    response = tool_response if isinstance(tool_response, dict) else {}
+    """Audits one data call; returns the error that withholds its result when it cannot."""
     try:
-        record(audit_row(tool.name, args, tool_context, response))
+        record(audit_row(tool, args, tool_context, response))
     except psycopg.Error as e:
         reason = str(e).strip().splitlines()[0]
         return {
