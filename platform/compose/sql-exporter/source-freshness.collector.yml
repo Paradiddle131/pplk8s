@@ -1,0 +1,28 @@
+# Source freshness (#130, semantic/PLAN.md SL-12): the verdict `dbt source freshness` last recorded per
+# landed table in ops.source_freshness (dbt/macros/source_freshness.sql), written by the source-freshness
+# CronJob. The thresholds stay in dbt/models/sources.yml; SourceStale fires on the status dbt gave, and
+# SourceFreshnessNotChecked when no check has been recorded for two hours.
+# Before the first check the table is empty (`make services-up` creates it) and both series are absent.
+collector_name: source_freshness
+
+queries:
+  - query_name: source_freshness
+    query: |
+      SELECT source_name AS source, table_name AS "table", status,
+             coalesce(extract(epoch FROM max_loaded_at), 0) AS loaded,
+             extract(epoch FROM checked_at) AS checked
+      FROM ops.source_freshness
+
+metrics:
+  - metric_name: ops_source_freshness_checked_timestamp_seconds
+    type: gauge
+    help: "When dbt source freshness last checked a landed table; status is dbt's verdict (pass, warn, error, runtime error)."
+    key_labels: [source, table, status]
+    values: [checked]
+    query_ref: source_freshness
+  - metric_name: ops_source_max_loaded_at_seconds
+    type: gauge
+    help: "The newest _loaded_at dbt source freshness found in a landed table; 0 if it could not be checked."
+    key_labels: [source, table]
+    values: [loaded]
+    query_ref: source_freshness

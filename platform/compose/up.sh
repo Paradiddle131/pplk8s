@@ -45,6 +45,10 @@ docker compose exec -T -e PGOPTIONS="-c client_min_messages=warning" warehouse p
 # builds (dbt/macros/agent_warehouse.sql, semantic/PLAN.md SL-10); after 01, whose ledger they grant.
 make -s -C ../.. agent-warehouse DBT_DBNAME=warehouse >/dev/null
 echo "warehouse: the semantic agent's roles and audit table ready"
+# The table the source-freshness CronJob fills (#130), there before its first run so the warehouse
+# sql_exporter's source_freshness query always has a table to read (dbt/macros/source_freshness.sql).
+make -s -C ../.. source-freshness-table DBT_DBNAME=warehouse >/dev/null
+echo "warehouse: ops.source_freshness ready"
 
 # The semantic agent's ADK sessions (semantic/PLAN.md SL-2): their own database and owner on the
 # metadata DB's instance, as a second database on the same Cloud SQL instance would be.

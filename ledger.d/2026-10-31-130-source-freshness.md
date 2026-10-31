@@ -1,0 +1,6 @@
+## 2026-10-31 — Semantic track U3 — a landed source that stops flowing raises SourceStale (#130)
+
+- Done: every `ds_source` table declares `loaded_at_field: _loaded_at` and freshness thresholds in `dbt/models/sources.yml` (daily synthetic tables 26 h / 36 h, partner returns 48 h / 72 h, TLC 35 / 62 days, Open-Meteo none, being loaded by hand). The dbt project's `on-run-end` hook (`dbt/macros/source_freshness.sql`) acts only after `dbt source freshness` and replaces each table's row in `ops.source_freshness` with dbt's verdict; `make services-up` creates the table (`make source-freshness-table`). A CronJob `source-freshness` in `workloads` runs it hourly on the dbt image, exiting 0 when dbt only reports stale sources so a stale source is not also `KubeJobFailed`. The warehouse `sql_exporter` gains a `source_freshness` collector, and `airflow-rules.yaml` the alerts `SourceStale` (on `error` or `runtime error`) and `SourceFreshnessNotChecked` (no verdict for two hours). Runbook entry 13, the BigQuery mapping row, `make source-freshness-check`. dbt 0.7.17, semantic-agent 0.1.15.
+- Evidence: see the PR body.
+- Decisions: semantic/PLAN.md SL-12 (owner's choice A on #130: a CronJob on the dbt image, no DAG).
+- Open: the CronJob's first run on the laptop's lab (the PR's local checklist).

@@ -1,6 +1,7 @@
 # Everything in the workloads namespace: the Cloud Run stand-ins (EL Factory, dbt, the semantic agent) and the Eventarc stand-in (event adapter).
-# Apply through workloads-up.sh, never `kubectl apply -k` here: the Deployments name placeholder images
-# (el-factory, event-adapter, semantic-agent) that its overlay maps to ELF_IMAGE, ADAPTER_IMAGE and AGENT_IMAGE from the Makefile (D16).
+# Apply through workloads-up.sh, never `kubectl apply -k` here: the Deployments and the CronJob name placeholder images
+# (el-factory, event-adapter, semantic-agent, dbt) that its overlay maps to ELF_IMAGE, ADAPTER_IMAGE, AGENT_IMAGE and
+# DBT_IMAGE from the Makefile (D16).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -18,6 +19,7 @@ resources:
   - semantic-agent-configmap.yaml
   - semantic-agent-deployment.yaml
   - semantic-agent-service.yaml
+  - source-freshness-cronjob.yaml
 
 secretGenerator:
   - name: warehouse-credentials
