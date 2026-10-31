@@ -5,7 +5,12 @@
 Apache Airflow 3 on Kubernetes, orchestrating a GCP-style ELT platform on one machine.
 Every managed GCP service has a local stand-in; all data is public or synthetic.
 
-<img width="2318" height="1250" alt="Architecture: Airflow, workloads and monitoring namespaces in the cluster; metadata DB, Pub/Sub, object storage and warehouse outside it" src="https://github.com/user-attachments/assets/ccacd37d-60c0-47dd-a4ca-8f621519c2c4" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/platform-dark.png">
+  <img width="2400" height="1384" alt="The whole lab. Inside one kind cluster: the airflow namespace (scheduler and triggerer pairs, Celery workers scaled by KEDA, the api-server, the dag-processor syncing DAGs from GitHub, PgBouncer in front of the metadata DB); the workloads namespace, the Cloud Run stand-ins (the semantic agent, which asks the model and reads the semantic layer as agent_metrics through MetricFlow; EL Factory, which Airflow calls to stage files and load the source tables; the dbt job pods Airflow launches to build the layers; the event adapter, which turns object notifications from Pub/Sub into DAG runs); and the monitoring namespace (Prometheus, Alertmanager, Grafana). Outside the cluster, the managed-service stand-ins: the metadata DB, the image registry, Pub/Sub, object storage and the warehouse. An analyst asks the agent" src="assets/platform.png">
+</picture>
+
+Its source, with a switch to the GCP names, is [`assets/platform.html`](assets/platform.html); [the second track](#second-track-a-semantic-layer-and-a-metrics-agent) goes one level down.
 
 ## Second track: a semantic layer and a metrics agent
 

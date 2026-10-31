@@ -9,16 +9,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap">
 <style>
-/* One level below assets/semantic-track.html: the semantic agent's code (services/semantic-agent/src),
-   laid out in the order a question travels, top to bottom.
-
-   The sheet is a draughtsman's: black ink on paper, frames without fill whose title sits in the top line,
-   and two coloured pencils that each mean one thing: cobalt for what the agent reads as agent_metrics
-   (the governed path), vermilion for what the text-to-SQL baseline reads as agent_sql. Meaning beyond
-   that comes from drawing conventions, not colour: hatching marks the model, the one part that is not
-   code; a chain (dash-dot) line, a phantom line in drafting, marks what the work platform replaces; a
-   grey card is a package's code, a white one this repo's. Text is never smaller than 11 px, so the 2x
-   export stays legible when a README scales it down. */
+/* One level below assets/semantic-track.html: the semantic agent's code (services/semantic-agent/src), in
+   the order a question travels, top to bottom. A drafting sheet (the drafting-sheet kit in claude-dotfiles:
+   its CSS, API and logos sit between the sheet: markers, refreshed by its bin/build.cjs and checked by its
+   bin/check.cjs). On this sheet cobalt is what the agent reads as agent_metrics, vermilion what the
+   text-to-SQL baseline reads as agent_sql; the chain line is what the work platform replaces; the hatched
+   card is the model, the one part that is not code. */
+/* sheet:css */
+/* drafting-sheet: the sheet's tokens and classes. bin/build.cjs inlines this file into each diagram
+   between the sheet:css markers; edit it here, never in a copy. */
 :root {
   --paper: #fbfbf9;
   --card: #ffffff;
@@ -27,22 +26,22 @@
   --rule: #85858b;
   --hair: #cfcec9;
   --muted: #5d5d65;
-  --gov: #2f4bc4;
-  --raw: #c3421a;
+  --cobalt: #2f4bc4;
+  --vermilion: #c3421a;
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
   --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #141517; --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
-    --muted: #a6a6ae; --gov: #93a5ff; --raw: #ff8f6b;
+    --paper: rgb(20, 21, 23); --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #141517; --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
-  --muted: #a6a6ae; --gov: #93a5ff; --raw: #ff8f6b;
+  --paper: rgb(20, 21, 23); --card: #1c1d20; --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
   color-scheme: dark;
 }
 html, body { margin: 0; }
@@ -51,179 +50,370 @@ body {
   padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   min-height: 100%;
 }
-.stage { max-width: 1200px; margin: 0 auto; }
+.stage { max-width: 1200px; margin: 0 auto; display: grid; gap: 12px; }
+.bar { display: flex; justify-content: flex-end; }
+.bar:empty, .bar[hidden] { display: none; }
+.seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 2px; overflow: hidden; }
+.seg button {
+  font: 400 13px/1 var(--sans); color: var(--muted); background: var(--card); border: 0;
+  padding: 8px 16px; cursor: pointer; min-height: 32px;
+}
+.seg button + button { border-left: 1px solid var(--ink); }
+.seg button[aria-pressed="true"] { color: var(--paper); background: var(--ink); font-weight: 700; }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
 figure { margin: 0; overflow-x: auto; }
-svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
+svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
+
 .frame { fill: none; stroke: var(--rule); stroke-width: 1; }
 .knock { fill: var(--paper); }
 .card { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 .card.pkg { fill: var(--pkg); stroke: none; }
-.hatch-line { stroke: var(--hair); stroke-width: 1.2; }
+.card.behind { stroke: var(--rule); }
+.card.quiet { stroke: var(--rule); }
 .phantom { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 14 3 2 3; }
-.role { fill: none; stroke-width: 1.2; }
-.role.gov { stroke: var(--gov); }
-.role.raw { stroke: var(--raw); }
-.ftitle { font-size: 13px; font-weight: 700; fill: var(--ink); }
-.title { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.card.phantom { fill: var(--card); }
+.hatch-line { stroke: var(--hair); stroke-width: 1.2; }
+.region { fill: none; stroke-width: 1.2; stroke: var(--muted); }
+.region.cobalt { stroke: var(--cobalt); }
+.region.vermilion { stroke: var(--vermilion); }
+
+.ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
 .sub { font-size: 11px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
 .mono.dim { fill: var(--muted); }
 .over { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.cobalt-text { fill: var(--cobalt); }
+.vermilion-text { fill: var(--vermilion); }
 .halo { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+
 .edge { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.edge.thin { stroke: var(--rule); stroke-width: 1; }
 .edge.reads { stroke-dasharray: 4 3; }
-.edge.gov { stroke: var(--gov); }
-.edge.raw { stroke: var(--raw); }
+.edge.cobalt { stroke: var(--cobalt); }
+.edge.vermilion { stroke: var(--vermilion); }
 .elabel { font-size: 11px; fill: var(--muted); }
 .elabel.mono { font-family: var(--mono); }
-.elabel.gov { fill: var(--gov); }
-.elabel.raw { fill: var(--raw); }
+.mark { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.mark-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.logo { color: var(--muted); }
+/* /sheet:css */
 </style>
 </head>
 <body>
 <div class="stage">
   <figure>
-    <svg id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; freshness.py reads the readiness ledger as agent_metrics. Every result passes through audit.py, ADK's after_tool_callback, which inserts one row into ops.agent_queries as agent_audit and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; freshness.py reads the readiness ledger as agent_metrics. Every result passes through audit.py, ADK's after_tool_callback, which inserts one row into ops.agent_queries as agent_audit and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
-document.fonts.ready.then(() => {
+/* sheet:logos */
+const LOGOS = window.LOGOS = {
+ "kubernetes": {
+  "title": "Kubernetes",
+  "coverage": 0.36,
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.8143 0 0 0.8143 2.2276 2.2278)\"><path d=\"M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.779zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zm10.876 5.97l-5.773 7.181a1.6 1.6 0 0 1-1.248.594l-9.261.003a1.6 1.6 0 0 1-1.247-.596l-5.776-7.18a1.583 1.583 0 0 1-.307-1.34L2.1 5.573c.108-.47.425-.864.863-1.073L11.305.513a1.606 1.606 0 0 1 1.385 0l8.345 3.985c.438.209.755.604.863 1.073l2.062 8.955c.108.47-.005.963-.308 1.34zm-3.289-2.057c-.042-.01-.103-.026-.145-.034-.174-.033-.315-.025-.479-.038-.35-.037-.638-.067-.895-.148-.105-.04-.18-.165-.216-.216l-.201-.059a6.45 6.45 0 0 0-.105-2.332 6.465 6.465 0 0 0-.936-2.163c.052-.047.15-.133.177-.159.008-.09.001-.183.094-.282.197-.185.444-.338.743-.522.142-.084.273-.137.415-.242.032-.024.076-.062.11-.089.24-.191.295-.52.123-.736-.172-.216-.506-.236-.745-.045-.034.027-.08.062-.111.088-.134.116-.217.23-.33.35-.246.25-.45.458-.673.609-.097.056-.239.037-.303.033l-.19.135a6.545 6.545 0 0 0-4.146-2.003l-.012-.223c-.065-.062-.143-.115-.163-.25-.022-.268.015-.557.057-.905.023-.163.061-.298.068-.475.001-.04-.001-.099-.001-.142 0-.306-.224-.555-.5-.555-.275 0-.499.249-.499.555l.001.014c0 .041-.002.092 0 .128.006.177.044.312.067.475.042.348.078.637.056.906a.545.545 0 0 1-.162.258l-.012.211a6.424 6.424 0 0 0-4.166 2.003 8.373 8.373 0 0 1-.18-.128c-.09.012-.18.04-.297-.029-.223-.15-.427-.358-.673-.608-.113-.12-.195-.234-.329-.349-.03-.026-.077-.062-.111-.088a.594.594 0 0 0-.348-.132.481.481 0 0 0-.398.176c-.172.216-.117.546.123.737l.007.005.104.083c.142.105.272.159.414.242.299.185.546.338.743.522.076.082.09.226.1.288l.16.143a6.462 6.462 0 0 0-1.02 4.506l-.208.06c-.055.072-.133.184-.215.217-.257.081-.546.11-.895.147-.164.014-.305.006-.48.039-.037.007-.09.02-.133.03l-.004.002-.007.002c-.295.071-.484.342-.423.608.061.267.349.429.645.365l.007-.001.01-.003.129-.029c.17-.046.294-.113.448-.172.33-.118.604-.217.87-.256.112-.009.23.069.288.101l.217-.037a6.5 6.5 0 0 0 2.88 3.596l-.09.218c.033.084.069.199.044.282-.097.252-.263.517-.452.813-.091.136-.185.242-.268.399-.02.037-.045.095-.064.134-.128.275-.034.591.213.71.248.12.556-.007.69-.282v-.002c.02-.039.046-.09.062-.127.07-.162.094-.301.144-.458.132-.332.205-.68.387-.897.05-.06.13-.082.215-.105l.113-.205a6.453 6.453 0 0 0 4.609.012l.106.192c.086.028.18.042.256.155.136.232.229.507.342.84.05.156.074.295.145.457.016.037.043.09.062.129.133.276.442.402.69.282.247-.118.341-.435.213-.71-.02-.039-.045-.096-.065-.134-.083-.156-.177-.261-.268-.398-.19-.296-.346-.541-.443-.793-.04-.13.007-.21.038-.294-.018-.022-.059-.144-.083-.202a6.499 6.499 0 0 0 2.88-3.622c.064.01.176.03.213.038.075-.05.144-.114.28-.104.266.039.54.138.87.256.154.06.277.128.448.173.036.01.088.019.13.028l.009.003.007.001c.297.064.584-.098.645-.365.06-.266-.128-.537-.423-.608zM16.4 9.701l-1.95 1.746v.005a.44.44 0 0 0 .173.757l.003.01 2.526.728a5.199 5.199 0 0 0-.108-1.674A5.208 5.208 0 0 0 16.4 9.7zm-4.013 5.325a.437.437 0 0 0-.404-.232.44.44 0 0 0-.372.233h-.002l-1.268 2.292a5.164 5.164 0 0 0 3.326.003l-1.27-2.296h-.01zm1.888-1.293a.44.44 0 0 0-.27.036.44.44 0 0 0-.214.572l-.003.004 1.01 2.438a5.15 5.15 0 0 0 2.081-2.615l-2.6-.44-.004.005z\"/></g>"
+ },
+ "adk": {
+  "title": "Agent Development Kit",
+  "coverage": 0.317,
+  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g></g>"
+ },
+ "dbt": {
+  "title": "dbt",
+  "coverage": 0.359,
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"currentColor\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>"
+ },
+ "postgresql": {
+  "title": "PostgreSQL",
+  "coverage": 0.321,
+  "body": "<g fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"0.6154\" stroke-linejoin=\"round\" transform=\"matrix(0.975 0 0 0.975 0.3 0.3)\"><path d=\"M23.5594 14.7228a.5269.5269 0 0 0-.0563-.1191c-.139-.2632-.4768-.3418-1.0074-.2321-1.6533.3411-2.2935.1312-2.5256-.0191 1.342-2.0482 2.445-4.522 3.0411-6.8297.2714-1.0507.7982-3.5237.1222-4.7316a1.5641 1.5641 0 0 0-.1509-.235C21.6931.9086 19.8007.0248 17.5099.0005c-1.4947-.0158-2.7705.3461-3.1161.4794a9.449 9.449 0 0 0-.5159-.0816 8.044 8.044 0 0 0-1.3114-.1278c-1.1822-.0184-2.2038.2642-3.0498.8406-.8573-.3211-4.7888-1.645-7.2219.0788C.9359 2.1526.3086 3.8733.4302 6.3043c.0409.818.5069 3.334 1.2423 5.7436.4598 1.5065.9387 2.7019 1.4334 3.582.553.9942 1.1259 1.5933 1.7143 1.7895.4474.1491 1.1327.1441 1.8581-.7279.8012-.9635 1.5903-1.8258 1.9446-2.2069.4351.2355.9064.3625 1.39.3772a.0569.0569 0 0 0 .0004.0041 11.0312 11.0312 0 0 0-.2472.3054c-.3389.4302-.4094.5197-1.5002.7443-.3102.064-1.1344.2339-1.1464.8115-.0025.1224.0329.2309.0919.3268.2269.4231.9216.6097 1.015.6331 1.3345.3335 2.5044.092 3.3714-.6787-.017 2.231.0775 4.4174.3454 5.0874.2212.5529.7618 1.9045 2.4692 1.9043.2505 0 .5263-.0291.8296-.0941 1.7819-.3821 2.5557-1.1696 2.855-2.9059.1503-.8707.4016-2.8753.5388-4.1012.0169-.0703.0357-.1207.057-.1362.0007-.0005.0697-.0471.4272.0307a.3673.3673 0 0 0 .0443.0068l.2539.0223.0149.001c.8468.0384 1.9114-.1426 2.5312-.4308.6438-.2988 1.8057-1.0323 1.5951-1.6698zM2.371 11.8765c-.7435-2.4358-1.1779-4.8851-1.2123-5.5719-.1086-2.1714.4171-3.6829 1.5623-4.4927 1.8367-1.2986 4.8398-.5408 6.108-.13-.0032.0032-.0066.0061-.0098.0094-2.0238 2.044-1.9758 5.536-1.9708 5.7495-.0002.0823.0066.1989.0162.3593.0348.5873.0996 1.6804-.0735 2.9184-.1609 1.1504.1937 2.2764.9728 3.0892.0806.0841.1648.1631.2518.2374-.3468.3714-1.1004 1.1926-1.9025 2.1576-.5677.6825-.9597.5517-1.0886.5087-.3919-.1307-.813-.5871-1.2381-1.3223-.4796-.839-.9635-2.0317-1.4155-3.5126zm6.0072 5.0871c-.1711-.0428-.3271-.1132-.4322-.1772.0889-.0394.2374-.0902.4833-.1409 1.2833-.2641 1.4815-.4506 1.9143-1.0002.0992-.126.2116-.2687.3673-.4426a.3549.3549 0 0 0 .0737-.1298c.1708-.1513.2724-.1099.4369-.0417.156.0646.3078.26.3695.4752.0291.1016.0619.2945-.0452.4444-.9043 1.2658-2.2216 1.2494-3.1676 1.0128zm2.094-3.988-.0525.141c-.133.3566-.2567.6881-.3334 1.003-.6674-.0021-1.3168-.2872-1.8105-.8024-.6279-.6551-.9131-1.5664-.7825-2.5004.1828-1.3079.1153-2.4468.079-3.0586-.005-.0857-.0095-.1607-.0122-.2199.2957-.2621 1.6659-.9962 2.6429-.7724.4459.1022.7176.4057.8305.928.5846 2.7038.0774 3.8307-.3302 4.7363-.084.1866-.1633.3629-.2311.5454zm7.3637 4.5725c-.0169.1768-.0358.376-.0618.5959l-.146.4383a.3547.3547 0 0 0-.0182.1077c-.0059.4747-.054.6489-.115.8693-.0634.2292-.1353.4891-.1794 1.0575-.11 1.4143-.8782 2.2267-2.4172 2.5565-1.5155.3251-1.7843-.4968-2.0212-1.2217a6.5824 6.5824 0 0 0-.0769-.2266c-.2154-.5858-.1911-1.4119-.1574-2.5551.0165-.5612-.0249-1.9013-.3302-2.6462.0044-.2932.0106-.5909.019-.8918a.3529.3529 0 0 0-.0153-.1126 1.4927 1.4927 0 0 0-.0439-.208c-.1226-.4283-.4213-.7866-.7797-.9351-.1424-.059-.4038-.1672-.7178-.0869.067-.276.1831-.5875.309-.9249l.0529-.142c.0595-.16.134-.3257.213-.5012.4265-.9476 1.0106-2.2453.3766-5.1772-.2374-1.0981-1.0304-1.6343-2.2324-1.5098-.7207.0746-1.3799.3654-1.7088.5321a5.6716 5.6716 0 0 0-.1958.1041c.0918-1.1064.4386-3.1741 1.7357-4.4823a4.0306 4.0306 0 0 1 .3033-.276.3532.3532 0 0 0 .1447-.0644c.7524-.5706 1.6945-.8506 2.802-.8325.4091.0067.8017.0339 1.1742.081 1.939.3544 3.2439 1.4468 4.0359 2.3827.8143.9623 1.2552 1.9315 1.4312 2.4543-1.3232-.1346-2.2234.1268-2.6797.779-.9926 1.4189.543 4.1729 1.2811 5.4964.1353.2426.2522.4522.2889.5413.2403.5825.5515.9713.7787 1.2552.0696.087.1372.1714.1885.245-.4008.1155-1.1208.3825-1.0552 1.717-.0123.1563-.0423.4469-.0834.8148-.0461.2077-.0702.4603-.0994.7662zm.8905-1.6211c-.0405-.8316.2691-.9185.5967-1.0105a2.8566 2.8566 0 0 0 .135-.0406 1.202 1.202 0 0 0 .1342.103c.5703.3765 1.5823.4213 3.0068.1344-.2016.1769-.5189.3994-.9533.6011-.4098.1903-1.0957.333-1.7473.3636-.7197.0336-1.0859-.0807-1.1721-.151zm.5695-9.2712c-.0059.3508-.0542.6692-.1054 1.0017-.055.3576-.112.7274-.1264 1.1762-.0142.4368.0404.8909.0932 1.3301.1066.887.216 1.8003-.2075 2.7014a3.5272 3.5272 0 0 1-.1876-.3856c-.0527-.1276-.1669-.3326-.3251-.6162-.6156-1.1041-2.0574-3.6896-1.3193-4.7446.3795-.5427 1.3408-.5661 2.1781-.463zm.2284 7.0137a12.3762 12.3762 0 0 0-.0853-.1074l-.0355-.0444c.7262-1.1995.5842-2.3862.4578-3.4385-.0519-.4318-.1009-.8396-.0885-1.2226.0129-.4061.0666-.7543.1185-1.0911.0639-.415.1288-.8443.1109-1.3505.0134-.0531.0188-.1158.0118-.1902-.0457-.4855-.5999-1.938-1.7294-3.253-.6076-.7073-1.4896-1.4972-2.6889-2.0395.5251-.1066 1.2328-.2035 2.0244-.1859 2.0515.0456 3.6746.8135 4.8242 2.2824a.908.908 0 0 1 .0667.1002c.7231 1.3556-.2762 6.2751-2.9867 10.5405zm-8.8166-6.1162c-.025.1794-.3089.4225-.6211.4225a.5821.5821 0 0 1-.0809-.0056c-.1873-.026-.3765-.144-.5059-.3156-.0458-.0605-.1203-.178-.1055-.2844.0055-.0401.0261-.0985.0925-.1488.1182-.0894.3518-.1226.6096-.0867.3163.0441.6426.1938.6113.4186zm7.9305-.4114c.0111.0792-.049.201-.1531.3102-.0683.0717-.212.1961-.4079.2232a.5456.5456 0 0 1-.075.0052c-.2935 0-.5414-.2344-.5607-.3717-.024-.1765.2641-.3106.5611-.352.297-.0414.6111.0088.6356.1851z\"/></g>"
+ }
+};
+/* /sheet:logos */
+/* sheet:js */
+/* drafting-sheet: the drawing API. bin/build.cjs inlines this file into each diagram between the
+   sheet:js markers; edit it here, never in a copy. SKILL.md documents the calls. */
+function Sheet(svg, opt = {}) {
   const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.getElementById('d');
+  const LOGO = 14; // the one logo size on every sheet, in user units
+  const INSET = 8; // a card's logo slot: this far in from its right edge, centred on its first text row
+  const modes = opt.modes ?? [];
+  const ids = modes.map(m => m.id);
+  let mode = ids[0] ?? null;
+  const logos = opt.logos ?? {};
+  const swaps = []; // run in creation order on every mode change
+  const phantoms = []; // chain-line outlines that go solid in opt.solidIn
+
+  const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
+  const pick = v => (isModal(v) ? v[mode] : v);
   const el = (tag, attrs = {}, parent = svg) => {
     const n = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) n.setAttribute(k, v);
-    parent.appendChild(n); return n;
+    (parent ?? svg).appendChild(n);
+    return n;
   };
-  const txt = (parent, x, y, s, cls, attrs = {}) => { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; };
+  const text = (parent, x, y, s, cls, attrs = {}) => {
+    const t = el('text', { x, y, class: cls, ...attrs }, parent);
+    const set = () => { t.textContent = pick(s) ?? ''; };
+    set();
+    if (isModal(s)) swaps.push(set);
+    return t;
+  };
+  const len = t => (t.textContent ? t.getBBox().width : 0); // the glyphs' box, wider than the advance in some fonts
+
+  // A logo: a registry mark in a fixed 14-unit box, drawn only through a card's or a frame's slot.
+  const logo = (parent, id, slot) => {
+    const box = el('svg', { width: LOGO, height: LOGO, viewBox: '0 0 24 24', class: 'logo', 'data-slot': slot }, parent);
+    const set = () => {
+      const now = pick(id);
+      if (now && !logos[now]) throw new Error(`drafting-sheet: no logo "${now}" in the registry`);
+      box.innerHTML = now ? logos[now].body : '';
+      if (now) box.setAttribute('data-logo', now); else box.removeAttribute('data-logo');
+      box.style.display = now ? '' : 'none';
+    };
+    set();
+    if (isModal(id)) swaps.push(set);
+    return { box, present: () => !!pick(id) };
+  };
 
   const defs = el('defs');
-  for (const [id, cls] of [['arrow', ''], ['arrowGov', 'gov'], ['arrowRaw', 'raw']]) {
-    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
-    const p = el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m);
-    p.style.fill = cls ? `var(--${cls})` : 'var(--ink)';
+  for (const [id, color] of [['ink', 'ink'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
+    const m = el('marker', { id: `arrow-${id}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m).style.fill = `var(--${color})`;
   }
   const hatch = el('pattern', { id: 'hatch', patternUnits: 'userSpaceOnUse', width: 7, height: 7, patternTransform: 'rotate(45)' }, defs);
   el('line', { x1: 0, y1: 0, x2: 0, y2: 7, class: 'hatch-line' }, hatch);
 
-  // A frame: no fill, its title knocked into the top line, an optional note after it.
-  const frame = (x, y, w, h, title, note) => {
-    el('rect', { x, y, width: w, height: h, rx: 2, class: 'frame' });
+  // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
+  // edge: 'bottom' (a title block, for a frame that edges enter from above).
+  const frame = ({ x, y: top, w, h, title, note, logo: id, edge: side = 'top' }) => {
+    const y = side === 'bottom' ? top + h : top;
+    el('rect', { x, y: top, width: w, height: h, rx: 2, class: 'frame' });
+    const knock = el('rect', { x: x + 10, y: y - 8, height: 16, class: 'knock' });
     const g = el('g');
-    const t = txt(g, x + 16, y + 4.5, title, 'ftitle');
-    let end = x + 16 + t.getComputedTextLength();
-    if (note) { const n = txt(g, end + 10, y + 4, note, 'mono dim'); end = end + 10 + n.getComputedTextLength(); }
-    svg.insertBefore(el('rect', { x: x + 10, y: y - 8, width: end - x - 4, height: 16, class: 'knock' }), g);
+    const lg = id ? logo(g, id, 'frame') : null;
+    const t = text(g, 0, y + 4.5, title, 'ftitle');
+    const n = note ? text(g, 0, y + 4, note, 'sub') : null;
+    const fit = () => {
+      let cx = x + 16;
+      if (lg?.present()) { lg.box.setAttribute('x', cx); lg.box.setAttribute('y', y - LOGO / 2); cx += LOGO + 6; }
+      t.setAttribute('x', cx); cx += len(t);
+      if (n) { n.setAttribute('x', cx + 10); cx += 10 + len(n); }
+      knock.setAttribute('width', cx - x - 4);
+    };
+    fit(); swaps.push(fit);
   };
-  // A card: an optional overline (the package a grey card is), a title, then lines; a string line is
-  // sans, {m: '...'} is mono.
-  const card = (x, y, w, h, title, lines = [], o = {}) => {
+
+  // A card: an optional overline (the package a grey card is), a title, then lines: a string is sans,
+  // {mono: '...'} is mono; any text may be {<mode>: '...'}. The logo sits in the top-right slot.
+  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id }) => {
     const g = el('g');
-    el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${o.pkg ? 'pkg' : ''}` }, g);
-    if (o.hatch) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
-    const halo = o.hatch ? ' halo' : '';
-    let ty = y + 19;
-    if (o.pkg) { txt(g, x + 12, y + 17, o.pkg, 'over'); ty = y + 34; }
-    txt(g, x + 12, ty, title, (o.tcls ?? 'title') + halo);
+    const r = el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${pkg ? 'pkg' : ''} ${cls}` }, g);
+    if (cls.includes('phantom')) phantoms.push(r);
+    if (hatched) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
+    const halo = hatched ? ' halo' : '';
+    let ty = lines.length || pkg ? y + 19 : y + h / 2 + 4.5;
+    const row = pkg ? y + 13 : ty - 4.5; // the optical middle of the first text row
+    if (pkg) { text(g, x + 12, y + 17, pkg, 'over' + halo); ty = y + 34; }
+    text(g, x + 12, ty, title, tcls + halo);
     lines.forEach((line, i) => {
       const y1 = ty + 16 + i * 15;
-      if (typeof line === 'string') txt(g, x + 12, y1, line, 'sub' + halo); else txt(g, x + 12, y1, line.m, 'mono dim' + halo);
+      const mono = line !== null && typeof line === 'object' && 'mono' in line;
+      text(g, x + 12, y1, mono ? line.mono : line, (mono ? 'mono dim' : 'sub') + halo);
     });
-    return g;
+    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', row - LOGO / 2); }
+    return r;
   };
-  const edge = (d, o = {}) => {
-    const cls = o.cls ?? '';
-    const marker = cls.includes('gov') ? 'arrowGov' : cls.includes('raw') ? 'arrowRaw' : 'arrow';
-    el('path', { d, class: `edge ${cls}`, 'marker-end': `url(#${marker})` });
-    if (o.label) {
-      const [lx, ly] = o.label.at;
-      txt(svg, lx, ly, o.label.text, `elabel ${o.label.mono ? 'mono' : ''} ${cls.includes('gov') ? 'gov' : cls.includes('raw') ? 'raw' : ''}`, { 'text-anchor': o.label.anchor ?? 'middle' });
+
+  // A chain-line outline round a group of cards, its label knocked into the top line at the right.
+  const phantom = ({ x, y, w, h, label }) => {
+    const r = el('rect', { x, y, width: w, height: h, rx: 2, class: 'phantom' });
+    phantoms.push(r);
+    if (label) {
+      const knock = el('rect', { y: y - 8, height: 16, class: 'knock' });
+      const t = text(svg, x + w - 16, y + 4.5, label, 'mono', { 'text-anchor': 'end' });
+      const fit = () => { const l = len(t); knock.setAttribute('x', x + w - 22 - l); knock.setAttribute('width', l + 12); };
+      fit(); swaps.push(fit);
+    }
+    return r;
+  };
+
+  // A role or trust region: one coloured outline; its title left and its role right, knocked into its
+  // top line, or its bottom line with edge: 'bottom' (when the top line sits close under a frame title).
+  const region = ({ x, y: top, w, h, tone = '', title, role, edge: side = 'top' }) => {
+    const y = side === 'bottom' ? top + h : top;
+    el('rect', { x, y: top, width: w, height: h, rx: 2, class: `region ${tone}` });
+    const g = el('g');
+    const tc = tone ? ` ${tone}-text` : '';
+    const parts = [];
+    if (title) parts.push([text(g, x + 12, y + 4.5, title, 'title' + tc), 'start']);
+    if (role) parts.push([text(g, x + w - 12, y + 4, role, 'mono' + tc, { 'text-anchor': 'end' }), 'end']);
+    for (const [t, side] of parts) {
+      const k = el('rect', { y: y - 8, height: 16, class: 'knock' });
+      g.parentNode.insertBefore(k, g);
+      const fit = () => { const l = len(t); k.setAttribute('x', side === 'start' ? x + 6 : x + w - 18 - l); k.setAttribute('width', l + 12); };
+      fit(); swaps.push(fit);
     }
   };
 
+  // An edge: an SVG path; tone colours it, reads dashes it, thin greys it; labels sit where `at` says.
+  const edge = (d, o = {}) => {
+    const tone = o.tone ?? (o.thin ? 'rule' : 'ink');
+    const cls = ['edge', o.reads ? 'reads' : '', o.thin ? 'thin' : '', o.tone ?? ''].join(' ');
+    const marker = `url(#arrow-${tone})`;
+    el('path', { d, class: cls, 'marker-end': o.noEnd ? null : marker, 'marker-start': o.both ? marker : null });
+    for (const l of o.labels ?? (o.label ? [o.label] : [])) {
+      const t = text(svg, l.at[0], l.at[1], l.text, `elabel${l.mono ? ' mono' : ''}${o.tone ? ` ${o.tone}-text` : ''}`, { 'text-anchor': l.anchor ?? 'middle' });
+      t.dataset.edgeLabel = '1';
+    }
+  };
+
+  // Marks: a check that runs on every build, drawn on the hop it checks; an equality (parity) mark.
+  const tick = (x, y, parent = svg) => {
+    el('circle', { cx: x, cy: y, r: 6, class: 'mark' }, parent);
+    el('path', { d: `M${x - 3},${y} l2,2.2 l4,-4.4`, class: 'mark-ink' }, parent);
+  };
+  const equal = (x, y, parent = svg) => {
+    el('circle', { cx: x, cy: y, r: 6.5, class: 'mark' }, parent);
+    text(parent, x, y + 4, '=', 'mono', { 'text-anchor': 'middle' });
+  };
+
+  // A legend that lays itself out left to right from x; each item is [kind, label].
+  const legend = (x, y, items) => {
+    const g = el('g', { class: 'legend' });
+    const sw = {
+      card: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g),
+      pkg: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card pkg' }, g),
+      hatch: cx => { el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g); el('rect', { x: cx + 0.5, y: y - 7.5, width: 29, height: 15, fill: 'url(#hatch)' }, g); },
+      phantom: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'phantom' }, g),
+      calls: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'edge', 'marker-end': 'url(#arrow-ink)' }, g),
+      reads: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow-ink)' }, g),
+      cobalt: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region cobalt' }, g),
+      vermilion: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region vermilion' }, g),
+      tick: cx => tick(cx + 15, y, g),
+      equal: cx => equal(cx + 15, y, g),
+    };
+    let cx = x;
+    for (const [kind, label] of items) {
+      sw[kind](cx);
+      const t = text(g, cx + 40, y + 4, label, 'sub');
+      cx += 40 + len(t) + 32;
+    }
+    return cx;
+  };
+
+  // The mode switch: buttons in `bar`, remembered per page, overridden by ?mode=<id>; ?static hides it.
+  const setMode = m => {
+    mode = m;
+    swaps.forEach(f => f());
+    phantoms.forEach(r => r.classList.toggle('phantom', m !== opt.solidIn));
+    opt.bar?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+    try { if (opt.storageKey) localStorage.setItem(opt.storageKey, m); } catch (e) { /* storage off */ }
+  };
+  const done = () => {
+    const params = new URLSearchParams(location.search);
+    if (opt.bar && modes.length > 1) {
+      if (params.has('static')) opt.bar.hidden = true;
+      const seg = document.createElement('div');
+      seg.className = 'seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', opt.switchLabel ?? 'Which names to show');
+      for (const m of modes) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.dataset.mode = m.id; b.textContent = m.label; b.setAttribute('aria-pressed', String(m.id === mode));
+        b.addEventListener('click', () => setMode(m.id));
+        seg.appendChild(b);
+      }
+      opt.bar.appendChild(seg);
+      let saved = null;
+      try { saved = opt.storageKey ? localStorage.getItem(opt.storageKey) : null; } catch (e) { /* storage off */ }
+      const want = params.get('mode') ?? saved;
+      if (want && ids.includes(want) && want !== mode) setMode(want);
+    }
+    window.__sheet = { modes: ids, setMode, mode: () => mode };
+  };
+
+  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO };
+}
+
+// Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
+// loads lazily, on first use, so text drawn before any mono text exists is measured in a fallback font.
+Sheet.ready = () => Promise.all([
+  '700 13px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Mono"',
+].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
+/* /sheet:js */
+Sheet.ready().then(() => {
+  const S = Sheet(document.getElementById('d'), { logos: LOGOS });
+
   // ---- the caller, outside the pod
-  card(24, 74, 112, 52, 'caller', [{ m: 'adk web, curl' }]);
-  edge('M136,92 H200', { label: { text: 'asks', at: [160, 86] } });
-  edge('M200,112 H136', { label: { text: 'answer', at: [160, 128] } });
+  S.card({ x: 24, y: 74, w: 112, h: 52, title: 'caller', lines: [{ mono: 'adk web, curl' }] });
+  S.edge('M136,92 H200', { label: { text: 'asks', at: [160, 86] } });
+  S.edge('M200,112 H136', { label: { text: 'answer', at: [160, 128] } });
 
   // ---- the pod: three columns, top to bottom in the order a question travels
-  frame(184, 32, 700, 412, 'semantic-agent pod', 'adk api_server');
-  card(200, 68, 164, 72, 'Runner', [{ m: 'sessions, events' }], { pkg: 'google.adk' });
-  card(396, 68, 220, 72, 'semantic_agent', [{ m: 'agent.py' }, { m: 'LlmAgent, 3 tools' }]);
-  card(648, 68, 216, 72, 'model.py', [{ m: 'MODEL_BACKEND' }, { m: 'on_model_error_callback' }]);
-  edge('M364,100 H396');
-  edge('M616,100 H648');
-  edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
+  S.frame({ x: 184, y: 32, w: 700, h: 412, title: 'semantic-agent pod', note: 'adk api_server', logo: 'kubernetes' });
+  S.card({ x: 200, y: 68, w: 164, h: 72, title: 'Runner', lines: [{ mono: 'sessions, events' }], pkg: 'google.adk', logo: 'adk' });
+  S.card({ x: 396, y: 68, w: 220, h: 72, title: 'semantic_agent', lines: [{ mono: 'agent.py' }, { mono: 'LlmAgent, 3 tools' }] });
+  S.card({ x: 648, y: 68, w: 216, h: 72, title: 'model.py', lines: [{ mono: 'MODEL_BACKEND' }, { mono: 'on_model_error_callback' }] });
+  S.edge('M364,100 H396');
+  S.edge('M616,100 H648');
+  S.edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
 
   // the audit gate: every tool result passes through it on its way back to the agent
-  card(456, 168, 160, 56, 'audit.py', ['no row, no result']);
-  edge('M420,140 V252');
-  edge('M536,252 V224');
-  edge('M536,168 V140', { label: { text: 'after_tool_callback', at: [548, 158], anchor: 'start', mono: true } });
-  edge('M616,196 H924', { label: { text: 'insert', at: [770, 190] } });
+  S.card({ x: 456, y: 168, w: 160, h: 56, title: 'audit.py', lines: ['no row, no result'] });
+  S.edge('M420,140 V252');
+  S.edge('M536,252 V224');
+  S.edge('M536,168 V140', { label: { text: 'after_tool_callback', at: [548, 158], anchor: 'start', mono: true } });
+  S.edge('M616,196 H924', { label: { text: 'insert', at: [770, 190] } });
 
   // the toolset, which the work platform replaces
-  el('rect', { x: 384, y: 240, width: 492, height: 184, rx: 2, class: 'phantom' });
-  const pl = txt(svg, 860, 244.5, 'at work: DataAgentToolset', 'mono', { 'text-anchor': 'end' });
-  const plw = pl.getComputedTextLength();
-  svg.insertBefore(el('rect', { x: 860 - plw - 6, y: 236, width: plw + 12, height: 16, class: 'knock' }), pl);
-  card(396, 256, 220, 80, 'tools.py', [{ m: 'list_metrics' }, { m: 'describe_metric' }, { m: 'query_metrics' }]);
-  card(648, 256, 216, 56, 'freshness.py', ['the sentence the answer quotes']);
-  card(396, 348, 220, 64, 'metrics.py', ['checks a request against', 'the catalog']);
-  card(648, 348, 216, 64, 'MetricFlowEngine', ['compiles the SQL'], { pkg: 'metricflow' });
-  edge('M616,284 H648');
-  edge('M506,336 V348');
-  edge('M616,380 H648');
-  edge('M864,284 H924', { cls: 'reads gov' });
-  edge('M864,380 H924', { cls: 'reads gov', label: { text: 'SQL', at: [897, 374] } });
+  S.phantom({ x: 384, y: 240, w: 492, h: 184, label: 'at work: DataAgentToolset' });
+  S.card({ x: 396, y: 256, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
+  S.card({ x: 648, y: 256, w: 216, h: 56, title: 'freshness.py', lines: ['the sentence the answer quotes'] });
+  S.card({ x: 396, y: 348, w: 220, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
+  S.card({ x: 648, y: 348, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
+  S.edge('M616,284 H648');
+  S.edge('M506,336 V348');
+  S.edge('M616,380 H648');
+  S.edge('M864,284 H924', { reads: true, tone: 'cobalt' });
+  S.edge('M864,380 H924', { reads: true, tone: 'cobalt' });
 
   // the initContainer: the catalog the toolset reads, built for the database the pod reads
-  frame(192, 168, 172, 260, 'initContainer');
-  card(200, 188, 152, 64, 'dbt parse', [{ m: 'manifests' }], { pkg: 'dbt-core' });
-  card(200, 272, 152, 52, 'build_catalog.py', ["MetricFlow's engine"]);
-  card(200, 344, 152, 72, 'target/', [{ m: 'agent.json' }, { m: 'semantic_manifest' }]);
-  edge('M276,252 V272');
-  edge('M276,324 V344');
-  edge('M352,380 H396');
+  S.frame({ x: 192, y: 168, w: 172, h: 260, title: 'initContainer' });
+  S.card({ x: 200, y: 188, w: 152, h: 64, title: 'dbt parse', lines: [{ mono: 'manifests' }], pkg: 'dbt-core', logo: 'dbt' });
+  S.card({ x: 200, y: 272, w: 152, h: 52, title: 'build_catalog.py', lines: ["MetricFlow's engine"] });
+  S.card({ x: 200, y: 344, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
+  S.edge('M276,252 V272');
+  S.edge('M276,324 V344');
+  S.edge('M352,380 H396');
 
   // ---- outside the cluster
-  frame(900, 16, 276, 556, 'outside the cluster');
-  card(916, 28, 244, 40, 'metadata DB', [], {});
-  txt(svg, 1148, 47, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
-  card(916, 76, 244, 66, 'the model', [{ m: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], { hatch: true });
-  edge('M864,100 H916');
+  S.frame({ x: 900, y: 16, w: 276, h: 556, title: 'outside the cluster' });
+  S.card({ x: 916, y: 28, w: 244, h: 40, title: 'metadata DB' });
+  S.text(null, 1148, 52.5, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
+  S.card({ x: 916, y: 76, w: 244, h: 66, title: 'the model', lines: [{ mono: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], hatch: true });
+  S.edge('M864,100 H916');
 
-  frame(908, 160, 260, 404, 'warehouse', 'IAM at work');
-  el('rect', { x: 916, y: 172, width: 244, height: 64, rx: 2, class: 'role' }).style.stroke = 'var(--muted)';
-  card(924, 178, 228, 36, 'ops.agent_queries', [], { tcls: 'mono' });
-  txt(svg, 1152, 228, 'agent_audit: insert only', 'mono dim', { 'text-anchor': 'end' });
-  el('rect', { x: 916, y: 252, width: 244, height: 168, rx: 2, class: 'role gov' });
-  card(924, 258, 228, 52, 'ops.readiness', [{ m: 'ops.product_deadlines' }], { tcls: 'mono' });
-  card(924, 360, 228, 40, 'silver, semantic', [], { tcls: 'mono' });
-  txt(svg, 1152, 338, 'agent_metrics: read-only', 'mono', { 'text-anchor': 'end' }).style.fill = 'var(--gov)';
-  el('rect', { x: 916, y: 484, width: 244, height: 68, rx: 2, class: 'role raw' });
-  card(924, 492, 228, 40, 'gold, exposed', [], { tcls: 'mono' });
-  txt(svg, 1152, 546, 'agent_sql: read-only', 'mono', { 'text-anchor': 'end' }).style.fill = 'var(--raw)';
+  S.frame({ x: 908, y: 160, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
+  S.region({ x: 916, y: 172, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
+  S.card({ x: 924, y: 178, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
+  S.region({ x: 916, y: 252, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 258, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
+  S.card({ x: 924, y: 360, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
+  S.region({ x: 916, y: 484, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 492, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
 
   // ---- the eval, in-process
-  frame(24, 468, 860, 104, 'eval', 'make agent-eval, in-process');
-  card(40, 492, 196, 64, 'evaluation.py', ['three custom metrics']);
-  card(268, 492, 196, 64, 'LocalEvalService', ['runs both agents'], { pkg: 'google.adk' });
-  card(496, 492, 260, 64, 'sql_baseline', ['reuses model.py, audit.py, the catalog']);
-  edge('M236,524 H268');
-  edge('M464,524 H496');
-  edge('M384,492 V444', { label: { text: 'runs semantic_agent', at: [392, 460], anchor: 'start' } });
-  edge('M756,512 H924', { cls: 'reads raw', label: { text: 'execute_sql', at: [836, 506], mono: true } });
+  S.frame({ x: 24, y: 468, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
+  S.card({ x: 40, y: 492, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
+  S.card({ x: 268, y: 492, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
+  S.card({ x: 496, y: 492, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
+  S.edge('M236,524 H268');
+  S.edge('M464,524 H496');
+  S.edge('M384,492 V444', { label: { text: 'runs semantic_agent', at: [392, 460], anchor: 'start' } });
+  S.edge('M756,512 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [836, 506], mono: true } });
 
-  // ---- legend
-  const ly = 596;
-  const li = (x, draw, label) => { draw(x); txt(svg, x + 40, ly + 4, label, 'sub'); };
-  li(24, x => el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card' }), "this repo's code");
-  li(176, x => el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card pkg' }), 'a package');
-  li(300, x => { el('rect', { x, y: ly - 8, width: 30, height: 16, rx: 2, class: 'card' }); el('rect', { x: x + 0.5, y: ly - 7.5, width: 29, height: 15, fill: 'url(#hatch)' }); }, 'the model: the only part that is not code');
-  li(620, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'phantom' }), 'replaced at work');
-  li(780, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge', 'marker-end': 'url(#arrow)' }), 'calls, writes');
-  li(924, x => el('path', { d: `M${x},${ly} H${x + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow)' }), 'reads');
+  S.legend(24, 596, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
+  S.done();
 });
 </script>
 </body>
