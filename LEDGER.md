@@ -636,3 +636,144 @@ Entry format:
 - Evidence: the bug reproduced through `make agent-eval` against a local 401 stand-in for OpenRouter: exit 0, the report rewritten with 30 `AuthenticationError` answers, each `Retried: 7 times` under `MODEL_RETRIES=1`. After the fix the preflight fails on 401 and on an unreachable base; the Python step alone exits 3 in 12 s with the report untouched and `Retried: 4 times`. New tests: an all-401 `main()` run through the real LiteLLM client (one question sent, at most 2 requests, report kept), a run with no answer, 401/403 classification for LiteLLM and Gemini. A live `tests/e2e/agent-eval.sh revenue_one_day` through the cloud proxy: both agents 868.65.
 - Decisions: exit 3 keeps one meaning, "not a score, report kept", rather than a new code per cause; the preflight uses `/key` because it costs no free-tier request.
 - Open: none.
+
+## 2026-10-30 — Semantic — S3b: the semantic agent deployed as the Cloud Run stand-in, checked on cloud (#111)
+
+- Done: `services/semantic-agent/Dockerfile` (`AGENT_IMAGE` 0.1.0; both agents and the dbt project from a named build context) and `platform/k8s/workloads/semantic-agent-*.yaml` (Deployment with a catalog initContainer that parses the project for the database the pod reads, Service, ConfigMap, generated Secret, ServiceAccount), deployed by `workloads-up.sh`; `make agent-deploy-check` asks it one question through the Service. The agent's `project_dir()` no longer fails outside the repo's layout. The fixture setup moves from `agent-eval.sh` to `tests/e2e/agent-fixture.sh`. The lab now builds and runs on the cloud sandbox: `cluster-up.sh` sets kubelet `failCgroupV1: false` on a cgroup v1 host and containerd `restrict_oom_score_adj` without `CAP_SYS_RESOURCE`; every Dockerfile's dependency step mounts an optional BuildKit secret `build_ca` that `make` passes when `BUILD_CA` (the proxy's CA) exists; `cloud-docker.sh` clears a stale dockerd pid file and takes the `uv` stage from Docker Hub because ghcr.io refuses public images there. Image tags: EL Factory 0.7.1, dbt 0.7.3, event adapter 0.1.1, Airflow 3.3.1-pplk8s.16, drill 3.2.2-pplk8s.4 (Dockerfile changes only).
+- Evidence: see the PR; on cloud, `make cluster-up` (3 nodes, v1.36.4, 56 s), `make workloads-up AGENT_DBNAME=dbt_dev` (EL Factory, event adapter and the agent rolled out), `make agent-deploy-check`: tools `list_metrics,describe_metric,query_metrics`, "Net revenue was €861.40 on 2 October 2026.", session and 8 events in `agent_sessions`. The first run failed with `IndexError: 4` in `project_dir()`, reproduced by a new test.
+- Decisions: the catalog is written at pod start, not baked, because the compiled SQL names the database; the cloud-only adaptations sit in the scripts, keyed on what the host lacks, and change nothing on the laptop.
+- Open: in-cluster pulls of third-party images (Airflow's chart, monitoring) still fail on cloud, so the Airflow phase checks stay on the laptop (#119).
+
+## 2026-10-30 — Semantic — the semantic path runs on a BigQuery emulator; the use-case map
+
+- Done: Compose profile `bigquery` runs the goccy BigQuery emulator behind a standard-library shim (`platform/compose/bigquery-shim/`); `dbt/profiles.yml` gains a `bigquery_emulator` output; `make bigquery-emulator-check` copies the fixture's sources in from `dbt_dev`, runs `dbt build` of the semantic path and asserts the eight metrics equal gold and exposed on the emulator (#125). `semantic/PLAN.md` adds the use case (U1-U6, Map #135, its steps) and SL-7; `docs/semantic-layer-on-bigquery.md` marks what the emulator measured.
+- Evidence: see the PR.
+- Decisions: SL-7, emulator beside the Postgres warehouse, not in its place; the shim is a stated stopgap until the emulator handles `routines.list` and DDL statement types.
+- Open: the use-case issues under Map #135.
+
+## 2026-10-30 — Semantic + Airflow — a marketing domain with its whole lineage
+
+- Done: EL Factory serves a deterministic synthetic marketing source (campaigns, daily ad spend, CRM leads, bookings) under a `marketing` catalog pipeline; `marketing_elt` runs it, built with `sales_elt` by one ELT builder (`airflow/include/pplk8s/elt.py`); a `marketing` deadline (36 h); bronze → silver → gold (`marketing_daily`) → exposed (`channel_performance_daily`) models with tests; semantic models and eight metrics (spend, clicks, leads, bookings, booking value, cost per lead and per booking as ratios, a 30-day lead-to-booking conversion rate); fixture slice, parity in `semantic-check` and the emulator check, three eval questions (#126).
+- Evidence: see the PR.
+- Decisions: D38 and SL-8 (owner, 2026-10-30: the use case may add a domain's whole lineage, DAG included); `CLAUDE.md`'s two tracks amended to match.
+- Fix after the first lab run (PR comment): on a fresh warehouse bookings named leads from before the extracted interval and failed `slv_bookings`' lead tests; those tests now warn, such a booking keeps a NULL campaign and gold counts it as channel `unknown` (owner: a lab warns, it need not be strict); the marketing readiness rows get a watermark (newest lead or booking).
+- Open: a second lab run of `marketing_elt` on the cluster.
+
+## 2026-10-30 — Semantic — Metrics group by customer country and signup cohort (#127)
+
+- Done: `slv_customers` becomes the `customers` semantic model (primary entity `customer`, dimensions `country` and `signup_date`), with no metric of its own, so every orders metric groups and filters by `customer__country` and `customer__signup_date__month` through the entity `orders` already declared. The eval's `revenue_germany` now expects `revenue_eur` instead of a decline. `semantic-check.sh` compares the orders metrics by day and country with `exposed.sales_by_country_daily` and revenue by signup month with a direct join of silver. dbt image 0.7.5 and semantic-agent 0.1.2 (both carry the dbt project).
+- Evidence: see the PR.
+- Decisions: none; a time dimension with MetricFlow's month grain is the cohort, rather than a derived `signup_month` column.
+- Open: none.
+
+## 2026-10-30 — Agents — Unattended wakes take the use-case map (#135)
+
+- Done: the autopilot profile's queue starts at Map #135 instead of the finished Map #99. `autopilot-ready` on #127, #128, #129, #131, #132, #133 and #134; `needs-user` on #130 (decision packet: what runs source freshness on a schedule) and #139 (upstream bug report). Two use-case issues filed under the map: #140 (model contracts on agent-read models) and #141 (scheduled queries and routines beside dbt); semantic/PLAN.md's step table lists them. The run board (#43) now lists open owner questions only.
+- Evidence: every #99 sub-issue is closed; #134 is blocked by #127-#133, and #133 by #131.
+- Decisions: no `lesson` on semantic issues (CLAUDE.md); the Airflow-lab queue entry is unchanged.
+- Open: the owner's answers on #130 and #139.
+
+## 2026-10-30 — Semantic — the semantic layer in dbt's latest YAML spec (#137)
+
+- Done: `dbt-core` 1.12.6 (image, host checks and the semantic agent). The six semantic models live on their silver models in `models/silver/schema.yml` (`semantic_model` with our names, entities and dimensions on columns, `primary_entity: ad_spend_day`, simple metrics instead of measures); `models/semantic/semantic.yml` keeps the time spine, `semantic.metrics` and the four cross-model metrics, with no `semantic_models:` or `measures:` left. `build_catalog.py` and `semantic_metrics.sql` (macro `semantic_models_of_metric`) find a metric's semantic models through dbt's `depends_on` and take the data agent's aggregations from the simple metrics. Images: dbt 0.7.4, semantic-agent 0.1.1. semantic/PLAN.md SL-1 names the spec; a § 6 lesson.
+- Evidence: see the PR.
+- Decisions: no metric sets `fill_nulls_with`, which dbt-core 1.12.6 drops in this spec; `net_revenue_eur` coalesces its inputs and the parity check compares counts and sums through coalesce (owner's call, over a manifest patch); derived `coalesce` wrappers were tried and fill nothing, because MetricFlow joins metrics after computing each.
+- Open: put `fill_nulls_with: 0` back once dbt parses it (#139).
+
+## 2026-10-30 — Maintenance — image builds share a layer cache on ghcr.io
+
+- Done: every `make` image build reads and writes `ghcr.io/<owner>/<repo>/<image>:buildcache` (`<owner>/<repo>` from the origin remote) (BuildKit registry cache, `mode=max`, `ignore-error=true`) when `BUILD_CACHE` is set: by default on cloud, where the egress proxy logs ghcr.io requests in as the owner; a laptop opts in after `docker login ghcr.io`. The drill image keeps its own cache name (`airflow-drill`). `cloud-docker.sh` no longer retags `astral/uv`: ghcr.io serves public images since the environment's ghcr.io secret became a base64 Bearer token.
+- Evidence: see the PR.
+- Decisions: a registry layer cache rather than pushing finished images by hand: it fills itself on every build, cannot serve a stale layer, and needs no tag discipline; claude-dotfiles' `image-cache` skill holds the way of working for every repo.
+- Open: none.
+
+## 2026-10-30 — Maintenance — cloud sessions are provisioned by claude-dotfiles alone
+
+- Done: removed `docs/agents/cloud-setup.sh` and `docs/agents/cloud-docker.sh` (copies of claude-dotfiles' `bin/cloud-setup.sh` and its session-start hook, which the environment already runs) and `scripts/check-portable.sh` with its `make lint` step; the same guard now lives in claude-dotfiles (`bin/check-portable.sh`) and runs as this clone's pre-commit hook on cloud, set by its session-start hook in `.git/config`, so nothing in this repo carries it.
+- Evidence: see the PR.
+- Decisions: agent provisioning, rules, skills and guards belong to claude-dotfiles; this repo keeps only what is its own (`docs/agents/autopilot.md`, the `GITHUB_REPO` derivation).
+- Open: none.
+
+## 2026-10-30 — Semantic — the agent runs on OpenRouter's free models only
+
+- Done: `build_model` refuses an OpenRouter model id that does not end in `:free`, so neither agent nor `make agent-eval` can reach a paid model whatever the key's budget allows; `semantic/PLAN.md` SL-5 and the agent's README say so.
+- Evidence: see the PR.
+- Decisions: free models only, even when the free quota is spent for the day (owner, 2026-10-30); enforced in the seam, not in a prompt or a doc alone.
+- Open: none.
+
+## 2026-10-30 — Maintenance — the repo names its GitHub owner only through the origin remote
+
+- Done: the Makefile derives `GITHUB_REPO` (`<owner>/<repo>`) from the origin remote; `BUILD_CACHE` and Airflow's git-sync repo (`deploy.sh` sets `dags.gitSync.repo`) come from it, and `docs/agents/cloud-setup.sh` derives its fallback git identity the same way. Links to this repo's issues are relative (`../../issues/N`). `scripts/check-portable.sh` (in `make lint`) fails on the owner's login in any tracked file but `LEDGER.md` and `ledger.d/`.
+- Evidence: see the PR.
+- Decisions: derive rather than parametrize by hand, so a fork builds, caches, syncs and links against itself with no edit; history files keep their literal facts.
+- Open: none.
+
+## 2026-10-31 — Semantic — The agent-ready warehouse standard and its check (#128)
+
+- Done: `docs/agent-ready-warehouse.md` states the standard agents rely on: a dataset and model prefix per layer, the relation named without the prefix, snake case, which models are public, where each calculated field lives, what every model, column and metric description says, and how the words reach BigQuery descriptions, Knowledge Catalog and a data agent. `dbt/scripts/check_standard.py` replaces `check_metrics.py` and enforces it offline on every parse, in `make dbt-validate` and the dbt image build; `semantic-check.sh` shows an unprefixed, undescribed gold model and an undescribed metric failing it. dbt image 0.7.6 and semantic-agent 0.1.3 (both carry the dbt project).
+- Evidence: see the PR.
+- Decisions: SL-4 amended: the standard and its check; `dbt-project-evaluator` rejected for it.
+- Open: none.
+
+## 2026-10-31 — Semantic — A glossary for business terms that are not metrics (#129)
+
+- Done: seven business terms that are not metrics (signup cohort, customer country, order status, partner return, channel, market, conversion) live in `config.meta.glossary` on the silver models that hold them, each naming its metrics and dimensions. `build_catalog.py` writes them into `agent.json` and the data agent's `glossaries`; `semantic_glossary.sql` builds `semantic.glossary` from dbt's graph; `check_catalog.py` fails on a term with an unknown metric, a dimension its metrics lack, or one that repeats a metric; the semantic agent's `list_metrics` returns the glossary. `docs/agent-ready-warehouse.md` gains the glossary rule. dbt image 0.7.7, semantic-agent 0.1.4.
+- Evidence: see the PR.
+- Decisions: SL-3 amended: the glossary's source and its check.
+- Open: none.
+
+## 2026-10-31 — Semantic — Discrepancy checks between layers on every build (#131)
+
+- Done: every hand-off between layers reconciles in `dbt build` as 26 dbt tests named after their hop (`hop_<from>_to_<to>`): bronze → silver (the generic `latest_load_reconciles`: silver holds bronze's latest load of each key, rows and amounts) on eight silver models, silver → gold and gold → exposed per key (seven singular tests, plus one for the tlc boroughs), and metric → gold (the generic `matches_metric`: eleven hand-written columns equal their simple metric per day, rendered from dbt's graph). One comparison macro (`macros/hops.sql`) returns the mismatching keys led by the hop's name. `make semantic-check` asserts the 26 pass and that a return seeded on a day without orders fails exactly the two returns hops into `exposed.net_sales_daily`; `make bigquery-emulator-check` asserts the 26 pass on the emulator. They replace `assert_gold_revenue_matches_silver`. dbt image 0.7.9, semantic-agent 0.1.6.
+- Evidence: see the PR.
+- Decisions: SL-9 added: layer hops reconcile in dbt build.
+- Open: a return on a day without orders now fails the finance build, because `exposed.net_sales_daily` has no row for it (#150, an owner question); dbt-core 1.12.6's partial parse duplicates `cancellation_rate` after an edit of `slv_orders` (#149).
+
+## 2026-10-31 — Semantic — Agent query audit log and a per-agent access proposal (#132)
+
+- Done: every `query_metrics` and `execute_sql` call, answered or refused, writes one row to `ops.agent_queries` (agent, user, session, invocation, call id, metrics, filters, arguments, SQL, rows returned, freshness statement, error) through ADK's `after_tool_callback` on both agents (`semantic_agent/audit.py`), as `agent_audit`, a new role that may only insert into that table; an unwritable audit withholds the result. `make agent-deploy-check` also asserts the deployed agent's audit row. The access proposal and its mapping to BigQuery's Data Access audit log, `INFORMATION_SCHEMA.JOBS` and job labels are in `docs/semantic-layer-on-bigquery.md` (recommended: a service account per agent with dataset-level read). semantic-agent 0.1.7.
+- Evidence: see the PR.
+- Decisions: SL-10 added: agent queries are audited by an insert-only writer role.
+- Open: the baseline's SQL can leave its read-only transaction and reset its statement timeout (filed as a follow-up issue).
+
+## 2026-10-31 — Semantic — Side-by-side migration rehearsal with a parity report per consumer (#133)
+
+- Done: three tables built the old way in a `legacy` dataset (`lgc_daily_net_sales`, `lgc_country_sales`, whose revenue counts cancelled orders, `lgc_channel_daily`); the consumers as dbt exposures (a finance dashboard, a sales agent, a marketing automation) naming what each reads; `migration.parity` comparing each consumer's old table with its new model per field through `hop_mismatches`; the gate `consumers_switch_on_parity`; `make migration-check`; the written plan in `docs/migration-rehearsal.md`. The dashboard is switched; the agent waits on its revenue difference, the automation on the agent. dbt 0.7.11, semantic-agent 0.1.9.
+- Evidence: see the PR.
+- Decisions: SL-11 added: migrations are rehearsed with consumers as exposures and a parity gate in `dbt build`.
+- Open: none.
+
+## 2026-10-31 — Semantic — Model contracts on every model agents read (#140)
+
+- Done: gold and exposed enforce dbt model contracts (`+contract: {enforced: true}` per layer), and every one of their columns declares a `data_type` spelled for Postgres and BigQuery alike (strings through a `text` YAML anchor). `check_standard.py` fails a public model without an enforced contract or a column without a type; `make semantic-check` shows `dbt build` failing on a renamed and a retyped public column with dbt's contract error. The agent-ready standard, the dbt README and `docs/semantic-layer-on-bigquery.md` name contracts as the public-model rule. dbt image 0.7.8, semantic-agent 0.1.5.
+- Evidence: see the PR.
+- Decisions: SL-4 amended: public models enforce a typed contract.
+- Open: none.
+
+## 2026-10-31 — Semantic — Where scheduled queries and routines fit beside dbt (#141)
+
+- Done: `docs/routines-and-scheduled-queries.md`: for scheduled queries, stored procedures, UDFs and table functions, what BigQuery says each is for, its dbt counterpart, when to keep it, and a one-at-a-time migration rule; linked from `docs/semantic-layer-on-bigquery.md`.
+- Evidence: see the PR.
+- Decisions: none.
+- Open: none.
+
+## 2026-10-31 — Semantic — The ratio metric moves off slv_orders, so a partial parse no longer duplicates it (#149)
+
+- Done: `cancellation_rate` moves from `slv_orders`' metrics in `dbt/models/silver/schema.yml` to `models/semantic/semantic.yml` (same name, label, description, numerator and denominator); both files' headers say metrics over other metrics live there. After a full parse, an edit of `slv_orders` then `dbt parse` no longer fails with `dbt found two metrics with the name "cancellation_rate"`. The agent's test catalog fixture is refreshed (three glossary descriptions had drifted). The profile's known-condition line is gone. dbt image 0.7.10, semantic-agent 0.1.8.
+- Evidence: see the PR.
+- Decisions: none; a lesson in semantic/PLAN.md § 6.
+- Open: none.
+
+## 2026-10-31 — Semantic — The baseline's SQL runs as one statement, so its read-only transaction and timeout hold (#153)
+
+- Done: `execute_sql` in `services/semantic-agent/src/sql_baseline/agent.py` sends the model's SQL with `prepare=True`, so psycopg uses the extended query protocol and Postgres refuses a string of several statements (`cannot insert multiple commands into a prepared statement`) before any of them runs. Before, `commit; begin read write; …` left the read-only transaction and `commit; set statement_timeout = 0; select pg_sleep(11)` ran 11 s past the 10 s timeout. `tests/test_services.py` covers both strings and a `%` in the SQL. semantic-agent 0.1.10.
+- Evidence: see the PR.
+- Decisions: none; SL-10's rationale now says the read-only transaction could be left, and a lesson in semantic/PLAN.md § 6.
+- Open: none.
+
+## 2026-10-31 — Maintenance — the autopilot skill comes from claude-dotfiles' plugin; a wake heals a missing setup
+
+- Done: `docs/agents/autopilot.md` names the skill as `dotfiles:autopilot` (claude-dotfiles now ships its skills as plugins from its own marketplace, read in place, instead of links in `~/.claude/skills`) and tells a wake with no `~/.claude/cloud-target` to run claude-dotfiles' `bin/cloud-setup.sh pplk8s` first, which writes the Docker mirror, starts `dockerd` and installs the plugins.
+- Evidence: see the PR.
+- Decisions: none in this repo; provisioning stays in claude-dotfiles.
+- Open: none.
