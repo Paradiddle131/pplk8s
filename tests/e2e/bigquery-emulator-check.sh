@@ -3,7 +3,8 @@
 # engine, not only compiles for one. On an empty emulator (Compose profile `bigquery`) it
 #   - copies the dev fixture's sources from Postgres dbt_dev into the emulator,
 #   - runs `dbt build` of the sales, returns, finance, marketing and semantic models, tests
-#     included, on the `bigquery_emulator` target, with the project unchanged,
+#     included, on the `bigquery_emulator` target, with the project unchanged; the 26 layer hops
+#     (semantic/PLAN.md SL-9) among them reconcile there,
 #   - queries the metrics through MetricFlow on the emulator, and asserts they equal the
 #     hand-written aggregates the same build wrote there: the eight sales metrics by day against
 #     gold.daily_sales and exposed.net_sales_daily, the marketing metrics by day and channel against
@@ -46,6 +47,9 @@ run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:sema
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
+hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
+[ "$hops" -eq 26 ] || fail "expected the 26 layer hops to pass on the emulator, got $hops"
+echo "ok: the 26 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 
 run_ mf query --metrics orders_total,orders_cancelled,revenue_eur,customers_distinct,cancellation_rate \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/sales.csv" >"$OUT/query.log" 2>&1 ||
