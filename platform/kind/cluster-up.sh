@@ -68,3 +68,4 @@ data:
 EOF
 
 ./join-services-network.sh
+./egress-up.sh

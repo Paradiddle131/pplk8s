@@ -8,7 +8,8 @@ import psycopg
 import pytest
 
 from semantic_agent import agent as semantic
-from semantic_agent import evaluation, tools
+from semantic_agent import evaluation, guard, tools
+from semantic_agent import freshness as readiness
 from semantic_agent.evaluation import FRESHNESS_QUOTED, eval_cases
 from semantic_agent.freshness import assess, freshness
 from tests.conftest import ScriptedLlm, final_text, run_turn
@@ -97,15 +98,18 @@ def metricflow(monkeypatch):
         asked.append(products)
         return assess([(p, at(20), DEADLINE) for p in products], NOW)
 
-    monkeypatch.setattr(tools, "freshness", stub)
+    monkeypatch.setattr(readiness, "freshness", stub)
     return asked
 
 
-def test_query_metrics_returns_the_freshness_of_every_metric_it_ran(metricflow):
+def test_the_freshness_covers_every_metric_query_metrics_ran(metricflow):
     result = tools.query_metrics(["net_revenue_eur", "revenue_eur"])
+    assert result["metrics"] == ["net_revenue_eur", "revenue_eur"]
+    assert "freshness" not in result  # the agent's callback attaches it, not the toolset (#177)
+    fresh = guard.freshness_of("query_metrics", result["metrics"], tools.catalog())
     assert metricflow == [["returns.silver", "sales.silver"]]
-    assert result["freshness"]["late"] is True
-    assert "Late: returns.silver" in result["freshness"]["statement"]
+    assert fresh["late"] is True
+    assert "Late: returns.silver" in fresh["statement"]
 
 
 def test_a_failed_query_asks_for_no_freshness(metricflow, monkeypatch):
@@ -114,7 +118,10 @@ def test_a_failed_query_asks_for_no_freshness(metricflow, monkeypatch):
         return {"rows": []}
 
     monkeypatch.setattr(tools, "run", checked)
-    assert "error" in tools.query_metrics(["average_basket_eur"])
+    model = ScriptedLlm(steps=[("query_metrics", {"metrics": ["average_basket_eur"]}), "none"])
+    run_turn(semantic.build_agent(model), "What is the average basket?")
+    (result,) = model.tool_results()
+    assert "error" in result["response"] and "freshness" not in result["response"]
     assert metricflow == []
 
 

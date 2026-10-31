@@ -8,8 +8,8 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
-DBT_IMAGE ?= localhost:5001/dbt:0.7.15
+ELF_IMAGE ?= localhost:5001/el-factory:0.7.2
+DBT_IMAGE ?= localhost:5001/dbt:0.7.16
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
 AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
@@ -36,8 +36,16 @@ cache_flags = $(if $(BUILD_CACHE),--cache-from type=registry$(comma)ref=$(BUILD_
 # $(call docker_build,<image ref>[,<cache name>]): the cache name defaults to the image's repository name.
 docker_build = $(DOCKER_BUILD) -t $(1) $(call cache_flags,$(or $(2),$(firstword $(subst :, ,$(notdir $(1))))))
 
+# $(call publish,<image ref>,<build args and context>[,<cache name>]): build the image and push it to the local registry.
+# On cloud (BUILD_CA set) the session's disk allowance cannot hold each image in Docker, the local registry and the
+# nodes at once (#119): a tag the registry already serves is not rebuilt (D16: a tag names its content; FORCE_BUILD=1
+# rebuilds it), and after a push Docker's copy and BuildKit's local cache go. The laptop always builds and keeps both.
+publish = $(if $(and $(BUILD_CA),$(if $(FORCE_BUILD),,$(call in_registry,$(1)))),@echo "$(1): the local registry has it",$(call docker_build,$(1),$(3)) $(2) && docker push $(1)$(if $(BUILD_CA), && docker image rm $(1) >/dev/null && docker builder prune -af >/dev/null))
+manifest_types = application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json
+in_registry = $(shell curl -sf -o /dev/null -H 'Accept: $(manifest_types)' http://$(firstword $(subst /, ,$(1)))/v2/$(firstword $(subst :, ,$(notdir $(1))))/manifests/$(word 2,$(subst :, ,$(notdir $(1)))) && echo yes)
+
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.16
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.17
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
@@ -48,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -62,6 +70,9 @@ tools: ## Install pinned kind, kubectl, helm, k9s into ~/.local/bin
 
 cluster-up: ## Create the kind cluster and local registry (localhost:5001)
 	platform/kind/cluster-up.sh
+
+egress-up: ## Behind a loopback HTTPS proxy (the cloud sandbox): relay the kind nodes' pulls and pods' calls through it; otherwise nothing (#119)
+	BUILD_CA=$(BUILD_CA) platform/kind/egress-up.sh
 
 cluster-down: ## Delete the kind cluster and local registry
 	platform/kind/cluster-down.sh
@@ -171,7 +182,11 @@ agent-web: ## Serve both agents locally (the semantic agent and the eval's basel
 agent-standalone-check: services-up ## Run the semantic agent on an empty database with only the dbt project: make agent-warehouse, the fixture, one scripted turn; asserts its audit row and "Freshness unknown" (#166; no model quota)
 	tests/e2e/agent-standalone-check.sh
 
-agent-deploy-check: services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
+agent-key-check: ## Ask OpenRouter whether it accepts the agents' key, spending no model request (#158; the cloud proxy adds the key)
+	tests/e2e/openrouter-key-check.sh
+
+# The key check runs before the image builds and the deploy, so a refused key fails in seconds.
+agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
 	tests/e2e/agent-deploy-check.sh
 
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
@@ -195,13 +210,13 @@ test: airflow-test rules-test agent-test ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 	cd services/event-adapter && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
-push: build ## Push the EL Factory, dbt, event adapter and semantic agent images to the local registry (localhost:5001)
-	docker push $(ELF_IMAGE)
-	docker push $(DBT_IMAGE)
-	docker push $(ADAPTER_IMAGE)
-	docker push $(AGENT_IMAGE)
+push: ## Build the EL Factory, dbt, event adapter and semantic agent images and push them to the local registry (localhost:5001)
+	$(call publish,$(ELF_IMAGE),services/el-factory)
+	$(call publish,$(DBT_IMAGE),dbt)
+	$(call publish,$(ADAPTER_IMAGE),services/event-adapter)
+	$(call publish,$(AGENT_IMAGE),--build-context dbt=dbt services/semantic-agent)
 
-workloads-up: services-up push ## Apply the workloads namespace (EL Factory, event adapter, semantic agent, Secrets, ConfigMaps) and wait for rollout
+workloads-up: services-up push egress-up ## Apply the workloads namespace (EL Factory, event adapter, semantic agent, Secrets, ConfigMaps) and wait for rollout
 	platform/k8s/workloads-up.sh
 
 workloads-down: ## Delete the workloads namespace and everything in it
@@ -217,12 +232,11 @@ phase1-check: services-up build ## Phase 1 exit check: extract via curl, re-run 
 	tests/e2e/phase1-check.sh
 
 airflow-image: ## Build and push the Airflow image to the local registry
-	$(call docker_build,$(AIRFLOW_IMAGE)) airflow
-	docker push $(AIRFLOW_IMAGE)
+	$(call publish,$(AIRFLOW_IMAGE),airflow)
 
 # Extra values files from platform/helm/airflow, e.g. AIRFLOW_OVERLAYS=values-multi-executor.yaml.
 AIRFLOW_OVERLAYS ?=
-airflow-up: services-up keda-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local, AIRFLOW_OVERLAYS=...)
+airflow-up: services-up keda-up egress-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local, AIRFLOW_OVERLAYS=...)
 	platform/helm/airflow/deploy.sh $(addprefix -f ,$(AIRFLOW_OVERLAYS))
 
 airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
@@ -261,8 +275,7 @@ db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup Cro
 	tests/e2e/db-cleanup-check.sh
 
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
-	$(call docker_build,$(AIRFLOW_DRILL_IMAGE),airflow-drill) --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow
-	docker push $(AIRFLOW_DRILL_IMAGE)
+	$(call publish,$(AIRFLOW_DRILL_IMAGE),--build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow,airflow-drill)
 
 metadata-restore-drill: airflow-up observability-up workloads-up ## Phase 6 drill 10: restore the metadata DB to an earlier point, detect the drift from the warehouse, replay the lost runs (~6 min)
 	tests/e2e/metadata-restore-drill.sh
@@ -275,13 +288,13 @@ ci-integration: ## CI integration test: deploy with this checkout's DAGs, hello 
 	tests/e2e/smoke-check.sh
 	tests/e2e/phase5-check.sh
 
-keda-up: ## Deploy the KEDA operator that scales the Celery workers (namespace keda)
+keda-up: egress-up ## Deploy the KEDA operator that scales the Celery workers (namespace keda)
 	platform/keda/deploy.sh
 
 keda-down: ## Uninstall KEDA (uninstall Airflow first: its worker ScaledObject needs the CRDs)
 	helm --kube-context kind-pplk8s uninstall keda -n keda --wait --ignore-not-found
 
-observability-up: services-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)
+observability-up: services-up egress-up ## Deploy kube-prometheus-stack, Airflow scrape targets, alert rules, and dashboards (namespace monitoring)
 	platform/monitoring/deploy.sh
 
 observability-down: ## Uninstall the monitoring stack (the database exporters stay with the Compose services)

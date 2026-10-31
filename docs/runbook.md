@@ -212,6 +212,16 @@ Recovery: `docker restart pplk8s-worker pplk8s-worker2` re-resolves the bind; th
 `platform/kind/ensure-dag-mount.sh` does this automatically and runs from `make airflow-up`; the e2e checks wait for `is_stale=false` (`wait_dag_ready`) before triggering.
 The failure mode disappears with git-sync delivery (D10, Phase 6).
 
+### A local DAG deploy from another clone
+
+Symptom: `make airflow-up` with `DAG_DELIVERY=local` stops with `the kind workers mount another clone's DAGs`.
+Seen on 2026-10-31 (#173), before the check existed: a deploy from a second clone ran that clone's image with the first clone's DAGs and failed with `TypeError: validate_semantic_layer() missing 1 required keyword-only argument`.
+
+Diagnosis: `cluster-up.sh` writes the absolute path of the clone that created the cluster into the workers' `extraMounts`, once, so the cluster serves that clone's `airflow/dags` whichever clone runs `make`.
+`ensure-dag-mount.sh` compares a digest of the workers' DAG files with this checkout's and names both paths.
+
+Recovery: run `make` from the clone the message names, or recreate the cluster from this one (`make cluster-down cluster-up`).
+
 ## Phase 5 drills
 
 The event path is explained in [`events.md`](events.md); `tests/e2e/phase5-check.sh` (`make phase5-check`) automates the dedupe cases.

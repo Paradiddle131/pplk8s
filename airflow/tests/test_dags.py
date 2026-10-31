@@ -240,7 +240,8 @@ def test_finance_waits_deferrably_on_both_producers_before_building(finance):
 def test_finance_validates_the_semantic_layer_after_exposed_beside_its_record(finance):
     validate = finance.get_task("validate_semantic_layer")
     assert validate.upstream_task_ids == {"dbt_exposed"}
-    assert validate.arguments[-1].endswith("mf validate-configs")
+    # Only the semantic models of the pipelines it waited for are queried on the warehouse (#168).
+    assert validate.arguments[-1].endswith("validate_semantic.py --pipelines returns,sales")
     # A broken semantic layer fails the run but never holds back finance.exposed.
     assert "validate_semantic_layer" not in finance.get_task("record").upstream_task_ids
 

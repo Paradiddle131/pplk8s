@@ -24,7 +24,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.base_llm import BaseLlm
 from google.adk.tools import FunctionTool
 
-from semantic_agent.audit import audit_tool_call
+from semantic_agent.guard import after_data_tool
 from semantic_agent.metrics import Catalog
 from semantic_agent.model import answer_model_failure, build_model, request_config
 from semantic_agent.tools import catalog
@@ -100,7 +100,8 @@ def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
         generate_content_config=request_config(),
         instruction=instruction,
         tools=[FunctionTool(execute_sql)],
-        after_tool_callback=audit_tool_call,
+        # Every call is a data call; with no metric catalog, none gets a freshness (SL-5).
+        after_tool_callback=after_data_tool(catalog_tools=()),
         on_model_error_callback=answer_model_failure,
     )
 

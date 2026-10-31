@@ -47,8 +47,9 @@ The database, not the prompt, keeps each agent in its tables (SL-4).
 
 ## Audit
 
-Every `query_metrics` and `execute_sql` call, answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
-`audit.py` does it as both agents' ADK `after_tool_callback`, so the tools themselves stay unchanged; listing and describing metrics read only the catalog and are not audited.
+Every call to a data tool (`query_metrics`, `execute_sql`, or whatever replaces them), answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
+`guard.py` builds both agents' ADK `after_tool_callback` and `audit.py` writes the row, so the tools themselves stay unchanged.
+A data tool is every tool but the ones the toolset seam names as reading only the catalog (`tools.CATALOG_TOOLS`: listing and describing metrics), so the audit survives a swap to `DataAgentToolset`, whose data tool is `ask_data_agent` (#177); a catalog tool the swap forgets to name is audited, not a data tool skipped.
 - The row is written as `agent_audit`, a role that may only insert into that table: it cannot read, change or delete a row, or write anywhere else.
 - The agents' own roles write nothing, the audit included: the baseline runs whatever single statement its model writes, and the transaction mode is only one guard (before the tool refused a second statement, `commit; begin read write` left it), so a role's privileges keep the audit unforged.
 - An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
@@ -57,7 +58,7 @@ The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the 
 
 ## Freshness
 
-Every `query_metrics` result carries a `freshness` field (SL-4, S4), which `freshness.py` builds:
+Every answered data call's result carries a `freshness` field (SL-4, S4): the after-tool callback (`guard.py`), not the toolset, attaches it for the metrics the result names (`query_metrics` names the ones it ran, a saved query's included), else the ones the call asked for, and `freshness.py` builds it:
 - The catalog names the readiness products each metric reads, `<pipeline>.<layer>` of its models (`sales.silver`).
 - A product is ready up to the end of its newest `ready` interval in `ops.readiness`.
 - It is late by the lab's D37 rule: that end is older than its deadline in `ops.product_deadlines`, or it has a deadline and no ready interval.
@@ -65,7 +66,8 @@ Every `query_metrics` result carries a `freshness` field (SL-4, S4), which `fres
 
 The field holds each product's facts and one `statement` ("Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.").
 The instruction tells the model to quote that statement word for word; no freshness rule is in the prompt.
-An unreadable ledger is said in the statement ("Freshness unknown: ..."), never raised.
+An unreadable ledger is said in the statement ("Freshness unknown: ..."), never raised, and so is a result that names no metrics, as `ask_data_agent`'s may not.
+A refused call (`{"error": ...}`) gets no freshness.
 
 ## Run with only the dbt project and a warehouse
 
@@ -123,7 +125,7 @@ make agent-serve AGENT_DBNAME=dbt_dev
 
 | Command | What it proves | Model |
 |---|---|---|
-| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
+| `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the audit and freshness kept for a stand-in `DataAgentToolset` whose data tool has another name, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
 | `make agent-eval` | the scored eval below | live, ~2 x 15 turns |
 
 `make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.

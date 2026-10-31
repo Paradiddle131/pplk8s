@@ -99,7 +99,8 @@ All synthetic output is deterministic and all data is synthetic or public; TLC d
 
 ## Warehouse contract
 
-The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each load, so dbt sources resolve even before an entity's first extract.
+The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each extract or load, so dbt sources resolve even before an entity's first extract.
+Each extract or load ensures all of them, not only its own: a pipeline's dbt build can read a table another pipeline lands (the weather models are tagged `sales`, PLAN.md D20), and a warehouse reset under a running service (`make services-reset`) would otherwise stay without the tables no request names (#172).
 The schema itself must already exist; `warehouse-init` creates it in the Compose stack.
 Every table ends with the metadata columns `_run_id text`, `_interval_start timestamptz`, `_interval_end timestamptz`, `_page integer`, `_source_uri text`, and `_loaded_at timestamptz DEFAULT now()`.
 All metadata columns except `_loaded_at` are `NOT NULL`.

@@ -5,13 +5,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection, Sequence
+
 from google.adk.agents import LlmAgent
 from google.adk.models.base_llm import BaseLlm
-from google.adk.tools import FunctionTool
+from google.adk.tools import BaseTool, FunctionTool
 
-from semantic_agent.audit import audit_tool_call
+from semantic_agent.guard import after_data_tool
 from semantic_agent.model import answer_model_failure, build_model, request_config
-from semantic_agent.tools import TOOLS
+from semantic_agent.tools import CATALOG_TOOLS, TOOLS, catalog
 
 INSTRUCTION = """\
 You answer business questions through the semantic layer's metrics, which list_metrics returns.
@@ -35,15 +37,22 @@ Then add the freshness statement that query_metrics returned, word for word.
 """
 
 
-def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
+def build_agent(
+    model: BaseLlm | str | None = None,
+    toolset: Sequence[BaseTool] | None = None,
+    catalog_tools: Collection[str] = CATALOG_TOOLS,
+) -> LlmAgent:
+    """The agent over a toolset, the lab's metric tools unless given one: the seam a
+    `DataAgentToolset` fills at work, naming its catalog-only tools in `catalog_tools`. Every other
+    tool's calls are audited and given their metrics' freshness, whatever the tool is called."""
     return LlmAgent(
         name="semantic_agent",
         description="Answers business questions through the dbt semantic layer's metrics.",
         model=model or build_model(),
         generate_content_config=request_config(),
         instruction=INSTRUCTION,
-        tools=[FunctionTool(tool) for tool in TOOLS],
-        after_tool_callback=audit_tool_call,
+        tools=list(toolset) if toolset is not None else [FunctionTool(tool) for tool in TOOLS],
+        after_tool_callback=after_data_tool(catalog_tools, catalog),
         on_model_error_callback=answer_model_failure,
     )
 

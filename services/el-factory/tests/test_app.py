@@ -245,6 +245,29 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
     ]
 
 
+SOURCE_TABLES = [
+    "open_meteo_hourly_weather",
+    "partner_returns",
+    "synthetic_ad_spend",
+    "synthetic_bookings",
+    "synthetic_campaigns",
+    "synthetic_customers",
+    "synthetic_leads",
+    "synthetic_orders",
+]
+
+
+def test_an_extract_after_a_warehouse_reset_recreates_every_source_table(make_client, warehouse):
+    # Issue #172: the warehouse is reset under a running service, then sales extracts orders;
+    # sales' dbt build also reads the weather table, which no sales extract names.
+    client = make_client()
+    warehouse.ensured.clear()
+
+    assert client.post("/extract", json=ORDERS_BODY).status_code == 200
+
+    assert sorted(set(warehouse.ensured)) == SOURCE_TABLES
+
+
 def test_startup_survives_an_unreachable_warehouse(storage):
     class DownWarehouse:
         def ensure_table(self, table):

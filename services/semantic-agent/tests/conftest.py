@@ -28,13 +28,14 @@ os.environ["OPENROUTER_API_BASE"] = "http://127.0.0.1:9/api/v1"
 
 @pytest.fixture(autouse=True)
 def no_ledger(monkeypatch):
-    """query_metrics' freshness without a warehouse: every product has no ready interval."""
-    from semantic_agent import tools
-    from semantic_agent.freshness import assess
+    """A data call's freshness without a warehouse: every product has no ready interval."""
+    from semantic_agent import freshness
 
     now = datetime.datetime.now(datetime.UTC)
     monkeypatch.setattr(
-        tools, "freshness", lambda products: assess([(p, None, None) for p in products], now)
+        freshness,
+        "freshness",
+        lambda products: freshness.assess([(p, None, None) for p in products], now),
     )
 
 
