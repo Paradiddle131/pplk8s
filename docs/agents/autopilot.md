@@ -1,6 +1,7 @@
 # Autopilot profile — pplk8s
 
-Unattended cloud wakes on this repo follow the `autopilot` skill (`~/.claude/skills/autopilot/SKILL.md`; if missing, read `/home/user/claude-dotfiles/cloud/skills/autopilot/SKILL.md`) with the slots below.
+Unattended cloud wakes on this repo follow the `dotfiles:autopilot` skill (claude-dotfiles' plugin; if missing, read `/home/user/claude-dotfiles/cloud/skills/autopilot/SKILL.md`) with the slots below.
+A wake with no `~/.claude/cloud-target` (the environment's setup didn't run: no Docker mirror, `dockerd` stopped, the skill missing) first runs `bash /home/user/claude-dotfiles/bin/cloud-setup.sh pplk8s`.
 The routine prompt: "Follow `docs/agents/autopilot.md` in pplk8s and do one wake."
 Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit PRs and issues, comment, label, mark PRs ready, without asking.
 
