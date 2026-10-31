@@ -1,6 +1,6 @@
 # Semantic agent eval
 
-Run 2026-10-30T23:48Z by `make agent-eval` (`services/semantic-agent`, semantic/PLAN.md SL-5), model `nvidia/nemotron-3.5-super-vl:free`, on `dbt/dev/fixture.sql`.
+Run 2026-10-31T13:15Z by `make agent-eval` (`services/semantic-agent`, semantic/PLAN.md SL-5), model `nvidia/nemotron-3.5-super-vl:free`, on `dbt/dev/fixture.sql`.
 Each agent answers each question once through ADK's `LocalEvalService`; an answer is right when it carries the number the warehouse gives (`evals/questions.yaml`).
 
 | | Semantic agent | Text-to-SQL baseline |
@@ -32,39 +32,39 @@ Each agent answers each question once through ADK's `LocalEvalService`; an answe
 
 ## Answers
 
-- `revenue_total` semantic: Total revenue for 1–2 October 2026 was EUR 1,850.34. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `revenue_total` baseline: Total revenue was €1,850.34 over 1–2 October 2026 (€981.69 on 1 October and €868.65 on 2 October).
-- `revenue_one_day` semantic: Revenue on 2 October 2026 was €868.65. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `revenue_total` semantic: Total revenue was EUR 1,850.34 over 1–2 October 2026. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `revenue_total` baseline: Total revenue was €1,850.34 across 1 and 2 October 2026.
+- `revenue_one_day` semantic: Revenue on 2 October 2026 was €868.65, covering that single day. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
 - `revenue_one_day` baseline: Revenue on 2 October 2026 was €868.65.
-- `revenue_best_day` semantic: The highest-revenue day in October 2026 was 2026-10-01, with 981.69 EUR in revenue. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `revenue_best_day` baseline: The highest revenue day in October 2026 was 2026-10-01, with €981.69 in revenue (covering the period 1–31 October 2026).
-- `net_revenue_one_day` semantic: Net revenue on 1 October 2026 was 964.19 EUR, covering that single day. Fresh: returns.silver is ready up to 2026-10-03T00:00Z. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `revenue_best_day` semantic: The highest-revenue day in October 2026 was 2026-10-01, with revenue of €981.69. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `revenue_best_day` baseline: The highest-revenue day in October 2026 was 2026-10-01, with €981.69 in revenue.
+- `net_revenue_one_day` semantic: Net revenue on 1 October 2026 was €964.19, covering revenue minus partner returns for that single day. Fresh: returns.silver is ready up to 2026-10-03T00:00Z. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
 - `net_revenue_one_day` baseline: Net revenue was €964.19 on 1 October 2026 (gross revenue €981.69 minus partner returns of €17.50).
-- `net_revenue_total` semantic: Net revenue for 1 and 2 October 2026 combined was 1,825.59 EUR. Fresh: returns.silver is ready up to 2026-10-03T00:00Z. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `net_revenue_total` baseline: The combined net revenue for 1 and 2 October 2026 is €1,825.59.
-- `orders_one_day` semantic: On 1 October 2026, 15 orders were placed (cancelled ones included). Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `orders_one_day` baseline: 15 orders were placed on 1 October 2026, including the 2 that were later cancelled.
-- `cancelled_total` semantic: There were 5 cancelled orders over 1 and 2 October 2026. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `cancelled_total` baseline: 5 orders were cancelled over 1 and 2 October 2026.
-- `cancellation_rate` semantic: 16.7% of orders placed on 1–2 October 2026 were cancelled. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `cancellation_rate` baseline: On 1–2 October 2026, 5 of 30 orders were cancelled, a cancelled share of 16.7%.
-- `active_customers` semantic: On 2 October 2026, 9 distinct customers made at least one non-cancelled purchase. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `net_revenue_total` semantic: Net revenue was 1,825.59 EUR for 1 and 2 October 2026 combined. Fresh: returns.silver is ready up to 2026-10-03T00:00Z. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `net_revenue_total` baseline: Combined net revenue for 1–2 October 2026 is €1,825.59 (€964.19 on 1 October plus €861.40 on 2 October).
+- `orders_one_day` semantic: On 1 October 2026, 15 orders were placed, cancelled ones included. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `orders_one_day` baseline: 15 orders were placed on 1 October 2026, including cancelled ones.
+- `cancelled_total` semantic: 5 cancelled orders were placed over 1 and 2 October 2026. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `cancelled_total` baseline: 5 orders were cancelled on 1 and 2 October 2026.
+- `cancellation_rate` semantic: On 1 and 2 October 2026, the share of orders cancelled was 16.7%. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `cancellation_rate` baseline: On 1 and 2 October 2026, 16.67% of the 30 orders were cancelled.
+- `active_customers` semantic: 9 distinct customers bought from us on 2 October 2026. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
 - `active_customers` baseline: 9 distinct customers bought on 2 October 2026.
-- `returns_amount` semantic: €24.75 was returned to customers through partner returns from October 1–7, 2026 (early October). Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
-- `returns_amount` baseline: €24.75 was returned to customers through partner returns (3 returns across 2 days) — covering 1–2 October 2026, the only days available in the data for early October 2026.
-- `returns_one_day` semantic: On 1 October 2026 there were 2 partner returns, covering the single day 2026-10-01. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
-- `returns_one_day` baseline: On 1 October 2026, there were **2 returns** (totaling €17.50 in returned value).
-- `shipped_orders` semantic: 11 shipped orders overall. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `shipped_orders` baseline: 25 orders have shipped across the period from 2026-10-01 to 2026-10-02.
-- `damaged_returns` semantic: Returns of damaged goods cost €12.5 across all available return data. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
-- `damaged_returns` baseline: The tables track returns in EUR but not by reason, so returns specifically for damaged goods cannot be isolated. Total returns across all causes were €24.75 over 2026-10-01 to 2026-10-02.
+- `returns_amount` semantic: Partner returns returned €24.75 to customers between 2026-10-01 and 2026-10-07. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
+- `returns_amount` baseline: €24.75 was returned to customers through partner returns between October 1 and October 2, 2026.
+- `returns_one_day` semantic: There were 2 partner returns on 1 October 2026. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
+- `returns_one_day` baseline: On 1 October 2026 there were 2 returns (€17.50 in returned value).
+- `shipped_orders` semantic: There are 11 shipped orders (all time). Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `shipped_orders` baseline: 25 orders have shipped, covering the period from 2026-10-01 to 2026-10-02.
+- `damaged_returns` semantic: Returns of damaged goods cost €12.50 across all available return data. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.
+- `damaged_returns` baseline: The tables do not separate returns of damaged goods from other returns; total returns cost €24.75 (3 returns) across 2026-10-01 to 2026-10-02.
 - `revenue_germany` semantic: Revenue from customers in Germany on 1 October 2026 was €379.75, covering that single day. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `revenue_germany` baseline: Revenue from customers in Germany on 1 October 2026 was €379.75.
-- `amsterdam_temperature` semantic: The semantic layer has no metric for average temperature or weather data. The available metrics cover lab sales, orders, cancellations, returns, bookings, ad spend, leads, and finance figures (revenue_eur, net_revenue_eur, returns_eur, orders_total, bookings, ad_spend_eur, etc.), but none relate to temperature or weather in Amsterdam.
-- `amsterdam_temperature` baseline: The average temperature in Amsterdam on 1 October 2026 was 11.0°C.
-- `cost_per_booking_total` semantic: Cost per booking was €130 over 1–2 October 2026. Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `cost_per_booking_total` baseline: Cost per booking was €130.00 (€390 total ad spend ÷ 3 bookings) across 1–2 October 2026.
-- `cost_per_lead_search` semantic: Cost per lead from search campaigns in early October 2026 (October 1–7) was 46 EUR. Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `cost_per_lead_search` baseline: A search-campaign lead cost €46 on average (€230 ad spend across 5 leads) over Oct 1–2, 2026 — the full early-October period available in the data.
-- `lead_to_booking_rate` semantic: The lead-to-booking rate for 1–2 October 2026 was 30%. Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
-- `lead_to_booking_rate` baseline: 30% of leads went on to book (3 bookings out of 10 leads) across 1 and 2 October 2026.
+- `revenue_germany` baseline: Revenue from customers in Germany on 1 October 2026 was €379.75 (3 orders).
+- `amsterdam_temperature` semantic: The semantic layer has no metric for temperature or weather; it only tracks business measures such as revenue, orders, bookings, ad spend, leads, and returns. There is no metric that can answer the average temperature in Amsterdam on 1 October 2026.
+- `amsterdam_temperature` baseline: The average temperature in Amsterdam on 1 October 2026 was 11°C, covering that single day.
+- `cost_per_booking_total` semantic: Cost per booking was EUR 130.0 over 1 and 2 October 2026. Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `cost_per_booking_total` baseline: The combined cost per booking on 1–2 October 2026 was €130.00 per booking (€220 on 1 Oct for 1 booking; €85 on 2 Oct for 2 bookings).
+- `cost_per_lead_search` semantic: A lead from search campaigns cost €46.00 per lead over October 1–7, 2026 (early October). Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `cost_per_lead_search` baseline: A search-campaign lead cost €46 on average across early October 2026 (Oct 1–2): €230 total ad spend divided by 5 leads (€43.33/lead on Oct 1, €50/lead on Oct 2).
+- `lead_to_booking_rate` semantic: 30% of the leads created on 1 and 2 October 2026 booked within 30 days of creation. Late: marketing.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.
+- `lead_to_booking_rate` baseline: 30% of leads booked — 3 bookings from 10 leads across 1–2 October 2026.
