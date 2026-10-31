@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Semantic layer check (issue #100, semantic/PLAN.md SL-1): host dbt builds the sales, returns and
 # finance models on dbt/dev/fixture.sql in the Compose warehouse's dbt_dev database, and asserts that
-#   - `make dbt-validate` passes against it (dbt parse, metric descriptions and labels, mf validate-configs),
+#   - `make dbt-validate` passes against it (dbt parse, the agent-ready standard, mf validate-configs),
 #   - the time spine lands in semantic.time_spine,
 #   - the daily order metrics equal gold.daily_sales row for row, cancellation_rate included,
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row,
@@ -42,8 +42,8 @@ echo "ok: sales, returns, finance and marketing built; semantic.time_spine has 1
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "16 metrics described and labelled" "$OUT/validate.log" || fail "check_metrics did not report the 16 metrics"
-echo "ok: make dbt-validate (parse, check_metrics, mf validate-configs) passes against $DB"
+grep -q "7 semantic models and 16 metrics described" "$OUT/validate.log" || fail "check_standard did not report the 7 semantic models and 16 metrics"
+echo "ok: make dbt-validate (parse, check_standard, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
 # the hand-written aggregates (R1: the metric is the one definition; gold and exposed are the oracle).
@@ -131,11 +131,18 @@ expect "revenue by signup cohort vs silver (rows differing)" "$(psql_dev -c "
   select count(*) from ((select * from silver except select * from mf) union all (select * from mf except select * from silver)) d")" 0
 echo "ok: orders metrics by customer country equal exposed.sales_by_country_daily; revenue by signup cohort equals silver"
 
-# A metric without words fails the stage: drop a labelled, undescribed metric beside the real ones.
+# Straying from the standard fails the stage: a labelled, undescribed metric beside the real ones, and
+# a gold model without the layer's prefix, a description or a described column.
 stray="$REPO/dbt/models/semantic/zz_semantic_check_stray.yml"
-trap 'rm -f "$stray"' EXIT
+stray_model="$REPO/dbt/models/gold/zz_semantic_check_stray.sql"
+trap 'rm -f "$stray" "$stray_model"' EXIT
+echo "select 1 as stray_id" >"$stray_model"
 cat >"$stray" <<'YAML'
 version: 2
+models:
+  - name: zz_semantic_check_stray
+    columns:
+      - name: stray_id
 metrics:
   - name: zz_stray_orders
     label: Stray
@@ -143,10 +150,15 @@ metrics:
     expr: orders_total
     input_metrics: [orders_total]
 YAML
-if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/stray.log" 2>&1; then fail "dbt-validate passed with an undescribed metric"; fi
-grep -q "check_metrics: metric zz_stray_orders: no description" "$OUT/stray.log" ||
-  { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on the undescribed metric"; }
-rm -f "$stray"
-echo "ok: a metric without a description fails make dbt-validate"
+if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/stray.log" 2>&1; then fail "dbt-validate passed off the standard"; fi
+for problem in "metric zz_stray_orders: no description" \
+  "model zz_semantic_check_stray: in gold, so its name starts with gld_" \
+  "public model zz_semantic_check_stray: no description" \
+  "public model zz_semantic_check_stray: column stray_id has no description"; do
+  grep -qF "check_standard: $problem" "$OUT/stray.log" ||
+    { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on: $problem"; }
+done
+rm -f "$stray" "$stray_model"
+echo "ok: an undescribed metric and an unprefixed, undescribed gold model fail make dbt-validate"
 
 echo "PASS: semantic check"

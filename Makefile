@@ -9,9 +9,9 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
-DBT_IMAGE ?= localhost:5001/dbt:0.7.5
+DBT_IMAGE ?= localhost:5001/dbt:0.7.6
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.2
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.3
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -98,13 +98,14 @@ dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed|sema
 	docker run --rm --network pplk8s $(DBT_IMAGE) build --select $(STAGE)
 
 # The semantic layer's stage check (semantic/PLAN.md SL-1), with host dbt on the image's pins as
-# tlc-dbt-check runs it: the project parses, every metric is described and labelled, and MetricFlow
+# tlc-dbt-check runs it: the project parses, it keeps the agent-ready standard (naming by layer, public
+# models, semantic models and metrics described; docs/agent-ready-warehouse.md), and MetricFlow
 # validates the semantic models, dimensions, entities, measures and metrics against the warehouse.
 DBT_DBNAME ?= warehouse
-dbt-validate: ## Validate the semantic layer against the Compose warehouse (DBT_DBNAME=warehouse|dbt_dev): dbt parse, metric descriptions and labels, mf validate-configs
+dbt-validate: ## Validate the semantic layer against the Compose warehouse (DBT_DBNAME=warehouse|dbt_dev): dbt parse, the agent-ready standard, mf validate-configs
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
 	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
-	  && python3 scripts/check_metrics.py target/semantic_manifest.json \
+	  && python3 scripts/check_standard.py target \
 	  && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf validate-configs
 
 # The catalog (semantic/PLAN.md SL-3), with the same host dbt: the agent catalog and the BigQuery data
