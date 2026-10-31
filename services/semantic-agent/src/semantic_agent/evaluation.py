@@ -8,7 +8,7 @@ when the run starts. Three custom ADK metrics score a run:
   a quoted freshness statement do not count.
 - `metric_choice` (semantic agent only): its `query_metrics` calls named the expected metrics.
 - `freshness_quoted` (semantic agent only, SL-4): the answer quotes every freshness statement its
-  `query_metrics` calls returned.
+  data calls returned.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
 Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`. A run that
@@ -156,11 +156,12 @@ def _result(scores: list[float], actual: list[Invocation], expected: list[Invoca
 
 
 def freshness_statements(invocation: Invocation) -> list[str]:
-    """The freshness statements the invocation's query_metrics calls returned, in order."""
+    """The freshness statements the invocation's data calls returned, in order, whatever the data
+    tool is called (#177)."""
     found = []
     for response in get_all_tool_responses(invocation.intermediate_data):
         statement = ((response.response or {}).get("freshness") or {}).get("statement")
-        if response.name == "query_metrics" and statement and statement not in found:
+        if statement and statement not in found:
             found.append(statement)
     return found
 
