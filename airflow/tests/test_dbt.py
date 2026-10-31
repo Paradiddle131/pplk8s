@@ -111,11 +111,13 @@ def test_unsafe_macro_names_are_rejected(macro):
         run_dbt_operation(macro, pipeline="tlc")
 
 
-def test_semantic_validation_runs_mf_in_the_dbt_pod():
-    op = validate_semantic_layer(pipeline="finance", retries=1)
+def test_semantic_validation_queries_only_the_named_pipelines_in_the_dbt_pod():
+    op = validate_semantic_layer(pipeline="finance", pipelines=["returns", "sales"], retries=1)
     assert op.task_id == "validate_semantic_layer"
     assert op.cmds == ["/bin/sh", "-c"]
-    assert op.arguments == ["dbt parse --quiet && exec mf validate-configs"]
+    assert op.arguments == [
+        "dbt parse --quiet && exec python scripts/validate_semantic.py --pipelines returns,sales"
+    ]
     assert op.name == "dbt-finance-semantic-validate"
     assert op.labels["pplk8s/stage"] == "semantic-validate"
     assert op.image == run_dbt("exposed", pipeline="finance").image
@@ -124,6 +126,10 @@ def test_semantic_validation_runs_mf_in_the_dbt_pod():
     assert op.retries == 1
 
 
-def test_semantic_validation_rejects_an_unsafe_pipeline():
+@pytest.mark.parametrize(
+    ("pipeline", "pipelines"),
+    [("x; rm -rf /", ["sales"]), ("finance", ["sales; rm -rf /"]), ("finance", [])],
+)
+def test_semantic_validation_rejects_unsafe_or_missing_pipelines(pipeline, pipelines):
     with pytest.raises(ValueError, match="pipeline"):
-        validate_semantic_layer(pipeline="x; rm -rf /")
+        validate_semantic_layer(pipeline=pipeline, pipelines=pipelines)

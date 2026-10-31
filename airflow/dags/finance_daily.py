@@ -3,9 +3,11 @@
 Waits (deferrable, in the triggerer, holding no worker slot) until ``sales.gold`` and
 ``returns.silver`` are ``ready`` in ``ops.readiness`` for the run's interval, then builds the
 ``finance`` exposed models and records ``finance.exposed`` (PLAN.md D19).
-After the exposed build it validates the semantic layer the metrics agent reads
-(``mf validate-configs``, semantic/PLAN.md S4); a broken semantic layer fails the run but does not
-hold back ``finance.exposed``, whose data it does not change.
+After the exposed build it validates the semantic layer the metrics agent reads (semantic/PLAN.md
+S4): the whole semantic manifest, and on the warehouse the semantic models of the pipelines it
+waited for, so a domain that has never loaded (marketing before its first run) cannot fail it
+(#168). A broken semantic layer fails the run but does not hold back ``finance.exposed``, whose
+data it does not change.
 
 The producers are ``sales_elt`` (scheduled) and ``returns_file_arrival`` (event-triggered); this DAG
 knows only their ledger products, never their DAG ids, so either could move to another Airflow or
@@ -81,7 +83,8 @@ def finance_daily():
     build = run_dbt("exposed", pipeline=PIPELINE, max_active_tis_per_dag=1)
     list(waits.values()) >> build
     build >> record(ctx, waits["sales.gold"].output)
-    build >> validate_semantic_layer(pipeline=PIPELINE, retries=1)
+    sources = sorted({product.split(".")[0] for product in UPSTREAM})
+    build >> validate_semantic_layer(pipeline=PIPELINE, pipelines=sources, retries=1)
 
 
 finance_daily()

@@ -117,7 +117,9 @@ make dbt-validate DBT_DBNAME=dbt_dev
 
 It parses the project, runs `check_standard.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities and metrics against the warehouse's tables.
 The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
-In the cluster, `finance_daily` runs the whole check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `mf validate-configs`, in one pod of this image).
+In the cluster, `finance_daily` runs the check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `scripts/validate_semantic.py --pipelines returns,sales`, in one pod of this image).
+That script runs MetricFlow's own validators: the whole semantic manifest, then on the warehouse only the semantic models of the pipelines named and the metrics that read only them, so a domain that has never loaded (marketing before `marketing_elt`'s first run) cannot fail another pipeline's gate (#168).
+Without `--pipelines` it queries every semantic model, as `mf validate-configs` does.
 
 Query a metric with the `mf` CLI from this folder, with the same environment:
 

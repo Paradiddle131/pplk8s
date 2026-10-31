@@ -9,7 +9,7 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.2
-DBT_IMAGE ?= localhost:5001/dbt:0.7.15
+DBT_IMAGE ?= localhost:5001/dbt:0.7.16
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
 AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
@@ -37,7 +37,7 @@ cache_flags = $(if $(BUILD_CACHE),--cache-from type=registry$(comma)ref=$(BUILD_
 docker_build = $(DOCKER_BUILD) -t $(1) $(call cache_flags,$(or $(2),$(firstword $(subst :, ,$(notdir $(1))))))
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.16
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.17
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
@@ -48,7 +48,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -171,7 +171,11 @@ agent-web: ## Serve both agents locally (the semantic agent and the eval's basel
 agent-standalone-check: services-up ## Run the semantic agent on an empty database with only the dbt project: make agent-warehouse, the fixture, one scripted turn; asserts its audit row and "Freshness unknown" (#166; no model quota)
 	tests/e2e/agent-standalone-check.sh
 
-agent-deploy-check: services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
+agent-key-check: ## Ask OpenRouter whether it accepts the agents' key, spending no model request (#158; the cloud proxy adds the key)
+	tests/e2e/openrouter-key-check.sh
+
+# The key check runs before the image builds and the deploy, so a refused key fails in seconds.
+agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
 	tests/e2e/agent-deploy-check.sh
 
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
