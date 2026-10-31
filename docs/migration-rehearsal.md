@@ -44,6 +44,9 @@ One calculated field is computed differently: `legacy.country_sales.revenue` sum
 - switching the automation before the agent fails on `switched before agent sales_agent`;
 - rolling the dashboard back to its old table passes.
 
+On real data the dashboard's parity can still differ: the old query starts from orders and drops a return recorded on a day without orders, which the new model keeps as a day with revenue 0 (#150).
+That is the parity report doing its job; the owner accepts the difference on the exposure, as for the agent.
+
 No DAG builds `legacy` or `migration`; `dbt build --select +tag:migration` does.
 A consumer here is an exposure, not a running dashboard or agent: the lab has none to repoint, so the switch is the exposure's half of the change.
 
