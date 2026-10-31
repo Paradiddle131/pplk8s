@@ -50,6 +50,6 @@ A consumer here is an exposure, not a running dashboard or agent: the lab has no
 ## At work, on BigQuery
 
 - The old tables stay where the scheduled queries write them; a `legacy` model can be a [source](https://docs.getdbt.com/docs/build/sources) instead of a rebuild, since the point is to read what consumers read today.
-- The parity model and the gate use only `union all`, `count`, `sum` and casts through dbt's type macros, as the hops do; they have not run on the BigQuery emulator (unverified).
+- The parity model and the gate run on a BigQuery engine unchanged: `make bigquery-emulator-check` builds them on the emulator and gets the same 13 rows of `migration.parity` as Postgres (measured); real BigQuery is unverified.
 - Repointing a consumer is per tool: a Looker Studio data source, the tables named in a data agent's authored context, the query of a scheduled automation.
 - dbt docs draws every exposure under the model it reads, so the lineage graph is the switch board: who is on the old table and who is on the new.

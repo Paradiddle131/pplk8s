@@ -26,7 +26,7 @@ SOURCES = (
     "synthetic_leads",
     "synthetic_bookings",
 )
-DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic")
+DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration")
 TYPES = {
     "text": "STRING",
     "integer": "INT64",
