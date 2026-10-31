@@ -59,7 +59,7 @@ A custom masking routine must be a SQL UDF.
 BigQuery also has [user-defined aggregate functions](https://docs.cloud.google.com/bigquery/docs/routines) (`CREATE AGGREGATE FUNCTION`).
 
 **Its dbt counterpart.**
-A dbt [function](https://docs.getdbt.com/docs/build/udfs) (dbt 1.11 and later): a SQL, Python or JavaScript body in `functions/` with its arguments and return type in YAML, referenced from a model as `{{ function('name') }}`; dbt creates it in the warehouse before the models that call it, so tools outside dbt can call it too (stated).
+A dbt [function](https://docs.getdbt.com/docs/build/udfs) (dbt 1.11 and later; JavaScript from 1.12): a SQL, Python or JavaScript body in `functions/` with its arguments and return type in YAML, referenced from a model as `{{ function('name') }}`; dbt creates it in the warehouse before the models that call it, so tools outside dbt can call it too (stated).
 The lab's pins (dbt-core 1.12.6, dbt-bigquery 1.12.1) parse such a function into the manifest as a `function` node named `` `pplk8s-lab`.`public`.`<name>` `` and compile it on the offline `bigquery` target (measured, in a scratch copy of `dbt/`; the project defines no function).
 Logic only dbt needs is a macro instead: it is compiled into each model's SQL and creates no object in the warehouse (stated).
 
