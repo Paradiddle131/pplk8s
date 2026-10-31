@@ -27,12 +27,12 @@ At work the same output takes `method: oauth` (application default credentials) 
 | `semantic.metrics` (one row per metric: name, label, description, type, models, pipelines) | Glossary terms: BigQuery custom glossary or Knowledge Catalog | The same model builds on BigQuery; the authored context's `glossaries` carry the same words |
 | `semantic.glossary` (one row per business term that is not a metric: term, description, synonyms, metrics, dimensions) | The same glossary, for terms such as a cohort or a channel | `config.meta.glossary` on the dbt models; the same model builds on BigQuery, and the authored context's `glossaries` carry each term with its metrics and dimensions in the description (the documented glossary item has no field for them) |
 | `target/catalog/data_agent/system_instruction.yaml` | The data agent's authored context: tables, fields and aggregations, relationships, glossary, additional descriptions | Generated from the manifests by `build_catalog.py` (S2); set as the agent's staging context, then published (`stagingContext`, `publishedContext`; stated) |
-| `target/catalog/data_agent/example_queries.json` | The data agent's verified queries (formerly golden queries) | MetricFlow compiles each metric offline in the target's dialect (measured on BigQuery's) |
+| `target/catalog/data_agent/example_queries.json` | The data agent's verified queries (formerly golden queries) | MetricFlow compiles each metric and each dbt saved query offline in the target's dialect (measured on BigQuery's); a saved query is dbt's unit for a question answered the same way every time, so it carries its question (`config.meta.question`) |
 | `list_metrics`, `describe_metric`, `query_metrics` (MetricFlow) | `DataAgentToolset`: `list_accessible_data_agents`, `get_data_agent_info`, `ask_data_agent` (ADK ≥ 1.23; stated) | Swap the toolset in `semantic_agent/agent.py`; the agent, its instruction and its session store stay |
-| `sql_baseline` (`execute_sql` over gold and exposed) | `BigQueryToolset.ask_data_insights` with inline table references | The "ADK schema-driven" pattern: what most teams run first, and what the eval scores against |
+| `sql_baseline` (`execute_sql` over gold and exposed) | `BigQueryToolset.ask_data_insights` with inline table references | The "ADK schema-driven" pattern: what most teams run first, and what the eval scores against; an eval arm only, never deployed, so nothing to move (SL-5) |
 | `MODEL_BACKEND=openrouter` (free model) | `MODEL_BACKEND=gemini` | `model.py` is the only place naming a provider |
 | ADK `DatabaseSessionService` on the metadata DB's `agent_sessions` | The same on Cloud SQL, or `VertexAiSessionService` | ADK's session URI |
-| `agent_metrics` and `agent_sql` roles | A service account per agent with dataset-level read on the datasets it may see | Trust stays in the warehouse, not the prompt (SL-4); [Agent access and audit](#agent-access-and-audit) is the proposal |
+| `agent_metrics` role (and `agent_sql`, the eval baseline's) | A service account per deployed agent with dataset-level read on the datasets it may see | Trust stays in the warehouse, not the prompt (SL-4); [Agent access and audit](#agent-access-and-audit) is the proposal |
 | `ops.agent_queries`, written as the insert-only `agent_audit` role | BigQuery's Data Access audit log and `INFORMATION_SCHEMA.JOBS`, with the agent's session in job labels | [Agent access and audit](#agent-access-and-audit) |
 | Freshness from `ops.readiness` and `ops.product_deadlines` | The same two tables in BigQuery | The tool reads them; a native data agent needs them as a knowledge source or a verified query (unverified) |
 | `validate_semantic_layer` in `finance_daily` | A Cloud Run Job on the dbt image whose command is `dbt parse && mf validate-configs` | Job overrides change args, not the command, so it is its own Job (unverified) |
@@ -94,7 +94,8 @@ This is how that maps to BigQuery; IAM on a real project stays out of scope, so 
 | B. Authorized views or an authorized dataset | The agent reads a dataset of views and has no grant on the source datasets; the views are authorized on them ([stated](https://docs.cloud.google.com/bigquery/docs/authorized-views): principals "can view the shared data and run queries on it, but they can't access the source dataset directly") | Narrows an agent to chosen columns and rows; dbt-bigquery grants a view model access with `grant_access_to` ([stated](https://docs.getdbt.com/reference/resource-configs/bigquery-configs)) | A view per table an agent reads, and the semantic models would have to sit on those views instead of silver |
 | C. A separate project for the agents | The agents' service accounts run their jobs in an agent project and read the data project's datasets through A or B | Separates the agents' jobs, quotas and billing from the pipelines' | A second project to run, and it still needs A or B for the reads |
 
-**Recommendation: A**, one service account per agent with dataset-level read, which is what the lab's roles already rehearse: the semantic agent on silver and semantic (plus the two `ops` tables its freshness reads, as table-level grants), the baseline on gold and exposed.
+**Recommendation: A**, one service account per deployed agent with dataset-level read, which is what the lab's roles already rehearse: the semantic agent on silver and semantic (plus the two `ops` tables its freshness reads, as table-level grants).
+The lab deploys one agent; the text-to-SQL baseline runs only inside the eval (SL-5), so its `agent_sql` role needs no counterpart unless the eval itself runs against BigQuery, where it would get its own identity on gold and exposed.
 Add B only for an agent that must see part of a dataset, and C only when the agents' query cost or quota needs its own budget.
 
 ### What is logged where
@@ -110,6 +111,7 @@ Add B only for an agent that must see part of a dataset, and C only when the age
 | Kept as long as the table is | `INFORMATION_SCHEMA.JOBS` keeps 180 days of job history (stated); the audit log's retention is its log bucket's |
 
 So at work the platform's audit log is the record of what each agent read, and the agent keeps a thin record of its own for what a job cannot carry: the conversation it served, the metrics asked for, the freshness it quoted and the calls it refused; labels join the two.
+That record's table comes from the dbt project, `dbt run-operation agent_warehouse` (`dbt/macros/agent_warehouse.sql`), which creates `ops.agent_queries` with BigQuery's types wherever the project builds (measured (emulator)); the agents' identities and their grants stay IAM, outside dbt.
 
 ## Unverified
 

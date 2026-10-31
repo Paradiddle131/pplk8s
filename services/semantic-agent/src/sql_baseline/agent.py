@@ -1,9 +1,12 @@
 """The eval baseline: the same model with one `execute_sql` tool over gold and exposed.
 
 The "ADK schema-driven" pattern (semantic/PLAN.md SL-5): the agent is told which tables exist and
-infers their columns and the SQL itself, with no semantic guardrails. The database enforces the
-scope: the lab's `agent_sql` role may only read `gold`, `exposed` and their `information_schema`
-rows, and every call runs one statement, read-only under a timeout.
+infers their columns and the SQL itself, with no semantic guardrails. The tables are the catalog's
+public models, the ones the semantic agent's catalog is built from, so neither agent knows a table
+the other does not. The database enforces the scope: the lab's `agent_sql` role may only read
+`gold`, `exposed` and their `information_schema` rows, and every call runs one statement, read-only
+under a timeout. It is the eval's control only: `make agent-eval` runs it in-process, and it is
+never deployed.
 
 Env: `WAREHOUSE_SQL_URL` (default the Compose warehouse as `agent_sql`, database `DBT_DBNAME`).
 """
@@ -17,27 +20,35 @@ from typing import Any
 
 import psycopg
 from google.adk.agents import LlmAgent
+from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.base_llm import BaseLlm
 from google.adk.tools import FunctionTool
 
 from semantic_agent.audit import audit_tool_call
+from semantic_agent.metrics import Catalog
 from semantic_agent.model import answer_model_failure, build_model, request_config
+from semantic_agent.tools import catalog
 
 MAX_ROWS = 200
-TABLES = (
-    "gold.daily_sales, gold.customer_lifetime, gold.daily_weather, gold.tlc_daily_trips, "
-    "exposed.sales_by_country_daily, exposed.daily_sales_with_weather, exposed.net_sales_daily, "
-    "exposed.tlc_daily_trips_by_borough"
-)
 
-INSTRUCTION = f"""\
-You answer business questions about the lab's sales, partner returns and finance data by writing
-PostgreSQL for the execute_sql tool. The tables you may read are: {TABLES}.
+INSTRUCTION = """\
+You answer business questions about the data in the warehouse's tables by writing PostgreSQL for
+the execute_sql tool. The tables you may read are: {tables}.
 Find their columns with information_schema.columns when you need them.
 Every number you give must come from a query result in this turn.
 If the tables cannot answer the question, say so.
 Answer in one or two sentences: the figure with its unit, and the days or period it covers.
 """
+
+
+def tables(source: Catalog) -> list[str]:
+    """The catalog's public models as `schema.table`, the names the warehouse knows them by."""
+    return sorted(".".join(model["relation"].split(".")[-2:]) for model in source.models)
+
+
+def instruction(_context: ReadonlyContext | None = None) -> str:
+    """The instruction with the catalog's tables, read when the agent first runs, not on import."""
+    return INSTRUCTION.format(tables=", ".join(tables(catalog())))
 
 
 def _url() -> str:
@@ -87,7 +98,7 @@ def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
         description="Answers business questions with SQL over gold and exposed (eval baseline).",
         model=model or build_model(),
         generate_content_config=request_config(),
-        instruction=INSTRUCTION,
+        instruction=instruction,
         tools=[FunctionTool(execute_sql)],
         after_tool_callback=audit_tool_call,
         on_model_error_callback=answer_model_failure,

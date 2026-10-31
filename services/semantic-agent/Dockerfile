@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
-# The semantic agent and its text-to-SQL baseline served by `adk api_server`: the Cloud Run stand-in
-# of semantic/PLAN.md SL-2, deployed in the workloads namespace (platform/k8s/workloads).
+# The semantic agent served by `adk api_server`: the Cloud Run stand-in of semantic/PLAN.md SL-2,
+# deployed in the workloads namespace (platform/k8s/workloads). The text-to-SQL baseline is the eval's
+# control (SL-5) and is never deployed, so the image carries the semantic agent's package only.
 # Build with the dbt project as a named context: `docker build --build-context dbt=dbt services/semantic-agent`.
 FROM ghcr.io/astral-sh/uv:0.11.7 AS uv
 
@@ -21,8 +22,9 @@ RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
-# The agents directory `adk api_server` serves: one package per agent, each with its root_agent.
-COPY src /app/agents
+# The agents directory `adk api_server` serves: one package per agent, each with its root_agent;
+# only semantic_agent, so the Service lists one app (SL-5: the baseline runs only inside the eval).
+COPY src/semantic_agent /app/agents/semantic_agent
 # The dbt project MetricFlow compiles requests against. Its target (manifest and agent catalog) is
 # written at pod start by the catalog initContainer, for the database the pod reads (SL-3).
 COPY --from=dbt dbt_project.yml profiles.yml selectors.yml /app/dbt/

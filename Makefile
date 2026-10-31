@@ -8,10 +8,10 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.1
-DBT_IMAGE ?= localhost:5001/dbt:0.7.14
+ELF_IMAGE ?= localhost:5001/el-factory:0.7.2
+DBT_IMAGE ?= localhost:5001/dbt:0.7.16
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.13
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.14
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -45,7 +45,7 @@ manifest_types = application/vnd.oci.image.index.v1+json,application/vnd.oci.ima
 in_registry = $(shell curl -sf -o /dev/null -H 'Accept: $(manifest_types)' http://$(firstword $(subst /, ,$(1)))/v2/$(firstword $(subst :, ,$(notdir $(1))))/manifests/$(word 2,$(subst :, ,$(notdir $(1)))) && echo yes)
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.16
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.17
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -156,22 +156,37 @@ semantic-check: services-up ## Build the sales, returns, finance and marketing m
 migration-check: services-up ## Build the legacy tables, the new layers and migration.parity on dbt/dev/fixture.sql in dbt_dev, and assert the parity report and the gate on each consumer's switch
 	tests/e2e/migration-check.sh
 
-# The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5).
+# The semantic agent's warehouse objects (semantic/PLAN.md SL-4, SL-10; #166): its roles, their grants and the
+# audit table, from one dbt macro (dbt/macros/agent_warehouse.sql) on any database the dbt project builds in,
+# with its own target path so a catalog built for another database stays. services-up runs it on warehouse.
+agent-warehouse: ## Create the semantic agent's roles, grants and ops.agent_queries in a database dbt builds in (DBT_DBNAME=warehouse|dbt_dev|...)
+	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/agent-warehouse \
+	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation agent_warehouse
+
+# The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5). Only the semantic agent is
+# deployed (workloads-up); the baseline is the eval's control, served here only beside it for the local demo.
 agent-test: ## Lint and test the semantic agent with a scripted model (services/semantic-agent); the database tests need services-up
 	cd services/semantic-agent && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
 AGENT_DBNAME ?= warehouse
-agent-serve: ## Serve both agents with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
+agent-serve: ## Serve both agents locally (the semantic agent and the eval's baseline) with `adk api_server` on localhost:8000, sessions in the metadata DB's agent_sessions database (needs services-up and dbt-catalog)
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk api_server --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
 
-agent-web: ## Serve both agents in ADK's dev UI on localhost:8000, the demo surface (needs services-up and dbt-catalog)
+agent-web: ## Serve both agents locally (the semantic agent and the eval's baseline) in ADK's dev UI on localhost:8000, the demo surface (needs services-up and dbt-catalog)
 	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
 	  uv run adk web --host 127.0.0.1 --port 8000 \
 	  --session_service_uri postgresql+asyncpg://agent_sessions:agent_sessions@localhost:5434/agent_sessions src
 
-agent-deploy-check: services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
+agent-standalone-check: services-up ## Run the semantic agent on an empty database with only the dbt project: make agent-warehouse, the fixture, one scripted turn; asserts its audit row and "Freshness unknown" (#166; no model quota)
+	tests/e2e/agent-standalone-check.sh
+
+agent-key-check: ## Ask OpenRouter whether it accepts the agents' key, spending no model request (#158; the cloud proxy adds the key)
+	tests/e2e/openrouter-key-check.sh
+
+# The key check runs before the image builds and the deploy, so a refused key fails in seconds.
+agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
 	tests/e2e/agent-deploy-check.sh
 
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)

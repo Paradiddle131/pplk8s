@@ -4,7 +4,8 @@
 # RBAC, runs `helm upgrade --install`, and ensures the Phase 4 pool exists.
 # Extra arguments are passed through to `helm upgrade` (e.g. --set key=value or -f <overlay>).
 # DAG_DELIVERY=git-sync (default, D23) syncs `main` from GitHub with the deploy key in
-# GIT_SYNC_SSH_KEY; DAG_DELIVERY=local mounts this checkout's airflow/dags instead (dev loop, CI).
+# GIT_SYNC_SSH_KEY; DAG_DELIVERY=local serves airflow/dags through the kind workers' bind mount
+# instead (dev loop, CI), and stops when that mount is another clone's (ensure-dag-mount.sh).
 set -euo pipefail
 cd "$(dirname "$0")"
 REPO="$(cd ../../.. && pwd)"

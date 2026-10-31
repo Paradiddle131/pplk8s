@@ -3,20 +3,27 @@
 An ADK agent that answers business questions through the dbt semantic layer's metrics instead of writing SQL, and the text-to-SQL baseline it is scored against ([`semantic/PLAN.md`](../../semantic/PLAN.md) SL-2, SL-5).
 It stands in for a Cloud Run service; at work the metric toolset is the seam a native BigQuery data agent fills (`DataAgentToolset.ask_data_agent`).
 
-## The two agents
+**One agent is deployed: `semantic_agent`.**
+`sql_baseline` is the eval's control, not a second production agent: `make agent-eval` runs it in-process beside the semantic agent to measure what the semantic layer adds, and `make agent-web` shows it locally for the demo's comparison; the image, the Deployment and its Secret leave it out (#163).
+
+## The two packages
 
 | Package | Tools | Reads |
 |---|---|---|
 | `semantic_agent` | `list_metrics`, `describe_metric`, `query_metrics` | S2's catalog (`dbt/target/catalog/agent.json`) and MetricFlow's Python API on the dbt project, as the read-only `agent_metrics` role (silver and semantic, plus `ops.readiness` and `ops.product_deadlines` for freshness) |
-| `sql_baseline` | `execute_sql` | gold and exposed only, as the read-only `agent_sql` role, one statement per call (10 s statement timeout); the "ADK schema-driven" pattern: table names in the instruction, columns from `information_schema` |
+| `sql_baseline` (eval only) | `execute_sql` | gold and exposed only, as the read-only `agent_sql` role, one statement per call (10 s statement timeout); the "ADK schema-driven" pattern: the catalog's public models as table names in the instruction (read from `agent.json` like the semantic agent's metrics, so the two never see different tables), columns from `information_schema` |
 
 `query_metrics` never takes SQL.
 It takes metric names, group-bys (`metric_time__day`, `__week`, `__month`, ...; `order__status`), filters as `{dimension, operator, values}` on categorical dimensions, a date range and an order.
 Each part is checked against the catalog; the filter becomes a MetricFlow `{{ Dimension(...) }}` condition with every value a quoted literal.
+MetricFlow renders that condition as a Jinja template before it compiles SQL, so a value holding `{{`, `{%` or `{#` is refused (`'{{ 7*7 }}'` would otherwise filter on `'49'`, #161).
 A categorical dimension whose column declares its values (an `accepted_values` test, which the catalog carries as `values`) shows them in `describe_metric`, and a filter value outside them comes back as an error naming them: a guessed value ("damaged goods" for `damaged`) would match no row and read as a confident zero.
 A request the semantic layer cannot answer (an unknown metric, a dimension the metric lacks) comes back as `{"error": ...}` for the model to read.
 
-The roles live in `platform/compose/warehouse-init/02-agent-roles.sql`, which `make services-up` applies to `warehouse` and `make agent-eval` to `dbt_dev`.
+`list_metrics` also returns the dbt saved queries (`dbt/models/semantic/saved_queries.yml`, #164): the recurring questions, each with its fixed metrics, group-bys and filters.
+`query_metrics(saved_query=...)` runs one by name, narrowed by the call's dates, filters, order and limit (MetricFlow refuses other metrics or group-bys beside a saved query); the result names the saved query's metrics, which its freshness, the audit row and the eval's `metric_choice` use.
+
+The roles, their grants and the audit table come from the dbt macro `agent_warehouse` (`make agent-warehouse`), which `make services-up` runs on `warehouse` and `make agent-eval` on `dbt_dev`.
 The database, not the prompt, keeps each agent in its tables (SL-4).
 
 ## Audit
@@ -41,6 +48,24 @@ The field holds each product's facts and one `statement` ("Late: sales.silver is
 The instruction tells the model to quote that statement word for word; no freshness rule is in the prompt.
 An unreadable ledger is said in the statement ("Freshness unknown: ..."), never raised.
 
+## Run with only the dbt project and a warehouse
+
+The agent needs no Airflow, no readiness ledger and no Compose stand-in: a Postgres database the dbt project builds in, and a model key (#166).
+Everything it needs in the warehouse beside the models comes from one dbt macro, `agent_warehouse` (`dbt/macros/agent_warehouse.sql`): the `agent_metrics`, `agent_sql` and `agent_audit` roles, their grants and `ops.agent_queries`.
+
+```bash
+make agent-warehouse DBT_DBNAME=mydb      # dbt run-operation agent_warehouse; idempotent
+# build the models into mydb, e.g. dbt build --select tag:sales tag:returns tag:finance tag:marketing
+make dbt-catalog DBT_DBNAME=mydb
+cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=mydb DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+  uv run adk web src                      # in-memory sessions without --session_service_uri
+```
+
+Run `make agent-warehouse` again after a schema is dropped and rebuilt, or after the readiness ledger appears, so the roles get their grants back.
+Without the ledger every answer says "Freshness unknown: the readiness ledger could not be read (...)", and every data query still leaves its audit row.
+`make agent-standalone-check` (`tests/e2e/agent-standalone-check.sh`) proves it on an empty database with one scripted turn: 861.4 through `query_metrics`, its audit row, "Freshness unknown".
+On BigQuery the same macro creates `ops.agent_queries` (checked on the emulator by `make bigquery-emulator-check`); the roles there are IAM, one service account per deployed agent.
+
 ## Model
 
 `model.py` is the only place that names a provider: `MODEL_BACKEND` (`openrouter`, the lab default, or `gemini`) and `MODEL_ID` (default `nvidia/nemotron-3.5-super-vl:free`; on OpenRouter only a free model, an id ending `:free`, builds), bounded by `MODEL_TIMEOUT_S` (120) and `MODEL_RETRIES` (2).
@@ -62,17 +87,17 @@ make dbt-catalog DBT_DBNAME=dbt_dev   # or warehouse
 make agent-serve AGENT_DBNAME=dbt_dev
 ```
 
-`agent-serve` runs `adk api_server` on `localhost:8000` with both agents, sessions in the `agent_sessions` database of the metadata DB (ADK's `DatabaseSessionService`; `make services-up` creates it).
+`agent-serve` runs `adk api_server` on `localhost:8000` with both packages (the baseline for local comparison only), sessions in the `agent_sessions` database of the metadata DB (ADK's `DatabaseSessionService`; `make services-up` creates it).
 
 ## Deploy
 
 `make workloads-up` builds the image (`Dockerfile`, tagged `AGENT_IMAGE` in the Makefile), pushes it to the local registry and deploys it in the kind cluster's `workloads` namespace beside EL Factory: the Cloud Run stand-in of SL-2 (`platform/k8s/workloads/semantic-agent-*.yaml`).
-- The image holds both agents (`/app/agents`, what `adk api_server` serves on 8080) and the dbt project; the build parses it once as a smoke check.
+- The image holds the semantic agent alone (`/app/agents/semantic_agent`, what `adk api_server` serves on 8080) and the dbt project; the build parses it once as a smoke check.
 - An initContainer runs `dbt parse` and `build_catalog.py` at pod start, for the database the pod reads (`AGENT_DBNAME`, default `warehouse`): MetricFlow's compiled SQL names that database.
-- The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics`, `agent_sql` and `agent_audit` logins, the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
+- The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics` and `agent_audit` logins (no `agent_sql`: the baseline is never deployed), the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
 - `EGRESS_PROXY` and `EGRESS_CA` route the model calls through a TLS-intercepting proxy (the cloud sandbox); unset elsewhere.
 
-`make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts 861.4 through `query_metrics`, the session's events in `agent_sessions` and its audit row in `ops.agent_queries` (one model turn).
+`make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts the Service lists `semantic_agent` alone and answers 861.4 through `query_metrics`, the session's events in `agent_sessions` and its audit row in `ops.agent_queries` (one model turn).
 `uv run adk web src` from this folder is the demo surface.
 
 ## Checks

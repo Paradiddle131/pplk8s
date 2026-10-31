@@ -185,12 +185,21 @@ def answer_correct(eval_metric, actual_invocations, expected_invocations, conver
 
 
 def queried_metrics(invocation: Invocation) -> set[str]:
-    return {
+    """The metrics the query_metrics calls named, and those of the saved queries they ran, which
+    their results name."""
+    named = {
         name
         for use in get_all_tool_calls(invocation.intermediate_data)
         if use.name == "query_metrics"
-        for name in (use.args or {}).get("metrics", [])
+        for name in (use.args or {}).get("metrics") or []
     }
+    saved = {
+        name
+        for response in get_all_tool_responses(invocation.intermediate_data)
+        if response.name == "query_metrics"
+        for name in (response.response or {}).get("metrics") or []
+    }
+    return named | saved
 
 
 def metric_choice(eval_metric, actual_invocations, expected_invocations, conversation_scenario):

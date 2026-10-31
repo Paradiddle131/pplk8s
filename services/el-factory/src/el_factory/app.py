@@ -18,7 +18,7 @@ from el_factory import retention
 from el_factory.chunks import extract_file
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
-from el_factory.model import Interval
+from el_factory.model import Interval, Table
 from el_factory.remote_file import NotPublished, head
 from el_factory.sources import Registry, build_registry, files, load_catalog, tlc
 from el_factory.sources.base import Entity
@@ -60,7 +60,8 @@ def create_app(
     catalog = load_catalog(config.catalog_path, registry)
     file_registry = files.FileRegistry(files.entities())
     app = Flask(__name__)
-    _provision_tables(app, warehouse, registry, file_registry)
+    landing = _landing_tables(warehouse, registry, file_registry)
+    _provision_tables(app, landing)
 
     @app.errorhandler(ApiError)
     def api_error(exc: ApiError) -> tuple[Response, int]:
@@ -169,7 +170,7 @@ def create_app(
         # next_url. The first page always runs, so every request makes progress, and the budget
         # is checked between pages, so a request can overrun it by one page.
         started = clock()
-        warehouse.ensure_table(entity.table)
+        _ensure(landing)
         cursor, pages, loaded, uri = parsed.cursor, 0, 0, ""
         while True:
             page = entity.fetch(parsed.interval, cursor)
@@ -211,7 +212,7 @@ def create_app(
             raise Superseded(f"{parsed.uri} generation {parsed.generation} is no longer live")
         rows = files.parse_ndjson(entity, data)
 
-        warehouse.ensure_file_table(entity.table)
+        _ensure(landing)
         loaded = warehouse.replace_file(
             entity.table, FileLoad(parsed.run_id, parsed.uri, parsed.generation), rows
         )
@@ -230,17 +231,34 @@ def create_app(
     return app
 
 
-def _provision_tables(
-    app: Flask, warehouse: Warehouse, registry: Registry, file_registry: files.FileRegistry
-) -> None:
-    # dbt sources expect every ds_source table to exist even before its first extract or load.
-    # Best effort: a warehouse outage at boot must not stop the service; each request re-ensures.
-    # File-source landing tables (tlc) are created by their first chunk, from the file's schema.
-    targets = [
-        (e.table, warehouse.ensure_table) for e in registry.entities() if isinstance(e, Entity)
+def _landing_tables(
+    warehouse: Warehouse, registry: Registry, file_registry: files.FileRegistry
+) -> list[tuple[Callable[[Table], None], Table]]:
+    """Every ds_source table dbt reads as a source, with the call that creates it.
+
+    File-source landing tables (tlc) are left out: their first chunk creates them, from the
+    file's schema.
+    """
+    landing = [
+        (warehouse.ensure_table, e.table) for e in registry.entities() if isinstance(e, Entity)
     ]
-    targets += [(e.table, warehouse.ensure_file_table) for e in file_registry.entities()]
-    for table, ensure in targets:
+    landing += [(warehouse.ensure_file_table, e.table) for e in file_registry.entities()]
+    return landing
+
+
+def _ensure(landing: list[tuple[Callable[[Table], None], Table]]) -> None:
+    # dbt sources expect every ds_source table to exist even before its first extract or load, and
+    # one pipeline's dbt build reads tables that another pipeline's extract lands (the weather
+    # models are tagged sales, PLAN.md D20). So every extract or load ensures all of them, not
+    # only its own: a warehouse reset under a running service would otherwise stay without the
+    # tables no request names (issue #172).
+    for ensure, table in landing:
+        ensure(table)
+
+
+def _provision_tables(app: Flask, landing: list[tuple[Callable[[Table], None], Table]]) -> None:
+    # Best effort: a warehouse outage at boot must not stop the service; each request re-ensures.
+    for ensure, table in landing:
         try:
             ensure(table)
         except (psycopg.Error, OSError) as exc:

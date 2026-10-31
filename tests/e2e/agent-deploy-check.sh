@@ -6,7 +6,7 @@
 # Live: spends one model turn of the free tier (the key from OPENROUTER_API_KEY or the cloud network secret).
 # Behind a TLS-intercepting HTTPS proxy on the host's loopback (the cloud sandbox), the agent's model
 # calls go through platform/kind/egress-up.sh's relay, which workloads-up.sh finds by itself.
-# Expects `make cluster-up`; `make agent-deploy-check` runs services-up and push first.
+# Expects `make cluster-up`; `make agent-deploy-check` runs the key check, services-up and push first.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -22,6 +22,8 @@ cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; }
 trap cleanup EXIT
 mkdir -p "$OUT"
 
+# A key OpenRouter refuses fails only after the deploy and a model turn (issue #158): check it first.
+"$REPO/tests/e2e/openrouter-key-check.sh"
 DB=dbt_dev "$REPO/tests/e2e/agent-fixture.sh"
 
 "$REPO/platform/kind/egress-up.sh" # behind the cloud's loopback proxy, pods reach it through the relay
@@ -37,7 +39,8 @@ pids+=($!)
 url="http://127.0.0.1:$LOCAL_PORT"
 for _ in $(seq 30); do curl -sf "$url/list-apps" >/dev/null 2>&1 && break; sleep 1; done
 apps=$(curl -sf "$url/list-apps" | jq -c 'sort') || fail "no answer from the port-forwarded Service"
-[ "$apps" = '["semantic_agent","sql_baseline"]' ] || fail "apps: expected semantic_agent and sql_baseline, got $apps"
+# One deployed agent: the text-to-SQL baseline is the eval's control, never served (semantic/PLAN.md SL-5).
+[ "$apps" = '["semantic_agent"]' ] || fail "apps: expected semantic_agent only, got $apps"
 echo "ok: the Service serves $apps"
 
 session="deploy-check-$(date -u +%Y%m%dT%H%M%S)"

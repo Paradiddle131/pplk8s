@@ -117,7 +117,9 @@ make dbt-validate DBT_DBNAME=dbt_dev
 
 It parses the project, runs `check_standard.py`, and runs `mf validate-configs`, which checks the semantic models, dimensions, entities and metrics against the warehouse's tables.
 The image build runs the offline half (`mf validate-configs --skip-dw`) beside `dbt parse`.
-In the cluster, `finance_daily` runs the whole check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `mf validate-configs`, in one pod of this image).
+In the cluster, `finance_daily` runs the check after its exposed stage (`validate_semantic_layer` in the workload seam: `dbt parse`, then `scripts/validate_semantic.py --pipelines returns,sales`, in one pod of this image).
+That script runs MetricFlow's own validators: the whole semantic manifest, then on the warehouse only the semantic models of the pipelines named and the metrics that read only them, so a domain that has never loaded (marketing before `marketing_elt`'s first run) cannot fail another pipeline's gate (#168).
+Without `--pipelines` it queries every semantic model, as `mf validate-configs` does.
 
 Query a metric with the `mf` CLI from this folder, with the same environment:
 
@@ -141,13 +143,13 @@ The generator reads `target/manifest.json` and `target/semantic_manifest.json` a
 
 | Artefact | For | Holds |
 |---|---|---|
-| `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns), metrics (label, description, type, pipelines, time grain, dimensions) and the glossary (term, description, synonyms, metrics, dimensions, the model that defines it) |
+| `agent.json` | the semantic agent's metric tools (S3) | public models (relation, layer, pipelines, grain, columns), metrics (label, description, type, pipelines, time grain, dimensions), the glossary (term, description, synonyms, metrics, dimensions, the model that defines it) and the saved queries (question, metrics, group-bys, filters, readiness) |
 | `data_agent/system_instruction.yaml` | a BigQuery data agent's authored context | `system_instruction`, `tables` with fields and aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics and the glossary terms (whose description names their metrics and dimensions), `additional_descriptions` from the derived and ratio formulas, in Google's documented form |
-| `data_agent/example_queries.json` | the data agent's verified queries | one `naturalLanguageQuestion` and `sqlQuery` per metric: the metric by day, as MetricFlow compiles it |
+| `data_agent/example_queries.json` | the data agent's verified queries | one `naturalLanguageQuestion` and `sqlQuery` per metric (the metric by day) and per saved query (its `config.meta.question`), as MetricFlow compiles them |
 
 The third artefact lives in the warehouse: the gold and exposed comments, `semantic.metrics` and `semantic.glossary` (`models/semantic/`), rendered from dbt's graph at build time.
 Table names are `database.schema.table` of the dbt target, so a BigQuery target gives `project.dataset.table` and BigQuery SQL with no change to the generator.
-`check_catalog.py` fails when the catalog misses a public model, a metric or a glossary term, when a public model or column has no description, when the authored context strays from the documented keys, or when a glossary term has no description, maps to nothing, names a metric the semantic manifest lacks or a dimension none of its metrics groups by, or repeats a metric or another term.
+`check_catalog.py` fails when the catalog misses a public model, a metric, a glossary term or a saved query, when a public model or column has no description, when the authored context strays from the documented keys, or when a glossary term has no description, maps to nothing, names a metric the semantic manifest lacks or a dimension none of its metrics groups by, or repeats a metric or another term.
 
 `tests/e2e/catalog-check.sh` (`make catalog-check`) builds every public model on both dev fixtures in `dbt_dev`, runs `make dbt-catalog`, and asserts that every gold and exposed relation and column has a comment, that `semantic.metrics` holds every metric and `semantic.glossary` every term, that every example query runs, and that an undocumented key, an undescribed column or a stray glossary term fails the check.
 

@@ -63,7 +63,7 @@ Expect a description on every column (`revenue_eur | Sum of amount for non-cance
 Then open `dbt/target/catalog/data_agent/system_instruction.yaml`: the BigQuery data agent's authored context (tables, aggregations, relationships, glossary), generated from the same YAML.
 
 **5. On BigQuery (1 min).**
-Open `dbt/target/bigquery/catalog/data_agent/example_queries.json`: one verified query per metric, compiled by MetricFlow for BigQuery (`` FROM `pplk8s-lab`.`silver`.`orders` ``), with no GCP account.
+Open `dbt/target/bigquery/catalog/data_agent/example_queries.json`: one verified query per metric and per dbt saved query, compiled by MetricFlow for BigQuery (`` FROM `pplk8s-lab`.`silver`.`orders` ``), with no GCP account.
 Say: the descriptions, the glossary and the verified queries are build artefacts; nothing in the data agent's context is hand-written ([mapping](semantic-layer-on-bigquery.md)).
 
 **6. Ask the agent (2.5 min).**
