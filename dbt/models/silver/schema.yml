@@ -227,7 +227,11 @@ models:
           type: time
         granularity: day
       - name: reason
-        description: The partner's return reason.
+        description: The partner's return reason (damaged, wrong size, late delivery).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['damaged', 'wrong size', 'late delivery']
         dimension:
           type: categorical
     metrics:

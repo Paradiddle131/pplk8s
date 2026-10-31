@@ -179,7 +179,7 @@ FIN_RUN="drill10__finance__$tag"
 SALES_RUN="drill10__sales__$tag"
 trigger finance_daily "$FIN_RUN"
 trigger sales_elt "$SALES_RUN"
-GEN=$(printf '{"return_id":"D10-%s","order_id":"O-%s","returned_at":"%sT%02d:00:00+00:00","amount":"%s.00","reason":"drill10"}\n' \
+GEN=$(printf '{"return_id":"D10-%s","order_id":"O-%s","returned_at":"%sT%02d:00:00+00:00","amount":"%s.00","reason":"damaged"}\n' \
   1 1 "$DAY" 1 3 2 2 "$DAY" 2 5 | upload) || fail "upload failed"
 RET_RUN=$(event_run "$GEN" 120)
 say "  past the backup: $SALES_RUN, $RET_RUN (generation $GEN), $FIN_RUN waiting on both"
