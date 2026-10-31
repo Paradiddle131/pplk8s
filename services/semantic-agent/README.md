@@ -8,7 +8,7 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 | Package | Tools | Reads |
 |---|---|---|
 | `semantic_agent` | `list_metrics`, `describe_metric`, `query_metrics` | S2's catalog (`dbt/target/catalog/agent.json`) and MetricFlow's Python API on the dbt project, as the read-only `agent_metrics` role (silver and semantic, plus `ops.readiness` and `ops.product_deadlines` for freshness) |
-| `sql_baseline` | `execute_sql` | gold and exposed only, as the read-only `agent_sql` role (10 s statement timeout); the "ADK schema-driven" pattern: table names in the instruction, columns from `information_schema` |
+| `sql_baseline` | `execute_sql` | gold and exposed only, as the read-only `agent_sql` role, one statement per call (10 s statement timeout); the "ADK schema-driven" pattern: table names in the instruction, columns from `information_schema` |
 
 `query_metrics` never takes SQL.
 It takes metric names, group-bys (`metric_time__day`, `__week`, `__month`, ...; `order__status`), filters as `{dimension, operator, values}` on categorical dimensions, a date range and an order.
@@ -23,7 +23,7 @@ The database, not the prompt, keeps each agent in its tables (SL-4).
 Every `query_metrics` and `execute_sql` call, answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
 `audit.py` does it as both agents' ADK `after_tool_callback`, so the tools themselves stay unchanged; listing and describing metrics read only the catalog and are not audited.
 - The row is written as `agent_audit`, a role that may only insert into that table: it cannot read, change or delete a row, or write anywhere else.
-- The agents' own roles write nothing, the audit included: the baseline runs whatever SQL its model writes, and that SQL can leave its read-only transaction (`commit; begin read write`), so only a role's privileges, not the transaction mode, keep the audit unforged.
+- The agents' own roles write nothing, the audit included: the baseline runs whatever single statement its model writes, and the transaction mode is only one guard (before the tool refused a second statement, `commit; begin read write` left it), so a role's privileges keep the audit unforged.
 - An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.

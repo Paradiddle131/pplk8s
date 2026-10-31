@@ -29,6 +29,10 @@ def test_the_baseline_reads_its_schemas(warehouse):
     assert execute_sql("select count(*) as n from information_schema.schemata")["rows"]
 
 
+def test_the_baseline_passes_a_percent_sign_through(warehouse):
+    assert execute_sql("select 'a%b' as p")["rows"] == [{"p": "a%b"}]
+
+
 @pytest.mark.parametrize(
     ("sql", "refusal"),
     [
@@ -36,6 +40,12 @@ def test_the_baseline_reads_its_schemas(warehouse):
         ("select * from silver.orders", "silver"),
         ("create table gold.planted (a int)", "read-only transaction"),
         ("select pg_sleep(11)", "statement timeout"),
+        # A second statement could leave the read-only transaction or lift the timeout.
+        (
+            "commit; begin read write; select current_setting('transaction_read_only') as ro",
+            "multiple commands",
+        ),
+        ("commit; set statement_timeout = 0; select pg_sleep(11) as slept", "multiple commands"),
     ],
 )
 def test_the_baseline_is_read_only_and_scoped_by_its_role(warehouse, sql, refusal):
