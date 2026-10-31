@@ -4,8 +4,9 @@ Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3,
 - naming: every model sits in a layer folder and builds in that layer's schema; a bronze, silver, gold or
   exposed model carries the layer's prefix and its relation is the name without it; models, columns,
   semantic models, their entities and dimensions, and metrics are snake case;
-- trust: gold and exposed models, and only they, are public in the analytics group; semantic models sit
-  on silver, so an agent reaches silver only through a metric;
+- trust: gold and exposed models, and only they, are public in the analytics group, each with an enforced
+  contract that types every column; semantic models sit on silver, so an agent reaches silver only through
+  a metric;
 - words: every model that builds a relation is described, every public model's column too, every
   semantic model with its entities, dimensions and measures, and every metric has a description and a label.
 
@@ -57,6 +58,8 @@ def model_problems(node: dict) -> list[str]:
         found.append(f"model {name}: {node.get('access')} in {layer}; only gold and exposed are public")
     if public and node.get("group") != PUBLIC_GROUP:
         found.append(f"model {name}: public outside the {PUBLIC_GROUP} group")
+    if public and not node["config"].get("contract", {}).get("enforced"):
+        found.append(f"public model {name}: no enforced contract")
     if not ephemeral and not described(node):
         found.append(f"{'public ' if public else ''}model {name}: no description")
     if public:
@@ -64,6 +67,11 @@ def model_problems(node: dict) -> list[str]:
             f"public model {name}: column {column} has no description"
             for column, spec in node["columns"].items()
             if not described(spec)
+        ]
+        found += [
+            f"public model {name}: column {column} has no data_type"
+            for column, spec in node["columns"].items()
+            if not (spec.get("data_type") or "").strip()
         ]
     return found
 

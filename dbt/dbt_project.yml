@@ -19,7 +19,8 @@ clean-targets: ["target", "dbt_packages"]
 models:
   pplk8s:
     # Trust tiers (semantic/PLAN.md SL-4): gold and exposed are the agent-facing models, public in the
-    # analytics group, with their descriptions persisted as warehouse comments (the catalog's words, SL-3);
+    # analytics group, with their descriptions persisted as warehouse comments (the catalog's words, SL-3)
+    # and an enforced contract, so a renamed, dropped or retyped column fails the build;
     # bronze, silver and the semantic stage stay protected and out of the agent catalog.
     bronze:
       +schema: bronze
@@ -38,6 +39,7 @@ models:
       +access: public
       +group: analytics
       +persist_docs: {relation: true, columns: true}
+      +contract: {enforced: true}
     exposed:
       +schema: exposed
       +tags: [exposed]
@@ -45,6 +47,7 @@ models:
       +access: public
       +group: analytics
       +persist_docs: {relation: true, columns: true}
+      +contract: {enforced: true}
     # The semantic layer (semantic/PLAN.md SL-1): the time spine and the metrics table, and the
     # semantic models and metrics in semantic.yml, which live in the manifest rather than the warehouse.
     semantic:

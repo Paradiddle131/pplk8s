@@ -16,7 +16,8 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 | semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics live in the manifest |
 
 Model names carry a layer prefix (`brz_`, `slv_`, `gld_`, `exp_`) so they stay unique across the project; the `alias` config gives the clean table name.
-The [agent-ready standard](../docs/agent-ready-warehouse.md) holds the naming and description rules, and `scripts/check_standard.py` enforces them on every parse.
+The [agent-ready standard](../docs/agent-ready-warehouse.md) holds the naming, description and contract rules, and `scripts/check_standard.py` enforces them on every parse.
+Gold and exposed enforce model contracts: every column declares its `data_type` in `schema.yml`, and a model whose SQL renames, drops, adds or retypes one fails `dbt build`.
 Bronze reads `ds_source` through `source()`.
 
 ## Selecting a stage
@@ -100,7 +101,7 @@ Business terms that are not metrics (`Signup cohort`, `Channel`, `Market`, `Conv
 A term never repeats a metric: the metric's label and description are already its glossary entry.
 
 Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_standard.py` fails the parse step without them.
-It checks the whole [agent-ready standard](../docs/agent-ready-warehouse.md): naming by layer, which models are public, and the descriptions agents read.
+It checks the whole [agent-ready standard](../docs/agent-ready-warehouse.md): naming by layer, which models are public with a typed contract, and the descriptions agents read.
 
 The stage check runs with host dbt on the image's pins, against the Compose warehouse (`DBT_DBNAME=warehouse` by default, `dbt_dev` for the fixture):
 

@@ -70,6 +70,9 @@ dbt has no glossary node; `meta` on the model keeps the term beside the columns 
 ## Which layer agents read
 
 Gold and exposed models, and only they, are `access: public` in the `analytics` group (`dbt/models/groups.yml`); bronze, silver and the semantic stage are `protected` (SL-4).
+A public model enforces a contract (`contract: {enforced: true}`, set per layer in `dbt_project.yml`) and gives every column a `data_type`, so a change that renames, drops, adds or retypes a column an agent relies on fails `dbt build` before it replaces the table, instead of leaving the agent's context stale.
+A type is spelled so both warehouses accept it: `date`, `numeric`, `bigint` and `integer` as they are, a string as the file's `text` anchor (`text` on Postgres, `string` on BigQuery).
+A view gets the same name and type check, but no constraints; the standard asks for none.
 The agent catalog lists exactly the public models and the metrics (`dbt/target/catalog/agent.json`), and each agent's read-only warehouse role reaches only its layers: `agent_metrics` silver and semantic through MetricFlow, `agent_sql` gold and exposed.
 At work that is a dataset-level read grant per agent identity.
 
@@ -100,12 +103,13 @@ A ratio is never stored per day for agents to average: the metric divides the to
 - a model outside a layer folder, building outside its layer's dataset, without its layer's prefix, or whose relation is not its name without the prefix;
 - a name that is not snake case: model, column, semantic model, entity, dimension, measure or metric;
 - a public model outside gold and exposed or outside the `analytics` group, a gold or exposed model that is not public, or a semantic model off silver;
+- a public model without an enforced contract, or a public model's column without a `data_type`;
 - a missing description on any of the things the rules above name, or a metric without a label.
 
-It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric and on an unprefixed, undescribed gold model.
+It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric and on an unprefixed, undescribed, untyped gold model, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
 `check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, glossary terms included (an unknown metric, a dimension none of the term's metrics has, a term repeating a metric), and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
 
-What it cannot see: a column the SQL selects but the YAML does not name is absent from the manifest, so its missing description shows only in the warehouse (`make catalog-check`) until model contracts declare every column ([#140](../../../issues/140)).
+A column the SQL selects but the YAML does not name is absent from the manifest, so the parse cannot see it; the contract can, and the build fails on it.
 
 A script, not `dbt-project-evaluator`: the package builds its rules as models and tests in the warehouse, its naming rules default to staging, intermediate and marts models, and no rule covers metrics or semantic models (stated, its [rules page](https://dbt-labs.github.io/dbt-project-evaluator/latest/rules/), 2026-10).
 Its modelling and governance rules (fan-out, public models without contracts) are worth a look when the project grows; this check stays the one for the agent-facing words.

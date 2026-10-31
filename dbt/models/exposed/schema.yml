@@ -1,5 +1,9 @@
 version: 2
 
+# Every column carries its contract type (gold and exposed enforce contracts, dbt_project.yml), spelled
+# so Postgres and BigQuery both accept it: date, numeric, bigint and integer (BigQuery's INT64 aliases);
+# a string is `text` on Postgres and `string` on BigQuery, written once as the `text` anchor below.
+# The tlc models stay Postgres-only (semantic/PLAN.md SL-6), so their float columns say `float`.
 models:
   - name: exp_sales_by_country_daily
     description: Sales per order_date and customer country. Alias exposed.sales_by_country_daily.
@@ -10,9 +14,11 @@ models:
     columns:
       - name: order_date
         description: UTC date the orders were placed.
+        data_type: date
         tests: [not_null]
       - name: country
         description: ISO-3166 alpha-2 country of the customer.
+        data_type: &text "{{ 'string' if target.type == 'bigquery' else 'text' }}"
         tests:
           - not_null
           - accepted_values:
@@ -20,42 +26,56 @@ models:
                 values: ['NL', 'TR', 'GB', 'DE', 'FR', 'US']
       - name: orders
         description: All orders for that country and day, cancelled included.
+        data_type: bigint
       - name: revenue_eur
         description: Sum of amount for non-cancelled orders.
+        data_type: numeric
 
   - name: exp_daily_sales_with_weather
     description: Daily sales left-joined to Amsterdam daily weather. Alias exposed.daily_sales_with_weather.
     columns:
       - name: order_date
         description: Natural key.
+        data_type: date
         tests: [not_null, unique]
       - name: orders_total
         description: All orders that day, cancelled included.
+        data_type: bigint
       - name: orders_cancelled
         description: Cancelled orders that day.
+        data_type: bigint
       - name: revenue_eur
         description: Sum of amount for non-cancelled orders.
+        data_type: numeric
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order that day.
+        data_type: bigint
       - name: amsterdam_avg_temperature_c
         description: Amsterdam's mean hourly temperature that UTC day, in degrees Celsius; NULL without observations.
+        data_type: numeric
       - name: amsterdam_total_precipitation_mm
         description: Amsterdam's precipitation that UTC day, in millimetres; NULL without observations.
+        data_type: numeric
 
   - name: exp_net_sales_daily
     description: Daily revenue net of partner returns, one row per order_date of gold.daily_sales. Alias exposed.net_sales_daily.
     columns:
       - name: order_date
         description: Natural key.
+        data_type: date
         tests: [not_null, unique]
       - name: revenue_eur
         description: Sum of amount for non-cancelled orders.
+        data_type: numeric
       - name: returns_count
         description: Partner returns recorded that day.
+        data_type: bigint
       - name: returns_eur
         description: Sum of partner return amounts recorded that day.
+        data_type: numeric
       - name: net_revenue_eur
         description: revenue_eur minus returns_eur.
+        data_type: numeric
         tests: [not_null]
 
   - name: exp_tlc_daily_trips_by_borough
@@ -67,18 +87,25 @@ models:
     columns:
       - name: pickup_date
         description: Local date of the pickup.
+        data_type: date
       - name: data_month
         description: The TLC data month (YYYY-MM) the trips were published in.
+        data_type: *text
       - name: trip_type
         description: yellow or green.
+        data_type: *text
       - name: borough
         description: Pickup borough from the taxi zone lookup; Unknown for zones it lacks.
+        data_type: *text
       - name: trips
         description: Number of trips.
+        data_type: numeric
       - name: passengers
         description: Sum of the passenger counts.
+        data_type: numeric
       - name: total_amount_usd
         description: Sum of the total amounts charged, in USD.
+        data_type: float
 
   - name: exp_channel_performance_daily
     description: Daily cost per lead and per booking per channel. Per-day ratios; over a period use the metrics cost_per_lead_eur and cost_per_booking_eur. Alias exposed.channel_performance_daily.
@@ -89,17 +116,24 @@ models:
     columns:
       - name: activity_date
         description: UTC day.
+        data_type: date
         tests: [not_null]
       - name: channel
         description: Marketing channel.
+        data_type: *text
         tests: [not_null]
       - name: ad_spend_eur
         description: Ad spend that day, EUR.
+        data_type: numeric
       - name: leads
         description: Leads created that day.
+        data_type: bigint
       - name: bookings
         description: Bookings made that day.
+        data_type: bigint
       - name: cost_per_lead_eur
         description: ad_spend_eur / leads for that day; NULL without leads.
+        data_type: numeric
       - name: cost_per_booking_eur
         description: ad_spend_eur / bookings for that day; NULL without bookings.
+        data_type: numeric

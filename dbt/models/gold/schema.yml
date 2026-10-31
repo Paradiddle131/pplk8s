@@ -1,39 +1,55 @@
 version: 2
 
+# Every column carries its contract type (gold and exposed enforce contracts, dbt_project.yml), spelled
+# so Postgres and BigQuery both accept it: date, numeric, bigint and integer (BigQuery's INT64 aliases);
+# a string is `text` on Postgres and `string` on BigQuery, written once as the `text` anchor below.
+# The tlc models stay Postgres-only (semantic/PLAN.md SL-6), so their float columns say `float`.
 models:
   - name: gld_daily_sales
     description: One row per order_date (UTC). Alias gold.daily_sales.
     columns:
       - name: order_date
         description: Natural key.
+        data_type: date
         tests: [not_null, unique]
       - name: orders_total
         description: All orders that day, cancelled included.
+        data_type: bigint
       - name: orders_cancelled
         description: Cancelled orders that day.
+        data_type: bigint
       - name: revenue_eur
         description: Sum of amount for non-cancelled orders.
+        data_type: numeric
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order that day.
+        data_type: bigint
 
   - name: gld_customer_lifetime
     description: One row per customer. Alias gold.customer_lifetime.
     columns:
       - name: customer_id
         description: Natural key.
+        data_type: integer
         tests: [not_null, unique]
       - name: name
         description: Customer name.
+        data_type: &text "{{ 'string' if target.type == 'bigquery' else 'text' }}"
       - name: country
         description: ISO-3166 alpha-2 country of the customer.
+        data_type: *text
       - name: first_order_date
         description: UTC date of the customer's first order, cancelled included; NULL without orders.
+        data_type: date
       - name: last_order_date
         description: UTC date of the customer's latest order, cancelled included; NULL without orders.
+        data_type: date
       - name: orders
         description: All orders, cancelled included.
+        data_type: bigint
       - name: lifetime_value_eur
         description: Sum of amount for non-cancelled orders.
+        data_type: numeric
 
   - name: gld_daily_weather
     description: One row per (location, UTC date). Alias gold.daily_weather.
@@ -44,18 +60,24 @@ models:
     columns:
       - name: location
         description: Weather location name, e.g. Amsterdam.
+        data_type: *text
         tests: [not_null]
       - name: date
         description: UTC date of the observations.
+        data_type: date
         tests: [not_null]
       - name: avg_temperature_c
         description: Mean of the hourly temperatures that day, in degrees Celsius, two decimals.
+        data_type: numeric
       - name: min_temperature_c
         description: Lowest hourly temperature that day, in degrees Celsius.
+        data_type: numeric
       - name: max_temperature_c
         description: Highest hourly temperature that day, in degrees Celsius.
+        data_type: numeric
       - name: total_precipitation_mm
         description: Sum of the hourly precipitation that day, in millimetres.
+        data_type: numeric
 
   - name: gld_tlc_daily_trips
     description: >
@@ -68,24 +90,34 @@ models:
     columns:
       - name: data_month
         description: The TLC data month (YYYY-MM) the trips were published in; one month is replaced per build.
+        data_type: *text
       - name: trip_type
         description: yellow or green.
+        data_type: *text
       - name: pickup_date
         description: Local date of the pickup.
+        data_type: date
       - name: pickup_location_id
         description: TLC taxi zone id of the pickup (bronze.tlc_taxi_zones).
+        data_type: integer
       - name: trips
         description: Number of trips.
+        data_type: bigint
       - name: passengers
         description: Sum of the passenger counts.
+        data_type: numeric
       - name: trip_distance_mi
         description: Sum of the trip distances, in miles.
+        data_type: float
       - name: fare_amount_usd
         description: Sum of the metered fares, in USD.
+        data_type: float
       - name: tip_amount_usd
         description: Sum of the tips, in USD.
+        data_type: float
       - name: total_amount_usd
         description: Sum of the total amounts charged, in USD.
+        data_type: float
 
   - name: gld_marketing_daily
     description: One row per (activity_date, channel) with any ad spend, lead or booking. Alias gold.marketing_daily.
@@ -96,9 +128,11 @@ models:
     columns:
       - name: activity_date
         description: UTC day of the spend, of the lead's creation, or of the booking.
+        data_type: date
         tests: [not_null]
       - name: channel
         description: Marketing channel (search, social, display, email, partner); unknown for bookings whose lead is not loaded.
+        data_type: *text
         tests:
           - not_null
           - accepted_values:
@@ -106,13 +140,19 @@ models:
                 values: ['search', 'social', 'display', 'email', 'partner', 'unknown']
       - name: ad_spend_eur
         description: Ad spend that day on the channel's campaigns, EUR.
+        data_type: numeric
       - name: ad_clicks
         description: Ad clicks that day on the channel's campaigns.
+        data_type: bigint
       - name: ad_impressions
         description: Ad impressions that day on the channel's campaigns.
+        data_type: bigint
       - name: leads
         description: CRM leads created that day from the channel's campaigns.
+        data_type: bigint
       - name: bookings
         description: Bookings made that day by leads from the channel's campaigns.
+        data_type: bigint
       - name: booking_value_eur
         description: Value of those bookings, EUR.
+        data_type: numeric
