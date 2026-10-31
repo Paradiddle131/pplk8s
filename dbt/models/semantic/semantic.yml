@@ -56,8 +56,14 @@ models:
       - name: model_name
         description: The dbt model whose YAML defines the term.
 
-# Metrics over other metrics, across semantic models.
+# Metrics over other metrics, whether over one semantic model or several (models/silver/schema.yml says why).
 metrics:
+  - name: cancellation_rate
+    description: Share of orders cancelled.
+    label: Cancellation rate
+    type: ratio
+    numerator: orders_cancelled
+    denominator: orders_total
   - name: net_revenue_eur
     description: Revenue minus partner returns (finance's net sales).
     label: Net revenue (EUR)
