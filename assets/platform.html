@@ -127,7 +127,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <div class="stage">
   <div class="bar" id="bar"></div>
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 1172" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: the agent pod's initContainer parses it into the catalog; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, quote freshness from the readiness ledger, and every result passes the audit gate into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 1172" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: the agent pod's initContainer parses it into the catalog; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, and every result passes the guard, outside the toolset, which attaches freshness from the readiness ledger and writes its row into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
   </figure>
 </div>
 <script>
@@ -595,7 +595,7 @@ Sheet.ready().then(() => {
   S.phantom({ x: 548, y: 700, w: 312, h: 80, label: 'DataAgentToolset' });
   S.card({ x: 560, y: 716, w: 120, h: 52, title: 'MetricFlow', pkg: 'metricflow' });
   S.card({ x: 692, y: 716, w: 156, h: 52, title: 'metric tools', lines: [{ mono: 'query_metrics' }] });
-  S.card({ x: 872, y: 716, w: 108, h: 52, title: 'audit gate', lines: ['no row, no result'] });
+  S.card({ x: 872, y: 716, w: 108, h: 52, title: 'guard', lines: ['freshness, audit'] });
 
   // ---- below: outside the cluster
   S.frame({ x: 24, y: 856, w: 1000, h: 288, title: { lab: 'outside the cluster', gcp: 'managed services' }, edge: 'bottom' });
@@ -646,7 +646,7 @@ Sheet.ready().then(() => {
   S.edge('M848,626 H1000 V120 H952 V92');
   S.edge('M848,638 H1016 V64 H1048', { both: true });
   S.edge('M620,768 V912', { reads: true, tone: 'cobalt' });
-  S.edge('M790,768 V912', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [798, 840], anchor: 'start' } });
+  S.edge('M890,768 V868 H760 V912', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [882, 840], anchor: 'end' } });
   S.edge('M926,768 V912', { label: { text: 'insert', at: [934, 840], anchor: 'start' } });
 
   S.legend(1048, 160, [['card', 'a component'], ['pkg', 'a package'], ['hatch', 'the model'], ['phantom', 'at work'], ['calls', 'calls, writes'], ['reads', 'reads'], ['tick', 'checked hop'], ['cobalt', 'agent reads'], ['vermilion', 'eval reads']], { column: true });

@@ -125,7 +125,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <body>
 <div class="stage">
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; freshness.py reads the readiness ledger as agent_metrics. Every result passes through audit.py, ADK's after_tool_callback, which inserts one row into ops.agent_queries as agent_audit and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; Every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
@@ -485,23 +485,22 @@ Sheet.ready().then(() => {
   S.edge('M616,100 H648');
   S.edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
 
-  // the audit gate: every tool result passes through it on its way back to the agent
-  S.card({ x: 456, y: 168, w: 160, h: 56, title: 'audit.py', lines: ['no row, no result'] });
-  S.edge('M420,140 V252');
-  S.edge('M536,252 V224');
-  S.edge('M536,168 V140', { label: { text: 'after_tool_callback', at: [548, 158], anchor: 'start', mono: true } });
-  S.edge('M616,196 H924', { label: { text: 'insert', at: [770, 190] } });
+  // the guard: ADK's after_tool_callback, outside the toolset, so a swapped toolset keeps both: every data
+  // result gets its metrics' freshness, then its audit row, on its way back to the agent
+  S.card({ x: 432, y: 160, w: 184, h: 64, title: 'guard.py', lines: [{ mono: 'freshness.py, audit.py' }, 'no row, no result'] });
+  S.edge('M420,140 V256');
+  S.edge('M536,256 V224');
+  S.edge('M536,160 V140', { label: { text: 'after_tool_callback', at: [548, 154], anchor: 'start', mono: true } });
+  S.edge('M616,192 H924', { label: { text: 'insert', at: [770, 186] } });
+  S.edge('M616,216 H892 V286 H924', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [770, 210] } });
 
   // the toolset, which the work platform replaces
   S.phantom({ x: 384, y: 240, w: 492, h: 184, label: 'at work: DataAgentToolset' });
   S.card({ x: 396, y: 256, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
-  S.card({ x: 648, y: 256, w: 216, h: 56, title: 'freshness.py', lines: ['the sentence the answer quotes'] });
-  S.card({ x: 396, y: 348, w: 220, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
+  S.card({ x: 648, y: 256, w: 216, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
   S.card({ x: 648, y: 348, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
-  S.edge('M616,284 H648');
-  S.edge('M506,336 V348');
-  S.edge('M616,380 H648');
-  S.edge('M864,284 H924', { reads: true, tone: 'cobalt' });
+  S.edge('M616,288 H648');
+  S.edge('M756,320 V348');
   S.edge('M864,380 H924', { reads: true, tone: 'cobalt' });
 
   // the initContainer: the catalog the toolset reads, built for the database the pod reads
@@ -511,7 +510,7 @@ Sheet.ready().then(() => {
   S.card({ x: 200, y: 344, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
   S.edge('M276,252 V272');
   S.edge('M276,324 V344');
-  S.edge('M352,380 H396');
+  S.edge('M352,380 H648');
 
   // ---- outside the cluster
   S.frame({ x: 900, y: 16, w: 276, h: 556, title: 'outside the cluster' });

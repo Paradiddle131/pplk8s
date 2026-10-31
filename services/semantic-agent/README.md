@@ -10,7 +10,7 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../../assets/semantic-agent-dark.png">
-  <img width="2400" height="1232" alt="Inside the semantic agent, in the order a question travels: a caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py; the agent calls the model through model.py, and the model, hatched, is the only part that is not code: it chooses the tool and its arguments; tools.py's query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics, and freshness.py reads the readiness ledger; every result passes through audit.py, ADK's after_tool_callback, which inserts one row as agent_audit or withholds the result; an initContainer runs dbt parse and build_catalog.py into target/; a chain line marks the toolset the work platform replaces with DataAgentToolset; the eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService" src="../../assets/semantic-agent.png">
+  <img width="2400" height="1232" alt="Inside the semantic agent, in the order a question travels: a caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py; the agent calls the model through model.py, and the model, hatched, is the only part that is not code: it chooses the tool and its arguments; tools.py's query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics; every result passes through guard.py, ADK's after_tool_callback outside the toolset, which attaches its metrics' freshness from the readiness ledger and inserts one row as agent_audit, or withholds the result; an initContainer runs dbt parse and build_catalog.py into target/; a chain line marks the toolset the work platform replaces with DataAgentToolset; the eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService" src="../../assets/semantic-agent.png">
 </picture>
 
 The picture runs top to bottom in the order a question travels.
@@ -23,7 +23,7 @@ This repo's code is the places it steps in:
   That Python surface is undocumented and held by the pin: `tests/test_metricflow_surface.py` checks it offline.
 - `dbt/macros/agent_warehouse.sql` creates the roles and the audit table through `dbt run-operation`, dispatched per adapter, and `dbt/macros/test_matches_metric.sql` renders a metric from dbt's graph as a build-time test.
 - The work platform swaps three things: the model (`MODEL_BACKEND=gemini`, a setting of `model.py`), the warehouse roles (IAM), and the whole metric toolset (`tools.py`, `metrics.py` and MetricFlow's engine) for `DataAgentToolset` on a BigQuery data agent.
-  The audit and the freshness statement are tied to the lab's tool names today, so that swap would drop them (#177).
+  The audit and the freshness statement stay: they are the agent's after-tool callback (`guard.py`), outside the toolset (#177).
 
 ## The two packages
 
