@@ -35,7 +35,9 @@ Cloud runs, with their counts in the handoff:
 - `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
 - the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make tools`, `make cluster-up`, `make workloads-up`, and `make agent-deploy-check` for the semantic agent
 
-Left to the laptop (the handoff's local checklist): `make ci-integration` and the phase checks that deploy Airflow or monitoring, whose images the kind nodes cannot pull on cloud (#119).
+- Airflow when `airflow/**` or `platform/helm/**` changed: `make ci-integration`, and the phase checks the change touches, with `DAG_DELIVERY=local` (git-sync needs the laptop's deploy key)
+
+Left to the laptop (the handoff's local checklist): git-sync delivery and anything WSL2-specific; a check that does not fit the session's disk (below) says so in the handoff.
 A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: the default git-sync serves `main`, so the run would test the old DAG (seen on #113).
 
 ## Never
@@ -49,6 +51,8 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 
 - `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists; a plain `docker build` still fails TLS; seen 2026-10-30.
 - Builds read and write a per-image layer cache at `ghcr.io/<owner>/<repo>/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
-- kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; its nodes cannot pull from the internet, so only images in the local registry run (#119); seen 2026-10-30.
+- kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; seen 2026-10-30.
+- The nodes and pods reach the internet through `platform/kind/egress-up.sh` (`make egress-up`, run by `cluster-up` and every deploy target): kind copies the host's loopback `HTTPS_PROXY` into the nodes, where it names the node itself, so a relay container `kind-egress` on the kind gateway pipes to the proxy, containerd uses it with the proxy's CA, and docker.io pulls go to mirror.gcr.io (#119); seen 2026-10-31.
+- The session's disk allowance (about 39 GB) holds the whole lab only without duplicates: on cloud a push drops Docker's copy of the image and BuildKit's local cache (Makefile `push_image`), and `ci-integration` peaked at 3.5 GB free; on `no space left on device`, `docker builder prune -af` and remove images of old tags (#119); seen 2026-10-31.
 - A session can start without the cloud setup: no `~/.claude/settings.json` or `/etc/docker/daemon.json`, `dockerd` stopped, and uv warns `UV_NATIVE_TLS is deprecated`; Compose pulls then hit Docker Hub's 429. Write the mirror `daemon.json` (claude-dotfiles `bin/cloud-setup.sh` step 5) and start `dockerd` as `cloud/hooks/session-start.sh` does; seen 2026-10-31 (seven times); fix: claude-dotfiles issue 28.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.

@@ -1,0 +1,6 @@
+## 2026-10-31 — Cloud: the kind cluster reaches the internet; Airflow deploys on cloud
+
+- Done: `platform/kind/egress-up.sh` (`make egress-up`; `cluster-up`, `workloads-up`, `airflow-up`, `keda-up` and `observability-up` run it) relays the nodes' and pods' egress to the cloud sandbox's loopback proxy: a `kind-egress` relay container on the kind gateway, a containerd drop-in and the proxy's CA on each node, docker.io pulls through mirror.gcr.io; a no-op without a loopback proxy. `workloads-up.sh` reads the relay's address and CA, so `agent-deploy-check.sh` lost its own forwarder. Airflow's deploy builds through `make airflow-image` (the proxy's CA and the ghcr.io layer cache). On cloud a push drops Docker's copy and BuildKit's cache to fit the disk allowance. The Airflow API helper checks ports through `/proc/net/tcp` where `ss` is missing.
+- Evidence: see the PR.
+- Decisions: relay and drop-in after cluster creation rather than kind's create-time proxy variables, so an existing cluster and a changed proxy port are fixed by re-running it.
+- Open: finance's semantic validation on a warehouse where marketing never ran (#168).

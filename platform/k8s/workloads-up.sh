@@ -4,8 +4,8 @@
 # ELF_IMAGE, ADAPTER_IMAGE, AGENT_IMAGE and DBT_IMAGE (Makefile) are the only source of the workload image tags (D16).
 # The semantic agent reads AGENT_DBNAME (default warehouse; dbt_dev holds the fixture) and the model key from
 # OPENROUTER_API_KEY (a placeholder when unset: a cloud network secret replaces it in flight).
-# EGRESS_PROXY and EGRESS_CA, when set, route the agent's model calls through an HTTPS proxy that
-# intercepts TLS (the cloud sandbox; tests/e2e/agent-deploy-check.sh sets both); unset on the laptop.
+# EGRESS_PROXY and EGRESS_CA route the agent's model calls through an HTTPS proxy that intercepts TLS:
+# on the cloud sandbox, the relay platform/kind/egress-up.sh runs (its labels give both); unset on the laptop.
 set -euo pipefail
 cd "$(dirname "$0")/workloads"
 mk() { make -s -C ../../.. "print-$1"; } # the Makefile default, when run outside make
@@ -38,6 +38,9 @@ AUDIT_URL=postgresql://agent_audit:agent_audit@warehouse:5432/${agent_db}
 SESSION_SERVICE_URI=postgresql+asyncpg://agent_sessions:agent_sessions@metadata-db:5432/agent_sessions
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-placeholder-replaced-by-the-proxy}
 ENV
+relay() { docker inspect -f "{{index .Config.Labels \"pplk8s.egress.$1\"}}" kind-egress 2>/dev/null || true; }
+EGRESS_PROXY="${EGRESS_PROXY:-$(relay proxy)}"
+EGRESS_CA="${EGRESS_CA:-$(relay ca)}"
 if [ -n "${EGRESS_PROXY:-}" ]; then
   cat >> semantic-agent.secret.env <<ENV
 HTTPS_PROXY=${EGRESS_PROXY}

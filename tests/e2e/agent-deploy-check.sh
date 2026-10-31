@@ -4,9 +4,8 @@
 # metric question through a port-forwarded Service and asserts the answer, the tools it took, and its
 # session in the metadata DB's agent_sessions database.
 # Live: spends one model turn of the free tier (the key from OPENROUTER_API_KEY or the cloud network secret).
-# Behind a TLS-intercepting HTTPS proxy on the host's loopback (the cloud sandbox: HTTPS_PROXY on
-# 127.0.0.1 and the Makefile's BUILD_CA), pods cannot reach the proxy, so a forwarder on the kind
-# network's gateway relays to it and workloads-up.sh gets EGRESS_PROXY and EGRESS_CA.
+# Behind a TLS-intercepting HTTPS proxy on the host's loopback (the cloud sandbox), the agent's model
+# calls go through platform/kind/egress-up.sh's relay, which workloads-up.sh finds by itself.
 # Expects `make cluster-up`; `make agent-deploy-check` runs services-up and push first.
 set -euo pipefail
 
@@ -25,38 +24,7 @@ mkdir -p "$OUT"
 
 DB=dbt_dev "$REPO/tests/e2e/agent-fixture.sh"
 
-ca=${BUILD_CA:-$(make -s -C "$REPO" print-BUILD_CA)}
-if [[ "${HTTPS_PROXY:-}" =~ ^http://127\.0\.0\.1:([0-9]+) ]] && [ -n "$ca" ]; then
-  proxy_port=${BASH_REMATCH[1]}
-  gateway=$(docker network inspect kind -f '{{json .IPAM.Config}}' | jq -r '[.[].Gateway | select(test("^[0-9.]+$"))][0]')
-  python3 -I - "$gateway" 3128 "$proxy_port" >"$OUT/forwarder.log" 2>&1 <<'PY' &
-import asyncio, sys
-
-host, port, target = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-
-async def pipe(reader, writer):
-    try:
-        while data := await reader.read(65536):
-            writer.write(data)
-            await writer.drain()
-    finally:
-        writer.close()
-
-async def relay(reader, writer):
-    upstream_reader, upstream_writer = await asyncio.open_connection("127.0.0.1", target)
-    await asyncio.gather(pipe(reader, upstream_writer), pipe(upstream_reader, writer), return_exceptions=True)
-
-async def main():
-    server = await asyncio.start_server(relay, host, port)
-    async with server:
-        await server.serve_forever()
-
-asyncio.run(main())
-PY
-  pids+=($!)
-  export EGRESS_PROXY="http://$gateway:3128" EGRESS_CA="$ca"
-  echo "ok: pods reach the host's proxy through $EGRESS_PROXY"
-fi
+"$REPO/platform/kind/egress-up.sh" # behind the cloud's loopback proxy, pods reach it through the relay
 
 AGENT_DBNAME=dbt_dev "$REPO/platform/k8s/workloads-up.sh" >"$OUT/workloads.log" 2>&1 ||
   { tail -30 "$OUT/workloads.log" >&2; fail "workloads-up.sh"; }

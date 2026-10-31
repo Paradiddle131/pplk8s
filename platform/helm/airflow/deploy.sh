@@ -26,11 +26,13 @@ HELM=(helm --kube-context kind-pplk8s)
 
 helm repo add apache-airflow https://airflow.apache.org --force-update >/dev/null
 
-# Image: build from airflow/ (context excludes dags/tests) and push to the local registry.
+# Image: build from airflow/ (context excludes dags/tests) through the Makefile, whose build works behind
+# the cloud's TLS-intercepting proxy and shares the layer cache, and push it to the local registry.
 if [ "${AIRFLOW_IMAGE_BUILD:-1}" = 1 ]; then
-  docker build -t "$AIRFLOW_IMAGE" "$REPO/airflow"
+  make -s -C "$REPO" airflow-image AIRFLOW_IMAGE="$AIRFLOW_IMAGE" >/dev/null
+elif docker image inspect "$AIRFLOW_IMAGE" >/dev/null 2>&1; then
+  docker push "$AIRFLOW_IMAGE" >/dev/null # a prebuilt image; on cloud the Makefile already pushed and dropped it
 fi
-docker push "$AIRFLOW_IMAGE" >/dev/null
 
 # The metadata DB lives in Compose; make sure it is up and the nodes can resolve it (D13).
 docker compose -f "$REPO/platform/compose/compose.yaml" up -d --wait metadata-db
