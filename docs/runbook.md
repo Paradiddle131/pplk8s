@@ -646,6 +646,38 @@ Then, in Airflow: is the DAG paused, has the scheduler created the interval's ru
 Recovery: fix the cause (unpause, clear the failed task, land the upstream product); the alert resolves within about a minute of the interval's `ready` row, after the next scrape.
 A product that is late on purpose (retired, or a source that skipped a day) gets its deadline changed in `platform/compose/warehouse-init/01-schemas.sql`, not silenced; `make services-up` re-applies it.
 
+### 13. A source stops flowing
+
+A product being late (12) says that a whole pipeline is behind; a stale source says which landed table stopped, often before its product is due.
+`dbt source freshness` judges each `ds_source` table's newest `_loaded_at` against the thresholds in `dbt/models/sources.yml` (semantic/PLAN.md SL-12): the daily synthetic tables warn after 26 h and error after 36 h, `partner_returns` 48 h and 72 h, the TLC tables 35 and 62 days; `open_meteo_hourly_weather` is loaded by hand and has none.
+The `source-freshness` CronJob in `workloads` runs it at minute 17 of every hour, and the dbt project's `on-run-end` hook writes each table's verdict into `ops.source_freshness`.
+
+Trigger, without the cluster: `make source-freshness-check` ages the fixtures' loads in its own database, `dbt_freshness`: one table 40 h old, one 30 h, one dropped.
+On the lab: pause `sales_elt` for 36 h, or age a table's loads in a scratch database as the check does; never rewrite `_loaded_at` in `warehouse`.
+Run the check at once instead of waiting for minute 17: `kubectl --context kind-pplk8s -n workloads create job --from=cronjob/source-freshness source-freshness-now`.
+
+Observed (2026-10-31, without the cluster: `make source-freshness-check` against the Compose warehouse):
+
+- With every landed table loaded an hour ago, dbt passed and recorded `pass` for the nine checked tables.
+- `synthetic_orders` 40 h old recorded `error` with its age, `synthetic_leads` 30 h old `warn`, a dropped `tlc_green` `runtime error`; dbt exited 1, one row per table.
+- The warehouse `sql_exporter`'s collector exported the nine verdicts and each table's newest load; the rules' promtool tests (`make rules-test`) fire `SourceStale` 2 minutes after a check records `error` and clear it on the next `pass`.
+
+Observed on the lab (2026-10-31, kind, `make workloads-up` then a Job created from the CronJob, nothing landed yet):
+
+- The Job completed although dbt exited 1, and wrote nine rows to `ops.source_freshness` in `warehouse`: the seven existing but empty tables `error`, the two TLC tables `runtime error` (not created until `tlc_monthly` first loads).
+- dbt-postgres reports an empty table's newest load as 2001-01-01, so `SourceStale` reads it as stopped about 25 years ago: on a fresh lab that means "never loaded".
+
+Detection: `SourceStale`, one alert per table, labelled `source`, `table` and `status`; its value is the age of the table's newest row ("could not be checked" for a `runtime error`).
+`SourceFreshnessNotChecked` fires when no verdict has landed for two hours: the CronJob is suspended, its Jobs fail (`kubectl -n workloads get jobs -l pplk8s/stage=source-freshness`), or the dbt image is missing; until it clears, `SourceStale` shows the last verdict.
+Both come from the warehouse's `sql_exporter` (`ops_source_freshness_checked_timestamp_seconds`, `ops_source_max_loaded_at_seconds`); if that exporter is gone, `AirflowReadinessMetricsMissing` fires instead.
+The Job succeeds when dbt reports stale sources (exit 1), so a stale source is not also `KubeJobFailed`; it fails when dbt cannot run at all (exit 2).
+
+Diagnosis: `psql -h localhost -p 5433 -U warehouse warehouse -c "SELECT table_name, status, max_loaded_at, checked_at, message FROM ops.source_freshness ORDER BY status, table_name"` shows the verdicts and, for a `runtime error`, dbt's message.
+Then find the table's producer: the `<pipeline>_elt` DAG for the synthetic tables, a partner drop and `returns_file_arrival` for `partner_returns`, `tlc_monthly` for the TLC tables; is it paused, did EL Factory's extract fail, did the upstream deliver.
+
+Recovery: fix the producer and land the data; the next hourly check records `pass` and the alert resolves after the next scrape (start a Job by hand, above, to see it at once).
+A source whose cadence changed gets new thresholds in `dbt/models/sources.yml` (a dbt image tag bump, D16), not a silence.
+
 ## Phase 8 drills
 
 Phase 8 drills exercise the TLC monthly pipeline (PLAN.md D34–D36) under the same contract as Phase 6: each drill is detected by an alert and recovered through its entry here (D28).

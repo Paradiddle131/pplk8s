@@ -16,6 +16,11 @@ flags:
   indirect_selection: cautious
 clean-targets: ["target", "dbt_packages"]
 
+# After `dbt source freshness`, record each source's verdict in ops.source_freshness for the SourceStale
+# alert (#130, semantic/PLAN.md SL-12); every other command leaves it untouched (macros/source_freshness.sql).
+on-run-end:
+  - "{{ record_source_freshness(results) }}"
+
 models:
   pplk8s:
     # Trust tiers (semantic/PLAN.md SL-4): gold and exposed are the agent-facing models, public in the

@@ -7,6 +7,16 @@ sources:
       Every table carries the metadata columns _run_id, _interval_start, _interval_end, _page, _source_uri, _loaded_at.
       The same natural key can appear in several runs; the latest load (greatest _loaded_at, _run_id) wins in silver.
     schema: ds_source
+    # Source freshness (#130, semantic/PLAN.md SL-12): _loaded_at is when EL Factory landed a row, so its
+    # maximum is when the source last flowed. The default suits the daily `<pipeline>_elt` DAGs (00:00 UTC):
+    # a missed run warns, and the error matches the products' 36-hour deadline (ops.product_deadlines).
+    # A table with another cadence sets its own. `dbt source freshness` runs on a CronJob in workloads
+    # (platform/k8s/workloads/source-freshness-cronjob.yaml) and its on-run-end hook writes ops.source_freshness.
+    config:
+      loaded_at_field: _loaded_at
+      freshness:
+        warn_after: {count: 26, period: hour}
+        error_after: {count: 36, period: hour}
     tables:
       - name: synthetic_customers
         description: Full customer snapshot per run (synthetic).
@@ -48,11 +58,18 @@ sources:
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).
           File tables carry _run_id, _source_uri, _generation, _loaded_at instead of the interval and page columns.
+        config:
+          # Partners drop files on business days, so a weekend is quiet; three days without one is a stop.
+          freshness:
+            warn_after: {count: 48, period: hour}
+            error_after: {count: 72, period: hour}
         columns:
           - name: return_id
             tests: [not_null]
       - name: open_meteo_hourly_weather
         description: Hourly weather observations per location from the public Open-Meteo archive API.
+        config:
+          freshness: null # loaded by hand (PLAN.md Phase 1); no DAG lands it on a schedule, so it cannot stop flowing
         columns:
           - name: location
             tests: [not_null]
@@ -63,8 +80,15 @@ sources:
           NYC TLC yellow taxi trip files, one Parquet file per data month, landed chunk by chunk (PLAN.md D34).
           Every published column under its lower-cased name, added and widened as months drift; file tables
           carry _run_id, _source_uri, _etag, _chunk, _loaded_at. EL Factory creates the table on the first load.
+        config: &tlc_freshness
+          # tlc_monthly loads a month on the 1st; a skipped month warns, two error. A month TLC has not yet
+          # published is the alert of #89, not this one: freshness says our loads stopped, not the publisher.
+          freshness:
+            warn_after: {count: 35, period: day}
+            error_after: {count: 62, period: day}
       - name: tlc_green
         description: NYC TLC green taxi trip files; same landing contract as tlc_yellow.
+        config: *tlc_freshness
 
   - name: ops
     description: Operational ledgers EL Factory writes next to the landing tables.
