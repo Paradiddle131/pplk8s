@@ -8,42 +8,48 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one wide schematic (left: domains and the Airflow lab that lands them; centre: the dbt project
-   above the warehouse it builds; right: the catalog it generates and the ADK agent that answers through it),
-   with a Here / On GCP switch above it that relabels every stand-in with its GCP counterpart. */
+/* Layout: one schematic in the manner of a cloud reference architecture: tinted zones with a title,
+   two-line cards (what it is / what runs it), grey chrome, and colour only where it carries meaning:
+   the two warehouse roles the agents read as, and the question's path. A Here / On GCP switch above
+   it relabels every stand-in with its GCP counterpart. Light first; dark is a palette swap. */
 :root {
-  --bg: #0b0f1a;
-  --panel: #121828;
-  --panel-2: #192136;
-  --line: #2b3454;
-  --fg: #e9edf8;
-  --muted: #8f98ba;
-  --bronze: #c97f3f;
-  --silver: #b4bdd0;
-  --gold: #e9bb4d;
-  --exposed: #4fd1b5;
-  --semantic: #a78bfa;
-  --agent: #fb7185;
-  --gcp: #60a5fa;
-  --ok: #34d399;
-  --alert: #f87171;
+  --bg: #f4f5f8;
+  --zone: #eaedf2;
+  --zone-2: #e6ebf4;
+  --card: #ffffff;
+  --line: #aab2c0;
+  --hair: #cfd5df;
+  --fg: #1a2030;
+  --muted: #5b6577;
+  --metrics: #0f766e;
+  --metrics-soft: rgba(15, 118, 110, 0.07);
+  --sql: #b45309;
+  --sql-soft: rgba(180, 83, 9, 0.07);
+  --bronze: #b1713a;
+  --silver: #7d879a;
+  --gold: #bf8a12;
+  --ok: #2e8b57;
+  --alert: #c0392b;
+  --gcp: #1a56c4;
   --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  color-scheme: dark;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f5f6fb; --panel: #ffffff; --panel-2: #eef1f9; --line: #cfd6e8; --fg: #151b2e; --muted: #5f6a8a;
-    --bronze: #a9612a; --silver: #6d778f; --gold: #b8860b; --exposed: #0f8f76; --semantic: #7c3aed;
-    --agent: #e11d48; --gcp: #2563eb; --ok: #059669; --alert: #dc2626;
-    color-scheme: light;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1218; --zone: #171b23; --zone-2: #182030; --card: #1e242f; --line: #46505f; --hair: #2f3745;
+    --fg: #e8ebf1; --muted: #9aa3b5; --metrics: #5fd3c4; --metrics-soft: rgba(95, 211, 196, 0.08);
+    --sql: #e8a94a; --sql-soft: rgba(232, 169, 74, 0.08); --bronze: #d08a50; --silver: #a4adbd; --gold: #e0b04a;
+    --ok: #4cc38a; --alert: #ef6b61; --gcp: #7aa7ff;
+    color-scheme: dark;
   }
 }
-:root[data-theme="light"] {
-  --bg: #f5f6fb; --panel: #ffffff; --panel-2: #eef1f9; --line: #cfd6e8; --fg: #151b2e; --muted: #5f6a8a;
-  --bronze: #a9612a; --silver: #6d778f; --gold: #b8860b; --exposed: #0f8f76; --semantic: #7c3aed;
-  --agent: #e11d48; --gcp: #2563eb; --ok: #059669; --alert: #dc2626;
-  color-scheme: light;
+:root[data-theme="dark"] {
+  --bg: #0f1218; --zone: #171b23; --zone-2: #182030; --card: #1e242f; --line: #46505f; --hair: #2f3745;
+  --fg: #e8ebf1; --muted: #9aa3b5; --metrics: #5fd3c4; --metrics-soft: rgba(95, 211, 196, 0.08);
+  --sql: #e8a94a; --sql-soft: rgba(232, 169, 74, 0.08); --bronze: #d08a50; --silver: #a4adbd; --gold: #e0b04a;
+  --ok: #4cc38a; --alert: #ef6b61; --gcp: #7aa7ff;
+  color-scheme: dark;
 }
 html, body { margin: 0; }
 body {
@@ -51,40 +57,40 @@ body {
   padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   min-height: 100%;
 }
-.stage { max-width: 1200px; margin: 0 auto; display: grid; gap: 10px; }
-.bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stage { max-width: 1200px; margin: 0 auto; display: grid; gap: 12px; }
+.bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; }
 .bar[hidden] { display: none; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--panel); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card); }
 .seg button, .act {
-  font: 500 12px/1 var(--sans); letter-spacing: .02em; color: var(--muted); background: transparent; border: 0;
-  border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  font: 500 12px/1 var(--sans); letter-spacing: .01em; color: var(--muted); background: transparent; border: 0;
+  padding: 8px 12px; cursor: pointer; min-height: 32px;
 }
-.seg button[aria-pressed="true"] { color: var(--fg); background: var(--panel-2); }
-.seg button:focus-visible, .act:focus-visible { outline: 2px solid var(--semantic); outline-offset: 2px; }
-.act { border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
-.act:hover { border-color: var(--agent); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { color: var(--fg); background: var(--zone-2); }
+.seg button:hover, .act:hover { color: var(--fg); }
+.seg button:focus-visible, .act:focus-visible { outline: 2px solid var(--metrics); outline-offset: -2px; }
+.act { border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
 figure { margin: 0; overflow-x: auto; }
 svg { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
-.box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
-.box.soft { fill: var(--panel-2); }
-.frame { fill: none; stroke: var(--line); stroke-width: 1; }
-.frame.dashed { stroke-dasharray: 4 4; }
-.lbl { font-size: 11px; font-weight: 600; fill: var(--fg); }
-.lbl.small { font-size: 9.5px; font-weight: 500; }
-.sub { font-size: 9.5px; fill: var(--muted); font-weight: 500; }
+.zone { fill: var(--zone); stroke: var(--hair); stroke-width: 1; }
+.zone.blue { fill: var(--zone-2); }
+.card { fill: var(--card); stroke: var(--line); stroke-width: 1; }
+.card.ghost { fill: none; stroke: var(--muted); stroke-dasharray: 3 3; }
+.ztitle { font-size: 12px; font-weight: 600; fill: var(--fg); }
+.title { font-size: 11px; font-weight: 600; fill: var(--fg); }
+.sub { font-size: 9.5px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 9.5px; fill: var(--fg); }
 .mono.dim { fill: var(--muted); }
+.mono.xs { font-size: 8.5px; }
+.ico { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .edge { fill: none; stroke: var(--muted); stroke-width: 1.3; }
 .edge.reads { stroke-dasharray: 3 3; }
 .edge.thin { stroke-width: 1; }
+.edge.ink { stroke: var(--fg); stroke-width: 1.5; }
 .elabel { font-size: 9px; fill: var(--muted); }
-.chip { fill: var(--panel-2); stroke: var(--line); }
-.chip.tool { stroke: var(--agent); }
-.pill { fill: var(--panel); stroke: var(--line); }
-.ghost { fill: none; stroke: var(--muted); stroke-dasharray: 2 3; opacity: .8; }
 svg .n, svg .e { transition: opacity .18s ease; }
-svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .22; }
-.tracer { fill: var(--agent); filter: drop-shadow(0 0 4px var(--agent)); }
+svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .2; }
+.tracer { fill: var(--fg); stroke: var(--bg); stroke-width: 1.5; }
 @media (prefers-reduced-motion: reduce) { svg .n, svg .e { transition: none; } }
 </style>
 </head>
@@ -98,7 +104,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .22; }
     </div>
   </div>
   <figure>
-    <svg id="d" viewBox="0 0 1200 560" role="img" aria-label="The semantic track: domains land through the Airflow lab into a warehouse whose layers dbt builds; the dbt project's semantic YAML defines every metric once, generates the agent catalog and a BigQuery data agent's context, and an ADK agent answers questions through MetricFlow over the silver tier, quoting freshness from the ops ledger, while a text-to-SQL baseline reads the public tier and both are scored by adk eval."></svg>
+    <svg id="d" viewBox="0 0 1200 580" role="img" aria-label="The semantic track: domains land through the Airflow lab into a warehouse whose layers dbt builds; the dbt project's semantic YAML defines every metric once, generates the agent catalog and a BigQuery data agent's context, and an ADK agent answers questions through MetricFlow over the semantic layer, quoting freshness from the ops ledger, while a text-to-SQL baseline reads the public tier and adk eval scores both."></svg>
   </figure>
 </div>
 <script>
@@ -116,217 +122,201 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .22; }
     return t;
   };
   const nodes = {};
-  const edges = [];
   const node = (id, cls = '') => { const g = el('g', { class: `n ${cls}`, 'data-id': id }); nodes[id] = g; return g; };
 
-  // defs: arrowheads
   const defs = el('defs');
-  for (const [id, color] of [['arrow', 'var(--muted)'], ['arrowA', 'var(--agent)'], ['arrowS', 'var(--semantic)'], ['arrowE', 'var(--exposed)']]) {
+  for (const [id, color] of [['arrow', 'var(--muted)'], ['arrowInk', 'var(--fg)'], ['arrowM', 'var(--metrics)'], ['arrowS', 'var(--sql)']]) {
     const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M1,1 L9,5 L1,9 z', fill: color }, m);
   }
 
-  // ---- shapes
-  const box = (g, x, y, w, h, cls = 'box', r = 6) => el('rect', { x, y, width: w, height: h, rx: r, class: cls }, g);
-  const chip = (g, x, y, label, opts = {}) => {
-    const w = opts.w ?? Math.round(label.length * 5.7 + 10);
-    const h = opts.h ?? 16;
-    el('rect', { x, y, width: w, height: h, rx: 8, class: `chip ${opts.cls ?? ''}` }, g);
-    const t = txt(g, x + w / 2, y + h / 2 + 3.4, label, `mono ${opts.tcls ?? ''}`, { 'text-anchor': 'middle' });
-    if (opts.gcp) { t.dataset.here = label; t.dataset.gcp = opts.gcp; }
-    return w;
+  // ---- line icons, 14px, drawn at (x, y) top-left
+  const icons = {
+    db: (g, x, y) => { el('ellipse', { cx: x + 7, cy: y + 3.5, rx: 6, ry: 2.6, class: 'ico' }, g); el('path', { d: `M${x + 1},${y + 3.5} V${y + 11} a6,2.6 0 0 0 12,0 V${y + 3.5}`, class: 'ico' }, g); },
+    doc: (g, x, y) => { el('path', { d: `M${x + 2},${y + 1} h7 l3,3 v9 h-10 z M${x + 9},${y + 1} v3 h3 M${x + 4.5},${y + 7} h5 M${x + 4.5},${y + 10} h5`, class: 'ico' }, g); },
+    gear: (g, x, y) => { el('circle', { cx: x + 7, cy: y + 7, r: 2.4, class: 'ico' }, g); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; el('path', { d: `M${x + 7 + Math.cos(a) * 4.2},${y + 7 + Math.sin(a) * 4.2} L${x + 7 + Math.cos(a) * 6.3},${y + 7 + Math.sin(a) * 6.3}`, class: 'ico' }, g); } },
+    bell: (g, x, y) => { el('path', { d: `M${x + 3},${y + 10} h8 l-1.2,-1.6 V${y + 5.5} a2.8,2.8 0 0 0 -5.6,0 V${y + 8.4} z M${x + 5.8},${y + 12} h2.4`, class: 'ico' }, g); },
+    lock: (g, x, y) => { el('path', { d: `M${x + 4},${y + 6.5} v-2 a3,3 0 0 1 6,0 v2 M${x + 2.5},${y + 6.5} h9 v6.5 h-9 z`, class: 'ico' }, g); },
+    clock: (g, x, y) => { el('circle', { cx: x + 7, cy: y + 7, r: 5.5, class: 'ico' }, g); el('path', { d: `M${x + 7},${y + 4} v3.2 l2.2,1.6`, class: 'ico' }, g); },
+    chat: (g, x, y) => { el('path', { d: `M${x + 2},${y + 2} h10 v7 h-5.5 l-2.5,2.5 v-2.5 h-2 z`, class: 'ico' }, g); },
+    bolt: (g, x, y) => { el('path', { d: `M${x + 8},${y + 1} l-5,7 h4 l-1,5 l5,-7 h-4 z`, class: 'ico' }, g); },
+    check: (g, x, y) => { el('path', { d: `M${x + 2.5},${y + 7.5} l3,3 l6,-7`, class: 'ico' }, g); },
+    layers: (g, x, y) => { el('path', { d: `M${x + 7},${y + 2} l6,3 l-6,3 l-6,-3 z M${x + 1},${y + 8} l6,3 l6,-3 M${x + 1},${y + 11} l6,3 l6,-3`, class: 'ico' }, g); },
+    box: (g, x, y) => { el('path', { d: `M${x + 2},${y + 4} l5,-2.5 l5,2.5 v6.5 l-5,2.5 l-5,-2.5 z M${x + 2},${y + 4} l5,2.5 l5,-2.5 M${x + 7},${y + 6.5} v6.5`, class: 'ico' }, g); },
+    cal: (g, x, y) => { el('path', { d: `M${x + 2},${y + 3} h10 v10 h-10 z M${x + 2},${y + 6} h10 M${x + 5},${y + 1.5} v3 M${x + 9},${y + 1.5} v3`, class: 'ico' }, g); },
   };
-  const edge = (id, d, ends, opts = {}) => {
-    const p = el('path', { id, d, class: `e edge ${opts.cls ?? ''}`, 'data-ends': ends.join(' '),
-      'marker-end': opts.noEnd ? null : `url(#${opts.marker ?? 'arrow'})`, 'marker-start': opts.both ? `url(#${opts.marker ?? 'arrow'})` : null });
-    if (opts.stroke) p.style.stroke = opts.stroke;
+
+  // ---- shapes
+  const zone = (g, x, y, w, h, cls = '') => el('rect', { x, y, width: w, height: h, rx: 8, class: `zone ${cls}` }, g);
+  // two-line card: title / sub; optional icon, optional metal stripe
+  const card = (g, x, y, w, h, title, sub, o = {}) => {
+    const r = el('rect', { x, y, width: w, height: h, rx: 5, class: `card ${o.cls ?? ''}` }, g);
+    if (o.stroke) r.style.stroke = o.stroke;
+    if (o.stripe) el('rect', { x: x + 1, y: y + 1, width: 4, height: h - 2, fill: o.stripe }, g);
+    let tx = x + 10 + (o.stripe ? 4 : 0);
+    if (o.icon) { icons[o.icon](g, tx - 2, y + (sub ? 8 : h / 2 - 7)); tx += 18; }
+    const ty = (sub || o.top) ? y + 17 : y + h / 2 + 4;
+    txt(g, tx, ty, title, o.tcls ?? 'title');
+    if (sub) txt(g, tx, y + 31, sub, o.scls ?? 'sub');
+    return r;
+  };
+  const edges = [];
+  const edge = (id, d, ends, o = {}) => {
+    const p = el('path', { id, d, class: `e edge ${o.cls ?? ''}`, 'data-ends': ends.join(' '),
+      'marker-end': o.noEnd ? null : `url(#${o.marker ?? 'arrow'})`, 'marker-start': o.both ? `url(#${o.marker ?? 'arrow'})` : null });
+    if (o.stroke) p.style.stroke = o.stroke;
     edges.push(p);
-    if (opts.label) {
-      const [lx, ly] = opts.label.at;
-      txt(svg, lx, ly, opts.label.text, 'e elabel', { 'text-anchor': opts.label.anchor ?? 'middle', 'data-ends': ends.join(' ') });
+    if (o.label) {
+      const [lx, ly] = o.label.at;
+      txt(svg, lx, ly, o.label.text, 'e elabel', { 'text-anchor': o.label.anchor ?? 'middle', 'data-ends': ends.join(' ') });
     }
     return p;
   };
-  const tick = (x, y) => { // discrepancy check on a hop
+  const tick = (x, y) => { // a discrepancy check on a hop
     const g = el('g', { class: 'n', 'data-id': 'checks' });
-    el('circle', { cx: x, cy: y, r: 6, fill: 'var(--bg)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, g);
+    el('circle', { cx: x, cy: y, r: 6, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, g);
     el('path', { d: `M${x - 3},${y} l2,2.2 l4,-4.4`, fill: 'none', stroke: 'var(--ok)', 'stroke-width': 1.4, 'stroke-linecap': 'round' }, g);
   };
 
-  // ---- left: sources
+  // ---- left: domains
   const S = node('sources');
-  [['sales', 300], ['returns', 334], ['marketing', 368], ['weather', 402]].forEach(([s, y]) => {
-    box(S, 28, y, 100, 26, 'pill', 13); txt(S, 78, y + 17, s, 'lbl small', { 'text-anchor': 'middle' });
+  txt(S, 28, 276, 'domains', 'sub');
+  [['sales', 288], ['returns', 318], ['marketing', 348], ['weather', 378]].forEach(([s, y]) => {
+    el('rect', { x: 28, y, width: 112, height: 24, rx: 4, class: 'card' }, S); txt(S, 38, y + 15.5, s, 'title');
   });
-  box(S, 28, 436, 100, 26, 'pill', 13).style.strokeDasharray = '3 3';
-  txt(S, 78, 453, '+ domain', 'sub', { 'text-anchor': 'middle' });
-  edge('e-src', 'M128,313 H139 V375 H150 M128,347 H139 M128,381 H139 M128,415 H139 M128,449 H139 V375', ['sources', 'elf'], { cls: 'thin' });
+  el('rect', { x: 28, y: 408, width: 112, height: 24, rx: 4, class: 'card ghost' }, S);
+  txt(S, 38, 423.5, '+ domain', 'sub');
+  edge('e-src', 'M140,300 H146 V393 H150 M140,330 H146 M140,360 H146 M140,390 H146 M140,420 H146 V393', ['sources', 'elf'], { cls: 'thin' });
 
   // ---- left: alerts
   const M = node('alerts');
-  box(M, 150, 134, 135, 56);
-  el('circle', { cx: 164, cy: 154, r: 4, fill: 'var(--alert)' }, M);
-  txt(M, 174, 158, 'alerts', 'lbl');
-  txt(M, 174, 171, { here: 'Prometheus', gcp: 'Cloud Monitoring' }, 'sub');
-  txt(M, 174, 183, { here: 'Alertmanager', gcp: '' }, 'sub');
+  card(M, 150, 124, 135, 54, 'alerts', { here: 'Prometheus', gcp: 'Cloud Monitoring' }, { icon: 'bell' });
+  txt(M, 178, 168, { here: 'Alertmanager', gcp: '' }, 'sub');
 
   // ---- left: the Airflow lab (track one)
   const A = node('airflow');
-  box(A, 150, 200, 135, 290, 'frame dashed', 8);
-  txt(A, 217, 480, { here: 'Airflow lab · track one', gcp: 'Cloud Composer' }, 'sub', { 'text-anchor': 'middle' });
-  const card = (g, x, y, w, h, title, sub) => {
-    box(g, x, y, w, h, 'box soft'); txt(g, x + w / 2, y + (sub ? 12 : h / 2 + 4), title, 'lbl small', { 'text-anchor': 'middle' });
-    if (sub) txt(g, x + w / 2, y + 23, sub, 'mono dim', { 'text-anchor': 'middle' });
-  };
-  card(A, 162, 212, 111, 28, { here: 'dbt job', gcp: 'Cloud Run Job' });
-  card(A, 162, 300, 111, 30, { here: 'DAG', gcp: 'DAG' }, '<pipeline>_elt');
-  card(A, 162, 360, 111, 30, { here: 'EL Factory', gcp: 'Cloud Run' }, 'extract · load');
+  zone(A, 150, 190, 135, 320);
+  txt(A, 162, 207, { here: 'Airflow lab', gcp: 'Cloud Composer' }, 'ztitle');
+  txt(A, 273, 500, 'track one', 'sub', { 'text-anchor': 'end' });
+  card(A, 162, 214, 111, 42, 'dbt job', { here: 'pod on the cluster', gcp: 'Cloud Run Job' }, { icon: 'box' });
+  card(A, 162, 300, 111, 42, 'DAG', '<pipeline>_elt', { icon: 'cal', scls: 'mono dim' });
+  card(A, 162, 372, 111, 42, 'EL Factory', { here: 'Flask on the cluster', gcp: 'Cloud Run' }, { icon: 'bolt' });
 
   // ---- centre top: dbt project
   const D = node('dbt');
-  box(D, 315, 36, 460, 160, 'frame', 8);
-  txt(D, 327, 56, 'dbt project', 'lbl');
-  box(D, 327, 70, 138, 66, 'box soft'); txt(D, 335, 88, 'models', 'lbl small');
-  [['brz', 'var(--bronze)'], ['slv', 'var(--silver)'], ['gld', 'var(--gold)'], ['exp', 'var(--exposed)']].forEach(([c, col], i) => {
-    const x = 333 + i * 32; el('rect', { x, y: 104, width: 28, height: 16, rx: 8, fill: 'var(--panel)', stroke: col }, D);
-    txt(D, x + 14, 115.4, c, 'mono', { 'text-anchor': 'middle' });
-  });
-  box(D, 479, 70, 158, 66, 'box soft').style.stroke = 'var(--semantic)';
-  txt(D, 487, 88, 'semantic YAML', 'lbl small');
-  el('rect', { x: 606, y: 77, width: 24, height: 14, rx: 7, fill: 'var(--semantic)' }, D);
-  txt(D, 618, 87.5, '1×', 'mono', { 'text-anchor': 'middle', fill: 'var(--bg)' }).style.fill = 'var(--bg)';
-  let cx = chip(D, 485, 104, 'semantic models', { cls: 'semantic' }); chip(D, 485 + cx + 4, 104, 'metrics');
-  box(D, 651, 70, 112, 66, 'box soft'); txt(D, 659, 88, 'documentation', 'lbl small');
-  cx = chip(D, 657, 104, 'glossary'); chip(D, 657 + cx + 4, 104, 'naming');
-  let x = 327; for (const c of ['source freshness', 'discrepancy', 'contracts', 'docs standard', 'parity']) x += chip(D, x, 156, c, { h: 22 }) + 8;
-  txt(D, 763, 171, 'checks', 'sub', { 'text-anchor': 'end' });
+  zone(D, 315, 36, 460, 140, 'blue');
+  txt(D, 327, 56, 'dbt project', 'ztitle');
+  card(D, 327, 70, 138, 44, 'models', '', { icon: 'layers', top: true });
+  let x = 355; for (const [c, col] of [['brz', 'var(--bronze)'], ['slv', 'var(--silver)'], ['gld', 'var(--gold)'], ['exp', 'var(--fg)']]) {
+    const t = txt(D, x, 101, c, 'mono'); t.style.fill = col; x += 26;
+  }
+  card(D, 479, 70, 158, 44, 'semantic YAML', 'semantic models · metrics', { icon: 'doc' });
+  el('rect', { x: 606, y: 76, width: 24, height: 14, rx: 3, fill: 'var(--metrics)' }, D);
+  txt(D, 618, 86.5, '1×', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--card)';
+  card(D, 651, 70, 112, 44, 'documentation', 'glossary · naming', { icon: 'doc' });
+  card(D, 327, 128, 436, 34, 'checks', '', { icon: 'check' });
+  txt(D, 400, 149, 'source freshness · discrepancy · contracts · docs · parity', 'mono dim');
 
   // ---- centre: warehouse
   const W = node('warehouse');
-  box(W, 315, 240, 460, 250, 'frame', 8);
-  txt(W, 327, 262, 'warehouse', 'lbl');
-  el('rect', { x: 395, y: 248, width: 60, height: 18, rx: 9, fill: 'var(--panel-2)', stroke: 'var(--line)' }, W);
-  txt(W, 425, 260.5, { here: 'Postgres', gcp: 'BigQuery' }, 'mono', { 'text-anchor': 'middle' });
+  zone(W, 315, 232, 460, 278, 'blue');
+  icons.db(W, 327, 243); txt(W, 347, 254, 'warehouse', 'ztitle');
+  txt(W, 414, 254, { here: 'Postgres', gcp: 'BigQuery' }, 'sub');
   const emu = el('g', { class: 'n gcp-hide', 'data-id': 'warehouse' }, W);
-  el('rect', { x: 650, y: 248, width: 112, height: 18, rx: 9, class: 'ghost' }, emu);
-  txt(emu, 706, 260.5, 'BigQuery emulator', 'mono dim', { 'text-anchor': 'middle' });
+  el('rect', { x: 650, y: 240, width: 112, height: 20, rx: 4, class: 'card ghost' }, emu);
+  txt(emu, 706, 253.5, 'BigQuery emulator', 'mono dim', { 'text-anchor': 'middle' });
 
-  // ops ledger strip
-  const O = node('ops');
-  box(O, 330, 285, 432, 26, 'box soft', 13);
-  txt(O, 344, 302, 'ops', 'lbl small');
-  x = 372; for (const c of ['readiness', 'deadlines', 'audit', 'parity report']) x += chip(O, x, 290, c) + 6;
+  const O = node('ops'); // the ledger
+  el('rect', { x: 330, y: 275, width: 432, height: 28, rx: 5, class: 'card' }, O);
+  txt(O, 340, 293, 'ops', 'title'); txt(O, 372, 293, 'readiness · deadlines · audit · parity report', 'mono dim');
 
-  // row 1: protected tier + semantic zone
-  const Z1 = node('semantic'); // zone around silver and the semantic schema
-  el('rect', { x: 433, y: 318, width: 329, height: 76, rx: 8, class: 'frame dashed' }, Z1).style.stroke = 'var(--semantic)';
-  txt(Z1, 710, 352, 'semantic layer', 'lbl', { 'text-anchor': 'middle' }).style.fill = 'var(--semantic)';
-  txt(Z1, 710, 368, 'agent_metrics', 'mono dim', { 'text-anchor': 'middle' });
-  const layer = (id, x, y, w, h, label, col, sub) => {
-    const g = node(id); const r = box(g, x, y, w, h, 'box'); r.style.stroke = col;
-    el('rect', { x, y, width: 4, height: h, rx: 2, fill: col }, g);
-    txt(g, x + w / 2 + 2, y + (sub ? h / 2 - 2 : h / 2 + 4), label, 'lbl', { 'text-anchor': 'middle' });
-    if (sub) txt(g, x + w / 2 + 2, y + h / 2 + 12, sub, 'mono dim', { 'text-anchor': 'middle' });
-    return g;
-  };
-  layer('bronze', 330, 326, 88, 60, 'bronze', 'var(--bronze)', 'raw');
-  layer('silver', 443, 326, 88, 60, 'silver', 'var(--silver)', 'clean');
-  const T = node('timespine'); box(T, 546, 326, 108, 60, 'box soft');
-  txt(T, 600, 350, 'time spine', 'lbl small', { 'text-anchor': 'middle' });
-  txt(T, 600, 366, 'metrics · glossary', 'mono dim', { 'text-anchor': 'middle' });
+  // row 1: the semantic layer, read as agent_metrics
+  const Z1 = node('semantic');
+  const z1 = el('rect', { x: 433, y: 314, width: 329, height: 82, rx: 6, fill: 'var(--metrics-soft)', stroke: 'var(--metrics)', 'stroke-dasharray': '4 3' }, Z1);
+  txt(Z1, 714, 351, 'semantic layer', 'title', { 'text-anchor': 'middle' }).style.fill = 'var(--metrics)';
+  txt(Z1, 714, 367, 'agent_metrics', 'mono dim', { 'text-anchor': 'middle' });
+  const L = (id, x, y, w, title, sub, stripe) => { const g = node(id); card(g, x, y, w, 44, title, sub, { stripe }); return g; };
+  L('bronze', 326, 333, 98, 'bronze', 'raw', 'var(--bronze)');
+  L('silver', 443, 333, 88, 'silver', 'clean', 'var(--silver)');
+  const T = node('timespine'); card(T, 546, 333, 116, 44, 'time spine', 'metrics · glossary', { scls: 'mono dim' });
 
-  // row 2: public tier
+  // row 2: the public tier, read as agent_sql
   const Z2 = node('public');
-  el('rect', { x: 433, y: 398, width: 329, height: 82, rx: 8, class: 'frame dashed' }, Z2).style.stroke = 'var(--exposed)';
-  el('path', { d: 'M700,432 v-4 a4,4 0 0 1 8,0 v4 M697,432 h14 v9 h-14 z', fill: 'none', stroke: 'var(--exposed)', 'stroke-width': 1.3 }, Z2);
-  txt(Z2, 721, 441, 'public', 'lbl', { 'text-anchor': 'start' }).style.fill = 'var(--exposed)';
-  txt(Z2, 710, 458, 'agent_sql', 'mono dim', { 'text-anchor': 'middle' });
-  const Dsc = node('descriptions'); box(Dsc, 330, 412, 88, 52, 'box soft');
-  txt(Dsc, 374, 434, { here: 'comments', gcp: 'descriptions' }, 'lbl small', { 'text-anchor': 'middle' });
-  txt(Dsc, 374, 449, { here: 'persist_docs', gcp: 'Knowledge Catalog' }, 'mono dim', { 'text-anchor': 'middle', 'font-size': '8.5' });
-  layer('gold', 443, 412, 88, 52, 'gold', 'var(--gold)', 'business-ready');
-  const Lg = node('legacy'); el('rect', { x: 552, y: 418, width: 108, height: 52, rx: 6, class: 'ghost' }, Lg);
-  layer('exposed', 546, 412, 108, 52, 'exposed', 'var(--exposed)', 'views');
+  el('rect', { x: 433, y: 410, width: 329, height: 82, rx: 6, fill: 'var(--sql-soft)', stroke: 'var(--sql)', 'stroke-dasharray': '4 3' }, Z2);
+  const lk = el('g', {}, Z2); icons.lock(lk, 676, 437); lk.querySelectorAll('.ico').forEach(p => p.style.stroke = 'var(--sql)');
+  txt(Z2, 696, 448, 'public', 'title').style.fill = 'var(--sql)';
+  txt(Z2, 710, 464, 'agent_sql', 'mono dim', { 'text-anchor': 'middle' });
+  const Dsc = node('descriptions'); card(Dsc, 326, 429, 98, 44, { here: 'comments', gcp: 'descriptions' }, { here: 'persist_docs', gcp: 'Knowledge Catalog' }, { scls: 'mono dim xs' });
+  L('gold', 443, 429, 88, 'gold', 'business-ready', 'var(--gold)');
+  const Lg = node('legacy'); el('rect', { x: 552, y: 435, width: 108, height: 44, rx: 5, class: 'card ghost' }, Lg);
+  L('exposed', 546, 429, 108, 'exposed', 'views', 'var(--fg)');
   const par = el('g', { class: 'n', 'data-id': 'legacy' });
-  el('circle', { cx: 660, cy: 466, r: 6.5, fill: 'var(--bg)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, par);
-  txt(par, 660, 469.5, '=', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--ok)';
+  el('circle', { cx: 660, cy: 477, r: 6.5, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, par);
+  txt(par, 660, 480.5, '=', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--ok)';
 
-  // hops inside the warehouse
-  edge('e-b-s', 'M418,356 H443', ['bronze', 'silver']);
-  edge('e-s-g', 'M487,386 V412', ['silver', 'gold']);
-  edge('e-g-e', 'M531,438 H546', ['gold', 'exposed']);
-  tick(430.5, 348); tick(495, 399); tick(538.5, 430);
+  edge('e-b-s', 'M424,355 H443', ['bronze', 'silver']);
+  edge('e-s-g', 'M487,377 V429', ['silver', 'gold']);
+  edge('e-g-e', 'M531,451 H546', ['gold', 'exposed']);
+  tick(433.5, 347); tick(495, 403); tick(538.5, 443);
 
-  // ---- top right: generator and artefacts
-  const G = node('generator');
-  box(G, 825, 78, 80, 44); txt(G, 865, 96, 'catalog', 'lbl small', { 'text-anchor': 'middle' }); txt(G, 865, 110, 'generator', 'lbl small', { 'text-anchor': 'middle' });
-  const A2 = node('context'); box(A2, 935, 52, 135, 34);
-  txt(A2, 1002, 66, 'data agent context', 'lbl small', { 'text-anchor': 'middle' }); txt(A2, 1002, 79, 'verified queries', 'mono dim', { 'text-anchor': 'middle' });
-  const A1 = node('catalog'); box(A1, 935, 112, 135, 34);
-  txt(A1, 1002, 126, 'agent catalog', 'lbl small', { 'text-anchor': 'middle' }); txt(A1, 1002, 139, 'agent.json', 'mono dim', { 'text-anchor': 'middle' });
-  const N = node('native'); const nr = el('rect', { x: 1100, y: 52, width: 90, height: 34, rx: 6, class: 'ghost gcp-solid' }, N);
-  txt(N, 1145, 66, 'BigQuery', 'lbl small', { 'text-anchor': 'middle' }); txt(N, 1145, 79, 'data agent', 'lbl small', { 'text-anchor': 'middle' });
+  // ---- top right: the generator and its artefacts
+  const G = node('generator'); card(G, 820, 70, 120, 44, 'generator', 'build_catalog.py', { icon: 'gear', scls: 'mono dim' });
+  const A2 = node('context'); card(A2, 960, 48, 130, 42, 'data agent context', 'verified queries', { scls: 'mono dim' });
+  const A1 = node('catalog'); card(A1, 960, 108, 130, 42, 'agent catalog', 'agent.json', { scls: 'mono dim' });
+  const N = node('native'); const nr = card(N, 1108, 48, 87, 42, 'data agent', 'BigQuery', { cls: 'ghost' });
 
   // ---- right: the agent (workloads)
   const R = node('workloads');
-  box(R, 805, 240, 295, 250, 'frame', 8);
-  txt(R, 817, 258, 'workloads', 'lbl');
-  el('rect', { x: 1025, y: 246, width: 62, height: 16, rx: 8, fill: 'var(--panel-2)', stroke: 'var(--line)' }, R);
-  txt(R, 1056, 257.5, { here: 'kind', gcp: 'Cloud Run' }, 'mono', { 'text-anchor': 'middle' });
+  zone(R, 805, 232, 295, 278);
+  txt(R, 817, 254, 'workloads', 'ztitle'); txt(R, 892, 254, { here: 'kind', gcp: 'Cloud Run' }, 'sub');
   const C1 = node('agent');
-  box(C1, 818, 264, 269, 128).style.stroke = 'var(--agent)';
-  txt(C1, 830, 281, 'semantic agent', 'lbl');
-  el('rect', { x: 914, y: 269, width: 30, height: 15, rx: 7.5, fill: 'var(--agent)' }, C1);
-  txt(C1, 929, 280, 'ADK', 'mono', { 'text-anchor': 'middle' }).style.fill = 'var(--bg)';
-  chip(C1, 978, 268, 'OpenRouter :free', { gcp: 'Gemini', w: 99 });
-  chip(C1, 830, 290, 'freshness', { cls: 'tool' });
+  el('rect', { x: 818, y: 262, width: 269, height: 130, rx: 5, class: 'card' }, C1);
+  icons.chat(C1, 828, 268); txt(C1, 848, 279, 'semantic agent', 'title'); txt(C1, 942, 279, 'ADK', 'sub');
+  const fr = el('g', {}, C1); icons.clock(fr, 828, 282); txt(C1, 848, 293, 'freshness', 'mono');
+  txt(C1, 978, 283, 'tools', 'sub');
+  el('path', { d: 'M972,289 V339', fill: 'none', stroke: 'var(--hair)' }, C1);
+  [['list_metrics', 300], ['describe_metric', 318], ['query_metrics', 336]].forEach(([t, y]) => txt(C1, 980, y, t, 'mono'));
   const MF = node('metricflow');
-  box(MF, 830, 337, 92, 38, 'box soft').style.stroke = 'var(--semantic)';
-  txt(MF, 876, 360, { here: 'MetricFlow', gcp: 'DataAgentToolset' }, 'mono', { 'text-anchor': 'middle' });
-  [['list_metrics', 292], ['describe_metric', 314], ['query_metrics', 336]].forEach(([t, y]) => chip(C1, 935, y, t, { cls: 'tool', w: 100 }));
-  edge('e-q-mf', 'M935,344 H922', ['agent', 'metricflow'], { cls: 'thin', stroke: 'var(--semantic)', marker: 'arrowS' });
+  card(MF, 830, 335, 104, 40, { here: 'MetricFlow', gcp: 'DataAgentToolset' }, 'query path', { tcls: 'mono', stroke: 'var(--metrics)' });
+  edge('e-q-mf', 'M972,332 H934', ['agent', 'metricflow'], { cls: 'thin', stroke: 'var(--metrics)', marker: 'arrowM' });
   const C2 = node('baseline');
-  box(C2, 818, 412, 269, 52, 'box');
-  txt(C2, 830, 442, 'text-to-SQL baseline', 'lbl small');
-  chip(C2, 985, 430, 'execute_sql', { cls: 'tool' });
+  card(C2, 818, 429, 269, 44, 'text-to-SQL baseline', 'execute_sql · gold and exposed', { scls: 'mono dim' });
   const EV = node('eval');
-  chip(EV, 818, 470, 'adk eval');
-  el('rect', { x: 884, y: 472, width: 60, height: 4, rx: 2, fill: 'var(--agent)' }, EV);
-  el('rect', { x: 884, y: 480, width: 44, height: 4, rx: 2, fill: 'var(--muted)' }, EV);
-  chip(EV, 962, 470, 'sessions · metadata DB', { gcp: 'sessions · Cloud SQL', w: 127 });
+  txt(EV, 818, 490, { here: 'adk eval  ·  OpenRouter :free', gcp: 'adk eval  ·  Gemini' }, 'mono dim');
+  txt(EV, 818, 503, { here: 'sessions  ·  metadata DB', gcp: 'sessions  ·  Cloud SQL' }, 'mono dim');
 
   // ---- far right: the person
   const P = node('person');
-  el('circle', { cx: 1152, cy: 292, r: 9, fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.4 }, P);
-  el('path', { d: 'M1136,326 a16,16 0 0 1 32,0', fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.4 }, P);
-  el('path', { d: 'M1163,264 h20 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-10 l-6,5 v-5 h-4 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z', fill: 'var(--panel-2)', stroke: 'var(--line)' }, P);
-  txt(P, 1173, 279, '?', 'lbl', { 'text-anchor': 'middle' });
+  el('circle', { cx: 1150, cy: 292, r: 9, fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.4 }, P);
+  el('path', { d: 'M1134,326 a16,16 0 0 1 32,0', fill: 'none', stroke: 'var(--fg)', 'stroke-width': 1.4 }, P);
+  el('path', { d: 'M1161,264 h20 a5,5 0 0 1 5,5 v10 a5,5 0 0 1 -5,5 h-10 l-6,5 v-5 h-4 a5,5 0 0 1 -5,-5 v-10 a5,5 0 0 1 5,-5 z', class: 'card' }, P);
+  txt(P, 1171, 279, '?', 'title', { 'text-anchor': 'middle' });
 
   // ---- edges across regions
-  edge('e-dag-ops', 'M285,315 H300 V298 H330', ['airflow', 'ops'], { label: { text: 'ready', at: [302, 290], anchor: 'start' } });
-  edge('e-elf-brz', 'M285,375 H306 V356 H330', ['airflow', 'bronze'], { label: { text: 'lands', at: [302, 390], anchor: 'start' } });
-  edge('e-job-build', 'M285,226 H538', ['airflow', 'dbt'], { label: { text: 'runs per stage', at: [410, 220] } });
-  edge('e-build', 'M545,196 V240', ['dbt', 'warehouse'], { label: { text: 'dbt build · tests · comments', at: [552, 225], anchor: 'start' } });
-  edge('e-alert', 'M327,167 H285', ['dbt', 'alerts'], { stroke: 'var(--alert)' });
-  edge('e-manifests', 'M775,100 H825', ['dbt', 'generator'], { label: { text: 'manifests', at: [800, 93] } });
-  edge('e-g-a2', 'M905,100 H920 V69 H935', ['generator', 'context']);
-  edge('e-g-a1', 'M905,100 H920 V129 H935', ['generator', 'catalog']);
-  edge('e-a2-n', 'M1070,69 H1100', ['context', 'native']);
-  edge('e-a1-agent', 'M1002,146 V264', ['catalog', 'agent'], { label: { text: 'reads', at: [1008, 210], anchor: 'start' } });
-  edge('e-mf-sem', 'M830,356 H762', ['metricflow', 'semantic'], { cls: 'reads', stroke: 'var(--semantic)', marker: 'arrowS' });
-  edge('e-ops-agent', 'M818,298 H762', ['agent', 'ops'], { both: true, label: { text: 'audit', at: [790, 311] } });
-  edge('e-sql-pub', 'M818,438 H762', ['baseline', 'public'], { cls: 'reads', stroke: 'var(--exposed)', marker: 'arrowE' });
-  edge('e-ask', 'M1130,300 H1087', ['person', 'agent'], { stroke: 'var(--agent)', marker: 'arrowA', label: { text: 'asks', at: [1106, 294] } });
-  edge('e-answer', 'M1087,346 H1130', ['agent', 'person'], { stroke: 'var(--agent)', marker: 'arrowA', label: { text: 'answer · freshness', at: [1106, 361] } });
+  edge('e-dag-ops', 'M285,321 H300 V289 H330', ['airflow', 'ops'], { label: { text: 'ready', at: [302, 281], anchor: 'start' } });
+  edge('e-elf-brz', 'M285,393 H306 V355 H326', ['airflow', 'bronze'], { label: { text: 'lands', at: [302, 389], anchor: 'start' } });
+  edge('e-job-build', 'M285,235 H302 V204 H538', ['airflow', 'dbt'], { label: { text: 'runs per stage', at: [420, 198] } });
+  edge('e-build', 'M545,176 V232', ['dbt', 'warehouse'], { label: { text: 'dbt build · tests · comments', at: [552, 208], anchor: 'start' } });
+  edge('e-alert', 'M327,151 H285', ['dbt', 'alerts'], { stroke: 'var(--alert)' });
+  edge('e-manifests', 'M775,92 H820', ['dbt', 'generator'], { label: { text: 'manifests', at: [800, 85] } });
+  edge('e-g-a2', 'M940,92 H950 V69 H960', ['generator', 'context']);
+  edge('e-g-a1', 'M940,92 H950 V129 H960', ['generator', 'catalog']);
+  edge('e-a2-n', 'M1090,69 H1108', ['context', 'native']);
+  edge('e-a1-agent', 'M1025,150 V262', ['catalog', 'agent'], { label: { text: 'reads', at: [1031, 210], anchor: 'start' } });
+  edge('e-mf-sem', 'M830,355 H762', ['metricflow', 'semantic'], { cls: 'reads', stroke: 'var(--metrics)', marker: 'arrowM' });
+  edge('e-ops-agent', 'M818,289 H762', ['agent', 'ops'], { both: true, label: { text: 'audit', at: [790, 301] } });
+  edge('e-sql-pub', 'M818,451 H762', ['baseline', 'public'], { cls: 'reads', stroke: 'var(--sql)', marker: 'arrowS' });
+  edge('e-ask', 'M1128,300 H1087', ['person', 'agent'], { cls: 'ink', marker: 'arrowInk', label: { text: 'asks', at: [1107, 294] } });
+  edge('e-answer', 'M1087,346 H1128', ['agent', 'person'], { cls: 'ink', marker: 'arrowInk', label: { text: 'answer · freshness', at: [1107, 361] } });
 
   // ---- legend
-  const L = el('g', { class: 'legend' });
-  const li = (x, draw, label) => { draw(x); txt(L, x + 40, 532.5, label, 'elabel'); };
-  li(28, x => el('path', { d: `M${x},529 H${x + 30}`, class: 'edge', 'marker-end': 'url(#arrow)' }, L), 'writes');
-  li(118, x => el('path', { d: `M${x},529 H${x + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow)' }, L), 'reads');
-  li(208, x => el('rect', { x, y: 522, width: 30, height: 14, rx: 4, class: 'frame dashed' }, L), 'role zone');
-  li(318, x => el('rect', { x, y: 522, width: 30, height: 14, rx: 4, class: 'ghost' }, L), 'legacy, in parity');
-  li(438, x => { el('circle', { cx: x + 15, cy: 529, r: 6, fill: 'var(--bg)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, L); el('path', { d: `M${x + 12},529 l2,2.2 l4,-4.4`, fill: 'none', stroke: 'var(--ok)', 'stroke-width': 1.4 }, L); }, 'checked on every build');
+  const Lg2 = el('g', { class: 'legend' });
+  const li = (x, draw, label) => { draw(x); txt(Lg2, x + 40, 552.5, label, 'elabel'); };
+  li(28, x => el('path', { d: `M${x},549 H${x + 30}`, class: 'edge', 'marker-end': 'url(#arrow)' }, Lg2), 'writes');
+  li(112, x => el('path', { d: `M${x},549 H${x + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow)' }, Lg2), 'reads');
+  li(196, x => el('rect', { x, y: 542, width: 30, height: 14, rx: 3, fill: 'var(--metrics-soft)', stroke: 'var(--metrics)', 'stroke-dasharray': '4 3' }, Lg2), 'warehouse role');
+  li(330, x => el('rect', { x, y: 542, width: 30, height: 14, rx: 3, class: 'card ghost' }, Lg2), 'legacy view, in parity');
+  li(490, x => { el('circle', { cx: x + 15, cy: 549, r: 6, fill: 'var(--card)', stroke: 'var(--ok)', 'stroke-width': 1.2 }, Lg2); el('path', { d: `M${x + 12},549 l2,2.2 l4,-4.4`, fill: 'none', stroke: 'var(--ok)', 'stroke-width': 1.4 }, Lg2); }, 'checked on every build');
 
   // ---- behaviour: Here / On GCP
   const setMode = gcp => {
@@ -341,7 +331,7 @@ svg.focus .n:not(.lit), svg.focus .e:not(.lit) { opacity: .22; }
   document.getElementById('here').addEventListener('click', () => setMode(false));
   document.getElementById('gcp').addEventListener('click', () => setMode(true));
 
-  // ---- behaviour: hover highlights what a node talks to
+  // ---- behaviour: hover lights what a part talks to
   const related = id => {
     const ids = new Set([id]);
     svg.querySelectorAll(`[data-ends~="${id}"]`).forEach(e => e.dataset.ends.split(' ').forEach(i => ids.add(i)));

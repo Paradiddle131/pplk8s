@@ -12,9 +12,20 @@ Every managed GCP service has a local stand-in; all data is public or synthetic.
 A dbt semantic layer over the same warehouse, queried by an ADK agent through metrics instead of SQL.
 Every calculated field is defined once, every answer carries its freshness, and the same YAML feeds BigQuery's descriptions, catalog and data agent.
 
-<img width="2400" height="1120" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, generates the agent catalog and a BigQuery data agent's context; the ADK agent answers through MetricFlow over the semantic layer with freshness from the ops ledger, a text-to-SQL baseline reads the public tier, and adk eval scores both" src="assets/semantic-track.png" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/semantic-track-dark.png">
+  <img width="2400" height="1160" alt="Architecture: domains land through the Airflow lab into the warehouse; the dbt project builds its layers and semantic YAML, generates the agent catalog and a BigQuery data agent's context; the ADK agent answers through MetricFlow over the semantic layer with freshness from the ops ledger, a text-to-SQL baseline reads the public tier, and adk eval scores both" src="assets/semantic-track.png">
+</picture>
 
-The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md); the diagram's interactive version is [`assets/semantic-track.html`](assets/semantic-track.html), with the GCP name of every stand-in behind a switch.
+| Here | On GCP |
+|---|---|
+| Postgres warehouse, with the BigQuery emulator for the dialect | BigQuery |
+| ADK agent in the `workloads` namespace, MetricFlow as its query path | Cloud Run, `DataAgentToolset` on a BigQuery data agent |
+| Warehouse comments from `persist_docs`, `semantic.metrics` | Table and column descriptions, Knowledge Catalog |
+| OpenRouter free model; sessions in the metadata DB | Gemini; Cloud SQL |
+| Prometheus and Alertmanager | Cloud Monitoring |
+
+The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md) and the full mapping in [`docs/semantic-layer-on-bigquery.md`](docs/semantic-layer-on-bigquery.md); the diagram's interactive version is [`assets/semantic-track.html`](assets/semantic-track.html), with the GCP names behind a switch.
 Everything else on this page is the Airflow lab.
 
 ## Design
