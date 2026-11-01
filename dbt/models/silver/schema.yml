@@ -32,9 +32,9 @@ models:
           - term: Customer country
             description: >-
               The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so
-              revenue or orders by country group by it.
+              revenue, net revenue, returns or orders by country group by it.
             synonyms: [country]
-            metrics: [orders_total, revenue_eur, customers_distinct]
+            metrics: [orders_total, revenue_eur, customers_distinct, returns_eur, net_revenue_eur]
             dimensions: [customer__country]
     semantic_model:
       enabled: true
@@ -220,6 +220,13 @@ models:
         entity:
           type: foreign
           name: order
+      - name: customer_id
+        description: >-
+          The returned order's customer (silver.orders), so returns and net revenue group by customer__country;
+          empty while the order is not in silver.
+        entity:
+          type: foreign
+          name: customer
       - name: return_date
         description: UTC date the return was recorded (returned_at in UTC).
         tests: [not_null]

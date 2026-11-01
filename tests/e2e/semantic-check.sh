@@ -4,7 +4,8 @@
 #   - `make dbt-validate` passes against it (dbt parse, the agent-ready standard, mf validate-configs),
 #   - the time spine lands in semantic.time_spine,
 #   - the daily order metrics equal gold.daily_sales row for row, cancellation_rate included,
-#   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row,
+#   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
+#     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -66,8 +67,8 @@ dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer
   { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
 echo "ok: sales, returns, finance, marketing, customer actions, partner outreach, recruitment and call transcripts built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 61
-echo "ok: the 61 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 62
+echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
@@ -108,6 +109,29 @@ expect "net metrics vs exposed.net_sales_daily (rows differing)" "$(psql_dev -c 
        mf as (select day, revenue_eur, coalesce(returns_eur, 0), coalesce(returns_count, 0), net_revenue_eur from semantic_check.net)
   select count(*) from ((select * from exposed except select * from mf) union all (select * from mf except select * from exposed)) d")" 0
 echo "ok: the eight sales metrics equal gold.daily_sales and exposed.net_sales_daily on $days days"
+
+# Net revenue by customer country: returns reach the customer through their order (silver.returns'
+# customer_id), the path revenue takes, so the three metrics group by customer__country and equal SQL
+# written by hand: non-cancelled orders minus returns, each joined to its order's customer, per day.
+mf_ query --metrics revenue_eur,returns_eur,net_revenue_eur --group-by metric_time__day,customer__country \
+  --csv "$OUT/net_country.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of net revenue by customer country"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.net_country" \
+  -c "create table semantic_check.net_country (day date, country text, revenue_eur numeric, returns_eur numeric, net_revenue_eur numeric)"
+psql_dev -c "\\copy semantic_check.net_country from stdin with (format csv, header true)" <"$OUT/net_country.csv"
+expect "net revenue by day and customer country vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with sold as (select o.order_date as day, c.country, sum(o.amount) as revenue_eur from silver.orders o
+                join silver.customers c on c.customer_id = o.customer_id where o.status <> 'cancelled' group by 1, 2),
+       returned as (select r.return_date as day, c.country, sum(r.amount) as returns_eur from silver.returns r
+                    join silver.orders o on o.order_id = r.order_id join silver.customers c on c.customer_id = o.customer_id group by 1, 2),
+       hand as (select coalesce(s.day, r.day), coalesce(s.country, r.country), s.revenue_eur, r.returns_eur,
+                       coalesce(s.revenue_eur, 0) - coalesce(r.returns_eur, 0)
+                from sold s full join returned r on r.day = s.day and r.country = s.country),
+       mf as (select day, country, revenue_eur, returns_eur, net_revenue_eur from semantic_check.net_country)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "net revenue from German customers on 2026-10-01 and 2026-10-02" "$(psql_dev -c "
+  select string_agg(net_revenue_eur::text, ' ' order by day) from semantic_check.net_country where country = 'DE'")" "367.25 23.75"
+echo "ok: revenue, returns and net revenue by day and customer country equal SQL by hand; DE nets 367.25 on 2026-10-01"
 
 # Marketing (SL-8): the simple metrics by day and channel against gold.marketing_daily, the ratios
 # against exposed.channel_performance_daily (per day), then the whole fixture as one period.
@@ -531,7 +555,7 @@ echo "ok: a metric missing from docs/target-architecture.md fails make dbt-valid
 psql_dev <"$REPO/dbt/dev/fixture_weeks.sql"
 dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc >"$OUT/weeks.log" 2>&1 ||
   { tail -30 "$OUT/weeks.log" >&2; fail "dbt build with fixture_weeks.sql"; }
-expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 29
+expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 30
 first=2026-08-17 last=2026-10-02
 mf_ query --metrics revenue_eur_wow_growth,bookings_wow_growth,leads_wow_growth --group-by metric_time__week \
   --start-time "$first" --end-time "$last" --csv "$OUT/wow.csv" >>"$OUT/query.log" 2>&1 ||
