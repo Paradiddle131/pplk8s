@@ -4,7 +4,7 @@
 # (used as a plain Postgres server) it
 #   - creates the agent's roles, grants and audit table with `make agent-warehouse` (the dbt macro
 #     agent_warehouse), before any model exists, so dbt's tables reach the roles by default privileges,
-#   - loads dbt/dev/fixture.sql's sources and builds the sales, returns, finance and marketing models,
+#   - loads dbt/dev/fixture.sql's sources and builds the sales, returns, finance, marketing and customer-actions models,
 #   - writes the catalog (make dbt-catalog),
 #   - runs one turn of the semantic agent through ADK's Runner, in-memory sessions, a scripted model
 #     (no model quota spent) and the real tools as agent_metrics and agent_audit,
