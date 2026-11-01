@@ -72,6 +72,8 @@ A business term that is not a metric (a cohort, a channel, a market, what a conv
 
 A term maps to at least one metric or dimension, names metrics by their name and dimensions as `<entity>__<dimension>`, and never repeats a metric: a metric's label and description are already its glossary entry, and a second definition is how two agents come to disagree.
 dbt has no glossary node; `meta` on the model keeps the term beside the columns it explains, in the YAML the catalog already reads.
+A word users say for more than one metric (customers, sales) is a term too: its description starts `Ambiguous on its own:`, names each meaning and says to ask which one is meant or give each, and its metrics are the meanings.
+The semantic agent asks instead of picking one, and the native data agent, whose glossary has only a term's words, reads the same sentence.
 
 ## Which layer agents read
 

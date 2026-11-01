@@ -155,52 +155,6 @@
       ]
     },
     {
-      "name": "exp_tlc_daily_trips_by_borough",
-      "relation": "dbt_dev.exposed.tlc_daily_trips_by_borough",
-      "layer": "exposed",
-      "group": "analytics",
-      "pipelines": [
-        "tlc"
-      ],
-      "description": "Daily trips, passengers and revenue per pickup borough and trip type. Alias exposed.tlc_daily_trips_by_borough.",
-      "grain": [
-        "pickup_date",
-        "data_month",
-        "trip_type",
-        "borough"
-      ],
-      "columns": [
-        {
-          "name": "pickup_date",
-          "description": "Local date of the pickup."
-        },
-        {
-          "name": "data_month",
-          "description": "The TLC data month (YYYY-MM) the trips were published in."
-        },
-        {
-          "name": "trip_type",
-          "description": "yellow or green."
-        },
-        {
-          "name": "borough",
-          "description": "Pickup borough from the taxi zone lookup; Unknown for zones it lacks."
-        },
-        {
-          "name": "trips",
-          "description": "Number of trips."
-        },
-        {
-          "name": "passengers",
-          "description": "Sum of the passenger counts."
-        },
-        {
-          "name": "total_amount_usd",
-          "description": "Sum of the total amounts charged, in USD."
-        }
-      ]
-    },
-    {
       "name": "gld_call_signals_daily",
       "relation": "dbt_dev.gold.call_signals_daily",
       "layer": "gold",
@@ -615,6 +569,52 @@
       ]
     },
     {
+      "name": "exp_tlc_daily_trips_by_borough",
+      "relation": "dbt_dev.exposed.tlc_daily_trips_by_borough",
+      "layer": "exposed",
+      "group": "analytics",
+      "pipelines": [
+        "tlc"
+      ],
+      "description": "Daily trips, passengers and revenue per pickup borough and trip type. Alias exposed.tlc_daily_trips_by_borough.",
+      "grain": [
+        "pickup_date",
+        "data_month",
+        "trip_type",
+        "borough"
+      ],
+      "columns": [
+        {
+          "name": "pickup_date",
+          "description": "Local date of the pickup."
+        },
+        {
+          "name": "data_month",
+          "description": "The TLC data month (YYYY-MM) the trips were published in."
+        },
+        {
+          "name": "trip_type",
+          "description": "yellow or green."
+        },
+        {
+          "name": "borough",
+          "description": "Pickup borough from the taxi zone lookup; Unknown for zones it lacks."
+        },
+        {
+          "name": "trips",
+          "description": "Number of trips."
+        },
+        {
+          "name": "passengers",
+          "description": "Sum of the passenger counts."
+        },
+        {
+          "name": "total_amount_usd",
+          "description": "Sum of the total amounts charged, in USD."
+        }
+      ]
+    },
+    {
       "name": "gld_tlc_daily_trips",
       "relation": "dbt_dev.gold.tlc_daily_trips",
       "layer": "gold",
@@ -724,6 +724,22 @@
       "dimensions": [
         "customer__country"
       ],
+      "model": "slv_customers"
+    },
+    {
+      "term": "Customers",
+      "description": "Ambiguous on its own: customers can mean signups (customers who signed up in the period), active customers (distinct customers with a non-cancelled order in the period) or customers to date (everyone signed up by a day). When the question does not say which, ask which one is meant or give each, named.",
+      "synonyms": [
+        "customer count",
+        "number of customers",
+        "our customers"
+      ],
+      "metrics": [
+        "signups",
+        "customers_distinct",
+        "customers_to_date"
+      ],
+      "dimensions": [],
       "model": "slv_customers"
     },
     {
@@ -843,6 +859,20 @@
         "return__reason"
       ],
       "model": "slv_returns"
+    },
+    {
+      "term": "Sales",
+      "description": "Ambiguous on its own: sales can mean revenue (gross, the non-cancelled orders' amounts) or net revenue (revenue minus partner returns, finance's net sales). When the question does not say gross or net, ask which one is meant or give both, named.",
+      "synonyms": [
+        "turnover",
+        "takings"
+      ],
+      "metrics": [
+        "revenue_eur",
+        "net_revenue_eur"
+      ],
+      "dimensions": [],
+      "model": "slv_orders"
     },
     {
       "term": "Signup cohort",

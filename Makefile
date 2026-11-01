@@ -226,7 +226,7 @@ agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloa
 record-call-labels: ## Live, opt-in: record the call-label prompt's answers for the golden set's calls from an OpenRouter free model into dbt/seeds/silver/call_label_recordings.csv (CALL_LABEL_MODEL=<id>:free; one request per unrecorded call; exit 3 keeps a partial recording on a spent quota)
 	cd dbt && uv run --no-project --quiet --with pyyaml==6.0.3 python scripts/record_call_labels.py $(if $(CALL_LABEL_MODEL),--model $(CALL_LABEL_MODEL))
 
-agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 49 free-tier model turns)
+agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 62 free-tier model turns)
 	tests/e2e/agent-eval.sh
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
