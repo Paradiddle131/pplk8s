@@ -95,7 +95,7 @@ metrics:
     conversion_metric: bookings
     window: 30 days
   - name: reply_rate
-    description: Share of outreach messages that got a reply, counted on the day the message was sent (messages replied over messages sent for the whole period asked); the one definition of reply rate.
+    description: Share of outreach messages that got a reply, counted on the day the message was sent, so a day's rate rises as late replies arrive (messages replied over messages sent for the whole period asked, never replies over messages of the same day); the one definition of reply rate and response rate.
     label: Reply rate
     type: ratio
     numerator: messages_replied

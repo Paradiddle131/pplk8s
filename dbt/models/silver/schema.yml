@@ -746,16 +746,6 @@ models:
     description: >
       One row per outreach message, latest load wins, with its contact's partner and its first reply's time, which
       a later run fills in when the reply arrives. sent_date is sent_ts in UTC. Alias silver.outreach_messages.
-    config:
-      meta:
-        glossary:
-          - term: Reply rate
-            description: >-
-              The share of outreach messages that got a reply, counted on the day the message was sent, so a day's
-              rate rises as late replies arrive. It is not replies divided by messages on the same day, which mixes
-              replies to earlier messages in.
-            synonyms: [response rate, outreach response rate]
-            metrics: [reply_rate, messages_replied, messages_sent]
     semantic_model:
       enabled: true
       name: outreach_messages

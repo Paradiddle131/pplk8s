@@ -49,15 +49,18 @@ echo "ok: sales, returns, finance, marketing, customer actions, partner outreach
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
   { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog against $DB"; }
-grep -q "13 public models, 30 metrics and 11 glossary terms" "$OUT/catalog.log" ||
-  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 13 public models, 30 metrics and 11 glossary terms"; }
+grep -q "13 public models, 30 metrics and 10 glossary terms" "$OUT/catalog.log" ||
+  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 13 public models, 30 metrics and 10 glossary terms"; }
 grep -q "check_catalog: every public model, metric, glossary term and saved query is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
 echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 
 # Every public relation built, and no relation or column of gold or exposed without a comment.
 public=$(py_ -c "import json; print('\n'.join(sorted(m['relation'].split('.', 1)[1] for m in json.load(open('target/catalog/agent.json'))['models'])))")
 built=$(psql_dev -c "select table_schema || '.' || table_name from information_schema.tables where table_schema in ('gold', 'exposed') order by 1")
-expect "gold and exposed relations vs the catalog's public models" "$built" "$public"
+# A gold or exposed model holding personal data is protected and stays out of the catalog (SL-16).
+protected=$(py_ -c "import json; print('\n'.join(sorted(n['schema'] + '.' + n['alias'] for n in json.load(open('target/manifest.json'))['nodes'].values() if n['resource_type'] == 'model' and n['schema'] in ('gold', 'exposed') and n.get('access') != 'public')))")
+expect "protected gold and exposed relations" "$protected" "exposed.outreach_activation"
+expect "gold and exposed relations vs the catalog's public models" "$(grep -vxF "$protected" <<<"$built")" "$public"
 expect "relations without a comment" "$(psql_dev -c "
   select string_agg(table_schema || '.' || table_name, ',') from information_schema.tables
   where table_schema in ('gold', 'exposed')
