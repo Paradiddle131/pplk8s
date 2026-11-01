@@ -3,7 +3,7 @@
 # engine, not only compiles for one. On an empty emulator (Compose profile `bigquery`) it
 #   - copies the dev fixture's sources from Postgres dbt_dev into the emulator,
 #   - runs `dbt build` of the sales, returns, finance, marketing and semantic models, tests
-#     included, on the `bigquery_emulator` target, with the project unchanged; the 35 layer hops
+#     included, on the `bigquery_emulator` target, with the project unchanged; the 40 layer hops
 #     (semantic/PLAN.md SL-9) among them reconcile there,
 #   - queries the metrics through MetricFlow on the emulator, and asserts they equal the
 #     hand-written aggregates the same build wrote there: the eight sales metrics by day against
@@ -54,8 +54,8 @@ run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:cust
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
-[ "$hops" -eq 35 ] || fail "expected the 35 layer hops to pass on the emulator, got $hops"
-echo "ok: the 35 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+[ "$hops" -eq 40 ] || fail "expected the 40 layer hops to pass on the emulator, got $hops"
+echo "ok: the 40 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 grep -q " PASS consumers_switch_on_parity " "$OUT/build.log" || fail "the migration gate did not pass on the emulator"
 
 # The agent's warehouse objects through the same macro as on Postgres; a second run changes nothing.

@@ -45,8 +45,8 @@ dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer
   { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
 echo "ok: sales, returns, finance, marketing and customer actions built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 35
-echo "ok: the 35 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 40
+echo "ok: the 40 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
@@ -196,7 +196,7 @@ grep -Eq "incremental model silver.customer_actions .*MERGE 21" "$OUT/incrementa
   { grep "silver.customer_actions" "$OUT/incremental.log" >&2; fail "silver.customer_actions did not merge the 21 events of the lookback"; }
 expect "silver after the late load: rows, distinct events, E-0022's day, E-0021's run" "$late_state" "22 22 2026-10-01 run-act-5"
 expect "2026-10-01's view-to-cart rate with the late page view" "$late_rate" "0.67"
-expect "hops after the late load" "$(grep -c " PASS hop_" "$OUT/incremental.log")" 9
+expect "hops after the late load" "$(grep -c " PASS hop_" "$OUT/incremental.log")" 11
 dbt_ build --select tag:customer_actions --full-refresh >"$OUT/incremental.log" 2>&1 ||
   { tail -30 "$OUT/incremental.log" >&2; fail "full refresh of the customer-actions models"; }
 expect "silver after the full refresh" "$(psql_dev -c "select count(*) from silver.customer_actions")" 21

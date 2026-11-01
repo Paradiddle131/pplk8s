@@ -11,7 +11,7 @@ Each layer is one folder under `models/` and one schema in the warehouse.
 |---|---|---|---|
 | bronze | `bronze` | view | 1:1 with the `ds_source` landing tables; cast only, keeps every run and the metadata columns; `partner_returns`, `tlc_yellow_trips`, `tlc_green_trips`, and the `tlc_taxi_zones` seed |
 | silver | `silver` | table, incremental per data month (`tlc`), or incremental merge on the event id (`customer_actions`, semantic/PLAN.md SL-15) | Latest row per natural key (`_loaded_at`, then `_run_id` or `_generation`, decides the winner); `customers`, `orders`, `hourly_weather`, `returns`, `campaigns`, `ad_spend`, `leads`, `bookings`, `customer_actions`, `tlc_trips`, `tlc_trips_quarantine` |
-| gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `marketing_daily`, `customer_actions_daily`, `customer_engagement_daily`, `tlc_daily_trips` |
+| gold | `gold` | table, or incremental per data month (`tlc`) | `daily_sales`, `customer_lifetime`, `daily_weather`, `marketing_daily`, `lead_conversion_daily`, `customer_actions_daily`, `customer_engagement_daily`, `tlc_daily_trips` |
 | exposed | `exposed` | view, or table when it reads another pipeline | `sales_by_country_daily`, `daily_sales_with_weather`, `channel_performance_daily`, `tlc_daily_trips_by_borough` (views), `net_sales_daily` (table) |
 | semantic | `semantic` | table | MetricFlow's `time_spine`, and `metrics`, one row per metric; the semantic models and metrics live in the manifest |
 | legacy | `legacy` | table | The migration rehearsal's tables built the old way: `daily_net_sales`, `country_sales`, `channel_daily` |
@@ -36,7 +36,7 @@ dbt build --selector bronze
 `--select <layer>` matches the folder, and `--selector <layer>` matches the tag.
 Tests follow their models; a test that reads two stages lives in the later stage's folder of `tests/` and carries that stage's tag and its pipeline's.
 Every hand-off between layers reconciles in `dbt build` (semantic/PLAN.md SL-9), as tests named `hop_<from>_to_<to>` that fail with the mismatching keys led by the hop's name:
-`hop_bronze_to_<silver model>` (the generic `latest_load_reconciles`: silver holds bronze's latest load of each key, rows and amounts), `tests/gold/hop_silver_to_gold_*` and `tests/exposed/hop_gold_to_exposed_*` (counts and sums per key), and `hop_metric_<metric>_to_<model>` (the generic `matches_metric`: a hand-written column equals its simple metric per day, rendered from dbt's graph).
+`hop_bronze_to_<silver model>` (the generic `latest_load_reconciles`: silver holds bronze's latest load of each key, rows and amounts), `tests/gold/hop_silver_to_gold_*` and `tests/exposed/hop_gold_to_exposed_*` (counts and sums per key), and `hop_metric_<metric>_to_<model>` (the generic `matches_metric`: a hand-written column equals its simple, cumulative or conversion-rate metric per day, rendered from dbt's graph).
 They share `macros/hops.sql`.
 
 The project sets `indirect_selection: cautious` in `dbt_project.yml`.
@@ -54,7 +54,7 @@ Every model also carries the tag of the pipeline that owns it (PLAN.md D20), set
 | `sales` | `sales_elt` | every customers, orders, and weather model, and their layer hops |
 | `returns` | `returns_file_arrival` | `brz_partner_returns`, `slv_returns` |
 | `finance` | `finance_daily` | `exp_net_sales_daily` (reads `sales` gold and `returns` silver) |
-| `marketing` | `marketing_elt` | every campaigns, ad spend, leads and bookings model: `gld_marketing_daily`, `exp_channel_performance_daily` (PLAN.md D38) |
+| `marketing` | `marketing_elt` | every campaigns, ad spend, leads and bookings model: `gld_marketing_daily`, `gld_lead_conversion_daily`, `exp_channel_performance_daily` (PLAN.md D38) |
 | `customer_actions` | `customer_actions_elt` | every customer-actions model: `slv_customer_actions` (incremental), `gld_customer_actions_daily`, `gld_customer_engagement_daily` (semantic/PLAN.md SL-15) |
 | `tlc` | `tlc_monthly` | every `tlc` model, the `tlc_taxi_zones` seed, and the tlc reconciliation tests |
 
@@ -128,7 +128,7 @@ Query a metric with the `mf` CLI from this folder, with the same environment:
 uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
-`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance, marketing and customer-actions models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 35 layer hops pass, that an incremental build merges a late action into its own day and a redelivered one once, and that a return seeded on a day without orders fails the returns hops, and checks that an undescribed metric and an unprefixed, undescribed gold model fail the validation.
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance, marketing and customer-actions models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 40 layer hops pass, that an incremental build merges a late action into its own day and a redelivered one once, and that a return seeded on a day without orders fails the returns hops, and checks that an undescribed metric and an unprefixed, undescribed gold model fail the validation.
 
 ### Trust tiers and the catalog
 
