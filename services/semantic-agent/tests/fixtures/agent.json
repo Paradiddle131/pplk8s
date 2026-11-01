@@ -1300,6 +1300,170 @@
       ]
     },
     {
+      "name": "bookings_mtd",
+      "label": "Bookings month to date",
+      "description": "Bookings from the first of the month up to and including each day (month to date); group by metric_time__day and read the day asked. Grouped by week or month it is the count up to that period's last day.",
+      "type": "cumulative",
+      "pipelines": [
+        "marketing"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "bookings"
+      ],
+      "dimensions": [
+        {
+          "name": "booking__booked_date",
+          "type": "time",
+          "description": "UTC date the booking was made."
+        },
+        {
+          "name": "campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "lead__campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "lead__campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the lead."
+        },
+        {
+          "name": "lead__created_date",
+          "type": "time",
+          "description": "UTC date the lead was created."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "bookings_wow_growth",
+      "label": "Bookings week-over-week growth",
+      "description": "Bookings' change from the week before, as a share of that week's bookings (0.10 is 10 % more); group by metric_time__week to compare whole weeks. Empty where either week has no bookings.",
+      "type": "derived",
+      "pipelines": [
+        "marketing"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "bookings"
+      ],
+      "dimensions": [
+        {
+          "name": "booking__booked_date",
+          "type": "time",
+          "description": "UTC date the booking was made."
+        },
+        {
+          "name": "campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "lead__campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "lead__campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the lead."
+        },
+        {
+          "name": "lead__created_date",
+          "type": "time",
+          "description": "UTC date the lead was created."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
       "name": "calls_labelled",
       "label": "Calls labelled",
       "description": "Model-derived: calls labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1, on the day of the call; group by call__topic for calls by topic. The build holds the labels to kappa 0.6 to 0.7 per signal on the golden set (silver.call_label_agreement).",
@@ -2362,6 +2526,116 @@
       ]
     },
     {
+      "name": "leads_mtd",
+      "label": "Leads month to date",
+      "description": "Leads from the first of the month up to and including each day (month to date); group by metric_time__day and read the day asked. Grouped by week or month it is the count up to that period's last day.",
+      "type": "cumulative",
+      "pipelines": [
+        "marketing"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "leads"
+      ],
+      "dimensions": [
+        {
+          "name": "campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the lead."
+        },
+        {
+          "name": "lead__created_date",
+          "type": "time",
+          "description": "UTC date the lead was created."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "leads_wow_growth",
+      "label": "Leads week-over-week growth",
+      "description": "Leads' change from the week before, as a share of that week's leads (0.10 is 10 % more); group by metric_time__week to compare whole weeks. Empty where either week has no leads.",
+      "type": "derived",
+      "pipelines": [
+        "marketing"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "leads"
+      ],
+      "dimensions": [
+        {
+          "name": "campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "lead__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the lead."
+        },
+        {
+          "name": "lead__created_date",
+          "type": "time",
+          "description": "UTC date the lead was created."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
       "name": "messages_replied",
       "label": "Messages replied",
       "description": "Outreach messages that got a reply, on the day the message was sent; grows as late replies arrive.",
@@ -3219,6 +3493,128 @@
       "label": "Revenue (EUR)",
       "description": "Sum of amount for non-cancelled orders (the one definition of revenue).",
       "type": "simple",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "revenue_eur_mtd",
+      "label": "Revenue month to date (EUR)",
+      "description": "Revenue from the first of the month up to and including each day (month to date); group by metric_time__day and read the day asked. Grouped by week or month it is the total up to that period's last day.",
+      "type": "cumulative",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "revenue_eur_wow_growth",
+      "label": "Revenue week-over-week growth",
+      "description": "Revenue's change from the week before, as a share of that week's revenue (0.10 is 10 % more); group by metric_time__week to compare whole weeks, by metric_time__day to compare a day with the same weekday a week earlier. Empty where either week has no revenue.",
+      "type": "derived",
       "pipelines": [
         "sales"
       ],

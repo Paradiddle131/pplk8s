@@ -32,7 +32,9 @@
 #   - a metric over a model-derived column without "Model-derived" in its description fails the validation,
 #   - a metric missing from docs/target-architecture.md's table fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
-#     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
+#     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150),
+#   - with dbt/dev/fixture_weeks.sql's six weeks before it loaded last, the week-over-week growth and
+#     month-to-date metrics of revenue, bookings and leads equal SQL written by hand on gold.
 # Expects `make services-up`; never touches the `warehouse` database.
 set -euo pipefail
 
@@ -69,10 +71,10 @@ echo "ok: the 61 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 39 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 39 metrics and 7 saved queries"
-grep -q "check_brief: 39 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 39 metrics of docs/target-architecture.md"
+grep -q "15 semantic models, 45 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 15 semantic models, 45 metrics and 7 saved queries"
+grep -q "check_brief: 45 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 45 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -521,5 +523,55 @@ grep -qF "check_brief: metric zz_stray_orders: missing from the table" "$OUT/bri
   { tail -20 "$OUT/brief.log" >&2; fail "the validation failed, but not on the metric missing from the brief"; }
 rm -f "$stray"
 echo "ok: a metric missing from docs/target-architecture.md fails make dbt-validate"
+
+# Period over period and to date: the six weeks before the fixture's days, loaded last so every
+# check above keeps the base fixture's numbers. Each metric is compared with SQL written by hand on gold:
+# a week's growth over the week before (weeks start on Monday) where both weeks have rows, and each day's
+# total from the first of its month, over every day of the spine from the first day to the last.
+psql_dev <"$REPO/dbt/dev/fixture_weeks.sql"
+dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc >"$OUT/weeks.log" 2>&1 ||
+  { tail -30 "$OUT/weeks.log" >&2; fail "dbt build with fixture_weeks.sql"; }
+expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 29
+first=2026-08-17 last=2026-10-02
+mf_ query --metrics revenue_eur_wow_growth,bookings_wow_growth,leads_wow_growth --group-by metric_time__week \
+  --start-time "$first" --end-time "$last" --csv "$OUT/wow.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the week-over-week metrics"; }
+mf_ query --metrics revenue_eur_mtd,bookings_mtd,leads_mtd --group-by metric_time__day \
+  --start-time "$first" --end-time "$last" --csv "$OUT/mtd.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the month-to-date metrics"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.wow" \
+  -c "create table semantic_check.wow (week date, revenue_eur_wow_growth numeric, bookings_wow_growth numeric, leads_wow_growth numeric)" \
+  -c "drop table if exists semantic_check.mtd" \
+  -c "create table semantic_check.mtd (day date, revenue_eur_mtd numeric, bookings_mtd bigint, leads_mtd bigint)"
+psql_dev -c "\\copy semantic_check.wow from stdin with (format csv, header true)" <"$OUT/wow.csv"
+psql_dev -c "\\copy semantic_check.mtd from stdin with (format csv, header true)" <"$OUT/mtd.csv"
+expect "weeks with a growth in all three metrics" "$(psql_dev -c "
+  select count(*) from semantic_check.wow where revenue_eur_wow_growth is not null
+    and bookings_wow_growth is not null and leads_wow_growth is not null")" 6
+expect "week-over-week growth vs gold (rows differing)" "$(psql_dev -c "
+  with daily as (select order_date as day, revenue_eur, 0 as bookings, 0 as leads from gold.daily_sales
+                 union all select activity_date, 0, bookings, leads from gold.marketing_daily),
+       weekly as (select date_trunc('week', day)::date as week, sum(revenue_eur) as revenue_eur,
+                         nullif(sum(bookings), 0) as bookings, nullif(sum(leads), 0) as leads
+                  from daily where day between '$first' and '$last' group by 1),
+       hand as (select w.week, round((w.revenue_eur - p.revenue_eur) / nullif(p.revenue_eur, 0), 6),
+                       round((w.bookings - p.bookings)::numeric / p.bookings, 6), round((w.leads - p.leads)::numeric / p.leads, 6)
+                from weekly w join weekly p on p.week = w.week - 7),
+       mf as (select week, round(revenue_eur_wow_growth, 6), round(bookings_wow_growth, 6), round(leads_wow_growth, 6)
+              from semantic_check.wow where revenue_eur_wow_growth is not null)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "month to date vs gold (rows differing)" "$(psql_dev -c "
+  with daily as (select order_date as day, revenue_eur, 0 as bookings, 0 as leads from gold.daily_sales
+                 union all select activity_date, 0, bookings, leads from gold.marketing_daily),
+       hand as (select s.date_day, coalesce(sum(d.revenue_eur), 0), coalesce(sum(d.bookings), 0), coalesce(sum(d.leads), 0)
+                from semantic.time_spine s
+                left join daily d on d.day between date_trunc('month', s.date_day)::date and s.date_day
+                where s.date_day between '$first' and '$last' group by 1),
+       mf as (select day, coalesce(revenue_eur_mtd, 0), coalesce(bookings_mtd, 0), coalesce(leads_mtd, 0) from semantic_check.mtd)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "revenue month to date on 2026-09-15, and the September growth weeks" "$(psql_dev -c "
+  select (select revenue_eur_mtd from semantic_check.mtd where day = '2026-09-15') || ' ' ||
+         (select round(revenue_eur_wow_growth, 4) from semantic_check.wow where week = '2026-09-14')")" "5668.75 0.3265"
+echo "ok: over six weeks, the week-over-week growth and month-to-date metrics of revenue, bookings and leads equal gold"
 
 echo "PASS: semantic check"

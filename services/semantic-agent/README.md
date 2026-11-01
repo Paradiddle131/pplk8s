@@ -126,9 +126,9 @@ make agent-serve AGENT_DBNAME=dbt_dev
 | Command | What it proves | Model |
 |---|---|---|
 | `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the audit and freshness kept for a stand-in `DataAgentToolset` whose data tool has another name, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
-| `make agent-eval` | the scored eval below | live, ~2 x 15 turns |
+| `make agent-eval` | the scored eval below | live, ~2 x 34 turns |
 
-`make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
+`make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` and the six weeks before it (`dev/fixture_weeks.sql`) in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
 Each question of `evals/questions.yaml` gets its expected number from the warehouse at run time, then goes once through each agent on ADK's `LocalEvalService`, scored by three custom metrics declared in `evals/eval_config.json`:
 - `answer_correct`: the answer carries the warehouse's number, or, for the semantic agent on a question no metric covers, says so; numbers inside a quoted freshness statement do not count.
 - `metric_choice`: the semantic agent queried the expected metrics.

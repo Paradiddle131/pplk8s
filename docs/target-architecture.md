@@ -92,6 +92,12 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `cart_to_checkout_rate` | Cart-to-checkout rate | conversion | `customer_actions` | `dbt/models/semantic/semantic.yml` |
 | `view_to_cart_rate` | View-to-cart rate | conversion | `customer_actions` | `dbt/models/semantic/semantic.yml` |
 | `reply_rate` | Reply rate | ratio | `outreach_messages` | `dbt/models/semantic/semantic.yml` |
+| `bookings_wow_growth` | Bookings week-over-week growth | derived | `bookings` | `dbt/models/semantic/semantic.yml` |
+| `bookings_mtd` | Bookings month to date | cumulative | `bookings` | `dbt/models/semantic/semantic.yml` |
+| `leads_wow_growth` | Leads week-over-week growth | derived | `leads` | `dbt/models/semantic/semantic.yml` |
+| `leads_mtd` | Leads month to date | cumulative | `leads` | `dbt/models/semantic/semantic.yml` |
+| `revenue_eur_wow_growth` | Revenue week-over-week growth | derived | `orders` | `dbt/models/semantic/semantic.yml` |
+| `revenue_eur_mtd` | Revenue month to date (EUR) | cumulative | `orders` | `dbt/models/semantic/semantic.yml` |
 
 - Rules: [`agent-ready-warehouse.md` § Where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)
 - Proof: `make semantic-check` (every metric equals gold and exposed, day by day), `make bigquery-emulator-check` (the same on the emulator)

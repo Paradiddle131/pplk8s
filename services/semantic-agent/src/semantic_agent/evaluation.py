@@ -102,9 +102,14 @@ def expected_numbers(questions: list[Question], url: str) -> dict[str, list[floa
     with psycopg.connect(url) as conn:
         for q in questions:
             (value,) = conn.execute(q.expected_sql).fetchone()  # type: ignore[arg-type, misc]
-            value = float(value)
-            found[q.id] = [value, round(value * 100, 2)] if 0 < value < 1 else [value]
+            found[q.id] = as_expected(float(value))
     return found
+
+
+def as_expected(value: float) -> list[float]:
+    """The numbers an answer may carry for a value: a rate also as a percentage, unrounded, so an
+    answer's own rounding is the only one (32.65 kept and rounded again to one decimal is 32.6)."""
+    return [value, value * 100] if 0 < value < 1 else [value]
 
 
 def _stated(text: str) -> list[tuple[float, int]]:
@@ -361,7 +366,7 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
         "# Semantic agent eval",
         "",
         f"Run {stamp} by `make agent-eval` (`services/semantic-agent`, semantic/PLAN.md SL-5), "
-        f"model `{model_id}`, on `dbt/dev/fixture.sql`.",
+        f"model `{model_id}`, on `dbt/dev/fixture.sql` and `dbt/dev/fixture_weeks.sql`.",
         "Each agent answers each question once through ADK's `LocalEvalService`; "
         "an answer is right when it carries the number the warehouse gives "
         "(`evals/questions.yaml`).",

@@ -1,7 +1,8 @@
 # The eval set (semantic/PLAN.md SL-5): business questions over dbt/dev/fixture.sql (orders on
 # 2026-10-01 and 2026-10-02, three partner returns, Amsterdam and Istanbul weather, three ad
 # campaigns' spend, leads and bookings on the same days, and site and CRM actions from 2026-09-20 to
-# 2026-10-03).
+# 2026-10-03) and dbt/dev/fixture_weeks.sql (the six weeks of orders, spend, leads and bookings before,
+# 2026-08-17 to 2026-09-30), so a question about early October scopes its expected_sql to those days.
 # expected_sql runs on the warehouse as its owner when the eval starts, so the expected numbers are
 # always the warehouse's own; it may read any layer, the agents may not. A question's answer is right
 # when it carries one of the expected numbers (a rate also as a percentage).
@@ -18,7 +19,7 @@ questions:
     metrics: [revenue_eur]
   - id: revenue_best_day
     question: Which day had the highest revenue in October 2026, and how much was it?
-    expected_sql: select max(revenue_eur) from gold.daily_sales
+    expected_sql: select max(revenue_eur) from gold.daily_sales where order_date >= '2026-10-01'
     metrics: [revenue_eur]
   - id: net_revenue_one_day
     question: What was net revenue on 1 October 2026, after partner returns?
@@ -26,7 +27,7 @@ questions:
     metrics: [net_revenue_eur]
   - id: net_revenue_total
     question: What is our net revenue for 1 and 2 October 2026 combined?
-    expected_sql: select sum(net_revenue_eur) from exposed.net_sales_daily
+    expected_sql: select sum(net_revenue_eur) from exposed.net_sales_daily where order_date between '2026-10-01' and '2026-10-02'
     metrics: [net_revenue_eur]
   - id: orders_one_day
     question: How many orders were placed on 1 October 2026, cancelled ones included?
@@ -34,11 +35,11 @@ questions:
     metrics: [orders_total]
   - id: cancelled_total
     question: How many orders were cancelled over 1 and 2 October 2026?
-    expected_sql: select sum(orders_cancelled) from gold.daily_sales
+    expected_sql: select sum(orders_cancelled) from gold.daily_sales where order_date between '2026-10-01' and '2026-10-02'
     metrics: [orders_cancelled]
   - id: cancellation_rate
     question: What share of our orders on 1 and 2 October 2026 was cancelled?
-    expected_sql: select sum(orders_cancelled)::numeric / sum(orders_total) from gold.daily_sales
+    expected_sql: select sum(orders_cancelled)::numeric / sum(orders_total) from gold.daily_sales where order_date between '2026-10-01' and '2026-10-02'
     metrics: [cancellation_rate]
   - id: active_customers
     question: How many distinct customers bought from us on 2 October 2026?
@@ -46,7 +47,7 @@ questions:
     metrics: [customers_distinct]
   - id: returns_amount
     question: How much money went back to customers through partner returns in early October 2026?
-    expected_sql: select sum(returns_eur) from exposed.net_sales_daily
+    expected_sql: select sum(returns_eur) from exposed.net_sales_daily where order_date >= '2026-10-01'
     metrics: [returns_eur]
   - id: returns_one_day
     question: How many partner returns did we get on 1 October 2026?
@@ -71,15 +72,17 @@ questions:
   # Marketing (semantic/PLAN.md SL-8): campaigns, ad spend, leads and bookings on the same two days.
   - id: cost_per_booking_total
     question: What was our cost per booking over 1 and 2 October 2026?
-    expected_sql: select sum(ad_spend_eur) / sum(bookings) from gold.marketing_daily
+    expected_sql: select sum(ad_spend_eur) / sum(bookings) from gold.marketing_daily where activity_date between '2026-10-01' and '2026-10-02'
     metrics: [cost_per_booking_eur]
   - id: cost_per_lead_search
     question: How much did a lead from search campaigns cost us in early October 2026?
-    expected_sql: select sum(ad_spend_eur) / sum(leads) from gold.marketing_daily where channel = 'search'
+    expected_sql: select sum(ad_spend_eur) / sum(leads) from gold.marketing_daily where channel = 'search' and activity_date >= '2026-10-01'
     metrics: [cost_per_lead_eur]
   - id: lead_to_booking_rate
     question: What share of our leads from 1 and 2 October 2026 went on to book?
-    expected_sql: select count(distinct b.lead_id)::numeric / (select count(*) from silver.leads) from silver.bookings b
+    expected_sql: >-
+      select count(distinct b.lead_id)::numeric / count(distinct l.lead_id) from silver.leads l
+      left join silver.bookings b on b.lead_id = l.lead_id where l.created_date between '2026-10-01' and '2026-10-02'
     metrics: [lead_to_booking_rate]
   # Customer actions (semantic/PLAN.md SL-15): actions per type, engaged customers over a trailing window,
   # and the site funnel; "monthly active" is the glossary's engaged customer, not customers_distinct.
@@ -133,3 +136,31 @@ questions:
     question: In what share of our customer calls on 1 and 2 October 2026 did the customer raise an objection?
     expected_sql: select sum(calls_with_objection)::numeric / sum(calls_labelled) from gold.call_signals_daily where call_date between '2026-10-01' and '2026-10-02'
     metrics: [objection_rate]
+  # Period over period and to date, over dbt/dev/fixture_weeks.sql: a change or a running total
+  # is a metric's definition, never the model's arithmetic on two figures. Weeks start on Monday.
+  - id: revenue_wow_growth
+    question: By what percentage did revenue in the week starting Monday 14 September 2026 grow over the week before?
+    expected_sql: >-
+      select sum(revenue_eur) filter (where order_date between '2026-09-14' and '2026-09-20')
+        / sum(revenue_eur) filter (where order_date between '2026-09-07' and '2026-09-13') - 1 from gold.daily_sales
+    metrics: [revenue_eur_wow_growth]
+  - id: bookings_wow_growth
+    question: How much did bookings grow in the week of 14 September 2026 compared with the previous week?
+    expected_sql: >-
+      select sum(bookings) filter (where activity_date between '2026-09-14' and '2026-09-20')::numeric
+        / sum(bookings) filter (where activity_date between '2026-09-07' and '2026-09-13') - 1 from gold.marketing_daily
+    metrics: [bookings_wow_growth]
+  - id: leads_wow_growth
+    question: What was the week-over-week growth in leads for the week starting 14 September 2026?
+    expected_sql: >-
+      select sum(leads) filter (where activity_date between '2026-09-14' and '2026-09-20')::numeric
+        / sum(leads) filter (where activity_date between '2026-09-07' and '2026-09-13') - 1 from gold.marketing_daily
+    metrics: [leads_wow_growth]
+  - id: revenue_mtd
+    question: What was our revenue month to date on 15 September 2026?
+    expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-09-01' and '2026-09-15'
+    metrics: [revenue_eur_mtd]
+  - id: leads_mtd
+    question: How many leads came in during September 2026 up to and including the 10th, month to date?
+    expected_sql: select sum(leads) from gold.marketing_daily where activity_date between '2026-09-01' and '2026-09-10'
+    metrics: [leads_mtd]

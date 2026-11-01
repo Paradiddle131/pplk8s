@@ -337,11 +337,27 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
     for metric in index.metrics:
         params = metric["type_params"]
         if metric["type"] == "derived":
-            # The formula in words: a coalesce that only fills a missing input with 0 says nothing to a reader.
-            formula = re.sub(r"coalesce\((\w+), 0\)", r"\1", params["expr"])
-            for name in sorted(labels, key=len, reverse=True):
-                formula = formula.replace(name, labels[name])
+            # The formula in words: a coalesce or nullif that only guards a missing input or a zero, and a
+            # cast to a decimal, say nothing to a reader; an input taken a period earlier says so.
+            words = dict(labels)
+            for item in params["metrics"]:
+                offset = item.get("offset_window")
+                if item.get("alias") and offset:
+                    words[item["alias"]] = f"{labels[item['name']]} {offset['count']} {offset['granularity']} earlier"
+            formula = re.sub(r"(?:coalesce\((\w+), 0\)|nullif\((\w+), 0\))", lambda m: m[1] or m[2], params["expr"])
+            formula = formula.replace(" * 1.0", "")
+            formula = re.sub(r"\b\w+\b", lambda m, words=words: words.get(m[0], m[0]), formula)
             descriptions.append({"text": f"{metric['label']} = {formula}."})
+        elif metric["type"] == "cumulative":
+            params = params["cumulative_type_params"]
+            window = params.get("window")
+            if params.get("grain_to_date"):
+                span = f"from the start of the {params['grain_to_date']}"
+            elif window:
+                span = f"over the trailing {window['count']} {window['granularity']}"
+            else:
+                span = "over all time"
+            descriptions.append({"text": f"{metric['label']} = {labels[params['metric']['name']]} summed {span}."})
         elif metric["type"] == "ratio":
             numerator, denominator = params["numerator"]["name"], params["denominator"]["name"]
             descriptions.append({"text": f"{metric['label']} = {labels[numerator]} / {labels[denominator]}."})
