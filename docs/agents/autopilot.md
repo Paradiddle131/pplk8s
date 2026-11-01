@@ -33,19 +33,19 @@ Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-us
 
 ## Gates
 
-Cloud runs, with their counts in the handoff:
+`cloud` (every wake; counts in the handoff; GitHub Actions is off, PLAN.md D26, so a PR shows no checks):
 - `make tools` first in each session: `make lint` runs `make gcp-validate`, which needs the pinned OpenTofu and tflint
-- `make check` (`make lint` and `make test` with the Compose warehouse up and required; GitHub Actions is off, PLAN.md D26, so a PR shows no checks)
-- dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
-- EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
-- alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
-- `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
-- the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make tools`, `make cluster-up`, `make workloads-up`, and `make agent-deploy-check` for the semantic agent
+- `make check` (lint and unit tests, the Compose warehouse up and required)
+- when `dbt/**` changed: `dbt parse`, `scripts/check_standard.py`, `scripts/check_brief.py` and `mf validate-configs` against a scratch database of the Compose warehouse (`cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=<scratch> DBT_PROFILES_DIR=$PWD uvx --with-requirements requirements.txt --from dbt-core dbt …`); a new metric's numbers probed there with `mf query` against the check's own SQL
+- when `services/el-factory/**` changed: EL Factory from the host, `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
+- when alert rules changed: `make rules-test`
 
-- Airflow when `airflow/**` or `platform/helm/**` changed: `make ci-integration`, and the phase checks the change touches, with `DAG_DELIVERY=local` (git-sync needs the laptop's deploy key)
-
-Left to the laptop (the handoff's local checklist): git-sync delivery and anything WSL2-specific; a check that does not fit the session's disk (below) says so in the handoff.
-A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: the default git-sync serves `main`, so the run would test the old DAG (seen on #113).
+`local` (the owner's WSL agent runs them from the handoff's checklist, on each PR of a stack bottom-up):
+- when `dbt/**`, `services/semantic-agent/**` or a fixture changed: `make semantic-check`, `make bigquery-emulator-check`, `make catalog-check`
+- `make verify` when an image's tag moved
+- the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make cluster-up workloads-up`, and `make agent-deploy-check` for the semantic agent
+- Airflow when `airflow/**` or `platform/helm/**` changed: `make ci-integration` and the phase checks the change touches, deployed with `DAG_DELIVERY=local make airflow-up` (the default git-sync serves `main`, so a run would test the old DAG; seen on #113)
+- git-sync delivery, anything WSL2-specific, and a live `make agent-eval`
 
 ## Never
 
