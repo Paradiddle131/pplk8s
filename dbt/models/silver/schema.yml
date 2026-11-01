@@ -712,6 +712,44 @@ models:
       - name: min_kappa
         description: The current version's kappa threshold; NULL for other versions.
 
+  - name: slv_call_label_shares
+    description: >
+      One row per signal, label and ISO week of the current prompt version's labelled calls: the label's share of
+      the week's calls and the band the trailing weeks expect it in (a p-chart: their pooled share plus or minus
+      three binomial standard errors), NULL until two weeks precede it. The warehouse's sql_exporter exports the
+      newest week and CallLabelShareDrift alerts on a share outside its band. Alias silver.call_label_shares.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['signal', 'label', 'week_start']
+    columns:
+      - name: signal
+        description: topic, objection, sentiment or next_step.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['topic', 'objection', 'sentiment', 'next_step']
+      - name: label
+        description: A value the model gave the signal in any week.
+        tests: [not_null]
+      - name: week_start
+        description: The Monday that starts the ISO week of the calls' day.
+        tests: [not_null]
+      - name: week_calls
+        description: Calls labelled that week.
+      - name: calls
+        description: Of those, calls given this label; 0 when none was.
+      - name: share
+        description: calls over week_calls.
+      - name: trailing_weeks
+        description: Weeks with calls before this one that the band pools, at most call_label_drift.trailing_weeks.
+      - name: expected_share
+        description: The pooled share of the label over the trailing weeks; NULL until enough weeks precede.
+      - name: lower_bound
+        description: The band's lower edge, never below 0; NULL with expected_share.
+      - name: upper_bound
+        description: The band's upper edge, never above 1; NULL with expected_share.
+
   - name: slv_call_signals
     description: >
       One row per call labelled under the current prompt version: the call's day and customer and the signals the
@@ -1348,3 +1386,36 @@ models:
         type: simple
         agg: count_distinct
         expr: candidate_id
+
+unit_tests:
+  # The band's arithmetic on three ISO weeks of topic labels (one sigma, to keep the numbers readable): the
+  # first two weeks have too few before them for a band; the third, all delivery, is above delivery's band
+  # and pricing's 0 below its own. 2026-10-04 is a Sunday, so it belongs to the week of 2026-09-28.
+  - name: call_label_shares_band
+    model: slv_call_label_shares
+    overrides:
+      vars:
+        call_label_drift: {trailing_weeks: 4, min_trailing_weeks: 2, sigmas: 1}
+    given:
+      - input: ref('slv_call_signals')
+        rows:
+          - {call_date: '2026-09-14', topic: delivery}
+          - {call_date: '2026-09-15', topic: delivery}
+          - {call_date: '2026-09-16', topic: pricing}
+          - {call_date: '2026-09-17', topic: pricing}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: pricing}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-10-04', topic: delivery}
+    expect:
+      rows:
+        - {signal: topic, label: delivery, week_start: '2026-09-14', week_calls: 4, calls: 2, share: '0.5000', trailing_weeks: 0, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: pricing, week_start: '2026-09-14', week_calls: 4, calls: 2, share: '0.5000', trailing_weeks: 0, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: delivery, week_start: '2026-09-21', week_calls: 4, calls: 3, share: '0.7500', trailing_weeks: 1, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: pricing, week_start: '2026-09-21', week_calls: 4, calls: 1, share: '0.2500', trailing_weeks: 1, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: delivery, week_start: '2026-09-28', week_calls: 4, calls: 4, share: '1.0000', trailing_weeks: 2, expected_share: '0.6250', lower_bound: '0.3829', upper_bound: '0.8671'}
+        - {signal: topic, label: pricing, week_start: '2026-09-28', week_calls: 4, calls: 0, share: '0.0000', trailing_weeks: 2, expected_share: '0.3750', lower_bound: '0.1329', upper_bound: '0.6171'}

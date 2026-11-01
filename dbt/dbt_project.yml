@@ -45,6 +45,13 @@ vars:
       next_step: {accuracy: 0.8, kappa: 0.7}
     # The share of a prompt version's calls whose label call failed (non-empty status) that fails the build.
     max_failed_share: 0.1
+  # The label shares' drift band (models/silver/slv_call_label_shares.sql): each week's share of a label against
+  # the pooled share of up to `trailing_weeks` weeks before it, plus or minus `sigmas` binomial standard
+  # errors; no band until `min_trailing_weeks` weeks precede it. Three sigmas is the p-chart's usual limit.
+  call_label_drift:
+    trailing_weeks: 4
+    min_trailing_weeks: 2
+    sigmas: 3
 
 # After `dbt source freshness`, record each source's verdict in ops.source_freshness for the SourceStale
 # alert (#130, semantic/PLAN.md SL-12); every other command leaves it untouched (macros/source_freshness.sql).

@@ -85,3 +85,17 @@
 {% macro bigquery__days_between(start, end) -%}
     round(cast(timestamp_diff({{ end }}, {{ start }}, second) / 86400 as numeric), 4)
 {%- endmacro %}
+
+-- The Monday that starts a date's ISO week, as a date: Postgres' date_trunc('week') is ISO,
+-- BigQuery's WEEK starts on Sunday, so it truncates to ISOWEEK.
+{% macro iso_week_start(column) -%}
+    {{ return(adapter.dispatch('iso_week_start')(column)) }}
+{%- endmacro %}
+
+{% macro default__iso_week_start(column) -%}
+    cast(date_trunc('week', {{ column }}) as date)
+{%- endmacro %}
+
+{% macro bigquery__iso_week_start(column) -%}
+    date_trunc({{ column }}, isoweek)
+{%- endmacro %}
