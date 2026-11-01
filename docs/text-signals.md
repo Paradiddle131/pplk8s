@@ -50,7 +50,7 @@ The raw transcript stays in bronze, so a new prompt re-labels from it without to
 - **Agreement, per signal.** A test model compares each signal's labels with the golden labels: accuracy, and [Cohen's kappa](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.cohen_kappa_score.html) for agreement beyond chance; a dbt test fails the build when either falls below a threshold written next to the prompt version before the comparison runs.
 - **Failed calls.** A test fails when the share of rows with a non-empty `status` passes a limit, the dbt counterpart of `max_error_ratio`.
 - **Allowed values.** `accepted_values` on each label column, as on every code column agents read (#157), so a label the prompt does not allow fails the build instead of reaching a group-by.
-- **Drift.** A new `model_version` is the drift no data shows: a test fails until the golden set has been scored on it; label shares per week against the trailing weeks are the drift data shows, written to an `ops` table the monitoring exporter reads, as source freshness does (#130), and alerted on there.
+- **Drift.** A new `model_version` is the drift no data shows: a test fails until the golden set has been scored on it; label shares per week against the trailing weeks are the drift data shows, written to a table the monitoring exporter reads, as source freshness does (#130), and alerted on there (built below).
 
 ## Telling the agent and the user
 
@@ -92,6 +92,10 @@ The call-transcripts domain follows the shape above:
 - `macros/call_labels.sql` builds the label call: `AI.GENERATE` on a BigQuery target, compiled by `make bigquery-check`; recorded answers on Postgres and the emulator.
 - `slv_call_transcript_labels` and `slv_call_golden_labels` are incremental with `full_refresh: false`; `slv_call_label_agreement` scores each version; `dbt build` fails below a threshold, above the failed-call share or on a label outside its values.
 - The metrics `calls_labelled`, `calls_with_objection`, `positive_calls`, `objection_rate` and `positive_sentiment_share` start "Model-derived", which `check_standard.py` enforces for any metric over a `derived_by: model` column; the glossary term "Model-derived label" explains them.
+- Drift no data shows: the test `call_label_model_versions_scored` fails the build when the current prompt version's labels name a model version the golden set was not labelled by.
+  The golden set is labelled once per prompt version, so a new model version behind the endpoint is answered with a new prompt version, scored beside the old one, never by relabelling in place.
+- Drift the data shows: `slv_call_label_shares` (alias `silver.call_label_shares`) holds each signal's label shares per ISO week and a [p-chart](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc332.htm) band: the pooled share of up to four weeks before, plus or minus three binomial standard errors for the week's count of calls (`call_label_drift` in `dbt_project.yml`), none until two weeks precede it; a dbt unit test holds the arithmetic.
+  The warehouse `sql_exporter` exports the newest week's banded shares, and `CallLabelShareDrift` alerts on a share outside its band (runbook § 14).
 
 **Measured on the fixture** (2026-11-01, `make record-call-labels` with `nvidia/nemotron-3.5-super-vl:free`, 14 requests for 15 golden calls, two sharing a text):
 

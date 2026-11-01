@@ -16,6 +16,8 @@
 #     are scored on the golden set's 15 calls, a second or `--full-refresh` build re-labels nothing, a
 #     transcript without a recording waits unlabelled, seeded wrong labels fail the agreement test, and failed
 #     calls past the share fail their test and are retried by the next build (SL-18),
+#   - a label from a model version the golden set was not labelled by fails its test, and the warehouse
+#     exporter's collector exports the newest week's label shares and their drift bands (SL-18),
 #   - a metric over a model-derived column without "Model-derived" in its description fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
 #     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
@@ -25,6 +27,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DB=dbt_dev
 OUT=${TMPDIR:-/tmp}/pplk8s-semantic-check
+SQL_EXPORTER_IMAGE=burningalchemist/sql_exporter:0.24.9 # compose.yaml's
 fail() { echo "FAIL: $*" >&2; exit 1; }
 psql_dev() {
   docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse \
@@ -157,6 +160,56 @@ expect "call labels after a second and a --full-refresh build" "$(labelled)" "$b
 expect "calls in silver, and labelled" "$(psql_dev -c "select count(*) from silver.call_transcripts")|$(psql_dev -c "select count(*) from silver.call_signals")" "13|12"
 psql_dev -c "delete from ds_source.synthetic_call_transcripts where transcript_id = 'T-UNRECORDED'"
 echo "ok: a second and a --full-refresh build re-label nothing; a call without a recording waits unlabelled"
+
+# Drift no data shows: one call labelled by a model version the golden set was never labelled by fails the test.
+unscored_call=$(psql_dev -c "select min(transcript_id) from silver.call_transcript_labels")
+recorded_by=$(psql_dev -c "select model_version from silver.call_transcript_labels where transcript_id = '$unscored_call'")
+psql_dev -c "update silver.call_transcript_labels set model_version = 'semantic-check-unscored-model' where transcript_id = '$unscored_call'"
+if dbt_ test --select call_label_model_versions_scored >"$OUT/model-version.log" 2>&1; then fail "dbt test passed labels from an unscored model version"; fi
+grep -q "FAIL 1 call_label_model_versions_scored" "$OUT/model-version.log" || { tail -30 "$OUT/model-version.log" >&2; fail "the test failed, but not on the unscored model version"; }
+psql_dev -c "update silver.call_transcript_labels set model_version = '$recorded_by' where transcript_id = '$unscored_call'"
+dbt_ test --select call_label_model_versions_scored >"$OUT/model-version.log" 2>&1 || { tail -30 "$OUT/model-version.log" >&2; fail "the model-version test after restoring the label"; }
+echo "ok: labels from a model version the golden set was not labelled by fail call_label_model_versions_scored"
+
+# Drift the data shows: the fixture's calls fill one week, so every share has no band yet; the unit test
+# call_label_shares_band (dbt build above) holds the band's arithmetic. The warehouse exporter's collector
+# exports only banded rows of the newest week: two seeded rows, one in its band and one above it.
+expect "label shares on the fixture: rows, weeks, rows with a band" "$(psql_dev -c "
+  select count(*) || ' ' || count(distinct week_start) || ' ' || count(lower_bound) from silver.call_label_shares")" "13 1 0"
+psql_dev -c "insert into silver.call_label_shares values
+  ('topic', 'delivery', date '2026-10-05', 20, 13, 0.65, 4, 0.33, 0.0146, 0.6454),
+  ('topic', 'pricing', date '2026-10-05', 20, 2, 0.10, 4, 0.08, 0, 0.2620)"
+cfg="$OUT/exporter"
+mkdir -p "$cfg" && chmod 755 "$cfg"
+cp "$REPO/platform/compose/sql-exporter/call-label-shares.collector.yml" "$cfg/"
+cat >"$cfg/sql_exporter.yml" <<YAML
+target:
+  data_source_name: "postgresql://set-by-env"
+  collectors: [call_label_shares]
+collector_files: ["*.collector.yml"]
+YAML
+chmod 644 "$cfg"/*
+exporter=pplk8s-semantic-check-exporter
+docker rm -f "$exporter" >/dev/null 2>&1 || true
+docker run -d --name "$exporter" --network pplk8s -v "$cfg:/etc/sql_exporter:ro" \
+  -e SQLEXPORTER_TARGET_DSN="postgresql://warehouse:${WAREHOUSE_PASSWORD:-warehouse}@warehouse:5432/$DB?sslmode=disable" \
+  "$SQL_EXPORTER_IMAGE" \
+  -config.file=/etc/sql_exporter/sql_exporter.yml >/dev/null
+metrics=""
+for _ in $(seq 30); do
+  metrics=$(docker run --rm --network pplk8s curlimages/curl:8.11.1 -sf "http://$exporter:9399/metrics" 2>/dev/null || true)
+  grep -q '^ops_call_label_share{' <<<"$metrics" && break
+  sleep 1
+done
+docker rm -f "$exporter" >/dev/null 2>&1 || true
+printf '%s\n' "$metrics" >"$OUT/label-share-metrics.txt"
+expect "exported label shares" "$(grep -c '^ops_call_label_share{' <<<"$metrics")" 2
+grep -q '^ops_call_label_share{label="delivery",signal="topic"[,}].* 0.65$' <<<"$metrics" ||
+  fail "the exporter does not show delivery's share as 0.65 (see $OUT/label-share-metrics.txt)"
+grep -q '^ops_call_label_share_upper_bound{label="delivery",signal="topic"[,}].* 0.6454$' <<<"$metrics" ||
+  fail "the exporter does not show delivery's upper bound as 0.6454 (see $OUT/label-share-metrics.txt)"
+dbt_ build --select slv_call_label_shares >"$OUT/label-shares.log" 2>&1 || { tail -30 "$OUT/label-shares.log" >&2; fail "rebuild of silver.call_label_shares"; }
+echo "ok: the fixture's label shares have no band yet; the warehouse exporter's collector exports the newest week's banded shares"
 
 # Seeded wrong labels fail the agreement test: four golden calls labelled with the wrong topic.
 psql_dev -c "update silver.call_golden_labels set topic = case topic when 'product' then 'delivery' else 'product' end

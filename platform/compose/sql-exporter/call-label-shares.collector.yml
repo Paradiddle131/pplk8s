@@ -1,0 +1,35 @@
+# Label drift the data shows (semantic/PLAN.md SL-18): for the newest ISO week in silver.call_label_shares
+# (dbt/models/silver/slv_call_label_shares.sql, rebuilt by every call-transcripts dbt build), each label's
+# share of the week's labelled calls and the band the trailing weeks expect it in. CallLabelShareDrift fires
+# on a share outside its band. Rows without a band (too few weeks before them) are left out, and before the
+# first build the table does not exist: this query then fails alone (scrape_errors_total counts it), the
+# exporter stays up, and the series are absent.
+collector_name: call_label_shares
+
+queries:
+  - query_name: call_label_shares
+    query: |
+      SELECT signal, label, share, lower_bound, upper_bound
+      FROM silver.call_label_shares
+      WHERE week_start = (SELECT max(week_start) FROM silver.call_label_shares)
+        AND lower_bound IS NOT NULL
+
+metrics:
+  - metric_name: ops_call_label_share
+    type: gauge
+    help: "Share of the newest week's labelled calls that the model gave this label, for one signal."
+    key_labels: [signal, label]
+    values: [share]
+    query_ref: call_label_shares
+  - metric_name: ops_call_label_share_lower_bound
+    type: gauge
+    help: "The lower edge of the band the trailing weeks expect the label's share in."
+    key_labels: [signal, label]
+    values: [lower_bound]
+    query_ref: call_label_shares
+  - metric_name: ops_call_label_share_upper_bound
+    type: gauge
+    help: "The upper edge of the band the trailing weeks expect the label's share in."
+    key_labels: [signal, label]
+    values: [upper_bound]
+    query_ref: call_label_shares

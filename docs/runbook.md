@@ -678,6 +678,26 @@ Then find the table's producer: the `<pipeline>_elt` DAG for the synthetic table
 Recovery: fix the producer and land the data; the next hourly check records `pass` and the alert resolves after the next scrape (start a Job by hand, above, to see it at once).
 A source whose cadence changed gets new thresholds in `dbt/models/sources.yml` (a dbt image tag bump, D16), not a silence.
 
+### 14. Call labels drift
+
+Call signals are labels a model read out of transcripts (semantic/PLAN.md SL-18), and two kinds of drift can move them without any test of the code failing.
+Drift no data shows: the endpoint (`gemini-3.5-flash`) starts answering from a new model version.
+The dbt test `call_label_model_versions_scored` fails the call-transcripts build when the current prompt version's labels name a model version the golden set was never labelled by, so gold never reads labels nobody scored.
+Drift the data shows: a label's share of a week's calls leaves the band its trailing weeks expect.
+`silver.call_label_shares` holds each signal's label shares per ISO week with a p-chart band (the pooled share of up to four weeks before, plus or minus three binomial standard errors, `call_label_drift` in `dbt/dbt_project.yml`); the warehouse `sql_exporter` exports the newest week.
+
+Trigger, without the cluster: `make semantic-check` relabels one call with an unscored model version and expects the test to fail, and runs the exporter's collector against a seeded week outside its band; `make rules-test` fires the alert on synthetic series.
+
+Detection: a failed `call_label_model_versions_scored` in the `call_transcripts_elt` DAG's dbt build (its rows name the prompt version and the unscored model version); `CallLabelShareDrift`, one alert per signal and label, valued at the week's share.
+A label that is new to a signal has a band of [0, 0], so its first appearance fires; one that stops appearing is exported at 0 and fires below its band.
+
+Diagnosis: `psql -h localhost -p 5433 -U warehouse warehouse -c "SELECT * FROM silver.call_label_shares WHERE signal = '<signal>' ORDER BY week_start DESC, label LIMIT 20"` shows the shares and bands by week.
+Then tell the model from the calls: `SELECT model_version, count(*) FROM silver.call_signals GROUP BY 1` shows whether a new model version answered this week; if not, the calls themselves changed (a product launch, a price change), and the dimensions beside the label (`call__topic` against `call__objection`) usually show it.
+`silver.call_label_agreement` says whether the current version still meets its thresholds on the golden set.
+
+Recovery: a new model version is a new prompt version (`call_label_prompt.version` in `dbt/dbt_project.yml`, a dbt image tag bump, D16), labelled beside the old one and scored on the golden set before the metrics switch to it (docs/text-signals.md § Versioning); never relabel the old version in place.
+A real change in the calls is not a fault: the band follows it once the new weeks become the trailing weeks, and the alert clears with the next week in band.
+
 ## Phase 8 drills
 
 Phase 8 drills exercise the TLC monthly pipeline (PLAN.md D34–D36) under the same contract as Phase 6: each drill is detected by an alert and recovered through its entry here (D28).
