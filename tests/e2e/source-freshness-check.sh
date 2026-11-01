@@ -22,7 +22,9 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 psql_db() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"; }
 expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 
-export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt"
+# Its own target path: dbt/target is the manifest of dbt_dev, which `make agent-web` and MetricFlow read, and a
+# parse against dbt_freshness there would send their queries to dbt_freshness (seen after `make demo-check`, #134).
+export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" DBT_TARGET_PATH=target/source-freshness-check
 # The pins come from the image's requirements, so host and image (the CronJob's) run the same dbt.
 dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
 freshness() { dbt_ source freshness >"$OUT/freshness-$1.log" 2>&1; }

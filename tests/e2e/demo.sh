@@ -169,6 +169,14 @@ check() {
     total=$((total + took))
     timings+="$step"$'\t'"${took}s"$'\n'
   done
+  # The live agent (`make agent-web`, step 3) reads dbt/target after every other step has run, so ask again:
+  # a step that reparses dbt/target against another database fails here, not in front of the audience.
+  start=$(date +%s)
+  agent >/dev/null
+  echo "ok: the agent answers again after every step, from the dbt/target make agent-web reads"
+  took=$(($(date +%s) - start))
+  total=$((total + took))
+  timings+="agent again"$'\t'"${took}s"$'\n'
   say "Rehearsal timings"
   printf '%s' "$timings" | table $'\t'
   echo "total ${total}s"

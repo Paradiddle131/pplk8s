@@ -14,13 +14,16 @@
 #     metrics against gold.partner_outreach_daily and the activation list (SL-16); the call metrics by
 #     day and topic against gold.call_signals_daily, labelled from the recorded label calls (the
 #     emulator fakes AI.CLASSIFY and lacks AI.GENERATE) and scored there on the golden set (SL-18).
+#   - first, on an emulator of its own, replays the recruitment extracts one at a time with a build after each, as
+#     semantic-check does on Postgres, and asserts the stage history the snapshot kept (SL-17); then recreates the
+#     emulator for everything else,
 #   - asserts the recruitment metrics and candidates_in_stage by stage (MetricFlow's SCD join) against gold, after
-#     one snapshot of every extract; then, on a recreated emulator, replays the extracts one at a time with a build
-#     after each, as semantic-check does on Postgres, and asserts the stage history the snapshot kept (SL-17),
+#     one snapshot of every extract,
 #   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
 #     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
 #   - creates the semantic agent's audit table there with the same entry point as on Postgres
 #     (`dbt run-operation agent_warehouse`, #166), twice, and writes and reads back one row.
+# The emulator it leaves running holds the full build, every layer and the migration report, as `make demo` expects.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050 (`docker compose
 # --profile bigquery down` in platform/compose stops it).
@@ -56,6 +59,65 @@ psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 rm -rf "$OUT" && mkdir -p "$PROJECT_DIR"
 # A copy of dbt/, because MetricFlow reads <project>/target whatever DBT_TARGET_PATH says.
 (cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs -cf - .) | tar -xf - -C "$PROJECT_DIR"
+fresh_emulator_
+bq_() {
+  run_ python -I - "$ENDPOINT" "$@" <<'EOF'
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+for sql in sys.argv[2:]:
+    for row in client.query(sql).result():
+        print(" ".join("" if v is None else str(v) for v in row))
+EOF
+}
+
+# The replay first, as semantic-check runs it on Postgres: the extracts land one at a time in load order with a build
+# of the recruitment path after each, so the snapshot's MERGE and its staging table's DROP run on the emulator. It needs
+# an emulator of its own: the emulator's memory grows with every statement (about 5 GiB after the full build below), and
+# past that a DROP TABLE panics inside the engine (googlesqlite: slice bounds out of range [-2147...:]) and the client
+# retries it until the run is killed. The extracts wait in a file and go back in through the streaming insert.
+# It runs before the full build, so the emulator the check leaves running holds every layer, which `make demo` reads.
+load_run_() {
+  run_ python -I - "$ENDPOINT" "$OUT/applications.json" "$1" <<'EOF' || fail "loading $1 into the emulator"
+import json
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+table = "pplk8s-lab.ds_source.synthetic_applications"
+if sys.argv[3] == "run-rec-1":
+    rows = [{k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in row.items()}
+            for row in client.query(f"select * from `{table}`").result()]
+    assert len(rows) == 28, len(rows)
+    json.dump(rows, open(sys.argv[2], "w"))
+    client.query(f"delete from `{table}` where true").result()
+rows = [row for row in json.load(open(sys.argv[2])) if row["_run_id"] == sys.argv[3]]
+assert rows and not client.insert_rows_json(table, rows)
+EOF
+}
+for run in run-rec-1 run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
+  load_run_ "$run"
+  run_ dbt build --select tag:recruitment >"$OUT/recruitment-$run.log" 2>&1 ||
+    { grep -E "ERROR|Error" "$OUT/recruitment-$run.log" | tail -20 >&2; fail "dbt build tag:recruitment after $run on the emulator"; }
+done
+hops=$(grep -c " PASS hop_" "$OUT/recruitment-run-rec-4.log" || true)
+[ "$hops" -eq 7 ] || fail "expected the 7 recruitment hops to pass after the last extract on the emulator, got $hops"
+history=$(bq_ "select string_agg(concat(candidate_id, ':', stage, '@', format_date('%m-%d', valid_from_date)), ' '
+  order by candidate_id, valid_from) from silver.candidate_stages")
+[ "$history" = "K-001:interview@09-30 K-001:offer@10-02 K-001:hired@10-03 K-002:screen@10-01 K-002:interview@10-02 K-002:rejected@10-04 K-003:applied@10-01 K-003:screen@10-02 K-003:interview@10-03 K-004:applied@10-02 K-004:screen@10-04 K-005:offer@09-30 K-005:hired@10-02 K-006:screen@10-01 K-006:rejected@10-02" ] ||
+  fail "the stage history replayed on the emulator: $history"
+in_interview=$(bq_ "select candidates from gold.candidates_in_stage_daily where stage = 'interview' and stage_date = date '2026-10-03'")
+[ "$in_interview" = 2 ] || fail "candidates in interview on 3 October after the replay on the emulator: $in_interview, expected 2"
+echo "ok: replayed extract by extract on a recreated emulator, the snapshot keeps every stage change and no backfill moves a candidate back; 2 in interview on 3 October"
+
+# The full build, on a recreated emulator.
 fresh_emulator_
 
 run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
@@ -219,22 +281,8 @@ print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and expos
 sys.exit(1 if bad else 0)
 EOF
 
-# Recruitment (SL-17): the build above snapshotted every extract at once, so the history holds each candidate's newest
-# stage; the metrics against their gold oracles. The replay extract by extract comes after, on a recreated emulator.
-bq_() {
-  run_ python -I - "$ENDPOINT" "$@" <<'EOF'
-import sys
-from google.api_core.client_options import ClientOptions
-from google.auth.credentials import AnonymousCredentials
-from google.cloud import bigquery
-
-client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
-                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
-for sql in sys.argv[2:]:
-    for row in client.query(sql).result():
-        print(" ".join("" if v is None else str(v) for v in row))
-EOF
-}
+# Recruitment (SL-17): this build snapshotted every extract at once, so the history holds each candidate's newest
+# stage; the metrics against their gold oracles. The replay extract by extract ran above, on an emulator of its own.
 run_ mf query --metrics candidates_in_stage --group-by metric_time__day,candidate__stage \
   --order metric_time__day,candidate__stage --csv "$OUT/in_stage.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of candidates_in_stage by stage on the emulator"; }
@@ -255,47 +303,5 @@ gold_recruitment=$(bq_ "select string_agg(concat(cast(recruitment_date as string
 [ "$mf_recruitment" = "$gold_recruitment" ] ||
   fail "the recruitment metrics on the emulator [$mf_recruitment] != gold.recruitment_daily [$gold_recruitment]"
 echo "ok: the snapshot builds on the emulator; candidates_in_stage by stage equals gold.candidates_in_stage_daily and the recruitment metrics gold.recruitment_daily"
-
-# The replay, as semantic-check runs it on Postgres: the extracts land one at a time in load order with a build of the
-# recruitment path after each, so the snapshot's MERGE and its staging table's DROP run on the emulator. It needs an
-# emulator of its own: the emulator's memory grows with every statement (about 5 GiB after the build above), and past
-# that a DROP TABLE panics inside the engine (googlesqlite: slice bounds out of range [-2147...:]) and the client
-# retries it until the run is killed. The extracts wait in a file and go back in through the streaming insert.
-fresh_emulator_
-load_run_() {
-  run_ python -I - "$ENDPOINT" "$OUT/applications.json" "$1" <<'EOF' || fail "loading $1 into the emulator"
-import json
-import sys
-from google.api_core.client_options import ClientOptions
-from google.auth.credentials import AnonymousCredentials
-from google.cloud import bigquery
-
-client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
-                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
-table = "pplk8s-lab.ds_source.synthetic_applications"
-if sys.argv[3] == "run-rec-1":
-    rows = [{k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in row.items()}
-            for row in client.query(f"select * from `{table}`").result()]
-    assert len(rows) == 28, len(rows)
-    json.dump(rows, open(sys.argv[2], "w"))
-    client.query(f"delete from `{table}` where true").result()
-rows = [row for row in json.load(open(sys.argv[2])) if row["_run_id"] == sys.argv[3]]
-assert rows and not client.insert_rows_json(table, rows)
-EOF
-}
-for run in run-rec-1 run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
-  load_run_ "$run"
-  run_ dbt build --select tag:recruitment >"$OUT/recruitment-$run.log" 2>&1 ||
-    { grep -E "ERROR|Error" "$OUT/recruitment-$run.log" | tail -20 >&2; fail "dbt build tag:recruitment after $run on the emulator"; }
-done
-hops=$(grep -c " PASS hop_" "$OUT/recruitment-run-rec-4.log" || true)
-[ "$hops" -eq 7 ] || fail "expected the 7 recruitment hops to pass after the last extract on the emulator, got $hops"
-history=$(bq_ "select string_agg(concat(candidate_id, ':', stage, '@', format_date('%m-%d', valid_from_date)), ' '
-  order by candidate_id, valid_from) from silver.candidate_stages")
-[ "$history" = "K-001:interview@09-30 K-001:offer@10-02 K-001:hired@10-03 K-002:screen@10-01 K-002:interview@10-02 K-002:rejected@10-04 K-003:applied@10-01 K-003:screen@10-02 K-003:interview@10-03 K-004:applied@10-02 K-004:screen@10-04 K-005:offer@09-30 K-005:hired@10-02 K-006:screen@10-01 K-006:rejected@10-02" ] ||
-  fail "the stage history replayed on the emulator: $history"
-in_interview=$(bq_ "select candidates from gold.candidates_in_stage_daily where stage = 'interview' and stage_date = date '2026-10-03'")
-[ "$in_interview" = 2 ] || fail "candidates in interview on 3 October after the replay on the emulator: $in_interview, expected 2"
-echo "ok: replayed extract by extract on a recreated emulator, the snapshot keeps every stage change and no backfill moves a candidate back; 2 in interview on 3 October"
 
 echo "PASS: BigQuery emulator check"
