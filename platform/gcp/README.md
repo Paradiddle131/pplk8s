@@ -8,7 +8,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 |---|---|---|---|
 | `free-path.yaml` | every API and OpenTofu resource type the project may use, each with its free-tier source; the paid list | — | in `make gcp-validate` |
 | `check_free_path.py`, `tests/` | fails on anything off the free path, offline | — | in `make gcp-validate` |
-| `infra/` | the one OpenTofu root: the free-path APIs and the kill switch | Compose and kind | applied by the owner |
+| `infra/` | the one OpenTofu root: the free-path APIs, the kill switch, and Artifact Registry's `pplk8s` Docker repository (two versions per image, scanning off; #230) | Compose and kind; the kind registry (`localhost:5001`) | applied by the owner; the repository waits for `gcp-up` |
 | `tofu.sh` | `make gcp-plan`, `gcp-up`, `gcp-down`: credentials, the state at `gs://<project>-tfstate/default.tfstate` (no slash in the name: the cloud proxy breaks slashed object names), refuses without `GCP_PROJECT` | — | applied; `gcp-plan`: no changes |
 | `cost-check.sh` | `make gcp-cost-check`: the month's cost from the billing export, by service and SKU (#233) | — | live: no export rows yet |
 
@@ -17,6 +17,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 - Use only what `free-path.yaml` lists; a new API or resource type joins it, with its source, in the PR that needs it, and `make gcp-validate` (in `make lint`) refuses anything else.
 - Run `make gcp-cost-check` before and after every live step; exit 1 (a cost) or 3 (not provable yet) means no live GCP work until the owner says so.
 - Dry-run a query before running it, and keep `maximum_bytes_billed` on every job; no streaming inserts (no free tier).
+- Artifact Registry holds at most 0.5 GiB-month across the billing account: images go there only to be pulled by Cloud Run in us-central1, never pulled to a laptop or a cloud session (internet egress), and the Container Scanning and On-Demand Scanning APIs stay off (billed per image).
 - Never raise a quota, a cap or the budget, and never test a permission by attempting the action: ask with `testIamPermissions`.
 - Cloud sessions also carry claude-dotfiles' GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
 
@@ -25,7 +26,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 | Who | Roles on the project | Does |
 |---|---|---|
 | The owner, from their own signed-in shell | Owner | `make gcp-up` / `gcp-down`, enabling APIs, IAM, quotas, the budget |
-| `pplk8s-automation`, the cloud sessions' credential (injected by the egress proxy, no key) | Viewer, BigQuery Job User and Data Editor, Service Usage Consumer; Storage Object Viewer on the state bucket | reads, `make gcp-plan`, `make gcp-cost-check`, BigQuery work |
+| `pplk8s-automation`, the cloud sessions' credential (injected by the egress proxy, no key) | Viewer, BigQuery Job User and Data Editor, Service Usage Consumer; Storage Object Viewer on the state bucket; Artifact Registry Writer on the `pplk8s` repository (`infra/`) | reads, `make gcp-plan`, `make gcp-cost-check`, BigQuery work, pushing the lab's images |
 | `kill-switch` (created by `infra/`) | Project Billing Manager, Workflows Invoker, Eventarc Event Receiver, Logs Writer | unlinks billing when the budget passes `kill_switch_usd` |
 
 The cloud sessions' credential holds no role that can enable an API, change IAM or quotas, or buy capacity, so a mistake there cannot spend; a product's role is added by the owner when an issue reaches it.

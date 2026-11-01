@@ -29,9 +29,10 @@ apis:
   eventarc.googleapis.com: {enable: true, source: https://cloud.google.com/eventarc/pricing}
   workflows.googleapis.com: {enable: true, source: https://cloud.google.com/workflows/pricing}
   workflowexecutions.googleapis.com: {enable: true, source: https://cloud.google.com/workflows/pricing}
+  # Artifact Registry: 0.5 GiB-month of storage per billing account, pulls within us-central1 free (#230).
+  artifactregistry.googleapis.com: {enable: true, source: https://cloud.google.com/artifact-registry/pricing}
   # Later issues on Map #212, off until their PR turns them on.
   run.googleapis.com: {enable: false, source: https://cloud.google.com/run/pricing, issue: 209}
-  artifactregistry.googleapis.com: {enable: false, source: https://cloud.google.com/artifact-registry/pricing, issue: 230}
   firestore.googleapis.com: {enable: false, source: https://cloud.google.com/firestore/pricing, issue: 209}
   cloudscheduler.googleapis.com: {enable: false, source: https://cloud.google.com/scheduler/pricing, issue: 228}
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
@@ -45,6 +46,8 @@ resources:
   google_pubsub_topic: pubsub.googleapis.com
   google_workflows_workflow: workflows.googleapis.com
   google_eventarc_trigger: eventarc.googleapis.com
+  google_artifact_registry_repository: artifactregistry.googleapis.com
+  google_artifact_registry_repository_iam_member: artifactregistry.googleapis.com
 
 # No Always Free tier, or a free tier the lab cannot hold: never on the list above.
 paid:
@@ -63,3 +66,6 @@ paid:
   - aiplatform.googleapis.com
   - bigqueryreservation.googleapis.com
   - cloudfunctions.googleapis.com
+  # Artifact Analysis: enabling either turns on vulnerability scanning, billed per image scanned.
+  - containerscanning.googleapis.com
+  - ondemandscanning.googleapis.com

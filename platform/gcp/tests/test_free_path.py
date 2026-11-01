@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 GCP = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(GCP))
@@ -63,3 +64,13 @@ def test_a_dated_exception_expires(copy: Path) -> None:
     spec.write_text(text)
     assert problems(copy, dt.date(2026, 12, 1)) == []
     assert any("free window" in p for p in problems(copy, dt.date(2027, 1, 1)))
+
+
+def test_scanning_is_paid_and_the_registry_turns_it_off() -> None:
+    paid = yaml.safe_load((GCP / "free-path.yaml").read_text())["paid"]
+    assert {
+        "containerscanning.googleapis.com",
+        "ondemandscanning.googleapis.com",
+    } <= set(paid)
+    registry = (GCP / "infra" / "artifact_registry.tf").read_text()
+    assert 'enablement_config = "DISABLED"' in registry
