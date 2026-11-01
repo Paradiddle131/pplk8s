@@ -1,0 +1,35 @@
+# Who reads and writes which BigQuery dataset on the lab project (#205; option A of
+# docs/semantic-layer-on-bigquery.md, "Who sees what"): one service account per workload, dataset-level
+# grants, BigQuery Job User on the project to run its queries. infra/bigquery.tf reads this file, and
+# tests/test_access.py holds each account to the lab role it stands for (dbt/macros/agent_warehouse.sql).
+# Table-level grants wait for their tables, which dbt creates (#209): the agent on ops.readiness and
+# ops.product_deadlines (its freshness reads), the audit writer on ops.agent_queries (insert only).
+
+# One per dbt layer and stage (dbt/dbt_project.yml `+schema`), plus the landing dataset dbt reads.
+datasets:
+  ds_source: Landed source tables; EL Factory loads them (#227), dbt reads them.
+  bronze: dbt's bronze layer.
+  silver: dbt's silver layer; the semantic models' tables.
+  gold: dbt's gold layer.
+  exposed: dbt's exposed layer, what consumers read.
+  semantic: The time spine and the semantic layer's own tables.
+  ops: The audit table, freshness verdicts and the readiness ledger.
+  legacy: Tables built the old way, for the migration rehearsal (SL-11).
+  migration: The migration rehearsal's parity report (SL-11).
+
+service_accounts:
+  dbt-runner:
+    description: Builds the dbt project (the dbt Cloud Run Jobs, #209).
+    lab_role: warehouse
+    reads: [ds_source]
+    writes: [bronze, silver, gold, exposed, semantic, ops, legacy, migration]
+  semantic-agent:
+    description: The semantic agent's MetricFlow reads (Cloud Run, #209).
+    lab_role: agent_metrics
+    reads: [silver, semantic]
+    writes: []
+  agent-audit:
+    description: Inserts the agent's audit rows into ops.agent_queries, and nothing else (SL-10).
+    lab_role: agent_audit
+    reads: []
+    writes: []

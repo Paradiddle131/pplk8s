@@ -99,6 +99,7 @@ This is how that maps to BigQuery; IAM on a real project stays out of scope, so 
 **Recommendation: A**, one service account per deployed agent with dataset-level read, which is what the lab's roles already rehearse: the semantic agent on silver and semantic (plus the two `ops` tables its freshness reads, as table-level grants).
 The lab deploys one agent; the text-to-SQL baseline runs only inside the eval (SL-5), so its `agent_sql` role needs no counterpart unless the eval itself runs against BigQuery, where it would get its own identity on gold and exposed.
 Add B only for an agent that must see part of a dataset, and C only when the agents' query cost or quota needs its own budget.
+On the lab project, A is declared in [`platform/gcp/access.yaml`](../platform/gcp/access.yaml) (#205): `dbt-runner`, `semantic-agent` and `agent-audit`, each with BigQuery Job User and the dataset grants of the lab role it stands for, which `platform/gcp/tests/test_access.py` compares with `dbt/macros/agent_warehouse.sql`; the table-level grants on `ops` come with their tables (#209).
 
 ### What is logged where
 

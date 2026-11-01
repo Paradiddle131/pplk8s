@@ -360,5 +360,8 @@ gcp-up: ## Live, the owner's step: apply platform/gcp/infra to the lab project f
 gcp-down: ## Live, the owner's step: destroy what platform/gcp/infra created on the lab project (GCP_PROJECT)
 	platform/gcp/tofu.sh destroy
 
+gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the daily query quota, enabled APIs against the free path, Firestore's one free database, the byte cap (GCP_PROJECT; #205)
+	platform/gcp/guardrails-check.sh
+
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
 	platform/gcp/cost-check.sh
