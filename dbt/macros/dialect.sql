@@ -45,3 +45,30 @@
 {% macro bigquery__type_timestamptz() -%}
     timestamp
 {%- endmacro %}
+
+-- A timestamptz / TIMESTAMP expression moved back by a number of hours. dbt.dateadd casts to the
+-- zoneless DATETIME on BigQuery, which a TIMESTAMP column does not compare with.
+{% macro hours_before(expression, hours) -%}
+    {{ return(adapter.dispatch('hours_before')(expression, hours)) }}
+{%- endmacro %}
+
+{% macro default__hours_before(expression, hours) -%}
+    ({{ expression }} - interval '{{ hours }} hours')
+{%- endmacro %}
+
+{% macro bigquery__hours_before(expression, hours) -%}
+    timestamp_sub({{ expression }}, interval {{ hours }} hour)
+{%- endmacro %}
+
+-- A DATE expression moved back by a number of days, still a DATE (dbt.dateadd returns a timestamp).
+{% macro days_before(expression, days) -%}
+    {{ return(adapter.dispatch('days_before')(expression, days)) }}
+{%- endmacro %}
+
+{% macro default__days_before(expression, days) -%}
+    ({{ expression }} - {{ days }})
+{%- endmacro %}
+
+{% macro bigquery__days_before(expression, days) -%}
+    date_sub({{ expression }}, interval {{ days }} day)
+{%- endmacro %}

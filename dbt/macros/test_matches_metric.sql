@@ -5,12 +5,24 @@
 -- not run in dbt build; tests/e2e/semantic-check.sh compares its own queries.
 -- A filter may name dimensions of the metric's own semantic model only. The relation is named, not
 -- ref'd, so the test depends on the column's model alone and runs with that model's stage.
+-- A cumulative metric with a window of days over a simple metric renders as that simple metric over
+-- the window ending on each of the model's days (the day and the window's count - 1 days before), as
+-- MetricFlow joins it to the time spine; the model's days are the days compared.
 {% test matches_metric(model, column_name, metric, time_column) %}
 
 {%- if execute %}
     {%- set found = graph.metrics.values() | selectattr('name', 'equalto', metric) | list %}
+    {%- set window = none %}
+    {%- if found | length == 1 and found[0].type == 'cumulative' %}
+        {%- set cumulative = found[0].type_params.cumulative_type_params %}
+        {%- if not cumulative.window or cumulative.window.granularity != 'day' or cumulative.grain_to_date or cumulative.metric.filter %}
+            {{ exceptions.raise_compiler_error("matches_metric: " ~ metric ~ " is cumulative over something other than a window of days on a simple metric") }}
+        {%- endif %}
+        {%- set window = cumulative.window.count %}
+        {%- set found = graph.metrics.values() | selectattr('name', 'equalto', cumulative.metric.name) | list %}
+    {%- endif %}
     {%- if found | length != 1 or found[0].type != 'simple' %}
-        {{ exceptions.raise_compiler_error("matches_metric: no simple metric named " ~ metric) }}
+        {{ exceptions.raise_compiler_error("matches_metric: no simple or cumulative metric named " ~ metric) }}
     {%- endif %}
     {%- set params = found[0].type_params.metric_aggregation_params %}
     {%- set semantic_model = graph.semantic_models.values() | selectattr('name', 'equalto', params.semantic_model) | first %}
@@ -38,13 +50,25 @@
         {{ exceptions.raise_compiler_error("matches_metric: " ~ metric ~ " aggregates with " ~ agg ~ ", which the test does not render") }}
     {%- endif %}
 
+    {%- set time = columns[params.agg_time_dimension] %}
     {%- set upstream %}
-        select {{ columns[params.agg_time_dimension] }} as day, {{ aggregate }} as {{ column_name }}
+        {%- if window %}
+        select model_days.day, {{ aggregate }} as {{ column_name }}
+        from (select distinct {{ time_column }} as day from {{ model }}) as model_days
+        inner join {{ semantic_model.node_relation.relation_name }}
+            on {{ time }} <= model_days.day and {{ time }} > {{ days_before('model_days.day', window) }}
+        {%- if conditions %}
+        where {{ conditions | join(' and ') }}
+        {%- endif %}
+        group by model_days.day
+        {%- else %}
+        select {{ time }} as day, {{ aggregate }} as {{ column_name }}
         from {{ semantic_model.node_relation.relation_name }}
         {%- if conditions %}
         where {{ conditions | join(' and ') }}
         {%- endif %}
-        group by {{ columns[params.agg_time_dimension] }}
+        group by {{ time }}
+        {%- endif %}
     {%- endset %}
 
     {%- set downstream %}

@@ -210,3 +210,93 @@ models:
               arguments:
                 metric: booking_value_eur
                 time_column: activity_date
+
+  - name: gld_customer_actions_daily
+    description: One row per (activity_date, action_type) with any site or CRM action; an action that arrived late counts on the day it happened. Alias gold.customer_actions_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['activity_date', 'action_type']
+    columns:
+      - name: activity_date
+        description: UTC day the actions happened.
+        data_type: date
+        tests: [not_null]
+      - name: action_type
+        description: page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.
+        data_type: *text
+        tests: [not_null]
+      - name: channel
+        description: Where the action happened, site or crm.
+        data_type: *text
+      - name: actions
+        description: Actions of the type that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_customer_actions_to_gld_customer_actions_daily
+              arguments:
+                metric: customer_actions
+                time_column: activity_date
+      - name: customers
+        description: Distinct customers with an action of the type that day.
+        data_type: bigint
+
+  - name: gld_customer_engagement_daily
+    description: One row per day with any site or CRM action, with engaged customers over the trailing 7 and 28 days and the site funnel's sessions and step rates. Per-day rates; over a period use the metrics view_to_cart_rate and cart_to_checkout_rate. Alias gold.customer_engagement_daily.
+    columns:
+      - name: activity_date
+        description: Natural key; the UTC day.
+        data_type: date
+        tests: [not_null, unique]
+      - name: engaged_customers_7d
+        description: Distinct customers with any action that day or in the 6 days before.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_engaged_customers_7d_to_gld_customer_engagement_daily
+              arguments:
+                metric: engaged_customers_7d
+                time_column: activity_date
+      - name: engaged_customers_28d
+        description: Distinct customers with any action that day or in the 27 days before.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_engaged_customers_28d_to_gld_customer_engagement_daily
+              arguments:
+                metric: engaged_customers_28d
+                time_column: activity_date
+      - name: site_sessions
+        description: Site sessions with a page view that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_site_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: site_sessions
+                time_column: activity_date
+      - name: cart_sessions
+        description: Site sessions with an add to cart that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_cart_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: cart_sessions
+                time_column: activity_date
+      - name: checkout_sessions
+        description: Site sessions with a checkout that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_checkout_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: checkout_sessions
+                time_column: activity_date
+      - name: view_to_cart_rate
+        description: Share of that day's page-view sessions that added to cart that day or the next; NULL without page views.
+        data_type: numeric
+      - name: cart_to_checkout_rate
+        description: Share of that day's add-to-cart sessions that checked out that day or the next; NULL without adds to cart.
+        data_type: numeric

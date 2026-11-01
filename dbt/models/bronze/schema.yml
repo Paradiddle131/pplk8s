@@ -103,3 +103,17 @@ models:
     columns:
       - name: booking_id
         tests: [not_null]
+
+  - name: brz_synthetic_customer_actions
+    description: >
+      Site and CRM actions as landed, cast only; append-only and extracted by received_ts, so an event can
+      land a day after its event_ts and a redelivered event repeats. Alias bronze.synthetic_customer_actions.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'event_id']
+    columns:
+      - name: event_id
+        tests: [not_null]
+      - name: event_ts
+        tests: [not_null]
