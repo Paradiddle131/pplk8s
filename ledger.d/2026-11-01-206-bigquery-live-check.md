@@ -5,6 +5,6 @@
 - Done: the call labels default to the recordings on `gcp` as on the emulator: the $0.00 lab project may not call Vertex AI. `DBT_IMAGE` 0.7.39, `AGENT_IMAGE` 0.1.36 (the dbt project changed).
 - Done: `docs/agents/autopilot.md` unparks Map #212 (owner, 2026-11-01).
 - Done (#275, from the owner's first live run): the bronze casts to `numeric(p, s)`, which BigQuery refuses in CAST and the emulator accepts, go through the dispatch macro `cast_decimal` (BigQuery: NUMERIC rounded to the scale); `tests/e2e/lib/bigquery_sql_rules.py` fails a parameterized CAST in `make bigquery-check` and at the end of the run check; the live check borrows the signed-in gcloud account's token as `tofu.sh` does, so a laptop needs no application-default login.
-- Evidence: see the PR for `make bigquery-emulator-check` on the new script and the offline parse on `gcp`.
+- Evidence: `make bigquery-live-check` on the lab project (2026-11-01): `PASS: BigQuery run check on BigQuery (pplk8s-lab-001)`, 63 hops, 8,420,065,280 bytes billed, both cost checks $0.00; see the PR for the emulator and offline runs.
 - Decisions: SL-7 amended (the live run beside the emulator).
-- Open: the live run waits for the owner's `make gcp-up` (the lab project has only `billing_export`); then the Unverified line on BigQuery itself is struck with its output. Part 2 of #206: SL-19's dbt image for GCP.
+- Open: part 2 of #206, SL-19's dbt image for GCP (#274).

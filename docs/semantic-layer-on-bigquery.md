@@ -1,7 +1,7 @@
 # The semantic layer on BigQuery
 
 How each piece of the lab's semantic track maps to its work counterpart on GCP, and what the lab proves about getting there ([`semantic/PLAN.md`](../semantic/PLAN.md) R7, S5).
-"Measured" means run in this repo (`make bigquery-check` and the checks it names); "measured (emulator)" means run on the BigQuery emulator by `make bigquery-emulator-check`; "stated" means read from Google's or dbt's documentation (2026-10); "unverified" means neither.
+"Measured" means run in this repo (`make bigquery-check` and the checks it names); "measured (emulator)" means run on the BigQuery emulator by `make bigquery-emulator-check`; "measured (live)" means run on real BigQuery in the lab project by `make bigquery-live-check`; "stated" means read from Google's or dbt's documentation (2026-10); "unverified" means neither.
 
 ## What carries over unchanged
 
@@ -14,6 +14,12 @@ It also runs (measured (emulator), `make bigquery-emulator-check`, [`semantic/PL
 - `dbt build` of the semantic path, tests included, on the `bigquery_emulator` output: every model and test passes on GoogleSQL, as the emulator's ZetaSQL analyzer checks it.
 - MetricFlow queries the eight metrics there, and they equal the hand-written gold and exposed tables the same build wrote, day by day.
 - The emulator needs a shim for two gaps dbt-bigquery hits (`routines.list`, and DDL jobs reported as `SELECT`); real BigQuery has neither.
+
+And it runs on real BigQuery (measured (live), `make bigquery-live-check` on the lab project, 2026-11-01, #206): the same script and fixture as on the emulator, on dbt's `gcp` output.
+- Every part builds with its tests (recruitment 43, customer actions 37, partner outreach 56, call transcripts 60, platform 173 nodes, no error), the recruitment snapshot replayed extract by extract keeps every stage change, and all 63 layer hops reconcile.
+- Every metric MetricFlow queries equals its gold or exposed oracle, `migration.parity` reports as on Postgres, and `ops.agent_queries` takes a row.
+- One difference the emulator hid: BigQuery refuses a parameterized type in CAST (`numeric(12, 2)`), so the bronze casts go through `cast_decimal` and `make bigquery-check` fails on the next one (#275).
+- The run billed 8,420,065,280 bytes (7.8 GiB, inside the free 1 TiB a month), and the cost check before and after read $0.00.
 
 The target is compile-only: `method: oauth-secrets` with a placeholder token lets dbt build its client offline, and `--no-introspect --no-populate-cache` keeps compile from querying.
 At work the same output takes `method: oauth` (application default credentials) and a real project.
@@ -118,7 +124,7 @@ That record's table comes from the dbt project, `dbt run-operation agent_warehou
 
 ## Unverified
 
-- That the compiled SQL runs on BigQuery itself: it runs on the emulator, whose analyzer is ZetaSQL's, including MetricFlow's `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; real BigQuery stays the final word, which `make bigquery-live-check` gives on the lab project (the same script and fixture, #206) once its datasets exist (`make gcp-up`).
+- ~~That the compiled SQL runs on BigQuery itself~~: measured (live), `make bigquery-live-check`, 2026-11-01: `PASS: BigQuery run check on BigQuery (pplk8s-lab-001)` (above).
 - The exact `ask_data_agent` arguments: the ADK page does not list them; the lab toolset's contract is a question in, and text, rows and SQL out, as the docs describe.
 - Whether `ask_data_agent`'s result names the metrics or tables it used, which the after-tool callback needs to look up their freshness; without them every answer says its freshness is unknown, and the options are the freshness tables as a knowledge source or a verified query of the data agent.
 - Cloud Run Job overrides: read from the Jobs API reference, not tried.
