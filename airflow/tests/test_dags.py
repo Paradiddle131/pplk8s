@@ -32,7 +32,9 @@ def test_hello_structure(bag):
     assert list(hello.task_ids) == ["say_hello"]
 
 
-@pytest.fixture(scope="module", params=["sales", "marketing", "customer_actions"])
+@pytest.fixture(
+    scope="module", params=["sales", "marketing", "customer_actions", "partner_outreach"]
+)
 def elt(request, bag):
     """The ELT DAGs the shared builder makes (PLAN.md D38): (pipeline, DAG)."""
     return request.param, bag.dags[f"{request.param}_elt"]
@@ -264,6 +266,7 @@ def test_elt_dbt_stages_select_only_their_pipelines_models(elt):
         "sales_elt",
         "marketing_elt",
         "customer_actions_elt",
+        "partner_outreach_elt",
         "returns_file_arrival",
         "finance_daily",
         "tlc_monthly",

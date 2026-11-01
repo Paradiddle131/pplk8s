@@ -31,7 +31,7 @@ run_ mf validate-configs --skip-dw >"$OUT/validate.log" 2>&1 || { tail -20 "$OUT
 echo "ok: dbt parse and mf validate-configs --skip-dw pass on the bigquery target"
 
 run_ dbt compile --quiet --no-introspect --no-populate-cache \
-  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
+  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
   { tail -20 "$OUT/compile.log" >&2; fail "dbt compile of the semantic path on the bigquery target"; }
 uvx --quiet --with "$SQLGLOT" python -I - "$PROJECT/target/compiled/pplk8s/models" <<'EOF' || fail "compiled SQL is not BigQuery"
 import pathlib, re, sys

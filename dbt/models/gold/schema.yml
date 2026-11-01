@@ -300,3 +300,50 @@ models:
       - name: cart_to_checkout_rate
         description: Share of that day's add-to-cart sessions that checked out that day or the next; NULL without adds to cart.
         data_type: numeric
+
+  - name: gld_partner_outreach_daily
+    description: One row per day with any outreach message sent or reply received. Per-day rate; over a period use the metric reply_rate. Alias gold.partner_outreach_daily.
+    columns:
+      - name: outreach_date
+        description: Natural key; the UTC day a message was sent or a reply arrived.
+        data_type: date
+        tests: [not_null, unique]
+      - name: messages_sent
+        description: Outreach messages sent that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_sent_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_sent
+                time_column: outreach_date
+      - name: messages_replied
+        description: Messages sent that day that have a reply, whenever it arrived.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_replied_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_replied
+                time_column: outreach_date
+      - name: replies
+        description: Replies that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_replies_to_gld_partner_outreach_daily
+              arguments:
+                metric: replies
+                time_column: outreach_date
+      - name: partners_engaged
+        description: Distinct partners with a reply that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_partners_engaged_to_gld_partner_outreach_daily
+              arguments:
+                metric: partners_engaged
+                time_column: outreach_date
+      - name: reply_rate
+        description: messages_replied / messages_sent for that day's messages; NULL on a day without messages.
+        data_type: numeric
