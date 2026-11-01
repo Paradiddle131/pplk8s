@@ -12,6 +12,8 @@
 #     customer-actions metrics (actions per type, engaged customers over 7 and 28 days, the site funnel)
 #     against gold.customer_actions_daily and gold.customer_engagement_daily (SL-15); the outreach
 #     metrics against gold.partner_outreach_daily and the activation list (SL-16).
+#   - replays the recruitment extracts one at a time with a build after each, so the snapshot's MERGE runs there,
+#     and asserts the stage history and candidates_in_stage by stage against gold (SL-17),
 #   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
 #     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
 #   - creates the semantic agent's audit table there with the same entry point as on Postgres
@@ -196,5 +198,55 @@ print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and expos
       " reports as on Postgres, on the emulator")
 sys.exit(1 if bad else 0)
 EOF
+
+# Recruitment (SL-17): replay the extracts one at a time with a build after each, as on Postgres, so the
+# snapshot's MERGE runs on the emulator; then the stage history, and the metrics against their gold oracles.
+bq_() {
+  run_ python -I - "$ENDPOINT" "$@" <<'EOF'
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+for sql in sys.argv[2:]:
+    for row in client.query(sql).result():
+        print(" ".join("" if v is None else str(v) for v in row))
+EOF
+}
+bq_ "create table ds_source.applications_replay as select * from ds_source.synthetic_applications" \
+  "delete from ds_source.synthetic_applications where true" "drop table silver.candidate_stage_snapshots" >/dev/null ||
+  fail "setting up the recruitment replay on the emulator"
+for run in run-rec-1 run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
+  bq_ "insert into ds_source.synthetic_applications select * from ds_source.applications_replay where _run_id = '$run'" >/dev/null ||
+    fail "loading $run into the emulator"
+  run_ dbt build --select tag:recruitment >"$OUT/recruitment-$run.log" 2>&1 ||
+    { grep -E "ERROR|Error" "$OUT/recruitment-$run.log" | tail -20 >&2; fail "dbt build tag:recruitment after $run on the emulator"; }
+done
+history=$(bq_ "select string_agg(concat(candidate_id, ':', stage, '@', format_date('%m-%d', valid_from_date)), ' '
+  order by candidate_id, valid_from) from silver.candidate_stages")
+[ "$history" = "K-001:interview@09-30 K-001:offer@10-02 K-001:hired@10-03 K-002:screen@10-01 K-002:interview@10-02 K-002:rejected@10-04 K-003:applied@10-01 K-003:screen@10-02 K-003:interview@10-03 K-004:applied@10-02 K-004:screen@10-04 K-005:offer@09-30 K-005:hired@10-02 K-006:screen@10-01 K-006:rejected@10-02" ] ||
+  fail "the stage history on the emulator: $history"
+run_ mf query --metrics candidates_in_stage --group-by metric_time__day,candidate__stage \
+  --order metric_time__day,candidate__stage --csv "$OUT/in_stage.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of candidates_in_stage by stage on the emulator"; }
+run_ mf query --metrics applications,hires,time_to_hire_days --group-by metric_time__day --order metric_time__day \
+  --csv "$OUT/recruitment.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the recruitment metrics on the emulator"; }
+# A day before a candidate's first snapshot has no stage: gold leaves it out, MetricFlow groups it under none.
+mf_in_stage=$(tail -n +2 "$OUT/in_stage.csv" | tr -d '\r' | awk -F, '$2 != "" {print substr($1, 1, 10) "," $2 "," $3}' | sort | paste -sd ' ')
+gold_in_stage=$(bq_ "select string_agg(concat(cast(stage_date as string), ',', stage, ',', cast(candidates as string)), ' '
+  order by cast(stage_date as string), stage) from gold.candidates_in_stage_daily")
+[ -n "$gold_in_stage" ] && [ "$mf_in_stage" = "$gold_in_stage" ] ||
+  fail "candidates_in_stage by stage on the emulator [$mf_in_stage] != gold.candidates_in_stage_daily [$gold_in_stage]"
+mf_recruitment=$(tail -n +2 "$OUT/recruitment.csv" | tr -d '\r' |
+  awk -F, '{printf "%s,%d,%d,%s\n", substr($1, 1, 10), $2, $3, ($4 == "" ? "" : sprintf("%.4f", $4))}' | sort | paste -sd ' ')
+gold_recruitment=$(bq_ "select string_agg(concat(cast(recruitment_date as string), ',', cast(applications as string), ',',
+  cast(hires as string), ',', coalesce(format('%.4f', cast(time_to_hire_days as float64)), '')), ' ' order by recruitment_date)
+  from gold.recruitment_daily")
+[ "$mf_recruitment" = "$gold_recruitment" ] ||
+  fail "the recruitment metrics on the emulator [$mf_recruitment] != gold.recruitment_daily [$gold_recruitment]"
+echo "ok: replayed extract by extract on the emulator, the snapshot keeps every stage change; candidates_in_stage by stage equals gold.candidates_in_stage_daily and the recruitment metrics gold.recruitment_daily"
 
 echo "PASS: BigQuery emulator check"

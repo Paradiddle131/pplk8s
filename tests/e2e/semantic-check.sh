@@ -252,7 +252,7 @@ expect "candidates_in_stage by stage vs gold.candidates_in_stage_daily (rows dif
   with gold as (select stage_date, stage, candidates from gold.candidates_in_stage_daily),
        mf as (select day, stage, candidates from semantic_check.in_stage where stage is not null)
   select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
-expect "candidates in interview at the end of 1 to 4 October" "$(tail -n +2 "$OUT/in_interview.csv" | cut -d, -f2 | paste -sd ' ')" "1 1 2 1"
+expect "candidates in interview at the end of 1 to 4 October" "$(tail -n +2 "$OUT/in_interview.csv" | tr -d '\r' | cut -d, -f2 | paste -sd ' ')" "1 1 2 1"
 expect "time to hire over the fixture (K-005 7.2083 and K-001 4.9583 days)" "$(tail -n +2 "$OUT/time_to_hire.csv" | cut -c1-4)" "6.08"
 echo "ok: replayed extract by extract, the snapshot keeps every stage change and no backfill moves a candidate back; the recruitment metrics equal gold.recruitment_daily, candidates_in_stage by stage equals gold.candidates_in_stage_daily, 2 in interview on 3 October"
 
