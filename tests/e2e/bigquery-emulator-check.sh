@@ -17,11 +17,11 @@
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
 #     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
 #     signup-to-first-order rate by month and the return rate by order day against SQL by hand, the average and
-#     the BigQuery-only median order value by day, signups by fiscal quarter, the marketing metrics by day and channel
+#     the BigQuery-only median order value by day, signups by fiscal quarter, the remaining budget (a balance), the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
-# Every part runs `dbt build` with its tests on the `bigquery_emulator` target, the project unchanged; the 62
+# Every part runs `dbt build` with its tests on the `bigquery_emulator` target, the project unchanged; the 63
 # layer hops (semantic/PLAN.md SL-9) reconcile across them.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050, holding the platform's build, which
@@ -171,7 +171,15 @@ if part == "platform":
         select cast(date_add(date_trunc(date_sub(signup_date, interval 1 month), quarter), interval 1 month) as string),
                count(*)
         from `pplk8s-lab.silver.customers` where signup_date between '2024-01-01' and '2024-12-31' group by 1""")
+    # The remaining budget, a semi-additive balance: by day the sum of the day's snapshots, and over the two days
+    # the last day's (10010.00), never the sum of both days.
+    budget = rows("select cast(snapshot_date as string), sum(remaining_eur) from `pplk8s-lab.silver.campaign_budgets` group by 1")
+    with open(f"{out}/budget_period.csv") as f:
+        period_budget = num(next(csv.DictReader(f))["remaining_budget_eur"])
+    if period_budget != num("10010.00"):
+        bad.append(f"remaining budget over 1 and 2 October: {period_budget} != 10010.00 (the last day's snapshots)")
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("remaining budget by day", budget, metrics("budget", ["remaining_budget_eur"])),
                 ("signups by fiscal quarter", fiscal, metrics("fiscal", ["signups"], ("metric_time__fiscal_quarter",))),
                 ("average and median order value by day", order_value,
                  metrics("order_value", ["average_order_value_eur", "median_order_value_eur"])),
@@ -387,6 +395,10 @@ run_ mf query --metrics average_order_value_eur,median_order_value_eur --group-b
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the average and the BigQuery-only median order value on the emulator"; }
 run_ mf query --metrics signups --group-by metric_time__fiscal_quarter --start-time 2024-01-01 --end-time 2024-12-31 \
   --csv "$OUT/fiscal.csv" >>"$OUT/query.log" 2>&1 || { tail -20 "$OUT/query.log" >&2; fail "mf query by fiscal quarter on the emulator"; }
+run_ mf query --metrics remaining_budget_eur --group-by metric_time__day --csv "$OUT/budget.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the remaining budget by day on the emulator"; }
+run_ mf query --metrics remaining_budget_eur --start-time 2026-10-01 --end-time 2026-10-02 --csv "$OUT/budget_period.csv" \
+  >>"$OUT/query.log" 2>&1 || { tail -20 "$OUT/query.log" >&2; fail "mf query of the remaining budget over two days on the emulator"; }
 run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \
@@ -398,7 +410,7 @@ parity_ platform
 
 # The recruitment replay's builds are not counted: the build over every extract holds the same hops.
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
-[ "$hops" -eq 62 ] || fail "expected the 62 layer hops to pass on the emulator, got $hops"
-echo "ok: the 62 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+[ "$hops" -eq 63 ] || fail "expected the 63 layer hops to pass on the emulator, got $hops"
+echo "ok: the 63 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 
 echo "PASS: BigQuery emulator check"

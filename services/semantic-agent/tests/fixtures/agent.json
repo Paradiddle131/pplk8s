@@ -3868,6 +3868,62 @@
       ]
     },
     {
+      "name": "remaining_budget_eur",
+      "label": "Remaining budget (EUR)",
+      "description": "Budget left in the month, in EUR: each campaign's last snapshot in the period asked (never a sum across days), added up over campaigns; by month it is what was left at month end.",
+      "type": "simple",
+      "pipelines": [
+        "marketing"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "campaign_budgets"
+      ],
+      "dimensions": [
+        {
+          "name": "campaign__campaign_name",
+          "type": "categorical",
+          "description": "The campaign's name."
+        },
+        {
+          "name": "campaign__channel",
+          "type": "categorical",
+          "description": "Marketing channel (search, social, display, email, partner).",
+          "values": [
+            "search",
+            "social",
+            "display",
+            "email",
+            "partner"
+          ]
+        },
+        {
+          "name": "campaign__market",
+          "type": "categorical",
+          "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "campaign_budget_day__snapshot_date",
+          "type": "time",
+          "description": "UTC day of the snapshot, after that day's spend."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "Must exist in slv_campaigns."
+        }
+      ]
+    },
+    {
       "name": "repeat_customers",
       "label": "Repeat customers",
       "description": "Distinct customers with a non-cancelled order in the period who have placed two or more orders in all (repeat customers).",

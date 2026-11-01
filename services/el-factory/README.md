@@ -117,6 +117,7 @@ They are created by their first chunk, not at startup.
 | `ds_source.synthetic_orders` | `order_id text`, `customer_id integer`, `order_ts timestamptz`, `status text`, `amount numeric(12,2)`, `currency text` |
 | `ds_source.synthetic_campaigns` | `campaign_id integer`, `name text`, `channel text`, `market text`, `start_date date` |
 | `ds_source.synthetic_ad_spend` | `spend_date date`, `campaign_id integer`, `impressions integer`, `clicks integer`, `spend numeric(12,2)`, `currency text` |
+| `ds_source.synthetic_campaign_budgets` | `snapshot_date date`, `campaign_id integer`, `budget_eur numeric(12,2)`, `remaining_eur numeric(12,2)` |
 | `ds_source.synthetic_leads` | `lead_id text`, `campaign_id integer`, `created_ts timestamptz`, `country text` |
 | `ds_source.synthetic_bookings` | `booking_id text`, `lead_id text`, `booked_ts timestamptz`, `amount numeric(12,2)`, `currency text` |
 | `ds_source.partner_returns` (file entity `partner_returns`) | `return_id text`, `order_id text`, `returned_at timestamptz`, `amount numeric(12,2)`, `reason text` |

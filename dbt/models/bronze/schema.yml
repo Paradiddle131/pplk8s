@@ -84,6 +84,18 @@ models:
       - name: campaign_id
         tests: [not_null]
 
+  - name: brz_synthetic_campaign_budgets
+    description: Daily campaign budget snapshots as landed, cast only. Alias bronze.synthetic_campaign_budgets.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'snapshot_date', 'campaign_id']
+    columns:
+      - name: snapshot_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
   - name: brz_synthetic_leads
     description: CRM leads as landed, cast only. Alias bronze.synthetic_leads.
     tests:

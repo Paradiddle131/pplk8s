@@ -60,6 +60,7 @@ The table holds the rows of `semantic.metrics`, and a metric defined for one war
 | `time_to_hire_days` | Time to hire (days) | simple | `applications` | `dbt/models/silver/schema.yml` |
 | `booking_value_eur` | Booking value (EUR) | simple | `bookings` | `dbt/models/silver/schema.yml` |
 | `bookings` | Bookings | simple | `bookings` | `dbt/models/silver/schema.yml` |
+| `remaining_budget_eur` | Remaining budget (EUR) | simple | `campaign_budgets` | `dbt/models/silver/schema.yml` |
 | `calls_labelled` | Calls labelled | simple | `call_signals` | `dbt/models/silver/schema.yml` |
 | `calls_with_objection` | Calls with an objection | simple | `call_signals` | `dbt/models/silver/schema.yml` |
 | `positive_calls` | Positive calls | simple | `call_signals` | `dbt/models/silver/schema.yml` |
