@@ -109,7 +109,7 @@ spec:
           for: 2m
           labels: {severity: warning}
           annotations:
-            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse, DataProductLate, SourceStale and SourceFreshnessNotChecked are blind.
+            summary: The warehouse's sql_exporter is not scraped; AirflowMetadataBehindWarehouse, DataProductLate, SourceStale, SourceFreshnessNotChecked and CallLabelShareDrift are blind.
         - alert: AirflowGitSyncFailing
           # git-sync retries a failing fetch forever and keeps serving its last good commit, with the
           # sidecar Running and Ready (#18), so DAG changes silently stop arriving. A healthy sidecar
@@ -286,3 +286,17 @@ spec:
           annotations:
             summary: "dbt source freshness last recorded a result {{ $value | humanizeDuration }} ago; SourceStale is blind."
             runbook: docs/runbook.md#13-a-source-stops-flowing
+        - alert: CallLabelShareDrift
+          # Label drift the data shows (semantic/PLAN.md SL-18): in the newest week, a label's share of the
+          # labelled calls left the band its trailing weeks expect (dbt/models/silver/slv_call_label_shares.sql,
+          # a p-chart's three binomial standard errors). The model may answer differently, or the calls changed;
+          # the runbook tells the two apart. One alert per signal and label; the value is the week's share.
+          expr: |
+            ops_call_label_share > ops_call_label_share_upper_bound
+            or
+            ops_call_label_share < ops_call_label_share_lower_bound
+          for: 2m
+          labels: {severity: warning}
+          annotations:
+            summary: "{{ $labels.label }} is {{ $value | humanizePercentage }} of this week's {{ $labels.signal }} labels, outside the band the trailing weeks expect."
+            runbook: docs/runbook.md#14-call-labels-drift

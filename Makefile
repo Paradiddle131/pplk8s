@@ -8,10 +8,10 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.2
-DBT_IMAGE ?= localhost:5001/dbt:0.7.17
+ELF_IMAGE ?= localhost:5001/el-factory:0.7.7
+DBT_IMAGE ?= localhost:5001/dbt:0.7.27
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.15
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.23
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -45,7 +45,7 @@ manifest_types = application/vnd.oci.image.index.v1+json,application/vnd.oci.ima
 in_registry = $(shell curl -sf -o /dev/null -H 'Accept: $(manifest_types)' http://$(firstword $(subst /, ,$(1)))/v2/$(firstword $(subst :, ,$(notdir $(1))))/manifests/$(word 2,$(subst :, ,$(notdir $(1)))) && echo yes)
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.17
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.22
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -149,13 +149,22 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
 	tests/e2e/bigquery-check.sh
 
-bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, and the migration rehearsal reports as on Postgres (#125)
+bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
 	tests/e2e/bigquery-emulator-check.sh
+
+# The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
+# failing when it differs from the script; demo-check rehearses them all, timed, on a fresh emulator.
+STEP ?= setup
+demo: ## Run one step of the use case's demo (STEP=setup|layers|standard|agent|alerts|audit|migration; needs services-up)
+	tests/e2e/demo.sh $(STEP)
+
+demo-check: services-up ## Rehearse the whole use case's demo on the BigQuery emulator and dbt_dev, every step asserted and timed (no model quota)
+	tests/e2e/demo.sh check
 
 source-freshness-check: services-up ## Run dbt source freshness on the dev fixtures in dbt_freshness: fresh data passes, a stopped source errors, and the warehouse sql_exporter exports each verdict (#130)
 	tests/e2e/source-freshness-check.sh
 
-semantic-check: services-up ## Build the sales, returns, finance and marketing models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models (#100, #126)
+semantic-check: services-up ## Build the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and call-transcripts models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models, an incremental build places late actions, the activation list honours consent, and the recruitment snapshot replayed extract by extract answers stage counts as of a date, and the call labels meet their thresholds on the golden set (#100, #126, #188, #190, #189, #241)
 	tests/e2e/semantic-check.sh
 
 migration-check: services-up ## Build the legacy tables, the new layers and migration.parity on dbt/dev/fixture.sql in dbt_dev, and assert the parity report and the gate on each consumer's switch
@@ -197,6 +206,9 @@ agent-key-check: ## Ask OpenRouter whether it accepts the agents' key, spending 
 # The key check runs before the image builds and the deploy, so a refused key fails in seconds.
 agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloads with the semantic agent on the dbt_dev fixture and ask it one question through its Service (#111; needs cluster-up; one model turn)
 	tests/e2e/agent-deploy-check.sh
+
+record-call-labels: ## Live, opt-in: record the call-label prompt's answers for the golden set's calls from an OpenRouter free model into dbt/seeds/silver/call_label_recordings.csv (CALL_LABEL_MODEL=<id>:free; one request per unrecorded call; exit 3 keeps a partial recording on a spent quota)
+	cd dbt && uv run --no-project --quiet --with pyyaml==6.0.3 python scripts/record_call_labels.py $(if $(CALL_LABEL_MODEL),--model $(CALL_LABEL_MODEL))
 
 agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
 	tests/e2e/agent-eval.sh
@@ -319,10 +331,11 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
-lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts and the BigQuery emulator shim (ruff via uvx)
+lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts, the e2e checks' Python helpers and the BigQuery emulator shim (ruff via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
 	uvx ruff@0.17.0 check platform/compose/bigquery-shim && uvx ruff@0.17.0 format --check platform/compose/bigquery-shim
+	uvx ruff@0.17.0 check --config dbt/ruff.toml tests/e2e/lib && uvx ruff@0.17.0 format --config dbt/ruff.toml --check tests/e2e/lib
 	$(MAKE) --no-print-directory gcp-validate
 
 # The lab project on GCP (semantic/PLAN.md SL-13, platform/gcp/README.md): validated offline in `make lint`;

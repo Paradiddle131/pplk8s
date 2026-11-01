@@ -538,3 +538,884 @@ models:
         type: simple
         agg: sum
         expr: amount
+
+  - name: slv_call_transcripts
+    description: One row per call transcript, latest load wins. call_date is call_ts in UTC. Alias silver.call_transcripts.
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_call_transcripts
+          arguments:
+            bronze: ref('brz_synthetic_call_transcripts')
+            keys: [transcript_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, call_transcripts]
+    columns:
+      - name: transcript_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: call_date
+        description: UTC date of the call.
+        tests: [not_null]
+      - name: transcript
+        description: What was said, as the recorder transcribed it.
+        tests: [not_null]
+
+  - name: slv_call_transcript_labels
+    description: >
+      One row per call transcript and prompt version (semantic/PLAN.md SL-18): the topic, objection, sentiment
+      and next step the model gave, or the call's error in status. Incremental and never fully refreshed, so a
+      routine rebuild never re-labels; a new prompt version is labelled beside the old one. Alias
+      silver.call_transcript_labels.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['transcript_id', 'prompt_version']
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null]
+      - name: prompt_version
+        description: The version of the prompt in dbt_project.yml's call_label_prompt that labelled the call.
+        tests: [not_null]
+      - name: endpoint
+        description: The model endpoint the call asked for (always named, never left to the warehouse's choice).
+      - name: model_version
+        description: The model version that answered, from the response.
+      - name: labelled_at
+        description: When the call was labelled (in the lab, when its recording was made).
+      - name: topic
+        description: What the customer called about, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['delivery', 'pricing', 'returns', 'product']
+      - name: objection
+        description: The customer's main objection, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'price', 'timing', 'competitor']
+      - name: sentiment
+        description: The customer's mood by the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['positive', 'neutral', 'negative']
+      - name: next_step
+        description: What the agent committed to at the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'follow_up_call', 'send_quote', 'escalate']
+      - name: status
+        description: The label call's error; empty on success, as AI.GENERATE reports it.
+        tests:
+          - not_null
+          - failed_call_share:
+              arguments:
+                max_share: "{{ var('call_label_prompt').max_failed_share }}"
+
+  - name: slv_call_golden_labels
+    description: >
+      One row per golden-set call and prompt version, labelled by the same prompt and path as
+      slv_call_transcript_labels, and scored in slv_call_label_agreement. Alias silver.call_golden_labels.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['transcript_id', 'prompt_version']
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null]
+      - name: prompt_version
+        description: The version of the prompt in dbt_project.yml's call_label_prompt that labelled the call.
+        tests: [not_null]
+      - name: endpoint
+        description: The model endpoint the call asked for (always named, never left to the warehouse's choice).
+      - name: model_version
+        description: The model version that answered, from the response.
+      - name: labelled_at
+        description: When the call was labelled (in the lab, when its recording was made).
+      - name: topic
+        description: What the customer called about, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['delivery', 'pricing', 'returns', 'product']
+      - name: objection
+        description: The customer's main objection, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'price', 'timing', 'competitor']
+      - name: sentiment
+        description: The customer's mood by the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['positive', 'neutral', 'negative']
+      - name: next_step
+        description: What the agent committed to at the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'follow_up_call', 'send_quote', 'escalate']
+      - name: status
+        description: The label call's error; empty on success, as AI.GENERATE reports it.
+        tests:
+          - not_null
+          - failed_call_share:
+              arguments:
+                max_share: "{{ var('call_label_prompt').max_failed_share }}"
+
+  - name: slv_call_label_agreement
+    description: >
+      One row per prompt version and signal: how the version's labels of the golden set's calls agree with their
+      true labels (accuracy, Cohen's kappa), and the current version's thresholds, which the test
+      call_labels_agree_with_golden_set holds the build to. Alias silver.call_label_agreement.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['prompt_version', 'signal']
+    columns:
+      - name: signal
+        description: topic, objection, sentiment or next_step.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['topic', 'objection', 'sentiment', 'next_step']
+      - name: calls_compared
+        description: Golden-set calls the version labelled without an error.
+      - name: accuracy
+        description: Share of those calls labelled as the golden set says.
+      - name: kappa
+        description: Cohen's kappa, agreement beyond chance; NULL when both sides use one value only.
+      - name: min_accuracy
+        description: The current version's accuracy threshold; NULL for other versions.
+      - name: min_kappa
+        description: The current version's kappa threshold; NULL for other versions.
+
+  - name: slv_call_label_shares
+    description: >
+      One row per signal, label and ISO week of the current prompt version's labelled calls: the label's share of
+      the week's calls and the band the trailing weeks expect it in (a p-chart: their pooled share plus or minus
+      three binomial standard errors), NULL until two weeks precede it. The warehouse's sql_exporter exports the
+      newest week and CallLabelShareDrift alerts on a share outside its band. Alias silver.call_label_shares.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['signal', 'label', 'week_start']
+    columns:
+      - name: signal
+        description: topic, objection, sentiment or next_step.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['topic', 'objection', 'sentiment', 'next_step']
+      - name: label
+        description: A value the model gave the signal in any week.
+        tests: [not_null]
+      - name: week_start
+        description: The Monday that starts the ISO week of the calls' day.
+        tests: [not_null]
+      - name: week_calls
+        description: Calls labelled that week.
+      - name: calls
+        description: Of those, calls given this label; 0 when none was.
+      - name: share
+        description: calls over week_calls.
+      - name: trailing_weeks
+        description: Weeks with calls before this one that the band pools, at most call_label_drift.trailing_weeks.
+      - name: expected_share
+        description: The pooled share of the label over the trailing weeks; NULL until enough weeks precede.
+      - name: lower_bound
+        description: The band's lower edge, never below 0; NULL with expected_share.
+      - name: upper_bound
+        description: The band's upper edge, never above 1; NULL with expected_share.
+
+  - name: slv_call_signals
+    description: >
+      One row per call labelled under the current prompt version: the call's day and customer and the signals the
+      model gave. Calls whose label call failed or waits are left out. Alias silver.call_signals.
+    config:
+      meta:
+        glossary:
+          - term: Model-derived label
+            description: >-
+              A value a language model read out of free text (a call's topic, objection, sentiment, next step),
+              not a value a system recorded. It comes from a versioned prompt, is scored against a golden set of
+              calls whose true labels are known, and a build fails below the agreed agreement; a metric over it
+              says so in its description. Filter on the prompt version to compare two versions.
+            synonyms: [AI label, call signal, model label, extracted signal]
+            dimensions: [call__prompt_version, call__topic, call__objection, call__sentiment, call__next_step]
+    semantic_model:
+      enabled: true
+      name: call_signals
+    agg_time_dimension: call_date
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: call
+      - name: customer_id
+        description: The customer who called.
+        entity:
+          type: foreign
+          name: customer
+      - name: call_date
+        description: UTC date of the call.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: topic
+        description: What the customer called about (delivery, pricing, returns, product), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: objection
+        description: The customer's main objection (none, price, timing, competitor), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: sentiment
+        description: The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: next_step
+        description: What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: prompt_version
+        description: The prompt version that labelled the call.
+        dimension:
+          type: categorical
+      - name: endpoint
+        description: The model endpoint the label call asked for.
+        dimension:
+          type: categorical
+      - name: model_version
+        description: The model version that answered.
+    metrics:
+      - name: calls_labelled
+        description: >-
+          Model-derived: calls labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under
+          prompt v1, on the day of the call; group by call__topic for calls by topic. The build holds the labels to
+          kappa 0.6 to 0.7 per signal on the golden set (silver.call_label_agreement).
+        label: Calls labelled
+        type: simple
+        agg: count
+        expr: transcript_id
+      - name: calls_with_objection
+        description: >-
+          Model-derived: calls in which the customer raised an objection (price, timing or a competitor), labelled by
+          gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; objection labels
+          agree with the golden set at kappa 0.6 or more.
+        label: Calls with an objection
+        type: simple
+        agg: count
+        expr: transcript_id
+        filter: "{{ Dimension('call__objection') }} <> 'none'"
+      - name: positive_calls
+        description: >-
+          Model-derived: calls the customer ended in a positive mood, labelled by gemini-3.5-flash (in the lab, recorded
+          from an OpenRouter free model) under prompt v1; sentiment labels agree with the golden set at kappa 0.5 or more.
+        label: Positive calls
+        type: simple
+        agg: count
+        expr: transcript_id
+        filter: "{{ Dimension('call__sentiment') }} = 'positive'"
+
+  # Customer actions (semantic/PLAN.md SL-15): an append-only event stream, built
+  # incrementally, the first semantic model whose metrics count over a trailing window and a funnel.
+  - name: slv_customer_actions
+    description: >
+      One row per site or CRM action, latest load wins, built incrementally: each build merges on event_id what
+      bronze landed since the last one, so an action that arrives a day late lands on its own event_date.
+      event_date is event_ts in UTC. Alias silver.customer_actions.
+    config:
+      meta:
+        glossary:
+          - term: Engaged customer
+            description: >-
+              A customer with any site or CRM action (a page view, a cart, a checkout, an email opened, a support
+              contact) in the trailing window ending on the day: 7 days for weekly, 28 for monthly. It is not an
+              active customer, which counts customers who placed a non-cancelled order.
+            synonyms: [weekly active customers, monthly active customers, WAU, MAU, engaged users]
+            metrics: [engaged_customers_7d, engaged_customers_28d]
+          - term: Site funnel
+            description: >-
+              The steps a site session walks: page view, then add to cart, then checkout. A step's rate counts the
+              sessions that took the next step on the same day as the step before or the day after, on the day of
+              the step before.
+            synonyms: [conversion funnel, checkout funnel, cart conversion]
+            metrics: [site_sessions, cart_sessions, checkout_sessions, view_to_cart_rate, cart_to_checkout_rate]
+    semantic_model:
+      enabled: true
+      name: customer_actions
+    agg_time_dimension: event_date
+    tests:
+      # The funnel's step metrics count sessions; a session takes each step at most once.
+      - unique_combination:
+          arguments:
+            columns: ['session_id', 'action_type']
+          config:
+            where: "session_id is not null"
+    columns:
+      - name: event_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: customer_action
+      - name: customer_id
+        description: The customer who acted; must exist in slv_customers.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_customers')
+                field: customer_id
+        entity:
+          type: foreign
+          name: customer
+      - name: session_id
+        description: The site session the action belongs to; NULL for CRM actions.
+        entity:
+          type: foreign
+          name: session
+      - name: action_type
+        description: page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['page_view', 'add_to_cart', 'checkout', 'email_open', 'support_contact']
+        dimension:
+          type: categorical
+      - name: channel
+        description: Where the action happened, site or crm.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['site', 'crm']
+        dimension:
+          type: categorical
+      - name: event_date
+        description: UTC date the action happened, which a late action keeps.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: received_ts
+        description: When the source received the action; up to a day after event_ts.
+    metrics:
+      - name: customer_actions
+        description: Site and CRM actions, on the day they happened; group by customer_action__action_type for actions per type.
+        label: Customer actions
+        type: simple
+        agg: count
+        expr: event_id
+      - name: acting_customers
+        description: Distinct customers with any site or CRM action in the period asked.
+        label: Acting customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+      - name: site_sessions
+        description: Site sessions with a page view, on the day of the page view.
+        label: Site sessions
+        type: simple
+        agg: count_distinct
+        expr: session_id
+        filter: "{{ Dimension('customer_action__action_type') }} = 'page_view'"
+      - name: cart_sessions
+        description: Site sessions with an add to cart, on the day of the add to cart.
+        label: Cart sessions
+        type: simple
+        agg: count_distinct
+        expr: "case when action_type = 'add_to_cart' then session_id end"
+      - name: checkout_sessions
+        description: Site sessions with a checkout, on the day of the checkout.
+        label: Checkout sessions
+        type: simple
+        agg: count_distinct
+        expr: "case when action_type = 'checkout' then session_id end"
+
+  # Partner outreach (semantic/PLAN.md SL-16): partners, their contacts, the messages an outreach
+  # automation sends and the replies. Contact details are personal data, marked `meta.pii`; no
+  # semantic model sits on the contacts, so no metric or dimension can name one.
+  - name: slv_partners
+    description: One row per partner the business refers work with, latest load wins. Alias silver.partners.
+    semantic_model:
+      enabled: true
+      name: partners
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_partners
+          arguments:
+            bronze: ref('brz_synthetic_partners')
+            keys: [partner_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: partner_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: partner
+      - name: name
+        description: The partner's name.
+      - name: partner_type
+        description: clinic, agency or reseller.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['clinic', 'agency', 'reseller']
+        dimension:
+          type: categorical
+      - name: country
+        description: ISO-2 country of the partner.
+        dimension:
+          type: categorical
+
+  - name: slv_partner_contacts
+    description: >
+      One row per partner contact in its newest state: the latest updated_ts wins, then the latest load, so a
+      backfilled older snapshot never undoes an opt-out. reachable is consent given and no opt-out. Name, email and
+      phone are personal data (meta.pii); only the outreach automation's activation list may carry them on.
+      Alias silver.partner_contacts.
+    columns:
+      - name: contact_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: partner_id
+        description: The partner the contact works at; must exist in slv_partners.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_partners')
+                field: partner_id
+      - name: contact_name
+        description: The contact's full name.
+        config:
+          meta: {pii: true}
+      - name: email
+        description: The contact's email address.
+        config:
+          meta: {pii: true}
+      - name: phone
+        description: The contact's phone number.
+        config:
+          meta: {pii: true}
+      - name: preferred_channel
+        description: email, phone or sms; how the automation reaches the contact.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['email', 'phone', 'sms']
+      - name: consent
+        description: Whether the contact agreed to be contacted.
+        tests: [not_null]
+      - name: opted_out_ts
+        description: When the contact opted out; NULL while they have not.
+      - name: reachable
+        description: Consent given and no opt-out; the automation may contact only these.
+        tests: [not_null]
+      - name: updated_ts
+        description: When the source last changed the contact's consent or opt-out.
+        tests: [not_null]
+
+  - name: slv_outreach_messages
+    description: >
+      One row per outreach message, latest load wins, with its contact's partner and its first reply's time, which
+      a later run fills in when the reply arrives. sent_date is sent_ts in UTC. Alias silver.outreach_messages.
+    semantic_model:
+      enabled: true
+      name: outreach_messages
+    agg_time_dimension: sent_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_outreach_messages
+          arguments:
+            bronze: ref('brz_synthetic_outreach_messages')
+            keys: [message_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: message_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: outreach_message
+      - name: contact_id
+        description: The contact the message went to; must exist in slv_partner_contacts.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_partner_contacts')
+                field: contact_id
+      - name: partner_id
+        description: The partner of the message's contact.
+        tests: [not_null]
+        entity:
+          type: foreign
+          name: partner
+      - name: channel
+        description: email, phone or sms.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['email', 'phone', 'sms']
+        dimension:
+          type: categorical
+      - name: sent_ts
+        description: When the message was sent.
+        tests: [not_null]
+      - name: sent_date
+        description: UTC date the message was sent.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: first_replied_ts
+        description: When the message's first reply arrived; NULL while it has none.
+    metrics:
+      - name: messages_sent
+        description: Outreach messages sent to partner contacts, on the day they were sent.
+        label: Messages sent
+        type: simple
+        agg: count
+        expr: message_id
+      - name: messages_replied
+        description: Outreach messages that got a reply, on the day the message was sent; grows as late replies arrive.
+        label: Messages replied
+        type: simple
+        agg: count
+        expr: first_replied_ts
+
+  - name: slv_outreach_replies
+    description: >
+      One row per reply to an outreach message, latest load wins, with its message's partner. A reply whose message
+      is not loaded (sent before the first loaded interval) keeps a NULL partner_id, and its message tests warn
+      rather than fail. replied_date is replied_ts in UTC. Alias silver.outreach_replies.
+    config:
+      meta:
+        glossary:
+          - term: Engaged partner
+            description: >-
+              A partner at least one of whose contacts replied to an outreach message in the period asked. A reply
+              to a message sent before the first loaded day counts as a reply but names no partner.
+            synonyms: [responsive partners, partners who replied, active partners]
+            metrics: [partners_engaged]
+    semantic_model:
+      enabled: true
+      name: outreach_replies
+    agg_time_dimension: replied_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_outreach_replies
+          arguments:
+            bronze: ref('brz_synthetic_outreach_replies')
+            keys: [reply_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: reply_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: outreach_reply
+      - name: message_id
+        description: The message replied to; warns when it is not loaded yet.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_outreach_messages')
+                field: message_id
+              config:
+                severity: warn
+        entity:
+          type: foreign
+          name: outreach_message
+      - name: partner_id
+        description: The partner of the replying contact; NULL when the message is not loaded.
+        entity:
+          type: foreign
+          name: partner
+      - name: replied_ts
+        description: When the reply arrived.
+        tests: [not_null]
+      - name: replied_date
+        description: UTC date the reply arrived.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+    metrics:
+      - name: replies
+        description: Replies to outreach messages, on the day they arrived.
+        label: Replies
+        type: simple
+        agg: count
+        expr: reply_id
+      - name: partners_engaged
+        description: Distinct partners with at least one reply from their contacts in the period asked.
+        label: Partners engaged
+        type: simple
+        agg: count_distinct
+        expr: partner_id
+
+  # Recruitment (semantic/PLAN.md SL-17): candidates in their newest stage, the stage history the snapshot
+  # snp_candidate_stages keeps, and one row per candidate per day, the grain stage counts are asked at.
+  - name: slv_applications
+    description: >
+      One row per candidate in their newest hiring stage: the latest stage_ts wins, then the latest load, so a
+      backfilled older extract never moves a candidate back. hired_date and days_to_hire are set once the candidate
+      is hired. Alias silver.applications.
+    config:
+      meta:
+        glossary:
+          - term: Hiring stage
+            description: >-
+              Where a candidate is in hiring: applied, screen, interview, offer, then hired, or rejected at any stage
+              before hired. A candidate's stage on a day is the one they were in at the end of that day, from the
+              stage history the warehouse snapshots after every load, so two changes between loads keep the later.
+            synonyms: [pipeline stage, recruitment stage, candidate status, funnel stage]
+            metrics: [candidates_in_stage]
+    semantic_model:
+      enabled: true
+      name: applications
+    agg_time_dimension: applied_date
+    columns:
+      - name: candidate_id
+        description: Natural key; one application per candidate.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: candidate
+      - name: role
+        description: engineering, sales or support; the job family applied for.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['engineering', 'sales', 'support']
+        dimension:
+          type: categorical
+      - name: channel
+        description: How the candidate applied - referral, job_board or agency.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['referral', 'job_board', 'agency']
+        dimension:
+          type: categorical
+      - name: applied_ts
+        description: When the candidate applied.
+        tests: [not_null]
+      - name: applied_date
+        description: UTC date the candidate applied.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: current_stage
+        description: The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['applied', 'screen', 'interview', 'offer', 'hired', 'rejected']
+        dimension:
+          type: categorical
+      - name: stage_ts
+        description: When the candidate entered the current stage.
+        tests: [not_null]
+      - name: hired_date
+        description: UTC date the candidate was hired; NULL until then.
+        dimension:
+          type: time
+        granularity: day
+      - name: days_to_hire
+        description: Days from applying to being hired, to 4 places; NULL until hired.
+    metrics:
+      - name: applications
+        description: Candidates who applied, on the day they applied (one application per candidate).
+        label: Applications
+        type: simple
+        agg: count
+        expr: candidate_id
+      - name: hires
+        description: Candidates hired, on the day they were hired.
+        label: Hires
+        type: simple
+        agg: count
+        expr: candidate_id
+        agg_time_dimension: hired_date
+        filter: "{{ Dimension('candidate__current_stage') }} = 'hired'"
+      - name: time_to_hire_days
+        description: >-
+          Average days from applying to being hired over the candidates hired in the period asked, on the day they were
+          hired; the one definition of time to hire and days to hire.
+        label: Time to hire (days)
+        type: simple
+        agg: average
+        expr: days_to_hire
+        agg_time_dimension: hired_date
+        filter: "{{ Dimension('candidate__current_stage') }} = 'hired'"
+
+  - name: slv_candidate_stages
+    description: >
+      Stage history of every candidate from the snapshot snp_candidate_stages, one row per stage seen: valid from
+      valid_from to valid_to (NULL while current), with their UTC dates. A candidate is in the stage they were in at
+      the end of a day, so a stage entered and left on the same day never counts. Its resolution is the
+      recruitment_elt schedule's. Alias silver.candidate_stages.
+    semantic_model:
+      enabled: true
+      name: candidate_stages
+    primary_entity: candidate_stage
+    columns:
+      - name: candidate_id
+        description: The candidate; a natural key, one row per stage they were in.
+        tests: [not_null]
+        entity:
+          type: natural
+          name: candidate
+      - name: stage
+        description: The hiring stage held from valid_from to valid_to.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['applied', 'screen', 'interview', 'offer', 'hired', 'rejected']
+        dimension:
+          type: categorical
+      - name: valid_from
+        description: When the candidate entered the stage (the source's stage_ts).
+        tests: [not_null]
+      - name: valid_to
+        description: When the candidate entered their next stage; NULL while the stage is current.
+      - name: valid_from_date
+        description: UTC date the stage began.
+        tests: [not_null]
+        dimension:
+          type: time
+          validity_params:
+            is_start: true
+        granularity: day
+      - name: valid_to_date
+        description: UTC date the stage ended; NULL while current.
+        dimension:
+          type: time
+          validity_params:
+            is_end: true
+        granularity: day
+
+  - name: slv_candidate_days
+    description: >
+      One row per candidate per UTC day from the day they applied to the last day loaded, the grain the semantic layer
+      counts candidates in a stage at. Alias silver.candidate_days.
+    semantic_model:
+      enabled: true
+      name: candidate_days
+    primary_entity: candidate_day
+    agg_time_dimension: calendar_date
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['candidate_id', 'calendar_date']
+    columns:
+      - name: candidate_id
+        description: The candidate; must exist in slv_applications.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_applications')
+                field: candidate_id
+        entity:
+          type: foreign
+          name: candidate
+      - name: calendar_date
+        description: The UTC day.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+    metrics:
+      - name: candidates_in_stage
+        description: >-
+          Candidates who had applied by the end of each day, counted per day; grouped by candidate__stage (or filtered
+          on it) it is the number in each hiring stage at the end of that day, from the stage history. Ask it per day:
+          over a longer period it counts the candidates who were in the stage on any of its days.
+        label: Candidates in stage
+        type: simple
+        agg: count_distinct
+        expr: candidate_id
+
+unit_tests:
+  # The band's arithmetic on three ISO weeks of topic labels (one sigma, to keep the numbers readable): the
+  # first two weeks have too few before them for a band; the third, all delivery, is above delivery's band
+  # and pricing's 0 below its own. 2026-10-04 is a Sunday, so it belongs to the week of 2026-09-28.
+  - name: call_label_shares_band
+    model: slv_call_label_shares
+    overrides:
+      vars:
+        call_label_drift: {trailing_weeks: 4, min_trailing_weeks: 2, sigmas: 1}
+    given:
+      - input: ref('slv_call_signals')
+        rows:
+          - {call_date: '2026-09-14', topic: delivery}
+          - {call_date: '2026-09-15', topic: delivery}
+          - {call_date: '2026-09-16', topic: pricing}
+          - {call_date: '2026-09-17', topic: pricing}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: delivery}
+          - {call_date: '2026-09-22', topic: pricing}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-09-29', topic: delivery}
+          - {call_date: '2026-10-04', topic: delivery}
+    expect:
+      rows:
+        - {signal: topic, label: delivery, week_start: '2026-09-14', week_calls: 4, calls: 2, share: '0.5000', trailing_weeks: 0, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: pricing, week_start: '2026-09-14', week_calls: 4, calls: 2, share: '0.5000', trailing_weeks: 0, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: delivery, week_start: '2026-09-21', week_calls: 4, calls: 3, share: '0.7500', trailing_weeks: 1, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: pricing, week_start: '2026-09-21', week_calls: 4, calls: 1, share: '0.2500', trailing_weeks: 1, expected_share: null, lower_bound: null, upper_bound: null}
+        - {signal: topic, label: delivery, week_start: '2026-09-28', week_calls: 4, calls: 4, share: '1.0000', trailing_weeks: 2, expected_share: '0.6250', lower_bound: '0.3829', upper_bound: '0.8671'}
+        - {signal: topic, label: pricing, week_start: '2026-09-28', week_calls: 4, calls: 0, share: '0.0000', trailing_weeks: 2, expected_share: '0.3750', lower_bound: '0.1329', upper_bound: '0.6171'}

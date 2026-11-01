@@ -29,7 +29,8 @@ def semantic_models_of(name: str, metrics: dict[str, dict]) -> set[str]:
         return {aggregation["semantic_model"]}
     conversion = params.get("conversion_type_params") or {}
     inputs = [params.get("numerator"), params.get("denominator"), *(params.get("metrics") or [])]
-    inputs += [conversion.get("base_metric"), conversion.get("conversion_metric")]
+    cumulative = params.get("cumulative_type_params") or {}
+    inputs += [conversion.get("base_metric"), conversion.get("conversion_metric"), cumulative.get("metric")]
     return set().union(*(semantic_models_of(i["name"], metrics) for i in inputs if i))
 
 

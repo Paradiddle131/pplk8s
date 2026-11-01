@@ -1,0 +1,5 @@
+## 2026-11-01 — Semantic track — conversion metrics get their metric → gold hop in dbt build
+
+- Done: `matches_metric` renders a conversion rate from dbt's graph as MetricFlow 0.15 computes it (base and conversion rows joined on the entity within the window of days, each conversion row counted once on the latest base day it joined, over the base metric per base day), so `view_to_cart_rate`, `cart_to_checkout_rate` and `lead_to_booking_rate` are checked in every build, not only by the on-demand MetricFlow comparisons. `gold.lead_conversion_daily` is the new hand-written oracle for the lead-to-booking rate, one row per lead creation day, since a rate cannot be summed over `gold.marketing_daily`'s channels. Five new hops run in `dbt build` (40 in all).
+- Evidence: in the PR (semantic-check, the emulator check, catalog-check, `make check`, a gold window shrunk from 2 days to 1 failing `view_to_cart_rate`'s hop alone).
+- Decisions: semantic/PLAN.md SL-9 amended (the metric → gold hop renders a conversion rate too).

@@ -55,13 +55,29 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 |---|---|---|---|---|
 | `ad_clicks` | Ad clicks | simple | `ad_spend` | `dbt/models/silver/schema.yml` |
 | `ad_spend_eur` | Ad spend (EUR) | simple | `ad_spend` | `dbt/models/silver/schema.yml` |
+| `applications` | Applications | simple | `applications` | `dbt/models/silver/schema.yml` |
+| `hires` | Hires | simple | `applications` | `dbt/models/silver/schema.yml` |
+| `time_to_hire_days` | Time to hire (days) | simple | `applications` | `dbt/models/silver/schema.yml` |
 | `booking_value_eur` | Booking value (EUR) | simple | `bookings` | `dbt/models/silver/schema.yml` |
 | `bookings` | Bookings | simple | `bookings` | `dbt/models/silver/schema.yml` |
+| `calls_labelled` | Calls labelled | simple | `call_signals` | `dbt/models/silver/schema.yml` |
+| `calls_with_objection` | Calls with an objection | simple | `call_signals` | `dbt/models/silver/schema.yml` |
+| `positive_calls` | Positive calls | simple | `call_signals` | `dbt/models/silver/schema.yml` |
+| `candidates_in_stage` | Candidates in stage | simple | `candidate_days` | `dbt/models/silver/schema.yml` |
+| `acting_customers` | Acting customers | simple | `customer_actions` | `dbt/models/silver/schema.yml` |
+| `cart_sessions` | Cart sessions | simple | `customer_actions` | `dbt/models/silver/schema.yml` |
+| `checkout_sessions` | Checkout sessions | simple | `customer_actions` | `dbt/models/silver/schema.yml` |
+| `customer_actions` | Customer actions | simple | `customer_actions` | `dbt/models/silver/schema.yml` |
+| `site_sessions` | Site sessions | simple | `customer_actions` | `dbt/models/silver/schema.yml` |
 | `leads` | Leads | simple | `leads` | `dbt/models/silver/schema.yml` |
 | `customers_distinct` | Active customers | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `orders_cancelled` | Cancelled orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `orders_total` | Orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `revenue_eur` | Revenue (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
+| `messages_replied` | Messages replied | simple | `outreach_messages` | `dbt/models/silver/schema.yml` |
+| `messages_sent` | Messages sent | simple | `outreach_messages` | `dbt/models/silver/schema.yml` |
+| `partners_engaged` | Partners engaged | simple | `outreach_replies` | `dbt/models/silver/schema.yml` |
+| `replies` | Replies | simple | `outreach_replies` | `dbt/models/silver/schema.yml` |
 | `returns_count` | Returns | simple | `returns` | `dbt/models/silver/schema.yml` |
 | `returns_eur` | Returns (EUR) | simple | `returns` | `dbt/models/silver/schema.yml` |
 | `cancellation_rate` | Cancellation rate | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
@@ -69,6 +85,13 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `cost_per_lead_eur` | Cost per lead (EUR) | ratio | `ad_spend`, `leads` | `dbt/models/semantic/semantic.yml` |
 | `net_revenue_eur` | Net revenue (EUR) | derived | `orders`, `returns` | `dbt/models/semantic/semantic.yml` |
 | `lead_to_booking_rate` | Lead-to-booking rate | conversion | `bookings`, `leads` | `dbt/models/semantic/semantic.yml` |
+| `engaged_customers_28d` | Engaged customers (28 days) | cumulative | `customer_actions` | `dbt/models/semantic/semantic.yml` |
+| `engaged_customers_7d` | Engaged customers (7 days) | cumulative | `customer_actions` | `dbt/models/semantic/semantic.yml` |
+| `objection_rate` | Objection rate | ratio | `call_signals` | `dbt/models/semantic/semantic.yml` |
+| `positive_sentiment_share` | Positive-sentiment share | ratio | `call_signals` | `dbt/models/semantic/semantic.yml` |
+| `cart_to_checkout_rate` | Cart-to-checkout rate | conversion | `customer_actions` | `dbt/models/semantic/semantic.yml` |
+| `view_to_cart_rate` | View-to-cart rate | conversion | `customer_actions` | `dbt/models/semantic/semantic.yml` |
+| `reply_rate` | Reply rate | ratio | `outreach_messages` | `dbt/models/semantic/semantic.yml` |
 
 - Rules: [`agent-ready-warehouse.md` § Where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)
 - Proof: `make semantic-check` (every metric equals gold and exposed, day by day), `make bigquery-emulator-check` (the same on the emulator)

@@ -1,0 +1,65 @@
+# promtool unit tests for CallLabelShareDrift (semantic/PLAN.md SL-18), run by `make rules-test`
+# (tests/monitoring/rules-test.sh), which writes each PrometheusRule manifest's spec to
+# <manifest>.rules.yaml beside this file first.
+rule_files:
+  - airflow-rules.rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # The newest week's topic shares, each with its band from the trailing weeks. pricing stays inside its
+  # band throughout; delivery is inside until a rebuild at 30m moves its share to 0.55, above its upper edge
+  # of 0.48, and the alert fires once the 2 m `for:` has passed. returns falls to 0.02 at 30m, under its lower
+  # edge of 0.05. A rebuild at 60m (a new week whose shares sit in their bands again) clears both.
+  - interval: 1m
+    input_series:
+      - series: 'ops_call_label_share{signal="topic", label="delivery", target="warehouse"}'
+        values: '0.35x29 0.55x29 0.38x30'
+      - series: 'ops_call_label_share_lower_bound{signal="topic", label="delivery", target="warehouse"}'
+        values: '0.22x89'
+      - series: 'ops_call_label_share_upper_bound{signal="topic", label="delivery", target="warehouse"}'
+        values: '0.48x89'
+      - series: 'ops_call_label_share{signal="topic", label="returns", target="warehouse"}'
+        values: '0.15x29 0.02x29 0.12x30'
+      - series: 'ops_call_label_share_lower_bound{signal="topic", label="returns", target="warehouse"}'
+        values: '0.05x89'
+      - series: 'ops_call_label_share_upper_bound{signal="topic", label="returns", target="warehouse"}'
+        values: '0.25x89'
+      - series: 'ops_call_label_share{signal="topic", label="pricing", target="warehouse"}'
+        values: '0.30x89'
+      - series: 'ops_call_label_share_lower_bound{signal="topic", label="pricing", target="warehouse"}'
+        values: '0.18x89'
+      - series: 'ops_call_label_share_upper_bound{signal="topic", label="pricing", target="warehouse"}'
+        values: '0.42x89'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CallLabelShareDrift
+        exp_alerts: []
+      - eval_time: 31m
+        alertname: CallLabelShareDrift
+        exp_alerts: [] # pending, not firing
+      - eval_time: 33m
+        alertname: CallLabelShareDrift
+        exp_alerts:
+          - exp_labels: {signal: topic, label: delivery, target: warehouse, severity: warning}
+            exp_annotations:
+              summary: "delivery is 55% of this week's topic labels, outside the band the trailing weeks expect."
+              runbook: docs/runbook.md#14-call-labels-drift
+          - exp_labels: {signal: topic, label: returns, target: warehouse, severity: warning}
+            exp_annotations:
+              summary: "returns is 2% of this week's topic labels, outside the band the trailing weeks expect."
+              runbook: docs/runbook.md#14-call-labels-drift
+      - eval_time: 62m
+        alertname: CallLabelShareDrift
+        exp_alerts: []
+
+  # A label with no band yet (fewer trailing weeks than call_label_drift.min_trailing_weeks) is not exported,
+  # so whatever its share, nothing fires.
+  - interval: 1m
+    input_series:
+      - series: 'ops_call_label_share{signal="sentiment", label="negative", target="warehouse"}'
+        values: '0.90x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CallLabelShareDrift
+        exp_alerts: []

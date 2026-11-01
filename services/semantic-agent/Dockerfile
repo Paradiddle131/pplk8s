@@ -31,6 +31,7 @@ COPY --from=dbt dbt_project.yml profiles.yml selectors.yml /app/dbt/
 COPY --from=dbt models /app/dbt/models
 COPY --from=dbt macros /app/dbt/macros
 COPY --from=dbt seeds /app/dbt/seeds
+COPY --from=dbt snapshots /app/dbt/snapshots
 COPY --from=dbt tests /app/dbt/tests
 COPY --from=dbt scripts/build_catalog.py /app/dbt/scripts/build_catalog.py
 ENV PATH=/app/.venv/bin:$PATH \

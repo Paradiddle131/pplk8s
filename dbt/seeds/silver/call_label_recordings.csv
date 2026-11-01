@@ -1,0 +1,15 @@
+transcript_hash,prompt_version,endpoint,model_version,topic,objection,sentiment,next_step,status,recorded_at
+110f3cebfe1bcace09aa84a771c84e91,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,delivery,none,negative,follow_up_call,,2026-11-01 06:57:21+00:00
+27089614eade74a15207007a9d894b84,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,returns,timing,neutral,follow_up_call,,2026-11-01 06:57:27+00:00
+3fff01e8ea94a847625af4dfe4653b16,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,product,none,positive,send_quote,,2026-11-01 06:57:32+00:00
+487e9d5cc6598249c6fdb94b5c49361f,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,pricing,price,neutral,none,,2026-11-01 06:57:41+00:00
+58e392b7f659e795f9af3c8bdfeaf665,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,delivery,none,neutral,send_quote,,2026-11-01 06:57:47+00:00
+59043604fabad4552ab64e3141fdbdf0,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,returns,timing,negative,send_quote,,2026-11-01 06:58:53+00:00
+6db3e34ce7552fb9cc1ce110c67f10c0,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,product,none,neutral,follow_up_call,,2026-11-01 06:58:59+00:00
+72a682b9b2513525cc4ff88ac5c77aa6,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,delivery,timing,neutral,follow_up_call,,2026-11-01 06:59:07+00:00
+825554ce64c49155af5870837a562dfe,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,product,competitor,positive,follow_up_call,,2026-11-01 06:59:13+00:00
+a7504b65ddd0d01e3abd009f2f164dc6,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,pricing,none,neutral,send_quote,,2026-11-01 06:59:19+00:00
+c208e265a7fe906ca7eba30b6dfa6b32,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,product,competitor,positive,none,,2026-11-01 06:59:25+00:00
+c6d35b649806618b32b2bf195ae16ca9,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,returns,none,negative,follow_up_call,,2026-11-01 06:59:32+00:00
+f75862bb6331914a164b18977e8d636f,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,returns,none,negative,send_quote,,2026-11-01 06:59:39+00:00
+fce170f4eef85e7b8e233102c3415648,v1,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-super-vl:free,delivery,none,negative,send_quote,,2026-11-01 06:59:50+00:00
