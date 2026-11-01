@@ -717,7 +717,7 @@ expect "repeat customers, their revenue and share by day vs SQL by hand (rows di
               from semantic_check.repeat)
   select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
 expect "the repeat share over 1 to 10 October, and 2 October's repeat revenue alone" "$(
-  tail -1 "$OUT/repeat_period.csv" | awk -F, '{ printf "%.4f", $2 }') $(tail -1 "$OUT/repeat_day.csv")" "0.8657 868.65"
+  tail -1 "$OUT/repeat_period.csv" | awk -F, '{ printf "%.4f", $2 }') $(tail -1 "$OUT/repeat_day.csv" | tr -d '\r')" "0.8657 868.65"
 echo "ok: repeat customers, their revenue and share equal SQL by hand; a query's dates do not limit who counts as a repeat customer"
 
 # Returns against the orders they return, both on the order's date: the return rate and the damaged-return share
