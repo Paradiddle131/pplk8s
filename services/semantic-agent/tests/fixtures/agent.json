@@ -3674,6 +3674,158 @@
       ]
     },
     {
+      "name": "repeat_customers",
+      "label": "Repeat customers",
+      "description": "Distinct customers with a non-cancelled order in the period who have placed two or more orders in all (repeat customers).",
+      "type": "simple",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "repeat_revenue_share",
+      "label": "Repeat-customer revenue share",
+      "description": "Share of revenue that came from repeat customers (revenue from customers with two or more orders in all over revenue, over the whole period asked).",
+      "type": "ratio",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
       "name": "replies",
       "label": "Replies",
       "description": "Replies to outreach messages, on the day they arrived.",
@@ -4206,6 +4358,82 @@
       "label": "Revenue week-over-week growth",
       "description": "Revenue's change from the week before, as a share of that week's revenue (0.10 is 10 % more); group by metric_time__week to compare whole weeks, by metric_time__day to compare a day with the same weekday a week earlier. Empty where either week has no revenue.",
       "type": "derived",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "revenue_repeat_customers_eur",
+      "label": "Revenue from repeat customers (EUR)",
+      "description": "Revenue (non-cancelled orders) from repeat customers, those who have placed two or more orders in all.",
+      "type": "simple",
       "pipelines": [
         "sales"
       ],

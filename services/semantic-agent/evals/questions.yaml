@@ -112,6 +112,12 @@ questions:
         and o.order_date >= c.signup_date and o.order_date < c.signup_date + 30))::numeric / count(*)
       from silver.customers c where c.signup_date between '2026-09-01' and '2026-09-30'
     metrics: [signup_to_first_order_rate]
+  - id: repeat_revenue_share
+    question: What share of our revenue from 1 to 10 October 2026 came from repeat customers?
+    expected_sql: >-
+      select sum(o.amount) filter (where o.customer_id in (select customer_id from silver.orders group by 1 having count(*) >= 2))
+        / sum(o.amount) from silver.orders o where o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-10'
+    metrics: [repeat_revenue_share]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'

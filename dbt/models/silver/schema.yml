@@ -176,6 +176,29 @@ models:
         agg: count_distinct
         expr: customer_id
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      # A repeat customer has two or more orders in all (cancelled ones included, as orders_total counts
+      # them); the inner metric is not limited by a query's dates (tests/e2e/semantic-check.sh pins it).
+      - name: repeat_customers
+        description: >-
+          Distinct customers with a non-cancelled order in the period who have placed two or more orders in all
+          (repeat customers).
+        label: Repeat customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter:
+          - "{{ Dimension('order__status') }} <> 'cancelled'"
+          - "{{ Metric('orders_total', group_by=['customer']) }} >= 2"
+      - name: revenue_repeat_customers_eur
+        description: >-
+          Revenue (non-cancelled orders) from repeat customers, those who have placed two or more orders in all.
+        label: Revenue from repeat customers (EUR)
+        type: simple
+        agg: sum
+        expr: amount
+        filter:
+          - "{{ Dimension('order__status') }} <> 'cancelled'"
+          - "{{ Metric('orders_total', group_by=['customer']) }} >= 2"
 
   - name: slv_hourly_weather
     description: One row per (location, observed_at), latest load wins. Alias silver.hourly_weather.

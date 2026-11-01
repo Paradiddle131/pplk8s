@@ -9,7 +9,8 @@
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
 #     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
 #     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
-#     equal SQL written by hand over two months of signups,
+#     equal SQL written by hand over two months of signups, and the repeat-customer metrics (a Metric() filter)
+#     equal SQL by hand, a query's dates leaving the inner order count unlimited,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -76,10 +77,10 @@ echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 48 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 48 metrics and 7 saved queries"
-grep -q "check_brief: 48 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 48 metrics of docs/target-architecture.md"
+grep -q "15 semantic models, 51 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 15 semantic models, 51 metrics and 7 saved queries"
+grep -q "check_brief: 51 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 51 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -676,5 +677,33 @@ expect "customers to date and the signup-to-first-order rate by month vs SQL by 
 expect "customers to date at the end of September, and September's signup-to-first-order rate" "$(psql_dev -c "
   select customers_to_date || ' ' || round(signup_to_first_order_rate, 4) from semantic_check.customers where month = '2026-09-01'")" "30 0.3333"
 echo "ok: signups, customers to date and the signup-to-first-order rate equal SQL by hand; 3 of September's 9 signups ordered within 30 days"
+
+# Repeat customers (two or more orders in all, a Metric() filter in the YAML): by day over 1 to 10 October and
+# as one period, against SQL by hand. A query's dates do not limit the inner metric: on 2 October alone, a
+# customer with one order that day and others before still counts, so the day's repeat revenue is 868.65, not
+# the 467.90 a date-limited count of orders would give.
+mf_ query --metrics repeat_customers,revenue_repeat_customers_eur,repeat_revenue_share --group-by metric_time__day \
+  --start-time 2026-10-01 --end-time 2026-10-10 --csv "$OUT/repeat.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the repeat-customer metrics"; }
+mf_ query --metrics revenue_repeat_customers_eur,repeat_revenue_share --start-time 2026-10-01 --end-time 2026-10-10 \
+  --csv "$OUT/repeat_period.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of the repeat share"; }
+mf_ query --metrics revenue_repeat_customers_eur --start-time 2026-10-02 --end-time 2026-10-02 \
+  --csv "$OUT/repeat_day.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of one day's repeat revenue"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.repeat" \
+  -c "create table semantic_check.repeat (day date, repeat_customers bigint, revenue_repeat_customers_eur numeric, repeat_revenue_share numeric)"
+psql_dev -c "\\copy semantic_check.repeat from stdin with (format csv, header true)" <"$OUT/repeat.csv"
+expect "repeat customers, their revenue and share by day vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with repeaters as (select customer_id from silver.orders group by 1 having count(*) >= 2),
+       hand as (select o.order_date, count(distinct o.customer_id) filter (where r.customer_id is not null),
+                       sum(o.amount) filter (where r.customer_id is not null),
+                       round(coalesce(sum(o.amount) filter (where r.customer_id is not null), 0) / sum(o.amount), 6)
+                from silver.orders o left join repeaters r on r.customer_id = o.customer_id
+                where o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-10' group by 1),
+       mf as (select day, coalesce(repeat_customers, 0), revenue_repeat_customers_eur, round(coalesce(repeat_revenue_share, 0), 6)
+              from semantic_check.repeat)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "the repeat share over 1 to 10 October, and 2 October's repeat revenue alone" "$(
+  tail -1 "$OUT/repeat_period.csv" | awk -F, '{ printf "%.4f", $2 }') $(tail -1 "$OUT/repeat_day.csv")" "0.8657 868.65"
+echo "ok: repeat customers, their revenue and share equal SQL by hand; a query's dates do not limit who counts as a repeat customer"
 
 echo "PASS: semantic check"

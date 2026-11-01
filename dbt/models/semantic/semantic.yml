@@ -243,3 +243,11 @@ metrics:
     base_metric: signups
     conversion_metric: orders_total
     window: 30 days
+  - name: repeat_revenue_share
+    description: >-
+      Share of revenue that came from repeat customers (revenue from customers with two or more orders in all over
+      revenue, over the whole period asked).
+    label: Repeat-customer revenue share
+    type: ratio
+    numerator: revenue_repeat_customers_eur
+    denominator: revenue_eur

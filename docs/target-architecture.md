@@ -75,6 +75,8 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `orders_cancelled` | Cancelled orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `orders_total` | Orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `revenue_eur` | Revenue (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
+| `repeat_customers` | Repeat customers | simple | `orders` | `dbt/models/silver/schema.yml` |
+| `revenue_repeat_customers_eur` | Revenue from repeat customers (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `messages_replied` | Messages replied | simple | `outreach_messages` | `dbt/models/silver/schema.yml` |
 | `messages_sent` | Messages sent | simple | `outreach_messages` | `dbt/models/silver/schema.yml` |
 | `partners_engaged` | Partners engaged | simple | `outreach_replies` | `dbt/models/silver/schema.yml` |
@@ -101,6 +103,7 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `revenue_eur_mtd` | Revenue month to date (EUR) | cumulative | `orders` | `dbt/models/semantic/semantic.yml` |
 | `customers_to_date` | Customers to date | cumulative | `customers` | `dbt/models/semantic/semantic.yml` |
 | `signup_to_first_order_rate` | Signup-to-first-order rate | conversion | `customers`, `orders` | `dbt/models/semantic/semantic.yml` |
+| `repeat_revenue_share` | Repeat-customer revenue share | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
 
 - Rules: [`agent-ready-warehouse.md` § Where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)
 - Proof: `make semantic-check` (every metric equals gold and exposed, day by day), `make bigquery-emulator-check` (the same on the emulator)
