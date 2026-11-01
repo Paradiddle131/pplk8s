@@ -7,7 +7,8 @@
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
 #     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
-#     query_metrics writes them, equals SQL written by hand, the average order value equals gold, and revenue grouped by weekday (a date part)
+#     query_metrics writes them, equals SQL written by hand, the average order value equals gold, signups by
+#     fiscal quarter (a custom grain of the time spine) equal SQL by hand, and revenue grouped by weekday (a date part)
 #     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
 #     equal SQL written by hand over two months of signups, and the repeat-customer metrics (a Metric() filter)
 #     equal SQL by hand, a query's dates leaving the inner order count unlimited, and the return rate and
@@ -177,6 +178,21 @@ expect "average order value by day vs gold.daily_sales (rows differing)" "$(psql
        mf as (select day, round(average_order_value_eur, 6) from semantic_check.aov)
   select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
 echo "ok: the average order value equals gold by day"
+
+# The fiscal calendar (a year from 1 February), custom grains on the time spine: signups by fiscal quarter over
+# the base fixture's 2024 signups against SQL by hand; the calendar quarters would count 4, 3 and 3.
+mf_ query --metrics signups --group-by metric_time__fiscal_quarter --start-time 2024-01-01 --end-time 2024-12-31 \
+  --csv "$OUT/fiscal.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query by fiscal quarter"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.fiscal" \
+  -c "create table semantic_check.fiscal (fiscal_quarter date, signups bigint)"
+psql_dev -c "\\copy semantic_check.fiscal from stdin with (format csv, header true)" <"$OUT/fiscal.csv"
+expect "signups by fiscal quarter vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with hand as (select (date_trunc('quarter', signup_date - interval '1 month') + interval '1 month')::date, count(*)
+                from silver.customers where signup_date between '2024-01-01' and '2024-12-31' group by 1),
+       mf as (select fiscal_quarter, signups from semantic_check.fiscal)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "signups per fiscal quarter of 2024" "$(psql_dev -c "select string_agg(signups::text, ' ' order by fiscal_quarter) from semantic_check.fiscal")" "1 4 3 2"
+echo "ok: signups by fiscal quarter (from 1 February) equal SQL by hand: 1, 4, 3 and 2"
 
 # Marketing (SL-8): the simple metrics by day and channel against gold.marketing_daily, the ratios
 # against exposed.channel_performance_daily (per day), then the whole fixture as one period.

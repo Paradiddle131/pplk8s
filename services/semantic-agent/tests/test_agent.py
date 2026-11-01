@@ -76,6 +76,14 @@ def test_list_metrics_and_describe_metric_say_a_metric_is_bigquery_only():
     assert "defined only on bigquery" in tools.describe_metric("median_order_value_eur")["error"]
 
 
+def test_list_metrics_gives_the_custom_time_grains_with_their_meaning():
+    grains = {
+        grain["name"]: grain["description"] for grain in tools.list_metrics()["custom_time_grains"]
+    }
+    assert set(grains) == {"fiscal_quarter", "fiscal_year"}
+    assert "1 February" in grains["fiscal_year"]
+
+
 def test_list_metrics_also_gives_the_saved_queries_with_their_questions():
     listed = {query["name"]: query for query in tools.list_metrics()["saved_queries"]}
     assert listed["orders_by_status"] == {
