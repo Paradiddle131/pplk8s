@@ -4,7 +4,7 @@
 # (used as a plain Postgres server) it
 #   - creates the agent's roles, grants and audit table with `make agent-warehouse` (the dbt macro
 #     agent_warehouse), before any model exists, so dbt's tables reach the roles by default privileges,
-#   - loads dbt/dev/fixture.sql's sources and builds the sales, returns, finance and marketing models,
+#   - loads dbt/dev/fixture.sql's sources and builds the sales, returns, finance, marketing and customer-actions models,
 #   - writes the catalog (make dbt-catalog),
 #   - runs one turn of the semantic agent through ADK's Runner, in-memory sessions, a scripted model
 #     (no model quota spent) and the real tools as agent_metrics and agent_audit,
@@ -30,7 +30,7 @@ echo "ok: make agent-warehouse created the roles' grants and ops.agent_queries i
 
 psql_db <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 (cd "$REPO/dbt" && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" \
-  uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc) \
+  uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions --exclude tag:tlc) \
   >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog"; }
 echo "ok: the fixture's models and the catalog built in $DB"

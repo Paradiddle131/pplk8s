@@ -18,9 +18,9 @@ from semantic_agent.evaluation import (
 from tests.conftest import ScriptedLlm
 
 
-def test_the_question_set_is_about_fifteen_with_some_no_metric_covers():
+def test_the_question_set_is_about_twenty_with_some_no_metric_covers():
     questions = load_questions()
-    assert 12 <= len(questions) <= 18
+    assert 15 <= len(questions) <= 25
     assert len({q.id for q in questions}) == len(questions)
     assert any(not q.metrics for q in questions)
     known = set(tools.catalog().metrics)

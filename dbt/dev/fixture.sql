@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS ds_source.synthetic_campaigns CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_ad_spend CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_leads CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_bookings CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_customer_actions CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -259,3 +260,47 @@ INSERT INTO ds_source.synthetic_bookings VALUES
     ('B-0001', 'L-0001', '2026-10-01 17:00+00', 3000.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://bookings', '2026-10-02 00:40+00'),
     ('B-0004', 'L-0004', '2026-10-02 11:00+00', 2500.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00'),
     ('B-0007', 'L-0007', '2026-10-02 18:30+00', 4000.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00');
+
+-- Customer actions (an append-only event stream, extracted by arrival time): site sessions walk the
+-- funnel page_view -> add_to_cart -> checkout; CRM actions carry no session. E-0011, E-0012 and E-0020
+-- arrive a day late (event_ts on one day, received_ts the next), S-0005 crosses midnight, run-act-3
+-- redelivers E-0004, and E-0001 lies 11 days before the rest, inside 28 days and outside 7.
+CREATE TABLE ds_source.synthetic_customer_actions (
+    event_id text,
+    customer_id integer,
+    session_id text,
+    action_type text,
+    channel text,
+    event_ts timestamptz,
+    received_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_customer_actions VALUES
+    ('E-0001', 10, 'S-0001', 'page_view', 'site', '2026-09-20 10:00+00', '2026-09-20 10:00+00', 'run-act-1', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://customer_actions', '2026-09-21 00:30+00'),
+    ('E-0002', 1, 'S-0002', 'page_view', 'site', '2026-10-01 09:00+00', '2026-10-01 09:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0003', 1, 'S-0002', 'add_to_cart', 'site', '2026-10-01 09:04+00', '2026-10-01 09:04+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0004', 1, 'S-0002', 'checkout', 'site', '2026-10-01 09:10+00', '2026-10-01 09:10+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0005', 2, 'S-0003', 'page_view', 'site', '2026-10-01 11:00+00', '2026-10-01 11:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0006', 2, 'S-0003', 'add_to_cart', 'site', '2026-10-01 11:03+00', '2026-10-01 11:03+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0007', 3, 'S-0004', 'page_view', 'site', '2026-10-01 14:00+00', '2026-10-01 14:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0008', 4, NULL, 'email_open', 'crm', '2026-10-01 08:00+00', '2026-10-01 08:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0009', 5, 'S-0005', 'page_view', 'site', '2026-10-01 23:50+00', '2026-10-01 23:50+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0010', 5, 'S-0005', 'add_to_cart', 'site', '2026-10-02 00:05+00', '2026-10-02 00:05+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0011', 6, 'S-0006', 'page_view', 'site', '2026-10-01 22:00+00', '2026-10-02 06:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0012', 6, 'S-0006', 'add_to_cart', 'site', '2026-10-01 22:05+00', '2026-10-02 06:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0013', 2, 'S-0007', 'page_view', 'site', '2026-10-02 10:00+00', '2026-10-02 10:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0014', 7, NULL, 'support_contact', 'crm', '2026-10-02 12:00+00', '2026-10-02 12:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0015', 1, NULL, 'email_open', 'crm', '2026-10-02 08:00+00', '2026-10-02 08:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0004', 1, 'S-0002', 'checkout', 'site', '2026-10-01 09:10+00', '2026-10-01 09:10+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0016', 8, 'S-0008', 'page_view', 'site', '2026-10-03 09:00+00', '2026-10-03 09:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0017', 8, 'S-0008', 'add_to_cart', 'site', '2026-10-03 09:02+00', '2026-10-03 09:02+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0018', 8, 'S-0008', 'checkout', 'site', '2026-10-03 09:06+00', '2026-10-03 09:06+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0019', 2, 'S-0009', 'page_view', 'site', '2026-10-03 15:00+00', '2026-10-03 15:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0020', 9, NULL, 'email_open', 'crm', '2026-10-02 19:00+00', '2026-10-03 05:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0021', 3, 'S-0010', 'page_view', 'site', '2026-10-03 18:00+00', '2026-10-03 18:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00');

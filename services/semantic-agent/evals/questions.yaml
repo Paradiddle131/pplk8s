@@ -1,6 +1,7 @@
 # The eval set (semantic/PLAN.md SL-5): business questions over dbt/dev/fixture.sql (orders on
-# 2026-10-01 and 2026-10-02, three partner returns, Amsterdam and Istanbul weather, and three ad
-# campaigns' spend, leads and bookings on the same days).
+# 2026-10-01 and 2026-10-02, three partner returns, Amsterdam and Istanbul weather, three ad
+# campaigns' spend, leads and bookings on the same days, and site and CRM actions from 2026-09-20 to
+# 2026-10-03).
 # expected_sql runs on the warehouse as its owner when the eval starts, so the expected numbers are
 # always the warehouse's own; it may read any layer, the agents may not. A question's answer is right
 # when it carries one of the expected numbers (a rate also as a percentage).
@@ -80,3 +81,21 @@ questions:
     question: What share of our leads from 1 and 2 October 2026 went on to book?
     expected_sql: select count(distinct b.lead_id)::numeric / (select count(*) from silver.leads) from silver.bookings b
     metrics: [lead_to_booking_rate]
+  # Customer actions (semantic/PLAN.md SL-15): actions per type, engaged customers over a trailing window,
+  # and the site funnel; "monthly active" is the glossary's engaged customer, not customers_distinct.
+  - id: page_views_one_day
+    question: How many page views did customers make on our site on 1 October 2026?
+    expected_sql: select actions from gold.customer_actions_daily where activity_date = '2026-10-01' and action_type = 'page_view'
+    metrics: [customer_actions]
+  - id: engaged_customers_week
+    question: How many customers did anything on our site or in the CRM in the week up to 3 October 2026?
+    expected_sql: select engaged_customers_7d from gold.customer_engagement_daily where activity_date = '2026-10-03'
+    metrics: [engaged_customers_7d]
+  - id: monthly_active_customers
+    question: How many monthly active customers did we have on 3 October 2026?
+    expected_sql: select engaged_customers_28d from gold.customer_engagement_daily where activity_date = '2026-10-03'
+    metrics: [engaged_customers_28d]
+  - id: view_to_cart_rate
+    question: What share of the site sessions that viewed a page on 1 October 2026 added something to the cart?
+    expected_sql: select view_to_cart_rate from gold.customer_engagement_daily where activity_date = '2026-10-01'
+    metrics: [view_to_cart_rate]

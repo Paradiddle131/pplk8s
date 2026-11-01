@@ -32,7 +32,7 @@ def test_hello_structure(bag):
     assert list(hello.task_ids) == ["say_hello"]
 
 
-@pytest.fixture(scope="module", params=["sales", "marketing"])
+@pytest.fixture(scope="module", params=["sales", "marketing", "customer_actions"])
 def elt(request, bag):
     """The ELT DAGs the shared builder makes (PLAN.md D38): (pipeline, DAG)."""
     return request.param, bag.dags[f"{request.param}_elt"]
@@ -259,7 +259,15 @@ def test_elt_dbt_stages_select_only_their_pipelines_models(elt):
 
 
 @pytest.mark.parametrize(
-    "dag_id", ["sales_elt", "marketing_elt", "returns_file_arrival", "finance_daily", "tlc_monthly"]
+    "dag_id",
+    [
+        "sales_elt",
+        "marketing_elt",
+        "customer_actions_elt",
+        "returns_file_arrival",
+        "finance_daily",
+        "tlc_monthly",
+    ],
 )
 def test_every_business_task_survives_a_lost_worker(bag, dag_id):
     """KEDA scale-in, a drain, or an OOM can kill a running task; Celery's warm shutdown only waits

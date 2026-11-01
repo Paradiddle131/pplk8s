@@ -54,6 +54,13 @@ sources:
         columns:
           - name: booking_id
             tests: [not_null]
+      - name: synthetic_customer_actions
+        description: >
+          Site and CRM actions received in the run's interval (synthetic): append-only, extracted by received_ts,
+          so an event can arrive a day after its event_ts.
+        columns:
+          - name: event_id
+            tests: [not_null]
       - name: partner_returns
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).
