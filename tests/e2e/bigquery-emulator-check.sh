@@ -52,6 +52,32 @@ run_ --with 'psycopg[binary]==3.3.6' python -I scripts/fixture_to_bigquery.py \
   fail "copying the fixture into the emulator"
 echo "ok: fixture sources copied into the emulator"
 
+# Recruitment (SL-17): a snapshot sees only what each run sees, so the build below gets the first extract alone
+# and the others land one at a time after it. The emulator panics on CREATE TABLE AS SELECT and on dropping the
+# snapshot table, so the extracts wait in a file and go back in through the streaming insert the fixture copy uses.
+load_run_() {
+  run_ python -I - "$ENDPOINT" "$OUT/applications.json" "$1" <<'EOF' || fail "loading $1 into the emulator"
+import json
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+table = "pplk8s-lab.ds_source.synthetic_applications"
+if sys.argv[3] == "run-rec-1":
+    rows = [{k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in row.items()}
+            for row in client.query(f"select * from `{table}`").result()]
+    assert len(rows) == 28, len(rows)
+    json.dump(rows, open(sys.argv[2], "w"))
+    client.query(f"delete from `{table}` where true").result()
+rows = [row for row in json.load(open(sys.argv[2])) if row["_run_id"] == sys.argv[3]]
+assert rows and not client.insert_rows_json(table, rows)
+EOF
+}
+load_run_ run-rec-1
+
 run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
@@ -199,8 +225,9 @@ print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and expos
 sys.exit(1 if bad else 0)
 EOF
 
-# Recruitment (SL-17): replay the extracts one at a time with a build after each, as on Postgres, so the
-# snapshot's MERGE runs on the emulator; then the stage history, and the metrics against their gold oracles.
+# Recruitment (SL-17): the build above snapshotted the first extract; land the others one at a time with a build
+# after each, as recruitment_elt runs, so the snapshot's MERGE runs on the emulator; then the stage history, and the
+# metrics against their gold oracles.
 bq_() {
   run_ python -I - "$ENDPOINT" "$@" <<'EOF'
 import sys
@@ -215,12 +242,8 @@ for sql in sys.argv[2:]:
         print(" ".join("" if v is None else str(v) for v in row))
 EOF
 }
-bq_ "create table ds_source.applications_replay as select * from ds_source.synthetic_applications" \
-  "delete from ds_source.synthetic_applications where true" "drop table silver.candidate_stage_snapshots" >/dev/null ||
-  fail "setting up the recruitment replay on the emulator"
-for run in run-rec-1 run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
-  bq_ "insert into ds_source.synthetic_applications select * from ds_source.applications_replay where _run_id = '$run'" >/dev/null ||
-    fail "loading $run into the emulator"
+for run in run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
+  load_run_ "$run"
   run_ dbt build --select tag:recruitment >"$OUT/recruitment-$run.log" 2>&1 ||
     { grep -E "ERROR|Error" "$OUT/recruitment-$run.log" | tail -20 >&2; fail "dbt build tag:recruitment after $run on the emulator"; }
 done
