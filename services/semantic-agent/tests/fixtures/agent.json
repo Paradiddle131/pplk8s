@@ -710,14 +710,16 @@
     },
     {
       "term": "Customer country",
-      "description": "The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so revenue or orders by country group by it.",
+      "description": "The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so revenue, net revenue, returns or orders by country group by it.",
       "synonyms": [
         "country"
       ],
       "metrics": [
         "orders_total",
         "revenue_eur",
-        "customers_distinct"
+        "customers_distinct",
+        "returns_eur",
+        "net_revenue_eur"
       ],
       "dimensions": [
         "customer__country"
@@ -2761,6 +2763,24 @@
       ],
       "dimensions": [
         {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
@@ -3353,6 +3373,24 @@
       ],
       "dimensions": [
         {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
@@ -3428,6 +3466,24 @@
         "returns"
       ],
       "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
         {
           "name": "metric_time",
           "type": "time",
