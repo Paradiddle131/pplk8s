@@ -31,6 +31,10 @@ WATERMARK_COLUMNS = {
     # move the watermark past the interval.
     "synthetic_leads": "created_ts",
     "synthetic_bookings": "booked_ts",
+    # Customer actions are extracted by arrival (semantic/PLAN.md SL-15): the newest received action
+    # is how far the stream has been read. Event time is not complete up to it, since an action can
+    # arrive a day after it happened; silver's incremental merge places the late ones.
+    "synthetic_customer_actions": "received_ts",
 }
 
 UPSERT_SQL = """

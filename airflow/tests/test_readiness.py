@@ -67,6 +67,19 @@ def test_marketing_extraction_has_a_watermark(mocker):
     assert "max(booked_ts)" in get_first.call_args_list[3].args[0]
 
 
+def test_customer_actions_watermark_is_the_newest_received_action(mocker):
+    received = datetime(2026, 10, 1, 23, 58, tzinfo=UTC)
+    get_first = mocker.patch.object(PostgresHook, "get_first", side_effect=[(64, received)])
+    result = readiness.check_extraction(
+        [{"source": "synthetic", "entity": "customer_actions", "pages": 1, "rows": 64}],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == received.isoformat()
+    assert "max(received_ts)" in get_first.call_args.args[0]
+
+
 def test_check_extraction_matches_rows_and_returns_watermark(mocker):
     latest = datetime(2026, 10, 8, 23, 59, tzinfo=UTC)
     get_first = mocker.patch.object(

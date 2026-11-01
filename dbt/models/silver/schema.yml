@@ -539,7 +539,7 @@ models:
         agg: sum
         expr: amount
 
-  # Customer actions (Map #199's event stream, semantic/PLAN.md SL-15): an append-only stream, built
+  # Customer actions (semantic/PLAN.md SL-15): an append-only event stream, built
   # incrementally, the first semantic model whose metrics count over a trailing window and a funnel.
   - name: slv_customer_actions
     description: >

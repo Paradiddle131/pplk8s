@@ -10,6 +10,9 @@ pipelines:
     - {source: synthetic, entity: ad_spend}
     - {source: synthetic, entity: leads}
     - {source: synthetic, entity: bookings}
+  # Synthetic customer actions (semantic/PLAN.md SL-15): an append-only stream, extracted by arrival.
+  customer_actions:
+    - {source: synthetic, entity: customer_actions}
   weather:
     - {source: open_meteo, entity: hourly_weather}
   # NYC TLC trip files, one data month per run (D35); FHVHV is kept for the big-file drill only.

@@ -8,7 +8,7 @@ import yaml
 
 from el_factory.config import ConfigError
 from el_factory.errors import NotFound
-from el_factory.sources import marketing, open_meteo, synthetic, tlc
+from el_factory.sources import customer_actions, marketing, open_meteo, synthetic, tlc
 from el_factory.sources.base import Entity
 
 
@@ -42,6 +42,7 @@ def build_registry(page_size: int, open_meteo_url: str, tlc_base_url: str) -> Re
         [
             *synthetic.entities(page_size),
             *marketing.entities(page_size),
+            *customer_actions.entities(page_size),
             *open_meteo.entities(open_meteo_url),
             *tlc.entities(tlc_base_url),
         ]
