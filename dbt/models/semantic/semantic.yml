@@ -154,3 +154,71 @@ metrics:
       filter: "{{ Dimension('customer_action__action_type') }} = 'add_to_cart'"
     conversion_metric: checkout_sessions
     window: 2 days
+  # Period over period and to date, over dbt/dev/fixture_weeks.sql. A week-over-week growth compares
+  # the metric with itself one week earlier (offset_window), so it means a week's change when grouped by
+  # metric_time__week; a month-to-date total runs from the first of the month (grain_to_date) and, grouped by a
+  # coarser grain, takes the period's last day (period_agg: last), so by month it is the month's total.
+  - name: revenue_eur_wow_growth
+    description: >-
+      Revenue's change from the week before, as a share of that week's revenue (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks, by metric_time__day to compare a day with the same weekday a week
+      earlier. Empty where either week has no revenue.
+    label: Revenue week-over-week growth
+    type: derived
+    expr: (revenue_eur - revenue_eur_prior_week) / nullif(revenue_eur_prior_week, 0)
+    input_metrics:
+      - name: revenue_eur
+      - name: revenue_eur
+        offset_window: 1 week
+        alias: revenue_eur_prior_week
+  - name: bookings_wow_growth
+    description: >-
+      Bookings' change from the week before, as a share of that week's bookings (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks. Empty where either week has no bookings.
+    label: Bookings week-over-week growth
+    type: derived
+    expr: (bookings - bookings_prior_week) * 1.0 / nullif(bookings_prior_week, 0)
+    input_metrics:
+      - name: bookings
+      - name: bookings
+        offset_window: 1 week
+        alias: bookings_prior_week
+  - name: leads_wow_growth
+    description: >-
+      Leads' change from the week before, as a share of that week's leads (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks. Empty where either week has no leads.
+    label: Leads week-over-week growth
+    type: derived
+    expr: (leads - leads_prior_week) * 1.0 / nullif(leads_prior_week, 0)
+    input_metrics:
+      - name: leads
+      - name: leads
+        offset_window: 1 week
+        alias: leads_prior_week
+  - name: revenue_eur_mtd
+    description: >-
+      Revenue from the first of the month up to and including each day (month to date); group by metric_time__day
+      and read the day asked. Grouped by week or month it is the total up to that period's last day.
+    label: Revenue month to date (EUR)
+    type: cumulative
+    input_metric: revenue_eur
+    grain_to_date: month
+    period_agg: last
+  - name: bookings_mtd
+    description: >-
+      Bookings from the first of the month up to and including each day (month to date); group by metric_time__day
+      and read the day asked. Grouped by week or month it is the count up to that period's last day.
+    label: Bookings month to date
+    type: cumulative
+    input_metric: bookings
+    grain_to_date: month
+    period_agg: last
+  - name: leads_mtd
+    description: >-
+      Leads from the first of the month up to and including each day (month to date); group by metric_time__day and
+      read the day asked. Grouped by week or month it is the count up to that period's last day.
+    label: Leads month to date
+    type: cumulative
+    input_metric: leads
+    grain_to_date: month
+    period_agg: last

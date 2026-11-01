@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The agents' fixture (semantic/PLAN.md SL-5): builds the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and call-transcripts models on
-# dbt/dev/fixture.sql in the Compose warehouse's dbt_dev database, writes the catalog (make dbt-catalog),
+# dbt/dev/fixture.sql and the six weeks before it (dbt/dev/fixture_weeks.sql) in the Compose warehouse's dbt_dev database, writes the catalog (make dbt-catalog),
 # gives the agents' read-only roles their grants there and records the fixture's days in ops.readiness.
 # Used by agent-eval.sh and agent-deploy-check.sh. Expects `make services-up`; never touches `warehouse`.
 set -euo pipefail
@@ -17,6 +17,7 @@ psql_dev() {
 mkdir -p "$OUT"
 psql_dev -c "select 1" >/dev/null 2>&1 || docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse createdb -U warehouse "$DB"
 psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
+psql_dev <"$REPO/dbt/dev/fixture_weeks.sql"
 (cd "$REPO/dbt" && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" \
   uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts --exclude tag:tlc) \
   >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }

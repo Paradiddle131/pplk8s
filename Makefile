@@ -9,9 +9,9 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.7
-DBT_IMAGE ?= localhost:5001/dbt:0.7.28
+DBT_IMAGE ?= localhost:5001/dbt:0.7.29
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.24
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.25
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -210,7 +210,7 @@ agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloa
 record-call-labels: ## Live, opt-in: record the call-label prompt's answers for the golden set's calls from an OpenRouter free model into dbt/seeds/silver/call_label_recordings.csv (CALL_LABEL_MODEL=<id>:free; one request per unrecorded call; exit 3 keeps a partial recording on a spent quota)
 	cd dbt && uv run --no-project --quiet --with pyyaml==6.0.3 python scripts/record_call_labels.py $(if $(CALL_LABEL_MODEL),--model $(CALL_LABEL_MODEL))
 
-agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 15 free-tier model turns)
+agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 34 free-tier model turns)
 	tests/e2e/agent-eval.sh
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
