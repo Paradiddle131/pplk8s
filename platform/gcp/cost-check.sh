@@ -2,7 +2,7 @@
 # `make gcp-cost-check` (#233): prove from the billing export that the lab project has cost nothing this
 # month, so a mistake surfaces the same day; run it before and after every gcp- step that changes the project.
 # Exit 0: $0.00 after credits. Exit 1: a cost, listed by service and SKU. Exit 3: unknown (no export rows
-# yet, or the query failed): treat it as "not proven" and do no live GCP work.
+# yet, bq failed, or the query failed): treat it as "not proven" and do no live GCP work.
 # The export (dataset $GCP_BILLING_DATASET, default billing_export) lags by hours: a pass proves the
 # spend up to the export's last load, which it prints. Its own query reads a few MB under a 100 MB cap.
 set -euo pipefail
@@ -10,8 +10,20 @@ set -euo pipefail
 dataset=${GCP_BILLING_DATASET:-billing_export}
 cap=104857600
 
-table=$(bq ls --format=json --max_results=100 "$GCP_PROJECT:$dataset" 2>/dev/null |
-  python3 -c 'import json,sys; print(next((t["tableReference"]["tableId"] for t in json.loads(sys.stdin.read().strip() or "[]") if t["tableReference"]["tableId"].startswith("gcp_billing_export_v1_")), ""))' || true)
+# A missing dataset is the no-export case; any other bq failure (a broken install, no credentials) is
+# reported as itself, so it is not mistaken for the export's lag (#271). bq prints its own errors
+# ("BigQuery error in ls operation: Not found: Dataset ...") on stdout and a crash's traceback on stderr.
+err=$(mktemp)
+trap 'rm -f "$err"' EXIT
+if ! listing=$(bq ls --format=json --max_results=100 "$GCP_PROJECT:$dataset" 2>"$err"); then
+  if grep -q "Not found: Dataset" <<<"$listing"; then
+    listing="[]"
+  else
+    echo "gcp-cost-check: UNKNOWN: bq failed: $(printf '%s\n%s\n' "$listing" "$(cat "$err")" | grep -v '^[[:space:]]*$' | tail -n 5 | tr '\n' ' ' | sed 's/ *$//')" >&2
+    exit 3
+  fi
+fi
+table=$(LISTING=$listing python3 -c 'import json,os; print(next((t["tableReference"]["tableId"] for t in json.loads(os.environ["LISTING"].strip() or "[]") if t["tableReference"]["tableId"].startswith("gcp_billing_export_v1_")), ""))')
 if [ -z "$table" ]; then
   echo "gcp-cost-check: UNKNOWN: no gcp_billing_export_v1_* table in $GCP_PROJECT:$dataset yet (the first rows take about a day after the export is set up)" >&2
   exit 3
