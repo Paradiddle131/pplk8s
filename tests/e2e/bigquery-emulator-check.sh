@@ -320,4 +320,6 @@ gold_recruitment=$(bq_ "select string_agg(concat(cast(recruitment_date as string
   fail "the recruitment metrics on the emulator [$mf_recruitment] != gold.recruitment_daily [$gold_recruitment]"
 echo "ok: the snapshot builds on the emulator; candidates_in_stage by stage equals gold.candidates_in_stage_daily and the recruitment metrics gold.recruitment_daily"
 
+# Left running for `make demo`, its memory freed and its tables kept.
+restart_emulator_
 echo "PASS: BigQuery emulator check"
