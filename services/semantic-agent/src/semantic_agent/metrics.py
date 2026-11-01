@@ -24,7 +24,13 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 MAX_ROWS = 200
-OPERATORS = ("=", "!=", "in", "not in")
+OPERATORS = ("=", "!=", "in", "not in", ">", ">=", "<", "<=", "between")
+# The operators each dimension type takes: a categorical value matched, a date or number compared.
+OPERATORS_BY_TYPE = {
+    "categorical": ("=", "!=", "in", "not in"),
+    "time": ("=", "!=", ">", ">=", "<", "<=", "between"),
+    "numeric": OPERATORS,
+}
 # MetricFlow renders a where filter as a Jinja template before it becomes SQL, so a value holding a
 # delimiter would be evaluated ('{{ 7*7 }}' filters on '49'), not compared as the text sent.
 JINJA_DELIMITERS = ("{{", "{%", "{#")
@@ -35,10 +41,11 @@ class QueryError(ValueError):
 
 
 class Filter(BaseModel):
-    """One condition on a categorical dimension, e.g. order__status = cancelled."""
+    """One condition on a dimension, e.g. order__status = cancelled, customer__signup_date >=
+    2024-09-01 or order__amount between 10 and 50."""
 
     dimension: str
-    operator: Literal["=", "!=", "in", "not in"] = "="
+    operator: Literal["=", "!=", "in", "not in", ">", ">=", "<", "<=", "between"] = "="
     values: list[str]
 
 
@@ -117,19 +124,50 @@ def _literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+def _iso_date(value: str, dimension: str) -> str:
+    """A date at the day grain every time dimension has, written back from its parsed form."""
+    try:
+        if len(value) != 10:
+            raise ValueError(value)
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError as e:
+        raise QueryError(
+            f"{dimension!r} is a time dimension: each value must be a date like 2024-09-01, "
+            f"got {value!r}"
+        ) from e
+
+
+def _number(value: str, dimension: str) -> decimal.Decimal:
+    """A plain decimal number (no exponent, no NaN or infinity), so its text is all digits."""
+    try:
+        number = decimal.Decimal(value.strip())
+        if not number.is_finite() or "e" in value.lower():
+            raise decimal.InvalidOperation(value)
+    except decimal.InvalidOperation as e:
+        raise QueryError(
+            f"{dimension!r} is numeric: each value must be a number like 100 or 99.50, "
+            f"got {value!r}"
+        ) from e
+    return number
+
+
 def where_clause(
     item: Filter, dimensions: dict[str, str], known: dict[str, list[str]] | None = None
 ) -> str:
     """A MetricFlow where filter built from checked parts, never from the model's text.
 
-    A value the dimension does not declare is refused with the values it does: a guessed value
-    ("damaged goods" for "damaged") would match no row and come back as a confident zero. A value
-    holding a Jinja delimiter is refused too: MetricFlow would render it, and filter on the result.
+    A categorical value the dimension does not declare is refused with the values it does: a
+    guessed value ("damaged goods" for "damaged") would match no row and come back as a confident
+    zero. A time dimension takes ISO dates and a numeric one numbers, each parsed and written back,
+    so no text the model sent reaches the filter. A value holding a Jinja delimiter is refused for
+    every type: MetricFlow would render it, and filter on the result.
     """
-    categorical = sorted(name for name, kind in dimensions.items() if kind == "categorical")
-    if item.dimension not in categorical:
+    if item.dimension == "metric_time" or item.dimension.startswith("metric_time__"):
+        raise QueryError("limit metric_time with start_date and end_date, not a filter")
+    kind = dimensions.get(item.dimension)
+    if kind is None:
         raise QueryError(
-            f"cannot filter by {item.dimension!r}; filter on one of {categorical}, "
+            f"cannot filter by {item.dimension!r}; filter on one of {sorted(dimensions)}, "
             "and limit time with start_date and end_date"
         )
     if not item.values:
@@ -139,20 +177,42 @@ def where_clause(
             f"filter value {', '.join(map(repr, templated))} on {item.dimension!r} holds a "
             f"template delimiter ({', '.join(JINJA_DELIMITERS)}); send the value as plain text"
         )
-    values = (known or {}).get(item.dimension)
-    if values is not None and (unknown := [v for v in item.values if v not in values]):
+    allowed = OPERATORS_BY_TYPE.get(kind, ())
+    if item.operator not in allowed:
         raise QueryError(
-            f"{item.dimension!r} has no value {', '.join(map(repr, unknown))}; "
-            f"its values are {values}"
+            f"operator {item.operator!r} does not apply to {item.dimension!r}, a {kind} dimension; "
+            f"use one of {list(allowed)}"
         )
-    reference = "{{ Dimension('" + item.dimension + "') }}"
-    if item.operator in ("=", "!="):
-        if len(item.values) != 1:
-            raise QueryError(f"operator {item.operator!r} takes exactly one value")
-        operator = "=" if item.operator == "=" else "<>"
-        return f"{reference} {operator} {_literal(item.values[0])}"
-    values = ", ".join(_literal(v) for v in item.values)
-    return f"{reference} {item.operator} ({values})"
+    if item.operator == "between":
+        if len(item.values) != 2:
+            raise QueryError("operator 'between' takes two values, the low and the high end")
+    elif item.operator not in ("in", "not in") and len(item.values) != 1:
+        raise QueryError(f"operator {item.operator!r} takes exactly one value")
+    if kind == "time":
+        reference = "{{ TimeDimension('" + item.dimension + "', 'day') }}"
+        literals = [_literal(_iso_date(v, item.dimension)) for v in item.values]
+        ordered = [_iso_date(v, item.dimension) for v in item.values]
+    elif kind == "numeric":
+        reference = "{{ Dimension('" + item.dimension + "') }}"
+        numbers = [_number(v, item.dimension) for v in item.values]
+        literals, ordered = [str(n) for n in numbers], numbers
+    else:
+        values = (known or {}).get(item.dimension)
+        if values is not None and (unknown := [v for v in item.values if v not in values]):
+            raise QueryError(
+                f"{item.dimension!r} has no value {', '.join(map(repr, unknown))}; "
+                f"its values are {values}"
+            )
+        reference = "{{ Dimension('" + item.dimension + "') }}"
+        literals, ordered = [_literal(v) for v in item.values], []
+    if item.operator == "between":
+        if ordered[0] > ordered[1]:
+            raise QueryError("operator 'between' takes the low end first, then the high end")
+        return f"{reference} between {literals[0]} and {literals[1]}"
+    if item.operator in ("in", "not in"):
+        return f"{reference} {item.operator} ({', '.join(literals)})"
+    operator = "<>" if item.operator == "!=" else item.operator
+    return f"{reference} {operator} {literals[0]}"
 
 
 def _date(value: str | None, name: str) -> datetime.datetime | None:
