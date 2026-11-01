@@ -8,14 +8,14 @@ Everything runs on the dev fixture (`dbt/dev/fixture.sql`), so every number belo
 Every step is one command, `make demo STEP=<step>`, which prints what to show and fails when the output differs from this script.
 `make demo-check` rehearses the whole script, every step asserted and timed, and spends no model quota.
 
-## Before the call (about 6 minutes, once)
+## Before the call (about 17 minutes, once)
 
 ```bash
 make services-up
 make demo STEP=setup
 ```
 
-- `setup` recreates the emulator and runs `make bigquery-emulator-check` on it: the fixture copied in, `dbt build` of every layer with its tests, the metrics checked against the hand-written tables, the migration report built.
+- `setup` runs `make bigquery-emulator-check`: each domain on a fresh emulator of its own (one emulator holding every domain overflows its engine), the fixture copied in, `dbt build` of every layer with its tests, the metrics checked against the hand-written tables; the platform's models and the migration report go last, so that is what the emulator holds for the demo.
   It ends `PASS: BigQuery emulator check`.
 - It then builds the same fixture in the Compose warehouse's `dbt_dev` for the agent: the models, the catalog, the agents' read-only roles and the fixture's days in `ops.readiness`.
   It ends `ok: fixture built in dbt_dev, catalog written, agent roles granted, readiness recorded`.
@@ -50,7 +50,7 @@ Say: every dashboard, export and agent gets this number from this one definition
 make demo STEP=standard
 ```
 
-Expect `check_standard: 38 models named by layer; 10 public models, 7 semantic models, 16 metrics and 7 saved queries described`, then `gold.daily_sales` as BigQuery holds it: the table's description and one per column (`revenue_eur  NUMERIC  Sum of amount for non-cancelled orders.`), written by dbt's `persist_docs`.
+Expect `check_standard: 67 models named by layer; 17 public models, 15 semantic models, 39 metrics and 7 saved queries described`, then `gold.daily_sales` as BigQuery holds it: the table's description and one per column (`revenue_eur  NUMERIC  Sum of amount for non-cancelled orders.`), written by dbt's `persist_docs`.
 Say: the rules are in [`agent-ready-warehouse.md`](agent-ready-warehouse.md); the check fails a build that strays from them, and the descriptions an agent reads in BigQuery are the ones in the YAML.
 Then open `dbt/target/catalog/data_agent/system_instruction.yaml`: the BigQuery data agent's authored context (tables, aggregations, relationships, glossary), generated from the same YAML ([mapping](semantic-layer-on-bigquery.md)).
 
@@ -63,12 +63,15 @@ make agent-web AGENT_DBNAME=dbt_dev
 Open `http://localhost:8000`, pick `semantic_agent`, and ask:
 - "What was net revenue on 1 October 2026, after partner returns?"
   The answer is €964.19, then its freshness: "Fresh: returns.silver is ready up to 2026-10-03T00:00Z. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline."
-  The events panel shows `list_metrics`, `describe_metric`, then `query_metrics`.
+  The events panel shows the tool calls: `query_metrics`, after `list_metrics` or `describe_metric` when the model looks the metric up first.
 - "How many orders have shipped?"
   The answer is 11: `orders_total` filtered on `order__status = shipped`.
   Switch to `sql_baseline` and ask again: it has said 25 (orders minus cancellations), a confident wrong number from a table without the breakdown.
 - "What was our revenue from customers in Germany on 1 October 2026?"
-  The semantic agent says the semantic layer has no metric by country, rather than guessing.
+  The answer is €379.75: `revenue_eur` filtered on `customer__country = DE`, the customer's dimension joined through the order; `exposed.sales_by_country_daily` says the same.
+- "What was the average temperature in Amsterdam on 1 October 2026?"
+  The semantic agent says the semantic layer has no metric for it, rather than guessing; `sql_baseline` reads `gold.daily_weather` and says 11.0 °C.
+  Say: the semantic agent answers only what the layer defines; a number it should answer becomes a metric first ([where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)).
 
 The model is a free OpenRouter model; an answer takes 5 to 30 seconds, and a spent quota answers "No answer: the model's daily request quota is spent." instead of failing.
 `make demo STEP=agent` asks the first question with a scripted model and the real tools, and prints the same figure and freshness: the fallback when the model is unavailable.
@@ -116,20 +119,21 @@ As of the last run, the semantic agent was right on all 15 and quoted its freshn
 
 ## The rehearsal
 
-`make demo-check` runs `setup` and steps 1 to 6 in order and ends with each step's time and `PASS: demo check`.
-One run from a fresh clone, Compose services already up and uv's cache warm (cloud sandbox, 2026-11-01): 376 s.
+`make demo-check` runs `setup` and steps 1 to 6 in order, asks the agent again (the live agent reads the same `dbt/target` after every step), and ends with each step's time and `PASS: demo check`.
+One run with every domain, Compose services already up and uv's cache warm (cloud sandbox, 2026-11-01): 1233 s.
 
 | Step | Time | Mostly |
 |---|---|---|
-| setup | 235 s | `dbt build` of 154 nodes on the emulator, one thread |
-| layers | 16 s | two MetricFlow queries |
-| standard | 1 s | |
-| agent | 10 s | |
-| alerts | 111 s | `make source-freshness-check` and `make rules-test` |
-| audit | 0 s | |
-| migration | 3 s | |
+| setup | 998 s | `make bigquery-emulator-check`: six parts, each on a fresh emulator, one thread; the platform's alone is 160 nodes |
+| layers | 22 s | two MetricFlow queries |
+| standard | 2 s | |
+| agent | 9 s | |
+| alerts | 188 s | `make source-freshness-check` and `make rules-test` |
+| audit | 1 s | |
+| migration | 4 s | |
+| agent again | 9 s | |
 
-The steps shown live (1 to 6) take about 2.5 minutes of commands; the rest is talk.
+The steps shown live (1 to 6) take about 4 minutes of commands; the rest is talk.
 
 ## If something goes wrong
 
