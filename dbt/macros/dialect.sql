@@ -118,8 +118,10 @@
 
 -- An expression cast to a decimal of `precision` digits, `scale` of them after the point. BigQuery refuses a
 -- parameterized type in CAST ("Parameterized types are not allowed in CAST expressions", measured on the lab
--- project, #275; the emulator accepts it), so there it is NUMERIC rounded to the scale, as Postgres's cast rounds
--- (both half away from zero); BigQuery's NUMERIC holds 38 digits, 9 after the point, so every precision here fits.
+-- project, #275; the emulator accepts it), so there it is plain NUMERIC (38 digits, 9 after the point): the
+-- sources land at their scale (cents, four-decimal coordinates), so both warehouses hold the same values. No
+-- ROUND: the emulator computes it through FLOAT64 (round(1.005, 2) is 1 there), which turns the amounts into
+-- floats whose sums by day and by country differ, failing the gold -> exposed hops.
 {% macro cast_decimal(expression, precision, scale) -%}
     {{ return(adapter.dispatch('cast_decimal')(expression, precision, scale)) }}
 {%- endmacro %}
@@ -129,5 +131,5 @@
 {%- endmacro %}
 
 {% macro bigquery__cast_decimal(expression, precision, scale) -%}
-    round(cast({{ expression }} as numeric), {{ scale }})
+    cast({{ expression }} as numeric)
 {%- endmacro %}
