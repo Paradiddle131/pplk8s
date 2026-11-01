@@ -2,13 +2,15 @@
 # BigQuery emulator check (issue #125, semantic/PLAN.md SL-7): the semantic path runs on a BigQuery
 # engine, not only compiles for one. On an empty emulator (Compose profile `bigquery`) it
 #   - copies the dev fixture's sources from Postgres dbt_dev into the emulator,
-#   - runs `dbt build` of the sales, returns, finance, marketing and semantic models, tests
-#     included, on the `bigquery_emulator` target, with the project unchanged; the 26 layer hops
+#   - runs `dbt build` of the sales, returns, finance, marketing, call-transcripts and semantic models,
+#     tests included, on the `bigquery_emulator` target, with the project unchanged; the 31 layer hops
 #     (semantic/PLAN.md SL-9) among them reconcile there,
 #   - queries the metrics through MetricFlow on the emulator, and asserts they equal the
 #     hand-written aggregates the same build wrote there: the eight sales metrics by day against
 #     gold.daily_sales and exposed.net_sales_daily, the marketing metrics by day and channel against
-#     gold.marketing_daily, and the fixture's cost per lead and per booking (39.00, 130.00).
+#     gold.marketing_daily, and the fixture's cost per lead and per booking (39.00, 130.00); the call
+#     metrics by day and topic against gold.call_signals_daily, labelled from the recorded label calls
+#     (the emulator fakes AI.CLASSIFY and lacks AI.GENERATE) and scored there on the golden set (SL-18).
 #   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
 #     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
 #   - creates the semantic agent's audit table there with the same entry point as on Postgres
@@ -47,14 +49,15 @@ run_ --with 'psycopg[binary]==3.3.6' python -I scripts/fixture_to_bigquery.py \
   fail "copying the fixture into the emulator"
 echo "ok: fixture sources copied into the emulator"
 
-run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:call_transcripts tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
-[ "$hops" -eq 26 ] || fail "expected the 26 layer hops to pass on the emulator, got $hops"
-echo "ok: the 26 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+[ "$hops" -eq 31 ] || fail "expected the 31 layer hops to pass on the emulator, got $hops"
+echo "ok: the 31 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 grep -q " PASS consumers_switch_on_parity " "$OUT/build.log" || fail "the migration gate did not pass on the emulator"
+grep -q " PASS call_labels_agree_with_golden_set " "$OUT/build.log" || fail "the call labels' agreement test did not pass on the emulator"
 
 # The agent's warehouse objects through the same macro as on Postgres; a second run changes nothing.
 for _ in 1 2; do
@@ -88,6 +91,9 @@ run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur 
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing metrics on the emulator"; }
 run_ mf query --metrics cost_per_lead_eur,cost_per_booking_eur --csv "$OUT/marketing_period.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing ratios on the emulator"; }
+run_ mf query --metrics calls_labelled,calls_with_objection,positive_calls \
+  --group-by metric_time__day,call__topic --order metric_time__day --csv "$OUT/calls.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the call metrics on the emulator"; }
 
 # Parity on the emulator itself: each metric by day against the hand-written aggregate, both ways.
 run_ python -I - "$ENDPOINT" "$OUT" <<'EOF' || fail "metrics differ from gold and exposed on the emulator"
@@ -121,7 +127,14 @@ marketing = ["ad_spend_eur", "ad_clicks", "leads", "bookings", "booking_value_eu
 gold_marketing = {k.replace(" ", "|"): v for k, v in rows(
     "select concat(cast(activity_date as string), ' ', channel), ad_spend_eur, ad_clicks, leads, bookings,"
     " booking_value_eur from `pplk8s-lab.gold.marketing_daily`").items()}
+calls = ["calls_labelled", "calls_with_objection", "positive_calls"]
+gold_calls = {k.replace(" ", "|"): v for k, v in rows(
+    "select concat(cast(call_date as string), ' ', topic), calls_labelled, calls_with_objection, positive_calls"
+    " from `pplk8s-lab.gold.call_signals_daily`").items()}
 bad = []
+labelled = list(client.query("select count(*) from `pplk8s-lab.silver.call_signals`").result())[0][0]
+if labelled != 12:
+    bad.append(f"silver.call_signals on the emulator holds {labelled} calls, not the fixture's 12")
 with open(f"{out}/marketing_period.csv") as f:
     period = next(csv.DictReader(f))
 got = (round(decimal.Decimal(period["cost_per_lead_eur"]), 2), round(decimal.Decimal(period["cost_per_booking_eur"]), 2))
@@ -130,7 +143,9 @@ if got != (decimal.Decimal("39.00"), decimal.Decimal("130.00")):
 for label, oracle, got in (("gold.daily_sales", gold, metrics("sales", sales)),
                            ("exposed.net_sales_daily", exposed, metrics("net", net)),
                            ("gold.marketing_daily", gold_marketing,
-                            metrics("marketing", marketing, ("metric_time__day", "campaign__channel")))):
+                            metrics("marketing", marketing, ("metric_time__day", "campaign__channel"))),
+                           ("gold.call_signals_daily", gold_calls,
+                            metrics("calls", calls, ("metric_time__day", "call__topic")))):
     if len(oracle) < 2:
         bad.append(f"{label} has {len(oracle)} days; the fixture gives at least 2")
     bad += [f"{label} {day}: metrics {got.get(day)} != {oracle.get(day)}"
@@ -148,7 +163,8 @@ expected = ("finance_dashboard gross_revenue 2 0 match; finance_dashboard net_re
 if parity != expected:
     bad.append(f"migration.parity on the emulator: {parity}")
 print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days,"
-      f" the marketing metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity"
+      f" the marketing metrics gold.marketing_daily on {len(gold_marketing)} day-channels, the call metrics"
+      f" gold.call_signals_daily on {len(gold_calls)} day-topics, and migration.parity"
       " reports as on Postgres, on the emulator")
 sys.exit(1 if bad else 0)
 EOF

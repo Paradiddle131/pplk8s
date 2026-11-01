@@ -16,7 +16,9 @@
 with pending as (
     select g.transcript_id, g.transcript
     from {{ ref('call_label_golden_set') }} as g
-    {%- if is_incremental() %}
+    {#- An offline compile (--no-introspect, the compile-only BigQuery target) cannot ask whether the table
+        exists, so it compiles the first build. #}
+    {%- if flags.INTROSPECT and is_incremental() %}
     where not exists (
         select 1
         from {{ this }} as labelled

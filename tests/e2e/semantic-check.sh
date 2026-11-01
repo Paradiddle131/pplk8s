@@ -12,6 +12,11 @@
 #     signup cohort equals a direct join of silver (the customers semantic model),
 #   - a public model whose SQL renames or retypes a column its contract declares fails dbt build,
 #   - a metric without a description or a label, or a public column without a data_type, fails the validation,
+#   - the call signals' metrics by day and topic equal gold.call_signals_daily, the current prompt's labels
+#     are scored on the golden set's 15 calls, a second or `--full-refresh` build re-labels nothing, a
+#     transcript without a recording waits unlabelled, seeded wrong labels fail the agreement test, and failed
+#     calls past the share fail their test and are retried by the next build (SL-18),
+#   - a metric over a model-derived column without "Model-derived" in its description fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
 #     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
 # Expects `make services-up`; never touches the `warehouse` database.
@@ -38,17 +43,19 @@ psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 echo "ok: fixture loaded into $DB"
 
 # The time spine is tagged sales, so the sales build carries it; tlc has its own fixture and check.
-dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
-  { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing"; }
+# The call labels are incremental and never fully refreshed: start them from an empty table each check.
+psql_dev -c "drop table if exists silver.call_transcript_labels, silver.call_golden_labels cascade" 2>&1 | grep -v NOTICE || true
+dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:call_transcripts --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+  { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:call_transcripts"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
-echo "ok: sales, returns, finance and marketing built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 26
-echo "ok: the 26 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+echo "ok: sales, returns, finance, marketing and call transcripts built; semantic.time_spine has 1461 days"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 31
+echo "ok: the 31 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "7 semantic models, 16 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 7 semantic models, 16 metrics and 7 saved queries"
+grep -q "8 semantic models, 21 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 8 semantic models, 21 metrics and 7 saved queries"
 echo "ok: make dbt-validate (parse, check_standard, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -112,6 +119,61 @@ expect "spend over count, from gold" "$(psql_dev -c "
 expect "the average of exposed's daily cost per booking (what the metric is not)" "$(psql_dev -c "
   select round(avg(cost_per_booking_eur), 2) from (select activity_date, sum(ad_spend_eur) / nullif(sum(bookings), 0) as cost_per_booking_eur from exposed.channel_performance_daily group by activity_date) d")" "152.50"
 echo "ok: the marketing metrics equal gold.marketing_daily and exposed.channel_performance_daily; cost per booking 130.00 over the fixture, not the daily average 152.50"
+
+# Call signals (SL-18): labels from the recorded label calls, scored on the golden set; the metrics by
+# day and topic equal gold.call_signals_daily, the rates over the fixture equal gold's sums.
+mf_ query --metrics calls_labelled,calls_with_objection,positive_calls --group-by metric_time__day,call__topic \
+  --order metric_time__day --csv "$OUT/calls.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of the call metrics"; }
+mf_ query --metrics objection_rate,positive_sentiment_share --csv "$OUT/calls_period.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the call rates"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.calls" \
+  -c "create table semantic_check.calls (day date, topic text, calls_labelled bigint, calls_with_objection bigint, positive_calls bigint)" \
+  -c "drop table if exists semantic_check.calls_period" -c "create table semantic_check.calls_period (objection_rate numeric, positive_sentiment_share numeric)"
+psql_dev -c "\\copy semantic_check.calls from stdin with (format csv, header true)" <"$OUT/calls.csv"
+psql_dev -c "\\copy semantic_check.calls_period from stdin with (format csv, header true)" <"$OUT/calls_period.csv"
+expect "calls labelled in silver (every fixture call has a recording)" "$(psql_dev -c "select count(*) from silver.call_signals")" 12
+expect "call metrics vs gold.call_signals_daily (rows differing)" "$(psql_dev -c "
+  with gold as (select call_date, topic, calls_labelled, calls_with_objection, positive_calls from gold.call_signals_daily),
+       mf as (select day, topic, coalesce(calls_labelled, 0), coalesce(calls_with_objection, 0), coalesce(positive_calls, 0) from semantic_check.calls)
+  select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
+expect "the fixture's objection rate and positive-sentiment share, mf vs gold" "$(psql_dev -c "
+  select round(objection_rate, 4) || ' ' || round(positive_sentiment_share, 4) from semantic_check.calls_period")" "$(psql_dev -c "
+  select round(sum(calls_with_objection)::numeric / sum(calls_labelled), 4) || ' ' || round(sum(positive_calls)::numeric / sum(calls_labelled), 4) from gold.call_signals_daily")"
+expect "signals of prompt v1 scored on the golden set, each at or above its thresholds" "$(psql_dev -c "
+  select count(*) || ' ' || min(calls_compared) || ' ' || bool_and(accuracy >= min_accuracy and kappa >= min_kappa)
+  from silver.call_label_agreement where prompt_version = 'v1'")" "4 15 true"
+echo "ok: the call metrics equal gold.call_signals_daily; v1's labels meet their thresholds on the golden set's 15 calls"
+
+# Labelled once: a second build and a --full-refresh build send no call (labelled_at, from the recording,
+# would not move anyway, so the rows' ctid shows they were not rewritten), and a call with no recording waits.
+labelled() { psql_dev -c "select count(*) || ' ' || string_agg(ctid::text, ',' order by transcript_id) from silver.call_transcript_labels"; }
+before=$(labelled)
+psql_dev -c "insert into ds_source.synthetic_call_transcripts values ('T-UNRECORDED', 1, '2026-10-02 16:00+00', 60,
+  'Agent: Thanks for calling. Customer: Nothing recorded this.', 'run-call-2c', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1,
+  'fixture://call_transcripts', '2026-10-03 07:00+00')"
+dbt_ build --select tag:call_transcripts,tag:silver >"$OUT/incremental.log" 2>&1 || { tail -30 "$OUT/incremental.log" >&2; fail "incremental build of the call labels"; }
+dbt_ build --full-refresh --select slv_call_transcript_labels >>"$OUT/incremental.log" 2>&1 || { tail -30 "$OUT/incremental.log" >&2; fail "--full-refresh build of the call labels"; }
+expect "call labels after a second and a --full-refresh build" "$(labelled)" "$before"
+expect "calls in silver, and labelled" "$(psql_dev -c "select count(*) from silver.call_transcripts")|$(psql_dev -c "select count(*) from silver.call_signals")" "13|12"
+psql_dev -c "delete from ds_source.synthetic_call_transcripts where transcript_id = 'T-UNRECORDED'"
+echo "ok: a second and a --full-refresh build re-label nothing; a call without a recording waits unlabelled"
+
+# Seeded wrong labels fail the agreement test: four golden calls labelled with the wrong topic.
+psql_dev -c "update silver.call_golden_labels set topic = case topic when 'product' then 'delivery' else 'product' end
+  where transcript_id in (select transcript_id from silver.call_golden_labels order by transcript_id limit 4)"
+if dbt_ build --select slv_call_label_agreement >"$OUT/agreement.log" 2>&1; then fail "dbt build passed seeded wrong labels"; fi
+grep -q "FAIL 1 call_labels_agree_with_golden_set" "$OUT/agreement.log" || { tail -30 "$OUT/agreement.log" >&2; fail "the build failed, but not on the agreement test"; }
+psql_dev -c "drop table silver.call_golden_labels cascade" 2>&1 | grep -v NOTICE || true
+
+# Failed calls past the share fail their test, and the next build retries them: two of 15 is above 0.1.
+dbt_ build --select slv_call_golden_labels slv_call_label_agreement >"$OUT/agreement.log" 2>&1 || { tail -30 "$OUT/agreement.log" >&2; fail "relabel the golden set"; }
+psql_dev -c "update silver.call_golden_labels set status = 'quota exceeded', topic = null, objection = null, sentiment = null, next_step = null
+  where transcript_id in (select transcript_id from silver.call_golden_labels order by transcript_id limit 2)"
+if dbt_ test --select slv_call_golden_labels >"$OUT/failed.log" 2>&1; then fail "dbt test passed two failed calls in 15"; fi
+grep -q "FAIL 1 failed_call_share_slv_call_golden_labels_status" "$OUT/failed.log" || { tail -30 "$OUT/failed.log" >&2; fail "the test failed, but not on the failed-call share"; }
+dbt_ build --select slv_call_golden_labels slv_call_label_agreement >"$OUT/failed.log" 2>&1 || { tail -30 "$OUT/failed.log" >&2; fail "retry of the failed calls"; }
+expect "failed golden calls after the retry" "$(psql_dev -c "select count(*) from silver.call_golden_labels where status <> ''")" 0
+echo "ok: seeded wrong labels fail the agreement test; failed calls past their share fail theirs and the next build retries them"
 
 # Customers: the orders metrics group by the customer's country and signup cohort through the
 # customer entity alone, and equal exposed.sales_by_country_daily and a direct join of silver.
@@ -201,9 +263,16 @@ metrics:
     type: derived
     expr: orders_total
     input_metrics: [orders_total]
+  - name: zz_stray_objections
+    description: Calls with an objection, said as if a system had recorded them.
+    label: Stray objections
+    type: derived
+    expr: calls_with_objection
+    input_metrics: [calls_with_objection]
 YAML
 if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/stray.log" 2>&1; then fail "dbt-validate passed off the standard"; fi
 for problem in "metric zz_stray_orders: no description" \
+  'metric zz_stray_objections: reads a model-derived column, so its description starts with "Model-derived"' \
   "model zz_semantic_check_stray: in gold, so its name starts with gld_" \
   "public model zz_semantic_check_stray: no description" \
   "public model zz_semantic_check_stray: column stray_id has no description" \
@@ -212,6 +281,6 @@ for problem in "metric zz_stray_orders: no description" \
     { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on: $problem"; }
 done
 rm -f "$stray" "$stray_model"
-echo "ok: an undescribed metric and an unprefixed, undescribed, untyped gold model fail make dbt-validate"
+echo "ok: an undescribed metric, a metric over model-derived labels not saying so, and an unprefixed, undescribed, untyped gold model fail make dbt-validate"
 
 echo "PASS: semantic check"
