@@ -1,6 +1,6 @@
 """The scheduled ELT pattern every extracted pipeline shares (PLAN.md D38): ``sales_elt``,
-``marketing_elt``, ``customer_actions_elt``, ``partner_outreach_elt`` and ``recruitment_elt`` are
-this builder with their own pipeline name.
+``marketing_elt``, ``customer_actions_elt``, ``partner_outreach_elt``, ``recruitment_elt`` and
+``call_transcripts_elt`` are this builder with their own pipeline name.
 
 Flow: resolve run context -> catalog -> one mapped extract task per catalog entry (pool
 ``el_factory``) -> extraction check and watermark -> dbt bronze, silver, gold, exposed with an

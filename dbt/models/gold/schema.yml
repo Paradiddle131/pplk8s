@@ -211,6 +211,56 @@ models:
                 metric: booking_value_eur
                 time_column: activity_date
 
+  - name: gld_call_signals_daily
+    description: >
+      One row per (call_date, topic) with any call labelled under the current prompt version. Model-derived: the topic,
+      objection and sentiment come from a language model's labels, scored against a golden set
+      (silver.call_label_agreement). Alias gold.call_signals_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['call_date', 'topic']
+    columns:
+      - name: call_date
+        description: UTC day of the call.
+        data_type: date
+        tests: [not_null]
+      - name: topic
+        description: What the customer called about (delivery, pricing, returns, product), as the model labelled it.
+        data_type: *text
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['delivery', 'pricing', 'returns', 'product']
+      - name: calls_labelled
+        description: Calls on the topic that day labelled under the current prompt version.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_calls_labelled_to_gld_call_signals_daily
+              arguments:
+                metric: calls_labelled
+                time_column: call_date
+      - name: calls_with_objection
+        description: Of those, calls in which the customer raised an objection (price, timing or a competitor).
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_calls_with_objection_to_gld_call_signals_daily
+              arguments:
+                metric: calls_with_objection
+                time_column: call_date
+      - name: positive_calls
+        description: Of those, calls the customer ended in a positive mood.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_positive_calls_to_gld_call_signals_daily
+              arguments:
+                metric: positive_calls
+                time_column: call_date
+
   - name: gld_lead_conversion_daily
     description: One row per day a CRM lead was created, with the leads of that day and those that booked within 30 days of being created. A per-day rate; over a period use the metric lead_to_booking_rate. Alias gold.lead_conversion_daily.
     columns:

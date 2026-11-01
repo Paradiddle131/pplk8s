@@ -82,6 +82,13 @@ def test_catalog_lists_the_recruitment_pipeline(client):
     assert response.get_json() == [{"source": "synthetic", "entity": "applications"}]
 
 
+def test_catalog_lists_the_call_transcripts_pipeline(client):
+    response = client.get("/catalog?pipeline=call_transcripts")
+
+    assert response.status_code == 200
+    assert response.get_json() == [{"source": "synthetic", "entity": "call_transcripts"}]
+
+
 def test_catalog_requires_a_pipeline_parameter(client):
     response = client.get("/catalog")
 
@@ -265,6 +272,7 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
         "synthetic_ad_spend",
         "synthetic_applications",
         "synthetic_bookings",
+        "synthetic_call_transcripts",
         "synthetic_campaigns",
         "synthetic_customer_actions",
         "synthetic_customers",
@@ -283,6 +291,7 @@ SOURCE_TABLES = [
     "synthetic_ad_spend",
     "synthetic_applications",
     "synthetic_bookings",
+    "synthetic_call_transcripts",
     "synthetic_campaigns",
     "synthetic_customer_actions",
     "synthetic_customers",

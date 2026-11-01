@@ -11,7 +11,10 @@ Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3,
 - words: every model that builds a relation is described, every public model's column too, every
   semantic model with its entities, dimensions and measures, and every metric has a description and a label;
   every saved query a description, a label and the business question it answers (`config.meta.question`),
-  which becomes its verified query's question.
+  which becomes its verified query's question;
+- model-derived: a metric over a semantic model whose model has a column marked `meta: {derived_by: model}`
+  (a label a language model read out of text), directly or through its input metrics, starts its description
+  with "Model-derived" (semantic/PLAN.md SL-18), so every consumer of the catalog is told.
 
 Usage: python scripts/check_standard.py [target_dir]  (after `dbt parse`)
 """
@@ -123,6 +126,54 @@ def semantic_problems(semantic_manifest: dict) -> list[str]:
     return found
 
 
+MODEL_DERIVED = "Model-derived"
+
+
+def derived_semantic_models(manifest: dict) -> set[str]:
+    """Semantic models whose dbt model has a column a language model derived (`meta: {derived_by: model}`)."""
+    found = set()
+    for semantic_model in manifest.get("semantic_models", {}).values():
+        for unique_id in semantic_model["depends_on"]["nodes"]:
+            columns = manifest["nodes"].get(unique_id, {}).get("columns", {})
+            if any(
+                (column.get("meta") or {}).get("derived_by") == "model"
+                or (column.get("config", {}).get("meta") or {}).get("derived_by") == "model"
+                for column in columns.values()
+            ):
+                found.add(semantic_model["name"])
+    return found
+
+
+def metric_inputs(metric: dict) -> list[str]:
+    """The metrics a metric reads (ratio, derived, cumulative and conversion); none for a simple one."""
+    params = metric.get("type_params") or {}
+    inputs = [params.get("numerator"), params.get("denominator"), *(params.get("metrics") or [])]
+    cumulative = params.get("cumulative_type_params") or {}
+    conversion = params.get("conversion_type_params") or {}
+    inputs += [cumulative.get("metric"), conversion.get("base_metric"), conversion.get("conversion_metric")]
+    return [item["name"] for item in inputs if item]
+
+
+def model_derived_problems(manifest: dict, semantic_manifest: dict) -> list[str]:
+    derived_models = derived_semantic_models(manifest)
+    metrics = {metric["name"]: metric for metric in semantic_manifest.get("metrics", [])}
+
+    def derived(name: str, seen: frozenset = frozenset()) -> bool:
+        metric = metrics.get(name)
+        if metric is None or name in seen:
+            return False
+        aggregation = (metric.get("type_params") or {}).get("metric_aggregation_params") or {}
+        if aggregation.get("semantic_model") in derived_models:
+            return True
+        return any(derived(item, seen | {name}) for item in metric_inputs(metric))
+
+    return [
+        f'metric {name}: reads a model-derived column, so its description starts with "{MODEL_DERIVED}"'
+        for name in sorted(metrics)
+        if derived(name) and not (metrics[name].get("description") or "").strip().startswith(MODEL_DERIVED)
+    ]
+
+
 def saved_query_problems(manifest: dict) -> list[str]:
     found = []
     for query in sorted(manifest.get("saved_queries", {}).values(), key=lambda q: q["name"]):
@@ -142,7 +193,12 @@ def saved_query_problems(manifest: dict) -> list[str]:
 def problems(manifest: dict, semantic_manifest: dict) -> list[str]:
     models = sorted((n for n in manifest["nodes"].values() if n["resource_type"] == "model"), key=lambda n: n["name"])
     found = [problem for node in models for problem in model_problems(node)]
-    return found + semantic_problems(semantic_manifest) + saved_query_problems(manifest)
+    return (
+        found
+        + semantic_problems(semantic_manifest)
+        + model_derived_problems(manifest, semantic_manifest)
+        + saved_query_problems(manifest)
+    )
 
 
 def main() -> int:

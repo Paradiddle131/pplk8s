@@ -40,6 +40,8 @@ WATERMARK_COLUMNS = {
     "synthetic_outreach_replies": "replied_ts",
     # Recruitment (semantic/PLAN.md SL-17): the newest stage change the extract saw.
     "synthetic_applications": "stage_ts",
+    # Call transcripts (semantic/PLAN.md SL-18): the newest call landed.
+    "synthetic_call_transcripts": "call_ts",
 }
 
 UPSERT_SQL = """

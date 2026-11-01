@@ -8,3 +8,25 @@ seeds:
     columns:
       - name: location_id
         tests: [not_null, unique]
+
+  - name: call_label_golden_set
+    description: >
+      The call labels' golden set (semantic/PLAN.md SL-18): calls whose true topic, objection, sentiment and next
+      step are known, because the synthetic generator wrote each text from them, plus hand-written hard cases
+      (two topics, sarcasm, no next step). Every prompt version is scored on these calls. Alias
+      silver.call_label_golden_set.
+    columns:
+      - name: transcript_id
+        tests: [not_null, unique]
+      - name: transcript
+        tests: [not_null]
+  - name: call_label_recordings
+    description: >
+      The lab's recorded label calls (semantic/PLAN.md SL-18): what an OpenRouter free model answered to the prompt
+      in dbt_project.yml's call_label_prompt for a transcript, keyed by the transcript's MD5 hash and the prompt
+      version, written by scripts/record_call_labels.py (make record-call-labels). Stands in for AI.GENERATE where
+      the lab cannot call it: Postgres and the BigQuery emulator. Alias silver.call_label_recordings.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['transcript_hash', 'prompt_version']

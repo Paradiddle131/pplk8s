@@ -177,3 +177,12 @@ models:
         tests: [not_null]
       - name: stage_ts
         tests: [not_null]
+
+  - name: brz_synthetic_call_transcripts
+    description: >
+      Call transcripts as landed, cast only; one row per call and run. Alias bronze.synthetic_call_transcripts.
+    columns:
+      - name: transcript_id
+        tests: [not_null]
+      - name: transcript
+        tests: [not_null]

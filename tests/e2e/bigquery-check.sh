@@ -5,6 +5,8 @@
 #   - `dbt compile` of the semantic path (sales, returns, finance, semantic; tlc introspects its
 #     source and needs a live connection) passes, and every compiled model parses as BigQuery SQL
 #     with none of the Postgres-only constructs the dialect macros replace (macros/dialect.sql);
+#   - the call labels compile to BigQuery's AI.GENERATE with an output schema and a named endpoint,
+#     never to the lab's recordings (semantic/PLAN.md SL-18; compiled, never run);
 #   - build_catalog.py writes the agent catalog and the data agent's authored context for BigQuery:
 #     relations are `project.dataset.table` and every verified query reads backticked BigQuery
 #     tables; check_catalog.py passes.
@@ -31,7 +33,7 @@ run_ mf validate-configs --skip-dw >"$OUT/validate.log" 2>&1 || { tail -20 "$OUT
 echo "ok: dbt parse and mf validate-configs --skip-dw pass on the bigquery target"
 
 run_ dbt compile --quiet --no-introspect --no-populate-cache \
-  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
+  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
   { tail -20 "$OUT/compile.log" >&2; fail "dbt compile of the semantic path on the bigquery target"; }
 uvx --quiet --with "$SQLGLOT" python -I - "$PROJECT/target/compiled/pplk8s/models" <<'EOF' || fail "compiled SQL is not BigQuery"
 import pathlib, re, sys
@@ -53,6 +55,14 @@ print("\n".join(bad) or f"{len(models)} compiled models parse as BigQuery")
 sys.exit(1 if bad or not models else 0)
 EOF
 echo "ok: the semantic path compiles to BigQuery SQL"
+for model in slv_call_transcript_labels slv_call_golden_labels; do
+  compiled="$PROJECT/target/compiled/pplk8s/models/silver/$model.sql"
+  for expected in "AI.GENERATE(" "endpoint => 'gemini-3.5-flash'" "output_schema => 'topic STRING, objection STRING, sentiment STRING, next_step STRING'"; do
+    grep -qF "$expected" "$compiled" || fail "$model does not compile to: $expected"
+  done
+  ! grep -v "^-- depends_on:" "$compiled" | grep -q "call_label_recordings" || fail "$model reads the lab's recordings on the bigquery target"
+done
+echo "ok: the call labels compile to AI.GENERATE with an output schema on the bigquery target, not to the recordings"
 
 run_ python scripts/build_catalog.py target >/dev/null || fail "build_catalog.py on the bigquery target"
 run_ python scripts/check_catalog.py target >/dev/null || fail "check_catalog.py on the bigquery target"

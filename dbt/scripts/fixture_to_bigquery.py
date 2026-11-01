@@ -31,6 +31,7 @@ SOURCES = (
     "synthetic_outreach_messages",
     "synthetic_outreach_replies",
     "synthetic_applications",
+    "synthetic_call_transcripts",
 )
 # ops: the agent's audit table (macros/agent_warehouse.sql); the emulator takes `create schema` but creates nothing.
 DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration", "ops")

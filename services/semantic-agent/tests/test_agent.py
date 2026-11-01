@@ -185,7 +185,7 @@ def test_the_baseline_is_told_every_public_model_of_the_catalog():
     configuration rather than by its pattern."""
     told = baseline.instruction()
     relations = [model["relation"] for model in tools.catalog().models]
-    assert len(relations) == 16
+    assert len(relations) == 17
     for relation in relations:
         schema, table = relation.split(".")[-2:]
         assert f"{schema}.{table}" in told, f"{relation} is missing from the baseline's tables"
@@ -197,6 +197,7 @@ def test_the_baseline_is_told_every_public_model_of_the_catalog():
     assert "gold.candidates_in_stage_daily" in told
     # The activation list holds contact details for an automation: protected, never an agent's.
     assert "outreach_activation" not in told
+    assert "gold.call_signals_daily" in told
 
 
 def test_a_question_reaches_the_baseline_with_the_catalog_tables():

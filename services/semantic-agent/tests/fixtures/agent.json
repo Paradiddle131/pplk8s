@@ -201,6 +201,42 @@
       ]
     },
     {
+      "name": "gld_call_signals_daily",
+      "relation": "dbt_dev.gold.call_signals_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "description": "One row per (call_date, topic) with any call labelled under the current prompt version. Model-derived: the topic, objection and sentiment come from a language model's labels, scored against a golden set (silver.call_label_agreement). Alias gold.call_signals_daily.\n",
+      "grain": [
+        "call_date",
+        "topic"
+      ],
+      "columns": [
+        {
+          "name": "call_date",
+          "description": "UTC day of the call."
+        },
+        {
+          "name": "topic",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "calls_labelled",
+          "description": "Calls on the topic that day labelled under the current prompt version."
+        },
+        {
+          "name": "calls_with_objection",
+          "description": "Of those, calls in which the customer raised an objection (price, timing or a competitor)."
+        },
+        {
+          "name": "positive_calls",
+          "description": "Of those, calls the customer ended in a positive mood."
+        }
+      ]
+    },
+    {
       "name": "gld_candidates_in_stage_daily",
       "relation": "dbt_dev.gold.candidates_in_stage_daily",
       "layer": "gold",
@@ -752,6 +788,25 @@
       "model": "slv_campaigns"
     },
     {
+      "term": "Model-derived label",
+      "description": "A value a language model read out of free text (a call's topic, objection, sentiment, next step), not a value a system recorded. It comes from a versioned prompt, is scored against a golden set of calls whose true labels are known, and a build fails below the agreed agreement; a metric over it says so in its description. Filter on the prompt version to compare two versions.",
+      "synonyms": [
+        "AI label",
+        "call signal",
+        "model label",
+        "extracted signal"
+      ],
+      "metrics": [],
+      "dimensions": [
+        "call__prompt_version",
+        "call__topic",
+        "call__objection",
+        "call__sentiment",
+        "call__next_step"
+      ],
+      "model": "slv_call_signals"
+    },
+    {
       "term": "Order status",
       "description": "Where an order stands: placed, shipped or cancelled. A cancelled order counts in orders and the cancellation rate, never in revenue or active customers.",
       "synonyms": [
@@ -1236,6 +1291,158 @@
           "name": "lead__created_date",
           "type": "time",
           "description": "UTC date the lead was created."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "calls_labelled",
+      "label": "Calls labelled",
+      "description": "Model-derived: calls labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1, on the day of the call; group by call__topic for calls by topic. The build holds the labels to kappa 0.6 to 0.7 per signal on the golden set (silver.call_label_agreement).",
+      "type": "simple",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "call_signals"
+      ],
+      "dimensions": [
+        {
+          "name": "call__call_date",
+          "type": "time",
+          "description": "UTC date of the call."
+        },
+        {
+          "name": "call__endpoint",
+          "type": "categorical",
+          "description": "The model endpoint the label call asked for."
+        },
+        {
+          "name": "call__next_step",
+          "type": "categorical",
+          "description": "What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it."
+        },
+        {
+          "name": "call__objection",
+          "type": "categorical",
+          "description": "The customer's main objection (none, price, timing, competitor), as the model labelled it."
+        },
+        {
+          "name": "call__prompt_version",
+          "type": "categorical",
+          "description": "The prompt version that labelled the call."
+        },
+        {
+          "name": "call__sentiment",
+          "type": "categorical",
+          "description": "The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it."
+        },
+        {
+          "name": "call__topic",
+          "type": "categorical",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "calls_with_objection",
+      "label": "Calls with an objection",
+      "description": "Model-derived: calls in which the customer raised an objection (price, timing or a competitor), labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; objection labels agree with the golden set at kappa 0.6 or more.",
+      "type": "simple",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "call_signals"
+      ],
+      "dimensions": [
+        {
+          "name": "call__call_date",
+          "type": "time",
+          "description": "UTC date of the call."
+        },
+        {
+          "name": "call__endpoint",
+          "type": "categorical",
+          "description": "The model endpoint the label call asked for."
+        },
+        {
+          "name": "call__next_step",
+          "type": "categorical",
+          "description": "What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it."
+        },
+        {
+          "name": "call__objection",
+          "type": "categorical",
+          "description": "The customer's main objection (none, price, timing, competitor), as the model labelled it."
+        },
+        {
+          "name": "call__prompt_version",
+          "type": "categorical",
+          "description": "The prompt version that labelled the call."
+        },
+        {
+          "name": "call__sentiment",
+          "type": "categorical",
+          "description": "The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it."
+        },
+        {
+          "name": "call__topic",
+          "type": "categorical",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
         },
         {
           "name": "metric_time",
@@ -2307,6 +2514,82 @@
       ]
     },
     {
+      "name": "objection_rate",
+      "label": "Objection rate",
+      "description": "Model-derived: share of labelled calls in which the customer raised an objection (calls with an objection over calls labelled, over the whole period asked), labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; objection labels agree with the golden set at kappa 0.6 or more.",
+      "type": "ratio",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "call_signals"
+      ],
+      "dimensions": [
+        {
+          "name": "call__call_date",
+          "type": "time",
+          "description": "UTC date of the call."
+        },
+        {
+          "name": "call__endpoint",
+          "type": "categorical",
+          "description": "The model endpoint the label call asked for."
+        },
+        {
+          "name": "call__next_step",
+          "type": "categorical",
+          "description": "What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it."
+        },
+        {
+          "name": "call__objection",
+          "type": "categorical",
+          "description": "The customer's main objection (none, price, timing, competitor), as the model labelled it."
+        },
+        {
+          "name": "call__prompt_version",
+          "type": "categorical",
+          "description": "The prompt version that labelled the call."
+        },
+        {
+          "name": "call__sentiment",
+          "type": "categorical",
+          "description": "The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it."
+        },
+        {
+          "name": "call__topic",
+          "type": "categorical",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
       "name": "orders_cancelled",
       "label": "Cancelled orders",
       "description": "Orders with status cancelled.",
@@ -2498,6 +2781,158 @@
             "agency",
             "reseller"
           ]
+        }
+      ]
+    },
+    {
+      "name": "positive_calls",
+      "label": "Positive calls",
+      "description": "Model-derived: calls the customer ended in a positive mood, labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; sentiment labels agree with the golden set at kappa 0.5 or more.",
+      "type": "simple",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "call_signals"
+      ],
+      "dimensions": [
+        {
+          "name": "call__call_date",
+          "type": "time",
+          "description": "UTC date of the call."
+        },
+        {
+          "name": "call__endpoint",
+          "type": "categorical",
+          "description": "The model endpoint the label call asked for."
+        },
+        {
+          "name": "call__next_step",
+          "type": "categorical",
+          "description": "What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it."
+        },
+        {
+          "name": "call__objection",
+          "type": "categorical",
+          "description": "The customer's main objection (none, price, timing, competitor), as the model labelled it."
+        },
+        {
+          "name": "call__prompt_version",
+          "type": "categorical",
+          "description": "The prompt version that labelled the call."
+        },
+        {
+          "name": "call__sentiment",
+          "type": "categorical",
+          "description": "The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it."
+        },
+        {
+          "name": "call__topic",
+          "type": "categorical",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "positive_sentiment_share",
+      "label": "Positive-sentiment share",
+      "description": "Model-derived: share of labelled calls the customer ended in a positive mood (positive calls over calls labelled, over the whole period asked), labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; sentiment labels agree with the golden set at kappa 0.5 or more.",
+      "type": "ratio",
+      "pipelines": [
+        "call_transcripts"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "call_signals"
+      ],
+      "dimensions": [
+        {
+          "name": "call__call_date",
+          "type": "time",
+          "description": "UTC date of the call."
+        },
+        {
+          "name": "call__endpoint",
+          "type": "categorical",
+          "description": "The model endpoint the label call asked for."
+        },
+        {
+          "name": "call__next_step",
+          "type": "categorical",
+          "description": "What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it."
+        },
+        {
+          "name": "call__objection",
+          "type": "categorical",
+          "description": "The customer's main objection (none, price, timing, competitor), as the model labelled it."
+        },
+        {
+          "name": "call__prompt_version",
+          "type": "categorical",
+          "description": "The prompt version that labelled the call."
+        },
+        {
+          "name": "call__sentiment",
+          "type": "categorical",
+          "description": "The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it."
+        },
+        {
+          "name": "call__topic",
+          "type": "categorical",
+          "description": "What the customer called about (delivery, pricing, returns, product), as the model labelled it."
+        },
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
       ]
     },

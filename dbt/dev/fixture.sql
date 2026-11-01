@@ -25,6 +25,7 @@ DROP TABLE IF EXISTS ds_source.synthetic_partner_contacts CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_outreach_messages CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_outreach_replies CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_applications CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_call_transcripts CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -265,6 +266,40 @@ INSERT INTO ds_source.synthetic_bookings VALUES
     ('B-0001', 'L-0001', '2026-10-01 17:00+00', 3000.00, 'EUR', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://bookings', '2026-10-02 00:40+00'),
     ('B-0004', 'L-0004', '2026-10-02 11:00+00', 2500.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00'),
     ('B-0007', 'L-0007', '2026-10-02 18:30+00', 4000.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00');
+
+
+-- Call transcripts (semantic/PLAN.md SL-18): the calls of 2026-10-01 and 02 as EL Factory's generator
+-- writes them; their true labels are dbt/seeds/silver/call_label_golden_set.csv (with three hand-written
+-- hard cases), and their recorded label calls dbt/seeds/silver/call_label_recordings.csv. The day-2 rerun
+-- (run-call-2b) redelivers its first call, so silver keeps the latest load.
+CREATE TABLE ds_source.synthetic_call_transcripts (
+    transcript_id text,
+    customer_id integer,
+    call_ts timestamptz,
+    duration_seconds integer,
+    transcript text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_call_transcripts VALUES
+    ('T-20261001-003', 53, '2026-10-01T09:34:21+00:00', 575, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: I am not happy with how this has been handled at all. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-001', 195, '2026-10-01T11:13:40+00:00', 689, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: Okay, noted. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-007', 80, '2026-10-01T12:45:02+00:00', 168, 'Agent: Thanks for calling, how can I help? Customer: I have a question about the coffee machine: can it make two cups at once? Agent: Good question. Let me pull up the product sheet for you. Customer: Another supplier offered us something similar, so I am comparing the two. Agent: I understand, let me see what I can do. Customer: Great, you have been very kind, thanks a lot. Agent: I am passing this to my team lead, who will contact you today. Customer: Thank you.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-005', 140, '2026-10-01T13:17:48+00:00', 314, 'Agent: Thanks for calling, how can I help? Customer: I want to return the blender, it stopped working after two days. Agent: I can help with that. Returns are free within thirty days of delivery. Customer: We are not ready to decide this quarter, maybe after the new year. Agent: I understand, let me see what I can do. Customer: I am not happy with how this has been handled at all. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-002', 172, '2026-10-01T14:46:24+00:00', 218, 'Agent: Thanks for calling, how can I help? Customer: I would like to send back the chair I bought, it does not fit the room. Agent: I can help with that. Returns are free within thirty days of delivery. Customer: We are not ready to decide this quarter, maybe after the new year. Agent: I understand, let me see what I can do. Customer: Alright, I understand. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-004', 96, '2026-10-01T16:53:42+00:00', 202, 'Agent: Thanks for calling, how can I help? Customer: Which of your laptops has the longest battery life? Agent: Good question. Let me pull up the product sheet for you. Customer: Alright, I understand. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261001-006', 169, '2026-10-01T17:10:51+00:00', 658, 'Agent: Thanks for calling, how can I help? Customer: I have a question about the coffee machine: can it make two cups at once? Agent: Good question. Let me pull up the product sheet for you. Customer: Great, you have been very kind, thanks a lot. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://call_transcripts', '2026-10-02 00:25+00'),
+    ('T-20261002-002', 62, '2026-10-02T08:30:00+00:00', 413, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: I am not happy with how this has been handled at all. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
+    ('T-20261002-003', 137, '2026-10-02T09:26:02+00:00', 215, 'Agent: Thanks for calling, how can I help? Customer: I saw the new pricing on your site and want to know what we would pay next year. Agent: Of course. The annual plan is billed per seat, and larger teams get a volume rate. Customer: Alright, I understand. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
+    ('T-20261002-004', 146, '2026-10-02T14:18:48+00:00', 1114, 'Agent: Thanks for calling, how can I help? Customer: Does the standing desk come with a cable tray, or is that sold separately? Agent: Good question. Let me pull up the product sheet for you. Customer: Another supplier offered us something similar, so I am comparing the two. Agent: I understand, let me see what I can do. Customer: Thank you, that is really helpful, I appreciate it. Agent: Is there anything else I can help with? Customer: No, that is all. Goodbye.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
+    ('T-20261002-001', 161, '2026-10-02T14:47:39+00:00', 754, 'Agent: Thanks for calling, how can I help? Customer: I would like to send back the chair I bought, it does not fit the room. Agent: I can help with that. Returns are free within thirty days of delivery. Customer: I am not happy with how this has been handled at all. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
+    ('T-20261002-005', 68, '2026-10-02T15:12:42+00:00', 107, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: This is frustrating, I have called three times already and nothing changes. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
+    ('T-20261002-002', 62, '2026-10-02T08:30:00+00:00', 413, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: I am not happy with how this has been handled at all. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-2b', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 06:10+00');
 
 -- Customer actions (an append-only event stream, extracted by arrival time): site sessions walk the
 -- funnel page_view -> add_to_cart -> checkout; CRM actions carry no session. E-0011, E-0012 and E-0020
