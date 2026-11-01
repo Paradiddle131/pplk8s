@@ -4,7 +4,15 @@ import datetime
 
 import pytest
 
-from semantic_agent.metrics import MAX_ROWS, Catalog, Filter, MetricQuery, QueryError, where_clause
+from semantic_agent.metrics import (
+    MAX_ROWS,
+    Catalog,
+    Filter,
+    MetricQuery,
+    QueryError,
+    group_by_parameter,
+    where_clause,
+)
 from tests.conftest import FIXTURES
 
 CATALOG = Catalog.load(FIXTURES / "agent.json")
@@ -176,10 +184,14 @@ def test_a_request_carries_the_checked_parts():
         limit=10_000,
     ).request(CATALOG)
     assert request.metric_names == ["revenue_eur"]
-    assert request.group_by_names == ["metric_time__month", "order__status"]
+    assert [(p.name, getattr(p, "grain", None)) for p in request.group_by] == [
+        ("metric_time", "month"),
+        ("order__status", None),
+    ]
     assert request.where_constraints == ["{{ Dimension('order__currency') }} = 'EUR'"]
     assert request.time_constraint_start == datetime.datetime(2026, 10, 1)
-    assert request.order_by_names == ["-revenue_eur"]
+    [order] = request.order_by
+    assert (order.order_by.name, order.descending) == ("revenue_eur", True)
     assert request.limit == MAX_ROWS
 
 
@@ -374,3 +386,66 @@ def test_a_jinja_delimiter_is_refused_for_every_value_type(dimension, operator, 
     item = Filter(dimension=dimension, operator=operator, values=[value])
     with pytest.raises(QueryError, match="template delimiter"):
         where_clause(item, CATALOG.dimensions(["revenue_eur"]))
+
+
+# Group-bys: a time grain, a date part and an entity become typed MetricFlow parameters,
+# each from a name the catalog lists; anything else is refused naming what is allowed.
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("metric_time__week", ("metric_time", "week", None)),
+        ("metric_time__extract_dow", ("metric_time", None, "dow")),
+        ("customer__signup_date__extract_month", ("customer__signup_date", None, "month")),
+        ("metric_time", ("metric_time", None, None)),
+    ],
+)
+def test_a_time_group_by_is_a_typed_grain_or_date_part(name, expected):
+    parameter = group_by_parameter(
+        name, CATALOG.dimensions(["revenue_eur"]), CATALOG.entities(["revenue_eur"])
+    )
+    date_part = parameter.date_part.value if parameter.date_part else None
+    assert (parameter.name, parameter.grain, date_part) == expected
+
+
+@pytest.mark.parametrize(
+    ("metric", "name"), [("revenue_eur", "customer"), ("ad_spend_eur", "campaign")]
+)
+def test_an_entity_the_catalog_lists_is_a_group_by(metric, name):
+    assert name in CATALOG.entities([metric])
+    parameter = group_by_parameter(name, CATALOG.dimensions([metric]), CATALOG.entities([metric]))
+    assert parameter.name == name and not hasattr(parameter, "grain")
+
+
+@pytest.mark.parametrize(
+    ("metric", "name"),
+    [
+        ("revenue_eur", "campaign"),  # an entity, but not one orders reach
+        ("revenue_eur", "metric_time__extract_week"),  # MetricFlow has no week date part
+        ("revenue_eur", "metric_time__extract_hour"),
+        ("revenue_eur", "order__status__extract_dow"),  # a date part of a categorical dimension
+        ("revenue_eur", "metric_time__dow"),
+    ],
+)
+def test_a_group_by_outside_the_catalog_is_refused_naming_the_allowed_ones(metric, name):
+    with pytest.raises(QueryError, match=r"cannot group by .*__extract_dow.*entities are"):
+        group_by_parameter(name, CATALOG.dimensions([metric]), CATALOG.entities([metric]))
+
+
+def test_top_three_campaigns_by_spend_orders_and_limits_by_the_metric():
+    request = MetricQuery(
+        metrics=["ad_spend_eur"], group_by=["campaign"], order_by=["-ad_spend_eur"], limit=3
+    ).request(CATALOG)
+    [group] = request.group_by
+    [order] = request.order_by
+    assert group.name == "campaign"
+    assert (order.order_by.name, order.descending, request.limit) == ("ad_spend_eur", True, 3)
+
+
+def test_ordering_by_a_date_part_orders_by_its_typed_parameter():
+    request = MetricQuery(
+        metrics=["revenue_eur"],
+        group_by=["metric_time__extract_dow"],
+        order_by=["metric_time__extract_dow"],
+    ).request(CATALOG)
+    [order] = request.order_by
+    assert order.order_by is request.group_by[0] and not order.descending

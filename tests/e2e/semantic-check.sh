@@ -7,7 +7,8 @@
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
 #     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
-#     query_metrics writes them, equals SQL written by hand,
+#     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
+#     equals gold over the six weeks,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -625,5 +626,20 @@ expect "revenue month to date on 2026-09-15, and the September growth weeks" "$(
   select (select revenue_eur_mtd from semantic_check.mtd where day = '2026-09-15') || ' ' ||
          (select round(revenue_eur_wow_growth, 4) from semantic_check.wow where week = '2026-09-14')")" "5668.75 0.3265"
 echo "ok: over six weeks, the week-over-week growth and month-to-date metrics of revenue, bookings and leads equal gold"
+
+# A date part (the weekday, ISO: 1 Monday) as query_metrics groups by it, over the six whole weeks, against gold.
+(cd "$REPO/dbt" && uv run --quiet --no-project --with-requirements requirements.txt \
+  python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-08-17 2026-09-27 "$OUT/dow.csv") >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.dow" \
+  -c "create table semantic_check.dow (dow numeric, revenue_eur numeric)"
+psql_dev -c "\\copy semantic_check.dow from stdin with (format csv, header true)" <"$OUT/dow.csv"
+expect "revenue by weekday vs gold (rows differing)" "$(psql_dev -c "
+  with hand as (select extract(isodow from order_date)::numeric, sum(revenue_eur) from gold.daily_sales
+                where order_date between '2026-08-17' and '2026-09-27' group by 1),
+       mf as (select dow, revenue_eur from semantic_check.dow)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "weekdays with revenue" "$(psql_dev -c "select count(*) from semantic_check.dow")" 7
+echo "ok: revenue grouped by weekday (a date part, ISO) equals gold over six whole weeks"
 
 echo "PASS: semantic check"

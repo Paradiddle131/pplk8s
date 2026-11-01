@@ -6,7 +6,8 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
 
 - `agent.json`: the catalog the metric toolset reads (S3): the public models (gold and exposed, SL-4)
   with their relation, pipelines, grain and column descriptions, and every metric with its label,
-  description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by,
+  description, type, pipelines, readiness products, time grain, the entities it can be grouped by (one row
+  per customer, campaign, ...; their ids, no personal data) and the dimensions it can be grouped by,
   a categorical one with its known values when its column declares them (an `accepted_values` test), so the
   agent filters on a value the data holds instead of guessing one, and typed `numeric` when its column
   declares a numeric `data_type`, so the agent may compare it (MetricFlow knows only categorical and time).
@@ -249,7 +250,12 @@ def saved_queries(index: SemanticIndex) -> list[dict]:
     return found
 
 
-def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[str], list[dict]]) -> dict:
+def agent_catalog(
+    manifest: dict,
+    index: SemanticIndex,
+    dimensions: Callable[[str], list[dict]],
+    entities: Callable[[str], list[dict]] = lambda metric: [],
+) -> dict:
     return {
         "models": public_models(manifest),
         "glossary": glossary(manifest),
@@ -264,6 +270,7 @@ def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[st
                 "time_grain": index.time_grain(metric),
                 "semantic_models": [model["name"] for model in index.models_of_metric(metric)],
                 "dimensions": dimensions(metric["name"]),
+                "entities": entities(metric["name"]),
             }
             for metric in index.metrics
         ],
@@ -412,7 +419,7 @@ def example_queries(
 
 def _metricflow(
     project_dir: Path, index: SemanticIndex
-) -> tuple[Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
+) -> tuple[Callable[[str], list[dict]], Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
     """Dimensions and compiled SQL, of a metric and of a saved query, from MetricFlow's engine, set up as the
     mf CLI sets it up."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
@@ -442,6 +449,15 @@ def _metricflow(
             found.append(entry)
         return sorted(found, key=lambda dimension: dimension["name"])
 
+    def entities(metric: str) -> list[dict]:
+        """The entities a metric can be grouped by (one row per customer, campaign, ...), as their ids."""
+        # One entry per name: an entity reached through two models (campaign on spend and on leads) is one
+        # group-by; its description is the first in order, so the catalog is the same on every run.
+        found: dict[str, str] = {}
+        for entity in sorted(engine.entities_for_metrics([metric]), key=lambda e: (e.name, e.description or "")):
+            found.setdefault(entity.name, entity.description or "")
+        return [{"name": name, "description": description} for name, description in sorted(found.items())]
+
     def compiled_sql(metric: str) -> str:
         request = MetricFlowQueryRequest.create(
             metric_names=[metric], group_by_names=["metric_time__day"], order_by_names=["metric_time__day"]
@@ -451,18 +467,18 @@ def _metricflow(
     def compiled_saved_query(name: str) -> str:
         return engine.explain(MetricFlowQueryRequest.create(saved_query_name=name)).sql_statement.sql
 
-    return dimensions, compiled_sql, compiled_saved_query
+    return dimensions, entities, compiled_sql, compiled_saved_query
 
 
 def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
+    dimensions, entities, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
-    catalog = agent_catalog(manifest, index, dimensions)
+    catalog = agent_catalog(manifest, index, dimensions, entities)
     (out / "agent.json").write_text(json.dumps(catalog, indent=2) + "\n")
     (out / "data_agent" / "system_instruction.yaml").write_text(
         yaml.safe_dump(system_instruction(index, catalog["glossary"]), sort_keys=False, allow_unicode=True, width=110)

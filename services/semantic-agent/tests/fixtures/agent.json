@@ -946,6 +946,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
+        }
       ]
     },
     {
@@ -996,6 +1010,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "Must exist in slv_campaigns."
+        }
       ]
     },
     {
@@ -1045,6 +1065,12 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "Must exist in slv_campaigns."
         }
       ]
     },
@@ -1135,6 +1161,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "candidate",
+          "description": "Natural key; one application per candidate."
+        }
       ]
     },
     {
@@ -1216,6 +1248,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "booking",
+          "description": "Natural key."
+        },
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "The lead that booked; each lead books at most once."
         }
       ]
     },
@@ -1299,6 +1345,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "booking",
+          "description": "Natural key."
+        },
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "The lead that booked; each lead books at most once."
+        }
       ]
     },
     {
@@ -1380,6 +1440,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "booking",
+          "description": "Natural key."
+        },
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "The lead that booked; each lead books at most once."
         }
       ]
     },
@@ -1463,6 +1537,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "booking",
+          "description": "Natural key."
+        },
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "The lead that booked; each lead books at most once."
+        }
       ]
     },
     {
@@ -1538,6 +1626,16 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "call",
+          "description": "The call's id."
+        },
+        {
+          "name": "customer",
+          "description": "The customer who called."
         }
       ]
     },
@@ -1615,6 +1713,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "call",
+          "description": "The call's id."
+        },
+        {
+          "name": "customer",
+          "description": "The customer who called."
+        }
       ]
     },
     {
@@ -1680,6 +1788,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -1775,6 +1893,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "candidate",
+          "description": "The candidate; must exist in slv_applications."
+        }
       ]
     },
     {
@@ -1841,6 +1965,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
         }
       ]
     },
@@ -1909,6 +2047,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
+        }
       ]
     },
     {
@@ -1976,6 +2128,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
+        }
       ]
     },
     {
@@ -2022,6 +2188,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "Must exist in slv_campaigns."
+        }
       ]
     },
     {
@@ -2067,6 +2239,12 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "Must exist in slv_campaigns."
         }
       ]
     },
@@ -2135,6 +2313,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
+        }
       ]
     },
     {
@@ -2200,6 +2392,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -2268,6 +2470,20 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
+        }
       ]
     },
     {
@@ -2334,6 +2550,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
         }
       ]
     },
@@ -2424,6 +2654,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "candidate",
+          "description": "Natural key; one application per candidate."
+        }
       ]
     },
     {
@@ -2480,6 +2716,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -2534,6 +2780,16 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "Natural key."
         }
       ]
     },
@@ -2590,6 +2846,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -2645,6 +2911,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "campaign",
+          "description": "The campaign the lead came from; must exist in slv_campaigns."
+        },
+        {
+          "name": "lead",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -2698,6 +2974,16 @@
             "reseller"
           ]
         }
+      ],
+      "entities": [
+        {
+          "name": "outreach_message",
+          "description": "Natural key."
+        },
+        {
+          "name": "partner",
+          "description": "The partner of the message's contact."
+        }
       ]
     },
     {
@@ -2750,6 +3036,16 @@
             "agency",
             "reseller"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "outreach_message",
+          "description": "Natural key."
+        },
+        {
+          "name": "partner",
+          "description": "The partner of the message's contact."
         }
       ]
     },
@@ -2819,6 +3115,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -2896,6 +3202,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "call",
+          "description": "The call's id."
+        },
+        {
+          "name": "customer",
+          "description": "The customer who called."
+        }
       ]
     },
     {
@@ -2962,6 +3278,16 @@
             "cancelled"
           ]
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -3027,6 +3353,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -3100,6 +3436,20 @@
             "agency",
             "reseller"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "outreach_message",
+          "description": "The message replied to; warns when it is not loaded yet."
+        },
+        {
+          "name": "outreach_reply",
+          "description": "Natural key."
+        },
+        {
+          "name": "partner",
+          "description": "The partner of the message's contact."
         }
       ]
     },
@@ -3177,6 +3527,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "call",
+          "description": "The call's id."
+        },
+        {
+          "name": "customer",
+          "description": "The customer who called."
+        }
       ]
     },
     {
@@ -3253,6 +3613,16 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "call",
+          "description": "The call's id."
+        },
+        {
+          "name": "customer",
+          "description": "The customer who called."
+        }
       ]
     },
     {
@@ -3326,6 +3696,20 @@
             "reseller"
           ]
         }
+      ],
+      "entities": [
+        {
+          "name": "outreach_message",
+          "description": "The message replied to; warns when it is not loaded yet."
+        },
+        {
+          "name": "outreach_reply",
+          "description": "Natural key."
+        },
+        {
+          "name": "partner",
+          "description": "The partner of the message's contact."
+        }
       ]
     },
     {
@@ -3378,6 +3762,16 @@
             "agency",
             "reseller"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "outreach_message",
+          "description": "Natural key."
+        },
+        {
+          "name": "partner",
+          "description": "The partner of the message's contact."
         }
       ]
     },
@@ -3478,6 +3872,20 @@
           "type": "time",
           "description": "UTC date the return was recorded (returned_at in UTC)."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "The returned order."
+        },
+        {
+          "name": "return",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -3577,6 +3985,20 @@
           "type": "time",
           "description": "UTC date the return was recorded (returned_at in UTC)."
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "The returned order."
+        },
+        {
+          "name": "return",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -3642,6 +4064,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -3709,6 +4141,16 @@
             "cancelled"
           ]
         }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
       ]
     },
     {
@@ -3774,6 +4216,16 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
         }
       ]
     },
@@ -3841,6 +4293,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
         }
       ]
     },
@@ -3931,6 +4397,12 @@
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
+      ],
+      "entities": [
+        {
+          "name": "candidate",
+          "description": "Natural key; one application per candidate."
+        }
       ]
     },
     {
@@ -3997,6 +4469,20 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "The customer who acted; must exist in slv_customers."
+        },
+        {
+          "name": "customer_action",
+          "description": "Natural key."
+        },
+        {
+          "name": "session",
+          "description": "The site session the action belongs to; NULL for CRM actions."
         }
       ]
     }
