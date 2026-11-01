@@ -147,12 +147,11 @@ services:
 
   # BigQuery engine stand-in for the semantic path's dialect (semantic/PLAN.md SL-7), beside the
   # Postgres warehouse rather than in its place; profile `bigquery`, so `make services-up` skips it
-  # and `make bigquery-emulator-check` starts it. Its data is a file in its own container: a restart keeps
-  # it and frees the engine's memory, which grows with every statement (#246); a recreate empties it.
+  # and `make bigquery-emulator-check` starts it. In memory: a restart empties it.
   bigquery:
     profiles: [bigquery]
     image: ghcr.io/goccy/bigquery-emulator:0.8.1
-    command: [--project=pplk8s-lab, --port=9050, --grpc-port=9060, --database=/tmp/bigquery.db]
+    command: [--project=pplk8s-lab, --port=9050, --grpc-port=9060]
 
   bigquery-api: # host http://localhost:9050: the emulator behind the shim for dbt-bigquery's two gaps
     profiles: [bigquery]
