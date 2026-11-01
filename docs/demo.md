@@ -16,7 +16,7 @@ make demo STEP=setup
 ```
 
 - `setup` runs `make bigquery-emulator-check`: each domain on a fresh emulator of its own (one emulator holding every domain overflows its engine), the fixture copied in, `dbt build` of every layer with its tests, the metrics checked against the hand-written tables; the platform's models and the migration report go last, so that is what the emulator holds for the demo.
-  It ends `PASS: BigQuery emulator check`.
+  It ends `PASS: BigQuery run check on the emulator`.
 - It then builds the same fixture in the Compose warehouse's `dbt_dev` for the agent: the models, the catalog, the agents' read-only roles and the fixture's days in `ops.readiness`.
   It ends `ok: fixture built in dbt_dev, catalog written, agent roles granted, readiness recorded`.
 - For the live agent (step 3), check the model key with `make agent-key-check`; for the score (step 7), `make agent-eval` refreshes it (about 90 free-tier model requests).

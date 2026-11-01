@@ -1,0 +1,9 @@
+## 2026-11-01 — Semantic — One BigQuery run check for the emulator and the lab project; dbt's `gcp` output (#206, part 1)
+
+- Done: dbt's `gcp` output (`dbt/profiles.yml`): the project from `GCP_PROJECT` (refused without), application default credentials or a proxy's placeholder token, location US, every job capped at 1 GiB billed (`free-path.yaml` `caps`, held by `platform/gcp/tests/test_dbt_gcp_output.py`) and 300 s; `query-comment: {job-label: true}` in `dbt_project.yml`; `dbt parse` passes on it offline.
+- Done: `tests/e2e/bigquery-emulator-check.sh` becomes `tests/e2e/bigquery-run-check.sh` with `BQ_TARGET=emulator|gcp`: one client helper (`tests/e2e/lib/bigquery_target.py`), the fixture copier moved out of the dbt project (`tests/e2e/lib/fixture_to_bigquery.py`), which empties the lab's dbt datasets (never `ops`, never the datasets OpenTofu owns), loads by load jobs on BigQuery (streaming inserts are not free; the emulator hangs on a JSON load), and the run's bytes billed at the end; `make bigquery-live-check` runs it with the cost check before and after.
+- Done: the call labels default to the recordings on `gcp` as on the emulator: the $0.00 lab project may not call Vertex AI.
+- Done: `docs/agents/autopilot.md` unparks Map #212 (owner, 2026-11-01).
+- Evidence: see the PR for `make bigquery-emulator-check` on the new script and the offline parse on `gcp`.
+- Decisions: SL-7 amended (the live run beside the emulator).
+- Open: the live run waits for the owner's `make gcp-up` (the lab project has only `billing_export`); then the Unverified line on BigQuery itself is struck with its output. Part 2 of #206: SL-19's dbt image for GCP.

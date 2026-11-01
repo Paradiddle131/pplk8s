@@ -5,10 +5,12 @@
 -- `var('call_labels')` picks the path: `generated` asks BigQuery's AI.GENERATE; `recorded` joins the
 -- lab's recordings (seeds/silver/call_label_recordings.csv, written by scripts/record_call_labels.py),
 -- keyed by the transcript's hash and the prompt version, so a transcript without a recording waits
--- unlabelled, as a failed call would. Unset, BigQuery generates, except on the emulator, which fakes
--- AI.CLASSIFY and lacks AI.GENERATE (docs/text-signals.md); Postgres has no model to ask.
+-- unlabelled, as a failed call would. Unset, BigQuery generates (the compile-only `bigquery` output, as at
+-- work), except on the emulator, which fakes AI.CLASSIFY and lacks AI.GENERATE (docs/text-signals.md), and on
+-- `gcp`, the $0.00 lab project, which may not call Vertex AI (platform/gcp/free-path.yaml lists it as paid);
+-- Postgres has no model to ask.
 {% macro label_calls(transcripts, prompt) -%}
-    {%- set default = 'generated' if target.type == 'bigquery' and target.name != 'bigquery_emulator' else 'recorded' %}
+    {%- set default = 'generated' if target.type == 'bigquery' and target.name not in ('bigquery_emulator', 'gcp') else 'recorded' %}
     {%- set path = var('call_labels', default) %}
     {%- if path == 'generated' %}
         {{ return(adapter.dispatch('generated_call_labels')(transcripts, prompt)) }}

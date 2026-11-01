@@ -118,7 +118,7 @@ That record's table comes from the dbt project, `dbt run-operation agent_warehou
 
 ## Unverified
 
-- That the compiled SQL runs on BigQuery itself: it runs on the emulator, whose analyzer is ZetaSQL's, including MetricFlow's `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; real BigQuery stays the final word.
+- That the compiled SQL runs on BigQuery itself: it runs on the emulator, whose analyzer is ZetaSQL's, including MetricFlow's `TIMESTAMP_TRUNC(order_date, day)` on a `DATE` column; real BigQuery stays the final word, which `make bigquery-live-check` gives on the lab project (the same script and fixture, #206) once its datasets exist (`make gcp-up`).
 - The exact `ask_data_agent` arguments: the ADK page does not list them; the lab toolset's contract is a question in, and text, rows and SQL out, as the docs describe.
 - Whether `ask_data_agent`'s result names the metrics or tables it used, which the after-tool callback needs to look up their freshness; without them every answer says its freshness is unknown, and the options are the freshness tables as a knowledge source or a verified query of the data agent.
 - Cloud Run Job overrides: read from the Jobs API reference, not tried.

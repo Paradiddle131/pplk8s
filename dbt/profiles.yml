@@ -1,7 +1,7 @@
 # Connection profile used by the dbt image (DBT_PROFILES_DIR=/dbt).
 # Every value is overridable by environment variable; the defaults target the lab's Compose warehouse.
 pplk8s:
-  target: "{{ env_var('DBT_TARGET', 'dev') }}"  # bigquery: the compile-only target below
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"  # bigquery: compile-only; bigquery_emulator; gcp: the lab project
   outputs:
     dev:
       type: postgres
@@ -37,3 +37,18 @@ pplk8s:
       api_endpoint: "{{ env_var('BQ_API_ENDPOINT', 'http://localhost:9050') }}"
       threads: 1
       job_retries: 0
+    # The lab project on real BigQuery (semantic/PLAN.md SL-13, SL-19; #206): application default credentials,
+    # or the access token in GCP_ACCESS_TOKEN where a proxy injects the real one (cloud sessions); the project
+    # from GCP_PROJECT, which it refuses without. Every job is capped at 1 GiB billed (BigQuery fails a job
+    # that would bill more, before it runs) and 5 minutes, and carries dbt's query comment as job labels
+    # (dbt_project.yml `query-comment`), so the Data Access log and INFORMATION_SCHEMA.JOBS name the run.
+    gcp:
+      type: bigquery
+      method: "{{ 'oauth-secrets' if env_var('GCP_ACCESS_TOKEN', '') else 'oauth' }}"
+      token: "{{ env_var('GCP_ACCESS_TOKEN', '') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: "{{ env_var('DBT_SCHEMA', 'public') }}"
+      location: US
+      maximum_bytes_billed: 1073741824
+      job_execution_timeout_seconds: 300
+      threads: 4

@@ -13,6 +13,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 | `guardrails-check.sh` | `make gcp-guardrails-check`: reads back the daily query quota, the enabled APIs against the free path, Firestore's databases and the byte cap (#205) | — | live: ok |
 | `tofu.sh` | `make gcp-plan`, `gcp-up`, `gcp-down`: credentials, the state at `gs://<project>-tfstate/default.tfstate` (no slash in the name: the cloud proxy breaks slashed object names), refuses without `GCP_PROJECT` | — | applied; `gcp-plan`: no changes |
 | `cost-check.sh` | `make gcp-cost-check`: the month's cost from the billing export, by service and SKU (#233) | — | live: no export rows yet |
+| (dbt's `gcp` output, `tests/e2e/bigquery-run-check.sh`) | `make bigquery-live-check`: the emulator check on the lab project: its dbt datasets emptied, the fixture loaded by load jobs, the semantic path built and its metrics asserted against gold, then the bytes billed; the cost check before and after (#206) | `make bigquery-emulator-check` | waits for `gcp-up`'s datasets |
 
 ## The $0.00 rule
 
@@ -39,7 +40,7 @@ The cloud sessions' credential holds no role that can enable an API, change IAM 
 - BigQuery query usage per day and per user: 31,457 MiB (`free-path.yaml` `caps`; set by hand in #226, imported and held by `infra/bigquery.tf`): 31 days of it stay under the free 1 TiB, and `make gcp-validate` fails a higher cap.
 - Firestore: only the `(default)` database, which is the free one, with point-in-time recovery off; no TTL policies or backups (billed from the first byte).
 - `make gcp-guardrails-check` reads these back from the project, and fails on any enabled API that is not on the free path.
-- `~/.bigqueryrc` in cloud sessions: 1 GiB `maximum_bytes_billed` per query.
+- `~/.bigqueryrc` in cloud sessions: 1 GiB `maximum_bytes_billed` per query; dbt's `gcp` output and the live check's client cap every job at the same `caps.bigquery_maximum_bytes_billed` (held by `tests/test_dbt_gcp_output.py`).
 - A 1 USD budget on the billing account, alerting by email; the billing export to `billing_export` (US).
 - Off: BigQuery Reservation, Dataplex, Cloud SQL and the "Google Cloud APIs" bundle that kept them on.
 

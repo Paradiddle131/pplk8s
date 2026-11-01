@@ -89,7 +89,7 @@ So the emulator target must take the recorded path, like Postgres.
 The call-transcripts domain follows the shape above:
 - EL Factory's `synthetic/call_transcripts` lands text only, written from labels it picks first; `call_transcripts_elt` runs it on the shared ELT pattern.
 - `dbt_project.yml`'s `call_label_prompt` holds the prompt, its version (`v1`), the endpoint (`gemini-3.5-flash`) and the thresholds per signal, written before the first comparison.
-- `macros/call_labels.sql` builds the label call: `AI.GENERATE` on a BigQuery target, compiled by `make bigquery-check`; recorded answers on Postgres and the emulator.
+- `macros/call_labels.sql` builds the label call: `AI.GENERATE` on a BigQuery target, compiled by `make bigquery-check`; recorded answers on Postgres, the emulator and the lab project's `gcp` output, which may not call Vertex AI (#206).
 - `slv_call_transcript_labels` and `slv_call_golden_labels` are incremental with `full_refresh: false`; `slv_call_label_agreement` scores each version; `dbt build` fails below a threshold, above the failed-call share or on a label outside its values.
 - The metrics `calls_labelled`, `calls_with_objection`, `positive_calls`, `objection_rate` and `positive_sentiment_share` start "Model-derived", which `check_standard.py` enforces for any metric over a `derived_by: model` column; the glossary term "Model-derived label" explains them.
 - Drift no data shows: the test `call_label_model_versions_scored` fails the build when the current prompt version's labels name a model version the golden set was not labelled by.
