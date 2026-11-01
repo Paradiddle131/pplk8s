@@ -6,9 +6,11 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 
 | Path | What it is | Stand-in it replaces | Status |
 |---|---|---|---|
-| `free-path.yaml` | every API and OpenTofu resource type the project may use, each with its free-tier source; the paid list | — | in `make gcp-validate` |
+| `free-path.yaml` | every API and OpenTofu resource type the project may use, each with its free-tier source; the APIs GCP turns on by itself; the caps; the paid list | — | in `make gcp-validate` |
 | `check_free_path.py`, `tests/` | fails on anything off the free path, offline | — | in `make gcp-validate` |
-| `infra/` | the one OpenTofu root: the free-path APIs, the kill switch, and Artifact Registry's `pplk8s` Docker repository (two versions per image, scanning off; #230) | Compose and kind; the kind registry (`localhost:5001`) | applied by the owner; the repository waits for `gcp-up` |
+| `infra/` | the one OpenTofu root: the free-path APIs, the kill switch, Artifact Registry's `pplk8s` Docker repository (two versions per image, scanning off; #230), the BigQuery datasets, workload service accounts and their grants, the daily query quota, Firestore's free database (#205) | Compose and kind; the kind registry (`localhost:5001`) | applied by the owner; #230's and #205's resources wait for `gcp-up` |
+| `access.yaml` | each workload's service account and the datasets it reads or writes, held to the lab's roles by `tests/test_access.py` | the warehouse roles of `dbt/macros/agent_warehouse.sql` | in `make gcp-validate` |
+| `guardrails-check.sh` | `make gcp-guardrails-check`: reads back the daily query quota, the enabled APIs against the free path, Firestore's databases and the byte cap (#205) | — | live: ok |
 | `tofu.sh` | `make gcp-plan`, `gcp-up`, `gcp-down`: credentials, the state at `gs://<project>-tfstate/default.tfstate` (no slash in the name: the cloud proxy breaks slashed object names), refuses without `GCP_PROJECT` | — | applied; `gcp-plan`: no changes |
 | `cost-check.sh` | `make gcp-cost-check`: the month's cost from the billing export, by service and SKU (#233) | — | live: no export rows yet |
 
@@ -27,13 +29,16 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 |---|---|---|
 | The owner, from their own signed-in shell | Owner | `make gcp-up` / `gcp-down`, enabling APIs, IAM, quotas, the budget |
 | `pplk8s-automation`, the cloud sessions' credential (injected by the egress proxy, no key) | Viewer, BigQuery Job User and Data Editor, Service Usage Consumer; Storage Object Viewer on the state bucket; Artifact Registry Writer on the `pplk8s` repository (`infra/`) | reads, `make gcp-plan`, `make gcp-cost-check`, BigQuery work, pushing the lab's images |
+| `dbt-runner`, `semantic-agent`, `agent-audit` (created by `infra/` from `access.yaml`) | BigQuery Job User; Data Editor on dbt's datasets and Data Viewer on `ds_source` (dbt), Data Viewer on `silver` and `semantic` (the agent), none yet (the audit writer, whose insert-only grant on `ops.agent_queries` comes with the table, #209) | run the dbt build, the agent's queries, the audit inserts (from #206 and #209) |
 | `kill-switch` (created by `infra/`) | Project Billing Manager, Workflows Invoker, Eventarc Event Receiver, Logs Writer | unlinks billing when the budget passes `kill_switch_usd` |
 
 The cloud sessions' credential holds no role that can enable an API, change IAM or quotas, or buy capacity, so a mistake there cannot spend; a product's role is added by the owner when an issue reaches it.
 
 ## Guard rails in place
 
-- BigQuery query usage per day and per user: 31,457 MiB (set by hand, #226; #205 codifies it).
+- BigQuery query usage per day and per user: 31,457 MiB (`free-path.yaml` `caps`; set by hand in #226, imported and held by `infra/bigquery.tf`): 31 days of it stay under the free 1 TiB, and `make gcp-validate` fails a higher cap.
+- Firestore: only the `(default)` database, which is the free one, with point-in-time recovery off; no TTL policies or backups (billed from the first byte).
+- `make gcp-guardrails-check` reads these back from the project, and fails on any enabled API that is not on the free path.
 - `~/.bigqueryrc` in cloud sessions: 1 GiB `maximum_bytes_billed` per query.
 - A 1 USD budget on the billing account, alerting by email; the billing export to `billing_export` (US).
 - Off: BigQuery Reservation, Dataplex, Cloud SQL and the "Google Cloud APIs" bundle that kept them on.

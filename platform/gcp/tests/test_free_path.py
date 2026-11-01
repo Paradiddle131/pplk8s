@@ -66,6 +66,28 @@ def test_a_dated_exception_expires(copy: Path) -> None:
     assert any("free window" in p for p in problems(copy, dt.date(2027, 1, 1)))
 
 
+def test_a_raised_query_cap_fails(copy: Path) -> None:
+    spec = copy / "free-path.yaml"
+    spec.write_text(
+        spec.read_text().replace(
+            "bigquery_query_mib_per_day: 31457", "bigquery_query_mib_per_day: 40000"
+        )
+    )
+    assert any("past the free 1 TiB" in p for p in problems(copy))
+
+
+def test_a_paid_api_cannot_hide_as_implicit(copy: Path) -> None:
+    spec = copy / "free-path.yaml"
+    spec.write_text(
+        spec.read_text().replace(
+            "implicit:\n",
+            "implicit:\n  compute.googleapis.com: {source: https://x}\n",
+            1,
+        )
+    )
+    assert any("cannot be implicit" in p for p in problems(copy))
+
+
 def test_scanning_is_paid_and_the_registry_turns_it_off() -> None:
     paid = yaml.safe_load((GCP / "free-path.yaml").read_text())["paid"]
     assert {

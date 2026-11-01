@@ -27,6 +27,16 @@ if [ -z "${GOOGLE_OAUTH_ACCESS_TOKEN:-}" ]; then
   fi
 fi
 vars=(-var "project=$GCP_PROJECT")
+# Quota preferences cannot be deleted: pass the BigQuery ones already on the project (the console's, #226,
+# or an earlier gcp-up's), so infra/bigquery.tf imports them instead of creating a second one.
+token=${GOOGLE_OAUTH_ACCESS_TOKEN:-$(gcloud auth print-access-token 2>/dev/null || true)}
+existing=$(curl -fsS -H "Authorization: Bearer $token" \
+  "https://cloudquotas.googleapis.com/v1/projects/$GCP_PROJECT/locations/global/quotaPreferences" |
+  python3 -c 'import json, sys
+prefs = json.load(sys.stdin).get("quotaPreferences", [])
+print(json.dumps({p["quotaId"]: p["name"].rsplit("/", 1)[1] for p in prefs if p["service"] == "bigquery.googleapis.com"}))') ||
+  { echo "tofu.sh: could not list the project's quota preferences" >&2; exit 1; }
+vars+=(-var "existing_quota_preferences=$existing")
 [ -n "${KILL_SWITCH_USD:-}" ] && vars+=(-var "kill_switch_usd=$KILL_SWITCH_USD")
 
 tofu -chdir="$infra" init -input=false -reconfigure -backend-config="bucket=$GCP_PROJECT-tfstate" >/dev/null

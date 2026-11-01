@@ -31,9 +31,10 @@ apis:
   workflowexecutions.googleapis.com: {enable: true, source: https://cloud.google.com/workflows/pricing}
   # Artifact Registry: 0.5 GiB-month of storage per billing account, pulls within us-central1 free (#230).
   artifactregistry.googleapis.com: {enable: true, source: https://cloud.google.com/artifact-registry/pricing}
+  # Firestore: one free database per project, 1 GiB stored, 50,000 reads and 20,000 writes a day (the agent's sessions, #205).
+  firestore.googleapis.com: {enable: true, source: https://cloud.google.com/firestore/pricing}
   # Later issues on Map #212, off until their PR turns them on.
   run.googleapis.com: {enable: false, source: https://cloud.google.com/run/pricing, issue: 209}
-  firestore.googleapis.com: {enable: false, source: https://cloud.google.com/firestore/pricing, issue: 209}
   cloudscheduler.googleapis.com: {enable: false, source: https://cloud.google.com/scheduler/pricing, issue: 228}
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
   # The one dated exception: free until 2026-12-31, switched off by #232.
@@ -46,8 +47,37 @@ resources:
   google_pubsub_topic: pubsub.googleapis.com
   google_workflows_workflow: workflows.googleapis.com
   google_eventarc_trigger: eventarc.googleapis.com
+  google_bigquery_dataset: bigquery.googleapis.com
+  google_bigquery_dataset_iam_member: bigquery.googleapis.com
+  google_firestore_database: firestore.googleapis.com
+  google_cloud_quotas_quota_preference: cloudquotas.googleapis.com
   google_artifact_registry_repository: artifactregistry.googleapis.com
   google_artifact_registry_repository_iam_member: artifactregistry.googleapis.com
+
+# APIs GCP turns on by itself with the ones above (BigQuery, Storage, IAM, Firestore, Workflows): they bill
+# nothing for being on, only for what is used through them, and the lab uses none of them directly.
+# `make gcp-guardrails-check` fails on an enabled API that is neither above nor here.
+implicit:
+  analyticshub.googleapis.com: {source: https://cloud.google.com/bigquery/docs/analytics-hub-introduction#pricing}
+  apptopology.googleapis.com: {source: https://cloud.google.com/app-hub/docs/overview}
+  bigqueryconnection.googleapis.com: {source: https://cloud.google.com/bigquery/docs/connections-api-intro}
+  bigquerydatapolicy.googleapis.com: {source: https://cloud.google.com/bigquery/docs/column-data-masking-intro}
+  bigquerymigration.googleapis.com: {source: https://cloud.google.com/bigquery/docs/migration-intro#pricing}
+  cloudtrace.googleapis.com: {source: https://cloud.google.com/stackdriver/pricing#trace-costs}
+  dataform.googleapis.com: {source: https://cloud.google.com/dataform/pricing}
+  datastore.googleapis.com: {source: https://cloud.google.com/firestore/pricing}
+  iamcredentials.googleapis.com: {source: https://cloud.google.com/iam/pricing}
+  servicemanagement.googleapis.com: {source: https://cloud.google.com/service-infrastructure/docs/service-management/getting-started}
+  storage-api.googleapis.com: {source: https://cloud.google.com/storage/pricing}
+  storage-component.googleapis.com: {source: https://cloud.google.com/storage/pricing}
+  telemetry.googleapis.com: {source: https://cloud.google.com/stackdriver/pricing}
+
+# The stops, in one place: infra/ applies the query quota, and `make gcp-guardrails-check` reads them back.
+caps:
+  # BigQuery bytes a day, for the project and for each user, in MiB: 31 days stay under the free 1 TiB.
+  bigquery_query_mib_per_day: 31457
+  # Bytes one query job may bill (cloud sessions' ~/.bigqueryrc, dbt's `gcp` target): 1 GiB.
+  bigquery_maximum_bytes_billed: 1073741824
 
 # No Always Free tier, or a free tier the lab cannot hold: never on the list above.
 paid:

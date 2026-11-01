@@ -4,7 +4,9 @@ Checks, against free-path.yaml:
 - every API listed has an https source and is not on its `paid` list;
 - an API past its `until` date is not enabled;
 - every resource type the OpenTofu root declares is listed, and its API is enabled;
-- every `*.googleapis.com` host the root names (resources, workflow sources) is an enabled API.
+- every `*.googleapis.com` host the root names (resources, workflow sources) is an enabled API;
+- every API GCP enables by itself (`implicit`) has an https source and is not paid;
+- the daily query cap, every day of a 31-day month, stays inside BigQuery's free 1 TiB of queries.
 
 Usage: python platform/gcp/check_free_path.py [gcp dir]; run by `make gcp-validate`.
 """
@@ -18,6 +20,9 @@ from pathlib import Path
 
 import yaml
 
+FREE_QUERY_MIB_PER_MONTH = (
+    1024 * 1024
+)  # 1 TiB: https://cloud.google.com/bigquery/pricing#free-tier
 RESOURCE = re.compile(r'^\s*resource\s+"([a-z0-9_]+)"', re.MULTILINE)
 HOST = re.compile(r"\b([a-z0-9-]+\.googleapis\.com)\b")
 
@@ -39,6 +44,32 @@ def problems(gcp: Path, today: dt.date | None = None) -> list[str]:
         if until and api.get("enable") and today > dt.date.fromisoformat(str(until)):
             out.append(f"{name}: enabled past its free window ({until})")
     enabled = {name for name, api in apis.items() if api.get("enable")}
+
+    for name, api in (spec.get("implicit") or {}).items():
+        if name in paid:
+            out.append(f"{name}: on the paid list, so it cannot be implicit")
+        if name in apis:
+            out.append(f"{name}: listed both as a free-path API and as implicit")
+        if not str((api or {}).get("source", "")).startswith("https://"):
+            out.append(f"{name}: an implicit API without an https source")
+
+    caps = spec.get("caps") or {}
+    daily = caps.get("bigquery_query_mib_per_day")
+    if not isinstance(daily, int) or daily <= 0:
+        out.append(
+            "caps.bigquery_query_mib_per_day: missing; the query quota is the hard stop"
+        )
+    elif daily * 31 > FREE_QUERY_MIB_PER_MONTH:
+        out.append(
+            f"caps.bigquery_query_mib_per_day: {daily} MiB a day can bill past the free 1 TiB in a month"
+        )
+    per_job = caps.get("bigquery_maximum_bytes_billed")
+    if not isinstance(per_job, int) or per_job <= 0:
+        out.append("caps.bigquery_maximum_bytes_billed: missing")
+    elif isinstance(daily, int) and per_job > daily * 1024 * 1024:
+        out.append(
+            "caps.bigquery_maximum_bytes_billed: one job may bill more than a day's quota"
+        )
 
     infra = gcp / "infra"
     for path in sorted([*infra.glob("*.tf"), *infra.glob("*.yaml")]):
