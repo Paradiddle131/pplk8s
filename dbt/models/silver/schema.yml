@@ -169,6 +169,21 @@ models:
         agg: sum
         expr: amount
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      - name: median_order_value_eur
+        description: >-
+          BigQuery only: the median amount of a non-cancelled order, BigQuery's approximate continuous percentile
+          (APPROX_QUANTILES); Postgres has no rendering of it, so an agent on Postgres declines.
+        label: Median order value (EUR)
+        type: simple
+        agg: percentile
+        percentile: 0.5
+        percentile_type: continuous
+        expr: amount
+        config:
+          enabled: "{{ target.type == 'bigquery' }}"
+          meta:
+            dialects: [bigquery]
+        filter: "{{ Dimension('order__status') }} <> 'cancelled'"
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order.
         label: Active customers

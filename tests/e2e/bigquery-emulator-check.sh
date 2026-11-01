@@ -16,7 +16,8 @@
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
 #     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
-#     signup-to-first-order rate by month and the return rate by order day against SQL by hand, the marketing metrics by day and channel
+#     signup-to-first-order rate by month and the return rate by order day against SQL by hand, the average and
+#     the BigQuery-only median order value by day, the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
@@ -158,7 +159,16 @@ if part == "platform":
                           group by 1)
         select cast(o.order_date as string), coalesce(r.n, 0) / o.n, coalesce(safe_divide(r.damaged, r.n), 0)
         from orders o left join returned r on r.order_date = o.order_date""")
+    # A typical order by day: the average against gold, and the BigQuery-only median (enabled on this target)
+    # against BigQuery's approximate quantiles by hand, as MetricFlow renders an approximate continuous percentile.
+    order_value = rows("""
+        select cast(g.order_date as string), g.revenue_eur / (g.orders_total - g.orders_cancelled), m.median
+        from `pplk8s-lab.gold.daily_sales` g join (
+            select order_date, approx_quantiles(amount, 100)[offset(50)] as median from `pplk8s-lab.silver.orders`
+            where status <> 'cancelled' group by 1) m on m.order_date = g.order_date""")
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("average and median order value by day", order_value,
+                 metrics("order_value", ["average_order_value_eur", "median_order_value_eur"])),
                 ("return rate by order day (SQL by hand)", return_rate,
                  metrics("return_rate", ["return_rate", "damaged_return_share"])),
                 ("customers by month (SQL by hand)", customers,
@@ -184,7 +194,7 @@ if part == "platform":
     said = (f"the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, net revenue"
             f" by customer country SQL by hand on {len(by_country)} day-countries, revenue by weekday on"
             f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the return rate on"
-            f" {len(return_rate)} order days, the marketing"
+            f" {len(return_rate)} order days, the average and median order value on {len(order_value)} days, the marketing"
             f" metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity reports as on Postgres")
 elif part == "customer_actions":
     actions = keyed("select concat(cast(activity_date as string), ' ', action_type), actions"
@@ -365,6 +375,9 @@ run_ mf query --metrics signups,customers_to_date,signup_to_first_order_rate --g
 run_ mf query --metrics return_rate,damaged_return_share --group-by metric_time__day \
   --csv "$OUT/return_rate.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the return rate on the emulator"; }
+run_ mf query --metrics average_order_value_eur,median_order_value_eur --group-by metric_time__day \
+  --csv "$OUT/order_value.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the average and the BigQuery-only median order value on the emulator"; }
 run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \

@@ -49,7 +49,7 @@ Everything is lower snake case; a metric ends in its unit (`revenue_eur`), a cou
 Every calculated field is one metric in the semantic YAML, over silver: a sum, count or distinct count in its silver model's YAML, a ratio, derived or conversion metric, built from other metrics, in `dbt/models/semantic/semantic.yml`.
 Gold and exposed keep their hand-written aggregates only as the parity oracle; a new number an agent should answer becomes a metric first.
 A routine or scheduled query that computes a business number moves into a metric, never into a UDF ([`routines-and-scheduled-queries.md`](routines-and-scheduled-queries.md)).
-The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in `make dbt-validate`) fails when a metric is missing from it or a row differs from the project.
+The table holds the rows of `semantic.metrics`, and a metric defined for one warehouse only (`median_order_value_eur`, BigQuery); `dbt/scripts/check_brief.py` (in `make dbt-validate`) fails when a metric is missing from it or a row differs from the project.
 
 | Metric | Label | Type | Semantic models | Defined in |
 |---|---|---|---|---|
@@ -75,6 +75,7 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `orders_cancelled` | Cancelled orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `orders_total` | Orders | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `revenue_eur` | Revenue (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
+| `median_order_value_eur` | Median order value (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `repeat_customers` | Repeat customers | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `revenue_repeat_customers_eur` | Revenue from repeat customers (EUR) | simple | `orders` | `dbt/models/silver/schema.yml` |
 | `messages_replied` | Messages replied | simple | `outreach_messages` | `dbt/models/silver/schema.yml` |
@@ -107,6 +108,7 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `repeat_revenue_share` | Repeat-customer revenue share | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
 | `return_rate` | Return rate | ratio | `orders`, `returns` | `dbt/models/semantic/semantic.yml` |
 | `damaged_return_share` | Damaged-return share | ratio | `returns` | `dbt/models/semantic/semantic.yml` |
+| `average_order_value_eur` | Average order value (EUR) | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
 
 - Rules: [`agent-ready-warehouse.md` § Where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)
 - Proof: `make semantic-check` (every metric equals gold and exposed, day by day), `make bigquery-emulator-check` (the same on the emulator)

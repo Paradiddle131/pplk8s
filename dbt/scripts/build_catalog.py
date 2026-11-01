@@ -13,6 +13,8 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   declares a numeric `data_type`, so the agent may compare it (MetricFlow knows only categorical and time).
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
+  The metrics defined for another warehouse only (`unavailable_metrics`: a BigQuery-only median on Postgres),
+  with their dialects, so the agent declines them by name instead of guessing.
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
@@ -123,6 +125,25 @@ def numeric_columns(manifest: dict) -> set[tuple[str, str]]:
         for name, column in node.get("columns", {}).items()
         if (column.get("data_type") or "").lower().split("(")[0].strip() in NUMERIC_TYPES
     }
+
+
+def unavailable_metrics(manifest: dict) -> list[dict]:
+    """The metrics defined for another warehouse only (`config.meta.dialects`, disabled on this target by
+    `enabled: "{{ target.type == ... }}"`), so the agent can say a metric exists, but not here (SL-6)."""
+    found = []
+    for nodes in manifest.get("disabled", {}).values():
+        for node in nodes:
+            dialects = ((node.get("config") or {}).get("meta") or {}).get("dialects")
+            if node.get("resource_type") == "metric" and dialects:
+                found.append(
+                    {
+                        "name": node["name"],
+                        "label": node.get("label") or "",
+                        "description": node.get("description") or "",
+                        "dialects": list(dialects),
+                    }
+                )
+    return sorted(found, key=lambda metric: metric["name"])
 
 
 def glossary(manifest: dict) -> list[dict]:
@@ -275,6 +296,7 @@ def agent_catalog(
             for metric in index.metrics
         ],
         "saved_queries": saved_queries(index),
+        "unavailable_metrics": unavailable_metrics(manifest),
     }
 
 

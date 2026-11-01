@@ -7,7 +7,7 @@
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
 #     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
-#     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
+#     query_metrics writes them, equals SQL written by hand, the average order value equals gold, and revenue grouped by weekday (a date part)
 #     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
 #     equal SQL written by hand over two months of signups, and the repeat-customer metrics (a Metric() filter)
 #     equal SQL by hand, a query's dates leaving the inner order count unlimited, and the return rate and
@@ -78,10 +78,10 @@ echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 54 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 54 metrics and 7 saved queries"
-grep -q "check_brief: 54 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 54 metrics of docs/target-architecture.md"
+grep -q "15 semantic models, 55 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 15 semantic models, 55 metrics and 7 saved queries"
+grep -q "check_brief: 56 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 56 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -164,6 +164,19 @@ expect "cohort revenue and large orders on 2026-10-01" "$(psql_dev -c "
   select (select round(revenue_eur, 2) from semantic_check.cohort where day = '2026-10-01') || ' ' ||
          (select orders_total from semantic_check.large where day = '2026-10-01')")" "312.00 3"
 echo "ok: a signup-date range and an amount comparison filter the metrics as SQL by hand does"
+
+# Average order value by day against gold (revenue over non-cancelled orders); the median is BigQuery-only
+# (disabled on Postgres; catalog-check asserts the catalog says so).
+mf_ query --metrics average_order_value_eur --group-by metric_time__day --csv "$OUT/aov.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the average order value"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.aov" \
+  -c "create table semantic_check.aov (day date, average_order_value_eur numeric)"
+psql_dev -c "\\copy semantic_check.aov from stdin with (format csv, header true)" <"$OUT/aov.csv"
+expect "average order value by day vs gold.daily_sales (rows differing)" "$(psql_dev -c "
+  with hand as (select order_date, round(revenue_eur / (orders_total - orders_cancelled), 6) from gold.daily_sales),
+       mf as (select day, round(average_order_value_eur, 6) from semantic_check.aov)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+echo "ok: the average order value equals gold by day"
 
 # Marketing (SL-8): the simple metrics by day and channel against gold.marketing_daily, the ratios
 # against exposed.channel_performance_daily (per day), then the whole fixture as one period.
