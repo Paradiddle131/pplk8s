@@ -25,6 +25,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "ad_clicks",
         "ad_spend_eur",
         "applications",
+        "average_order_value_eur",
         "booking_value_eur",
         "bookings",
         "bookings_mtd",
@@ -458,3 +459,13 @@ def test_ordering_by_a_date_part_orders_by_its_typed_parameter():
     ).request(CATALOG)
     [order] = request.order_by
     assert order.order_by is request.group_by[0] and not order.descending
+
+
+# A metric defined for BigQuery only is disabled on Postgres: the catalog lists it as not available
+# here, and the tools decline it by name rather than answer with something else.
+def test_a_bigquery_only_metric_is_declined_on_postgres_naming_its_warehouse():
+    assert "median_order_value_eur" not in CATALOG.metrics
+    with pytest.raises(QueryError, match=r"defined only on bigquery.*not available here"):
+        CATALOG.metric("median_order_value_eur")
+    with pytest.raises(QueryError, match="not available here"):
+        MetricQuery(metrics=["median_order_value_eur"]).request(CATALOG)

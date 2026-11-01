@@ -1171,6 +1171,82 @@
       ]
     },
     {
+      "name": "average_order_value_eur",
+      "label": "Average order value (EUR)",
+      "description": "Average amount of a non-cancelled order (revenue over non-cancelled orders, over the whole period asked, never an average of daily averages).",
+      "type": "ratio",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
       "name": "booking_value_eur",
       "label": "Booking value (EUR)",
       "description": "Value of the bookings made, in EUR.",
@@ -5311,6 +5387,16 @@
       "where": [],
       "readiness": [
         "sales.silver"
+      ]
+    }
+  ],
+  "unavailable_metrics": [
+    {
+      "name": "median_order_value_eur",
+      "label": "Median order value (EUR)",
+      "description": "BigQuery only: the median amount of a non-cancelled order, BigQuery's approximate continuous percentile (APPROX_QUANTILES); Postgres has no rendering of it, so an agent on Postgres declines.",
+      "dialects": [
+        "bigquery"
       ]
     }
   ]

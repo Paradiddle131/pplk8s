@@ -272,3 +272,15 @@ metrics:
       filter: "{{ Dimension('return__reason') }} = 'damaged'"
       alias: damaged_returns
     denominator: returns_on_order_date
+  # A typical order: the mean on every warehouse; the median is BigQuery-only (models/silver/schema.yml).
+  - name: average_order_value_eur
+    description: >-
+      Average amount of a non-cancelled order (revenue over non-cancelled orders, over the whole period asked, never
+      an average of daily averages).
+    label: Average order value (EUR)
+    type: ratio
+    numerator: revenue_eur
+    denominator:
+      name: orders_total
+      filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      alias: orders_not_cancelled

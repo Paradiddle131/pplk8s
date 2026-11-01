@@ -26,6 +26,8 @@ def list_metrics() -> dict[str, Any]:
     and the saved queries: recurring questions answered the same way every time, each a fixed set
     of metrics, group-bys and filters that query_metrics runs by name.
 
+    not_available_here lists metrics defined only for another warehouse: decline those.
+
     Call this first: an answer may only use these metrics.
     """
     return {
@@ -40,6 +42,10 @@ def list_metrics() -> dict[str, Any]:
         "saved_queries": [
             {key: query[key] for key in ("name", "question", "metrics", "group_by", "where")}
             for query in catalog().saved_queries.values()
+        ],
+        "not_available_here": [
+            {key: m[key] for key in ("name", "label", "dialects")}
+            for m in catalog().unavailable.values()
         ],
     }
 

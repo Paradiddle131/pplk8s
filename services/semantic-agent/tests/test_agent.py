@@ -65,6 +65,17 @@ def test_list_metrics_also_gives_the_glossary_of_terms_that_are_not_metrics():
     assert all(set(term["metrics"]) <= metrics for term in terms.values())
 
 
+def test_list_metrics_and_describe_metric_say_a_metric_is_bigquery_only():
+    listed = tools.list_metrics()["not_available_here"]
+    median = {
+        "name": "median_order_value_eur",
+        "label": "Median order value (EUR)",
+        "dialects": ["bigquery"],
+    }
+    assert median in listed
+    assert "defined only on bigquery" in tools.describe_metric("median_order_value_eur")["error"]
+
+
 def test_list_metrics_also_gives_the_saved_queries_with_their_questions():
     listed = {query["name"]: query for query in tools.list_metrics()["saved_queries"]}
     assert listed["orders_by_status"] == {

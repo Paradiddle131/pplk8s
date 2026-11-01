@@ -61,6 +61,7 @@ class Catalog:
     models: list[dict[str, Any]] = field(default_factory=list)
     glossary: list[dict[str, Any]] = field(default_factory=list)
     saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
+    unavailable: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -75,9 +76,18 @@ class Catalog:
             models=data["models"],
             glossary=data.get("glossary", []),
             saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
+            unavailable={m["name"]: m for m in data.get("unavailable_metrics", [])},
         )
 
     def metric(self, name: str) -> dict[str, Any]:
+        if name in self.unavailable:
+            other = self.unavailable[name]
+            raise QueryError(
+                f"{name!r} ({other['label']}) is defined only on "
+                f"{' and '.join(other['dialects'])}, "
+                "not on this warehouse; say that this metric is not available here, and do not "
+                "compute it from other metrics"
+            )
         if name not in self.metrics:
             raise QueryError(
                 f"no metric named {name!r}; the metrics are {sorted(self.metrics)}. "
