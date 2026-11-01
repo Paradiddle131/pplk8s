@@ -140,7 +140,7 @@ def _write(rng: random.Random, labels: CallLabels) -> str:
     lines.append(f"Customer: {rng.choice(_SENTIMENT_LINES[labels.sentiment])}")
     agent, customer = _NEXT_STEP_LINES[labels.next_step]
     lines += [f"Agent: {agent}", f"Customer: {customer}"]
-    return "\n".join(lines)
+    return " ".join(lines)
 
 
 def _day_calls(day: date) -> list[tuple[dict[str, object], CallLabels]]:

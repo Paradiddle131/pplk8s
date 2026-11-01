@@ -94,3 +94,21 @@ metrics:
     base_metric: leads
     conversion_metric: bookings
     window: 30 days
+  - name: objection_rate
+    description: >-
+      Model-derived: share of labelled calls in which the customer raised an objection (calls with an objection over
+      calls labelled, over the whole period asked), labelled by gemini-3.5-flash (in the lab, recorded from an
+      OpenRouter free model) under prompt v1; objection labels agree with the golden set at kappa 0.6 or more.
+    label: Objection rate
+    type: ratio
+    numerator: calls_with_objection
+    denominator: calls_labelled
+  - name: positive_sentiment_share
+    description: >-
+      Model-derived: share of labelled calls the customer ended in a positive mood (positive calls over calls labelled,
+      over the whole period asked), labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model)
+      under prompt v1; sentiment labels agree with the golden set at kappa 0.5 or more.
+    label: Positive-sentiment share
+    type: ratio
+    numerator: positive_calls
+    denominator: calls_labelled

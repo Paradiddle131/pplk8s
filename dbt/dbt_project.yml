@@ -16,6 +16,31 @@ flags:
   indirect_selection: cautious
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # The prompt that labels call transcripts (semantic/PLAN.md SL-18, docs/text-signals.md): one reviewed
+  # place for its text, version and endpoint, and for the agreement it must reach on the golden set before
+  # gold reads its labels. A changed text is a new version, labelled beside the old one, never an overwrite;
+  # its thresholds are written here before its first comparison (silver.call_label_agreement).
+  # scripts/record_call_labels.py sends the same text to an OpenRouter free model for the lab's recordings.
+  call_label_prompt:
+    version: v1
+    endpoint: gemini-3.5-flash
+    text: >-
+      Label this customer call transcript.
+      topic: what the customer called about, one of delivery, pricing, returns, product.
+      objection: the customer's main objection to buying or going on, one of none, price, timing, competitor.
+      sentiment: the customer's mood by the end of the call, one of positive, neutral, negative.
+      next_step: what the agent committed to at the end of the call, one of none, follow_up_call, send_quote, escalate.
+      Answer with a JSON object with exactly the keys topic, objection, sentiment and next_step.
+      Transcript:
+    thresholds:
+      topic: {accuracy: 0.8, kappa: 0.7}
+      objection: {accuracy: 0.8, kappa: 0.6}
+      sentiment: {accuracy: 0.7, kappa: 0.5}
+      next_step: {accuracy: 0.8, kappa: 0.7}
+    # The share of a prompt version's calls whose label call failed (non-empty status) that fails the build.
+    max_failed_share: 0.1
+
 # After `dbt source freshness`, record each source's verdict in ops.source_freshness for the SourceStale
 # alert (#130, semantic/PLAN.md SL-12); every other command leaves it untouched (macros/source_freshness.sql).
 on-run-end:
@@ -80,6 +105,29 @@ models:
 # Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
 seeds:
   pplk8s:
+    # The call labels' golden set and the lab's recorded label calls (semantic/PLAN.md SL-18).
+    silver:
+      +schema: silver
+      +tags: [silver, call_transcripts]
+      call_label_golden_set:
+        +column_types:
+          transcript_id: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+      call_label_recordings:
+        +column_types:
+          transcript_hash: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          prompt_version: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          endpoint: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          model_version: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          status: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          recorded_at: "{{ 'timestamp' if target.type == 'bigquery' else 'timestamptz' }}"
     bronze:
       +schema: bronze
       +tags: [bronze]

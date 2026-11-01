@@ -54,6 +54,13 @@ sources:
         columns:
           - name: booking_id
             tests: [not_null]
+      - name: synthetic_call_transcripts
+        description: >
+          Sales and support call transcripts made in the run's interval (synthetic): the text only; dbt labels it
+          (semantic/PLAN.md SL-18).
+        columns:
+          - name: transcript_id
+            tests: [not_null]
       - name: partner_returns
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).

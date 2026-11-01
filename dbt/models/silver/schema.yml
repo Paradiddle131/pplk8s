@@ -538,3 +538,277 @@ models:
         type: simple
         agg: sum
         expr: amount
+
+  - name: slv_call_transcripts
+    description: One row per call transcript, latest load wins. call_date is call_ts in UTC. Alias silver.call_transcripts.
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_call_transcripts
+          arguments:
+            bronze: ref('brz_synthetic_call_transcripts')
+            keys: [transcript_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, call_transcripts]
+    columns:
+      - name: transcript_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: call_date
+        description: UTC date of the call.
+        tests: [not_null]
+      - name: transcript
+        description: What was said, as the recorder transcribed it.
+        tests: [not_null]
+
+  - name: slv_call_transcript_labels
+    description: >
+      One row per call transcript and prompt version (semantic/PLAN.md SL-18): the topic, objection, sentiment
+      and next step the model gave, or the call's error in status. Incremental and never fully refreshed, so a
+      routine rebuild never re-labels; a new prompt version is labelled beside the old one. Alias
+      silver.call_transcript_labels.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['transcript_id', 'prompt_version']
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null]
+      - name: prompt_version
+        description: The version of the prompt in dbt_project.yml's call_label_prompt that labelled the call.
+        tests: [not_null]
+      - name: endpoint
+        description: The model endpoint the call asked for (always named, never left to the warehouse's choice).
+      - name: model_version
+        description: The model version that answered, from the response.
+      - name: labelled_at
+        description: When the call was labelled (in the lab, when its recording was made).
+      - name: topic
+        description: What the customer called about, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['delivery', 'pricing', 'returns', 'product']
+      - name: objection
+        description: The customer's main objection, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'price', 'timing', 'competitor']
+      - name: sentiment
+        description: The customer's mood by the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['positive', 'neutral', 'negative']
+      - name: next_step
+        description: What the agent committed to at the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'follow_up_call', 'send_quote', 'escalate']
+      - name: status
+        description: The label call's error; empty on success, as AI.GENERATE reports it.
+        tests:
+          - not_null
+          - failed_call_share:
+              arguments:
+                max_share: "{{ var('call_label_prompt').max_failed_share }}"
+
+  - name: slv_call_golden_labels
+    description: >
+      One row per golden-set call and prompt version, labelled by the same prompt and path as
+      slv_call_transcript_labels, and scored in slv_call_label_agreement. Alias silver.call_golden_labels.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['transcript_id', 'prompt_version']
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null]
+      - name: prompt_version
+        description: The version of the prompt in dbt_project.yml's call_label_prompt that labelled the call.
+        tests: [not_null]
+      - name: endpoint
+        description: The model endpoint the call asked for (always named, never left to the warehouse's choice).
+      - name: model_version
+        description: The model version that answered, from the response.
+      - name: labelled_at
+        description: When the call was labelled (in the lab, when its recording was made).
+      - name: topic
+        description: What the customer called about, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['delivery', 'pricing', 'returns', 'product']
+      - name: objection
+        description: The customer's main objection, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'price', 'timing', 'competitor']
+      - name: sentiment
+        description: The customer's mood by the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['positive', 'neutral', 'negative']
+      - name: next_step
+        description: What the agent committed to at the end of the call, as the model labelled it; NULL when the call failed.
+        config:
+          meta: {derived_by: model}
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'follow_up_call', 'send_quote', 'escalate']
+      - name: status
+        description: The label call's error; empty on success, as AI.GENERATE reports it.
+        tests:
+          - not_null
+          - failed_call_share:
+              arguments:
+                max_share: "{{ var('call_label_prompt').max_failed_share }}"
+
+  - name: slv_call_label_agreement
+    description: >
+      One row per prompt version and signal: how the version's labels of the golden set's calls agree with their
+      true labels (accuracy, Cohen's kappa), and the current version's thresholds, which the test
+      call_labels_agree_with_golden_set holds the build to. Alias silver.call_label_agreement.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['prompt_version', 'signal']
+    columns:
+      - name: signal
+        description: topic, objection, sentiment or next_step.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['topic', 'objection', 'sentiment', 'next_step']
+      - name: calls_compared
+        description: Golden-set calls the version labelled without an error.
+      - name: accuracy
+        description: Share of those calls labelled as the golden set says.
+      - name: kappa
+        description: Cohen's kappa, agreement beyond chance; NULL when both sides use one value only.
+      - name: min_accuracy
+        description: The current version's accuracy threshold; NULL for other versions.
+      - name: min_kappa
+        description: The current version's kappa threshold; NULL for other versions.
+
+  - name: slv_call_signals
+    description: >
+      One row per call labelled under the current prompt version: the call's day and customer and the signals the
+      model gave. Calls whose label call failed or waits are left out. Alias silver.call_signals.
+    config:
+      meta:
+        glossary:
+          - term: Model-derived label
+            description: >-
+              A value a language model read out of free text (a call's topic, objection, sentiment, next step),
+              not a value a system recorded. It comes from a versioned prompt, is scored against a golden set of
+              calls whose true labels are known, and a build fails below the agreed agreement; a metric over it
+              says so in its description. Filter on the prompt version to compare two versions.
+            synonyms: [AI label, call signal, model label, extracted signal]
+            dimensions: [call__prompt_version, call__topic, call__objection, call__sentiment, call__next_step]
+    semantic_model:
+      enabled: true
+      name: call_signals
+    agg_time_dimension: call_date
+    columns:
+      - name: transcript_id
+        description: The call's id.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: call
+      - name: customer_id
+        description: The customer who called.
+        entity:
+          type: foreign
+          name: customer
+      - name: call_date
+        description: UTC date of the call.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: topic
+        description: What the customer called about (delivery, pricing, returns, product), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: objection
+        description: The customer's main objection (none, price, timing, competitor), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: sentiment
+        description: The customer's mood by the end of the call (positive, neutral, negative), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: next_step
+        description: What the agent committed to (none, follow_up_call, send_quote, escalate), as the model labelled it.
+        config:
+          meta: {derived_by: model}
+        dimension:
+          type: categorical
+      - name: prompt_version
+        description: The prompt version that labelled the call.
+        dimension:
+          type: categorical
+      - name: endpoint
+        description: The model endpoint the label call asked for.
+        dimension:
+          type: categorical
+      - name: model_version
+        description: The model version that answered.
+    metrics:
+      - name: calls_labelled
+        description: >-
+          Model-derived: calls labelled by gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under
+          prompt v1, on the day of the call; group by call__topic for calls by topic. The build holds the labels to
+          kappa 0.6 to 0.7 per signal on the golden set (silver.call_label_agreement).
+        label: Calls labelled
+        type: simple
+        agg: count
+        expr: transcript_id
+      - name: calls_with_objection
+        description: >-
+          Model-derived: calls in which the customer raised an objection (price, timing or a competitor), labelled by
+          gemini-3.5-flash (in the lab, recorded from an OpenRouter free model) under prompt v1; objection labels
+          agree with the golden set at kappa 0.6 or more.
+        label: Calls with an objection
+        type: simple
+        agg: count
+        expr: transcript_id
+        filter: "{{ Dimension('call__objection') }} <> 'none'"
+      - name: positive_calls
+        description: >-
+          Model-derived: calls the customer ended in a positive mood, labelled by gemini-3.5-flash (in the lab, recorded
+          from an OpenRouter free model) under prompt v1; sentiment labels agree with the golden set at kappa 0.5 or more.
+        label: Positive calls
+        type: simple
+        agg: count
+        expr: transcript_id
+        filter: "{{ Dimension('call__sentiment') }} = 'positive'"
