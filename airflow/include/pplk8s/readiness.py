@@ -31,6 +31,8 @@ WATERMARK_COLUMNS = {
     # move the watermark past the interval.
     "synthetic_leads": "created_ts",
     "synthetic_bookings": "booked_ts",
+    # Call transcripts (semantic/PLAN.md SL-18): the newest call landed.
+    "synthetic_call_transcripts": "call_ts",
 }
 
 UPSERT_SQL = """

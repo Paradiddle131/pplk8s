@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS ops.product_deadlines (
 INSERT INTO ops.product_deadlines (product, max_age) VALUES
   ('sales', '36 hours'),
   ('marketing', '36 hours'),
+  ('call_transcripts', '36 hours'),
   ('finance.exposed', '36 hours')
 ON CONFLICT (product) DO UPDATE SET max_age = EXCLUDED.max_age;
 

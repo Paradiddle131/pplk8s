@@ -56,6 +56,13 @@ def test_catalog_lists_the_marketing_pipeline(client):
     ]
 
 
+def test_catalog_lists_the_call_transcripts_pipeline(client):
+    response = client.get("/catalog?pipeline=call_transcripts")
+
+    assert response.status_code == 200
+    assert response.get_json() == [{"source": "synthetic", "entity": "call_transcripts"}]
+
+
 def test_catalog_requires_a_pipeline_parameter(client):
     response = client.get("/catalog")
 
@@ -238,6 +245,7 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
         "partner_returns",
         "synthetic_ad_spend",
         "synthetic_bookings",
+        "synthetic_call_transcripts",
         "synthetic_campaigns",
         "synthetic_customers",
         "synthetic_leads",
@@ -250,6 +258,7 @@ SOURCE_TABLES = [
     "partner_returns",
     "synthetic_ad_spend",
     "synthetic_bookings",
+    "synthetic_call_transcripts",
     "synthetic_campaigns",
     "synthetic_customers",
     "synthetic_leads",

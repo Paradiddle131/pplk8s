@@ -10,6 +10,9 @@ pipelines:
     - {source: synthetic, entity: ad_spend}
     - {source: synthetic, entity: leads}
     - {source: synthetic, entity: bookings}
+  # Synthetic call transcripts (semantic/PLAN.md SL-18): text only; dbt labels it (docs/text-signals.md).
+  call_transcripts:
+    - {source: synthetic, entity: call_transcripts}
   weather:
     - {source: open_meteo, entity: hourly_weather}
   # NYC TLC trip files, one data month per run (D35); FHVHV is kept for the big-file drill only.
