@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "An ADK agent that answers business questions through the dbt semantic layer's metrics, and its text-to-SQL baseline"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "google-adk[db,eval,extensions]==2.13.0",
+    # The served agent needs ADK's session database and LiteLLM (OpenRouter), not its eval or
+    # extensions extras, which would more than double the image (#230); the eval runs from the dev group.
+    "google-adk[db]==2.13.0",
+    "litellm==1.96.2",
     "dbt-core==1.12.6",
     "dbt-postgres==1.11.0",
     "dbt-metricflow[dbt-postgres]==0.15.0",
@@ -21,6 +24,8 @@ build-backend = "uv_build"
 dev = [
     "pytest",
     "ruff",
+    # The agent eval (semantic_agent.evaluation, `make agent-eval`): run with uv, never in the image.
+    "google-adk[eval]==2.13.0",
 ]
 
 [tool.uv.build-backend]

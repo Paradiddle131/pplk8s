@@ -11,7 +11,7 @@ export NODE_IMAGE
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.7
 DBT_IMAGE ?= localhost:5001/dbt:0.7.28
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.24
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.25
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
