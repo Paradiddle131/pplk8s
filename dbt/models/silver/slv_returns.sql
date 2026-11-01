@@ -6,7 +6,8 @@
 -- markers earlier lab checks uploaded (`check`, `drill`, `drill10`) to the `damaged` they upload now.
 -- Any other code fails the accepted_values test, so a new partner code is mapped here or declared there.
 -- customer_id is the returned order's customer, so returns reach the customer by the same path as the
--- order's revenue and net revenue groups by customer country; empty while the order is not in silver.
+-- order's revenue and net revenue groups by customer country; order_date dates a return by its sale, so a
+-- return rate compares like with like. Both are empty while the order is not in silver.
 with ranked as (
     select
         *,
@@ -21,6 +22,7 @@ select
     r.return_id,
     r.order_id,
     o.customer_id,
+    o.order_date,
     r.returned_at,
     {{ utc_date('r.returned_at') }} as return_date,
     r.amount,

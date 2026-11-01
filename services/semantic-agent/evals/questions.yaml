@@ -118,6 +118,20 @@ questions:
       select sum(o.amount) filter (where o.customer_id in (select customer_id from silver.orders group by 1 having count(*) >= 2))
         / sum(o.amount) from silver.orders o where o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-10'
     metrics: [repeat_revenue_share]
+  # Returns against the orders they return, both on the order's date.
+  - id: return_rate_september
+    question: What share of the orders placed in September 2026 were returned?
+    expected_sql: >-
+      select (select count(*) from silver.returns r join silver.orders o on o.order_id = r.order_id
+              where o.order_date between '2026-09-01' and '2026-09-30')::numeric
+        / (select count(*) from silver.orders where order_date between '2026-09-01' and '2026-09-30')
+    metrics: [return_rate]
+  - id: damaged_return_share
+    question: Of the returns of orders placed from August to October 2026, what share were returned as damaged?
+    expected_sql: >-
+      select count(*) filter (where r.reason = 'damaged')::numeric / count(*) from silver.returns r
+      join silver.orders o on o.order_id = r.order_id where o.order_date between '2026-08-01' and '2026-10-31'
+    metrics: [damaged_return_share]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'

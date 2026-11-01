@@ -251,3 +251,24 @@ metrics:
     type: ratio
     numerator: revenue_repeat_customers_eur
     denominator: revenue_eur
+  # Returns against the orders they return, both on the order's date (returns_on_order_date's agg_time_dimension),
+  # so a month's rate is that month's orders only.
+  - name: return_rate
+    description: >-
+      Share of orders that were returned (returns over orders, both counted on the day the order was placed, over
+      the whole period asked); a return in October of a September order counts against September.
+    label: Return rate
+    type: ratio
+    numerator: returns_on_order_date
+    denominator: orders_total
+  - name: damaged_return_share
+    description: >-
+      Share of returns whose reason was damaged goods (damaged returns over all returns, both counted on the
+      returned order's date, over the whole period asked).
+    label: Damaged-return share
+    type: ratio
+    numerator:
+      name: returns_on_order_date
+      filter: "{{ Dimension('return__reason') }} = 'damaged'"
+      alias: damaged_returns
+    denominator: returns_on_order_date

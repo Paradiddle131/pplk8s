@@ -112,3 +112,11 @@ SELECT
     1, 'fixture://orders',
     timestamptz '2026-10-05 00:30+00' + make_interval(days => (c - 12) / 3)
 FROM generate_series(12, 30, 3) AS c;
+
+-- Three returns of the six weeks' orders, recorded on 5 and 6 October (after the base fixture's days), so a
+-- return rate on the order's date has August and September returns: 0828-1 damaged, 0914-1 damaged, 0921-2
+-- wrong size.
+INSERT INTO ds_source.partner_returns VALUES
+    ('R-W1', 'ORD-W0914-1', '2026-10-05 09:00+00', 20.00, 'damaged', 'gcs-run-w', 'gs://landing/returns/2026-10-05.jsonl', 1, '2026-10-06 06:00+00'),
+    ('R-W2', 'ORD-W0921-2', '2026-10-05 11:00+00', 15.00, 'wrong size', 'gcs-run-w', 'gs://landing/returns/2026-10-05.jsonl', 1, '2026-10-06 06:00+00'),
+    ('R-W3', 'ORD-W0828-1', '2026-10-06 10:00+00', 30.00, 'damaged', 'gcs-run-w2', 'gs://landing/returns/2026-10-06.jsonl', 1, '2026-10-07 06:00+00');
