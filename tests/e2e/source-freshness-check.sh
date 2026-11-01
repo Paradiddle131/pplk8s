@@ -27,7 +27,7 @@ export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO
 dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
 freshness() { dbt_ source freshness >"$OUT/freshness-$1.log" 2>&1; }
 statuses() { psql_db -F= -c "select table_name, status from ops.source_freshness order by table_name" | paste -sd' '; }
-LANDED="partner_returns synthetic_ad_spend synthetic_bookings synthetic_campaigns synthetic_customer_actions synthetic_customers
+LANDED="partner_returns synthetic_ad_spend synthetic_applications synthetic_bookings synthetic_campaigns synthetic_customer_actions synthetic_customers
   synthetic_leads synthetic_orders synthetic_outreach_messages synthetic_outreach_replies synthetic_partner_contacts
   synthetic_partners tlc_green tlc_yellow"
 all_with() { local t out=""; for t in $LANDED; do out+="$t=${2:-$1} "; done; echo "${out% }"; }
@@ -45,7 +45,7 @@ echo "ok: fixtures loaded into $DB, every landed table last loaded an hour ago"
 
 freshness fresh || { tail -30 "$OUT/freshness-fresh.log" >&2; fail "dbt source freshness on fresh data"; }
 expect "statuses on fresh data" "$(statuses)" "$(all_with pass)"
-echo "ok: dbt source freshness passes on fresh data and records pass for the 14 landed tables (open_meteo left out)"
+echo "ok: dbt source freshness passes on fresh data and records pass for the 15 landed tables (open_meteo left out)"
 
 # Orders stopped 40 hours ago (error_after 36 h), leads 30 hours ago (warn_after 26 h), tlc_green is gone.
 loaded synthetic_orders "40 hours"

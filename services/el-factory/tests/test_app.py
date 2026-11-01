@@ -75,6 +75,13 @@ def test_catalog_lists_the_partner_outreach_pipeline(client):
     ]
 
 
+def test_catalog_lists_the_recruitment_pipeline(client):
+    response = client.get("/catalog?pipeline=recruitment")
+
+    assert response.status_code == 200
+    assert response.get_json() == [{"source": "synthetic", "entity": "applications"}]
+
+
 def test_catalog_requires_a_pipeline_parameter(client):
     response = client.get("/catalog")
 
@@ -256,6 +263,7 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
         "open_meteo_hourly_weather",
         "partner_returns",
         "synthetic_ad_spend",
+        "synthetic_applications",
         "synthetic_bookings",
         "synthetic_campaigns",
         "synthetic_customer_actions",
@@ -273,6 +281,7 @@ SOURCE_TABLES = [
     "open_meteo_hourly_weather",
     "partner_returns",
     "synthetic_ad_spend",
+    "synthetic_applications",
     "synthetic_bookings",
     "synthetic_campaigns",
     "synthetic_customer_actions",

@@ -160,3 +160,20 @@ models:
     columns:
       - name: reply_id
         tests: [not_null]
+
+  # Recruitment (semantic/PLAN.md SL-17): candidates in their current stage, one extract per run.
+  - name: brz_synthetic_applications
+    description: >
+      Candidates as landed, cast only; each run lands every candidate in the stage they were in at the end of the
+      run's interval, so a backfill lands an older stage after a newer one. Alias bronze.synthetic_applications.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'candidate_id']
+    columns:
+      - name: candidate_id
+        tests: [not_null]
+      - name: stage
+        tests: [not_null]
+      - name: stage_ts
+        tests: [not_null]

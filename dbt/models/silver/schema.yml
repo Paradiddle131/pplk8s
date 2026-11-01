@@ -887,3 +887,190 @@ models:
         type: simple
         agg: count_distinct
         expr: partner_id
+
+  # Recruitment (semantic/PLAN.md SL-17): candidates in their newest stage, the stage history the snapshot
+  # snp_candidate_stages keeps, and one row per candidate per day, the grain stage counts are asked at.
+  - name: slv_applications
+    description: >
+      One row per candidate in their newest hiring stage: the latest stage_ts wins, then the latest load, so a
+      backfilled older extract never moves a candidate back. hired_date and days_to_hire are set once the candidate
+      is hired. Alias silver.applications.
+    config:
+      meta:
+        glossary:
+          - term: Hiring stage
+            description: >-
+              Where a candidate is in hiring: applied, screen, interview, offer, then hired, or rejected at any stage
+              before hired. A candidate's stage on a day is the one they were in at the end of that day, from the
+              stage history the warehouse snapshots after every load, so two changes between loads keep the later.
+            synonyms: [pipeline stage, recruitment stage, candidate status, funnel stage]
+            metrics: [candidates_in_stage]
+    semantic_model:
+      enabled: true
+      name: applications
+    agg_time_dimension: applied_date
+    columns:
+      - name: candidate_id
+        description: Natural key; one application per candidate.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: candidate
+      - name: role
+        description: engineering, sales or support; the job family applied for.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['engineering', 'sales', 'support']
+        dimension:
+          type: categorical
+      - name: channel
+        description: How the candidate applied - referral, job_board or agency.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['referral', 'job_board', 'agency']
+        dimension:
+          type: categorical
+      - name: applied_ts
+        description: When the candidate applied.
+        tests: [not_null]
+      - name: applied_date
+        description: UTC date the candidate applied.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: current_stage
+        description: The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['applied', 'screen', 'interview', 'offer', 'hired', 'rejected']
+        dimension:
+          type: categorical
+      - name: stage_ts
+        description: When the candidate entered the current stage.
+        tests: [not_null]
+      - name: hired_date
+        description: UTC date the candidate was hired; NULL until then.
+        dimension:
+          type: time
+        granularity: day
+      - name: days_to_hire
+        description: Days from applying to being hired, to 4 places; NULL until hired.
+    metrics:
+      - name: applications
+        description: Candidates who applied, on the day they applied (one application per candidate).
+        label: Applications
+        type: simple
+        agg: count
+        expr: candidate_id
+      - name: hires
+        description: Candidates hired, on the day they were hired.
+        label: Hires
+        type: simple
+        agg: count
+        expr: candidate_id
+        agg_time_dimension: hired_date
+        filter: "{{ Dimension('candidate__current_stage') }} = 'hired'"
+      - name: time_to_hire_days
+        description: >-
+          Average days from applying to being hired over the candidates hired in the period asked, on the day they were
+          hired; the one definition of time to hire and days to hire.
+        label: Time to hire (days)
+        type: simple
+        agg: average
+        expr: days_to_hire
+        agg_time_dimension: hired_date
+        filter: "{{ Dimension('candidate__current_stage') }} = 'hired'"
+
+  - name: slv_candidate_stages
+    description: >
+      Stage history of every candidate from the snapshot snp_candidate_stages, one row per stage seen: valid from
+      valid_from to valid_to (NULL while current), with their UTC dates. A candidate is in the stage they were in at
+      the end of a day, so a stage entered and left on the same day never counts. Its resolution is the
+      recruitment_elt schedule's. Alias silver.candidate_stages.
+    semantic_model:
+      enabled: true
+      name: candidate_stages
+    primary_entity: candidate_stage
+    columns:
+      - name: candidate_id
+        description: The candidate; a natural key, one row per stage they were in.
+        tests: [not_null]
+        entity:
+          type: natural
+          name: candidate
+      - name: stage
+        description: The hiring stage held from valid_from to valid_to.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['applied', 'screen', 'interview', 'offer', 'hired', 'rejected']
+        dimension:
+          type: categorical
+      - name: valid_from
+        description: When the candidate entered the stage (the source's stage_ts).
+        tests: [not_null]
+      - name: valid_to
+        description: When the candidate entered their next stage; NULL while the stage is current.
+      - name: valid_from_date
+        description: UTC date the stage began.
+        tests: [not_null]
+        dimension:
+          type: time
+          validity_params:
+            is_start: true
+        granularity: day
+      - name: valid_to_date
+        description: UTC date the stage ended; NULL while current.
+        dimension:
+          type: time
+          validity_params:
+            is_end: true
+        granularity: day
+
+  - name: slv_candidate_days
+    description: >
+      One row per candidate per UTC day from the day they applied to the last day loaded, the grain the semantic layer
+      counts candidates in a stage at. Alias silver.candidate_days.
+    semantic_model:
+      enabled: true
+      name: candidate_days
+    primary_entity: candidate_day
+    agg_time_dimension: calendar_date
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['candidate_id', 'calendar_date']
+    columns:
+      - name: candidate_id
+        description: The candidate; must exist in slv_applications.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_applications')
+                field: candidate_id
+        entity:
+          type: foreign
+          name: candidate
+      - name: calendar_date
+        description: The UTC day.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+    metrics:
+      - name: candidates_in_stage
+        description: >-
+          Candidates who had applied by the end of each day, counted per day; grouped by candidate__stage (or filtered
+          on it) it is the number in each hiring stage at the end of that day, from the stage history. Ask it per day:
+          over a longer period it counts the candidates who were in the stage on any of its days.
+        label: Candidates in stage
+        type: simple
+        agg: count_distinct
+        expr: candidate_id

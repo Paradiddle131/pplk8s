@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS ds_source.synthetic_partners CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_partner_contacts CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_outreach_messages CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_outreach_replies CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_applications CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -408,3 +409,57 @@ INSERT INTO ds_source.synthetic_outreach_replies VALUES
     ('R-0003', 'M-0005', '2026-10-02 12:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_replies', '2026-10-03 00:50+00'),
     ('R-0004', 'M-0006', '2026-10-03 16:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00'),
     ('R-0005', 'M-0000', '2026-10-03 17:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00');
+
+-- Recruitment (semantic/PLAN.md SL-17): six candidates, each extract every candidate in their current stage only.
+-- Runs land 2026-10-01 to 2026-10-04 in order; run-rec-1b, a backfill of 2026-10-01 loaded after run-rec-3, lands
+-- older stages, which must move nobody back. Snapshotted after every run in load order, the history is:
+-- K-001 interview (from 09-30), offer (10-02), hired (10-03); K-002 screen (10-01), interview (10-02), rejected
+-- (10-04); K-003 applied (10-01), screen (10-02), interview (10-03); K-004 applied (10-02), screen (10-04);
+-- K-005 offer (09-30), hired (10-02); K-006 screen (10-01), rejected (10-02); K-006's applied stage (entered and
+-- left on 10-01 between two extracts) is never seen. In interview at the end of the day: one on 10-01 (K-001), one
+-- on 10-02 (K-002), two on 10-03 (K-002, K-003), one on 10-04 (K-003). Hires: K-005 on 10-02 after 7.2083 days,
+-- K-001 on 10-03 after 4.9583 days, so time to hire is 6.0833 days over the fixture.
+CREATE TABLE ds_source.synthetic_applications (
+    candidate_id text,
+    role text,
+    channel text,
+    applied_ts timestamptz,
+    stage text,
+    stage_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_applications VALUES
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'interview', '2026-09-30 10:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'screen', '2026-10-01 09:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'applied', '2026-10-01 08:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'offer', '2026-09-30 15:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'screen', '2026-10-01 15:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'offer', '2026-10-02 11:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'interview', '2026-10-02 14:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'screen', '2026-10-02 10:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'applied', '2026-10-02 12:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'hired', '2026-10-03 09:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'interview', '2026-10-02 14:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'interview', '2026-10-03 13:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'applied', '2026-10-02 12:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'interview', '2026-09-30 10:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'screen', '2026-10-01 09:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'applied', '2026-10-01 08:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'offer', '2026-09-30 15:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'screen', '2026-10-01 15:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'hired', '2026-10-03 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'rejected', '2026-10-04 10:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'interview', '2026-10-03 13:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'screen', '2026-10-04 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00');

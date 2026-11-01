@@ -38,6 +38,8 @@ WATERMARK_COLUMNS = {
     # Partner outreach (semantic/PLAN.md SL-16): the newest message sent or reply received.
     "synthetic_outreach_messages": "sent_ts",
     "synthetic_outreach_replies": "replied_ts",
+    # Recruitment (semantic/PLAN.md SL-17): the newest stage change the extract saw.
+    "synthetic_applications": "stage_ts",
 }
 
 UPSERT_SQL = """

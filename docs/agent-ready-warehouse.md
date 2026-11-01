@@ -11,7 +11,7 @@ Each layer is one folder under `dbt/models/` and one schema in the warehouse, wh
 | Layer | Dataset | Model prefix | Holds | Agents read it |
 |---|---|---|---|---|
 | bronze | `bronze` | `brz_` | The landing tables cast, one to one, every run and metadata column kept | no |
-| silver | `silver` | `slv_` | One row per natural key, latest load wins; the semantic models sit here | only through a metric |
+| silver | `silver` | `slv_` | One row per natural key, latest load wins; a snapshot's history of a source that overwrites its rows (`snp_`); the semantic models sit here | only through a metric |
 | gold | `gold` | `gld_` | Business aggregates at a stated grain | yes, `access: public` |
 | exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public`, unless it holds personal data |
 | semantic | `semantic` | none | MetricFlow's `time_spine`, `metrics` (one row per metric) and `glossary` (one row per term) | `metrics` and `glossary` |
@@ -26,6 +26,7 @@ The landing dataset (`ds_source`) belongs to the extraction service; dbt reads i
 - A model in bronze, silver, gold, exposed or legacy starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
   The prefix keeps names unique across the project; the dataset already says the layer, so the table does not repeat it.
   An ephemeral model builds no relation and needs only the prefix.
+- A dbt snapshot starts with `snp_` and builds in silver, its relation named for what it keeps (`snp_candidate_stages` builds `silver.candidate_stage_snapshots`); a silver model renames its columns for the semantic layer (semantic/PLAN.md SL-17).
 - A semantic-stage or migration model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`, `glossary`, `parity`).
 - Models, columns, semantic models, entities, dimensions and metrics are lower snake case; a metadata column the loader adds starts with an underscore (`_loaded_at`, `_run_id`).
 - A metric is the quantity with its unit as a suffix (`revenue_eur`, `cost_per_lead_eur`); a count names what it counts, and how when there is more than one way (`leads`, `orders_total`, `orders_cancelled`, `customers_distinct`); a ratio of two counts ends in `_rate`.

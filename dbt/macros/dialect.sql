@@ -72,3 +72,16 @@
 {% macro bigquery__days_before(expression, days) -%}
     date_sub({{ expression }}, interval {{ days }} day)
 {%- endmacro %}
+
+-- The days from one timestamptz / TIMESTAMP to a later one, as a numeric rounded to 4 places.
+{% macro days_between(start, end) -%}
+    {{ return(adapter.dispatch('days_between')(start, end)) }}
+{%- endmacro %}
+
+{% macro default__days_between(start, end) -%}
+    round(cast(extract(epoch from ({{ end }} - {{ start }})) / 86400 as numeric), 4)
+{%- endmacro %}
+
+{% macro bigquery__days_between(start, end) -%}
+    round(cast(timestamp_diff({{ end }}, {{ start }}, second) / 86400 as numeric), 4)
+{%- endmacro %}
