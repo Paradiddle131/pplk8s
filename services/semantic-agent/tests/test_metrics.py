@@ -4,7 +4,15 @@ import datetime
 
 import pytest
 
-from semantic_agent.metrics import MAX_ROWS, Catalog, Filter, MetricQuery, QueryError, where_clause
+from semantic_agent.metrics import (
+    MAX_ROWS,
+    Catalog,
+    Filter,
+    MetricQuery,
+    QueryError,
+    group_by_parameter,
+    where_clause,
+)
 from tests.conftest import FIXTURES
 
 CATALOG = Catalog.load(FIXTURES / "agent.json")
@@ -17,8 +25,11 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "ad_clicks",
         "ad_spend_eur",
         "applications",
+        "average_order_value_eur",
         "booking_value_eur",
         "bookings",
+        "bookings_mtd",
+        "bookings_wow_growth",
         "calls_labelled",
         "calls_with_objection",
         "cancellation_rate",
@@ -30,11 +41,15 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "cost_per_lead_eur",
         "customer_actions",
         "customers_distinct",
+        "customers_to_date",
+        "damaged_return_share",
         "engaged_customers_28d",
         "engaged_customers_7d",
         "hires",
         "lead_to_booking_rate",
         "leads",
+        "leads_mtd",
+        "leads_wow_growth",
         "messages_replied",
         "messages_sent",
         "net_revenue_eur",
@@ -44,11 +59,21 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "partners_engaged",
         "positive_calls",
         "positive_sentiment_share",
+        "remaining_budget_eur",
+        "repeat_customers",
+        "repeat_revenue_share",
         "replies",
         "reply_rate",
+        "return_rate",
         "returns_count",
         "returns_eur",
+        "returns_on_order_date",
         "revenue_eur",
+        "revenue_eur_mtd",
+        "revenue_eur_wow_growth",
+        "revenue_repeat_customers_eur",
+        "signup_to_first_order_rate",
+        "signups",
         "site_sessions",
         "time_to_hire_days",
         "view_to_cart_rate",
@@ -170,10 +195,14 @@ def test_a_request_carries_the_checked_parts():
         limit=10_000,
     ).request(CATALOG)
     assert request.metric_names == ["revenue_eur"]
-    assert request.group_by_names == ["metric_time__month", "order__status"]
+    assert [(p.name, getattr(p, "grain", None)) for p in request.group_by] == [
+        ("metric_time", "month"),
+        ("order__status", None),
+    ]
     assert request.where_constraints == ["{{ Dimension('order__currency') }} = 'EUR'"]
     assert request.time_constraint_start == datetime.datetime(2026, 10, 1)
-    assert request.order_by_names == ["-revenue_eur"]
+    [order] = request.order_by
+    assert (order.order_by.name, order.descending) == ("revenue_eur", True)
     assert request.limit == MAX_ROWS
 
 
@@ -267,3 +296,208 @@ def test_dbt_project_dir_comes_from_the_env_outside_the_repo(monkeypatch):
     monkeypatch.setattr(metrics, "__file__", "/app/agents/semantic_agent/metrics.py")
     monkeypatch.setenv("DBT_PROJECT_DIR", "/app/dbt")
     assert str(metrics.project_dir()) == "/app/dbt"
+
+
+# Time and numeric dimensions (a signup cohort, orders over an amount): each value is type-checked
+# and rendered from its parsed form, never from the model's text.
+@pytest.mark.parametrize(
+    ("operator", "values", "expected"),
+    [
+        (
+            ">=",
+            ["2024-09-01"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} >= '2024-09-01'",
+        ),
+        (
+            "<=",
+            ["2024-09-30"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} <= '2024-09-30'",
+        ),
+        ("<", ["2024-09-30"], "{{ TimeDimension('customer__signup_date', 'day') }} < '2024-09-30'"),
+        ("=", ["2024-09-01"], "{{ TimeDimension('customer__signup_date', 'day') }} = '2024-09-01'"),
+        (
+            "between",
+            ["2024-09-01", "2024-09-30"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} "
+            "between '2024-09-01' and '2024-09-30'",
+        ),
+    ],
+)
+def test_a_time_dimension_takes_comparisons_on_iso_dates(operator, values, expected):
+    item = Filter(dimension="customer__signup_date", operator=operator, values=values)
+    assert where_clause(item, CATALOG.dimensions(["revenue_eur"])) == expected
+
+
+@pytest.mark.parametrize(
+    ("operator", "values", "expected"),
+    [
+        (">", ["100"], "{{ Dimension('order__amount') }} > 100"),
+        (">=", ["99.5"], "{{ Dimension('order__amount') }} >= 99.5"),
+        ("<", ["-1"], "{{ Dimension('order__amount') }} < -1"),
+        ("!=", ["25.00"], "{{ Dimension('order__amount') }} <> 25.00"),
+        ("in", ["25", "45.0"], "{{ Dimension('order__amount') }} in (25, 45.0)"),
+        ("between", ["10", "50"], "{{ Dimension('order__amount') }} between 10 and 50"),
+    ],
+)
+def test_a_numeric_dimension_takes_comparisons_on_numbers(operator, values, expected):
+    item = Filter(dimension="order__amount", operator=operator, values=values)
+    assert where_clause(item, CATALOG.dimensions(["revenue_eur"])) == expected
+
+
+def test_the_catalog_types_a_numeric_dimension():
+    assert CATALOG.dimensions(["orders_total"])["order__amount"] == "numeric"
+    assert CATALOG.dimensions(["orders_total"])["customer__signup_date"] == "time"
+
+
+@pytest.mark.parametrize(
+    ("item", "message"),
+    [
+        (Filter(dimension="customer__signup_date", operator=">=", values=["September"]), "a date"),
+        (Filter(dimension="customer__signup_date", operator=">=", values=["2024-09"]), "a date"),
+        (Filter(dimension="customer__signup_date", values=["2024-09-01 00:00"]), "a date"),
+        (
+            Filter(dimension="customer__signup_date", operator="in", values=["2024-09-01"]),
+            "operator",
+        ),
+        (Filter(dimension="order__amount", operator=">", values=["a lot"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["1e3"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["NaN"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["100 or 1=1"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["1", "2"]), "exactly one value"),
+        (Filter(dimension="order__amount", operator="between", values=["1"]), "two values"),
+        (Filter(dimension="order__amount", operator="between", values=["50", "10"]), "low"),
+        (
+            Filter(
+                dimension="customer__signup_date",
+                operator="between",
+                values=["2024-09-30", "2024-09-01"],
+            ),
+            "low",
+        ),
+        (Filter(dimension="order__status", operator=">", values=["placed"]), "operator"),
+        (
+            Filter(dimension="metric_time", operator=">=", values=["2026-10-01"]),
+            "start_date and end_date",
+        ),
+    ],
+)
+def test_a_typed_filter_is_refused_unless_its_values_fit(item, message):
+    with pytest.raises(QueryError, match=message):
+        where_clause(
+            item, CATALOG.dimensions(["revenue_eur"]), CATALOG.known_values(["revenue_eur"])
+        )
+
+
+@pytest.mark.parametrize(
+    ("dimension", "operator"),
+    [("customer__signup_date", ">="), ("order__amount", ">"), ("order__status", "=")],
+)
+@pytest.mark.parametrize("value", ["{{ 7*7 }}", "{% if 1 %}1{% endif %}", "{# x #}1"])
+def test_a_jinja_delimiter_is_refused_for_every_value_type(dimension, operator, value):
+    item = Filter(dimension=dimension, operator=operator, values=[value])
+    with pytest.raises(QueryError, match="template delimiter"):
+        where_clause(item, CATALOG.dimensions(["revenue_eur"]))
+
+
+# Group-bys: a time grain, a date part and an entity become typed MetricFlow parameters,
+# each from a name the catalog lists; anything else is refused naming what is allowed.
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("metric_time__week", ("metric_time", "week", None)),
+        ("metric_time__extract_dow", ("metric_time", None, "dow")),
+        ("customer__signup_date__extract_month", ("customer__signup_date", None, "month")),
+        ("metric_time", ("metric_time", None, None)),
+    ],
+)
+def test_a_time_group_by_is_a_typed_grain_or_date_part(name, expected):
+    parameter = group_by_parameter(
+        name, CATALOG.dimensions(["revenue_eur"]), CATALOG.entities(["revenue_eur"])
+    )
+    date_part = parameter.date_part.value if parameter.date_part else None
+    assert (parameter.name, parameter.grain, date_part) == expected
+
+
+@pytest.mark.parametrize(
+    ("metric", "name"), [("revenue_eur", "customer"), ("ad_spend_eur", "campaign")]
+)
+def test_an_entity_the_catalog_lists_is_a_group_by(metric, name):
+    assert name in CATALOG.entities([metric])
+    parameter = group_by_parameter(name, CATALOG.dimensions([metric]), CATALOG.entities([metric]))
+    assert parameter.name == name and not hasattr(parameter, "grain")
+
+
+@pytest.mark.parametrize(
+    ("metric", "name"),
+    [
+        ("revenue_eur", "campaign"),  # an entity, but not one orders reach
+        ("revenue_eur", "metric_time__extract_week"),  # MetricFlow has no week date part
+        ("revenue_eur", "metric_time__extract_hour"),
+        ("revenue_eur", "order__status__extract_dow"),  # a date part of a categorical dimension
+        ("revenue_eur", "metric_time__dow"),
+    ],
+)
+def test_a_group_by_outside_the_catalog_is_refused_naming_the_allowed_ones(metric, name):
+    with pytest.raises(QueryError, match=r"cannot group by .*__extract_dow.*entities are"):
+        group_by_parameter(name, CATALOG.dimensions([metric]), CATALOG.entities([metric]))
+
+
+def test_top_three_campaigns_by_spend_orders_and_limits_by_the_metric():
+    request = MetricQuery(
+        metrics=["ad_spend_eur"], group_by=["campaign"], order_by=["-ad_spend_eur"], limit=3
+    ).request(CATALOG)
+    [group] = request.group_by
+    [order] = request.order_by
+    assert group.name == "campaign"
+    assert (order.order_by.name, order.descending, request.limit) == ("ad_spend_eur", True, 3)
+
+
+def test_ordering_by_a_date_part_orders_by_its_typed_parameter():
+    request = MetricQuery(
+        metrics=["revenue_eur"],
+        group_by=["metric_time__extract_dow"],
+        order_by=["metric_time__extract_dow"],
+    ).request(CATALOG)
+    [order] = request.order_by
+    assert order.order_by is request.group_by[0] and not order.descending
+
+
+# A metric defined for BigQuery only is disabled on Postgres: the catalog lists it as not available
+# here, and the tools decline it by name rather than answer with something else.
+def test_a_bigquery_only_metric_is_declined_on_postgres_naming_its_warehouse():
+    assert "median_order_value_eur" not in CATALOG.metrics
+    with pytest.raises(QueryError, match=r"defined only on bigquery.*not available here"):
+        CATALOG.metric("median_order_value_eur")
+    with pytest.raises(QueryError, match="not available here"):
+        MetricQuery(metrics=["median_order_value_eur"]).request(CATALOG)
+
+
+# The time spine's custom grains (the fiscal calendar) are grains like month, from the catalog.
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("metric_time__fiscal_quarter", ("metric_time", "fiscal_quarter")),
+        ("customer__signup_date__fiscal_year", ("customer__signup_date", "fiscal_year")),
+    ],
+)
+def test_a_custom_grain_the_catalog_lists_is_a_time_grain(name, expected):
+    assert CATALOG.custom_grains == ["fiscal_quarter", "fiscal_year"]
+    parameter = group_by_parameter(
+        name,
+        CATALOG.dimensions(["revenue_eur"]),
+        CATALOG.entities(["revenue_eur"]),
+        CATALOG.custom_grains,
+    )
+    assert (parameter.name, parameter.grain) == expected
+
+
+def test_a_custom_grain_is_refused_when_the_catalog_has_none():
+    with pytest.raises(QueryError, match="cannot group by"):
+        group_by_parameter("metric_time__fiscal_quarter", CATALOG.dimensions(["revenue_eur"]), [])
+
+
+def test_a_request_groups_by_the_fiscal_quarter():
+    request = MetricQuery(
+        metrics=["revenue_eur"], group_by=["metric_time__fiscal_quarter"]
+    ).request(CATALOG)
+    assert [(p.name, p.grain) for p in request.group_by] == [("metric_time", "fiscal_quarter")]

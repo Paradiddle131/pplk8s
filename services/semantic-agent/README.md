@@ -33,7 +33,7 @@ This repo's code is the places it steps in:
 | `sql_baseline` (eval only) | `execute_sql` | gold and exposed only, as the read-only `agent_sql` role, one statement per call (10 s statement timeout); the "ADK schema-driven" pattern: the catalog's public models as table names in the instruction (read from `agent.json` like the semantic agent's metrics, so the two never see different tables), columns from `information_schema` |
 
 `query_metrics` never takes SQL.
-It takes metric names, group-bys (`metric_time__day`, `__week`, `__month`, ...; `order__status`), filters as `{dimension, operator, values}` on categorical dimensions, a date range and an order.
+It takes metric names, group-bys (`metric_time__day`, `__week`, `__month`, ...; a date part such as `metric_time__extract_dow`, 1 Monday; `order__status`; an entity such as `campaign`, one row per id), filters as `{dimension, operator, values}` (categorical values matched, dates and numbers compared), a date range and an order.
 Each part is checked against the catalog; the filter becomes a MetricFlow `{{ Dimension(...) }}` condition with every value a quoted literal.
 MetricFlow renders that condition as a Jinja template before it compiles SQL, so a value holding `{{`, `{%` or `{#` is refused (`'{{ 7*7 }}'` would otherwise filter on `'49'`, #161).
 A categorical dimension whose column declares its values (an `accepted_values` test, which the catalog carries as `values`) shows them in `describe_metric`, and a filter value outside them comes back as an error naming them: a guessed value ("damaged goods" for `damaged`) would match no row and read as a confident zero.
@@ -126,9 +126,9 @@ make agent-serve AGENT_DBNAME=dbt_dev
 | Command | What it proves | Model |
 |---|---|---|
 | `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the audit and freshness kept for a stand-in `DataAgentToolset` whose data tool has another name, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
-| `make agent-eval` | the scored eval below | live, ~2 x 15 turns |
+| `make agent-eval` | the scored eval below | live, ~2 x 49 turns |
 
-`make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
+`make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` and the six weeks before it (`dev/fixture_weeks.sql`) in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
 Each question of `evals/questions.yaml` gets its expected number from the warehouse at run time, then goes once through each agent on ADK's `LocalEvalService`, scored by three custom metrics declared in `evals/eval_config.json`:
 - `answer_correct`: the answer carries the warehouse's number, or, for the semantic agent on a question no metric covers, says so; numbers inside a quoted freshness statement do not count.
 - `metric_choice`: the semantic agent queried the expected metrics.

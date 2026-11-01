@@ -26,6 +26,10 @@ def list_metrics() -> dict[str, Any]:
     and the saved queries: recurring questions answered the same way every time, each a fixed set
     of metrics, group-bys and filters that query_metrics runs by name.
 
+    custom_time_grains are the business's own periods (the fiscal quarter and year): group a time
+    dimension by them as by a month, e.g. metric_time__fiscal_quarter. not_available_here lists
+    metrics defined only for another warehouse: decline those.
+
     Call this first: an answer may only use these metrics.
     """
     return {
@@ -41,13 +45,18 @@ def list_metrics() -> dict[str, Any]:
             {key: query[key] for key in ("name", "question", "metrics", "group_by", "where")}
             for query in catalog().saved_queries.values()
         ],
+        "custom_time_grains": catalog().custom_grains_described,
+        "not_available_here": [
+            {key: m[key] for key in ("name", "label", "dialects")}
+            for m in catalog().unavailable.values()
+        ],
     }
 
 
 def describe_metric(name: str) -> dict[str, Any]:
-    """Describes one metric: its definition, time grain, and the dimensions it can be grouped or
-    filtered by, with the values of each categorical dimension that declares them: filter on one of
-    those values exactly.
+    """Describes one metric: its definition, time grain, the dimensions it can be grouped or
+    filtered by, with the values of each categorical dimension that declares them (filter on one of
+    those values exactly), and the entities it can be grouped by (one row per id).
 
     Args:
         name: The metric's name, as list_metrics returns it.
@@ -67,7 +76,9 @@ def describe_metric(name: str) -> dict[str, Any]:
             "pipelines",
             "readiness",
             "dimensions",
+            "entities",
         )
+        if key in metric
     }
 
 
@@ -88,10 +99,22 @@ def query_metrics(
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
         group_by: Dimensions to break the metrics down by, e.g. ["metric_time__day"] for one row per
             day, ["metric_time__month"] per month, or ["order__status"]. Omit for one total row.
-        filters: Conditions on categorical dimensions, e.g.
-            [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}];
-            operator is one of =, !=, in, not in. A value must be one describe_metric lists for
-            the dimension, when it lists any.
+            A custom grain list_metrics gives (custom_time_grains) groups by the business's own
+            periods, e.g. ["metric_time__fiscal_quarter"]. A date part groups by a piece of the
+            date across periods:
+            ["metric_time__extract_dow"] for one row per weekday (1 is Monday, 7 Sunday), or
+            __extract_month, __extract_day, __extract_quarter, __extract_year, __extract_doy.
+            An entity describe_metric lists, e.g. ["campaign"], gives one row per id; with
+            order_by and limit it answers "top 3 campaigns by spend".
+        filters: Conditions on dimensions, e.g.
+            [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}].
+            A categorical dimension takes =, !=, in, not in, with a value describe_metric lists
+            for it, when it lists any. A time dimension (signup cohort) takes =, !=, >, >=, <, <=
+            or between on dates like 2024-09-01, e.g. {"dimension": "customer__signup_date",
+            "operator": "between", "values": ["2024-09-01", "2024-09-30"]}. A numeric dimension
+            takes those and in, not in on numbers, e.g. {"dimension": "order__amount",
+            "operator": ">", "values": ["100"]}. between takes the low end, then the high end,
+            both included.
         start_date: First day to include (YYYY-MM-DD), inclusive.
         end_date: Last day to include (YYYY-MM-DD), inclusive.
         order_by: Requested metrics or group-bys to sort by; prefix "-" for descending.

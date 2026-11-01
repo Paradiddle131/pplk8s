@@ -10,14 +10,27 @@ version: 2
 
 models:
   - name: metricflow_time_spine
-    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine. Alias semantic.time_spine.
+    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine, with the fiscal quarter and year each day falls in. Alias semantic.time_spine.
     time_spine:
       standard_granularity_column: date_day
+      custom_granularities:
+        - name: fiscal_quarter
+        - name: fiscal_year
     columns:
       - name: date_day
         description: The calendar day.
         granularity: day
         tests: [not_null, unique]
+      - name: fiscal_quarter
+        description: >-
+          First day of the day's fiscal quarter; the fiscal year starts on 1 February, so its quarters start on
+          1 February, 1 May, 1 August and 1 November (fiscal Q3 of fiscal 2026 is 2026-08-01 to 2026-10-31).
+        tests: [not_null]
+      - name: fiscal_year
+        description: >-
+          First day of the day's fiscal year, which starts on 1 February and is named by the calendar year it
+          starts in (fiscal 2026 is 2026-02-01 to 2027-01-31).
+        tests: [not_null]
 
   - name: semantic_metrics
     description: One row per metric of the semantic layer, with its words; the warehouse copy of the agent catalog's metrics (semantic/PLAN.md SL-3). Alias semantic.metrics.
@@ -154,3 +167,133 @@ metrics:
       filter: "{{ Dimension('customer_action__action_type') }} = 'add_to_cart'"
     conversion_metric: checkout_sessions
     window: 2 days
+  # Period over period and to date, over dbt/dev/fixture_weeks.sql. A week-over-week growth compares
+  # the metric with itself one week earlier (offset_window), so it means a week's change when grouped by
+  # metric_time__week; a month-to-date total runs from the first of the month (grain_to_date) and, grouped by a
+  # coarser grain, takes the period's last day (period_agg: last), so by month it is the month's total.
+  - name: revenue_eur_wow_growth
+    description: >-
+      Revenue's change from the week before, as a share of that week's revenue (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks, by metric_time__day to compare a day with the same weekday a week
+      earlier. Empty where either week has no revenue.
+    label: Revenue week-over-week growth
+    type: derived
+    expr: (revenue_eur - revenue_eur_prior_week) / nullif(revenue_eur_prior_week, 0)
+    input_metrics:
+      - name: revenue_eur
+      - name: revenue_eur
+        offset_window: 1 week
+        alias: revenue_eur_prior_week
+  - name: bookings_wow_growth
+    description: >-
+      Bookings' change from the week before, as a share of that week's bookings (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks. Empty where either week has no bookings.
+    label: Bookings week-over-week growth
+    type: derived
+    expr: (bookings - bookings_prior_week) * 1.0 / nullif(bookings_prior_week, 0)
+    input_metrics:
+      - name: bookings
+      - name: bookings
+        offset_window: 1 week
+        alias: bookings_prior_week
+  - name: leads_wow_growth
+    description: >-
+      Leads' change from the week before, as a share of that week's leads (0.10 is 10 % more); group by
+      metric_time__week to compare whole weeks. Empty where either week has no leads.
+    label: Leads week-over-week growth
+    type: derived
+    expr: (leads - leads_prior_week) * 1.0 / nullif(leads_prior_week, 0)
+    input_metrics:
+      - name: leads
+      - name: leads
+        offset_window: 1 week
+        alias: leads_prior_week
+  - name: revenue_eur_mtd
+    description: >-
+      Revenue from the first of the month up to and including each day (month to date); group by metric_time__day
+      and read the day asked. Grouped by week or month it is the total up to that period's last day.
+    label: Revenue month to date (EUR)
+    type: cumulative
+    input_metric: revenue_eur
+    grain_to_date: month
+    period_agg: last
+  - name: bookings_mtd
+    description: >-
+      Bookings from the first of the month up to and including each day (month to date); group by metric_time__day
+      and read the day asked. Grouped by week or month it is the count up to that period's last day.
+    label: Bookings month to date
+    type: cumulative
+    input_metric: bookings
+    grain_to_date: month
+    period_agg: last
+  - name: leads_mtd
+    description: >-
+      Leads from the first of the month up to and including each day (month to date); group by metric_time__day and
+      read the day asked. Grouped by week or month it is the count up to that period's last day.
+    label: Leads month to date
+    type: cumulative
+    input_metric: leads
+    grain_to_date: month
+    period_agg: last
+  # Customers (signups on silver.customers): the running total over all time, and the share of signups that
+  # place an order within 30 days, at day grain the signup day and the 29 after it.
+  - name: customers_to_date
+    description: >-
+      All customers who had signed up by each day, a running total over all time; grouped by week or month it is
+      the count on that period's last day.
+    label: Customers to date
+    type: cumulative
+    input_metric: signups
+    period_agg: last
+  - name: signup_to_first_order_rate
+    description: >-
+      Share of customers who placed their first order within 30 days of signing up (the signup day and the 29
+      after it), counted on the signup day; by signup month, the share of that cohort.
+    label: Signup-to-first-order rate
+    type: conversion
+    entity: customer
+    calculation: conversion_rate
+    base_metric: signups
+    conversion_metric: orders_total
+    window: 30 days
+  - name: repeat_revenue_share
+    description: >-
+      Share of revenue that came from repeat customers (revenue from customers with two or more orders in all over
+      revenue, over the whole period asked).
+    label: Repeat-customer revenue share
+    type: ratio
+    numerator: revenue_repeat_customers_eur
+    denominator: revenue_eur
+  # Returns against the orders they return, both on the order's date (returns_on_order_date's agg_time_dimension),
+  # so a month's rate is that month's orders only.
+  - name: return_rate
+    description: >-
+      Share of orders that were returned (returns over orders, both counted on the day the order was placed, over
+      the whole period asked); a return in October of a September order counts against September.
+    label: Return rate
+    type: ratio
+    numerator: returns_on_order_date
+    denominator: orders_total
+  - name: damaged_return_share
+    description: >-
+      Share of returns whose reason was damaged goods (damaged returns over all returns, both counted on the
+      returned order's date, over the whole period asked).
+    label: Damaged-return share
+    type: ratio
+    numerator:
+      name: returns_on_order_date
+      filter: "{{ Dimension('return__reason') }} = 'damaged'"
+      alias: damaged_returns
+    denominator: returns_on_order_date
+  # A typical order: the mean on every warehouse; the median is BigQuery-only (models/silver/schema.yml).
+  - name: average_order_value_eur
+    description: >-
+      Average amount of a non-cancelled order (revenue over non-cancelled orders, over the whole period asked, never
+      an average of daily averages).
+    label: Average order value (EUR)
+    type: ratio
+    numerator: revenue_eur
+    denominator:
+      name: orders_total
+      filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      alias: orders_not_cancelled

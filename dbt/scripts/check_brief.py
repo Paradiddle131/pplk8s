@@ -37,7 +37,7 @@ def semantic_models_of(name: str, metrics: dict[str, dict]) -> set[str]:
 def expected_rows(manifest: dict, semantic_manifest: dict) -> dict[str, dict]:
     metrics = {m["name"]: m for m in semantic_manifest["metrics"]}
     files = {m["name"]: m["original_file_path"] for m in manifest["metrics"].values()}
-    return {
+    rows = {
         name: {
             "label": metric.get("label") or "",
             "type": metric["type"],
@@ -46,6 +46,19 @@ def expected_rows(manifest: dict, semantic_manifest: dict) -> dict[str, dict]:
         }
         for name, metric in metrics.items()
     }
+    # A metric defined for another warehouse only is disabled on this target (config.meta.dialects), and
+    # keeps its row: the brief lists what the project defines on every warehouse.
+    for nodes in manifest.get("disabled", {}).values():
+        for node in nodes:
+            if node.get("resource_type") == "metric" and ((node.get("config") or {}).get("meta") or {}).get("dialects"):
+                aggregation = (node.get("type_params") or {}).get("metric_aggregation_params") or {}
+                rows[node["name"]] = {
+                    "label": node.get("label") or "",
+                    "type": node["type"],
+                    "semantic models": {aggregation["semantic_model"]} if aggregation.get("semantic_model") else set(),
+                    "defined in": f"dbt/{node['original_file_path']}",
+                }
+    return rows
 
 
 def cells(line: str) -> list[str]:

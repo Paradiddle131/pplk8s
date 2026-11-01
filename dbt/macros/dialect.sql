@@ -15,6 +15,22 @@
     date({{ column }}, 'UTC')
 {%- endmacro %}
 
+-- The first day of the fiscal period (quarter or year) holding a date, for a fiscal year that starts on the
+-- first day of month `start_month` (2: February): shift back to the calendar, truncate, shift forward.
+{% macro fiscal_period_start(column, grain, start_month) -%}
+    {{ return(adapter.dispatch('fiscal_period_start')(column, grain, start_month)) }}
+{%- endmacro %}
+
+{% macro default__fiscal_period_start(column, grain, start_month) -%}
+    cast(date_trunc('{{ grain }}', {{ column }} - interval '{{ start_month - 1 }} month')
+         + interval '{{ start_month - 1 }} month' as date)
+{%- endmacro %}
+
+{% macro bigquery__fiscal_period_start(column, grain, start_month) -%}
+    date_add(date_trunc(date_sub({{ column }}, interval {{ start_month - 1 }} month), {{ grain }}),
+             interval {{ start_month - 1 }} month)
+{%- endmacro %}
+
 -- One row per calendar day from start to end inclusive, as `date_day`; start and end are
 -- 'YYYY-MM-DD' strings. dbt.date_spine counts its days with a warehouse query, so it cannot
 -- compile offline; these need none.

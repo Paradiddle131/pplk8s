@@ -30,7 +30,7 @@ export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO
 dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
 freshness() { dbt_ source freshness >"$OUT/freshness-$1.log" 2>&1; }
 statuses() { psql_db -F= -c "select table_name, status from ops.source_freshness order by table_name" | paste -sd' '; }
-LANDED="partner_returns synthetic_ad_spend synthetic_applications synthetic_bookings synthetic_call_transcripts synthetic_campaigns
+LANDED="partner_returns synthetic_ad_spend synthetic_applications synthetic_bookings synthetic_call_transcripts synthetic_campaign_budgets synthetic_campaigns
   synthetic_customer_actions synthetic_customers synthetic_leads synthetic_orders synthetic_outreach_messages synthetic_outreach_replies
   synthetic_partner_contacts synthetic_partners tlc_green tlc_yellow"
 all_with() { local t out=""; for t in $LANDED; do out+="$t=${2:-$1} "; done; echo "${out% }"; }
@@ -48,7 +48,7 @@ echo "ok: fixtures loaded into $DB, every landed table last loaded an hour ago"
 
 freshness fresh || { tail -30 "$OUT/freshness-fresh.log" >&2; fail "dbt source freshness on fresh data"; }
 expect "statuses on fresh data" "$(statuses)" "$(all_with pass)"
-echo "ok: dbt source freshness passes on fresh data and records pass for the 16 landed tables (open_meteo left out)"
+echo "ok: dbt source freshness passes on fresh data and records pass for the 17 landed tables (open_meteo left out)"
 
 # Orders stopped 40 hours ago (error_after 36 h), leads 30 hours ago (warn_after 26 h), outreach replies were
 # never loaded (empty), tlc_green is gone.
@@ -62,7 +62,7 @@ want=$(all_with pass | sed -e 's/synthetic_orders=pass/synthetic_orders=error/' 
   -e 's/synthetic_leads=pass/synthetic_leads=warn/' -e 's/synthetic_outreach_replies=pass/synthetic_outreach_replies=error/' \
   -e 's/tlc_green=pass/tlc_green=runtime error/')
 expect "statuses with stopped sources" "$(statuses)" "$want"
-expect "rows per table" "$(psql_db -c "select count(*) from ops.source_freshness")" 16
+expect "rows per table" "$(psql_db -c "select count(*) from ops.source_freshness")" 17
 age=$(psql_db -c "select round(extract(epoch from checked_at - max_loaded_at) / 3600) from ops.source_freshness where table_name = 'synthetic_orders'")
 expect "synthetic_orders' recorded age in hours" "$age" 40
 expect "synthetic_orders' error_after" "$(psql_db -c "select error_after_seconds from ops.source_freshness where table_name = 'synthetic_orders'")" 129600
@@ -100,7 +100,7 @@ for _ in $(seq 30); do
   sleep 1
 done
 printf '%s\n' "$metrics" >"$OUT/metrics.txt"
-expect "exported verdicts" "$(grep -c '^ops_source_freshness_checked_timestamp_seconds{' <<<"$metrics")" 16
+expect "exported verdicts" "$(grep -c '^ops_source_freshness_checked_timestamp_seconds{' <<<"$metrics")" 17
 grep -q '^ops_source_freshness_checked_timestamp_seconds{source="ds_source",status="error",table="synthetic_orders"[,}]' <<<"$metrics" ||
   fail "the exporter does not show synthetic_orders as error (see $OUT/metrics.txt)"
 for t in tlc_green synthetic_outreach_replies; do
@@ -109,6 +109,6 @@ for t in tlc_green synthetic_outreach_replies; do
 done
 loaded_orders=$(grep '^ops_source_max_loaded_at_seconds{source="ds_source",table="synthetic_orders"[,}]' <<<"$metrics" | awk '{printf "%d", $2}')
 expect "exported age of synthetic_orders in hours" "$(( ($(date +%s) - loaded_orders + 1800) / 3600 ))" 40
-echo "ok: the warehouse sql_exporter's collector exports the 16 verdicts and each table's newest load"
+echo "ok: the warehouse sql_exporter's collector exports the 17 verdicts and each table's newest load"
 
 echo "PASS: source freshness check"

@@ -5,7 +5,7 @@ description = "An ADK agent that answers business questions through the dbt sema
 requires-python = ">=3.13,<3.14"
 dependencies = [
     # The served agent needs ADK's session database and LiteLLM (OpenRouter), not its eval or
-    # extensions extras, which would more than double the image (#230); the eval runs from the dev group.
+    # extensions extras, which would more than double the image (#230); the eval runs from the `eval` group.
     "google-adk[db]==2.13.0",
     "litellm==1.96.2",
     "dbt-core==1.12.6",

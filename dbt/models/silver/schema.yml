@@ -15,8 +15,8 @@ version: 2
 # Each model's `hop_bronze_to_<model>` test reconciles it with bronze's latest load of each key (SL-9).
 
 models:
-  # Customers carry no metric of their own: the customer entity lets every orders metric group and
-  # filter by the customer's country and signup cohort (customer__signup_date__month).
+  # The customer entity lets every orders metric group and filter by the customer's country and signup
+  # cohort (customer__signup_date__month); signups count customers on the day they signed up.
   - name: slv_customers
     description: One row per customer, latest load wins. Alias silver.customers.
     config:
@@ -27,18 +27,19 @@ models:
               The customers who signed up in the same calendar month. A metric by cohort groups by the month
               its customer signed up, not the month the order was placed.
             synonyms: [cohort, acquisition cohort]
-            metrics: [orders_total, revenue_eur, customers_distinct]
+            metrics: [orders_total, revenue_eur, customers_distinct, signups]
             dimensions: [customer__signup_date]
           - term: Customer country
             description: >-
               The customer's ISO-2 country. It is not the market a campaign targets nor a lead's country, so
-              revenue or orders by country group by it.
+              revenue, net revenue, returns or orders by country group by it.
             synonyms: [country]
-            metrics: [orders_total, revenue_eur, customers_distinct]
+            metrics: [orders_total, revenue_eur, customers_distinct, returns_eur, net_revenue_eur]
             dimensions: [customer__country]
     semantic_model:
       enabled: true
       name: customers
+    agg_time_dimension: signup_date
     tests:
       - latest_load_reconciles:
           name: hop_bronze_to_slv_customers
@@ -68,6 +69,13 @@ models:
         dimension:
           type: time
         granularity: day
+    metrics:
+      - name: signups
+        description: Customers who signed up, counted on the day they signed up (new customers).
+        label: Signups
+        type: simple
+        agg: count
+        expr: 1
 
   - name: slv_orders
     description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.
@@ -128,7 +136,13 @@ models:
         dimension:
           type: categorical
       - name: amount
+        description: >-
+          The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an
+          amount are a filter (order__amount > 100), not a band.
+        data_type: numeric
         tests: [not_null]
+        dimension:
+          type: categorical
       - name: currency
         description: ISO-4217 code of the order amount.
         dimension:
@@ -139,7 +153,8 @@ models:
         label: Orders
         type: simple
         agg: count
-        expr: order_id
+        # One per row (order_id is unique and not null): a conversion metric's input must count 1.
+        expr: 1
       - name: orders_cancelled
         description: Orders with status cancelled.
         label: Cancelled orders
@@ -154,6 +169,21 @@ models:
         agg: sum
         expr: amount
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      - name: median_order_value_eur
+        description: >-
+          BigQuery only: the median amount of a non-cancelled order, BigQuery's approximate continuous percentile
+          (APPROX_QUANTILES); Postgres has no rendering of it, so an agent on Postgres declines.
+        label: Median order value (EUR)
+        type: simple
+        agg: percentile
+        percentile: 0.5
+        percentile_type: continuous
+        expr: amount
+        config:
+          enabled: "{{ target.type == 'bigquery' }}"
+          meta:
+            dialects: [bigquery]
+        filter: "{{ Dimension('order__status') }} <> 'cancelled'"
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order.
         label: Active customers
@@ -161,6 +191,29 @@ models:
         agg: count_distinct
         expr: customer_id
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      # A repeat customer has two or more orders in all (cancelled ones included, as orders_total counts
+      # them); the inner metric is not limited by a query's dates (tests/e2e/semantic-check.sh pins it).
+      - name: repeat_customers
+        description: >-
+          Distinct customers with a non-cancelled order in the period who have placed two or more orders in all
+          (repeat customers).
+        label: Repeat customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter:
+          - "{{ Dimension('order__status') }} <> 'cancelled'"
+          - "{{ Metric('orders_total', group_by=['customer']) }} >= 2"
+      - name: revenue_repeat_customers_eur
+        description: >-
+          Revenue (non-cancelled orders) from repeat customers, those who have placed two or more orders in all.
+        label: Revenue from repeat customers (EUR)
+        type: simple
+        agg: sum
+        expr: amount
+        filter:
+          - "{{ Dimension('order__status') }} <> 'cancelled'"
+          - "{{ Metric('orders_total', group_by=['customer']) }} >= 2"
 
   - name: slv_hourly_weather
     description: One row per (location, observed_at), latest load wins. Alias silver.hourly_weather.
@@ -220,6 +273,21 @@ models:
         entity:
           type: foreign
           name: order
+      - name: customer_id
+        description: >-
+          The returned order's customer (silver.orders), so returns and net revenue group by customer__country;
+          empty while the order is not in silver.
+        entity:
+          type: foreign
+          name: customer
+      - name: order_date
+        description: >-
+          UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a
+          return in October of a September order counts against September's orders. Empty while the order is not
+          in silver.
+        dimension:
+          type: time
+        granularity: day
       - name: return_date
         description: UTC date the return was recorded (returned_at in UTC).
         tests: [not_null]
@@ -247,6 +315,15 @@ models:
         type: simple
         agg: count
         expr: return_id
+      - name: returns_on_order_date
+        description: >-
+          Number of partner returns, counted on the day the returned order was placed rather than the day of the
+          return; the return rate's numerator.
+        label: Returns by order date
+        type: simple
+        agg: count
+        expr: 1
+        agg_time_dimension: order_date
 
   - name: slv_tlc_trips
     description: >
@@ -348,6 +425,64 @@ models:
         dimension:
           type: categorical
           name: campaign_name
+
+  - name: slv_campaign_budgets
+    description: >-
+      One row per (snapshot_date, campaign), latest load wins: the campaign's budget for the month and what is left
+      of it after that day's spend. A balance, not a flow. Alias silver.campaign_budgets.
+    semantic_model:
+      enabled: true
+      name: campaign_budgets
+    agg_time_dimension: snapshot_date
+    primary_entity: campaign_budget_day
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['snapshot_date', 'campaign_id']
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_campaign_budgets
+          arguments:
+            bronze: ref('brz_synthetic_campaign_budgets')
+            keys: [snapshot_date, campaign_id]
+            tie_breaker: _run_id
+            amount: remaining_eur
+          config:
+            tags: [silver, marketing]
+    columns:
+      - name: snapshot_date
+        description: UTC day of the snapshot, after that day's spend.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: campaign_id
+        description: Must exist in slv_campaigns.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_campaigns')
+                field: campaign_id
+        entity:
+          type: foreign
+          name: campaign
+      - name: budget_eur
+        description: The campaign's budget for the snapshot's calendar month, in EUR.
+      - name: remaining_eur
+        description: What is left of the month's budget after the day's spend, in EUR; negative when overspent.
+    metrics:
+      - name: remaining_budget_eur
+        description: >-
+          Budget left in the month, in EUR: each campaign's last snapshot in the period asked (never a sum across
+          days), added up over campaigns; by month it is what was left at month end.
+        label: Remaining budget (EUR)
+        type: simple
+        agg: sum
+        expr: remaining_eur
+        non_additive_dimension:
+          name: snapshot_date
+          window_agg: max
+          group_by: [campaign]
 
   - name: slv_ad_spend
     description: One row per (spend_date, campaign), latest load wins. Alias silver.ad_spend.

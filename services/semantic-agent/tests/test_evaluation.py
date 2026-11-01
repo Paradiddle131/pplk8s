@@ -10,6 +10,7 @@ from semantic_agent.evaluation import (
     ANSWER_CORRECT,
     METRIC_CHOICE,
     Question,
+    as_expected,
     carries,
     eval_cases,
     load_questions,
@@ -18,11 +19,11 @@ from semantic_agent.evaluation import (
 from tests.conftest import ScriptedLlm
 
 
-def test_the_question_set_is_about_twenty_five_with_some_no_metric_covers():
-    # Each domain adds its questions (semantic/PLAN.md SL-14); the bound keeps a live run's
-    # free-tier calls in check.
+def test_the_question_set_is_about_fifty_with_some_no_metric_covers():
+    # Each domain and each question shape adds its questions (semantic/PLAN.md SL-5, SL-14);
+    # the bound keeps a live run's free-tier calls in check.
     questions = load_questions()
-    assert 20 <= len(questions) <= 30
+    assert 30 <= len(questions) <= 60
     assert len({q.id for q in questions}) == len(questions)
     assert any(not q.metrics for q in questions)
     known = set(tools.catalog().metrics)
@@ -57,6 +58,15 @@ def test_declines_are_recognised(answer):
 
 def test_an_answer_is_not_a_decline():
     assert not evaluation.DECLINE.search("Revenue was 981.69 EUR on 1 October 2026.")
+
+
+def test_a_rate_is_expected_as_a_percentage_rounded_only_once():
+    # 0.3265327... is 32.65 % at two decimals and 32.7 % at one; a percentage kept at two decimals
+    # and rounded again to one gives 32.6 (32.65 is 32.6499... as a float).
+    assert carries("Revenue grew by 32.7%", as_expected(0.3265327921384320))
+    assert carries("32.65 %", as_expected(0.3265327921384320))
+    assert not carries("32.6%", as_expected(0.3265327921384320))
+    assert as_expected(964.19) == [964.19]
 
 
 def test_an_answer_carries_a_number_within_rounding():

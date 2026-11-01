@@ -131,7 +131,7 @@ Query a metric with the `mf` CLI from this folder, with the same environment:
 uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
-`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and call-transcripts models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 61 layer hops pass, that the activation list leaves out every contact without consent, opted out (a backfilled older snapshot included) or messaged within the cooldown, that the recruitment extracts replayed one at a time, with a build after each, leave the snapshot every stage change and `candidates_in_stage` by `candidate__stage` equal to `gold.candidates_in_stage_daily`, that an incremental build merges a late action into its own day and a redelivered one once, and that a return seeded on a day without orders fails the returns hops, checks the call labels (scored on the golden set, labelled once, seeded wrong labels and too many failed calls failing their tests, failed calls retried), and checks that an undescribed metric, a metric over model-derived labels without "Model-derived", and an unprefixed, undescribed gold model with a personal-data column fail the validation.
+`tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and call-transcripts models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 63 layer hops pass, that the activation list leaves out every contact without consent, opted out (a backfilled older snapshot included) or messaged within the cooldown, that the recruitment extracts replayed one at a time, with a build after each, leave the snapshot every stage change and `candidates_in_stage` by `candidate__stage` equal to `gold.candidates_in_stage_daily`, that an incremental build merges a late action into its own day and a redelivered one once, and that a return seeded on a day without orders fails the returns hops, checks the call labels (scored on the golden set, labelled once, seeded wrong labels and too many failed calls failing their tests, failed calls retried), and checks that an undescribed metric, a metric over model-derived labels without "Model-derived", and an unprefixed, undescribed gold model with a personal-data column fail the validation, and, with `dev/fixture_weeks.sql` loaded last, that the week-over-week growth and month-to-date metrics equal SQL written by hand on gold.
 
 ### Labels read out of text
 
@@ -207,6 +207,10 @@ docker exec -i pplk8s-warehouse-1 psql -U warehouse -d dbt_dev -v ON_ERROR_STOP=
 ```
 
 Create the scratch database first if the warehouse volume is new: `docker exec pplk8s-warehouse-1 createdb -U warehouse dbt_dev`.
+
+`dev/fixture_weeks.sql` adds the six weeks before it (2026-08-17 to 2026-09-30) of orders, ad spend, leads and bookings, from fixed formulas, so the week-over-week and month-to-date metrics have periods to compare.
+Load it after `dev/fixture.sql`, never alone; it leaves the base fixture's days untouched.
+`make semantic-check` loads it last and compares those metrics with SQL written by hand on gold; the agents' fixture (`tests/e2e/agent-fixture.sh`) loads both, so the eval can ask for a change or a running total.
 
 `dev/tlc_fixture.sql` is the tlc counterpart.
 It holds two months of yellow and green rows in the D34 landing contract, a half-loaded second file version, and one row per quarantine rule.

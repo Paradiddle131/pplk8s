@@ -24,7 +24,13 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 MAX_ROWS = 200
-OPERATORS = ("=", "!=", "in", "not in")
+OPERATORS = ("=", "!=", "in", "not in", ">", ">=", "<", "<=", "between")
+# The operators each dimension type takes: a categorical value matched, a date or number compared.
+OPERATORS_BY_TYPE = {
+    "categorical": ("=", "!=", "in", "not in"),
+    "time": ("=", "!=", ">", ">=", "<", "<=", "between"),
+    "numeric": OPERATORS,
+}
 # MetricFlow renders a where filter as a Jinja template before it becomes SQL, so a value holding a
 # delimiter would be evaluated ('{{ 7*7 }}' filters on '49'), not compared as the text sent.
 JINJA_DELIMITERS = ("{{", "{%", "{#")
@@ -35,10 +41,11 @@ class QueryError(ValueError):
 
 
 class Filter(BaseModel):
-    """One condition on a categorical dimension, e.g. order__status = cancelled."""
+    """One condition on a dimension, e.g. order__status = cancelled, customer__signup_date >=
+    2024-09-01 or order__amount between 10 and 50."""
 
     dimension: str
-    operator: Literal["=", "!=", "in", "not in"] = "="
+    operator: Literal["=", "!=", "in", "not in", ">", ">=", "<", "<=", "between"] = "="
     values: list[str]
 
 
@@ -54,6 +61,8 @@ class Catalog:
     models: list[dict[str, Any]] = field(default_factory=list)
     glossary: list[dict[str, Any]] = field(default_factory=list)
     saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
+    unavailable: dict[str, dict[str, Any]] = field(default_factory=dict)
+    custom_grains_described: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -68,9 +77,24 @@ class Catalog:
             models=data["models"],
             glossary=data.get("glossary", []),
             saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
+            unavailable={m["name"]: m for m in data.get("unavailable_metrics", [])},
+            custom_grains_described=data.get("custom_grains", []),
         )
 
+    @property
+    def custom_grains(self) -> list[str]:
+        """The time spine's own grains (fiscal_quarter, fiscal_year), beside day to year."""
+        return [grain["name"] for grain in self.custom_grains_described]
+
     def metric(self, name: str) -> dict[str, Any]:
+        if name in self.unavailable:
+            other = self.unavailable[name]
+            raise QueryError(
+                f"{name!r} ({other['label']}) is defined only on "
+                f"{' and '.join(other['dialects'])}, "
+                "not on this warehouse; say that this metric is not available here, and do not "
+                "compute it from other metrics"
+            )
         if name not in self.metrics:
             raise QueryError(
                 f"no metric named {name!r}; the metrics are {sorted(self.metrics)}. "
@@ -96,6 +120,13 @@ class Catalog:
             if d.get("values")
         }
 
+    def entities(self, metric_names: list[str]) -> list[str]:
+        """Entities every one of the metrics can be grouped by: one row per id."""
+        found = [
+            {e["name"] for e in self.metric(name).get("entities", [])} for name in metric_names
+        ]
+        return sorted(set.intersection(*found)) if found else []
+
     def dimensions(self, metric_names: list[str]) -> dict[str, str]:
         """Dimensions every one of the metrics can be grouped or filtered by, with their type."""
         found = [
@@ -105,16 +136,71 @@ class Catalog:
         return {name: found[0][name] for name in sorted(common)}
 
 
-def _group_by_allowed(name: str, dimensions: dict[str, str]) -> bool:
-    base, _, grain = name.rpartition("__")
-    if name in dimensions:
-        return True
-    grains = ("day", "week", "month", "quarter", "year")
-    return dimensions.get(base) == "time" and grain in grains
+GRAINS = ("day", "week", "month", "quarter", "year")
+# A date part groups by a piece of the date (dow: 1 Monday to 7 Sunday, ISO), not by a period.
+DATE_PARTS = ("year", "quarter", "month", "day", "dow", "doy")
+
+
+def group_by_parameter(
+    name: str, dimensions: dict[str, str], entities: list[str], custom_grains: list[str] = ()
+):
+    """MetricFlow's typed group-by for a checked name: `<time>__<grain>`, `<time>__extract_<part>`,
+    a dimension or an entity. MetricFlow parses no date part from a name string, so each is built
+    typed here, from parts the catalog lists."""
+    from metricflow_semantic_interfaces.type_enums.date_part import DatePart
+    from metricflow_semantics.specs.query_param_implementations import (
+        DimensionOrEntityParameter,
+        TimeDimensionParameter,
+    )
+
+    base, _, suffix = name.rpartition("__")
+    grains = (*GRAINS, *custom_grains)
+    if dimensions.get(base) == "time":
+        if suffix in grains:
+            return TimeDimensionParameter(name=base, grain=suffix)
+        part = suffix.removeprefix("extract_")
+        if suffix.startswith("extract_") and part in DATE_PARTS:
+            return TimeDimensionParameter(name=base, date_part=DatePart(part))
+    if dimensions.get(name) == "time":
+        return TimeDimensionParameter(name=name)
+    if name in dimensions or name in entities:
+        return DimensionOrEntityParameter(name=name)
+    raise QueryError(
+        f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}, a time one with "
+        f"__{', __'.join(grains)} or __extract_{', __extract_'.join(DATE_PARTS)} (dow: 1 is "
+        f"Monday), and the entities are {sorted(entities)}"
+    )
 
 
 def _literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
+
+
+def _iso_date(value: str, dimension: str) -> str:
+    """A date at the day grain every time dimension has, written back from its parsed form."""
+    try:
+        if len(value) != 10:
+            raise ValueError(value)
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError as e:
+        raise QueryError(
+            f"{dimension!r} is a time dimension: each value must be a date like 2024-09-01, "
+            f"got {value!r}"
+        ) from e
+
+
+def _number(value: str, dimension: str) -> decimal.Decimal:
+    """A plain decimal number (no exponent, no NaN or infinity), so its text is all digits."""
+    try:
+        number = decimal.Decimal(value.strip())
+        if not number.is_finite() or "e" in value.lower():
+            raise decimal.InvalidOperation(value)
+    except decimal.InvalidOperation as e:
+        raise QueryError(
+            f"{dimension!r} is numeric: each value must be a number like 100 or 99.50, "
+            f"got {value!r}"
+        ) from e
+    return number
 
 
 def where_clause(
@@ -122,14 +208,18 @@ def where_clause(
 ) -> str:
     """A MetricFlow where filter built from checked parts, never from the model's text.
 
-    A value the dimension does not declare is refused with the values it does: a guessed value
-    ("damaged goods" for "damaged") would match no row and come back as a confident zero. A value
-    holding a Jinja delimiter is refused too: MetricFlow would render it, and filter on the result.
+    A categorical value the dimension does not declare is refused with the values it does: a
+    guessed value ("damaged goods" for "damaged") would match no row and come back as a confident
+    zero. A time dimension takes ISO dates and a numeric one numbers, each parsed and written back,
+    so no text the model sent reaches the filter. A value holding a Jinja delimiter is refused for
+    every type: MetricFlow would render it, and filter on the result.
     """
-    categorical = sorted(name for name, kind in dimensions.items() if kind == "categorical")
-    if item.dimension not in categorical:
+    if item.dimension == "metric_time" or item.dimension.startswith("metric_time__"):
+        raise QueryError("limit metric_time with start_date and end_date, not a filter")
+    kind = dimensions.get(item.dimension)
+    if kind is None:
         raise QueryError(
-            f"cannot filter by {item.dimension!r}; filter on one of {categorical}, "
+            f"cannot filter by {item.dimension!r}; filter on one of {sorted(dimensions)}, "
             "and limit time with start_date and end_date"
         )
     if not item.values:
@@ -139,20 +229,42 @@ def where_clause(
             f"filter value {', '.join(map(repr, templated))} on {item.dimension!r} holds a "
             f"template delimiter ({', '.join(JINJA_DELIMITERS)}); send the value as plain text"
         )
-    values = (known or {}).get(item.dimension)
-    if values is not None and (unknown := [v for v in item.values if v not in values]):
+    allowed = OPERATORS_BY_TYPE.get(kind, ())
+    if item.operator not in allowed:
         raise QueryError(
-            f"{item.dimension!r} has no value {', '.join(map(repr, unknown))}; "
-            f"its values are {values}"
+            f"operator {item.operator!r} does not apply to {item.dimension!r}, a {kind} dimension; "
+            f"use one of {list(allowed)}"
         )
-    reference = "{{ Dimension('" + item.dimension + "') }}"
-    if item.operator in ("=", "!="):
-        if len(item.values) != 1:
-            raise QueryError(f"operator {item.operator!r} takes exactly one value")
-        operator = "=" if item.operator == "=" else "<>"
-        return f"{reference} {operator} {_literal(item.values[0])}"
-    values = ", ".join(_literal(v) for v in item.values)
-    return f"{reference} {item.operator} ({values})"
+    if item.operator == "between":
+        if len(item.values) != 2:
+            raise QueryError("operator 'between' takes two values, the low and the high end")
+    elif item.operator not in ("in", "not in") and len(item.values) != 1:
+        raise QueryError(f"operator {item.operator!r} takes exactly one value")
+    if kind == "time":
+        reference = "{{ TimeDimension('" + item.dimension + "', 'day') }}"
+        literals = [_literal(_iso_date(v, item.dimension)) for v in item.values]
+        ordered = [_iso_date(v, item.dimension) for v in item.values]
+    elif kind == "numeric":
+        reference = "{{ Dimension('" + item.dimension + "') }}"
+        numbers = [_number(v, item.dimension) for v in item.values]
+        literals, ordered = [str(n) for n in numbers], numbers
+    else:
+        values = (known or {}).get(item.dimension)
+        if values is not None and (unknown := [v for v in item.values if v not in values]):
+            raise QueryError(
+                f"{item.dimension!r} has no value {', '.join(map(repr, unknown))}; "
+                f"its values are {values}"
+            )
+        reference = "{{ Dimension('" + item.dimension + "') }}"
+        literals, ordered = [_literal(v) for v in item.values], []
+    if item.operator == "between":
+        if ordered[0] > ordered[1]:
+            raise QueryError("operator 'between' takes the low end first, then the high end")
+        return f"{reference} between {literals[0]} and {literals[1]}"
+    if item.operator in ("in", "not in"):
+        return f"{reference} {item.operator} ({', '.join(literals)})"
+    operator = "<>" if item.operator == "!=" else item.operator
+    return f"{reference} {operator} {literals[0]}"
 
 
 def _date(value: str | None, name: str) -> datetime.datetime | None:
@@ -207,11 +319,11 @@ class MetricQuery:
         if not metrics:
             raise QueryError("name at least one metric")
         dimensions = catalog.dimensions(metrics)
-        for name in group_by:
-            if not _group_by_allowed(name, dimensions):
-                raise QueryError(
-                    f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}"
-                )
+        entities = catalog.entities(metrics)
+        parameters = {
+            name: group_by_parameter(name, dimensions, entities, catalog.custom_grains)
+            for name in group_by
+        }
         allowed_order = set(metrics) | set(group_by)
         for name in self.order_by:
             if name.removeprefix("-") not in allowed_order:
@@ -221,15 +333,34 @@ class MetricQuery:
         if self.saved_query is not None:
             # MetricFlow refuses metrics or group-bys beside a saved query; filters, dates, order
             # and limit narrow it.
-            selection: dict[str, Any] = {"saved_query_name": self.saved_query}
+            selection: dict[str, Any] = {
+                "saved_query_name": self.saved_query,
+                "order_by_names": self.order_by or None,
+            }
         else:
-            selection = {"metric_names": metrics, "group_by_names": group_by or None}
+            from metricflow_semantics.specs.query_param_implementations import (
+                MetricParameter,
+                OrderByParameter,
+            )
+
+            order_by = [
+                OrderByParameter(
+                    order_by=parameters.get(name.removeprefix("-"))
+                    or MetricParameter(name=name.removeprefix("-")),
+                    descending=name.startswith("-"),
+                )
+                for name in self.order_by
+            ]
+            selection = {
+                "metric_names": metrics,
+                "group_by": list(parameters.values()) or None,
+                "order_by": order_by or None,
+            }
         return MetricFlowQueryRequest.create(
             **selection,
             where_constraints=[where_clause(f, dimensions, known) for f in self.filters] or None,
             time_constraint_start=_date(self.start_date, "start_date"),
             time_constraint_end=_date(self.end_date, "end_date"),
-            order_by_names=self.order_by or None,
             limit=limit,
         )
 

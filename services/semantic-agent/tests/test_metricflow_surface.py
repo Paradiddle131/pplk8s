@@ -78,7 +78,7 @@ def test_every_keyword_the_agent_passes_is_one_create_accepts(monkeypatch):
     query.request(metrics.Catalog.load(FIXTURES / "agent.json"))
     unknown = sorted(sent.keys() - signature.parameters.keys())
     assert not unknown, f"MetricFlowQueryRequest.create no longer takes {unknown}: {SURFACE}"
-    assert {"metric_names", "group_by_names", "where_constraints", "order_by_names"} <= sent.keys()
+    assert {"metric_names", "group_by", "where_constraints", "order_by"} <= sent.keys()
 
 
 def test_a_saved_query_request_uses_keywords_create_accepts(monkeypatch):
@@ -135,3 +135,24 @@ def test_an_explained_statement_carries_its_sql():
     assert "SqlStatement" in str(returned), SURFACE
     fields = {f.name for f in dataclasses.fields(SqlStatement)}
     assert "sql" in fields or hasattr(SqlStatement, "sql"), f"SqlStatement.sql: {SURFACE}"
+
+
+def test_the_typed_group_by_and_order_by_parameters_take_what_the_agent_sets():
+    """A date part and an entity are typed parameters; their fields and the date parts
+    the tool offers must exist in MetricFlow."""
+    from metricflow_semantic_interfaces.type_enums.date_part import DatePart
+    from metricflow_semantics.specs.query_param_implementations import (
+        DimensionOrEntityParameter,
+        MetricParameter,
+        OrderByParameter,
+        TimeDimensionParameter,
+    )
+
+    fields = {f.name for f in dataclasses.fields(TimeDimensionParameter)}
+    assert {"name", "grain", "date_part"} <= fields, SURFACE
+    assert {f.name for f in dataclasses.fields(DimensionOrEntityParameter)} >= {"name"}, SURFACE
+    assert {f.name for f in dataclasses.fields(MetricParameter)} >= {"name"}, SURFACE
+    assert {f.name for f in dataclasses.fields(OrderByParameter)} >= {"order_by", "descending"}, (
+        SURFACE
+    )
+    assert {part.value for part in DatePart} >= set(metrics.DATE_PARTS), SURFACE

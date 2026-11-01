@@ -52,7 +52,7 @@ def test_catalog_lists_the_marketing_pipeline(client):
     assert response.status_code == 200
     assert response.get_json() == [
         {"source": "synthetic", "entity": entity}
-        for entity in ("campaigns", "ad_spend", "leads", "bookings")
+        for entity in ("campaigns", "ad_spend", "leads", "bookings", "campaign_budgets")
     ]
 
 
@@ -273,6 +273,7 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
         "synthetic_applications",
         "synthetic_bookings",
         "synthetic_call_transcripts",
+        "synthetic_campaign_budgets",
         "synthetic_campaigns",
         "synthetic_customer_actions",
         "synthetic_customers",
@@ -292,6 +293,7 @@ SOURCE_TABLES = [
     "synthetic_applications",
     "synthetic_bookings",
     "synthetic_call_transcripts",
+    "synthetic_campaign_budgets",
     "synthetic_campaigns",
     "synthetic_customer_actions",
     "synthetic_customers",

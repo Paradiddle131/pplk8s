@@ -6,11 +6,16 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
 
 - `agent.json`: the catalog the metric toolset reads (S3): the public models (gold and exposed, SL-4)
   with their relation, pipelines, grain and column descriptions, and every metric with its label,
-  description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by,
+  description, type, pipelines, readiness products, time grain, the entities it can be grouped by (one row
+  per customer, campaign, ...; their ids, no personal data) and the dimensions it can be grouped by,
   a categorical one with its known values when its column declares them (an `accepted_values` test), so the
-  agent filters on a value the data holds instead of guessing one.
+  agent filters on a value the data holds instead of guessing one, and typed `numeric` when its column
+  declares a numeric `data_type`, so the agent may compare it (MetricFlow knows only categorical and time).
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
+  The metrics defined for another warehouse only (`unavailable_metrics`: a BigQuery-only median on Postgres),
+  with their dialects, so the agent declines them by name instead of guessing.
+  The time spine's custom grains (`custom_grains`: the fiscal quarter and year) with their descriptions.
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
@@ -108,6 +113,60 @@ def accepted_values(manifest: dict) -> dict[tuple[str, str], list[str]]:
     return found
 
 
+# Postgres and BigQuery spellings of a number type, as a column's data_type declares it.
+NUMERIC_TYPES = ("numeric", "decimal", "bignumeric", "integer", "int", "int64", "bigint", "smallint", "float64")
+
+
+def numeric_columns(manifest: dict) -> set[tuple[str, str]]:
+    """The model columns whose declared `data_type` is a number, by (model, column)."""
+    return {
+        (node["name"], name)
+        for node in manifest["nodes"].values()
+        if node["resource_type"] == "model"
+        for name, column in node.get("columns", {}).items()
+        if (column.get("data_type") or "").lower().split("(")[0].strip() in NUMERIC_TYPES
+    }
+
+
+def custom_grains(manifest: dict, index: SemanticIndex) -> list[dict]:
+    """The time spine's custom granularities (the fiscal quarter and year), each with its column's description,
+    so a time dimension groups by `__fiscal_quarter` as by `__month`."""
+    found = []
+    for spine in index.time_spines:
+        model = next(
+            (
+                n
+                for n in manifest["nodes"].values()
+                if n["resource_type"] == "model" and n.get("alias") == spine["node_relation"]["alias"]
+            ),
+            {},
+        )
+        for grain in spine.get("custom_granularities", []):
+            column = grain.get("column_name") or grain["name"]
+            description = ((model.get("columns") or {}).get(column) or {}).get("description") or ""
+            found.append({"name": grain["name"], "description": " ".join(description.split())})
+    return sorted(found, key=lambda grain: grain["name"])
+
+
+def unavailable_metrics(manifest: dict) -> list[dict]:
+    """The metrics defined for another warehouse only (`config.meta.dialects`, disabled on this target by
+    `enabled: "{{ target.type == ... }}"`), so the agent can say a metric exists, but not here (SL-6)."""
+    found = []
+    for nodes in manifest.get("disabled", {}).values():
+        for node in nodes:
+            dialects = ((node.get("config") or {}).get("meta") or {}).get("dialects")
+            if node.get("resource_type") == "metric" and dialects:
+                found.append(
+                    {
+                        "name": node["name"],
+                        "label": node.get("label") or "",
+                        "description": node.get("description") or "",
+                        "dialects": list(dialects),
+                    }
+                )
+    return sorted(found, key=lambda metric: metric["name"])
+
+
 def glossary(manifest: dict) -> list[dict]:
     """The business terms that are not metrics, from `config.meta.glossary` on the models that hold them."""
     terms = []
@@ -147,6 +206,8 @@ class SemanticIndex:
             for node in manifest["semantic_models"].values()
         }
         self.accepted_values = accepted_values(manifest)
+        self.time_spines = semantic_manifest.get("project_configuration", {}).get("time_spines", [])
+        self.numeric_columns = numeric_columns(manifest)
         self._nodes = {**manifest["metrics"], **manifest["semantic_models"]}
         self._metric_ids = {node["name"]: unique_id for unique_id, node in manifest["metrics"].items()}
 
@@ -186,6 +247,10 @@ class SemanticIndex:
     def known_values(self, semantic_model: str, column: str) -> list[str] | None:
         """The values a dimension's column declares, or None when it declares none."""
         return self.accepted_values.get((self.model_of_semantic_model.get(semantic_model, ""), column))
+
+    def is_numeric(self, semantic_model: str, column: str) -> bool:
+        """Whether a dimension's column declares a numeric data_type."""
+        return (self.model_of_semantic_model.get(semantic_model, ""), column) in self.numeric_columns
 
     def question(self, saved_query: dict) -> str:
         """The business question a saved query answers, from its `config.meta.question`."""
@@ -228,7 +293,12 @@ def saved_queries(index: SemanticIndex) -> list[dict]:
     return found
 
 
-def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[str], list[dict]]) -> dict:
+def agent_catalog(
+    manifest: dict,
+    index: SemanticIndex,
+    dimensions: Callable[[str], list[dict]],
+    entities: Callable[[str], list[dict]] = lambda metric: [],
+) -> dict:
     return {
         "models": public_models(manifest),
         "glossary": glossary(manifest),
@@ -243,10 +313,13 @@ def agent_catalog(manifest: dict, index: SemanticIndex, dimensions: Callable[[st
                 "time_grain": index.time_grain(metric),
                 "semantic_models": [model["name"] for model in index.models_of_metric(metric)],
                 "dimensions": dimensions(metric["name"]),
+                "entities": entities(metric["name"]),
             }
             for metric in index.metrics
         ],
         "saved_queries": saved_queries(index),
+        "unavailable_metrics": unavailable_metrics(manifest),
+        "custom_grains": custom_grains(manifest, index),
     }
 
 
@@ -337,11 +410,27 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
     for metric in index.metrics:
         params = metric["type_params"]
         if metric["type"] == "derived":
-            # The formula in words: a coalesce that only fills a missing input with 0 says nothing to a reader.
-            formula = re.sub(r"coalesce\((\w+), 0\)", r"\1", params["expr"])
-            for name in sorted(labels, key=len, reverse=True):
-                formula = formula.replace(name, labels[name])
+            # The formula in words: a coalesce or nullif that only guards a missing input or a zero, and a
+            # cast to a decimal, say nothing to a reader; an input taken a period earlier says so.
+            words = dict(labels)
+            for item in params["metrics"]:
+                offset = item.get("offset_window")
+                if item.get("alias") and offset:
+                    words[item["alias"]] = f"{labels[item['name']]} {offset['count']} {offset['granularity']} earlier"
+            formula = re.sub(r"(?:coalesce\((\w+), 0\)|nullif\((\w+), 0\))", lambda m: m[1] or m[2], params["expr"])
+            formula = formula.replace(" * 1.0", "")
+            formula = re.sub(r"\b\w+\b", lambda m, words=words: words.get(m[0], m[0]), formula)
             descriptions.append({"text": f"{metric['label']} = {formula}."})
+        elif metric["type"] == "cumulative":
+            params = params["cumulative_type_params"]
+            window = params.get("window")
+            if params.get("grain_to_date"):
+                span = f"from the start of the {params['grain_to_date']}"
+            elif window:
+                span = f"over the trailing {window['count']} {window['granularity']}"
+            else:
+                span = "over all time"
+            descriptions.append({"text": f"{metric['label']} = {labels[params['metric']['name']]} summed {span}."})
         elif metric["type"] == "ratio":
             numerator, denominator = params["numerator"]["name"], params["denominator"]["name"]
             descriptions.append({"text": f"{metric['label']} = {labels[numerator]} / {labels[denominator]}."})
@@ -375,7 +464,7 @@ def example_queries(
 
 def _metricflow(
     project_dir: Path, index: SemanticIndex
-) -> tuple[Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
+) -> tuple[Callable[[str], list[dict]], Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
     """Dimensions and compiled SQL, of a metric and of a saved query, from MetricFlow's engine, set up as the
     mf CLI sets it up."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
@@ -396,11 +485,23 @@ def _metricflow(
             if dimension.type.value == "categorical" and dimension.semantic_model_reference is not None:
                 # A dimension's column is its expr when that is a plain column name, else its own name.
                 column = dimension.expr if dimension.expr and dimension.expr.isidentifier() else dimension.name
-                values = index.known_values(dimension.semantic_model_reference.semantic_model_name, column)
+                semantic_model = dimension.semantic_model_reference.semantic_model_name
+                values = index.known_values(semantic_model, column)
                 if values is not None:
                     entry["values"] = values
+                if index.is_numeric(semantic_model, column):
+                    entry["type"] = "numeric"
             found.append(entry)
         return sorted(found, key=lambda dimension: dimension["name"])
+
+    def entities(metric: str) -> list[dict]:
+        """The entities a metric can be grouped by (one row per customer, campaign, ...), as their ids."""
+        # One entry per name: an entity reached through two models (campaign on spend and on leads) is one
+        # group-by; its description is the first in order, so the catalog is the same on every run.
+        found: dict[str, str] = {}
+        for entity in sorted(engine.entities_for_metrics([metric]), key=lambda e: (e.name, e.description or "")):
+            found.setdefault(entity.name, entity.description or "")
+        return [{"name": name, "description": description} for name, description in sorted(found.items())]
 
     def compiled_sql(metric: str) -> str:
         request = MetricFlowQueryRequest.create(
@@ -411,18 +512,18 @@ def _metricflow(
     def compiled_saved_query(name: str) -> str:
         return engine.explain(MetricFlowQueryRequest.create(saved_query_name=name)).sql_statement.sql
 
-    return dimensions, compiled_sql, compiled_saved_query
+    return dimensions, entities, compiled_sql, compiled_saved_query
 
 
 def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
+    dimensions, entities, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
-    catalog = agent_catalog(manifest, index, dimensions)
+    catalog = agent_catalog(manifest, index, dimensions, entities)
     (out / "agent.json").write_text(json.dumps(catalog, indent=2) + "\n")
     (out / "data_agent" / "system_instruction.yaml").write_text(
         yaml.safe_dump(system_instruction(index, catalog["glossary"]), sort_keys=False, allow_unicode=True, width=110)
