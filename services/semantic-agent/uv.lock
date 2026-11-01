@@ -2215,9 +2215,11 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "google-adk", extra = ["eval"] },
     { name = "pytest" },
     { name = "ruff" },
+]
+eval = [
+    { name = "google-adk", extra = ["eval"] },
 ]
 
 [package.metadata]
@@ -2234,10 +2236,10 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "google-adk", extras = ["eval"], specifier = "==2.13.0" },
     { name = "pytest" },
     { name = "ruff" },
 ]
+eval = [{ name = "google-adk", extras = ["eval"], specifier = "==2.13.0" }]
 
 [[package]]
 name = "six"
