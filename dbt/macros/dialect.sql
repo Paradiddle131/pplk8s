@@ -46,6 +46,46 @@
     timestamp
 {%- endmacro %}
 
+-- A timestamptz / TIMESTAMP expression moved back by a number of hours. dbt.dateadd casts to the
+-- zoneless DATETIME on BigQuery, which a TIMESTAMP column does not compare with.
+{% macro hours_before(expression, hours) -%}
+    {{ return(adapter.dispatch('hours_before')(expression, hours)) }}
+{%- endmacro %}
+
+{% macro default__hours_before(expression, hours) -%}
+    ({{ expression }} - interval '{{ hours }} hours')
+{%- endmacro %}
+
+{% macro bigquery__hours_before(expression, hours) -%}
+    timestamp_sub({{ expression }}, interval {{ hours }} hour)
+{%- endmacro %}
+
+-- A DATE expression moved back by a number of days, still a DATE (dbt.dateadd returns a timestamp).
+{% macro days_before(expression, days) -%}
+    {{ return(adapter.dispatch('days_before')(expression, days)) }}
+{%- endmacro %}
+
+{% macro default__days_before(expression, days) -%}
+    ({{ expression }} - {{ days }})
+{%- endmacro %}
+
+{% macro bigquery__days_before(expression, days) -%}
+    date_sub({{ expression }}, interval {{ days }} day)
+{%- endmacro %}
+
+-- The days from one timestamptz / TIMESTAMP to a later one, as a numeric rounded to 4 places.
+{% macro days_between(start, end) -%}
+    {{ return(adapter.dispatch('days_between')(start, end)) }}
+{%- endmacro %}
+
+{% macro default__days_between(start, end) -%}
+    round(cast(extract(epoch from ({{ end }} - {{ start }})) / 86400 as numeric), 4)
+{%- endmacro %}
+
+{% macro bigquery__days_between(start, end) -%}
+    round(cast(timestamp_diff({{ end }}, {{ start }}, second) / 86400 as numeric), 4)
+{%- endmacro %}
+
 -- The Monday that starts a date's ISO week, as a date: Postgres' date_trunc('week') is ISO,
 -- BigQuery's WEEK starts on Sunday, so it truncates to ISOWEEK.
 {% macro iso_week_start(column) -%}

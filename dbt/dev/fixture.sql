@@ -19,6 +19,12 @@ DROP TABLE IF EXISTS ds_source.synthetic_campaigns CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_ad_spend CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_leads CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_bookings CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_customer_actions CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_partners CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_partner_contacts CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_outreach_messages CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_outreach_replies CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_applications CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_call_transcripts CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
@@ -261,6 +267,7 @@ INSERT INTO ds_source.synthetic_bookings VALUES
     ('B-0004', 'L-0004', '2026-10-02 11:00+00', 2500.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00'),
     ('B-0007', 'L-0007', '2026-10-02 18:30+00', 4000.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://bookings', '2026-10-03 00:40+00');
 
+
 -- Call transcripts (semantic/PLAN.md SL-18): the calls of 2026-10-01 and 02 as EL Factory's generator
 -- writes them; their true labels are dbt/seeds/silver/call_label_golden_set.csv (with three hand-written
 -- hard cases), and their recorded label calls dbt/seeds/silver/call_label_recordings.csv. The day-2 rerun
@@ -293,3 +300,201 @@ INSERT INTO ds_source.synthetic_call_transcripts VALUES
     ('T-20261002-001', 161, '2026-10-02T14:47:39+00:00', 754, 'Agent: Thanks for calling, how can I help? Customer: I would like to send back the chair I bought, it does not fit the room. Agent: I can help with that. Returns are free within thirty days of delivery. Customer: I am not happy with how this has been handled at all. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
     ('T-20261002-005', 68, '2026-10-02T15:12:42+00:00', 107, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: This is frustrating, I have called three times already and nothing changes. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
     ('T-20261002-002', 62, '2026-10-02T08:30:00+00:00', 413, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: I am not happy with how this has been handled at all. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-2b', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 06:10+00');
+
+-- Customer actions (an append-only event stream, extracted by arrival time): site sessions walk the
+-- funnel page_view -> add_to_cart -> checkout; CRM actions carry no session. E-0011, E-0012 and E-0020
+-- arrive a day late (event_ts on one day, received_ts the next), S-0005 crosses midnight, run-act-3
+-- redelivers E-0004, and E-0001 lies 11 days before the rest, inside 28 days and outside 7.
+CREATE TABLE ds_source.synthetic_customer_actions (
+    event_id text,
+    customer_id integer,
+    session_id text,
+    action_type text,
+    channel text,
+    event_ts timestamptz,
+    received_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_customer_actions VALUES
+    ('E-0001', 10, 'S-0001', 'page_view', 'site', '2026-09-20 10:00+00', '2026-09-20 10:00+00', 'run-act-1', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://customer_actions', '2026-09-21 00:30+00'),
+    ('E-0002', 1, 'S-0002', 'page_view', 'site', '2026-10-01 09:00+00', '2026-10-01 09:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0003', 1, 'S-0002', 'add_to_cart', 'site', '2026-10-01 09:04+00', '2026-10-01 09:04+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0004', 1, 'S-0002', 'checkout', 'site', '2026-10-01 09:10+00', '2026-10-01 09:10+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0005', 2, 'S-0003', 'page_view', 'site', '2026-10-01 11:00+00', '2026-10-01 11:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0006', 2, 'S-0003', 'add_to_cart', 'site', '2026-10-01 11:03+00', '2026-10-01 11:03+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0007', 3, 'S-0004', 'page_view', 'site', '2026-10-01 14:00+00', '2026-10-01 14:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0008', 4, NULL, 'email_open', 'crm', '2026-10-01 08:00+00', '2026-10-01 08:00+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0009', 5, 'S-0005', 'page_view', 'site', '2026-10-01 23:50+00', '2026-10-01 23:50+00', 'run-act-2', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://customer_actions', '2026-10-02 00:30+00'),
+    ('E-0010', 5, 'S-0005', 'add_to_cart', 'site', '2026-10-02 00:05+00', '2026-10-02 00:05+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0011', 6, 'S-0006', 'page_view', 'site', '2026-10-01 22:00+00', '2026-10-02 06:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0012', 6, 'S-0006', 'add_to_cart', 'site', '2026-10-01 22:05+00', '2026-10-02 06:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0013', 2, 'S-0007', 'page_view', 'site', '2026-10-02 10:00+00', '2026-10-02 10:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0014', 7, NULL, 'support_contact', 'crm', '2026-10-02 12:00+00', '2026-10-02 12:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0015', 1, NULL, 'email_open', 'crm', '2026-10-02 08:00+00', '2026-10-02 08:00+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0004', 1, 'S-0002', 'checkout', 'site', '2026-10-01 09:10+00', '2026-10-01 09:10+00', 'run-act-3', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://customer_actions', '2026-10-03 00:30+00'),
+    ('E-0016', 8, 'S-0008', 'page_view', 'site', '2026-10-03 09:00+00', '2026-10-03 09:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0017', 8, 'S-0008', 'add_to_cart', 'site', '2026-10-03 09:02+00', '2026-10-03 09:02+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0018', 8, 'S-0008', 'checkout', 'site', '2026-10-03 09:06+00', '2026-10-03 09:06+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0019', 2, 'S-0009', 'page_view', 'site', '2026-10-03 15:00+00', '2026-10-03 15:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0020', 9, NULL, 'email_open', 'crm', '2026-10-02 19:00+00', '2026-10-03 05:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
+    ('E-0021', 3, 'S-0010', 'page_view', 'site', '2026-10-03 18:00+00', '2026-10-03 18:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00');
+
+-- Partner outreach (semantic/PLAN.md SL-16): three partners and seven contacts, snapshotted per run. C-0201 never
+-- consented; C-0102 opts out on 2026-10-02 (run-out-2), and run-out-1b, a backfill of 2026-10-01 loaded last,
+-- lands C-0102's older snapshot, which silver must not let undo the opt-out. Messages M-0002 to M-0007 run from
+-- 2026-10-01 to 2026-10-03 (M-0001 on 2026-09-20, outside the 7-day cooldown); R-0002 replies the day after its
+-- message's day, and R-0005 replies to a message sent before the first loaded day. The activation list as of the
+-- newest message (2026-10-03 09:00) is C-0103 (never messaged) and C-0301 (messaged 2026-09-20).
+CREATE TABLE ds_source.synthetic_partners (
+    partner_id integer,
+    name text,
+    partner_type text,
+    country text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_partners VALUES
+    (1, 'Northwind Clinics', 'clinic', 'NL', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00'),
+    (2, 'Rhein Referrals', 'agency', 'DE', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00'),
+    (3, 'Loire Wellness', 'reseller', 'FR', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00');
+
+CREATE TABLE ds_source.synthetic_partner_contacts (
+    contact_id text,
+    partner_id integer,
+    contact_name text,
+    email text,
+    phone text,
+    preferred_channel text,
+    consent boolean,
+    opted_out_ts timestamptz,
+    updated_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_partner_contacts VALUES
+    ('C-0101', 1, 'Ada de Jong', 'ada.dejong@partner1.example', '+1-555-0111', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0103', 1, 'Chen Smith', 'chen.smith@partner1.example', '+1-555-0113', 'phone', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0201', 2, 'Dilara Kaya', 'dilara.kaya@partner2.example', '+1-555-0121', 'email', false, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0202', 2, 'Elif Yilmaz', 'elif.yilmaz@partner2.example', '+1-555-0122', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0301', 3, 'Finn Dubois', 'finn.dubois@partner3.example', '+1-555-0131', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0302', 3, 'Gwen Brown', 'gwen.brown@partner3.example', '+1-555-0132', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0101', 1, 'Ada de Jong', 'ada.dejong@partner1.example', '+1-555-0111', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, '2026-10-02 15:00+00', '2026-10-02 15:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0103', 1, 'Chen Smith', 'chen.smith@partner1.example', '+1-555-0113', 'phone', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0201', 2, 'Dilara Kaya', 'dilara.kaya@partner2.example', '+1-555-0121', 'email', false, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0202', 2, 'Elif Yilmaz', 'elif.yilmaz@partner2.example', '+1-555-0122', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0301', 3, 'Finn Dubois', 'finn.dubois@partner3.example', '+1-555-0131', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0302', 3, 'Gwen Brown', 'gwen.brown@partner3.example', '+1-555-0132', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://partner_contacts', '2026-10-05 00:50+00');
+
+CREATE TABLE ds_source.synthetic_outreach_messages (
+    message_id text,
+    contact_id text,
+    channel text,
+    sent_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_outreach_messages VALUES
+    ('M-0001', 'C-0301', 'sms', '2026-09-20 10:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://outreach_messages', '2026-09-21 00:50+00'),
+    ('M-0002', 'C-0101', 'email', '2026-10-01 09:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0003', 'C-0102', 'email', '2026-10-01 11:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0004', 'C-0202', 'email', '2026-10-01 14:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0005', 'C-0101', 'email', '2026-10-02 10:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_messages', '2026-10-03 00:50+00'),
+    ('M-0007', 'C-0302', 'sms', '2026-10-03 08:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_messages', '2026-10-04 00:50+00'),
+    ('M-0006', 'C-0202', 'email', '2026-10-03 09:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_messages', '2026-10-04 00:50+00');
+
+CREATE TABLE ds_source.synthetic_outreach_replies (
+    reply_id text,
+    message_id text,
+    replied_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_outreach_replies VALUES
+    ('R-0001', 'M-0002', '2026-10-01 15:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_replies', '2026-10-02 00:50+00'),
+    ('R-0002', 'M-0004', '2026-10-02 09:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_replies', '2026-10-03 00:50+00'),
+    ('R-0003', 'M-0005', '2026-10-02 12:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_replies', '2026-10-03 00:50+00'),
+    ('R-0004', 'M-0006', '2026-10-03 16:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00'),
+    ('R-0005', 'M-0000', '2026-10-03 17:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00');
+
+-- Recruitment (semantic/PLAN.md SL-17): six candidates, each extract every candidate in their current stage only.
+-- Runs land 2026-10-01 to 2026-10-04 in order; run-rec-1b, a backfill of 2026-10-01 loaded after run-rec-3, lands
+-- older stages, which must move nobody back. Snapshotted after every run in load order, the history is:
+-- K-001 interview (from 09-30), offer (10-02), hired (10-03); K-002 screen (10-01), interview (10-02), rejected
+-- (10-04); K-003 applied (10-01), screen (10-02), interview (10-03); K-004 applied (10-02), screen (10-04);
+-- K-005 offer (09-30), hired (10-02); K-006 screen (10-01), rejected (10-02); K-006's applied stage (entered and
+-- left on 10-01 between two extracts) is never seen. In interview at the end of the day: one on 10-01 (K-001), one
+-- on 10-02 (K-002), two on 10-03 (K-002, K-003), one on 10-04 (K-003). Hires: K-005 on 10-02 after 7.2083 days,
+-- K-001 on 10-03 after 4.9583 days, so time to hire is 6.0833 days over the fixture.
+CREATE TABLE ds_source.synthetic_applications (
+    candidate_id text,
+    role text,
+    channel text,
+    applied_ts timestamptz,
+    stage text,
+    stage_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_applications VALUES
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'interview', '2026-09-30 10:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'screen', '2026-10-01 09:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'applied', '2026-10-01 08:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'offer', '2026-09-30 15:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'screen', '2026-10-01 15:00+00', 'run-rec-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-02 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'offer', '2026-10-02 11:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'interview', '2026-10-02 14:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'screen', '2026-10-02 10:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'applied', '2026-10-02 12:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://applications', '2026-10-03 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'hired', '2026-10-03 09:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'interview', '2026-10-02 14:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'interview', '2026-10-03 13:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'applied', '2026-10-02 12:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://applications', '2026-10-04 00:40+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'interview', '2026-09-30 10:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'screen', '2026-10-01 09:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'applied', '2026-10-01 08:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'offer', '2026-09-30 15:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'screen', '2026-10-01 15:00+00', 'run-rec-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://applications', '2026-10-04 06:00+00'),
+    ('K-001', 'engineering', 'referral', '2026-09-28 10:00+00', 'hired', '2026-10-03 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-002', 'sales', 'job_board', '2026-09-30 09:00+00', 'rejected', '2026-10-04 10:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-003', 'engineering', 'job_board', '2026-10-01 08:00+00', 'interview', '2026-10-03 13:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-004', 'support', 'agency', '2026-10-02 12:00+00', 'screen', '2026-10-04 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-005', 'sales', 'referral', '2026-09-25 11:00+00', 'hired', '2026-10-02 16:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00'),
+    ('K-006', 'support', 'job_board', '2026-10-01 10:00+00', 'rejected', '2026-10-02 09:00+00', 'run-rec-4', '2026-10-04 00:00+00', '2026-10-05 00:00+00', 1, 'fixture://applications', '2026-10-05 00:40+00');

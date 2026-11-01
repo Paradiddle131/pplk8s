@@ -67,6 +67,59 @@ def test_marketing_extraction_has_a_watermark(mocker):
     assert "max(booked_ts)" in get_first.call_args_list[3].args[0]
 
 
+def test_customer_actions_watermark_is_the_newest_received_action(mocker):
+    received = datetime(2026, 10, 1, 23, 58, tzinfo=UTC)
+    get_first = mocker.patch.object(PostgresHook, "get_first", side_effect=[(64, received)])
+    result = readiness.check_extraction(
+        [{"source": "synthetic", "entity": "customer_actions", "pages": 1, "rows": 64}],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == received.isoformat()
+    assert "max(received_ts)" in get_first.call_args.args[0]
+
+
+def test_partner_outreach_watermark_is_the_newest_message_or_reply(mocker):
+    sent, replied = (
+        datetime(2026, 10, 8, 17, 5, tzinfo=UTC),
+        datetime(2026, 10, 8, 21, 40, tzinfo=UTC),
+    )
+    get_first = mocker.patch.object(
+        PostgresHook, "get_first", side_effect=[(6, None), (18, None), (7, sent), (3, replied)]
+    )
+    result = readiness.check_extraction(
+        [
+            {"source": "synthetic", "entity": entity, "pages": 1, "rows": rows}
+            for entity, rows in (
+                ("partners", 6),
+                ("partner_contacts", 18),
+                ("outreach_messages", 7),
+                ("outreach_replies", 3),
+            )
+        ],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == replied.isoformat()
+    assert "max(sent_ts)" in get_first.call_args_list[2].args[0]
+    assert "max(replied_ts)" in get_first.call_args_list[3].args[0]
+
+
+def test_recruitment_watermark_is_the_newest_stage_change(mocker):
+    changed = datetime(2026, 10, 8, 16, 20, tzinfo=UTC)
+    get_first = mocker.patch.object(PostgresHook, "get_first", return_value=(40, changed))
+    result = readiness.check_extraction(
+        [{"source": "synthetic", "entity": "applications", "pages": 1, "rows": 40}],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == changed.isoformat()
+    assert "max(stage_ts)" in get_first.call_args.args[0]
+
+
 def test_call_transcripts_watermark_is_the_newest_call(mocker):
     called = datetime(2026, 10, 1, 17, 42, tzinfo=UTC)
     get_first = mocker.patch.object(PostgresHook, "get_first", side_effect=[(7, called)])
