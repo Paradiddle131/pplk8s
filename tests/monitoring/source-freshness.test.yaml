@@ -113,7 +113,7 @@ tests:
       - eval_time: 121m
         alertname: SourceFreshnessNotChecked
         exp_alerts:
-          - exp_labels: {severity: warning}
+          - exp_labels: {severity: warning, reason: never-recorded}
             exp_annotations:
               summary: "dbt source freshness has never recorded a result; SourceStale is blind."
               runbook: docs/runbook.md#13-a-source-stops-flowing
