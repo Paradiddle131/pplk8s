@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -149,6 +149,15 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
 	tests/e2e/bigquery-emulator-check.sh
+
+# The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
+# failing when it differs from the script; demo-check rehearses them all, timed, on a fresh emulator.
+STEP ?= setup
+demo: ## Run one step of the use case's demo (STEP=setup|layers|standard|agent|alerts|audit|migration; needs services-up)
+	tests/e2e/demo.sh $(STEP)
+
+demo-check: services-up ## Rehearse the whole use case's demo on the BigQuery emulator and dbt_dev, every step asserted and timed (no model quota)
+	tests/e2e/demo.sh check
 
 source-freshness-check: services-up ## Run dbt source freshness on the dev fixtures in dbt_freshness: fresh data passes, a stopped source errors, and the warehouse sql_exporter exports each verdict (#130)
 	tests/e2e/source-freshness-check.sh
@@ -320,10 +329,11 @@ prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
-lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts and the BigQuery emulator shim (ruff via uvx)
+lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts, the e2e checks' Python helpers and the BigQuery emulator shim (ruff via uvx)
 	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
 	uvx ruff@0.17.0 check platform/compose/bigquery-shim && uvx ruff@0.17.0 format --check platform/compose/bigquery-shim
+	uvx ruff@0.17.0 check --config dbt/ruff.toml tests/e2e/lib && uvx ruff@0.17.0 format --config dbt/ruff.toml --check tests/e2e/lib
 	$(MAKE) --no-print-directory gcp-validate
 
 # The lab project on GCP (semantic/PLAN.md SL-13, platform/gcp/README.md): validated offline in `make lint`;
