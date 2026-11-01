@@ -16,6 +16,43 @@ flags:
   indirect_selection: cautious
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # How far back an incremental build of silver.customer_actions re-reads bronze's loads (SL-15): loads
+  # that commit after a newer one was merged still land, and the bronze -> silver hop checks these days.
+  customer_actions_lookback_hours: 72
+  # The outreach activation list leaves out a contact messaged this many days before its as_of (SL-16).
+  outreach_cooldown_days: 7
+  # The prompt that labels call transcripts (semantic/PLAN.md SL-18, docs/text-signals.md): one reviewed
+  # place for its text, version and endpoint, and for the agreement it must reach on the golden set before
+  # gold reads its labels. A changed text is a new version, labelled beside the old one, never an overwrite;
+  # its thresholds are written here before its first comparison (silver.call_label_agreement).
+  # scripts/record_call_labels.py sends the same text to an OpenRouter free model for the lab's recordings.
+  call_label_prompt:
+    version: v1
+    endpoint: gemini-3.5-flash
+    text: >-
+      Label this customer call transcript.
+      topic: what the customer called about, one of delivery, pricing, returns, product.
+      objection: the customer's main objection to buying or going on, one of none, price, timing, competitor.
+      sentiment: the customer's mood by the end of the call, one of positive, neutral, negative.
+      next_step: what the agent committed to at the end of the call, one of none, follow_up_call, send_quote, escalate.
+      Answer with a JSON object with exactly the keys topic, objection, sentiment and next_step.
+      Transcript:
+    thresholds:
+      topic: {accuracy: 0.8, kappa: 0.7}
+      objection: {accuracy: 0.8, kappa: 0.6}
+      sentiment: {accuracy: 0.7, kappa: 0.5}
+      next_step: {accuracy: 0.8, kappa: 0.7}
+    # The share of a prompt version's calls whose label call failed (non-empty status) that fails the build.
+    max_failed_share: 0.1
+  # The label shares' drift band (models/silver/slv_call_label_shares.sql): each week's share of a label against
+  # the pooled share of up to `trailing_weeks` weeks before it, plus or minus `sigmas` binomial standard
+  # errors; no band until `min_trailing_weeks` weeks precede it. Three sigmas is the p-chart's usual limit.
+  call_label_drift:
+    trailing_weeks: 4
+    min_trailing_weeks: 2
+    sigmas: 3
+
 # After `dbt source freshness`, record each source's verdict in ops.source_freshness for the SourceStale
 # alert (#130, semantic/PLAN.md SL-12); every other command leaves it untouched (macros/source_freshness.sql).
 on-run-end:
@@ -80,6 +117,30 @@ models:
 # Seeds sit in a layer folder so `--select <layer>` (fqn) builds them with that layer's models.
 seeds:
   pplk8s:
+    # The call labels' golden set and the lab's recorded label calls (semantic/PLAN.md SL-18).
+    silver:
+      +schema: silver
+      +tags: [silver, call_transcripts]
+      call_label_golden_set:
+        +column_types:
+          transcript_id: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          transcript: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+      call_label_recordings:
+        +column_types:
+          transcript_hash: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          prompt_version: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          endpoint: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          model_version: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          status: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          recorded_at: "{{ 'TIMESTAMP' if target.type == 'bigquery' else 'timestamptz' }}"
     bronze:
       +schema: bronze
       +tags: [bronze]

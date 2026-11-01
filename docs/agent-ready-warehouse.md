@@ -11,9 +11,9 @@ Each layer is one folder under `dbt/models/` and one schema in the warehouse, wh
 | Layer | Dataset | Model prefix | Holds | Agents read it |
 |---|---|---|---|---|
 | bronze | `bronze` | `brz_` | The landing tables cast, one to one, every run and metadata column kept | no |
-| silver | `silver` | `slv_` | One row per natural key, latest load wins; the semantic models sit here | only through a metric |
+| silver | `silver` | `slv_` | One row per natural key, latest load wins; a snapshot's history of a source that overwrites its rows (`snp_`); the semantic models sit here | only through a metric |
 | gold | `gold` | `gld_` | Business aggregates at a stated grain | yes, `access: public` |
-| exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public` |
+| exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public`, unless it holds personal data |
 | semantic | `semantic` | none | MetricFlow's `time_spine`, `metrics` (one row per metric) and `glossary` (one row per term) | `metrics` and `glossary` |
 | legacy | `legacy` | `lgc_` | During a migration only: what a consumer read before the layers, rebuilt as it was, in the consumer's column names | no |
 | migration | `migration` | none | During a migration only: `parity`, each consumer's legacy table against its new model ([`migration-rehearsal.md`](migration-rehearsal.md)) | no |
@@ -26,6 +26,7 @@ The landing dataset (`ds_source`) belongs to the extraction service; dbt reads i
 - A model in bronze, silver, gold, exposed or legacy starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
   The prefix keeps names unique across the project; the dataset already says the layer, so the table does not repeat it.
   An ephemeral model builds no relation and needs only the prefix.
+- A dbt snapshot starts with `snp_` and builds in silver, its relation named for what it keeps (`snp_candidate_stages` builds `silver.candidate_stage_snapshots`); a silver model renames its columns for the semantic layer (semantic/PLAN.md SL-17).
 - A semantic-stage or migration model carries no layer prefix; its relation names what it holds (`time_spine`, `metrics`, `glossary`, `parity`).
 - Models, columns, semantic models, entities, dimensions and metrics are lower snake case; a metadata column the loader adds starts with an underscore (`_loaded_at`, `_run_id`).
 - A metric is the quantity with its unit as a suffix (`revenue_eur`, `cost_per_lead_eur`); a count names what it counts, and how when there is more than one way (`leads`, `orders_total`, `orders_cancelled`, `customers_distinct`); a ratio of two counts ends in `_rate`.
@@ -75,6 +76,8 @@ dbt has no glossary node; `meta` on the model keeps the term beside the columns 
 ## Which layer agents read
 
 Gold and exposed models, and only they, are `access: public` in the `analytics` group (`dbt/models/groups.yml`); bronze, silver and the semantic stage are `protected` (SL-4).
+A column of personal data carries `meta: {pii: true}` from bronze on; a gold or exposed model holding one is `protected` instead, so it stays out of the agent catalog, and its consumer is an automation or a person, never an agent (`exp_outreach_activation`, semantic/PLAN.md SL-16).
+No semantic model sits on a model with personal data, so no metric or dimension can name a personal column.
 A public model enforces a contract (`contract: {enforced: true}`, set per layer in `dbt_project.yml`) and gives every column a `data_type`, so a change that renames, drops, adds or retypes a column an agent relies on fails `dbt build` before it replaces the table, instead of leaving the agent's context stale.
 A type is spelled so both warehouses accept it: `date`, `numeric`, `bigint` and `integer` as they are, a string as the file's `text` anchor (`text` on Postgres, `string` on BigQuery).
 A view gets the same name and type check, but no constraints; the standard asks for none.
@@ -108,11 +111,12 @@ A ratio is never stored per day for agents to average: the metric divides the to
 `dbt/scripts/check_standard.py` reads the manifests `dbt parse` writes, with no warehouse, and fails on:
 - a model outside a layer folder, building outside its layer's dataset, without its layer's prefix, or whose relation is not its name without the prefix;
 - a name that is not snake case: model, column, semantic model, entity, dimension, measure or metric;
-- a public model outside gold and exposed or outside the `analytics` group, a gold or exposed model that is not public, or a semantic model off silver;
+- a public model outside gold and exposed or outside the `analytics` group, a gold or exposed model that is not public unless it holds a column marked `meta: {pii: true}`, a public model that holds one, or a semantic model off silver;
 - a public model without an enforced contract, or a public model's column without a `data_type`;
-- a missing description on any of the things the rules above name, or a metric without a label.
+- a missing description on any of the things the rules above name, or a metric without a label;
+- a metric over a model-derived column (`meta: {derived_by: model}`, a label a language model read out of text), directly or through its input metrics, whose description does not start with "Model-derived" (semantic/PLAN.md SL-18).
 
-It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric and on an unprefixed, undescribed, untyped gold model, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
+It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric, on a metric over model-derived labels that does not say so, and on an unprefixed, undescribed, untyped gold model with a personal-data column, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
 `check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, glossary terms included (an unknown metric, a dimension none of the term's metrics has, a term repeating a metric), and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
 
 A column the SQL selects but the YAML does not name is absent from the manifest, so the parse cannot see it; the contract can, and the build fails on it.

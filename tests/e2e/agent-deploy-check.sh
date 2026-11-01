@@ -30,8 +30,8 @@ DB=dbt_dev "$REPO/tests/e2e/agent-fixture.sh"
 
 AGENT_DBNAME=dbt_dev "$REPO/platform/k8s/workloads-up.sh" >"$OUT/workloads.log" 2>&1 ||
   { tail -30 "$OUT/workloads.log" >&2; fail "workloads-up.sh"; }
-"${K[@]}" logs deploy/semantic-agent -c catalog | grep -q "10 public models, 16 metrics and 7 glossary terms" ||
-  fail "the catalog initContainer did not write 10 public models, 16 metrics and 7 glossary terms"
+"${K[@]}" logs deploy/semantic-agent -c catalog | grep -q "17 public models, 39 metrics and 12 glossary terms" ||
+  fail "the catalog initContainer did not write 17 public models, 39 metrics and 12 glossary terms"
 echo "ok: workloads up; the agent's initContainer wrote its catalog for dbt_dev"
 
 "${K[@]}" port-forward svc/semantic-agent "$LOCAL_PORT:80" >"$OUT/port-forward.log" 2>&1 &

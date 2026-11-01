@@ -153,3 +153,50 @@ models:
       - name: cost_per_booking_eur
         description: ad_spend_eur / bookings for that day; NULL without bookings.
         data_type: numeric
+
+  # The outreach automation's activation list (semantic/PLAN.md SL-16): an exposed model whose consumer is an
+  # automation, not an agent, and which carries personal data, so it is protected and stays out of the agent
+  # catalog; scripts/check_standard.py requires exactly that of a gold or exposed model with a meta.pii column.
+  - name: exp_outreach_activation
+    description: >
+      Partner contacts the outreach automation may contact next, with their details: every contact who consented,
+      has not opted out, and was not messaged in the cooldown (outreach_cooldown_days, 7) before as_of, the newest
+      message sent. Alias exposed.outreach_activation.
+    config:
+      access: protected
+    columns:
+      - name: contact_id
+        description: Natural key.
+        data_type: *text
+        tests: [not_null, unique]
+      - name: partner_id
+        description: The contact's partner.
+        data_type: integer
+        tests: [not_null]
+      - name: partner_name
+        description: The partner's name.
+        data_type: *text
+      - name: contact_name
+        description: The contact's full name.
+        data_type: *text
+        config:
+          meta: {pii: true}
+      - name: email
+        description: The contact's email address.
+        data_type: *text
+        config:
+          meta: {pii: true}
+      - name: phone
+        description: The contact's phone number.
+        data_type: *text
+        config:
+          meta: {pii: true}
+      - name: preferred_channel
+        description: email, phone or sms.
+        data_type: *text
+      - name: last_contacted_at
+        description: When the contact was last messaged; NULL if never.
+        data_type: &timestamptz "{{ 'timestamp' if target.type == 'bigquery' else 'timestamp with time zone' }}"
+      - name: as_of
+        description: The newest message sent, which the cooldown counts back from.
+        data_type: *timestamptz
