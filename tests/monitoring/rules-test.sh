@@ -24,5 +24,5 @@ promtool() { docker run --rm -v "$WORK:/rules:ro" -w /rules --entrypoint promtoo
 # Paths as the container sees them; the names have no spaces.
 mapfile -t rules < <(cd "$WORK" && ls ./*.rules.yaml)
 mapfile -t tests < <(cd "$WORK" && ls ./*.test.yaml)
-promtool check rules "${rules[@]}"
+promtool check rules --lint-fatal "${rules[@]}" # a lint finding (a duplicate rule) fails the run, not just prints FAILED
 promtool test rules "${tests[@]}"
