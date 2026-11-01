@@ -1,0 +1,6 @@
+## 2026-11-01 — Semantic — Where text-to-signal extraction runs and how its labels are tested (#191)
+
+- Done: `docs/text-signals.md` answers #191: label in dbt through BigQuery's `AI.GENERATE` (incremental, `full_refresh: false`, one row per transcript and prompt version, endpoint and model version recorded), a golden set from the synthetic generator's own labels with agreement and failed-call tests, "Model-derived" in the metric's description and the glossary; in the lab, the same model reads recorded labels on Postgres and the emulator, an opt-in target records them from an OpenRouter free model, and the BigQuery target only compiles the real call. Rejected: labelling in EL Factory before landing; a separate batch job kept as the fallback. Linked from `docs/semantic-layer-on-bigquery.md`; one lesson in `semantic/PLAN.md` § 6.
+- Evidence: measured on `ghcr.io/goccy/bigquery-emulator:0.8.1`: `AI.GENERATE`, `ML.GENERATE_TEXT`, `AI.GENERATE_TABLE` not found and `CREATE MODEL … REMOTE` unparsed; `AI.CLASSIFY` returned the first category for three different inputs and `AI.SCORE` 0.5. The rest is stated from Google's, dbt's and OpenRouter's pages, each linked in the doc.
+- Decisions: none; the build issue records its decision row when it builds.
+- Open: the build, filed under Map #199.

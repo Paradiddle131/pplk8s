@@ -43,6 +43,7 @@ The metric definitions reach it as words and SQL: the glossary, the aggregations
 The lab's agent queries through MetricFlow itself, so its eval shows what the definitions are worth when they are enforced, not only described.
 
 Scheduled queries and routines (stored procedures, UDFs, table functions) map onto dbt models, functions, macros and metrics as [`routines-and-scheduled-queries.md`](routines-and-scheduled-queries.md) sets out, with the rule for moving them one at a time.
+Signals extracted from text (a transcript's topic, objection, sentiment) are labelled in dbt through BigQuery's AI functions, versioned and tested against a golden set, as [`text-signals.md`](text-signals.md) sets out.
 
 ## Integration patterns (stated)
 
