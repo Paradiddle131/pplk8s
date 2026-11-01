@@ -260,8 +260,8 @@ AIRFLOW_OVERLAYS ?=
 airflow-up: services-up keda-up egress-up ## Deploy Airflow into namespace airflow (DAG_DELIVERY=git-sync|local, AIRFLOW_OVERLAYS=...)
 	platform/helm/airflow/deploy.sh $(addprefix -f ,$(AIRFLOW_OVERLAYS))
 
-airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV)
-	helm --kube-context kind-pplk8s uninstall airflow -n airflow --wait
+airflow-down: ## Uninstall the Airflow release (keeps the metadata DB, secrets and PV); nothing to do without one
+	helm --kube-context kind-pplk8s uninstall airflow -n airflow --wait --ignore-not-found
 
 airflow-ui: ## Port-forward the Airflow UI/API to http://localhost:8080 (admin/admin)
 	kubectl --context kind-pplk8s -n airflow port-forward svc/airflow-api-server 8080:8080
