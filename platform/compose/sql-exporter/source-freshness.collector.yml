@@ -22,7 +22,7 @@ metrics:
     query_ref: source_freshness
   - metric_name: ops_source_max_loaded_at_seconds
     type: gauge
-    help: "The newest _loaded_at dbt source freshness found in a landed table; 0 if it could not be checked."
+    help: "The newest _loaded_at dbt source freshness found in a landed table; 0 if it could not be checked or was never loaded."
     key_labels: [source, table]
     values: [loaded]
     query_ref: source_freshness

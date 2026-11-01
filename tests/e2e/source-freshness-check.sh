@@ -4,7 +4,8 @@
 #   - with every landed table loaded an hour ago, it passes and records `pass` for each checked table
 #     in ops.source_freshness, open_meteo_hourly_weather left out (no freshness: loaded by hand),
 #   - a table whose loads stopped past its error_after fails it (exit 1) and records `error` for that
-#     table only, one past its warn_after records `warn`, and a dropped table records `runtime error`,
+#     table only, one past its warn_after records `warn`, an empty one records `error` with no newest load
+#     (never loaded), and a dropped table records `runtime error`,
 #   - re-running replaces each table's row rather than adding one,
 #   - `dbt build` runs the same on-run-end hook and leaves the rows untouched,
 #   - the warehouse's sql_exporter collector (platform/compose/sql-exporter/source-freshness.collector.yml)
@@ -49,20 +50,25 @@ freshness fresh || { tail -30 "$OUT/freshness-fresh.log" >&2; fail "dbt source f
 expect "statuses on fresh data" "$(statuses)" "$(all_with pass)"
 echo "ok: dbt source freshness passes on fresh data and records pass for the 16 landed tables (open_meteo left out)"
 
-# Orders stopped 40 hours ago (error_after 36 h), leads 30 hours ago (warn_after 26 h), tlc_green is gone.
+# Orders stopped 40 hours ago (error_after 36 h), leads 30 hours ago (warn_after 26 h), outreach replies were
+# never loaded (empty), tlc_green is gone.
 loaded synthetic_orders "40 hours"
 loaded synthetic_leads "30 hours"
+psql_db -c "delete from ds_source.synthetic_outreach_replies"
 psql_db -c "drop table ds_source.tlc_green cascade" 2>&1 | grep -v NOTICE || true
 rc=0; freshness stopped || rc=$?
 expect "dbt source freshness exit code with a stopped source" "$rc" 1
 want=$(all_with pass | sed -e 's/synthetic_orders=pass/synthetic_orders=error/' \
-  -e 's/synthetic_leads=pass/synthetic_leads=warn/' -e 's/tlc_green=pass/tlc_green=runtime error/')
+  -e 's/synthetic_leads=pass/synthetic_leads=warn/' -e 's/synthetic_outreach_replies=pass/synthetic_outreach_replies=error/' \
+  -e 's/tlc_green=pass/tlc_green=runtime error/')
 expect "statuses with stopped sources" "$(statuses)" "$want"
 expect "rows per table" "$(psql_db -c "select count(*) from ops.source_freshness")" 16
 age=$(psql_db -c "select round(extract(epoch from checked_at - max_loaded_at) / 3600) from ops.source_freshness where table_name = 'synthetic_orders'")
 expect "synthetic_orders' recorded age in hours" "$age" 40
 expect "synthetic_orders' error_after" "$(psql_db -c "select error_after_seconds from ops.source_freshness where table_name = 'synthetic_orders'")" 129600
-echo "ok: a stopped source fails it (exit 1) and records error, a late one warn, a dropped one runtime error; one row per table"
+never=$(psql_db -c "select coalesce(max_loaded_at::text, 'null') from ops.source_freshness where table_name = 'synthetic_outreach_replies'")
+expect "synthetic_outreach_replies' newest load (empty table)" "$never" null
+echo "ok: a stopped source fails it (exit 1) and records error, a late one warn, an empty one error with no newest load, a dropped one runtime error; one row per table"
 
 before=$(psql_db -c "select max(checked_at) from ops.source_freshness")
 dbt_ build --select tag:sales --exclude tag:tlc >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales"; }
@@ -97,8 +103,10 @@ printf '%s\n' "$metrics" >"$OUT/metrics.txt"
 expect "exported verdicts" "$(grep -c '^ops_source_freshness_checked_timestamp_seconds{' <<<"$metrics")" 16
 grep -q '^ops_source_freshness_checked_timestamp_seconds{source="ds_source",status="error",table="synthetic_orders"[,}]' <<<"$metrics" ||
   fail "the exporter does not show synthetic_orders as error (see $OUT/metrics.txt)"
-grep -q '^ops_source_max_loaded_at_seconds{source="ds_source",table="tlc_green"[,}].* 0$' <<<"$metrics" ||
-  fail "the exporter does not show tlc_green's load as 0 (see $OUT/metrics.txt)"
+for t in tlc_green synthetic_outreach_replies; do
+  grep -q "^ops_source_max_loaded_at_seconds{source=\"ds_source\",table=\"$t\"[,}].* 0\$" <<<"$metrics" ||
+    fail "the exporter does not show $t's load as 0 (see $OUT/metrics.txt)"
+done
 loaded_orders=$(grep '^ops_source_max_loaded_at_seconds{source="ds_source",table="synthetic_orders"[,}]' <<<"$metrics" | awk '{printf "%d", $2}')
 expect "exported age of synthetic_orders in hours" "$(( ($(date +%s) - loaded_orders + 1800) / 3600 ))" 40
 echo "ok: the warehouse sql_exporter's collector exports the 16 verdicts and each table's newest load"
