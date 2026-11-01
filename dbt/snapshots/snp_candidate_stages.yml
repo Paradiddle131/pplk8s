@@ -1,0 +1,22 @@
+version: 2
+
+# The recruitment source keeps only each candidate's current stage (semantic/PLAN.md SL-17), so this
+# snapshot is the warehouse's only record of the stage history: SCD type 2 over slv_applications, one
+# row per stage a candidate was seen in, valid from the stage_ts the source gave it until the next one.
+# It sees the changes between two of its runs: two stage changes between runs keep only the later one.
+# The timestamp strategy records a row only when stage_ts moves forward, so an older extract never
+# rewrites the history. silver.candidate_stages renames its columns for the semantic layer.
+snapshots:
+  - name: snp_candidate_stages
+    relation: ref('slv_applications')
+    description: >
+      Stage history of every candidate, one row per stage seen, valid from dbt_valid_from (the stage's stage_ts) to
+      dbt_valid_to (the next stage's stage_ts; NULL for the current one). Its resolution is the recruitment_elt
+      schedule's. Alias silver.candidate_stage_snapshots.
+    config:
+      schema: silver
+      alias: candidate_stage_snapshots
+      tags: [silver, recruitment]
+      unique_key: candidate_id
+      strategy: timestamp
+      updated_at: stage_ts

@@ -3,8 +3,9 @@ emulator and covers the three gaps dbt-bigquery hits there.
 
 - `routines.list` is unsupported, and dbt-bigquery lists routines beside tables in every dataset
   it caches, retrying the emulator's error until it gives up; answer it with an empty list.
-- Every job reports `statementType: SELECT`, so after a CREATE dbt reads the job's destination
-  table, which a DDL job does not have; report a DDL job as a SCRIPT, as dbt then reads nothing.
+- Every job reports `statementType: SELECT`, so after a CREATE, or the MERGE of a snapshot, dbt reads
+  the job's destination table, which a DDL or DML job does not have; report either as a SCRIPT, as dbt
+  then reads nothing.
 - A load job without `sourceFormat` fails ("not support sourceFormat"), where BigQuery reads it as
   CSV, and dbt-bigquery loads seeds without one; give such a job CSV (semantic/PLAN.md SL-18).
 
@@ -22,7 +23,8 @@ import urllib.request
 UPSTREAM = os.environ.get("UPSTREAM", "http://bigquery:9050")
 PORT = int(os.environ.get("PORT", "9050"))
 ROUTINES = re.compile(r"/datasets/[^/]+/routines(\?|$)")
-DDL = ("create", "drop", "alter")
+# DDL and DML: statements whose job has no destination table.
+NO_DESTINATION = ("create", "drop", "alter", "merge", "insert", "update", "delete")
 REQUEST_SKIP = {"host", "content-length", "accept-encoding"}
 RESPONSE_SKIP = {"transfer-encoding", "content-length", "connection"}
 
@@ -37,7 +39,7 @@ def first_keyword(sql: str) -> str:
 
 
 def relabel(body: bytes) -> bytes:
-    """A job resource whose query is DDL, reported as a SCRIPT; any other body unchanged."""
+    """A job resource whose query is DDL or DML, reported as a SCRIPT; any other body unchanged."""
     try:
         job = json.loads(body)
     except ValueError:
@@ -46,7 +48,7 @@ def relabel(body: bytes) -> bytes:
     sql = (
         job.get("configuration", {}).get("query", {}).get("query", "") if stats else ""
     )
-    if stats is None or first_keyword(sql) not in DDL:
+    if stats is None or first_keyword(sql) not in NO_DESTINATION:
         return body
     stats["statementType"] = "SCRIPT"
     return json.dumps(job).encode()

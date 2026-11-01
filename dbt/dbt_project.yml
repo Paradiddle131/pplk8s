@@ -17,6 +17,11 @@ flags:
 clean-targets: ["target", "dbt_packages"]
 
 vars:
+  # How far back an incremental build of silver.customer_actions re-reads bronze's loads (SL-15): loads
+  # that commit after a newer one was merged still land, and the bronze -> silver hop checks these days.
+  customer_actions_lookback_hours: 72
+  # The outreach activation list leaves out a contact messaged this many days before its as_of (SL-16).
+  outreach_cooldown_days: 7
   # The prompt that labels call transcripts (semantic/PLAN.md SL-18, docs/text-signals.md): one reviewed
   # place for its text, version and endpoint, and for the agreement it must reach on the golden set before
   # gold reads its labels. A changed text is a new version, labelled beside the old one, never an overwrite;
