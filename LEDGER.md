@@ -777,3 +777,182 @@ Entry format:
 - Evidence: see the PR.
 - Decisions: none in this repo; provisioning stays in claude-dotfiles.
 - Open: none.
+
+## 2026-10-30 — Maintenance — the README shows the semantic track
+
+- Done: `assets/semantic-track.html`, an interactive schematic of the semantic track at its destination (every issue under Map #135 done), drawn the way a cloud reference architecture is: tinted zones with a title, two-line cards (what it is, what runs it), grey chrome, and colour only on the two warehouse roles the agents read as and on the question's path. A Here / On GCP switch relabels every stand-in with its GCP counterpart, hovering a part lights what it talks to, and a button traces a question through the system. `assets/semantic-track.png` and `assets/semantic-track-dark.png` are its exports, under "Second track" in the README behind a `<picture>` that follows the reader's theme, with a one-liner and a Here / On GCP table like the lab's.
+- Evidence: rendered in Chromium in both modes and both themes with no console error; the switch, hover and trace exercised in a browser; `house-lint` clean; the official Composer, Airflow and dbt diagrams read as references.
+- Decisions: draw the end state rather than today's, so the picture does not change with each use-case issue; keep words to names and labels, with the sentences in the README; light first, because every official reference diagram is, with dark as a palette swap; commit the images under `assets/` rather than as uploads, so a fork carries them.
+- Open: none.
+
+## 2026-10-31 — Cloud: the kind cluster reaches the internet; Airflow deploys on cloud
+
+- Done: `platform/kind/egress-up.sh` (`make egress-up`; `cluster-up`, `workloads-up`, `airflow-up`, `keda-up` and `observability-up` run it) relays the nodes' and pods' egress to the cloud sandbox's loopback proxy: a `kind-egress` relay container on the kind gateway, a containerd drop-in and the proxy's CA on each node, docker.io pulls through mirror.gcr.io; a no-op without a loopback proxy. `workloads-up.sh` reads the relay's address and CA, so `agent-deploy-check.sh` lost its own forwarder. Airflow's deploy builds through `make airflow-image` (the proxy's CA and the ghcr.io layer cache). On cloud `make push` and `airflow-image` skip a tag the local registry already serves (D16; `FORCE_BUILD=1` rebuilds) and drop Docker's copy and BuildKit's cache after a push, to fit the disk allowance. The Airflow API helper checks ports through `/proc/net/tcp` where `ss` is missing, and a scheduled run it discards takes its `ops.readiness` rows with it, so the restore drill does not start on a stale alert.
+- Evidence: see the PR.
+- Decisions: relay and drop-in after cluster creation rather than kind's create-time proxy variables, so an existing cluster and a changed proxy port are fixed by re-running it.
+- Open: finance's semantic validation on a warehouse where marketing never ran (#168).
+
+## 2026-10-31 — Semantic track U3 — a landed source that stops flowing raises SourceStale (#130)
+
+- Done: every `ds_source` table declares `loaded_at_field: _loaded_at` and freshness thresholds in `dbt/models/sources.yml` (daily synthetic tables 26 h / 36 h, partner returns 48 h / 72 h, TLC 35 / 62 days, Open-Meteo none, being loaded by hand). The dbt project's `on-run-end` hook (`dbt/macros/source_freshness.sql`) acts only after `dbt source freshness` and replaces each table's row in `ops.source_freshness` with dbt's verdict; `make services-up` creates the table (`make source-freshness-table`). A CronJob `source-freshness` in `workloads` runs it hourly on the dbt image, exiting 0 when dbt only reports stale sources so a stale source is not also `KubeJobFailed`. The warehouse `sql_exporter` gains a `source_freshness` collector, and `airflow-rules.yaml` the alerts `SourceStale` (on `error` or `runtime error`) and `SourceFreshnessNotChecked` (no verdict for two hours). Runbook entry 13, the BigQuery mapping row, `make source-freshness-check`. dbt 0.7.17, semantic-agent 0.1.15.
+- Evidence: `make source-freshness-check` PASS (fresh data: 9 × pass; a 40 h, a 30 h and a dropped table: error, warn, runtime error, exit 1; the sql_exporter exports 9 verdicts); `make rules-test` SUCCESS (3 new promtool cases); `make check` exit 0; `make semantic-check` PASS with the hook in every `dbt build`; on kind, `make workloads-up` exit 0 and a Job from the CronJob `Complete` with 9 rows written to `warehouse`.
+- Decisions: semantic/PLAN.md SL-12 (owner's choice A on #130: a CronJob on the dbt image, no DAG).
+- Open: the CronJob's first run on the laptop's lab (the PR's local checklist).
+
+## 2026-10-31 — Semantic track — finance's daily table keeps a return recorded on a day without orders
+
+- Done: `exp_net_sales_daily` covers every UTC day with orders or returns (owner's choice A on #150), revenue 0 on a day with returns only, so its returns columns equal the `returns_*` metrics by construction and the two metric hops stay strict; its description, contract and SL-9 say so. `semantic-check.sh`'s seeded return on a day without orders now expects that row and every hop passing; the migration doc names the parity difference this opens on real data. Carried in #160, whose lab run on a used warehouse failed on this hop (return D-1 on 2026-10-05, a day without orders). dbt 0.7.14, semantic-agent 0.1.13. #167 closed as its duplicate.
+- Evidence: see the PR.
+- Decisions: SL-9's "a return on a day without orders fails the build" replaced by the union grain.
+- Open: none.
+
+## 2026-10-31 — Semantic track — the agent sees a categorical dimension's values and refuses a guessed one
+
+- Done: `dbt/scripts/build_catalog.py` carries the values a categorical dimension's column declares (its `accepted_values` test) into `agent.json` as the dimension's `values`; `slv_returns.reason` declares the fixture's codes (`damaged`, `wrong size`, `late delivery`); `describe_metric` shows them, and `query_metrics` refuses a filter value outside them with an error naming them, before MetricFlow runs. A dimension that declares no values (currency, campaign name) passes any value as before. `phase5-check.sh` and `metadata-restore-drill.sh` upload `damaged` instead of made-up reasons the new test would refuse, and `slv_returns` conforms the codes loaded before the test (`late` to `late delivery`, the checks' old markers to `damaged`), so a lab warehouse that ran the old checks builds; the fixture's R-3 carries `late` to keep that covered. dbt 0.7.13, semantic-agent 0.1.12 (0.7.14 and 0.1.13 with #150 in the same PR).
+- Evidence: see the PR.
+- Decisions: SL-2 now checks a filter value against the declared values, declared rather than queried so the catalog stays offline; two lessons in semantic/PLAN.md § 6 (declared values; declaring them over rows already loaded).
+- Open: none.
+
+## 2026-10-31 — Semantic track — one deployed agent, saved queries, the agent's warehouse objects in dbt
+
+- Done: the image, the Deployment and its Secret serve `semantic_agent` alone; `sql_baseline` stays the eval's in-process control and a local `adk web` comparison (#163), and SL-5 now says up front that the track builds one agent. A `query_metrics` filter value holding `{{`, `{%` or `{#` is refused, since MetricFlow renders the filter as Jinja (#161). The baseline's tables are the catalog's public models, so it now sees the two marketing tables, and neither instruction names a fixed list of domains (#162). An offline test pins the MetricFlow Python surface the agent shares with `mf` (#165). Seven dbt saved queries hold the recurring questions: verified queries in `example_queries.json`, listed by `list_metrics`, run by name through `query_metrics(saved_query=...)`, counted by the eval's `metric_choice` (#164). The agent's roles, grants and `ops.agent_queries` come from one dbt macro, `make agent-warehouse`, on Postgres and the BigQuery emulator; `02-agent-roles.sql` is gone, and `make agent-standalone-check` runs the agent with no Airflow and no ledger (#166). dbt 0.7.15, semantic-agent 0.1.14.
+- Evidence: see the PR.
+- Decisions: SL-1 (licence floor 0.209.0), SL-2, SL-3 (saved queries), SL-5 (one agent; the baseline an eval arm), SL-7 (two emulator gaps), SL-10 (the macro), § 5 (the Python surface), two § 6 lessons.
+- Open: none.
+
+## 2026-10-31 — Semantic track — finance's semantic gate queries only the domains it waited for; the agent checks fail fast on a refused key
+
+- Done: `finance_daily`'s `validate_semantic_layer` no longer fails on a warehouse where `marketing_elt` has never run (#168): `dbt/scripts/validate_semantic.py` runs MetricFlow's own validators, the whole semantic manifest offline and on the warehouse only the semantic models of the pipelines the DAG waited for (`--pipelines returns,sales`) and the metrics that read only them; a broken returns metric still fails it. `make agent-deploy-check` and `make agent-eval` share one OpenRouter `/key` preflight (`tests/e2e/openrouter-key-check.sh`, `make agent-key-check`), which the deploy check runs before the image builds, so an unset or refused key fails in seconds (#158). dbt 0.7.16, airflow 3.3.1-pplk8s.17.
+- Evidence: see the PR.
+- Decisions: SL-1 (the stage check in a DAG is scoped to the waited-for pipelines).
+- Open: none.
+
+## 2026-10-31 — Maintenance — every extract and load re-creates all landing tables, so sales_elt passes on a fresh warehouse
+
+- Done: EL Factory ensures every `ds_source` landing table before each extract or load, not only the requested one (#172): after `make services-reset` under a running EL Factory, a sales extract left `ds_source.open_meteo_hourly_weather` missing and `sales_elt`'s `dbt_bronze` failed, because the weather models are tagged `sales` (D20) while no DAG extracts weather. el-factory 0.7.2.
+- Evidence: see the PR.
+- Decisions: none; D20 stands (the weather models stay in `sales` until a weather DAG exists).
+- Open: none.
+
+## 2026-10-31 — Maintenance — a local DAG deploy stops when the cluster mounts another clone's DAGs
+
+- Done: `platform/kind/ensure-dag-mount.sh`, which `deploy.sh` runs for `DAG_DELIVERY=local`, compares a digest of the `*.py` files the kind workers serve with this checkout's `airflow/dags` and fails, naming both paths, when they differ (#173): `cluster-up.sh` binds the creating clone's path once, so a deploy from a second clone ran its own image with the first clone's DAGs. Runbook entry "A local DAG deploy from another clone".
+- Evidence: see the PR.
+- Decisions: none.
+- Open: none.
+
+## 2026-10-31 — Semantic — the audit and the freshness survive the swap to DataAgentToolset
+
+- Done: the semantic agent's audit and freshness move out of its metric toolset into one ADK `after_tool_callback` (`services/semantic-agent/src/semantic_agent/guard.py`), which audits every call to a tool the seam does not name as catalog-only and attaches the freshness of the metrics the result names (#177). `build_agent` takes a toolset and its catalog-only tools; `query_metrics` always names the metrics it ran; the eval reads a freshness statement from any data call. SL-4, SL-10 and the freshness lesson in `semantic/PLAN.md`, the agent README and `docs/semantic-layer-on-bigquery.md` say where both live after the swap.
+- Evidence: see the PR.
+- Decisions: SL-4 and SL-10 amended (freshness attached around the toolset; a data tool is every tool but the catalog-only ones).
+- Open: whether `ask_data_agent`'s result names the metrics it used (`docs/semantic-layer-on-bigquery.md`, Unverified).
+
+## 2026-10-31 — Semantic — The track's next maps, triaged and queued; the semantic track goes to a free-tier GCP project, GCP-native first (SL-13); one agent however many domains (SL-14)
+
+- Done: an assessment of the semantic track against the use case, and five maps of follow-on work filed and triaged by the owner: #199 (more domains), #197 (the questions business users ask), #200 (one governed semantic layer for every agent), #212 (GCP-ready), #198 (the eval, low priority), with #202 (dbt v2 research, low) and #196 (the target-architecture brief, on #135); #201 (Apache Ossie export) closed as not planned. Eight more question shapes from dbt's semantic-layer docs join #197 (#216-#223), found by compiling probe queries with MetricFlow 0.213. `semantic/PLAN.md` names the maps in the owner's order and records SL-13 and SL-14; § 2 now rules out running on a real project until #203, not preparing for it. `docs/agents/autopilot.md` queues the maps after #135, bugs and lessons, the eval and #202 last. Map #212 is reshaped twice: first GCP-ready offline, then, once the owner chose a new project on the existing billing account (#203), a free-tier GCP-native project: the scaffold #213 first, the owner's project and credentials (#226), guard rails as code (#205), then each component built and run there, with new issues for EL Factory on Cloud Run (#227), Workflows orchestration (#228), Model Armor (#229), images within the free registry (#230), an opt-in Agent Platform run (#231), and a $0.00 month as the map's proof (#214). #218's median is BigQuery-only (owner).
+- Evidence: `make semantic-check`, `catalog-check`, `migration-check`, `bigquery-check`, `bigquery-emulator-check` (dbt build PASS=153, 26 hops), `agent-test` (137 passed) and `agent-standalone-check` all exit 0 on `14696a8`; `make lint`: exit 0. Research fact sheets with their sources are artifacts on #212 (GCP; one agent or one per domain; free-tier fit) and #135 (open source). Image sizes measured with `docker save | gzip -1`: agent 418 MiB, dbt 135 MiB, EL Factory 101 MiB.
+- Decisions: SL-13 (the semantic track on a free-tier GCP project, GCP-native first, code under `platform/gcp/`); SL-14 (one agent over one semantic layer; when and how to split, in order).
+- Open: #226 (the owner creates the project and the cloud sessions' credentials).
+
+## 2026-10-31 — Semantic — The lab project's $0.00 guard rails: a narrow credential, platform/gcp/ with its free-path gate and cost check, a kill switch for a runaway (#213, #233)
+
+- Done: on the lab project, the cloud sessions' service account went from Owner to Viewer, BigQuery Job User and Data Editor and Service Usage Consumer, so it can enable no API, change no IAM or quota and buy no capacity (checked with `testIamPermissions`); BigQuery Reservation, Dataplex, Cloud SQL and the "Google Cloud APIs" bundle that kept them on were turned off. Before the narrowing applied, an agent's permission test enabled the Compute Engine API (and with it Backup and DR, OS Login, Service Networking and the default compute service account with Editor): no resource was created; turning them off is the owner's step on #226. `platform/gcp/` (#213): the README with the $0.00 rule, the identities and the owner's runbook; `free-path.yaml`, every API and resource type with its free-tier source and a paid list, enforced offline by `check_free_path.py`; `infra/`, the one OpenTofu root (pinned OpenTofu 1.10.7 and the Google provider 8.9, tflint 0.59.1 in `make tools`), enabling the free-path APIs and declaring the kill switch (budget → Pub/Sub → Eventarc → a workflow that unlinks billing above `kill_switch_usd`, 5 USD); `tofu.sh` for `gcp-plan`, `gcp-up`, `gcp-down`, refusing without `GCP_PROJECT`; `cost-check.sh`, `make gcp-cost-check` (#233). `make gcp-validate` runs in `make lint`. CLAUDE.md, the autopilot profile and SL-13 carry the rule. Then the owner parked the real project for unattended work: the autopilot profile skips Map #212 and any live GCP call until unparked, and its gates run `make tools` first, since `make lint` now needs OpenTofu and tflint.
+- Evidence: `make gcp-validate`: fmt, validate, tflint, the free-path check and 5 tests pass, offline. `make gcp-cost-check` on the lab project: exit 3, no export rows yet; against a stub export: exit 0 at $0.00, exit 1 on a sub-cent SKU and on $1.23. `testIamPermissions` after the narrowing: of 15 fence and work permissions, only `bigquery.datasets.create`, `bigquery.jobs.create`, `bigquery.tables.getData` and `cloudquotas.quotas.get` held. A 1,000-byte `~/.bigqueryrc` cap refused a public-dataset query unbilled.
+- Decisions: SL-13 amended: IAM fences and the owner's apply; the kill switch for a runaway, not the first cent.
+- Open: #226 (the owner's steps: turn Compute and its companions off, the state bucket, `make gcp-up`, the budget's topic), #205, #206.
+
+## 2026-10-31 — Maintenance — README images keep their proportions
+
+- Done: the whole-lab picture, the agent's code picture and the k9s screenshot drop their `height` attribute and keep a `width` (the diagrams their 1x width, 1200, for a 2x PNG), so GitHub's `max-width: 100%` scales them down whole instead of stretching them tall.
+- Evidence: GitHub's rendered README (`repos/<owner>/<repo>/readme`, HTML) in Chromium with GitHub's markdown CSS (`github-markdown-css` 5.9.0) at a 980 px page: before, the whole-lab picture showed 890×2344 for a 2400×2344 PNG (2.6 times too tall); after, 890×869, its own proportion.
+- Decisions: none.
+- Open: none.
+
+## 2026-10-31 — Maintenance — the whole lab in one picture, the agent's code one level down; the semantic-track diagram retired
+
+- Done: `assets/platform.html` (new, now the README's opening picture) draws the whole lab once both tracks are done, the semantic track folded in at the level of an architecture: GitHub and the model above; the kind cluster with the airflow namespace (scheduler and triggerer pairs, Celery workers on KEDA, api-server, dag-processor, PgBouncer, the DAGs), monitoring (Prometheus, Alertmanager, alert rules, Grafana) and the workloads (event adapter, EL Factory, dbt job pods, the dbt project in both images, the semantic agent pod with its initContainer, LlmAgent, metric tools on MetricFlow and audit gate); outside it the metadata DB, Pub/Sub, object storage, the image registry, the work-only data agent, the eval, and the warehouse with its layers, checked hops and the three role regions; the analyst beside it. A Lab / On GCP switch relabels every stand-in. `assets/semantic-track.html` is retired: the whole-lab picture now holds all it drew, with `build_catalog.py` named on both consumers of its two outputs (the agent pod's initContainer and the work-only data agent), so two pictures at one level no longer drift apart. `assets/semantic-agent.html` is redrawn in the same language: ink on paper, frames without fill whose title sits in a frame line, cobalt for what the agent reads as `agent_metrics` and vermilion for what the baseline reads as `agent_sql`, a chain line for what the work platform replaces, hatching for the model; Atkinson Hyperlegible Next and Mono, no text under 11 px. The agent diagram follows a question top to bottom and corrects the first draft (sessions in the metadata DB outside the cluster, the whole toolset as the work seam, the catalog from the initContainer's `target/`, the audit as a gate); both are built on the draw-architecture kit in claude-dotfiles, which inlines its CSS, drawing API and logos into each page and checks it; every technology a sheet names that the kit's registry knows carries its logo in its brand colours, once per sheet, at one size (a one-ink copy in a theme where the colours do not read).
+- Evidence: the kit's checker (Playwright) reports 0 problems on both pages in light and dark and in both modes: text inside its card and off edges, other text and frame lines, no edge through or along a card or into a logo, contrast at least 4.5:1, the logo rules (a named technology without its logo included), the web fonts loaded; it found and drove fixing labels on frame lines, knock-outs sized in a fallback font, arrows pointing at logos and a solid chain outline filled black. The switch works by click and keyboard and is remembered across a reload; the PNGs are exported at 2x (2400×2344, 2400×1232).
+- Decisions: none in PLAN.md. The end state keeps PLAN.md's split: the agent and MetricFlow run in the cluster, the semantic layer lives in the warehouse outside it, and at work the workloads are Cloud Run, outside GKE. Drawing the work seam where the docs put it showed that the audit and freshness were tied to the lab's tool names (#177); its fix moved both into the agent's after-tool callback (`guard.py`), which the agent diagram and the whole-lab picture now draw outside the toolset.
+- Open: none.
+
+## 2026-11-01 — Semantic — The demo walks the whole use case, on the BigQuery emulator where it runs (#134)
+
+- Done: `docs/demo.md` is rewritten around U1-U6: the layers and cost per booking queried through MetricFlow on the emulator, the standard's check and the column descriptions BigQuery holds, the agent answering with its freshness (live in `make agent-web`, scripted in the check), a stopped source (dbt source freshness, its exporter, SourceStale's promtool tests) and a number changed in gold failing two layer hops on the emulator, the audit trail, and `migration.parity` on the emulator. Each step is `make demo STEP=<step>` (`tests/e2e/demo.sh`, which asserts what it prints); `make demo-check` rehearses them all, timed, with no model quota. `tests/e2e/lib/bigquery_emulator.py` reads the emulator's tables, columns and queries; `make lint` covers it.
+- Done after the local verify: `make source-freshness-check` builds in its own target path, so `make agent-web` after `make demo-check` keeps `dbt_dev`'s manifest (every agent query had failed on a cross-database reference to `dbt_freshness`); `demo-check` asks the agent again after every step; the third question's answer is the country breakdown (€379.75) since metrics group by `customer__country`, and a weather question shows the refusal.
+- Evidence: see the PR.
+- Decisions: none.
+- Open: the agent and the freshness exporter still read the Compose Postgres, not the emulator (the doc says why).
+
+## 2026-11-01 — Semantic track — the customer-actions domain: an incremental event stream, engaged customers over a trailing window, the site funnel
+
+- Done: EL Factory serves `synthetic/customer_actions`, a deterministic stream of site sessions (page view → add to cart → checkout) and CRM actions for the sales source's customers, extracted by the time an action was received, about 8% of them a day after they happened; `customer_actions_elt` runs it on the shared ELT pattern with readiness per stage, a `received_ts` watermark and a 36-hour deadline. In dbt, `silver.customer_actions` is the first incremental model on the semantic path: it merges on `event_id` what bronze landed since its newest load minus a 72-hour lookback, partitioned by event date and clustered by customer on BigQuery; `gold.customer_actions_daily` and `gold.customer_engagement_daily` are the parity oracles. Nine metrics: `customer_actions`, `acting_customers`, the three funnel step counts, `engaged_customers_7d` and `_28d` (cumulative) and `view_to_cart_rate` and `cart_to_checkout_rate` (conversion on the session entity), with two glossary terms (Engaged customer, Site funnel). `matches_metric` now renders a cumulative metric too, and nine new hops run in `dbt build` (35 in all). The dev fixture carries a slice with late actions, a redelivery, a session across midnight and an action outside 7 days but inside 28; the eval has four new questions.
+- Evidence: in the PR (semantic-check, the emulator check, catalog-check, `make check`, the EL Factory and Airflow suites).
+- Decisions: semantic/PLAN.md SL-15 (new: extract by arrival, merge on the event id with a load lookback; the funnel's step metrics count a `case` expression because MetricFlow 0.15 drops a filter on a conversion metric's conversion side); SL-9 amended (the metric → gold hop renders a cumulative metric; a conversion metric is compared by MetricFlow's own query).
+- Open: a metric → gold hop for conversion metrics (#240).
+
+## 2026-11-01 — Semantic track — the recruitment domain: stage history kept by a dbt snapshot, stage counts as of a date
+
+- Done: EL Factory serves `synthetic/applications`, every candidate in their current hiring stage only (applied, screen, interview, offer, hired, or rejected) with `stage_ts`; `recruitment_elt` runs it on the shared ELT pattern with readiness per stage, a stage-change watermark and a 36-hour deadline. In dbt, `silver.applications` keeps each candidate's newest stage, the project's first snapshot `snp_candidate_stages` (SCD type 2, timestamp strategy on `stage_ts`) keeps the stage history the source does not, `silver.candidate_stages` exposes it with valid-from and valid-to dates for a semantic model with `validity_params`, and `silver.candidate_days` is the candidate-day grain `candidates_in_stage` counts, grouped by the stage valid on each day. Four metrics (`applications`, `hires`, `time_to_hire_days`, `candidates_in_stage`), a glossary term (Hiring stage), seven new hops (51 in all), `matches_metric` rendering an average, and a test that every history row was landed. The dev fixture carries six candidates over five extracts, a backfill among them; `semantic-check` replays them one at a time as the DAG would; the eval has two new questions.
+- Evidence: in the PR (semantic-check, the emulator check, catalog-check, `make check`, the EL Factory and Airflow suites).
+- Decisions: semantic/PLAN.md SL-17 (new); docs/agent-ready-warehouse.md: a snapshot is `snp_` and builds in silver.
+
+## 2026-11-01 — Semantic track — the partner-outreach domain: an activation list an automation acts on, with consent tested
+
+- Done: EL Factory serves `synthetic/partners`, `partner_contacts` (a snapshot per run: consent, an opt-out once it happens, `updated_ts`), `outreach_messages` and `outreach_replies`; `partner_outreach_elt` runs them on the shared ELT pattern with readiness per stage, a message-or-reply watermark and a 36-hour deadline. In dbt, `silver.partner_contacts` keeps each contact's newest change, so a backfilled older snapshot never undoes an opt-out; `exposed.outreach_activation` lists who the automation contacts next (consented, not opted out, not messaged within 7 days of the newest message), protected because it holds contact details, and the test `activation_respects_consent_and_cooldown` fails the build if an excluded contact appears; the exposure `partner_outreach_automation` names it. Five metrics (`messages_sent`, `messages_replied`, `reply_rate`, `replies`, `partners_engaged`), a glossary term (Engaged partner), nine new hops (44 in all), contact columns marked `meta.pii`, and `check_standard.py` failing a public model with personal data. The dev fixture carries a slice with a refused consent, an opt-out a backfill tries to undo, a reply a day later and a reply to an unloaded message; the eval has three new questions.
+- Evidence: in the PR (semantic-check, the emulator check, catalog-check, `make check`, the EL Factory and Airflow suites, two mutations).
+- Decisions: semantic/PLAN.md SL-16 (new); docs/agent-ready-warehouse.md: a gold or exposed model with a personal-data column is protected.
+- Open: the column grants that keep the contact columns from the agents' roles (#193).
+
+## 2026-11-01 — Semantic — Where text-to-signal extraction runs and how its labels are tested (#191)
+
+- Done: `docs/text-signals.md` answers #191: label in dbt through BigQuery's `AI.GENERATE` (incremental, `full_refresh: false`, one row per transcript and prompt version, endpoint and model version recorded), a golden set from the synthetic generator's own labels with agreement and failed-call tests, "Model-derived" in the metric's description and the glossary; in the lab, the same model reads recorded labels on Postgres and the emulator, an opt-in target records them from an OpenRouter free model, and the BigQuery target only compiles the real call. Rejected: labelling in EL Factory before landing; a separate batch job kept as the fallback. Linked from `docs/semantic-layer-on-bigquery.md`; one lesson in `semantic/PLAN.md` § 6.
+- Evidence: measured on `ghcr.io/goccy/bigquery-emulator:0.8.1`: `AI.GENERATE`, `ML.GENERATE_TEXT`, `AI.GENERATE_TABLE` not found and `CREATE MODEL … REMOTE` unparsed; `AI.CLASSIFY` returned the first category for three different inputs and `AI.SCORE` 0.5. The rest is stated from Google's, dbt's and OpenRouter's pages, each linked in the doc.
+- Decisions: none; the build issue records its decision row when it builds.
+- Open: the build, filed under Map #199.
+
+## 2026-11-01 — Semantic track — the target-architecture brief, with the GCP target drawn (#196)
+
+- Done: `docs/target-architecture.md` is one page a BigQuery team can adopt: layers and datasets, naming, where each calculated field lives, the documentation standard, monitoring, access and audit, migration, each a few lines with the document that holds its rules and the `make` target that proves it, and what stays unproven. `assets/gcp-target.html` draws the GCP target on the draw-architecture kit: Scheduler and Workflows, EL Factory and the dbt and freshness Jobs on Cloud Run, BigQuery's datasets with each hop checked, the semantic agent with Firestore, Model Armor and Gemini, the data agent as the native alternative, Knowledge Catalog, Cloud Monitoring and the Data Access log. `dbt/scripts/check_brief.py`, in `make dbt-validate`, fails when the brief's metric table misses a metric or a row's label, type, semantic models or file differs from the project. The README links the brief and names Firestore, not Cloud SQL, for sessions on GCP (SL-13); `agent-ready-warehouse.md` puts every metric built from other metrics in `semantic.yml`, as the project does since #149.
+- Evidence: in the PR.
+- Decisions: none.
+- Open: none.
+
+## 2026-11-01 — Semantic track — conversion metrics get their metric → gold hop in dbt build
+
+- Done: `matches_metric` renders a conversion rate from dbt's graph as MetricFlow 0.15 computes it (base and conversion rows joined on the entity within the window of days, each conversion row counted once on the latest base day it joined, over the base metric per base day), so `view_to_cart_rate`, `cart_to_checkout_rate` and `lead_to_booking_rate` are checked in every build, not only by the on-demand MetricFlow comparisons. `gold.lead_conversion_daily` is the new hand-written oracle for the lead-to-booking rate, one row per lead creation day, since a rate cannot be summed over `gold.marketing_daily`'s channels. Five new hops run in `dbt build` (40 in all).
+- Evidence: in the PR (semantic-check, the emulator check, catalog-check, `make check`, a gold window shrunk from 2 days to 1 failing `view_to_cart_rate`'s hop alone).
+- Decisions: semantic/PLAN.md SL-9 amended (the metric → gold hop renders a conversion rate too).
+
+## 2026-11-01 — Semantic — Call-transcripts domain: signals labelled in dbt by a recorded model call, tested against a golden set (#241)
+
+- Done: EL Factory's `synthetic/call_transcripts` (text written from labels picked first) and the `call_transcripts_elt` DAG; dbt bronze and silver transcripts, `slv_call_transcript_labels` and `slv_call_golden_labels` (incremental, `full_refresh: false`, one row per transcript and prompt version) through the dispatched `label_calls` macro (BigQuery `AI.GENERATE` with an output schema, compiled only; recorded answers on Postgres and the emulator), `slv_call_label_agreement` (accuracy and Cohen's kappa per signal), `slv_call_signals`, `gld_call_signals_daily`; the prompt, version, endpoint and thresholds in `dbt_project.yml`; golden-set, failed-call-share and accepted-values tests; five "Model-derived" metrics and a glossary term; `check_standard.py` fails a metric over a `derived_by: model` column without "Model-derived"; `make record-call-labels` (OpenRouter free models only); two eval questions; SL-18 and a lesson in `semantic/PLAN.md`.
+- Evidence: recorded 14 label calls from `nvidia/nemotron-3.5-super-vl:free` for the 15 golden calls: accuracy/kappa topic 1.00/1.00, objection 0.87/0.76, sentiment 0.93/0.90, next step 0.87/0.80, all above thresholds written before recording; `make semantic-check`, `make bigquery-check` and `make bigquery-emulator-check` pass with the call path; see the PR for the gate counts.
+- Decisions: semantic/PLAN.md SL-18.
+- Open: production transcripts without a recording wait unlabelled in the lab, so a DAG run on days outside the fixture labels none of them.
+
+## 2026-11-01 — Semantic track — the recruitment snapshot replayed extract by extract on the BigQuery emulator
+
+- Done: `bigquery-emulator-check` now replays the five recruitment extracts one at a time with a build after each, on a recreated emulator, and asserts the 15-row stage history `semantic-check` asserts on Postgres, the seven recruitment hops and 2 candidates in interview on 3 October. The emulator's `DROP TABLE` panic (`googlesqlite: slice bounds out of range [-2147...:]`) is not tied to the statement: the stack shows the engine rebuilding its catalog through go-googlesql's WASM module, the emulator held about 5 GiB after the full build, and the same replay on a fresh emulator never panics. No release newer than `0.8.1` exists, so the pin stays and the shim is unchanged.
+- Evidence: in the PR (the emulator check before and after, `make check`).
+- Decisions: semantic/PLAN.md SL-17 (the emulator sentence).
+
+## 2026-11-01 — Semantic — Catch label drift: a new model version and shifting label shares in the call signals (#248)
+
+- Done: the dbt test `call_label_model_versions_scored` (labels of the current prompt version from a model version the golden set was not labelled by fail the build); `slv_call_label_shares` (alias `silver.call_label_shares`), each signal's label shares per ISO week with a p-chart band from the trailing weeks (`call_label_drift` in `dbt_project.yml`, a dbt unit test for its arithmetic, the `iso_week_start` dialect seam); the warehouse `sql_exporter` collector `call_label_shares`; the `CallLabelShareDrift` rule with promtool tests; runbook § 14; SL-18 and `docs/text-signals.md`; dbt image 0.7.23.
+- Evidence: see the PR for the gate counts; the unit test caught Postgres' `greatest`/`least` skipping a NULL, which had given bandless weeks a [0, 1] band.
+- Decisions: semantic/PLAN.md SL-18 (extended).
+- Open: the fixture's calls fill one week, so the lab's own data never has a band; a multi-week fixture would show the alert end to end.
+
+## 2026-11-01 — Semantic — Spread the call fixture over six weeks, so the label-share band and CallLabelShareDrift show end to end (#251)
+
+- Done: `dbt/dev/fixture.sql` adds five weeks of calls before 2026-09-28's (eight a week, reusing recorded texts, so no new label call); `make semantic-check` drops its hand-seeded label shares and asserts the built table: 78 rows over 6 weeks, 52 banded, the newest week's delivery share (0.3333, band 0 to 0.1819) the only one outside its band, and the exporter's 13 series for that week; the emulator check counts 52 labelled calls; the call eval questions keep to 1 and 2 October; runbook § 14.
+- Evidence: see the PR for the gate counts.
+- Decisions: none.
+
+## 2026-11-01 — Maintenance — `make airflow-down` passes when no Airflow release is installed
+
+- Done: `airflow-down` uninstalls with `--ignore-not-found`, as `keda-down` and `observability-down` already do, so a cleanup chain such as `make airflow-down workloads-down services-reset` no longer stops at a release an earlier run removed.
+- Evidence: see the PR.
+- Decisions: none.
+- Open: none.

@@ -1,6 +1,0 @@
-## 2026-11-01 — Semantic track — the target-architecture brief, with the GCP target drawn (#196)
-
-- Done: `docs/target-architecture.md` is one page a BigQuery team can adopt: layers and datasets, naming, where each calculated field lives, the documentation standard, monitoring, access and audit, migration, each a few lines with the document that holds its rules and the `make` target that proves it, and what stays unproven. `assets/gcp-target.html` draws the GCP target on the draw-architecture kit: Scheduler and Workflows, EL Factory and the dbt and freshness Jobs on Cloud Run, BigQuery's datasets with each hop checked, the semantic agent with Firestore, Model Armor and Gemini, the data agent as the native alternative, Knowledge Catalog, Cloud Monitoring and the Data Access log. `dbt/scripts/check_brief.py`, in `make dbt-validate`, fails when the brief's metric table misses a metric or a row's label, type, semantic models or file differs from the project. The README links the brief and names Firestore, not Cloud SQL, for sessions on GCP (SL-13); `agent-ready-warehouse.md` puts every metric built from other metrics in `semantic.yml`, as the project does since #149.
-- Evidence: in the PR.
-- Decisions: none.
-- Open: none.

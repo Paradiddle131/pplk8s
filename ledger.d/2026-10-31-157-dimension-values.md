@@ -1,6 +1,0 @@
-## 2026-10-31 — Semantic track — the agent sees a categorical dimension's values and refuses a guessed one
-
-- Done: `dbt/scripts/build_catalog.py` carries the values a categorical dimension's column declares (its `accepted_values` test) into `agent.json` as the dimension's `values`; `slv_returns.reason` declares the fixture's codes (`damaged`, `wrong size`, `late delivery`); `describe_metric` shows them, and `query_metrics` refuses a filter value outside them with an error naming them, before MetricFlow runs. A dimension that declares no values (currency, campaign name) passes any value as before. `phase5-check.sh` and `metadata-restore-drill.sh` upload `damaged` instead of made-up reasons the new test would refuse, and `slv_returns` conforms the codes loaded before the test (`late` to `late delivery`, the checks' old markers to `damaged`), so a lab warehouse that ran the old checks builds; the fixture's R-3 carries `late` to keep that covered. dbt 0.7.13, semantic-agent 0.1.12 (0.7.14 and 0.1.13 with #150 in the same PR).
-- Evidence: see the PR.
-- Decisions: SL-2 now checks a filter value against the declared values, declared rather than queried so the catalog stays offline; two lessons in semantic/PLAN.md § 6 (declared values; declaring them over rows already loaded).
-- Open: none.
