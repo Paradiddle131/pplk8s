@@ -26,11 +26,15 @@ A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`;
 4. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (unparked by the owner, 2026-11-01), under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-cost-check` before and after every live step, its exit 1 (a cost) or 3 (not provable yet) ending the wake's GCP work with the SKU or the reason in the handoff; `make gcp-up` is a `needs-owner` step.
 5. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
 
+**Offline wakes.** A routine prompt that says `offline` (the hourly schedule, owner 2026-11-01) skips Map #212, [#276](../../../../issues/276) and every step that reaches the real GCP project (`make gcp-*`, `bigquery-live-check`, a live data-agent or Knowledge Catalog call): live GCP work waits for a wake the owner watches, because the billing export lags hours behind a cost.
+An offline wake that finds nothing else pickable ends after step 9; it never falls through to Map #212.
+
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
 
 ## Gates
 
-Cloud runs, with their counts in the handoff:
+Cloud runs every gate below, with their counts in the handoff; this profile has no `local` gates (owner, 2026-11-01: the less left for the laptop the better), so each wake gives its long gates the time they need.
+Each wake has its own container, so wakes never share Docker, kind or the disk; within one wake, run the long gates one at a time (`run_in_background`), and run the long ones once on the PR's final head rather than before every push.
 - `make tools` first in each session: `make lint` runs `make gcp-validate`, which needs the pinned OpenTofu and tflint
 - `make check` (`make lint` and `make test` with the Compose warehouse up and required; GitHub Actions is off, PLAN.md D26, so a PR shows no checks)
 - dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
