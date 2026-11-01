@@ -147,7 +147,7 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
 	tests/e2e/bigquery-check.sh
 
-bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, and the migration rehearsal reports as on Postgres (#125)
+bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
 	tests/e2e/bigquery-emulator-check.sh
 
 source-freshness-check: services-up ## Run dbt source freshness on the dev fixtures in dbt_freshness: fresh data passes, a stopped source errors, and the warehouse sql_exporter exports each verdict (#130)
