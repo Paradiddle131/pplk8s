@@ -133,8 +133,8 @@ gold_calls = {k.replace(" ", "|"): v for k, v in rows(
     " from `pplk8s-lab.gold.call_signals_daily`").items()}
 bad = []
 labelled = list(client.query("select count(*) from `pplk8s-lab.silver.call_signals`").result())[0][0]
-if labelled != 12:
-    bad.append(f"silver.call_signals on the emulator holds {labelled} calls, not the fixture's 12")
+if labelled != 52:
+    bad.append(f"silver.call_signals on the emulator holds {labelled} calls, not the fixture's 52")
 with open(f"{out}/marketing_period.csv") as f:
     period = next(csv.DictReader(f))
 got = (round(decimal.Decimal(period["cost_per_lead_eur"]), 2), round(decimal.Decimal(period["cost_per_booking_eur"]), 2))

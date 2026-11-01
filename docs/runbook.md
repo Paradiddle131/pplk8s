@@ -686,7 +686,7 @@ The dbt test `call_label_model_versions_scored` fails the call-transcripts build
 Drift the data shows: a label's share of a week's calls leaves the band its trailing weeks expect.
 `silver.call_label_shares` holds each signal's label shares per ISO week with a p-chart band (the pooled share of up to four weeks before, plus or minus three binomial standard errors, `call_label_drift` in `dbt/dbt_project.yml`); the warehouse `sql_exporter` exports the newest week.
 
-Trigger, without the cluster: `make semantic-check` relabels one call with an unscored model version and expects the test to fail, and runs the exporter's collector against a seeded week outside its band; `make rules-test` fires the alert on synthetic series.
+Trigger, without the cluster: `make semantic-check` relabels one call with an unscored model version and expects the test to fail, and runs the exporter's collector on `dbt/dev/fixture.sql`'s six weeks of calls, whose newest week's delivery share (4 of 12) is above its band (0 to 0.18); `make rules-test` fires the alert on synthetic series.
 
 Detection: a failed `call_label_model_versions_scored` in the `call_transcripts_elt` DAG's dbt build (its rows name the prompt version and the unscored model version); `CallLabelShareDrift`, one alert per signal and label, valued at the week's share.
 A label that is new to a signal has a band of [0, 0], so its first appearance fires; one that stops appearing is exported at 0 and fires below its band.

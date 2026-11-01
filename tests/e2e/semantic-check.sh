@@ -16,8 +16,9 @@
 #     are scored on the golden set's 15 calls, a second or `--full-refresh` build re-labels nothing, a
 #     transcript without a recording waits unlabelled, seeded wrong labels fail the agreement test, and failed
 #     calls past the share fail their test and are retried by the next build (SL-18),
-#   - a label from a model version the golden set was not labelled by fails its test, and the warehouse
-#     exporter's collector exports the newest week's label shares and their drift bands (SL-18),
+#   - a label from a model version the golden set was not labelled by fails its test, the fixture's six weeks
+#     of calls give the label shares bands with the newest week's shifted topic the one share outside its
+#     band, and the warehouse exporter's collector exports that week's shares and bands (SL-18),
 #   - a metric over a model-derived column without "Model-derived" in its description fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
 #     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
@@ -134,7 +135,7 @@ psql_dev -c "set client_min_messages = warning" -c "drop table if exists semanti
   -c "drop table if exists semantic_check.calls_period" -c "create table semantic_check.calls_period (objection_rate numeric, positive_sentiment_share numeric)"
 psql_dev -c "\\copy semantic_check.calls from stdin with (format csv, header true)" <"$OUT/calls.csv"
 psql_dev -c "\\copy semantic_check.calls_period from stdin with (format csv, header true)" <"$OUT/calls_period.csv"
-expect "calls labelled in silver (every fixture call has a recording)" "$(psql_dev -c "select count(*) from silver.call_signals")" 12
+expect "calls labelled in silver (every fixture call has a recording)" "$(psql_dev -c "select count(*) from silver.call_signals")" 52
 expect "call metrics vs gold.call_signals_daily (rows differing)" "$(psql_dev -c "
   with gold as (select call_date, topic, calls_labelled, calls_with_objection, positive_calls from gold.call_signals_daily),
        mf as (select day, topic, coalesce(calls_labelled, 0), coalesce(calls_with_objection, 0), coalesce(positive_calls, 0) from semantic_check.calls)
@@ -157,7 +158,7 @@ psql_dev -c "insert into ds_source.synthetic_call_transcripts values ('T-UNRECOR
 dbt_ build --select tag:call_transcripts,tag:silver >"$OUT/incremental.log" 2>&1 || { tail -30 "$OUT/incremental.log" >&2; fail "incremental build of the call labels"; }
 dbt_ build --full-refresh --select slv_call_transcript_labels >>"$OUT/incremental.log" 2>&1 || { tail -30 "$OUT/incremental.log" >&2; fail "--full-refresh build of the call labels"; }
 expect "call labels after a second and a --full-refresh build" "$(labelled)" "$before"
-expect "calls in silver, and labelled" "$(psql_dev -c "select count(*) from silver.call_transcripts")|$(psql_dev -c "select count(*) from silver.call_signals")" "13|12"
+expect "calls in silver, and labelled" "$(psql_dev -c "select count(*) from silver.call_transcripts")|$(psql_dev -c "select count(*) from silver.call_signals")" "53|52"
 psql_dev -c "delete from ds_source.synthetic_call_transcripts where transcript_id = 'T-UNRECORDED'"
 echo "ok: a second and a --full-refresh build re-label nothing; a call without a recording waits unlabelled"
 
@@ -171,14 +172,15 @@ psql_dev -c "update silver.call_transcript_labels set model_version = '$recorded
 dbt_ test --select call_label_model_versions_scored >"$OUT/model-version.log" 2>&1 || { tail -30 "$OUT/model-version.log" >&2; fail "the model-version test after restoring the label"; }
 echo "ok: labels from a model version the golden set was not labelled by fail call_label_model_versions_scored"
 
-# Drift the data shows: the fixture's calls fill one week, so every share has no band yet; the unit test
-# call_label_shares_band (dbt build above) holds the band's arithmetic. The warehouse exporter's collector
-# exports only banded rows of the newest week: two seeded rows, one in its band and one above it.
+# Drift the data shows: the fixture's calls fill six weeks, so the last four have bands; the newest week's
+# delivery share (4 of 12) is the only share of any week outside its band, as dbt/dev/fixture.sql shifts it.
+# The unit test call_label_shares_band (dbt build above) holds the band's arithmetic. The warehouse exporter's
+# collector exports the newest week's banded shares, one per label.
 expect "label shares on the fixture: rows, weeks, rows with a band" "$(psql_dev -c "
-  select count(*) || ' ' || count(distinct week_start) || ' ' || count(lower_bound) from silver.call_label_shares")" "13 1 0"
-psql_dev -c "insert into silver.call_label_shares values
-  ('topic', 'delivery', date '2026-10-05', 20, 13, 0.65, 4, 0.33, 0.0146, 0.6454),
-  ('topic', 'pricing', date '2026-10-05', 20, 2, 0.10, 4, 0.08, 0, 0.2620)"
+  select count(*) || ' ' || count(distinct week_start) || ' ' || count(lower_bound) from silver.call_label_shares")" "78 6 52"
+expect "label shares outside their band" "$(psql_dev -c "
+  select string_agg(week_start || ' ' || signal || ' ' || label || ' ' || share || ' ' || lower_bound || '-' || upper_bound, ', ')
+  from silver.call_label_shares where share < lower_bound or share > upper_bound")" "2026-09-28 topic delivery 0.3333 0.0000-0.1819"
 cfg="$OUT/exporter"
 mkdir -p "$cfg" && chmod 755 "$cfg"
 cp "$REPO/platform/compose/sql-exporter/call-label-shares.collector.yml" "$cfg/"
@@ -203,13 +205,12 @@ for _ in $(seq 30); do
 done
 docker rm -f "$exporter" >/dev/null 2>&1 || true
 printf '%s\n' "$metrics" >"$OUT/label-share-metrics.txt"
-expect "exported label shares" "$(grep -c '^ops_call_label_share{' <<<"$metrics")" 2
-grep -q '^ops_call_label_share{label="delivery",signal="topic"[,}].* 0.65$' <<<"$metrics" ||
-  fail "the exporter does not show delivery's share as 0.65 (see $OUT/label-share-metrics.txt)"
-grep -q '^ops_call_label_share_upper_bound{label="delivery",signal="topic"[,}].* 0.6454$' <<<"$metrics" ||
-  fail "the exporter does not show delivery's upper bound as 0.6454 (see $OUT/label-share-metrics.txt)"
-dbt_ build --select slv_call_label_shares >"$OUT/label-shares.log" 2>&1 || { tail -30 "$OUT/label-shares.log" >&2; fail "rebuild of silver.call_label_shares"; }
-echo "ok: the fixture's label shares have no band yet; the warehouse exporter's collector exports the newest week's banded shares"
+expect "exported label shares" "$(grep -c '^ops_call_label_share{' <<<"$metrics")" 13
+grep -q '^ops_call_label_share{label="delivery",signal="topic"[,}].* 0.3333$' <<<"$metrics" ||
+  fail "the exporter does not show delivery's share as 0.3333 (see $OUT/label-share-metrics.txt)"
+grep -q '^ops_call_label_share_upper_bound{label="delivery",signal="topic"[,}].* 0.1819$' <<<"$metrics" ||
+  fail "the exporter does not show delivery's upper bound as 0.1819 (see $OUT/label-share-metrics.txt)"
+echo "ok: the fixture's newest week has the one label share outside its band; the warehouse exporter's collector exports that week's banded shares"
 
 # Seeded wrong labels fail the agreement test: four golden calls labelled with the wrong topic.
 psql_dev -c "update silver.call_golden_labels set topic = case topic when 'product' then 'delivery' else 'product' end
