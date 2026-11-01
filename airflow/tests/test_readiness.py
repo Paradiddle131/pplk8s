@@ -107,6 +107,19 @@ def test_partner_outreach_watermark_is_the_newest_message_or_reply(mocker):
     assert "max(replied_ts)" in get_first.call_args_list[3].args[0]
 
 
+def test_recruitment_watermark_is_the_newest_stage_change(mocker):
+    changed = datetime(2026, 10, 8, 16, 20, tzinfo=UTC)
+    get_first = mocker.patch.object(PostgresHook, "get_first", return_value=(40, changed))
+    result = readiness.check_extraction(
+        [{"source": "synthetic", "entity": "applications", "pages": 1, "rows": 40}],
+        "run-1",
+        START,
+        END,
+    )
+    assert result["watermark"] == changed.isoformat()
+    assert "max(stage_ts)" in get_first.call_args.args[0]
+
+
 def test_check_extraction_matches_rows_and_returns_watermark(mocker):
     latest = datetime(2026, 10, 8, 23, 59, tzinfo=UTC)
     get_first = mocker.patch.object(

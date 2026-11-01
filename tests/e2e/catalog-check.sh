@@ -39,18 +39,18 @@ echo "ok: fixtures loaded into $DB"
 
 # Rebuilt from scratch, so a comment can only come from this build's persist_docs.
 psql_dev -c "set client_min_messages = warning" -c "drop schema if exists gold cascade" -c "drop schema if exists exposed cascade"
-dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:tlc --vars '{data_month: 2024-12}' >"$OUT/build.log" 2>&1 ||
-  { tail -30 "$OUT/build.log" >&2; fail "dbt build of the sales, returns, finance, marketing, customer-actions, partner-outreach and tlc models"; }
+dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:tlc --vars '{data_month: 2024-12}' >"$OUT/build.log" 2>&1 ||
+  { tail -30 "$OUT/build.log" >&2; fail "dbt build of the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and tlc models"; }
 # The drop took the agents' schema grants with it; give them back, as make agent-eval does.
 psql_dev -c "set client_min_messages = warning" -f /docker-entrypoint-initdb.d/01-schemas.sql
 make -s -C "$REPO" agent-warehouse DBT_DBNAME="$DB" >"$OUT/agent-warehouse.log" 2>&1 ||
   { tail -30 "$OUT/agent-warehouse.log" >&2; fail "make agent-warehouse"; }
-echo "ok: sales, returns, finance, marketing, customer actions, partner outreach and tlc (2024-12) built; agent roles granted again"
+echo "ok: sales, returns, finance, marketing, customer actions, partner outreach, recruitment and tlc (2024-12) built; agent roles granted again"
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
   { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog against $DB"; }
-grep -q "13 public models, 30 metrics and 10 glossary terms" "$OUT/catalog.log" ||
-  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 13 public models, 30 metrics and 10 glossary terms"; }
+grep -q "15 public models, 34 metrics and 11 glossary terms" "$OUT/catalog.log" ||
+  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 15 public models, 34 metrics and 11 glossary terms"; }
 grep -q "check_catalog: every public model, metric, glossary term and saved query is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
 echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 

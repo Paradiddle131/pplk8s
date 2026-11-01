@@ -33,7 +33,8 @@ def test_hello_structure(bag):
 
 
 @pytest.fixture(
-    scope="module", params=["sales", "marketing", "customer_actions", "partner_outreach"]
+    scope="module",
+    params=["sales", "marketing", "customer_actions", "partner_outreach", "recruitment"],
 )
 def elt(request, bag):
     """The ELT DAGs the shared builder makes (PLAN.md D38): (pipeline, DAG)."""
@@ -267,6 +268,7 @@ def test_elt_dbt_stages_select_only_their_pipelines_models(elt):
         "marketing_elt",
         "customer_actions_elt",
         "partner_outreach_elt",
+        "recruitment_elt",
         "returns_file_arrival",
         "finance_daily",
         "tlc_monthly",

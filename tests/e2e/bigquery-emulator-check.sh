@@ -3,7 +3,7 @@
 # engine, not only compiles for one. On an empty emulator (Compose profile `bigquery`) it
 #   - copies the dev fixture's sources from Postgres dbt_dev into the emulator,
 #   - runs `dbt build` of the sales, returns, finance, marketing and semantic models, tests
-#     included, on the `bigquery_emulator` target, with the project unchanged; the 44 layer hops
+#     included, on the `bigquery_emulator` target, with the project unchanged; the 51 layer hops
 #     (semantic/PLAN.md SL-9) among them reconcile there,
 #   - queries the metrics through MetricFlow on the emulator, and asserts they equal the
 #     hand-written aggregates the same build wrote there: the eight sales metrics by day against
@@ -12,6 +12,8 @@
 #     customer-actions metrics (actions per type, engaged customers over 7 and 28 days, the site funnel)
 #     against gold.customer_actions_daily and gold.customer_engagement_daily (SL-15); the outreach
 #     metrics against gold.partner_outreach_daily and the activation list (SL-16).
+#   - asserts the recruitment metrics and candidates_in_stage by stage (MetricFlow's SCD join) against gold, after
+#     one snapshot of every extract; the emulator cannot replay them one at a time (SL-17),
 #   - builds the migration rehearsal there too (semantic/PLAN.md SL-11): migration.parity holds the
 #     same report as on Postgres, and the gate on each consumer's switch passes the lab's state.
 #   - creates the semantic agent's audit table there with the same entry point as on Postgres
@@ -50,13 +52,13 @@ run_ --with 'psycopg[binary]==3.3.6' python -I scripts/fixture_to_bigquery.py \
   fail "copying the fixture into the emulator"
 echo "ok: fixture sources copied into the emulator"
 
-run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
   { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
 echo "ok: dbt build on the emulator: $summary"
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
-[ "$hops" -eq 44 ] || fail "expected the 44 layer hops to pass on the emulator, got $hops"
-echo "ok: the 44 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+[ "$hops" -eq 51 ] || fail "expected the 51 layer hops to pass on the emulator, got $hops"
+echo "ok: the 51 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 grep -q " PASS consumers_switch_on_parity " "$OUT/build.log" || fail "the migration gate did not pass on the emulator"
 
 # The agent's warehouse objects through the same macro as on Postgres; a second run changes nothing.
@@ -196,5 +198,44 @@ print("\n".join(bad) or f"ok: the sales metrics equal gold.daily_sales and expos
       " reports as on Postgres, on the emulator")
 sys.exit(1 if bad else 0)
 EOF
+
+# Recruitment (SL-17): the build above snapshotted every extract at once, so the history holds each candidate's newest
+# stage; the metrics against their gold oracles. A replay extract by extract, as semantic-check runs on Postgres, does
+# not run here: the snapshot's MERGE succeeds, then the emulator panics dropping dbt's staging table (DROP TABLE), and
+# the client retries it until the run is killed.
+bq_() {
+  run_ python -I - "$ENDPOINT" "$@" <<'EOF'
+import sys
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+
+client = bigquery.Client(project="pplk8s-lab", credentials=AnonymousCredentials(),
+                         client_options=ClientOptions(api_endpoint=sys.argv[1]))
+for sql in sys.argv[2:]:
+    for row in client.query(sql).result():
+        print(" ".join("" if v is None else str(v) for v in row))
+EOF
+}
+run_ mf query --metrics candidates_in_stage --group-by metric_time__day,candidate__stage \
+  --order metric_time__day,candidate__stage --csv "$OUT/in_stage.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of candidates_in_stage by stage on the emulator"; }
+run_ mf query --metrics applications,hires,time_to_hire_days --group-by metric_time__day --order metric_time__day \
+  --csv "$OUT/recruitment.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the recruitment metrics on the emulator"; }
+# A day before a candidate's first snapshot has no stage: gold leaves it out, MetricFlow groups it under none.
+mf_in_stage=$(tail -n +2 "$OUT/in_stage.csv" | tr -d '\r' | awk -F, '$2 != "" {print substr($1, 1, 10) "," $2 "," $3}' | sort | paste -sd ' ')
+gold_in_stage=$(bq_ "select string_agg(concat(cast(stage_date as string), ',', stage, ',', cast(candidates as string)), ' '
+  order by cast(stage_date as string), stage) from gold.candidates_in_stage_daily")
+[ -n "$gold_in_stage" ] && [ "$mf_in_stage" = "$gold_in_stage" ] ||
+  fail "candidates_in_stage by stage on the emulator [$mf_in_stage] != gold.candidates_in_stage_daily [$gold_in_stage]"
+mf_recruitment=$(tail -n +2 "$OUT/recruitment.csv" | tr -d '\r' |
+  awk -F, '{printf "%s,%d,%d,%s\n", substr($1, 1, 10), $2, $3, ($4 == "" ? "" : sprintf("%.4f", $4))}' | sort | paste -sd ' ')
+gold_recruitment=$(bq_ "select string_agg(concat(cast(recruitment_date as string), ',', cast(applications as string), ',',
+  cast(hires as string), ',', coalesce(format('%.4f', cast(time_to_hire_days as float64)), '')), ' ' order by recruitment_date)
+  from gold.recruitment_daily")
+[ "$mf_recruitment" = "$gold_recruitment" ] ||
+  fail "the recruitment metrics on the emulator [$mf_recruitment] != gold.recruitment_daily [$gold_recruitment]"
+echo "ok: the snapshot builds on the emulator; candidates_in_stage by stage equals gold.candidates_in_stage_daily and the recruitment metrics gold.recruitment_daily"
 
 echo "PASS: BigQuery emulator check"

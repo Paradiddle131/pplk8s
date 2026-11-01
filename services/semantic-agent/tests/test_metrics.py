@@ -16,9 +16,11 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "acting_customers",
         "ad_clicks",
         "ad_spend_eur",
+        "applications",
         "booking_value_eur",
         "bookings",
         "cancellation_rate",
+        "candidates_in_stage",
         "cart_sessions",
         "cart_to_checkout_rate",
         "checkout_sessions",
@@ -28,6 +30,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "customers_distinct",
         "engaged_customers_28d",
         "engaged_customers_7d",
+        "hires",
         "lead_to_booking_rate",
         "leads",
         "messages_replied",
@@ -42,6 +45,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "returns_eur",
         "revenue_eur",
         "site_sessions",
+        "time_to_hire_days",
         "view_to_cart_rate",
     ]
 

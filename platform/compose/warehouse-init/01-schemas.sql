@@ -38,6 +38,7 @@ INSERT INTO ops.product_deadlines (product, max_age) VALUES
   ('marketing', '36 hours'),
   ('customer_actions', '36 hours'),
   ('partner_outreach', '36 hours'),
+  ('recruitment', '36 hours'),
   ('finance.exposed', '36 hours')
 ON CONFLICT (product) DO UPDATE SET max_age = EXCLUDED.max_age;
 

@@ -1,5 +1,5 @@
 -- Generic test, the metric -> gold hop (semantic/PLAN.md SL-9): a hand-written column equals the simple
--- metric of the same meaning, per day. The metric is rendered from dbt's graph, as the YAML defines it:
+-- metric of the same meaning, per day; an average metric's column holds one row per day, as the day's average. The metric is rendered from dbt's graph, as the YAML defines it:
 -- its aggregation over its semantic model's relation, its filters, and its agg_time_dimension as the
 -- day, so a metric whose YAML drifts from the hand-written SQL fails the build. MetricFlow itself does
 -- not run in dbt build; tests/e2e/semantic-check.sh compares its own queries.
@@ -45,7 +45,7 @@
 
     {%- set agg = params.agg %}
     {%- set expr = found[0].type_params.expr %}
-    {%- set aggregate = {'sum': 'sum(' ~ expr ~ ')', 'count': 'count(' ~ expr ~ ')', 'count_distinct': 'count(distinct ' ~ expr ~ ')'}.get(agg) %}
+    {%- set aggregate = {'sum': 'sum(' ~ expr ~ ')', 'count': 'count(' ~ expr ~ ')', 'count_distinct': 'count(distinct ' ~ expr ~ ')', 'average': 'avg(' ~ expr ~ ')'}.get(agg) %}
     {%- if not aggregate %}
         {{ exceptions.raise_compiler_error("matches_metric: " ~ metric ~ " aggregates with " ~ agg ~ ", which the test does not render") }}
     {%- endif %}

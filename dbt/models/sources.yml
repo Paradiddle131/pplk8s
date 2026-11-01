@@ -90,6 +90,13 @@ sources:
         columns:
           - name: reply_id
             tests: [not_null]
+      - name: synthetic_applications
+        description: >
+          Every candidate who had applied by the end of the run's interval, in the hiring stage they were in then and
+          since when (stage_ts); the source keeps no stage history (synthetic recruitment, semantic/PLAN.md SL-17).
+        columns:
+          - name: candidate_id
+            tests: [not_null]
       - name: partner_returns
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).
