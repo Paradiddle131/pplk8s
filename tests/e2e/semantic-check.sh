@@ -6,7 +6,8 @@
 #   - the daily order metrics equal gold.daily_sales row for row, cancellation_rate included,
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
-#     exposed.channel_performance_daily, and over the whole fixture cost per lead and per booking are
+#     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
+#     and over the whole fixture cost per lead and per booking are
 #     total spend over the total count, not an average of the daily ratios (SL-8),
 #   - the order metrics by customer country equal exposed.sales_by_country_daily, and revenue by
 #     signup cohort equals a direct join of silver (the customers semantic model),
@@ -51,8 +52,8 @@ dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer
   { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
 echo "ok: sales, returns, finance, marketing, customer actions, partner outreach and recruitment built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 51
-echo "ok: the 51 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 56
+echo "ok: the 56 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
@@ -121,6 +122,22 @@ expect "spend over count, from gold" "$(psql_dev -c "
 expect "the average of exposed's daily cost per booking (what the metric is not)" "$(psql_dev -c "
   select round(avg(cost_per_booking_eur), 2) from (select activity_date, sum(ad_spend_eur) / nullif(sum(bookings), 0) as cost_per_booking_eur from exposed.channel_performance_daily group by activity_date) d")" "152.50"
 echo "ok: the marketing metrics equal gold.marketing_daily and exposed.channel_performance_daily; cost per booking 130.00 over the fixture, not the daily average 152.50"
+
+# The lead-to-booking rate by the lead's creation day against gold.lead_conversion_daily (SL-9's
+# conversion hop renders the same rate inside dbt build; this compares MetricFlow's own query).
+mf_ query --metrics leads,lead_to_booking_rate --group-by metric_time__day --order metric_time__day \
+  --csv "$OUT/lead_conversion.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of the lead-to-booking rate"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.lead_conversion" \
+  -c "create table semantic_check.lead_conversion (day date, leads bigint, lead_to_booking_rate numeric)"
+psql_dev -c "\\copy semantic_check.lead_conversion from stdin with (format csv, header true)" <"$OUT/lead_conversion.csv"
+expect "lead-to-booking rate vs gold.lead_conversion_daily (rows differing)" "$(psql_dev -c "
+  with gold as (select created_date, leads, round(lead_to_booking_rate, 6) from gold.lead_conversion_daily),
+       mf as (select day, leads, round(coalesce(lead_to_booking_rate, 0), 6) from semantic_check.lead_conversion)
+  select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
+expect "the fixture's daily lead-to-booking rates" "$(psql_dev -c "
+  select string_agg(created_date || ' ' || round(lead_to_booking_rate, 2), ', ' order by created_date) from gold.lead_conversion_daily")" \
+  "2026-10-01 0.33, 2026-10-02 0.25"
+echo "ok: the lead-to-booking rate by creation day equals gold.lead_conversion_daily (0.33, 0.25)"
 
 # Customers: the orders metrics group by the customer's country and signup cohort through the
 # customer entity alone, and equal exposed.sales_by_country_daily and a direct join of silver.
@@ -276,7 +293,7 @@ grep -Eq "incremental model silver.customer_actions .*MERGE 21" "$OUT/incrementa
   { grep "silver.customer_actions" "$OUT/incremental.log" >&2; fail "silver.customer_actions did not merge the 21 events of the lookback"; }
 expect "silver after the late load: rows, distinct events, E-0022's day, E-0021's run" "$late_state" "22 22 2026-10-01 run-act-5"
 expect "2026-10-01's view-to-cart rate with the late page view" "$late_rate" "0.67"
-expect "hops after the late load" "$(grep -c " PASS hop_" "$OUT/incremental.log")" 9
+expect "hops after the late load" "$(grep -c " PASS hop_" "$OUT/incremental.log")" 11
 dbt_ build --select tag:customer_actions --full-refresh >"$OUT/incremental.log" 2>&1 ||
   { tail -30 "$OUT/incremental.log" >&2; fail "full refresh of the customer-actions models"; }
 expect "silver after the full refresh" "$(psql_dev -c "select count(*) from silver.customer_actions")" 21

@@ -211,6 +211,35 @@ models:
                 metric: booking_value_eur
                 time_column: activity_date
 
+  - name: gld_lead_conversion_daily
+    description: One row per day a CRM lead was created, with the leads of that day and those that booked within 30 days of being created. A per-day rate; over a period use the metric lead_to_booking_rate. Alias gold.lead_conversion_daily.
+    columns:
+      - name: created_date
+        description: Natural key; the UTC day the leads were created.
+        data_type: date
+        tests: [not_null, unique]
+      - name: leads
+        description: CRM leads created that day, over all channels.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_leads_to_gld_lead_conversion_daily
+              arguments:
+                metric: leads
+                time_column: created_date
+      - name: booked_leads
+        description: Of those leads, the ones that booked on their creation day or in the 29 days after.
+        data_type: bigint
+      - name: lead_to_booking_rate
+        description: Share of that day's leads that booked within 30 days of being created.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_lead_to_booking_rate_to_gld_lead_conversion_daily
+              arguments:
+                metric: lead_to_booking_rate
+                time_column: created_date
+
   - name: gld_customer_actions_daily
     description: One row per (activity_date, action_type) with any site or CRM action; an action that arrived late counts on the day it happened. Alias gold.customer_actions_daily.
     tests:
@@ -297,9 +326,21 @@ models:
       - name: view_to_cart_rate
         description: Share of that day's page-view sessions that added to cart that day or the next; NULL without page views.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_view_to_cart_rate_to_gld_customer_engagement_daily
+              arguments:
+                metric: view_to_cart_rate
+                time_column: activity_date
       - name: cart_to_checkout_rate
         description: Share of that day's add-to-cart sessions that checked out that day or the next; NULL without adds to cart.
         data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_cart_to_checkout_rate_to_gld_customer_engagement_daily
+              arguments:
+                metric: cart_to_checkout_rate
+                time_column: activity_date
 
   - name: gld_partner_outreach_daily
     description: One row per day with any outreach message sent or reply received. Per-day rate; over a period use the metric reply_rate. Alias gold.partner_outreach_daily.
