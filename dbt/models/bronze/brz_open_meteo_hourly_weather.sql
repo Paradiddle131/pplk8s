@@ -2,11 +2,11 @@
 
 select
     cast(location as {{ dbt.type_string() }}) as location,
-    cast(latitude as numeric(8,4)) as latitude,
-    cast(longitude as numeric(8,4)) as longitude,
+    {{ cast_decimal("latitude", 8, 4) }} as latitude,
+    {{ cast_decimal("longitude", 8, 4) }} as longitude,
     cast(observed_at as {{ type_timestamptz() }}) as observed_at,
-    cast(temperature_c as numeric(5,2)) as temperature_c,
-    cast(precipitation_mm as numeric(6,2)) as precipitation_mm,
+    {{ cast_decimal("temperature_c", 5, 2) }} as temperature_c,
+    {{ cast_decimal("precipitation_mm", 6, 2) }} as precipitation_mm,
     _run_id,
     _interval_start,
     _interval_end,

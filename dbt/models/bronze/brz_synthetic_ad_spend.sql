@@ -5,7 +5,7 @@ select
     cast(campaign_id as integer) as campaign_id,
     cast(impressions as integer) as impressions,
     cast(clicks as integer) as clicks,
-    cast(spend as numeric(12,2)) as spend,
+    {{ cast_decimal("spend", 12, 2) }} as spend,
     cast(currency as {{ dbt.type_string() }}) as currency,
     _run_id,
     _interval_start,

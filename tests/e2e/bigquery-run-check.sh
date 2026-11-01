@@ -54,8 +54,23 @@ case "$BQ_TARGET" in
     export DBT_TARGET=bigquery_emulator BQ_API_ENDPOINT=http://localhost:9050 BQ_WHERE="the emulator" ;;
   gcp)
     : "${GCP_PROJECT:?GCP_PROJECT is unset: the live run needs the id of the lab project (platform/gcp/README.md)}"
-    # Where a proxy injects the credential (cloud sessions), a placeholder token stands in for ADC.
-    [ "${CLOUDSDK_AUTH_ACCESS_TOKEN:-}" = proxy-injected ] && export GCP_ACCESS_TOKEN=proxy-injected
+    # The credential, as platform/gcp/tofu.sh picks it, first that holds: GCP_ACCESS_TOKEN already set; a cloud
+    # session's proxy-injected token (CLOUDSDK_AUTH_ACCESS_TOKEN); a short-lived token of a signed-in gcloud
+    # account ($GCP_ACCOUNT, default the active one: a laptop, no application-default login needed, #275; it
+    # lives an hour, the run about a quarter of that); else application default credentials.
+    if [ -z "${GCP_ACCESS_TOKEN:-}" ]; then
+      if [ -n "${CLOUDSDK_AUTH_ACCESS_TOKEN:-}" ]; then
+        export GCP_ACCESS_TOKEN=$CLOUDSDK_AUTH_ACCESS_TOKEN
+      elif command -v gcloud >/dev/null; then
+        account=${GCP_ACCOUNT:-$(gcloud config get-value account 2>/dev/null)}
+        if [ -n "$account" ]; then
+          GCP_ACCESS_TOKEN=$(gcloud auth print-access-token --account="$account") ||
+            fail "gcloud auth print-access-token --account=$account"
+          export GCP_ACCESS_TOKEN
+          echo "ok: acting on $GCP_PROJECT as $account (GCP_ACCOUNT=<account> picks another)"
+        fi
+      fi
+    fi
     unset BQ_API_ENDPOINT
     export DBT_TARGET=gcp BQ_WHERE="BigQuery ($GCP_PROJECT)" ;;
   *) fail "BQ_TARGET is $BQ_TARGET, not emulator or gcp" ;;
@@ -439,6 +454,9 @@ run_ mf query --metrics cost_per_lead_eur,cost_per_booking_eur --csv "$OUT/marke
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing ratios on $BQ_WHERE"; }
 parity_ platform
 
+# What every part compiled keeps BigQuery's rules the emulator lets through (a parameterized CAST, #275).
+uvx --quiet --with sqlglot==27.28.1 python -I "$BQ_LIB/bigquery_sql_rules.py" "$PROJECT_DIR/target/compiled" ||
+  fail "the SQL compiled on $BQ_WHERE breaks BigQuery's rules"
 # The recruitment replay's builds are not counted: the build over every extract holds the same hops.
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
 [ "$hops" -eq 63 ] || fail "expected the 63 layer hops to pass on $BQ_WHERE, got $hops"

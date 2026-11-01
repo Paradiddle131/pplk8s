@@ -38,25 +38,8 @@ echo "ok: dbt parse and mf validate-configs --skip-dw pass on the bigquery targe
 run_ dbt compile --quiet --no-introspect --no-populate-cache \
   --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
   { tail -20 "$OUT/compile.log" >&2; fail "dbt compile of the semantic path on the bigquery target"; }
-uvx --quiet --with "$SQLGLOT" python -I - "$PROJECT/target/compiled/pplk8s/models" <<'EOF' || fail "compiled SQL is not BigQuery"
-import pathlib, re, sys
-import sqlglot
-
-# Postgres spellings the dialect macros replace; sqlglot alone reads some of them leniently.
-POSTGRES_ONLY = re.compile(r"at time zone|generate_series\(|timestamptz|::| as text\)", re.IGNORECASE)
-models = [f for f in sorted(pathlib.Path(sys.argv[1]).rglob("*.sql")) if ".yml" not in str(f)]
-bad = []
-for f in models:
-    sql = "\n".join(line for line in f.read_text().splitlines() if not line.lstrip().startswith("--"))
-    try:
-        sqlglot.parse(sql, read="bigquery", error_level=sqlglot.ErrorLevel.RAISE)
-    except sqlglot.errors.ParseError as e:
-        bad.append(f"{f.name}: {str(e).splitlines()[0][:120]}")
-    if found := POSTGRES_ONLY.search(sql):
-        bad.append(f"{f.name}: Postgres-only {found[0]!r}")
-print("\n".join(bad) or f"{len(models)} compiled models parse as BigQuery")
-sys.exit(1 if bad or not models else 0)
-EOF
+uvx --quiet --with "$SQLGLOT" python -I "$REPO/tests/e2e/lib/bigquery_sql_rules.py" "$PROJECT/target/compiled/pplk8s/models" ||
+  fail "compiled SQL breaks BigQuery's rules"
 echo "ok: the semantic path compiles to BigQuery SQL"
 for model in slv_call_transcript_labels slv_call_golden_labels; do
   compiled="$PROJECT/target/compiled/pplk8s/models/silver/$model.sql"

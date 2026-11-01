@@ -4,7 +4,7 @@ select
     cast(booking_id as {{ dbt.type_string() }}) as booking_id,
     cast(lead_id as {{ dbt.type_string() }}) as lead_id,
     cast(booked_ts as {{ type_timestamptz() }}) as booked_ts,
-    cast(amount as numeric(12,2)) as amount,
+    {{ cast_decimal("amount", 12, 2) }} as amount,
     cast(currency as {{ dbt.type_string() }}) as currency,
     _run_id,
     _interval_start,

@@ -3,8 +3,8 @@
 select
     cast(snapshot_date as date) as snapshot_date,
     cast(campaign_id as integer) as campaign_id,
-    cast(budget_eur as numeric(12,2)) as budget_eur,
-    cast(remaining_eur as numeric(12,2)) as remaining_eur,
+    {{ cast_decimal("budget_eur", 12, 2) }} as budget_eur,
+    {{ cast_decimal("remaining_eur", 12, 2) }} as remaining_eur,
     _run_id,
     _interval_start,
     _interval_end,
