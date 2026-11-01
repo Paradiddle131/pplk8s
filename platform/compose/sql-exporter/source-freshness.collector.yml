@@ -2,7 +2,8 @@
 # landed table in ops.source_freshness (dbt/macros/source_freshness.sql), written by the source-freshness
 # CronJob. The thresholds stay in dbt/models/sources.yml; SourceStale fires on the status dbt gave, and
 # SourceFreshnessNotChecked when no check has been recorded for two hours.
-# Before the first check the table is empty (`make services-up` creates it) and both series are absent.
+# Before the first check the table is empty (`make services-up` creates it) and both series are absent;
+# SourceFreshnessNotChecked's second rule fires when they stay absent for two hours.
 collector_name: source_freshness
 
 queries:

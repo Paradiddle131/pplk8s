@@ -670,6 +670,7 @@ Observed on the lab (2026-10-31, kind, `make workloads-up` then a Job created fr
 
 Detection: `SourceStale`, one alert per table, labelled `source`, `table` and `status`; its value is the age of the table's newest row ("could not be checked" for a `runtime error`, "was never loaded" for an empty table).
 `SourceFreshnessNotChecked` fires when no verdict has landed for two hours: the CronJob is suspended, its Jobs fail (`kubectl -n workloads get jobs -l pplk8s/stage=source-freshness`), or the dbt image is missing; until it clears, `SourceStale` shows the last verdict.
+It also fires when no verdict was ever recorded, two hours after the warehouse exporter came up with `ops.source_freshness` still empty: the CronJob has failed from its first run.
 Both come from the warehouse's `sql_exporter` (`ops_source_freshness_checked_timestamp_seconds`, `ops_source_max_loaded_at_seconds`); if that exporter is gone, `AirflowReadinessMetricsMissing` fires instead.
 The Job succeeds when dbt reports stale sources (exit 1), so a stale source is not also `KubeJobFailed`; it fails when dbt cannot run at all (exit 2).
 

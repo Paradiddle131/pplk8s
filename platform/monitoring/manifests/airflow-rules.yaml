@@ -287,6 +287,19 @@ spec:
           annotations:
             summary: "dbt source freshness last recorded a result {{ $value | humanizeDuration }} ago; SourceStale is blind."
             runbook: docs/runbook.md#13-a-source-stops-flowing
+        - alert: SourceFreshnessNotChecked
+          # The same alert when no check was ever recorded: an empty ops.source_freshness exports no series,
+          # so the rule above has nothing to take the max of (a CronJob failing from its first run). Scoped
+          # to a scraped warehouse exporter, which AirflowReadinessMetricsMissing covers otherwise. The 2 h
+          # hold outlasts a fresh lab's wait for its first run at minute 17, as the rule above allows two hours.
+          expr: |
+            absent(ops_source_freshness_checked_timestamp_seconds)
+              and on () (max(up{instance="warehouse-sql-exporter:9399"}) == 1)
+          for: 2h
+          labels: {severity: warning}
+          annotations:
+            summary: "dbt source freshness has never recorded a result; SourceStale is blind."
+            runbook: docs/runbook.md#13-a-source-stops-flowing
         - alert: CallLabelShareDrift
           # Label drift the data shows (semantic/PLAN.md SL-18): in the newest week, a label's share of the
           # labelled calls left the band its trailing weeks expect (dbt/models/silver/slv_call_label_shares.sql,
