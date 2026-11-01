@@ -94,6 +94,12 @@ metrics:
     base_metric: leads
     conversion_metric: bookings
     window: 30 days
+  - name: reply_rate
+    description: Share of outreach messages that got a reply, counted on the day the message was sent (messages replied over messages sent for the whole period asked); the one definition of reply rate.
+    label: Reply rate
+    type: ratio
+    numerator: messages_replied
+    denominator: messages_sent
   - name: engaged_customers_7d
     description: Distinct customers with any site or CRM action in the 7 days ending on the day (that day and the 6 before); weekly engaged customers.
     label: Engaged customers (7 days)

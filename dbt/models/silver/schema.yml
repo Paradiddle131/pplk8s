@@ -654,3 +654,246 @@ models:
         type: simple
         agg: count_distinct
         expr: "case when action_type = 'checkout' then session_id end"
+
+  # Partner outreach (semantic/PLAN.md SL-16): partners, their contacts, the messages an outreach
+  # automation sends and the replies. Contact details are personal data, marked `meta.pii`; no
+  # semantic model sits on the contacts, so no metric or dimension can name one.
+  - name: slv_partners
+    description: One row per partner the business refers work with, latest load wins. Alias silver.partners.
+    semantic_model:
+      enabled: true
+      name: partners
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_partners
+          arguments:
+            bronze: ref('brz_synthetic_partners')
+            keys: [partner_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: partner_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: partner
+      - name: name
+        description: The partner's name.
+      - name: partner_type
+        description: clinic, agency or reseller.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['clinic', 'agency', 'reseller']
+        dimension:
+          type: categorical
+      - name: country
+        description: ISO-2 country of the partner.
+        dimension:
+          type: categorical
+
+  - name: slv_partner_contacts
+    description: >
+      One row per partner contact in its newest state: the latest updated_ts wins, then the latest load, so a
+      backfilled older snapshot never undoes an opt-out. reachable is consent given and no opt-out. Name, email and
+      phone are personal data (meta.pii); only the outreach automation's activation list may carry them on.
+      Alias silver.partner_contacts.
+    columns:
+      - name: contact_id
+        description: Natural key.
+        tests: [not_null, unique]
+      - name: partner_id
+        description: The partner the contact works at; must exist in slv_partners.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_partners')
+                field: partner_id
+      - name: contact_name
+        description: The contact's full name.
+        config:
+          meta: {pii: true}
+      - name: email
+        description: The contact's email address.
+        config:
+          meta: {pii: true}
+      - name: phone
+        description: The contact's phone number.
+        config:
+          meta: {pii: true}
+      - name: preferred_channel
+        description: email, phone or sms; how the automation reaches the contact.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['email', 'phone', 'sms']
+      - name: consent
+        description: Whether the contact agreed to be contacted.
+        tests: [not_null]
+      - name: opted_out_ts
+        description: When the contact opted out; NULL while they have not.
+      - name: reachable
+        description: Consent given and no opt-out; the automation may contact only these.
+        tests: [not_null]
+      - name: updated_ts
+        description: When the source last changed the contact's consent or opt-out.
+        tests: [not_null]
+
+  - name: slv_outreach_messages
+    description: >
+      One row per outreach message, latest load wins, with its contact's partner and its first reply's time, which
+      a later run fills in when the reply arrives. sent_date is sent_ts in UTC. Alias silver.outreach_messages.
+    config:
+      meta:
+        glossary:
+          - term: Reply rate
+            description: >-
+              The share of outreach messages that got a reply, counted on the day the message was sent, so a day's
+              rate rises as late replies arrive. It is not replies divided by messages on the same day, which mixes
+              replies to earlier messages in.
+            synonyms: [response rate, outreach response rate]
+            metrics: [reply_rate, messages_replied, messages_sent]
+    semantic_model:
+      enabled: true
+      name: outreach_messages
+    agg_time_dimension: sent_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_outreach_messages
+          arguments:
+            bronze: ref('brz_synthetic_outreach_messages')
+            keys: [message_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: message_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: outreach_message
+      - name: contact_id
+        description: The contact the message went to; must exist in slv_partner_contacts.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_partner_contacts')
+                field: contact_id
+      - name: partner_id
+        description: The partner of the message's contact.
+        tests: [not_null]
+        entity:
+          type: foreign
+          name: partner
+      - name: channel
+        description: email, phone or sms.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['email', 'phone', 'sms']
+        dimension:
+          type: categorical
+      - name: sent_ts
+        description: When the message was sent.
+        tests: [not_null]
+      - name: sent_date
+        description: UTC date the message was sent.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: first_replied_ts
+        description: When the message's first reply arrived; NULL while it has none.
+    metrics:
+      - name: messages_sent
+        description: Outreach messages sent to partner contacts, on the day they were sent.
+        label: Messages sent
+        type: simple
+        agg: count
+        expr: message_id
+      - name: messages_replied
+        description: Outreach messages that got a reply, on the day the message was sent; grows as late replies arrive.
+        label: Messages replied
+        type: simple
+        agg: count
+        expr: first_replied_ts
+
+  - name: slv_outreach_replies
+    description: >
+      One row per reply to an outreach message, latest load wins, with its message's partner. A reply whose message
+      is not loaded (sent before the first loaded interval) keeps a NULL partner_id, and its message tests warn
+      rather than fail. replied_date is replied_ts in UTC. Alias silver.outreach_replies.
+    config:
+      meta:
+        glossary:
+          - term: Engaged partner
+            description: >-
+              A partner at least one of whose contacts replied to an outreach message in the period asked. A reply
+              to a message sent before the first loaded day counts as a reply but names no partner.
+            synonyms: [responsive partners, partners who replied, active partners]
+            metrics: [partners_engaged]
+    semantic_model:
+      enabled: true
+      name: outreach_replies
+    agg_time_dimension: replied_date
+    tests:
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_outreach_replies
+          arguments:
+            bronze: ref('brz_synthetic_outreach_replies')
+            keys: [reply_id]
+            tie_breaker: _run_id
+          config:
+            tags: [silver, partner_outreach]
+    columns:
+      - name: reply_id
+        description: Natural key.
+        tests: [not_null, unique]
+        entity:
+          type: primary
+          name: outreach_reply
+      - name: message_id
+        description: The message replied to; warns when it is not loaded yet.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_outreach_messages')
+                field: message_id
+              config:
+                severity: warn
+        entity:
+          type: foreign
+          name: outreach_message
+      - name: partner_id
+        description: The partner of the replying contact; NULL when the message is not loaded.
+        entity:
+          type: foreign
+          name: partner
+      - name: replied_ts
+        description: When the reply arrived.
+        tests: [not_null]
+      - name: replied_date
+        description: UTC date the reply arrived.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+    metrics:
+      - name: replies
+        description: Replies to outreach messages, on the day they arrived.
+        label: Replies
+        type: simple
+        agg: count
+        expr: reply_id
+      - name: partners_engaged
+        description: Distinct partners with at least one reply from their contacts in the period asked.
+        label: Partners engaged
+        type: simple
+        agg: count_distinct
+        expr: partner_id

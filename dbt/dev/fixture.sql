@@ -20,6 +20,10 @@ DROP TABLE IF EXISTS ds_source.synthetic_ad_spend CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_leads CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_bookings CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_customer_actions CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_partners CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_partner_contacts CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_outreach_messages CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_outreach_replies CASCADE;
 
 CREATE TABLE ds_source.synthetic_customers (
     customer_id integer,
@@ -304,3 +308,103 @@ INSERT INTO ds_source.synthetic_customer_actions VALUES
     ('E-0019', 2, 'S-0009', 'page_view', 'site', '2026-10-03 15:00+00', '2026-10-03 15:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
     ('E-0020', 9, NULL, 'email_open', 'crm', '2026-10-02 19:00+00', '2026-10-03 05:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00'),
     ('E-0021', 3, 'S-0010', 'page_view', 'site', '2026-10-03 18:00+00', '2026-10-03 18:00+00', 'run-act-4', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://customer_actions', '2026-10-04 00:30+00');
+
+-- Partner outreach (semantic/PLAN.md SL-16): three partners and seven contacts, snapshotted per run. C-0201 never
+-- consented; C-0102 opts out on 2026-10-02 (run-out-2), and run-out-1b, a backfill of 2026-10-01 loaded last,
+-- lands C-0102's older snapshot, which silver must not let undo the opt-out. Messages M-0002 to M-0007 run from
+-- 2026-10-01 to 2026-10-03 (M-0001 on 2026-09-20, outside the 7-day cooldown); R-0002 replies the day after its
+-- message's day, and R-0005 replies to a message sent before the first loaded day. The activation list as of the
+-- newest message (2026-10-03 09:00) is C-0103 (never messaged) and C-0301 (messaged 2026-09-20).
+CREATE TABLE ds_source.synthetic_partners (
+    partner_id integer,
+    name text,
+    partner_type text,
+    country text,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_partners VALUES
+    (1, 'Northwind Clinics', 'clinic', 'NL', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00'),
+    (2, 'Rhein Referrals', 'agency', 'DE', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00'),
+    (3, 'Loire Wellness', 'reseller', 'FR', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partners', '2026-09-21 00:50+00');
+
+CREATE TABLE ds_source.synthetic_partner_contacts (
+    contact_id text,
+    partner_id integer,
+    contact_name text,
+    email text,
+    phone text,
+    preferred_channel text,
+    consent boolean,
+    opted_out_ts timestamptz,
+    updated_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_partner_contacts VALUES
+    ('C-0101', 1, 'Ada de Jong', 'ada.dejong@partner1.example', '+1-555-0111', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0103', 1, 'Chen Smith', 'chen.smith@partner1.example', '+1-555-0113', 'phone', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0201', 2, 'Dilara Kaya', 'dilara.kaya@partner2.example', '+1-555-0121', 'email', false, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0202', 2, 'Elif Yilmaz', 'elif.yilmaz@partner2.example', '+1-555-0122', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0301', 3, 'Finn Dubois', 'finn.dubois@partner3.example', '+1-555-0131', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0302', 3, 'Gwen Brown', 'gwen.brown@partner3.example', '+1-555-0132', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://partner_contacts', '2026-09-21 00:50+00'),
+    ('C-0101', 1, 'Ada de Jong', 'ada.dejong@partner1.example', '+1-555-0111', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, '2026-10-02 15:00+00', '2026-10-02 15:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0103', 1, 'Chen Smith', 'chen.smith@partner1.example', '+1-555-0113', 'phone', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0201', 2, 'Dilara Kaya', 'dilara.kaya@partner2.example', '+1-555-0121', 'email', false, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0202', 2, 'Elif Yilmaz', 'elif.yilmaz@partner2.example', '+1-555-0122', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0301', 3, 'Finn Dubois', 'finn.dubois@partner3.example', '+1-555-0131', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0302', 3, 'Gwen Brown', 'gwen.brown@partner3.example', '+1-555-0132', 'sms', true, NULL, '2026-09-01 00:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://partner_contacts', '2026-10-03 00:50+00'),
+    ('C-0102', 1, 'Bram Visser', 'bram.visser@partner1.example', '+1-555-0112', 'email', true, NULL, '2026-09-01 00:00+00', 'run-out-1b', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://partner_contacts', '2026-10-05 00:50+00');
+
+CREATE TABLE ds_source.synthetic_outreach_messages (
+    message_id text,
+    contact_id text,
+    channel text,
+    sent_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_outreach_messages VALUES
+    ('M-0001', 'C-0301', 'sms', '2026-09-20 10:00+00', 'run-out-0', '2026-09-20 00:00+00', '2026-09-21 00:00+00', 1, 'fixture://outreach_messages', '2026-09-21 00:50+00'),
+    ('M-0002', 'C-0101', 'email', '2026-10-01 09:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0003', 'C-0102', 'email', '2026-10-01 11:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0004', 'C-0202', 'email', '2026-10-01 14:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_messages', '2026-10-02 00:50+00'),
+    ('M-0005', 'C-0101', 'email', '2026-10-02 10:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_messages', '2026-10-03 00:50+00'),
+    ('M-0007', 'C-0302', 'sms', '2026-10-03 08:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_messages', '2026-10-04 00:50+00'),
+    ('M-0006', 'C-0202', 'email', '2026-10-03 09:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_messages', '2026-10-04 00:50+00');
+
+CREATE TABLE ds_source.synthetic_outreach_replies (
+    reply_id text,
+    message_id text,
+    replied_ts timestamptz,
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
+
+INSERT INTO ds_source.synthetic_outreach_replies VALUES
+    ('R-0001', 'M-0002', '2026-10-01 15:00+00', 'run-out-1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://outreach_replies', '2026-10-02 00:50+00'),
+    ('R-0002', 'M-0004', '2026-10-02 09:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_replies', '2026-10-03 00:50+00'),
+    ('R-0003', 'M-0005', '2026-10-02 12:00+00', 'run-out-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://outreach_replies', '2026-10-03 00:50+00'),
+    ('R-0004', 'M-0006', '2026-10-03 16:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00'),
+    ('R-0005', 'M-0000', '2026-10-03 17:00+00', 'run-out-3', '2026-10-03 00:00+00', '2026-10-04 00:00+00', 1, 'fixture://outreach_replies', '2026-10-04 00:50+00');
