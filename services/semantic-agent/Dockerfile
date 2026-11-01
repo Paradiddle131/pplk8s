@@ -15,7 +15,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
-    && uv sync --frozen --no-dev --no-install-project
+    && uv sync --frozen --no-default-groups --no-install-project
 
 FROM python:3.13-slim AS runtime
 RUN groupadd --system --gid 10001 app \
@@ -25,14 +25,15 @@ COPY --from=builder /app/.venv /app/.venv
 # The agents directory `adk api_server` serves: one package per agent, each with its root_agent;
 # only semantic_agent, so the Service lists one app (SL-5: the baseline runs only inside the eval).
 COPY src/semantic_agent /app/agents/semantic_agent
-# The dbt project MetricFlow compiles requests against. Its target (manifest and agent catalog) is
-# written at pod start by the catalog initContainer, for the database the pod reads (SL-3).
+# The dbt project MetricFlow compiles requests against: what `dbt parse` and the catalog read, so not the
+# singular tests in dbt/tests (the catalog reads only generic tests, declared in YAML and macros/). Its target
+# (manifest and agent catalog) is written at pod start by the catalog initContainer, for the database the
+# pod reads (SL-3).
 COPY --from=dbt dbt_project.yml profiles.yml selectors.yml /app/dbt/
 COPY --from=dbt models /app/dbt/models
 COPY --from=dbt macros /app/dbt/macros
 COPY --from=dbt seeds /app/dbt/seeds
 COPY --from=dbt snapshots /app/dbt/snapshots
-COPY --from=dbt tests /app/dbt/tests
 COPY --from=dbt scripts/build_catalog.py /app/dbt/scripts/build_catalog.py
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
