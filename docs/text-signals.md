@@ -84,6 +84,27 @@ So the emulator target must take the recorded path, like Postgres.
 - The free budget bounds the fixture: OpenRouter's free models allow 20 requests a minute and 50 a day below 10 purchased credits, 1,000 a day above ([limits](https://openrouter.ai/docs/api/reference/limits), stated); one call per transcript keeps a 40-transcript fixture inside one day's quota, and a spent quota stops the recording and keeps what it has, as `make agent-eval` does.
 - Airflow does nothing new: the domain's `<pipeline>_elt` DAG lands transcripts through EL Factory and runs the dbt stages (SL-8).
 
+## Built in the lab ([#241](../../../issues/241), semantic/PLAN.md SL-18)
+
+The call-transcripts domain follows the shape above:
+- EL Factory's `synthetic/call_transcripts` lands text only, written from labels it picks first; `call_transcripts_elt` runs it on the shared ELT pattern.
+- `dbt_project.yml`'s `call_label_prompt` holds the prompt, its version (`v1`), the endpoint (`gemini-3.5-flash`) and the thresholds per signal, written before the first comparison.
+- `macros/call_labels.sql` builds the label call: `AI.GENERATE` on a BigQuery target, compiled by `make bigquery-check`; recorded answers on Postgres and the emulator.
+- `slv_call_transcript_labels` and `slv_call_golden_labels` are incremental with `full_refresh: false`; `slv_call_label_agreement` scores each version; `dbt build` fails below a threshold, above the failed-call share or on a label outside its values.
+- The metrics `calls_labelled`, `calls_with_objection`, `positive_calls`, `objection_rate` and `positive_sentiment_share` start "Model-derived", which `check_standard.py` enforces for any metric over a `derived_by: model` column; the glossary term "Model-derived label" explains them.
+
+**Measured on the fixture** (2026-11-01, `make record-call-labels` with `nvidia/nemotron-3.5-super-vl:free`, 14 requests for 15 golden calls, two sharing a text):
+
+| Signal | Accuracy | Kappa | Thresholds (accuracy, kappa) |
+|---|---|---|---|
+| topic | 1.00 | 1.00 | 0.8, 0.7 |
+| objection | 0.87 | 0.76 | 0.8, 0.6 |
+| sentiment | 0.93 | 0.90 | 0.7, 0.5 |
+| next_step | 0.87 | 0.80 | 0.8, 0.7 |
+
+Six of the seven misses are on the three hand-written hard cases: the two-topic call got an objection (timing) and a neutral mood, the sarcastic return was read as negative but its escalation as a follow-up call, and the competitor comparison as a price objection; one generated call's escalation was also read as a follow-up call.
+The scores are one recording on 15 calls, not a model comparison.
+
 ## Unverified
 
 - `AI.GENERATE` on real BigQuery: nothing here ran it, its `output_schema` included; the $0.00 project cannot.

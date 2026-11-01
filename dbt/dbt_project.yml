@@ -111,23 +111,24 @@ seeds:
       +tags: [silver, call_transcripts]
       call_label_golden_set:
         +column_types:
-          transcript_id: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          topic: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          objection: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          sentiment: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          next_step: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
+          transcript_id: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          transcript: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
       call_label_recordings:
         +column_types:
-          transcript_hash: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          prompt_version: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          endpoint: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          model_version: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          topic: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          objection: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          sentiment: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          next_step: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          status: "{{ 'string' if target.type == 'bigquery' else 'text' }}"
-          recorded_at: "{{ 'timestamp' if target.type == 'bigquery' else 'timestamptz' }}"
+          transcript_hash: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          prompt_version: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          endpoint: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          model_version: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          topic: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          objection: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          sentiment: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          next_step: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          status: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
+          recorded_at: "{{ 'TIMESTAMP' if target.type == 'bigquery' else 'timestamptz' }}"
     bronze:
       +schema: bronze
       +tags: [bronze]

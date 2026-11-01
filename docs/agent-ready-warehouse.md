@@ -110,9 +110,10 @@ A ratio is never stored per day for agents to average: the metric divides the to
 - a name that is not snake case: model, column, semantic model, entity, dimension, measure or metric;
 - a public model outside gold and exposed or outside the `analytics` group, a gold or exposed model that is not public, or a semantic model off silver;
 - a public model without an enforced contract, or a public model's column without a `data_type`;
-- a missing description on any of the things the rules above name, or a metric without a label.
+- a missing description on any of the things the rules above name, or a metric without a label;
+- a metric over a model-derived column (`meta: {derived_by: model}`, a label a language model read out of text), directly or through its input metrics, whose description does not start with "Model-derived" (semantic/PLAN.md SL-18).
 
-It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric and on an unprefixed, undescribed, untyped gold model, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
+It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric, on a metric over model-derived labels that does not say so, and on an unprefixed, undescribed, untyped gold model, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
 `check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, glossary terms included (an unknown metric, a dimension none of the term's metrics has, a term repeating a metric), and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
 
 A column the SQL selects but the YAML does not name is absent from the manifest, so the parse cannot see it; the contract can, and the build fails on it.

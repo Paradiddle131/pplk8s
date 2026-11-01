@@ -80,3 +80,12 @@ questions:
     question: What share of our leads from 1 and 2 October 2026 went on to book?
     expected_sql: select count(distinct b.lead_id)::numeric / (select count(*) from silver.leads) from silver.bookings b
     metrics: [lead_to_booking_rate]
+  # Call signals (semantic/PLAN.md SL-18): calls on the same two days, labelled from their transcripts.
+  - id: calls_about_returns
+    question: How many of our customer calls on 1 and 2 October 2026 were about returns?
+    expected_sql: select sum(calls_labelled) from gold.call_signals_daily where topic = 'returns'
+    metrics: [calls_labelled]
+  - id: objection_rate
+    question: In what share of our customer calls on 1 and 2 October 2026 did the customer raise an objection?
+    expected_sql: select sum(calls_with_objection)::numeric / sum(calls_labelled) from gold.call_signals_daily
+    metrics: [objection_rate]
