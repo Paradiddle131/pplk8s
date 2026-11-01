@@ -72,7 +72,7 @@ Each step is a build issue under the map; a step is done when its acceptance pas
 | U3 | [#130](../../../issues/130), [#131](../../../issues/131) | Source freshness alerts; discrepancy checks between layers on every build |
 | U4 | [#132](../../../issues/132) | An audit row per agent query; a per-agent access proposal |
 | U5 | [#133](../../../issues/133), [#141](../../../issues/141) | A side-by-side migration rehearsal with a parity report per consumer; where scheduled queries and routines fit beside dbt |
-| all | [#134](../../../issues/134) | The demo of the whole use case on the emulator |
+| all | [#134](../../../issues/134) | The demo of the whole use case on the emulator: `make demo STEP=…`, rehearsed by `make demo-check` |
 
 **Exit:** `make dbt-validate` and the parity check pass; `make dbt-catalog` writes the three artefacts and every gold column has a comment in the warehouse; `make agent-eval` reports the semantic agent answering every question whose metric exists, with the baseline's score beside it; a BigQuery target parses the project unchanged; the demo script runs end to end.
 The use case's exit: every issue under Map #135 closed, and the extended demo runs end to end on the emulator.
