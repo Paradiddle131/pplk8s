@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 GCP = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(GCP))
@@ -85,3 +86,13 @@ def test_a_paid_api_cannot_hide_as_implicit(copy: Path) -> None:
         )
     )
     assert any("cannot be implicit" in p for p in problems(copy))
+
+
+def test_scanning_is_paid_and_the_registry_turns_it_off() -> None:
+    paid = yaml.safe_load((GCP / "free-path.yaml").read_text())["paid"]
+    assert {
+        "containerscanning.googleapis.com",
+        "ondemandscanning.googleapis.com",
+    } <= set(paid)
+    registry = (GCP / "infra" / "artifact_registry.tf").read_text()
+    assert 'enablement_config = "DISABLED"' in registry

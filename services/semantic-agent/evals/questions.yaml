@@ -118,6 +118,41 @@ questions:
       select sum(o.amount) filter (where o.customer_id in (select customer_id from silver.orders group by 1 having count(*) >= 2))
         / sum(o.amount) from silver.orders o where o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-10'
     metrics: [repeat_revenue_share]
+  # Returns against the orders they return, both on the order's date.
+  - id: return_rate_september
+    question: What share of the orders placed in September 2026 were returned?
+    expected_sql: >-
+      select (select count(*) from silver.returns r join silver.orders o on o.order_id = r.order_id
+              where o.order_date between '2026-09-01' and '2026-09-30')::numeric
+        / (select count(*) from silver.orders where order_date between '2026-09-01' and '2026-09-30')
+    metrics: [return_rate]
+  - id: damaged_return_share
+    question: Of the returns of orders placed from August to October 2026, what share were returned as damaged?
+    expected_sql: >-
+      select count(*) filter (where r.reason = 'damaged')::numeric / count(*) from silver.returns r
+      join silver.orders o on o.order_id = r.order_id where o.order_date between '2026-08-01' and '2026-10-31'
+    metrics: [damaged_return_share]
+  # A typical order: the average on every warehouse; the median is BigQuery-only, so the Postgres agent declines.
+  - id: average_order_value
+    question: What was our average order value on 1 October 2026?
+    expected_sql: select revenue_eur / (orders_total - orders_cancelled) from gold.daily_sales where order_date = '2026-10-01'
+    metrics: [average_order_value_eur]
+  - id: median_order_value
+    question: What was the median order value on 1 October 2026?
+    expected_sql: >-
+      select percentile_cont(0.5) within group (order by amount) from silver.orders
+      where status <> 'cancelled' and order_date = '2026-10-01'
+    metrics: []
+  # The fiscal calendar: a year from 1 February, named by the calendar year it starts in.
+  - id: revenue_fiscal_q3
+    question: What was our revenue in the third quarter of fiscal 2026?
+    expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-08-01' and '2026-10-31'
+    metrics: [revenue_eur]
+  # A balance: the budget left is the last snapshot, never a sum of days.
+  - id: budget_left_end_of_september
+    question: How much of our campaigns' budget was left at the end of September 2026?
+    expected_sql: select sum(remaining_eur) from silver.campaign_budgets where snapshot_date = '2026-09-30'
+    metrics: [remaining_budget_eur]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'

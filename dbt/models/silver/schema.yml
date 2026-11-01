@@ -169,6 +169,21 @@ models:
         agg: sum
         expr: amount
         filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      - name: median_order_value_eur
+        description: >-
+          BigQuery only: the median amount of a non-cancelled order, BigQuery's approximate continuous percentile
+          (APPROX_QUANTILES); Postgres has no rendering of it, so an agent on Postgres declines.
+        label: Median order value (EUR)
+        type: simple
+        agg: percentile
+        percentile: 0.5
+        percentile_type: continuous
+        expr: amount
+        config:
+          enabled: "{{ target.type == 'bigquery' }}"
+          meta:
+            dialects: [bigquery]
+        filter: "{{ Dimension('order__status') }} <> 'cancelled'"
       - name: customers_distinct
         description: Distinct customers with at least one non-cancelled order.
         label: Active customers
@@ -265,6 +280,14 @@ models:
         entity:
           type: foreign
           name: customer
+      - name: order_date
+        description: >-
+          UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a
+          return in October of a September order counts against September's orders. Empty while the order is not
+          in silver.
+        dimension:
+          type: time
+        granularity: day
       - name: return_date
         description: UTC date the return was recorded (returned_at in UTC).
         tests: [not_null]
@@ -292,6 +315,15 @@ models:
         type: simple
         agg: count
         expr: return_id
+      - name: returns_on_order_date
+        description: >-
+          Number of partner returns, counted on the day the returned order was placed rather than the day of the
+          return; the return rate's numerator.
+        label: Returns by order date
+        type: simple
+        agg: count
+        expr: 1
+        agg_time_dimension: order_date
 
   - name: slv_tlc_trips
     description: >
@@ -393,6 +425,64 @@ models:
         dimension:
           type: categorical
           name: campaign_name
+
+  - name: slv_campaign_budgets
+    description: >-
+      One row per (snapshot_date, campaign), latest load wins: the campaign's budget for the month and what is left
+      of it after that day's spend. A balance, not a flow. Alias silver.campaign_budgets.
+    semantic_model:
+      enabled: true
+      name: campaign_budgets
+    agg_time_dimension: snapshot_date
+    primary_entity: campaign_budget_day
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['snapshot_date', 'campaign_id']
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_campaign_budgets
+          arguments:
+            bronze: ref('brz_synthetic_campaign_budgets')
+            keys: [snapshot_date, campaign_id]
+            tie_breaker: _run_id
+            amount: remaining_eur
+          config:
+            tags: [silver, marketing]
+    columns:
+      - name: snapshot_date
+        description: UTC day of the snapshot, after that day's spend.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: campaign_id
+        description: Must exist in slv_campaigns.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_campaigns')
+                field: campaign_id
+        entity:
+          type: foreign
+          name: campaign
+      - name: budget_eur
+        description: The campaign's budget for the snapshot's calendar month, in EUR.
+      - name: remaining_eur
+        description: What is left of the month's budget after the day's spend, in EUR; negative when overspent.
+    metrics:
+      - name: remaining_budget_eur
+        description: >-
+          Budget left in the month, in EUR: each campaign's last snapshot in the period asked (never a sum across
+          days), added up over campaigns; by month it is what was left at month end.
+        label: Remaining budget (EUR)
+        type: simple
+        agg: sum
+        expr: remaining_eur
+        non_additive_dimension:
+          name: snapshot_date
+          window_agg: max
+          group_by: [campaign]
 
   - name: slv_ad_spend
     description: One row per (spend_date, campaign), latest load wins. Alias silver.ad_spend.

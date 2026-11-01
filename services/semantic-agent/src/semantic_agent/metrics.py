@@ -61,6 +61,8 @@ class Catalog:
     models: list[dict[str, Any]] = field(default_factory=list)
     glossary: list[dict[str, Any]] = field(default_factory=list)
     saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
+    unavailable: dict[str, dict[str, Any]] = field(default_factory=dict)
+    custom_grains_described: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -75,9 +77,24 @@ class Catalog:
             models=data["models"],
             glossary=data.get("glossary", []),
             saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
+            unavailable={m["name"]: m for m in data.get("unavailable_metrics", [])},
+            custom_grains_described=data.get("custom_grains", []),
         )
 
+    @property
+    def custom_grains(self) -> list[str]:
+        """The time spine's own grains (fiscal_quarter, fiscal_year), beside day to year."""
+        return [grain["name"] for grain in self.custom_grains_described]
+
     def metric(self, name: str) -> dict[str, Any]:
+        if name in self.unavailable:
+            other = self.unavailable[name]
+            raise QueryError(
+                f"{name!r} ({other['label']}) is defined only on "
+                f"{' and '.join(other['dialects'])}, "
+                "not on this warehouse; say that this metric is not available here, and do not "
+                "compute it from other metrics"
+            )
         if name not in self.metrics:
             raise QueryError(
                 f"no metric named {name!r}; the metrics are {sorted(self.metrics)}. "
@@ -124,7 +141,9 @@ GRAINS = ("day", "week", "month", "quarter", "year")
 DATE_PARTS = ("year", "quarter", "month", "day", "dow", "doy")
 
 
-def group_by_parameter(name: str, dimensions: dict[str, str], entities: list[str]):
+def group_by_parameter(
+    name: str, dimensions: dict[str, str], entities: list[str], custom_grains: list[str] = ()
+):
     """MetricFlow's typed group-by for a checked name: `<time>__<grain>`, `<time>__extract_<part>`,
     a dimension or an entity. MetricFlow parses no date part from a name string, so each is built
     typed here, from parts the catalog lists."""
@@ -135,8 +154,9 @@ def group_by_parameter(name: str, dimensions: dict[str, str], entities: list[str
     )
 
     base, _, suffix = name.rpartition("__")
+    grains = (*GRAINS, *custom_grains)
     if dimensions.get(base) == "time":
-        if suffix in GRAINS:
+        if suffix in grains:
             return TimeDimensionParameter(name=base, grain=suffix)
         part = suffix.removeprefix("extract_")
         if suffix.startswith("extract_") and part in DATE_PARTS:
@@ -147,7 +167,7 @@ def group_by_parameter(name: str, dimensions: dict[str, str], entities: list[str
         return DimensionOrEntityParameter(name=name)
     raise QueryError(
         f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}, a time one with "
-        f"__{', __'.join(GRAINS)} or __extract_{', __extract_'.join(DATE_PARTS)} (dow: 1 is "
+        f"__{', __'.join(grains)} or __extract_{', __extract_'.join(DATE_PARTS)} (dow: 1 is "
         f"Monday), and the entities are {sorted(entities)}"
     )
 
@@ -300,7 +320,10 @@ class MetricQuery:
             raise QueryError("name at least one metric")
         dimensions = catalog.dimensions(metrics)
         entities = catalog.entities(metrics)
-        parameters = {name: group_by_parameter(name, dimensions, entities) for name in group_by}
+        parameters = {
+            name: group_by_parameter(name, dimensions, entities, catalog.custom_grains)
+            for name in group_by
+        }
         allowed_order = set(metrics) | set(group_by)
         for name in self.order_by:
             if name.removeprefix("-") not in allowed_order:

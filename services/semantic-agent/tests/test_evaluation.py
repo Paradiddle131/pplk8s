@@ -19,11 +19,11 @@ from semantic_agent.evaluation import (
 from tests.conftest import ScriptedLlm
 
 
-def test_the_question_set_is_about_thirty_five_with_some_no_metric_covers():
+def test_the_question_set_is_about_fifty_with_some_no_metric_covers():
     # Each domain and each question shape adds its questions (semantic/PLAN.md SL-5, SL-14);
     # the bound keeps a live run's free-tier calls in check.
     questions = load_questions()
-    assert 25 <= len(questions) <= 45
+    assert 30 <= len(questions) <= 60
     assert len({q.id for q in questions}) == len(questions)
     assert any(not q.metrics for q in questions)
     known = set(tools.catalog().metrics)

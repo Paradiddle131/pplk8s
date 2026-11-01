@@ -25,6 +25,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "ad_clicks",
         "ad_spend_eur",
         "applications",
+        "average_order_value_eur",
         "booking_value_eur",
         "bookings",
         "bookings_mtd",
@@ -41,6 +42,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "customer_actions",
         "customers_distinct",
         "customers_to_date",
+        "damaged_return_share",
         "engaged_customers_28d",
         "engaged_customers_7d",
         "hires",
@@ -57,12 +59,15 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "partners_engaged",
         "positive_calls",
         "positive_sentiment_share",
+        "remaining_budget_eur",
         "repeat_customers",
         "repeat_revenue_share",
         "replies",
         "reply_rate",
+        "return_rate",
         "returns_count",
         "returns_eur",
+        "returns_on_order_date",
         "revenue_eur",
         "revenue_eur_mtd",
         "revenue_eur_wow_growth",
@@ -455,3 +460,44 @@ def test_ordering_by_a_date_part_orders_by_its_typed_parameter():
     ).request(CATALOG)
     [order] = request.order_by
     assert order.order_by is request.group_by[0] and not order.descending
+
+
+# A metric defined for BigQuery only is disabled on Postgres: the catalog lists it as not available
+# here, and the tools decline it by name rather than answer with something else.
+def test_a_bigquery_only_metric_is_declined_on_postgres_naming_its_warehouse():
+    assert "median_order_value_eur" not in CATALOG.metrics
+    with pytest.raises(QueryError, match=r"defined only on bigquery.*not available here"):
+        CATALOG.metric("median_order_value_eur")
+    with pytest.raises(QueryError, match="not available here"):
+        MetricQuery(metrics=["median_order_value_eur"]).request(CATALOG)
+
+
+# The time spine's custom grains (the fiscal calendar) are grains like month, from the catalog.
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("metric_time__fiscal_quarter", ("metric_time", "fiscal_quarter")),
+        ("customer__signup_date__fiscal_year", ("customer__signup_date", "fiscal_year")),
+    ],
+)
+def test_a_custom_grain_the_catalog_lists_is_a_time_grain(name, expected):
+    assert CATALOG.custom_grains == ["fiscal_quarter", "fiscal_year"]
+    parameter = group_by_parameter(
+        name,
+        CATALOG.dimensions(["revenue_eur"]),
+        CATALOG.entities(["revenue_eur"]),
+        CATALOG.custom_grains,
+    )
+    assert (parameter.name, parameter.grain) == expected
+
+
+def test_a_custom_grain_is_refused_when_the_catalog_has_none():
+    with pytest.raises(QueryError, match="cannot group by"):
+        group_by_parameter("metric_time__fiscal_quarter", CATALOG.dimensions(["revenue_eur"]), [])
+
+
+def test_a_request_groups_by_the_fiscal_quarter():
+    request = MetricQuery(
+        metrics=["revenue_eur"], group_by=["metric_time__fiscal_quarter"]
+    ).request(CATALOG)
+    assert [(p.name, p.grain) for p in request.group_by] == [("metric_time", "fiscal_quarter")]

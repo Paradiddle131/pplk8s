@@ -1,11 +1,14 @@
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from el_factory.model import Interval
 from el_factory.sources.marketing import (
     CAMPAIGNS,
     MAX_BOOKING_LAG_DAYS,
+    MONTHLY_BUDGET_EUR,
     build_ad_spend,
     build_bookings,
+    build_campaign_budgets,
     build_campaigns,
     build_leads,
 )
@@ -46,7 +49,7 @@ def test_splitting_an_interval_yields_the_same_rows_as_the_whole():
         Interval(utc(2026, 10, 1), utc(2026, 10, 2)),
         Interval(utc(2026, 10, 2), utc(2026, 10, 3)),
     ]
-    for build in (build_ad_spend, build_leads, build_bookings):
+    for build in (build_ad_spend, build_leads, build_bookings, build_campaign_budgets):
         assert sorted(sum((build(i) for i in split), []), key=str) == sorted(
             build(TWO_DAYS), key=str
         )
@@ -91,3 +94,37 @@ def test_a_booking_can_name_a_lead_from_an_earlier_interval():
     leads = {lead["lead_id"] for lead in build_leads(DAY_ONE)}
 
     assert any(b["lead_id"] not in leads for b in build_bookings(DAY_ONE))
+
+
+def test_a_campaign_budget_snapshot_is_its_month_budget_less_the_spend_so_far():
+    """A balance: each day's snapshot is what is left of the month's budget after its spend."""
+    october = Interval(utc(2026, 10, 1), utc(2026, 11, 1))
+    snapshots = build_campaign_budgets(october)
+    spend = build_ad_spend(october)
+    assert len(snapshots) == 31 * len(CAMPAIGNS)
+    for campaign_id, _, channel, _ in CAMPAIGNS:
+        left = MONTHLY_BUDGET_EUR[channel]
+        days = sorted(
+            (row for row in spend if row["campaign_id"] == campaign_id),
+            key=lambda r: r["spend_date"],
+        )
+        for day in days:
+            left -= Decimal(str(day["spend"]))
+            [snapshot] = [
+                s
+                for s in snapshots
+                if s["campaign_id"] == campaign_id and s["snapshot_date"] == day["spend_date"]
+            ]
+            assert Decimal(snapshot["budget_eur"]) == MONTHLY_BUDGET_EUR[channel]
+            assert Decimal(snapshot["remaining_eur"]) == left
+
+
+def test_a_campaign_budget_starts_again_on_the_first_of_the_month():
+    first = build_campaign_budgets(Interval(utc(2026, 11, 1), utc(2026, 11, 2)))
+    spend = {
+        r["campaign_id"]: Decimal(str(r["spend"]))
+        for r in build_ad_spend(Interval(utc(2026, 11, 1), utc(2026, 11, 2)))
+    }
+    for campaign_id, _, channel, _ in CAMPAIGNS:
+        [row] = [r for r in first if r["campaign_id"] == campaign_id]
+        assert Decimal(row["remaining_eur"]) == MONTHLY_BUDGET_EUR[channel] - spend[campaign_id]

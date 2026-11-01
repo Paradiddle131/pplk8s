@@ -4,12 +4,14 @@ pipelines:
   sales:
     - {source: synthetic, entity: customers}
     - {source: synthetic, entity: orders}
-  # Synthetic marketing (PLAN.md D38): campaigns, daily ad spend, CRM leads and their bookings.
+  # Synthetic marketing (PLAN.md D38): campaigns, daily ad spend, CRM leads, their bookings, and each
+  # campaign's budget left in the month (a daily balance snapshot).
   marketing:
     - {source: synthetic, entity: campaigns}
     - {source: synthetic, entity: ad_spend}
     - {source: synthetic, entity: leads}
     - {source: synthetic, entity: bookings}
+    - {source: synthetic, entity: campaign_budgets}
   # Synthetic customer actions (semantic/PLAN.md SL-15): an append-only stream, extracted by arrival.
   customer_actions:
     - {source: synthetic, entity: customer_actions}

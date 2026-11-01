@@ -7,3 +7,5 @@ tests/
 .python-version
 evals/
 README.md
+# Eval-only: runs with uv (`make agent-eval`), imports the eval group and the warehouse owner's driver.
+src/semantic_agent/evaluation.py

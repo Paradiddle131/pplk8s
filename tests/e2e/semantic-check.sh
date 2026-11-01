@@ -7,10 +7,13 @@
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
 #     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
-#     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
+#     query_metrics writes them, equals SQL written by hand, the average order value equals gold, signups by
+#     fiscal quarter (a custom grain of the time spine) equal SQL by hand, and revenue grouped by weekday (a date part)
 #     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
 #     equal SQL written by hand over two months of signups, and the repeat-customer metrics (a Metric() filter)
-#     equal SQL by hand, a query's dates leaving the inner order count unlimited,
+#     equal SQL by hand, a query's dates leaving the inner order count unlimited, and the return rate and
+#     damaged-return share by the returned order's month equal SQL by hand, and the remaining budget (a
+#     semi-additive balance) by month is the month-end snapshot, not the sum of the days,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -72,15 +75,15 @@ dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer
   { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
 echo "ok: sales, returns, finance, marketing, customer actions, partner outreach, recruitment and call transcripts built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 62
-echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 63
+echo "ok: the 63 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 51 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 51 metrics and 7 saved queries"
-grep -q "check_brief: 51 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 51 metrics of docs/target-architecture.md"
+grep -q "16 semantic models, 56 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 16 semantic models, 56 metrics and 7 saved queries"
+grep -q "check_brief: 57 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 57 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -163,6 +166,34 @@ expect "cohort revenue and large orders on 2026-10-01" "$(psql_dev -c "
   select (select round(revenue_eur, 2) from semantic_check.cohort where day = '2026-10-01') || ' ' ||
          (select orders_total from semantic_check.large where day = '2026-10-01')")" "312.00 3"
 echo "ok: a signup-date range and an amount comparison filter the metrics as SQL by hand does"
+
+# Average order value by day against gold (revenue over non-cancelled orders); the median is BigQuery-only
+# (disabled on Postgres; catalog-check asserts the catalog says so).
+mf_ query --metrics average_order_value_eur --group-by metric_time__day --csv "$OUT/aov.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the average order value"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.aov" \
+  -c "create table semantic_check.aov (day date, average_order_value_eur numeric)"
+psql_dev -c "\\copy semantic_check.aov from stdin with (format csv, header true)" <"$OUT/aov.csv"
+expect "average order value by day vs gold.daily_sales (rows differing)" "$(psql_dev -c "
+  with hand as (select order_date, round(revenue_eur / (orders_total - orders_cancelled), 6) from gold.daily_sales),
+       mf as (select day, round(average_order_value_eur, 6) from semantic_check.aov)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+echo "ok: the average order value equals gold by day"
+
+# The fiscal calendar (a year from 1 February), custom grains on the time spine: signups by fiscal quarter over
+# the base fixture's 2024 signups against SQL by hand; the calendar quarters would count 4, 3 and 3.
+mf_ query --metrics signups --group-by metric_time__fiscal_quarter --start-time 2024-01-01 --end-time 2024-12-31 \
+  --csv "$OUT/fiscal.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query by fiscal quarter"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.fiscal" \
+  -c "create table semantic_check.fiscal (fiscal_quarter date, signups bigint)"
+psql_dev -c "\\copy semantic_check.fiscal from stdin with (format csv, header true)" <"$OUT/fiscal.csv"
+expect "signups by fiscal quarter vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with hand as (select (date_trunc('quarter', signup_date - interval '1 month') + interval '1 month')::date, count(*)
+                from silver.customers where signup_date between '2024-01-01' and '2024-12-31' group by 1),
+       mf as (select fiscal_quarter, signups from semantic_check.fiscal)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "signups per fiscal quarter of 2024" "$(psql_dev -c "select string_agg(signups::text, ' ' order by fiscal_quarter) from semantic_check.fiscal")" "1 4 3 2"
+echo "ok: signups by fiscal quarter (from 1 February) equal SQL by hand: 1, 4, 3 and 2"
 
 # Marketing (SL-8): the simple metrics by day and channel against gold.marketing_daily, the ratios
 # against exposed.channel_performance_daily (per day), then the whole fixture as one period.
@@ -586,7 +617,7 @@ echo "ok: a metric missing from docs/target-architecture.md fails make dbt-valid
 psql_dev <"$REPO/dbt/dev/fixture_weeks.sql"
 dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc >"$OUT/weeks.log" 2>&1 ||
   { tail -30 "$OUT/weeks.log" >&2; fail "dbt build with fixture_weeks.sql"; }
-expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 30
+expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 31
 first=2026-08-17 last=2026-10-04 # whole weeks: MetricFlow widens a weekly query to them
 mf_ query --metrics revenue_eur_wow_growth,bookings_wow_growth,leads_wow_growth --group-by metric_time__week \
   --start-time "$first" --end-time "$last" --csv "$OUT/wow.csv" >>"$OUT/query.log" 2>&1 ||
@@ -705,5 +736,49 @@ expect "repeat customers, their revenue and share by day vs SQL by hand (rows di
 expect "the repeat share over 1 to 10 October, and 2 October's repeat revenue alone" "$(
   tail -1 "$OUT/repeat_period.csv" | awk -F, '{ printf "%.4f", $2 }') $(tail -1 "$OUT/repeat_day.csv" | tr -d '\r')" "0.8657 868.65"
 echo "ok: repeat customers, their revenue and share equal SQL by hand; a query's dates do not limit who counts as a repeat customer"
+
+# Returns against the orders they return, both on the order's date: the return rate and the damaged-return share
+# by order month over August to October (the six weeks' three returns land in October against August and
+# September orders), against SQL by hand.
+mf_ query --metrics return_rate,damaged_return_share --group-by metric_time__month --start-time 2026-08-01 \
+  --end-time 2026-10-31 --csv "$OUT/return_rate.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the return rate"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.return_rate" \
+  -c "create table semantic_check.return_rate (month date, return_rate numeric, damaged_return_share numeric)"
+psql_dev -c "\\copy semantic_check.return_rate from stdin with (format csv, header true)" <"$OUT/return_rate.csv"
+expect "return rate and damaged-return share by order month vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with orders as (select date_trunc('month', order_date)::date as month, count(*) as n from silver.orders
+                  where order_date between '2026-08-01' and '2026-10-31' group by 1),
+       returned as (select date_trunc('month', o.order_date)::date as month, count(*) as n,
+                           count(*) filter (where r.reason = 'damaged') as damaged
+                    from silver.returns r join silver.orders o on o.order_id = r.order_id group by 1),
+       hand as (select o.month, round(coalesce(r.n, 0)::numeric / o.n, 6), round(r.damaged::numeric / r.n, 6)
+                from orders o left join returned r on r.month = o.month),
+       mf as (select month, round(return_rate, 6), round(damaged_return_share, 6) from semantic_check.return_rate)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "September's return rate and damaged-return share" "$(psql_dev -c "
+  select round(return_rate, 4) || ' ' || round(damaged_return_share, 2) from semantic_check.return_rate where month = '2026-09-01'")" "0.0167 0.50"
+echo "ok: the return rate and the damaged-return share by order month equal SQL by hand; September: 2 of 120 orders returned, 1 damaged"
+
+# A semi-additive balance: each campaign's budget left in the month, a daily snapshot. By month it is the sum over
+# campaigns of each one's last snapshot in the month (non_additive_dimension, window max by campaign), against SQL
+# by hand, and it differs from the naive sum across days.
+mf_ query --metrics remaining_budget_eur --group-by metric_time__month --start-time 2026-08-01 --end-time 2026-09-30 \
+  --csv "$OUT/budget.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of the remaining budget"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.budget" \
+  -c "create table semantic_check.budget (month date, remaining_budget_eur numeric)"
+psql_dev -c "\\copy semantic_check.budget from stdin with (format csv, header true)" <"$OUT/budget.csv"
+expect "remaining budget by month vs the month-end snapshots by hand (rows differing)" "$(psql_dev -c "
+  with last_day as (select campaign_id, date_trunc('month', snapshot_date)::date as month, max(snapshot_date) as day
+                    from silver.campaign_budgets where snapshot_date between '2026-08-01' and '2026-09-30' group by 1, 2),
+       hand as (select l.month, sum(b.remaining_eur) from last_day l
+                join silver.campaign_budgets b on b.campaign_id = l.campaign_id and b.snapshot_date = l.day group by 1),
+       mf as (select month, remaining_budget_eur from semantic_check.budget)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "September's remaining budget" "$(psql_dev -c "
+  select round(remaining_budget_eur, 2) from semantic_check.budget where month = '2026-09-01'")" "4130.00"
+[ "$(psql_dev -c "select sum(remaining_eur) <> 4130.00 from silver.campaign_budgets where snapshot_date between '2026-09-01' and '2026-09-30'")" = t ] ||
+  fail "the naive sum of September's daily snapshots should differ from the month-end balance"
+echo "ok: the remaining budget by month is the month-end snapshot (September 4130.00), not the sum of the days"
 
 echo "PASS: semantic check"

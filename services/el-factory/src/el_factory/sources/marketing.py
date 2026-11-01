@@ -1,5 +1,6 @@
 """Deterministic synthetic marketing sources (PLAN.md D38): ad campaigns, their daily spend, the
-CRM leads they bring, and the bookings those leads become.
+CRM leads they bring, the bookings those leads become, and each campaign's budget left in the month
+(a daily balance snapshot, semi-additive: summing it across days means nothing).
 
 The shape is a services business: a lead asks, a share of leads book within a few weeks, and a
 booking is worth thousands, not tens. The source is `synthetic`, like the sales entities; each day
@@ -37,6 +38,15 @@ SPEND_CENTS = {
     "email": (500, 1_500),
     "partner": (1_000, 4_000),
 }
+# Each campaign's budget for a calendar month, by channel; what is left is the budget less the
+# month's spend so far, negative when a campaign overspends.
+MONTHLY_BUDGET_EUR = {
+    "search": Decimal("6000.00"),
+    "social": Decimal("4000.00"),
+    "display": Decimal("2500.00"),
+    "email": Decimal("400.00"),
+    "partner": Decimal("1000.00"),
+}
 BOOKING_RATE = 0.3
 MAX_BOOKING_LAG_DAYS = 21
 
@@ -70,6 +80,15 @@ LEADS_TABLE = Table(
         ("country", "text"),
     ),
 )
+CAMPAIGN_BUDGETS_TABLE = Table(
+    "synthetic_campaign_budgets",
+    (
+        ("snapshot_date", "date"),
+        ("campaign_id", "integer"),
+        ("budget_eur", "numeric(12,2)"),
+        ("remaining_eur", "numeric(12,2)"),
+    ),
+)
 BOOKINGS_TABLE = Table(
     "synthetic_bookings",
     (
@@ -97,6 +116,9 @@ def entities(page_size: int) -> list[Entity]:
         Entity(SOURCE, "ad_spend", AD_SPEND_TABLE, per_interval(build_ad_spend)),
         Entity(SOURCE, "leads", LEADS_TABLE, per_interval(build_leads)),
         Entity(SOURCE, "bookings", BOOKINGS_TABLE, per_interval(build_bookings)),
+        Entity(
+            SOURCE, "campaign_budgets", CAMPAIGN_BUDGETS_TABLE, per_interval(build_campaign_budgets)
+        ),
     ]
 
 
@@ -144,6 +166,30 @@ def build_ad_spend(interval: Interval) -> list[dict[str, object]]:
                     "clicks": rng.randint(impressions // 200, impressions // 40),
                     "spend": f"{Decimal(rng.randint(low, high)) / 100:.2f}",
                     "currency": "EUR",
+                }
+            )
+    return rows
+
+
+def build_campaign_budgets(interval: Interval) -> list[dict[str, object]]:
+    """One snapshot per campaign per UTC day whose midnight is in the interval: the month's budget
+    and what is left of it after that day's spend, from the same daily spend as build_ad_spend."""
+    rows = []
+    for day in _days(interval):
+        first = day.replace(day=1)
+        month = Interval(_midnight(first), _midnight(day) + timedelta(days=1))
+        spent: dict[int, Decimal] = {}
+        for row in build_ad_spend(month):
+            campaign_id = int(row["campaign_id"])
+            spent[campaign_id] = spent.get(campaign_id, Decimal(0)) + Decimal(str(row["spend"]))
+        for campaign_id, _, channel, _ in CAMPAIGNS:
+            budget = MONTHLY_BUDGET_EUR[channel]
+            rows.append(
+                {
+                    "snapshot_date": day.isoformat(),
+                    "campaign_id": campaign_id,
+                    "budget_eur": f"{budget:.2f}",
+                    "remaining_eur": f"{budget - spent.get(campaign_id, Decimal(0)):.2f}",
                 }
             )
     return rows

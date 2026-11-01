@@ -47,6 +47,21 @@ CROSS JOIN LATERAL (SELECT (CASE c.campaign_id
     WHEN 4 THEN 60 + (d.i % 3) * 10
     ELSE 10 END)::numeric(12,2) AS spend) AS s;
 
+-- Budget snapshots: each campaign's month budget (search 6000.00, social 4000.00, email 400.00) less its
+-- spend in the month up to and including the day, from the spend just inserted.
+INSERT INTO ds_source.synthetic_campaign_budgets
+SELECT
+    spend_date,
+    campaign_id,
+    budget,
+    budget - sum(spend) OVER (PARTITION BY campaign_id, date_trunc('month', spend_date) ORDER BY spend_date),
+    'run-mkt-w-' || to_char(spend_date, 'YYYYMMDD'),
+    spend_date, spend_date + 1, 1, 'fixture://campaign_budgets',
+    spend_date + interval '1 day 40 minutes'
+FROM (SELECT spend_date, campaign_id, spend,
+             (CASE campaign_id WHEN 1 THEN 6000 WHEN 4 THEN 4000 ELSE 400 END)::numeric(12,2) AS budget
+      FROM ds_source.synthetic_ad_spend WHERE spend_date BETWEEN '2026-08-17' AND '2026-09-30') AS s;
+
 -- Leads: search 2 or 3 a day (one more from the fifth week), social 1 or 2, email one every fourth day.
 -- A lead whose (day + number + campaign) is divisible by 3 books five hours later, the same day.
 CREATE TEMP TABLE fixture_weeks_leads AS
@@ -112,3 +127,11 @@ SELECT
     1, 'fixture://orders',
     timestamptz '2026-10-05 00:30+00' + make_interval(days => (c - 12) / 3)
 FROM generate_series(12, 30, 3) AS c;
+
+-- Three returns of the six weeks' orders, recorded on 5 and 6 October (after the base fixture's days), so a
+-- return rate on the order's date has August and September returns: 0828-1 damaged, 0914-1 damaged, 0921-2
+-- wrong size.
+INSERT INTO ds_source.partner_returns VALUES
+    ('R-W1', 'ORD-W0914-1', '2026-10-05 09:00+00', 20.00, 'damaged', 'gcs-run-w', 'gs://landing/returns/2026-10-05.jsonl', 1, '2026-10-06 06:00+00'),
+    ('R-W2', 'ORD-W0921-2', '2026-10-05 11:00+00', 15.00, 'wrong size', 'gcs-run-w', 'gs://landing/returns/2026-10-05.jsonl', 1, '2026-10-06 06:00+00'),
+    ('R-W3', 'ORD-W0828-1', '2026-10-06 10:00+00', 30.00, 'damaged', 'gcs-run-w2', 'gs://landing/returns/2026-10-06.jsonl', 1, '2026-10-07 06:00+00');

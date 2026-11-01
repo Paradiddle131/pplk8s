@@ -23,6 +23,7 @@ SOURCES = (
     "open_meteo_hourly_weather",
     "synthetic_campaigns",
     "synthetic_ad_spend",
+    "synthetic_campaign_budgets",
     "synthetic_leads",
     "synthetic_bookings",
     "synthetic_customer_actions",

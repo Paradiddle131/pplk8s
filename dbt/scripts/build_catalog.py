@@ -13,6 +13,9 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   declares a numeric `data_type`, so the agent may compare it (MetricFlow knows only categorical and time).
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
+  The metrics defined for another warehouse only (`unavailable_metrics`: a BigQuery-only median on Postgres),
+  with their dialects, so the agent declines them by name instead of guessing.
+  The time spine's custom grains (`custom_grains`: the fiscal quarter and year) with their descriptions.
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
@@ -125,6 +128,45 @@ def numeric_columns(manifest: dict) -> set[tuple[str, str]]:
     }
 
 
+def custom_grains(manifest: dict, index: SemanticIndex) -> list[dict]:
+    """The time spine's custom granularities (the fiscal quarter and year), each with its column's description,
+    so a time dimension groups by `__fiscal_quarter` as by `__month`."""
+    found = []
+    for spine in index.time_spines:
+        model = next(
+            (
+                n
+                for n in manifest["nodes"].values()
+                if n["resource_type"] == "model" and n.get("alias") == spine["node_relation"]["alias"]
+            ),
+            {},
+        )
+        for grain in spine.get("custom_granularities", []):
+            column = grain.get("column_name") or grain["name"]
+            description = ((model.get("columns") or {}).get(column) or {}).get("description") or ""
+            found.append({"name": grain["name"], "description": " ".join(description.split())})
+    return sorted(found, key=lambda grain: grain["name"])
+
+
+def unavailable_metrics(manifest: dict) -> list[dict]:
+    """The metrics defined for another warehouse only (`config.meta.dialects`, disabled on this target by
+    `enabled: "{{ target.type == ... }}"`), so the agent can say a metric exists, but not here (SL-6)."""
+    found = []
+    for nodes in manifest.get("disabled", {}).values():
+        for node in nodes:
+            dialects = ((node.get("config") or {}).get("meta") or {}).get("dialects")
+            if node.get("resource_type") == "metric" and dialects:
+                found.append(
+                    {
+                        "name": node["name"],
+                        "label": node.get("label") or "",
+                        "description": node.get("description") or "",
+                        "dialects": list(dialects),
+                    }
+                )
+    return sorted(found, key=lambda metric: metric["name"])
+
+
 def glossary(manifest: dict) -> list[dict]:
     """The business terms that are not metrics, from `config.meta.glossary` on the models that hold them."""
     terms = []
@@ -164,6 +206,7 @@ class SemanticIndex:
             for node in manifest["semantic_models"].values()
         }
         self.accepted_values = accepted_values(manifest)
+        self.time_spines = semantic_manifest.get("project_configuration", {}).get("time_spines", [])
         self.numeric_columns = numeric_columns(manifest)
         self._nodes = {**manifest["metrics"], **manifest["semantic_models"]}
         self._metric_ids = {node["name"]: unique_id for unique_id, node in manifest["metrics"].items()}
@@ -275,6 +318,8 @@ def agent_catalog(
             for metric in index.metrics
         ],
         "saved_queries": saved_queries(index),
+        "unavailable_metrics": unavailable_metrics(manifest),
+        "custom_grains": custom_grains(manifest, index),
     }
 
 

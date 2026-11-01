@@ -16,11 +16,12 @@
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
 #     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
-#     signup-to-first-order rate by month against SQL by hand, the marketing metrics by day and channel
+#     signup-to-first-order rate by month and the return rate by order day against SQL by hand, the average and
+#     the BigQuery-only median order value by day, signups by fiscal quarter, the remaining budget (a balance), the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
-# Every part runs `dbt build` with its tests on the `bigquery_emulator` target, the project unchanged; the 62
+# Every part runs `dbt build` with its tests on the `bigquery_emulator` target, the project unchanged; the 63
 # layer hops (semantic/PLAN.md SL-9) reconcile across them.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050, holding the platform's build, which
@@ -149,7 +150,41 @@ if part == "platform":
                countif(c.signup_date < date_add(month, interval 1 month)), 0
         from unnest(generate_date_array(date '2024-01-01', date '2024-12-01', interval 1 month)) as month
         cross join `pplk8s-lab.silver.customers` c group by month""")
+    # The return rate and damaged-return share by the returned order's day (all three returns are of 1 October's
+    # orders), against SQL by hand.
+    return_rate = rows("""
+        with orders as (select order_date, count(*) as n from `pplk8s-lab.silver.orders` group by 1),
+             returned as (select o.order_date, count(*) as n, countif(r.reason = 'damaged') as damaged
+                          from `pplk8s-lab.silver.returns` r join `pplk8s-lab.silver.orders` o on o.order_id = r.order_id
+                          group by 1)
+        select cast(o.order_date as string), coalesce(r.n, 0) / o.n, coalesce(safe_divide(r.damaged, r.n), 0)
+        from orders o left join returned r on r.order_date = o.order_date""")
+    # A typical order by day: the average against gold, and the BigQuery-only median (enabled on this target)
+    # against BigQuery's approximate quantiles by hand, as MetricFlow renders an approximate continuous percentile.
+    order_value = rows("""
+        select cast(g.order_date as string), g.revenue_eur / (g.orders_total - g.orders_cancelled), m.median
+        from `pplk8s-lab.gold.daily_sales` g join (
+            select order_date, approx_quantiles(amount, 100)[offset(50)] as median from `pplk8s-lab.silver.orders`
+            where status <> 'cancelled' group by 1) m on m.order_date = g.order_date""")
+    # Signups by fiscal quarter (a year from 1 February), a custom grain of the time spine, against SQL by hand.
+    fiscal = rows("""
+        select cast(date_add(date_trunc(date_sub(signup_date, interval 1 month), quarter), interval 1 month) as string),
+               count(*)
+        from `pplk8s-lab.silver.customers` where signup_date between '2024-01-01' and '2024-12-31' group by 1""")
+    # The remaining budget, a semi-additive balance: by day the sum of the day's snapshots, and over the two days
+    # the last day's (10010.00), never the sum of both days.
+    budget = rows("select cast(snapshot_date as string), sum(remaining_eur) from `pplk8s-lab.silver.campaign_budgets` group by 1")
+    with open(f"{out}/budget_period.csv") as f:
+        period_budget = num(next(csv.DictReader(f))["remaining_budget_eur"])
+    if period_budget != num("10010.00"):
+        bad.append(f"remaining budget over 1 and 2 October: {period_budget} != 10010.00 (the last day's snapshots)")
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("remaining budget by day", budget, metrics("budget", ["remaining_budget_eur"])),
+                ("signups by fiscal quarter", fiscal, metrics("fiscal", ["signups"], ("metric_time__fiscal_quarter",))),
+                ("average and median order value by day", order_value,
+                 metrics("order_value", ["average_order_value_eur", "median_order_value_eur"])),
+                ("return rate by order day (SQL by hand)", return_rate,
+                 metrics("return_rate", ["return_rate", "damaged_return_share"])),
                 ("customers by month (SQL by hand)", customers,
                  metrics("customers", ["signups", "customers_to_date", "signup_to_first_order_rate"], ("metric_time__month",))),
                 ("revenue by weekday (ISO)", weekday, by_weekday),
@@ -172,7 +207,9 @@ if part == "platform":
         bad.append(f"migration.parity on the emulator: {parity}")
     said = (f"the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, net revenue"
             f" by customer country SQL by hand on {len(by_country)} day-countries, revenue by weekday on"
-            f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the marketing"
+            f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the return rate on"
+            f" {len(return_rate)} order days, the average and median order value on {len(order_value)} days, signups on"
+            f" {len(fiscal)} fiscal quarters, the marketing"
             f" metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity reports as on Postgres")
 elif part == "customer_actions":
     actions = keyed("select concat(cast(activity_date as string), ' ', action_type), actions"
@@ -350,6 +387,18 @@ run_ mf query --metrics revenue_eur,returns_eur,net_revenue_eur --group-by metri
 run_ mf query --metrics signups,customers_to_date,signup_to_first_order_rate --group-by metric_time__month \
   --start-time 2024-01-01 --end-time 2024-12-31 --csv "$OUT/customers.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the customers' metrics on the emulator"; }
+run_ mf query --metrics return_rate,damaged_return_share --group-by metric_time__day \
+  --csv "$OUT/return_rate.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the return rate on the emulator"; }
+run_ mf query --metrics average_order_value_eur,median_order_value_eur --group-by metric_time__day \
+  --csv "$OUT/order_value.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the average and the BigQuery-only median order value on the emulator"; }
+run_ mf query --metrics signups --group-by metric_time__fiscal_quarter --start-time 2024-01-01 --end-time 2024-12-31 \
+  --csv "$OUT/fiscal.csv" >>"$OUT/query.log" 2>&1 || { tail -20 "$OUT/query.log" >&2; fail "mf query by fiscal quarter on the emulator"; }
+run_ mf query --metrics remaining_budget_eur --group-by metric_time__day --csv "$OUT/budget.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the remaining budget by day on the emulator"; }
+run_ mf query --metrics remaining_budget_eur --start-time 2026-10-01 --end-time 2026-10-02 --csv "$OUT/budget_period.csv" \
+  >>"$OUT/query.log" 2>&1 || { tail -20 "$OUT/query.log" >&2; fail "mf query of the remaining budget over two days on the emulator"; }
 run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \
@@ -361,7 +410,7 @@ parity_ platform
 
 # The recruitment replay's builds are not counted: the build over every extract holds the same hops.
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
-[ "$hops" -eq 62 ] || fail "expected the 62 layer hops to pass on the emulator, got $hops"
-echo "ok: the 62 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
+[ "$hops" -eq 63 ] || fail "expected the 63 layer hops to pass on the emulator, got $hops"
+echo "ok: the 63 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
 
 echo "PASS: BigQuery emulator check"

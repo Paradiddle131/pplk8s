@@ -22,6 +22,9 @@ vars:
   customer_actions_lookback_hours: 72
   # The outreach activation list leaves out a contact messaged this many days before its as_of (SL-16).
   outreach_cooldown_days: 7
+  # The fiscal year starts on the first day of this month (2: February); the time spine's fiscal quarters
+  # and years follow it (models/semantic/metricflow_time_spine.sql).
+  fiscal_year_start_month: 2
   # The prompt that labels call transcripts (semantic/PLAN.md SL-18, docs/text-signals.md): one reviewed
   # place for its text, version and endpoint, and for the agreement it must reach on the golden set before
   # gold reads its labels. A changed text is a new version, labelled beside the old one, never an overwrite;

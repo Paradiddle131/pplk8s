@@ -10,14 +10,27 @@ version: 2
 
 models:
   - name: metricflow_time_spine
-    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine. Alias semantic.time_spine.
+    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine, with the fiscal quarter and year each day falls in. Alias semantic.time_spine.
     time_spine:
       standard_granularity_column: date_day
+      custom_granularities:
+        - name: fiscal_quarter
+        - name: fiscal_year
     columns:
       - name: date_day
         description: The calendar day.
         granularity: day
         tests: [not_null, unique]
+      - name: fiscal_quarter
+        description: >-
+          First day of the day's fiscal quarter; the fiscal year starts on 1 February, so its quarters start on
+          1 February, 1 May, 1 August and 1 November (fiscal Q3 of fiscal 2026 is 2026-08-01 to 2026-10-31).
+        tests: [not_null]
+      - name: fiscal_year
+        description: >-
+          First day of the day's fiscal year, which starts on 1 February and is named by the calendar year it
+          starts in (fiscal 2026 is 2026-02-01 to 2027-01-31).
+        tests: [not_null]
 
   - name: semantic_metrics
     description: One row per metric of the semantic layer, with its words; the warehouse copy of the agent catalog's metrics (semantic/PLAN.md SL-3). Alias semantic.metrics.
@@ -251,3 +264,36 @@ metrics:
     type: ratio
     numerator: revenue_repeat_customers_eur
     denominator: revenue_eur
+  # Returns against the orders they return, both on the order's date (returns_on_order_date's agg_time_dimension),
+  # so a month's rate is that month's orders only.
+  - name: return_rate
+    description: >-
+      Share of orders that were returned (returns over orders, both counted on the day the order was placed, over
+      the whole period asked); a return in October of a September order counts against September.
+    label: Return rate
+    type: ratio
+    numerator: returns_on_order_date
+    denominator: orders_total
+  - name: damaged_return_share
+    description: >-
+      Share of returns whose reason was damaged goods (damaged returns over all returns, both counted on the
+      returned order's date, over the whole period asked).
+    label: Damaged-return share
+    type: ratio
+    numerator:
+      name: returns_on_order_date
+      filter: "{{ Dimension('return__reason') }} = 'damaged'"
+      alias: damaged_returns
+    denominator: returns_on_order_date
+  # A typical order: the mean on every warehouse; the median is BigQuery-only (models/silver/schema.yml).
+  - name: average_order_value_eur
+    description: >-
+      Average amount of a non-cancelled order (revenue over non-cancelled orders, over the whole period asked, never
+      an average of daily averages).
+    label: Average order value (EUR)
+    type: ratio
+    numerator: revenue_eur
+    denominator:
+      name: orders_total
+      filter: "{{ Dimension('order__status') }} <> 'cancelled'"
+      alias: orders_not_cancelled
