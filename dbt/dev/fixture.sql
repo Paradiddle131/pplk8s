@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS ds_source.open_meteo_hourly_weather CASCADE;
 DROP TABLE IF EXISTS ds_source.partner_returns CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_campaigns CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_ad_spend CASCADE;
+DROP TABLE IF EXISTS ds_source.synthetic_campaign_budgets CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_leads CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_bookings CASCADE;
 DROP TABLE IF EXISTS ds_source.synthetic_customer_actions CASCADE;
@@ -195,6 +196,18 @@ CREATE TABLE ds_source.synthetic_campaigns (
     _loaded_at timestamptz
 );
 
+CREATE TABLE ds_source.synthetic_campaign_budgets (
+    snapshot_date date,
+    campaign_id integer,
+    budget_eur numeric(12,2),
+    remaining_eur numeric(12,2),
+    _run_id text,
+    _interval_start timestamptz,
+    _interval_end timestamptz,
+    _page integer,
+    _source_uri text,
+    _loaded_at timestamptz
+);
 CREATE TABLE ds_source.synthetic_ad_spend (
     spend_date date,
     campaign_id integer,
@@ -250,6 +263,16 @@ INSERT INTO ds_source.synthetic_ad_spend VALUES
     ('2026-10-02', 1, 8000, 250, 100.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00'),
     ('2026-10-02', 4, 10000, 120, 60.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00'),
     ('2026-10-02', 7, 2500, 35, 10.00, 'EUR', 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://ad_spend', '2026-10-03 00:40+00');
+
+-- Each campaign's budget for October (search 6000.00, social 4000.00, email 400.00) less its spend so far,
+-- after each day: a balance snapshot, so the period's figure is the last day's, never the sum of days.
+INSERT INTO ds_source.synthetic_campaign_budgets VALUES
+    ('2026-10-01', 1, 6000.00, 5870.00, 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-02 00:40+00'),
+    ('2026-10-01', 4, 4000.00, 3920.00, 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-02 00:40+00'),
+    ('2026-10-01', 7, 400.00, 390.00, 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-02 00:40+00'),
+    ('2026-10-02', 1, 6000.00, 5770.00, 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-03 00:40+00'),
+    ('2026-10-02', 4, 4000.00, 3860.00, 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-03 00:40+00'),
+    ('2026-10-02', 7, 400.00, 380.00, 'run-mkt-d2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://campaign_budgets', '2026-10-03 00:40+00');
 
 INSERT INTO ds_source.synthetic_leads VALUES
     ('L-0001', 1, '2026-10-01 08:10+00', 'NL', 'run-mkt-d1', '2026-10-01 00:00+00', '2026-10-02 00:00+00', 1, 'fixture://leads', '2026-10-02 00:40+00'),

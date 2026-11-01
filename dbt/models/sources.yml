@@ -44,6 +44,13 @@ sources:
             tests: [not_null]
           - name: spend_date
             tests: [not_null]
+      - name: synthetic_campaign_budgets
+        description: Each campaign's monthly budget and what is left of it after the day's spend, one snapshot per campaign per day of the run's interval (synthetic).
+        columns:
+          - name: campaign_id
+            tests: [not_null]
+          - name: snapshot_date
+            tests: [not_null]
       - name: synthetic_leads
         description: CRM leads created in the run's interval (synthetic).
         columns:

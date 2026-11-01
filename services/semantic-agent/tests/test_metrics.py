@@ -59,6 +59,7 @@ def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
         "partners_engaged",
         "positive_calls",
         "positive_sentiment_share",
+        "remaining_budget_eur",
         "repeat_customers",
         "repeat_revenue_share",
         "replies",

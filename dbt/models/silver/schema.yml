@@ -426,6 +426,64 @@ models:
           type: categorical
           name: campaign_name
 
+  - name: slv_campaign_budgets
+    description: >-
+      One row per (snapshot_date, campaign), latest load wins: the campaign's budget for the month and what is left
+      of it after that day's spend. A balance, not a flow. Alias silver.campaign_budgets.
+    semantic_model:
+      enabled: true
+      name: campaign_budgets
+    agg_time_dimension: snapshot_date
+    primary_entity: campaign_budget_day
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['snapshot_date', 'campaign_id']
+      - latest_load_reconciles:
+          name: hop_bronze_to_slv_campaign_budgets
+          arguments:
+            bronze: ref('brz_synthetic_campaign_budgets')
+            keys: [snapshot_date, campaign_id]
+            tie_breaker: _run_id
+            amount: remaining_eur
+          config:
+            tags: [silver, marketing]
+    columns:
+      - name: snapshot_date
+        description: UTC day of the snapshot, after that day's spend.
+        tests: [not_null]
+        dimension:
+          type: time
+        granularity: day
+      - name: campaign_id
+        description: Must exist in slv_campaigns.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_campaigns')
+                field: campaign_id
+        entity:
+          type: foreign
+          name: campaign
+      - name: budget_eur
+        description: The campaign's budget for the snapshot's calendar month, in EUR.
+      - name: remaining_eur
+        description: What is left of the month's budget after the day's spend, in EUR; negative when overspent.
+    metrics:
+      - name: remaining_budget_eur
+        description: >-
+          Budget left in the month, in EUR: each campaign's last snapshot in the period asked (never a sum across
+          days), added up over campaigns; by month it is what was left at month end.
+        label: Remaining budget (EUR)
+        type: simple
+        agg: sum
+        expr: remaining_eur
+        non_additive_dimension:
+          name: snapshot_date
+          window_agg: max
+          group_by: [campaign]
+
   - name: slv_ad_spend
     description: One row per (spend_date, campaign), latest load wins. Alias silver.ad_spend.
     semantic_model:

@@ -47,6 +47,21 @@ CROSS JOIN LATERAL (SELECT (CASE c.campaign_id
     WHEN 4 THEN 60 + (d.i % 3) * 10
     ELSE 10 END)::numeric(12,2) AS spend) AS s;
 
+-- Budget snapshots: each campaign's month budget (search 6000.00, social 4000.00, email 400.00) less its
+-- spend in the month up to and including the day, from the spend just inserted.
+INSERT INTO ds_source.synthetic_campaign_budgets
+SELECT
+    spend_date,
+    campaign_id,
+    budget,
+    budget - sum(spend) OVER (PARTITION BY campaign_id, date_trunc('month', spend_date) ORDER BY spend_date),
+    'run-mkt-w-' || to_char(spend_date, 'YYYYMMDD'),
+    spend_date, spend_date + 1, 1, 'fixture://campaign_budgets',
+    spend_date + interval '1 day 40 minutes'
+FROM (SELECT spend_date, campaign_id, spend,
+             (CASE campaign_id WHEN 1 THEN 6000 WHEN 4 THEN 4000 ELSE 400 END)::numeric(12,2) AS budget
+      FROM ds_source.synthetic_ad_spend WHERE spend_date BETWEEN '2026-08-17' AND '2026-09-30') AS s;
+
 -- Leads: search 2 or 3 a day (one more from the fifth week), social 1 or 2, email one every fourth day.
 -- A lead whose (day + number + campaign) is divisible by 3 books five hours later, the same day.
 CREATE TEMP TABLE fixture_weeks_leads AS

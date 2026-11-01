@@ -148,6 +148,11 @@ questions:
     question: What was our revenue in the third quarter of fiscal 2026?
     expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-08-01' and '2026-10-31'
     metrics: [revenue_eur]
+  # A balance: the budget left is the last snapshot, never a sum of days.
+  - id: budget_left_end_of_september
+    question: How much of our campaigns' budget was left at the end of September 2026?
+    expected_sql: select sum(remaining_eur) from silver.campaign_budgets where snapshot_date = '2026-09-30'
+    metrics: [remaining_budget_eur]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'
