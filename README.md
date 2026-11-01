@@ -24,10 +24,11 @@ It is drawn with the rest of the lab in the picture at the top of this page: the
 | Postgres warehouse; the BigQuery emulator builds and queries the same models and metrics | BigQuery |
 | ADK agent in the `workloads` namespace, MetricFlow as its query path | Cloud Run, `DataAgentToolset` on a BigQuery data agent |
 | Warehouse comments from `persist_docs`, `semantic.metrics` and `semantic.glossary` | Table and column descriptions, Knowledge Catalog |
-| OpenRouter free model; sessions in the metadata DB | Gemini; Cloud SQL |
+| OpenRouter free model; sessions in the metadata DB | Gemini; Firestore |
 | Prometheus and Alertmanager | Cloud Monitoring |
 
 The plan, decisions and evidence are in [`semantic/PLAN.md`](semantic/PLAN.md) and the full mapping in [`docs/semantic-layer-on-bigquery.md`](docs/semantic-layer-on-bigquery.md).
+The architecture a BigQuery team can adopt from it, with a picture of the GCP target, is one page: [`docs/target-architecture.md`](docs/target-architecture.md).
 One level down, the agent's code and what it reuses from ADK, MetricFlow and dbt is drawn in [the semantic agent's README](services/semantic-agent/README.md#how-it-is-built).
 Everything else on this page is the Airflow lab.
 
@@ -115,5 +116,5 @@ make cluster-down services-down
 | `platform/` | kind, Compose, Helm values, workloads manifests, KEDA, monitoring |
 | [`platform/gcp/`](platform/gcp/README.md) | The semantic track's real GCP project at $0.00: the free-path allowlist, the OpenTofu root, the kill switch, the cost check |
 | `tests/` | End-to-end checks and alert-rule tests |
-| `docs/` | [Runbook](docs/runbook.md), [event path](docs/events.md), [executors](docs/executors.md) |
+| `docs/` | [Runbook](docs/runbook.md), [event path](docs/events.md), [executors](docs/executors.md), [target architecture](docs/target-architecture.md) |
 | [`PLAN.md`](PLAN.md) | Architecture decisions and version pins |

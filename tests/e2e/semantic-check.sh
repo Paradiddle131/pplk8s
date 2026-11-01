@@ -30,6 +30,7 @@
 #     of calls give the label shares bands with the newest week's shifted topic the one share outside its
 #     band, and the warehouse exporter's collector exports that week's shares and bands (SL-18),
 #   - a metric over a model-derived column without "Model-derived" in its description fails the validation,
+#   - a metric missing from docs/target-architecture.md's table fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
 #     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
 # Expects `make services-up`; never touches the `warehouse` database.
@@ -70,7 +71,9 @@ make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
 grep -q "15 semantic models, 39 metrics and 7 saved queries described" "$OUT/validate.log" ||
   fail "check_standard did not report the 15 semantic models, 39 metrics and 7 saved queries"
-echo "ok: make dbt-validate (parse, check_standard, mf validate-configs) passes against $DB"
+grep -q "check_brief: 39 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 39 metrics of docs/target-architecture.md"
+echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
 # the hand-written aggregates (R1: the metric is the one definition; gold and exposed are the oracle).
@@ -501,5 +504,22 @@ for problem in "metric zz_stray_orders: no description" \
 done
 rm -f "$stray" "$stray_model"
 echo "ok: an undescribed metric, a metric over model-derived labels not saying so, and an unprefixed, undescribed, untyped gold model with personal data fail make dbt-validate"
+
+# A metric the standard accepts but the target-architecture brief does not list fails the validation too.
+cat >"$stray" <<'YAML'
+version: 2
+metrics:
+  - name: zz_stray_orders
+    label: Stray orders
+    description: Orders again, to show a metric the brief does not list.
+    type: derived
+    expr: orders_total
+    input_metrics: [orders_total]
+YAML
+if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/brief.log" 2>&1; then fail "dbt-validate passed a metric the brief does not list"; fi
+grep -qF "check_brief: metric zz_stray_orders: missing from the table" "$OUT/brief.log" ||
+  { tail -20 "$OUT/brief.log" >&2; fail "the validation failed, but not on the metric missing from the brief"; }
+rm -f "$stray"
+echo "ok: a metric missing from docs/target-architecture.md fails make dbt-validate"
 
 echo "PASS: semantic check"
