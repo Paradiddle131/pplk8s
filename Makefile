@@ -9,9 +9,9 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.8
-DBT_IMAGE ?= localhost:5001/dbt:0.7.38
+DBT_IMAGE ?= localhost:5001/dbt:0.7.39
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.35
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.36
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -150,7 +150,15 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 	tests/e2e/bigquery-check.sh
 
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
-	tests/e2e/bigquery-emulator-check.sh
+	tests/e2e/bigquery-run-check.sh
+
+# The same check on real BigQuery (#206, semantic/PLAN.md SL-13): opt-in like agent-eval, never in `make check`;
+# the cost check before and after it, as for every live step (platform/gcp/README.md).
+bigquery-live-check: services-up ## Live: the bigquery-emulator-check script on the lab project (GCP_PROJECT): its datasets emptied, the fixture loaded, the semantic path built and its metrics asserted against gold, then the bytes billed; the cost check before and after
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the live check needs the id of the lab project (platform/gcp/README.md)}"
+	platform/gcp/cost-check.sh
+	BQ_TARGET=gcp tests/e2e/bigquery-run-check.sh
+	platform/gcp/cost-check.sh
 
 # The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
 # failing when it differs from the script; demo-check rehearses them all, timed, on a fresh emulator.

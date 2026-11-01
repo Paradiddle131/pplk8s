@@ -20,10 +20,10 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 STEPS=(layers standard agent alerts audit migration)
 DB=dbt_dev
 ENDPOINT=http://localhost:9050
-# bigquery-emulator-check.sh's copy of dbt/ (MetricFlow reads <project>/target), built for the emulator.
-PROJECT_DIR=${TMPDIR:-/tmp}/pplk8s-bigquery-emulator-check/dbt
+# bigquery-run-check.sh's copy of dbt/ (MetricFlow reads <project>/target), built for the emulator.
+PROJECT_DIR=${TMPDIR:-/tmp}/pplk8s-bigquery-run-check-emulator/dbt
 OUT=${TMPDIR:-/tmp}/pplk8s-demo
-DBT_BIGQUERY=dbt-bigquery==1.12.1 # bigquery-emulator-check.sh's
+DBT_BIGQUERY=dbt-bigquery==1.12.1 # bigquery-run-check.sh's
 fail() { echo "FAIL: $*" >&2; exit 1; }
 say() { printf '\n== %s\n' "$*"; }
 psql_dev() {

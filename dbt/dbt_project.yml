@@ -15,6 +15,10 @@ target-path: "target"
 flags:
   indirect_selection: cautious
 clean-targets: ["target", "dbt_packages"]
+# dbt's query comment also as BigQuery job labels (dbt_invocation_id, node_id, ...), so a job in the Data
+# Access log or INFORMATION_SCHEMA.JOBS names the run and the node it served (#206); Postgres keeps the comment.
+query-comment:
+  job-label: true
 
 vars:
   # How far back an incremental build of silver.customer_actions re-reads bronze's loads (SL-15): loads

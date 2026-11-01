@@ -1,19 +1,27 @@
-"""Copy the dev fixture's landed sources from Postgres into the BigQuery emulator (semantic/PLAN.md
-SL-7), so `dbt build` on the `bigquery_emulator` target starts from the same rows as `dbt_dev`.
+"""Copy the dev fixture's landed sources from Postgres into a BigQuery (semantic/PLAN.md SL-7, #206), so
+`dbt build` there starts from the same rows as `dbt_dev`: the emulator, or the lab project on real BigQuery
+(tests/e2e/lib/bigquery_target.py picks it from BQ_API_ENDPOINT).
 
-Usage: fixture_to_bigquery.py <postgres dsn> <bigquery api endpoint> <project>
-It creates every dataset the project builds into, then each source table with BigQuery types
-mapped from Postgres's, and inserts its rows. The emulator must be empty (it runs in memory).
+Usage: fixture_to_bigquery.py <postgres dsn>
+The BigQuery is left holding only the fixture's sources, as a fresh emulator would: every table in the
+datasets dbt builds into is deleted first (never `ops`, which keeps the agents' audit, nor the datasets
+themselves); then each source table is written with BigQuery types mapped from Postgres's. The emulator
+gets its datasets created here (it creates none on `create schema`); on the lab project they are OpenTofu's
+(platform/gcp/infra/bigquery.tf), so a missing one fails with what to run.
 """
 
 import datetime
 import decimal
 import sys
+from pathlib import Path
 
 import psycopg
-from google.api_core.client_options import ClientOptions
-from google.auth.credentials import AnonymousCredentials
+from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
+
+# `python -I` leaves the script's own folder off sys.path; the target helper sits beside it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bigquery_target import client, endpoint, load_rows  # noqa: E402
 
 # The tables the semantic path reads; tlc stays Postgres-only (its models are marked `-- dialect:`).
 SOURCES = (
@@ -36,6 +44,8 @@ SOURCES = (
 )
 # ops: the agent's audit table (macros/agent_warehouse.sql); the emulator takes `create schema` but creates nothing.
 DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration", "ops")
+# Emptied before the copy: what a build reads or writes, never the audit (`ops`).
+EMPTIED = tuple(d for d in DATASETS if d != "ops")
 TYPES = {
     "text": "STRING",
     "integer": "INT64",
@@ -61,14 +71,19 @@ def to_json(value):
     return value
 
 
-def main(dsn: str, endpoint: str, project: str) -> None:
-    client = bigquery.Client(
-        project=project,
-        credentials=AnonymousCredentials(),
-        client_options=ClientOptions(api_endpoint=endpoint),
-    )
+def main(dsn: str) -> None:
+    bq = client()
     for dataset in DATASETS:
-        client.create_dataset(f"{project}.{dataset}", exists_ok=True)
+        if endpoint():
+            bq.create_dataset(f"{bq.project}.{dataset}", exists_ok=True)
+            continue
+        try:
+            bq.get_dataset(f"{bq.project}.{dataset}")
+        except NotFound:
+            sys.exit(f"dataset {bq.project}.{dataset} is missing: the owner's `make gcp-up` creates the lab's datasets")
+    for dataset in EMPTIED:
+        for table in bq.list_tables(f"{bq.project}.{dataset}"):
+            bq.delete_table(table, not_found_ok=True)
     with psycopg.connect(dsn) as conn:
         for name in SOURCES:
             columns = conn.execute(
@@ -79,15 +94,13 @@ def main(dsn: str, endpoint: str, project: str) -> None:
             if not columns:
                 sys.exit(f"ds_source.{name} is missing: load dbt/dev/fixture.sql first")
             schema = [bigquery.SchemaField(column, TYPES[kind]) for column, kind in columns]
-            table = client.create_table(bigquery.Table(f"{project}.ds_source.{name}", schema))
             rows = [
                 {column: to_json(value) for (column, _), value in zip(columns, row, strict=True)}
                 for row in conn.execute(f'select * from ds_source."{name}"')
             ]
-            if errors := client.insert_rows_json(table, rows):
-                sys.exit(f"ds_source.{name}: {errors[:3]}")
+            load_rows(bq, f"ds_source.{name}", rows, schema)
             print(f"ds_source.{name}: {len(rows)} rows")
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(sys.argv[1])
