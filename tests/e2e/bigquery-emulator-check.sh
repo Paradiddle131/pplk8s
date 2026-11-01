@@ -176,8 +176,8 @@ elif part == "call_transcripts":
     gold_calls = keyed("select concat(cast(call_date as string), ' ', topic), calls_labelled, calls_with_objection,"
                        " positive_calls from `pplk8s-lab.gold.call_signals_daily`")
     labelled = list(client.query("select count(*) from `pplk8s-lab.silver.call_signals`").result())[0][0]
-    if labelled != 12:
-        bad.append(f"silver.call_signals on the emulator holds {labelled} calls, not the fixture's 12")
+    if labelled != 52:
+        bad.append(f"silver.call_signals on the emulator holds {labelled} calls, not the fixture's 52")
     compared = [("gold.call_signals_daily", gold_calls, metrics("calls", calls, ("metric_time__day", "call__topic")))]
     said = f"the call metrics equal gold.call_signals_daily on {len(gold_calls)} day-topics"
 else:

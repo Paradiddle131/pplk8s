@@ -271,7 +271,8 @@ INSERT INTO ds_source.synthetic_bookings VALUES
 -- Call transcripts (semantic/PLAN.md SL-18): the calls of 2026-10-01 and 02 as EL Factory's generator
 -- writes them; their true labels are dbt/seeds/silver/call_label_golden_set.csv (with three hand-written
 -- hard cases), and their recorded label calls dbt/seeds/silver/call_label_recordings.csv. The day-2 rerun
--- (run-call-2b) redelivers its first call, so silver keeps the latest load.
+-- (run-call-2b) redelivers its first call, so silver keeps the latest load. Five earlier weeks follow them,
+-- so silver.call_label_shares has bands to show.
 CREATE TABLE ds_source.synthetic_call_transcripts (
     transcript_id text,
     customer_id integer,
@@ -300,6 +301,43 @@ INSERT INTO ds_source.synthetic_call_transcripts VALUES
     ('T-20261002-001', 161, '2026-10-02T14:47:39+00:00', 754, 'Agent: Thanks for calling, how can I help? Customer: I would like to send back the chair I bought, it does not fit the room. Agent: I can help with that. Returns are free within thirty days of delivery. Customer: I am not happy with how this has been handled at all. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
     ('T-20261002-005', 68, '2026-10-02T15:12:42+00:00', 107, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: This is frustrating, I have called three times already and nothing changes. Agent: I will email you a written quote today. Customer: Please do, I will look at it.', 'run-call-2', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 00:25+00'),
     ('T-20261002-002', 62, '2026-10-02T08:30:00+00:00', 413, 'Agent: Thanks for calling, how can I help? Customer: My order still has not arrived and the tracking page has not moved since Monday. Agent: Let me look up the shipment. I can see it left the depot this morning. Customer: I am not happy with how this has been handled at all. Agent: I will call you back on Thursday with an answer. Customer: Fine, talk then.', 'run-call-2b', '2026-10-02 00:00+00', '2026-10-03 00:00+00', 1, 'fixture://call_transcripts', '2026-10-03 06:10+00');
+
+-- The five weeks before 2026-09-28's (a Wednesday each, one run a day): eight calls a week that reuse the
+-- texts above, so the recordings already label them, with the same time of day, customer and duration as
+-- the call they copy. Seven calls repeat every week (four about a product, two returns, one pricing); the
+-- eighth is a delivery call in the first and third weeks and a return otherwise. Against these weeks the
+-- delivery share of 2026-09-28's week (4 of 12) is far above its band, the shift CallLabelShareDrift
+-- alerts on, and every other share of every week stays inside its band (tests/e2e/semantic-check.sh).
+INSERT INTO ds_source.synthetic_call_transcripts
+WITH every_week (seq, copy_of) AS (
+    VALUES (1, 'T-20261001-007'), (2, 'T-20261001-004'), (3, 'T-20261001-006'), (4, 'T-20261002-004'),
+        (5, 'T-20261001-005'), (6, 'T-20261001-002'), (7, 'T-20261002-003')
+),
+weeks (call_day, eighth) AS (
+    VALUES (date '2026-08-26', 'T-20261001-001'), (date '2026-09-02', 'T-20261002-001'),
+        (date '2026-09-09', 'T-20261001-001'), (date '2026-09-16', 'T-20261002-001'),
+        (date '2026-09-23', 'T-20261002-001')
+),
+calls AS (
+    SELECT call_day, seq, copy_of FROM weeks CROSS JOIN every_week
+    UNION ALL
+    SELECT call_day, 8, eighth FROM weeks
+)
+SELECT
+    'T-' || to_char(c.call_day, 'YYYYMMDD') || '-' || lpad(c.seq::text, 3, '0'),
+    t.customer_id,
+    (c.call_day + (t.call_ts AT TIME ZONE 'UTC')::time) AT TIME ZONE 'UTC',
+    t.duration_seconds,
+    t.transcript,
+    'run-call-' || to_char(c.call_day, 'MMDD'),
+    c.call_day::timestamp AT TIME ZONE 'UTC',
+    (c.call_day + 1)::timestamp AT TIME ZONE 'UTC',
+    1,
+    'fixture://call_transcripts',
+    ((c.call_day + 1) + time '00:25') AT TIME ZONE 'UTC'
+FROM calls AS c
+INNER JOIN ds_source.synthetic_call_transcripts AS t ON t.transcript_id = c.copy_of
+ORDER BY 3;
 
 -- Customer actions (an append-only event stream, extracted by arrival time): site sessions walk the
 -- funnel page_view -> add_to_cart -> checkout; CRM actions carry no session. E-0011, E-0012 and E-0020

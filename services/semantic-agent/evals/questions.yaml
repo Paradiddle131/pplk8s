@@ -123,12 +123,13 @@ questions:
     question: On average, how many days did it take to hire a candidate, over everyone hired in October 2026?
     expected_sql: select sum(time_to_hire_days * hires) / sum(hires) from gold.recruitment_daily where recruitment_date between '2026-10-01' and '2026-10-31'
     metrics: [time_to_hire_days]
-  # Call signals (semantic/PLAN.md SL-18): calls on the same two days, labelled from their transcripts.
+  # Call signals (semantic/PLAN.md SL-18): calls on the same two days, labelled from their transcripts; the
+  # fixture's calls of the five weeks before them stay out of the answer.
   - id: calls_about_returns
     question: How many of our customer calls on 1 and 2 October 2026 were about returns?
-    expected_sql: select sum(calls_labelled) from gold.call_signals_daily where topic = 'returns'
+    expected_sql: select sum(calls_labelled) from gold.call_signals_daily where topic = 'returns' and call_date between '2026-10-01' and '2026-10-02'
     metrics: [calls_labelled]
   - id: objection_rate
     question: In what share of our customer calls on 1 and 2 October 2026 did the customer raise an objection?
-    expected_sql: select sum(calls_with_objection)::numeric / sum(calls_labelled) from gold.call_signals_daily
+    expected_sql: select sum(calls_with_objection)::numeric / sum(calls_labelled) from gold.call_signals_daily where call_date between '2026-10-01' and '2026-10-02'
     metrics: [objection_rate]
