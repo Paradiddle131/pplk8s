@@ -53,9 +53,15 @@ fresh_emulator_() {
 # The emulator's memory grows with every statement, and past about 5 GiB a DROP TABLE panics inside its engine
 # (googlesqlite: slice bounds out of range [-2147...:], #246). It keeps its data in a file in its own container
 # (compose.yaml), so a restart frees the memory and keeps the tables; a recreate empties it.
+# The shim stays healthy across the restart, so wait for the emulator itself to answer through it.
 restart_emulator_() {
-  "${COMPOSE[@]}" restart bigquery >/dev/null 2>&1 && "${COMPOSE[@]}" up -d --wait bigquery-api >/dev/null 2>&1 ||
-    { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come back after a restart"; }
+  "${COMPOSE[@]}" restart bigquery >/dev/null 2>&1 || fail "restarting the emulator"
+  for _ in $(seq 60); do
+    curl -sf "$ENDPOINT/bigquery/v2/projects/pplk8s-lab/datasets" >/dev/null && return 0
+    sleep 1
+  done
+  "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2
+  fail "the emulator did not answer within 60 s of a restart"
 }
 
 psql_dev -c "select 1" >/dev/null 2>&1 || "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"
