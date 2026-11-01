@@ -45,9 +45,9 @@ def list_metrics() -> dict[str, Any]:
 
 
 def describe_metric(name: str) -> dict[str, Any]:
-    """Describes one metric: its definition, time grain, and the dimensions it can be grouped or
-    filtered by, with the values of each categorical dimension that declares them: filter on one of
-    those values exactly.
+    """Describes one metric: its definition, time grain, the dimensions it can be grouped or
+    filtered by, with the values of each categorical dimension that declares them (filter on one of
+    those values exactly), and the entities it can be grouped by (one row per id).
 
     Args:
         name: The metric's name, as list_metrics returns it.
@@ -67,7 +67,9 @@ def describe_metric(name: str) -> dict[str, Any]:
             "pipelines",
             "readiness",
             "dimensions",
+            "entities",
         )
+        if key in metric
     }
 
 
@@ -88,6 +90,11 @@ def query_metrics(
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
         group_by: Dimensions to break the metrics down by, e.g. ["metric_time__day"] for one row per
             day, ["metric_time__month"] per month, or ["order__status"]. Omit for one total row.
+            A date part groups by a piece of the date across periods:
+            ["metric_time__extract_dow"] for one row per weekday (1 is Monday, 7 Sunday), or
+            __extract_month, __extract_day, __extract_quarter, __extract_year, __extract_doy.
+            An entity describe_metric lists, e.g. ["campaign"], gives one row per id; with
+            order_by and limit it answers "top 3 campaigns by spend".
         filters: Conditions on dimensions, e.g.
             [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}].
             A categorical dimension takes =, !=, in, not in, with a value describe_metric lists

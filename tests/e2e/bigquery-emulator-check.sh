@@ -15,7 +15,7 @@
 #     set (SL-18),
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
-#     against SQL by hand, the marketing metrics by day and channel
+#     and revenue by weekday (a date part, ISO) against SQL by hand, the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
@@ -136,7 +136,14 @@ if part == "platform":
                coalesce(s.revenue, 0) - coalesce(r.returned, 0)
         from days d left join sold s on s.day = d.day and s.country = d.country
         left join returned r on r.day = d.day and r.country = d.country""")
+    # Revenue by weekday as query_metrics groups by it (a date part, ISO: 1 Monday); BigQuery's own DAYOFWEEK
+    # starts on Sunday, so SQL by hand shifts it.
+    weekday = rows("select cast(mod(extract(dayofweek from order_date) + 5, 7) + 1 as string), sum(revenue_eur)"
+                   " from `pplk8s-lab.gold.daily_sales` group by 1")
+    with open(f"{out}/dow.csv") as f:
+        by_weekday = {str(int(float(r["metric_time__extract_dow"]))): (num(r["revenue_eur"]),) for r in csv.DictReader(f)}
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("revenue by weekday (ISO)", weekday, by_weekday),
                 ("exposed.net_sales_daily", exposed, metrics("net", net)),
                 ("net revenue by customer country (SQL by hand)", by_country,
                  metrics("net_country", ["revenue_eur", "returns_eur", "net_revenue_eur"], ("metric_time__day", "customer__country"))),
@@ -155,7 +162,8 @@ if part == "platform":
     if parity != expected:
         bad.append(f"migration.parity on the emulator: {parity}")
     said = (f"the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, net revenue"
-            f" by customer country SQL by hand on {len(by_country)} day-countries, the marketing"
+            f" by customer country SQL by hand on {len(by_country)} day-countries, revenue by weekday on"
+            f" {len(weekday)} weekdays, the marketing"
             f" metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity reports as on Postgres")
 elif part == "customer_actions":
     actions = keyed("select concat(cast(activity_date as string), ' ', action_type), actions"
@@ -330,6 +338,8 @@ run_ mf query --metrics revenue_eur,returns_eur,returns_count,net_revenue_eur \
 run_ mf query --metrics revenue_eur,returns_eur,net_revenue_eur --group-by metric_time__day,customer__country \
   --csv "$OUT/net_country.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of net revenue by customer country on the emulator"; }
+run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \
   --group-by metric_time__day,campaign__channel --order metric_time__day --csv "$OUT/marketing.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the marketing metrics on the emulator"; }

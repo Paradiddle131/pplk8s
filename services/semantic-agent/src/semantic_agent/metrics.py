@@ -103,6 +103,13 @@ class Catalog:
             if d.get("values")
         }
 
+    def entities(self, metric_names: list[str]) -> list[str]:
+        """Entities every one of the metrics can be grouped by: one row per id."""
+        found = [
+            {e["name"] for e in self.metric(name).get("entities", [])} for name in metric_names
+        ]
+        return sorted(set.intersection(*found)) if found else []
+
     def dimensions(self, metric_names: list[str]) -> dict[str, str]:
         """Dimensions every one of the metrics can be grouped or filtered by, with their type."""
         found = [
@@ -112,12 +119,37 @@ class Catalog:
         return {name: found[0][name] for name in sorted(common)}
 
 
-def _group_by_allowed(name: str, dimensions: dict[str, str]) -> bool:
-    base, _, grain = name.rpartition("__")
-    if name in dimensions:
-        return True
-    grains = ("day", "week", "month", "quarter", "year")
-    return dimensions.get(base) == "time" and grain in grains
+GRAINS = ("day", "week", "month", "quarter", "year")
+# A date part groups by a piece of the date (dow: 1 Monday to 7 Sunday, ISO), not by a period.
+DATE_PARTS = ("year", "quarter", "month", "day", "dow", "doy")
+
+
+def group_by_parameter(name: str, dimensions: dict[str, str], entities: list[str]):
+    """MetricFlow's typed group-by for a checked name: `<time>__<grain>`, `<time>__extract_<part>`,
+    a dimension or an entity. MetricFlow parses no date part from a name string, so each is built
+    typed here, from parts the catalog lists."""
+    from metricflow_semantic_interfaces.type_enums.date_part import DatePart
+    from metricflow_semantics.specs.query_param_implementations import (
+        DimensionOrEntityParameter,
+        TimeDimensionParameter,
+    )
+
+    base, _, suffix = name.rpartition("__")
+    if dimensions.get(base) == "time":
+        if suffix in GRAINS:
+            return TimeDimensionParameter(name=base, grain=suffix)
+        part = suffix.removeprefix("extract_")
+        if suffix.startswith("extract_") and part in DATE_PARTS:
+            return TimeDimensionParameter(name=base, date_part=DatePart(part))
+    if dimensions.get(name) == "time":
+        return TimeDimensionParameter(name=name)
+    if name in dimensions or name in entities:
+        return DimensionOrEntityParameter(name=name)
+    raise QueryError(
+        f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}, a time one with "
+        f"__{', __'.join(GRAINS)} or __extract_{', __extract_'.join(DATE_PARTS)} (dow: 1 is "
+        f"Monday), and the entities are {sorted(entities)}"
+    )
 
 
 def _literal(value: str) -> str:
@@ -267,11 +299,8 @@ class MetricQuery:
         if not metrics:
             raise QueryError("name at least one metric")
         dimensions = catalog.dimensions(metrics)
-        for name in group_by:
-            if not _group_by_allowed(name, dimensions):
-                raise QueryError(
-                    f"cannot group by {name!r}; the dimensions are {sorted(dimensions)}"
-                )
+        entities = catalog.entities(metrics)
+        parameters = {name: group_by_parameter(name, dimensions, entities) for name in group_by}
         allowed_order = set(metrics) | set(group_by)
         for name in self.order_by:
             if name.removeprefix("-") not in allowed_order:
@@ -281,15 +310,34 @@ class MetricQuery:
         if self.saved_query is not None:
             # MetricFlow refuses metrics or group-bys beside a saved query; filters, dates, order
             # and limit narrow it.
-            selection: dict[str, Any] = {"saved_query_name": self.saved_query}
+            selection: dict[str, Any] = {
+                "saved_query_name": self.saved_query,
+                "order_by_names": self.order_by or None,
+            }
         else:
-            selection = {"metric_names": metrics, "group_by_names": group_by or None}
+            from metricflow_semantics.specs.query_param_implementations import (
+                MetricParameter,
+                OrderByParameter,
+            )
+
+            order_by = [
+                OrderByParameter(
+                    order_by=parameters.get(name.removeprefix("-"))
+                    or MetricParameter(name=name.removeprefix("-")),
+                    descending=name.startswith("-"),
+                )
+                for name in self.order_by
+            ]
+            selection = {
+                "metric_names": metrics,
+                "group_by": list(parameters.values()) or None,
+                "order_by": order_by or None,
+            }
         return MetricFlowQueryRequest.create(
             **selection,
             where_constraints=[where_clause(f, dimensions, known) for f in self.filters] or None,
             time_constraint_start=_date(self.start_date, "start_date"),
             time_constraint_end=_date(self.end_date, "end_date"),
-            order_by_names=self.order_by or None,
             limit=limit,
         )
 

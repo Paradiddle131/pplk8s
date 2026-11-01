@@ -83,6 +83,19 @@ questions:
     question: How many orders of more than 100 EUR were placed on 1 and 2 October 2026?
     expected_sql: select count(*) from silver.orders where amount > 100 and order_date between '2026-10-01' and '2026-10-02'
     metrics: [orders_total]
+  # Group-bys by a date part and by an entity, over the six whole weeks of fixture_weeks.sql.
+  - id: best_weekday_revenue
+    question: Over the six weeks from Monday 17 August to Sunday 27 September 2026, which day of the week brought in the most revenue, and how much?
+    expected_sql: >-
+      select max(revenue_eur) from (select extract(isodow from order_date), sum(revenue_eur) as revenue_eur
+      from gold.daily_sales where order_date between '2026-08-17' and '2026-09-27' group by 1) w
+    metrics: [revenue_eur]
+  - id: top_campaigns_by_spend
+    question: Which three campaigns spent the most on ads in September 2026, and how much did the top one spend?
+    expected_sql: >-
+      select max(spend) from (select campaign_id, sum(spend) as spend from silver.ad_spend
+      where spend_date between '2026-09-01' and '2026-09-30' group by 1) c
+    metrics: [ad_spend_eur]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'
