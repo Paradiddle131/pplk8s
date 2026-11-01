@@ -49,8 +49,8 @@ echo "ok: sales, returns, finance, marketing, customer actions, partner outreach
 
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
   { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog against $DB"; }
-grep -q "17 public models, 45 metrics and 12 glossary terms" "$OUT/catalog.log" ||
-  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 17 public models, 45 metrics and 12 glossary terms"; }
+grep -q "17 public models, 48 metrics and 12 glossary terms" "$OUT/catalog.log" ||
+  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 17 public models, 48 metrics and 12 glossary terms"; }
 grep -q "check_catalog: every public model, metric, glossary term and saved query is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
 echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 

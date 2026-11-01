@@ -15,7 +15,8 @@
 #     set (SL-18),
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
-#     and revenue by weekday (a date part, ISO) against SQL by hand, the marketing metrics by day and channel
+#     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
+#     signup-to-first-order rate by month against SQL by hand, the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
@@ -142,7 +143,15 @@ if part == "platform":
                    " from `pplk8s-lab.gold.daily_sales` group by 1")
     with open(f"{out}/dow.csv") as f:
         by_weekday = {str(int(float(r["metric_time__extract_dow"]))): (num(r["revenue_eur"]),) for r in csv.DictReader(f)}
+    # Customers' own metrics by month over the base fixture's 2024 signups (none orders within 30 days).
+    customers = rows("""
+        select cast(month as string), countif(date_trunc(c.signup_date, month) = month),
+               countif(c.signup_date < date_add(month, interval 1 month)), 0
+        from unnest(generate_date_array(date '2024-01-01', date '2024-12-01', interval 1 month)) as month
+        cross join `pplk8s-lab.silver.customers` c group by month""")
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("customers by month (SQL by hand)", customers,
+                 metrics("customers", ["signups", "customers_to_date", "signup_to_first_order_rate"], ("metric_time__month",))),
                 ("revenue by weekday (ISO)", weekday, by_weekday),
                 ("exposed.net_sales_daily", exposed, metrics("net", net)),
                 ("net revenue by customer country (SQL by hand)", by_country,
@@ -163,7 +172,7 @@ if part == "platform":
         bad.append(f"migration.parity on the emulator: {parity}")
     said = (f"the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, net revenue"
             f" by customer country SQL by hand on {len(by_country)} day-countries, revenue by weekday on"
-            f" {len(weekday)} weekdays, the marketing"
+            f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the marketing"
             f" metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity reports as on Postgres")
 elif part == "customer_actions":
     actions = keyed("select concat(cast(activity_date as string), ' ', action_type), actions"
@@ -338,6 +347,9 @@ run_ mf query --metrics revenue_eur,returns_eur,returns_count,net_revenue_eur \
 run_ mf query --metrics revenue_eur,returns_eur,net_revenue_eur --group-by metric_time__day,customer__country \
   --csv "$OUT/net_country.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of net revenue by customer country on the emulator"; }
+run_ mf query --metrics signups,customers_to_date,signup_to_first_order_rate --group-by metric_time__month \
+  --start-time 2024-01-01 --end-time 2024-12-31 --csv "$OUT/customers.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the customers' metrics on the emulator"; }
 run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \

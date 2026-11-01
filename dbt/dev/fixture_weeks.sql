@@ -79,3 +79,36 @@ SELECT 'B-W' || substr(lead_id, 4), lead_id, created_ts + interval '5 hours',
        day + interval '1 day 40 minutes'
 FROM fixture_weeks_leads
 WHERE (i + n + campaign_id) % 3 = 0;
+
+-- Customers 11 to 30 sign up every third day from 2026-08-01 to 2026-09-27 (two months of signups), and
+-- every third of them (12, 15, ..., 30) places a first order after the base fixture's days, from 2026-10-04,
+-- so no figure above moves: 24, 27 and 30 order 29, 21 and 13 days after signing up (within 30 days; 29 is the
+-- window's last day), 12 to 21 between 37 and 61 days after. Their countries cycle through the six accepted.
+INSERT INTO ds_source.synthetic_customers
+SELECT
+    c,
+    'Customer ' || c,
+    'customer' || c || '@example.test',
+    (ARRAY['NL', 'TR', 'GB', 'DE', 'FR', 'US'])[1 + c % 6],
+    date '2026-08-01' + (c - 11) * 3,
+    'run-c-w-' || c,
+    timestamptz '2026-08-01 00:00+00' + make_interval(days => (c - 11) * 3),
+    timestamptz '2026-08-02 00:00+00' + make_interval(days => (c - 11) * 3),
+    1, 'fixture://customers',
+    timestamptz '2026-08-02 00:30+00' + make_interval(days => (c - 11) * 3)
+FROM generate_series(11, 30) AS c;
+
+INSERT INTO ds_source.synthetic_orders
+SELECT
+    'ORD-S' || c,
+    c,
+    timestamptz '2026-10-04 10:00+00' + make_interval(days => (c - 12) / 3),
+    'placed',
+    (20 + c)::numeric(12,2),
+    'EUR',
+    'run-s-' || c,
+    timestamptz '2026-10-04 00:00+00' + make_interval(days => (c - 12) / 3),
+    timestamptz '2026-10-05 00:00+00' + make_interval(days => (c - 12) / 3),
+    1, 'fixture://orders',
+    timestamptz '2026-10-05 00:30+00' + make_interval(days => (c - 12) / 3)
+FROM generate_series(12, 30, 3) AS c;

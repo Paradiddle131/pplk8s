@@ -96,6 +96,22 @@ questions:
       select max(spend) from (select campaign_id, sum(spend) as spend from silver.ad_spend
       where spend_date between '2026-09-01' and '2026-09-30' group by 1) c
     metrics: [ad_spend_eur]
+  # Customers' own metrics, over fixture_weeks.sql's signups of August and September 2026.
+  - id: signups_september
+    question: How many new customers signed up in September 2026?
+    expected_sql: select count(*) from silver.customers where signup_date between '2026-09-01' and '2026-09-30'
+    metrics: [signups]
+  - id: customers_to_date
+    question: How many customers had signed up in total by the end of September 2026?
+    expected_sql: select count(*) from silver.customers where signup_date <= '2026-09-30'
+    metrics: [customers_to_date]
+  - id: signup_to_first_order_rate
+    question: What share of the customers who signed up in September 2026 placed an order within 30 days of signing up?
+    expected_sql: >-
+      select count(*) filter (where exists (select 1 from silver.orders o where o.customer_id = c.customer_id
+        and o.order_date >= c.signup_date and o.order_date < c.signup_date + 30))::numeric / count(*)
+      from silver.customers c where c.signup_date between '2026-09-01' and '2026-09-30'
+    metrics: [signup_to_first_order_rate]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'
