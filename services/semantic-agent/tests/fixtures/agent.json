@@ -402,6 +402,37 @@
       ]
     },
     {
+      "name": "gld_lead_conversion_daily",
+      "relation": "dbt_dev.gold.lead_conversion_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "marketing"
+      ],
+      "description": "One row per day a CRM lead was created, with the leads of that day and those that booked within 30 days of being created. A per-day rate; over a period use the metric lead_to_booking_rate. Alias gold.lead_conversion_daily.",
+      "grain": [
+        "created_date"
+      ],
+      "columns": [
+        {
+          "name": "created_date",
+          "description": "Natural key; the UTC day the leads were created."
+        },
+        {
+          "name": "leads",
+          "description": "CRM leads created that day, over all channels."
+        },
+        {
+          "name": "booked_leads",
+          "description": "Of those leads, the ones that booked on their creation day or in the 29 days after."
+        },
+        {
+          "name": "lead_to_booking_rate",
+          "description": "Share of that day's leads that booked within 30 days of being created."
+        }
+      ]
+    },
+    {
       "name": "gld_marketing_daily",
       "relation": "dbt_dev.gold.marketing_daily",
       "layer": "gold",
