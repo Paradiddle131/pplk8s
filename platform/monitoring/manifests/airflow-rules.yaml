@@ -266,7 +266,8 @@ spec:
           # the source-freshness CronJob, last found its newest _loaded_at past the table's error_after in
           # dbt/models/sources.yml, or could not read the table at all (`runtime error`). The thresholds
           # live in dbt only; this rule reads dbt's verdict. One alert per table, before any product it
-          # feeds is late; the value is the age of its newest row in seconds (meaningless for `runtime error`).
+          # feeds is late; the value is the age of its newest row in seconds (meaningless for `runtime error`),
+          # about 1.8e9 for an empty table, whose newest load the hook records as null (never loaded).
           expr: |
             max by (source, table, status) (ops_source_freshness_checked_timestamp_seconds{status=~"error|runtime error"}) * 0
               + on (source, table) group_left()
@@ -274,7 +275,7 @@ spec:
           for: 2m
           labels: {severity: warning}
           annotations:
-            summary: "{{ $labels.source }}.{{ $labels.table }} {{ if eq $labels.status \"runtime error\" }}could not be checked for freshness{{ else }}stopped flowing: its newest row landed {{ $value | humanizeDuration }} ago{{ end }}."
+            summary: "{{ $labels.source }}.{{ $labels.table }} {{ if eq $labels.status \"runtime error\" }}could not be checked for freshness{{ else if gt $value 1e9 }}was never loaded{{ else }}stopped flowing: its newest row landed {{ $value | humanizeDuration }} ago{{ end }}."
             runbook: docs/runbook.md#13-a-source-stops-flowing
         - alert: SourceFreshnessNotChecked
           # SourceStale only knows what the last check recorded: a CronJob that stopped running (suspended,

@@ -3,7 +3,8 @@
 -- It replaces each checked source's row in ops.source_freshness with dbt's verdict, so the thresholds live
 -- once, in models/sources.yml, and the warehouse's sql_exporter turns the rows into the SourceStale alert
 -- (platform/compose/sql-exporter/source-freshness.collector.yml).
--- A table that could not be checked (missing, no permission) is `runtime error`, with no max_loaded_at.
+-- A table that could not be checked (missing, no permission) is `runtime error`, with no max_loaded_at;
+-- an empty table is `error`, also with no max_loaded_at (never loaded).
 -- Postgres and BigQuery alike: the types come from dbt's cross-database macros and type_timestamptz().
 
 {% macro record_source_freshness(results) -%}
@@ -64,9 +65,10 @@
   ) }}
 {%- endmacro %}
 
-{# A datetime dbt hands over (UTC), as a timestamp literal; null when the table could not be checked. #}
+{# A datetime dbt hands over (UTC), as a timestamp literal; null when the table could not be checked, or when it
+   is empty: dbt then reports year 1 ("infinitely long ago"), which %Y prints as `1-01-01` and Postgres reads as 2001. #}
 {% macro _freshness_timestamp(value) -%}
-  {%- if value is none -%}null
+  {%- if value is none or value.year == 1 -%}null
   {%- else -%}cast({{ dbt.string_literal(value.strftime("%Y-%m-%d %H:%M:%S.%f") ~ "+00:00") }} as {{ type_timestamptz() }})
   {%- endif -%}
 {%- endmacro %}

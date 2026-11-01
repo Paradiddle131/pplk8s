@@ -61,6 +61,25 @@ tests:
               summary: "ds_source.tlc_green could not be checked for freshness."
               runbook: docs/runbook.md#13-a-source-stops-flowing
 
+  # An empty landed table (a fresh lab whose ELT never ran): dbt records `error`, the hook records no newest load,
+  # and the exporter turns that into 0, so the age is the whole epoch and the summary says never loaded. The group's
+  # clock starts in 2026, as the lab's does, since an age measured from 0 only means "never" against a real clock.
+  - interval: 1m
+    start_timestamp: 2026-10-31T00:00:00Z
+    input_series:
+      - series: 'ops_source_freshness_checked_timestamp_seconds{source="ds_source", table="synthetic_leads", status="error", target="warehouse"}'
+        values: '0x10'
+      - series: 'ops_source_max_loaded_at_seconds{source="ds_source", table="synthetic_leads", target="warehouse"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: SourceStale
+        exp_alerts:
+          - exp_labels: {source: ds_source, table: synthetic_leads, status: error, severity: warning}
+            exp_annotations:
+              summary: "ds_source.synthetic_leads was never loaded."
+              runbook: docs/runbook.md#13-a-source-stops-flowing
+
   # The CronJob stops: the last check at t=0 stays the newest, quiet until two hours have passed, firing
   # 2 m later, valued at the age of the last check.
   - interval: 1m
