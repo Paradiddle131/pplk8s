@@ -8,7 +8,8 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   with their relation, pipelines, grain and column descriptions, and every metric with its label,
   description, type, pipelines, readiness products, time grain and the dimensions it can be grouped by,
   a categorical one with its known values when its column declares them (an `accepted_values` test), so the
-  agent filters on a value the data holds instead of guessing one.
+  agent filters on a value the data holds instead of guessing one, and typed `numeric` when its column
+  declares a numeric `data_type`, so the agent may compare it (MetricFlow knows only categorical and time).
   A metric's readiness products are the `ops.readiness` products of the models it reads,
   `<pipeline>.<layer>` (e.g. `sales.silver`), which is how the agent states its freshness (SL-4).
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
@@ -108,6 +109,21 @@ def accepted_values(manifest: dict) -> dict[tuple[str, str], list[str]]:
     return found
 
 
+# Postgres and BigQuery spellings of a number type, as a column's data_type declares it.
+NUMERIC_TYPES = ("numeric", "decimal", "bignumeric", "integer", "int", "int64", "bigint", "smallint", "float64")
+
+
+def numeric_columns(manifest: dict) -> set[tuple[str, str]]:
+    """The model columns whose declared `data_type` is a number, by (model, column)."""
+    return {
+        (node["name"], name)
+        for node in manifest["nodes"].values()
+        if node["resource_type"] == "model"
+        for name, column in node.get("columns", {}).items()
+        if (column.get("data_type") or "").lower().split("(")[0].strip() in NUMERIC_TYPES
+    }
+
+
 def glossary(manifest: dict) -> list[dict]:
     """The business terms that are not metrics, from `config.meta.glossary` on the models that hold them."""
     terms = []
@@ -147,6 +163,7 @@ class SemanticIndex:
             for node in manifest["semantic_models"].values()
         }
         self.accepted_values = accepted_values(manifest)
+        self.numeric_columns = numeric_columns(manifest)
         self._nodes = {**manifest["metrics"], **manifest["semantic_models"]}
         self._metric_ids = {node["name"]: unique_id for unique_id, node in manifest["metrics"].items()}
 
@@ -186,6 +203,10 @@ class SemanticIndex:
     def known_values(self, semantic_model: str, column: str) -> list[str] | None:
         """The values a dimension's column declares, or None when it declares none."""
         return self.accepted_values.get((self.model_of_semantic_model.get(semantic_model, ""), column))
+
+    def is_numeric(self, semantic_model: str, column: str) -> bool:
+        """Whether a dimension's column declares a numeric data_type."""
+        return (self.model_of_semantic_model.get(semantic_model, ""), column) in self.numeric_columns
 
     def question(self, saved_query: dict) -> str:
         """The business question a saved query answers, from its `config.meta.question`."""
@@ -412,9 +433,12 @@ def _metricflow(
             if dimension.type.value == "categorical" and dimension.semantic_model_reference is not None:
                 # A dimension's column is its expr when that is a plain column name, else its own name.
                 column = dimension.expr if dimension.expr and dimension.expr.isidentifier() else dimension.name
-                values = index.known_values(dimension.semantic_model_reference.semantic_model_name, column)
+                semantic_model = dimension.semantic_model_reference.semantic_model_name
+                values = index.known_values(semantic_model, column)
                 if values is not None:
                     entry["values"] = values
+                if index.is_numeric(semantic_model, column):
+                    entry["type"] = "numeric"
             found.append(entry)
         return sorted(found, key=lambda dimension: dimension["name"])
 

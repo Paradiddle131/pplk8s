@@ -273,3 +273,104 @@ def test_dbt_project_dir_comes_from_the_env_outside_the_repo(monkeypatch):
     monkeypatch.setattr(metrics, "__file__", "/app/agents/semantic_agent/metrics.py")
     monkeypatch.setenv("DBT_PROJECT_DIR", "/app/dbt")
     assert str(metrics.project_dir()) == "/app/dbt"
+
+
+# Time and numeric dimensions (a signup cohort, orders over an amount): each value is type-checked
+# and rendered from its parsed form, never from the model's text.
+@pytest.mark.parametrize(
+    ("operator", "values", "expected"),
+    [
+        (
+            ">=",
+            ["2024-09-01"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} >= '2024-09-01'",
+        ),
+        (
+            "<=",
+            ["2024-09-30"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} <= '2024-09-30'",
+        ),
+        ("<", ["2024-09-30"], "{{ TimeDimension('customer__signup_date', 'day') }} < '2024-09-30'"),
+        ("=", ["2024-09-01"], "{{ TimeDimension('customer__signup_date', 'day') }} = '2024-09-01'"),
+        (
+            "between",
+            ["2024-09-01", "2024-09-30"],
+            "{{ TimeDimension('customer__signup_date', 'day') }} "
+            "between '2024-09-01' and '2024-09-30'",
+        ),
+    ],
+)
+def test_a_time_dimension_takes_comparisons_on_iso_dates(operator, values, expected):
+    item = Filter(dimension="customer__signup_date", operator=operator, values=values)
+    assert where_clause(item, CATALOG.dimensions(["revenue_eur"])) == expected
+
+
+@pytest.mark.parametrize(
+    ("operator", "values", "expected"),
+    [
+        (">", ["100"], "{{ Dimension('order__amount') }} > 100"),
+        (">=", ["99.5"], "{{ Dimension('order__amount') }} >= 99.5"),
+        ("<", ["-1"], "{{ Dimension('order__amount') }} < -1"),
+        ("!=", ["25.00"], "{{ Dimension('order__amount') }} <> 25.00"),
+        ("in", ["25", "45.0"], "{{ Dimension('order__amount') }} in (25, 45.0)"),
+        ("between", ["10", "50"], "{{ Dimension('order__amount') }} between 10 and 50"),
+    ],
+)
+def test_a_numeric_dimension_takes_comparisons_on_numbers(operator, values, expected):
+    item = Filter(dimension="order__amount", operator=operator, values=values)
+    assert where_clause(item, CATALOG.dimensions(["revenue_eur"])) == expected
+
+
+def test_the_catalog_types_a_numeric_dimension():
+    assert CATALOG.dimensions(["orders_total"])["order__amount"] == "numeric"
+    assert CATALOG.dimensions(["orders_total"])["customer__signup_date"] == "time"
+
+
+@pytest.mark.parametrize(
+    ("item", "message"),
+    [
+        (Filter(dimension="customer__signup_date", operator=">=", values=["September"]), "a date"),
+        (Filter(dimension="customer__signup_date", operator=">=", values=["2024-09"]), "a date"),
+        (Filter(dimension="customer__signup_date", values=["2024-09-01 00:00"]), "a date"),
+        (
+            Filter(dimension="customer__signup_date", operator="in", values=["2024-09-01"]),
+            "operator",
+        ),
+        (Filter(dimension="order__amount", operator=">", values=["a lot"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["1e3"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["NaN"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["100 or 1=1"]), "a number"),
+        (Filter(dimension="order__amount", operator=">", values=["1", "2"]), "exactly one value"),
+        (Filter(dimension="order__amount", operator="between", values=["1"]), "two values"),
+        (Filter(dimension="order__amount", operator="between", values=["50", "10"]), "low"),
+        (
+            Filter(
+                dimension="customer__signup_date",
+                operator="between",
+                values=["2024-09-30", "2024-09-01"],
+            ),
+            "low",
+        ),
+        (Filter(dimension="order__status", operator=">", values=["placed"]), "operator"),
+        (
+            Filter(dimension="metric_time", operator=">=", values=["2026-10-01"]),
+            "start_date and end_date",
+        ),
+    ],
+)
+def test_a_typed_filter_is_refused_unless_its_values_fit(item, message):
+    with pytest.raises(QueryError, match=message):
+        where_clause(
+            item, CATALOG.dimensions(["revenue_eur"]), CATALOG.known_values(["revenue_eur"])
+        )
+
+
+@pytest.mark.parametrize(
+    ("dimension", "operator"),
+    [("customer__signup_date", ">="), ("order__amount", ">"), ("order__status", "=")],
+)
+@pytest.mark.parametrize("value", ["{{ 7*7 }}", "{% if 1 %}1{% endif %}", "{# x #}1"])
+def test_a_jinja_delimiter_is_refused_for_every_value_type(dimension, operator, value):
+    item = Filter(dimension=dimension, operator=operator, values=[value])
+    with pytest.raises(QueryError, match="template delimiter"):
+        where_clause(item, CATALOG.dimensions(["revenue_eur"]))

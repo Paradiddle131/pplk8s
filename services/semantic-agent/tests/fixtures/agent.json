@@ -1657,6 +1657,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -2170,6 +2175,11 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
         },
         {
           "name": "order__currency",
@@ -2786,6 +2796,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -2923,6 +2938,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -2982,6 +3002,11 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
         },
         {
           "name": "order__currency",
@@ -3396,6 +3421,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -3488,6 +3518,11 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
         },
         {
           "name": "order__currency",
@@ -3584,6 +3619,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -3645,6 +3685,11 @@
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         },
         {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
           "name": "order__currency",
           "type": "categorical",
           "description": "ISO-4217 code of the order amount."
@@ -3704,6 +3749,11 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
         },
         {
           "name": "order__currency",

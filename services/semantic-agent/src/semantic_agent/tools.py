@@ -88,10 +88,15 @@ def query_metrics(
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
         group_by: Dimensions to break the metrics down by, e.g. ["metric_time__day"] for one row per
             day, ["metric_time__month"] per month, or ["order__status"]. Omit for one total row.
-        filters: Conditions on categorical dimensions, e.g.
-            [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}];
-            operator is one of =, !=, in, not in. A value must be one describe_metric lists for
-            the dimension, when it lists any.
+        filters: Conditions on dimensions, e.g.
+            [{"dimension": "order__currency", "operator": "=", "values": ["EUR"]}].
+            A categorical dimension takes =, !=, in, not in, with a value describe_metric lists
+            for it, when it lists any. A time dimension (signup cohort) takes =, !=, >, >=, <, <=
+            or between on dates like 2024-09-01, e.g. {"dimension": "customer__signup_date",
+            "operator": "between", "values": ["2024-09-01", "2024-09-30"]}. A numeric dimension
+            takes those and in, not in on numbers, e.g. {"dimension": "order__amount",
+            "operator": ">", "values": ["100"]}. between takes the low end, then the high end,
+            both included.
         start_date: First day to include (YYYY-MM-DD), inclusive.
         end_date: Last day to include (YYYY-MM-DD), inclusive.
         order_by: Requested metrics or group-bys to sort by; prefix "-" for descending.

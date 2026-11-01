@@ -6,6 +6,8 @@
 #   - the daily order metrics equal gold.daily_sales row for row, cancellation_rate included,
 #   - revenue, returns and net revenue by day equal exposed.net_sales_daily row for row, and by day and
 #     customer country equal SQL written by hand (returns reach the customer through their order),
+#   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
+#     query_metrics writes them, equals SQL written by hand,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -132,6 +134,32 @@ expect "net revenue by day and customer country vs SQL by hand (rows differing)"
 expect "net revenue from German customers on 2026-10-01 and 2026-10-02" "$(psql_dev -c "
   select string_agg(net_revenue_eur::text, ' ' order by day) from semantic_check.net_country where country = 'DE'")" "367.25 23.75"
 echo "ok: revenue, returns and net revenue by day and customer country equal SQL by hand; DE nets 367.25 on 2026-10-01"
+
+# Filters on a time and a numeric dimension, written as query_metrics builds them (services/semantic-agent,
+# metrics.where_clause; its unit tests pin these strings): a signup cohort's revenue, and orders over an amount.
+mf_ query --metrics revenue_eur --group-by metric_time__day \
+  --where "{{ TimeDimension('customer__signup_date', 'day') }} between '2024-08-01' and '2024-09-30'" \
+  --csv "$OUT/cohort.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query with a signup-date filter"; }
+mf_ query --metrics orders_total --group-by metric_time__day --where "{{ Dimension('order__amount') }} > 100" \
+  --csv "$OUT/large.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query with an amount filter"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.cohort" \
+  -c "create table semantic_check.cohort (day date, revenue_eur numeric)" \
+  -c "drop table if exists semantic_check.large" -c "create table semantic_check.large (day date, orders_total bigint)"
+psql_dev -c "\\copy semantic_check.cohort from stdin with (format csv, header true)" <"$OUT/cohort.csv"
+psql_dev -c "\\copy semantic_check.large from stdin with (format csv, header true)" <"$OUT/large.csv"
+expect "revenue of the August-September 2024 signups vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with hand as (select o.order_date, sum(o.amount) from silver.orders o join silver.customers c on c.customer_id = o.customer_id
+                where o.status <> 'cancelled' and c.signup_date between '2024-08-01' and '2024-09-30' group by 1),
+       mf as (select day, revenue_eur from semantic_check.cohort)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "orders over 100 vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with hand as (select order_date, count(*) from silver.orders where amount > 100 group by 1),
+       mf as (select day, orders_total from semantic_check.large)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "cohort revenue and large orders on 2026-10-01" "$(psql_dev -c "
+  select (select round(revenue_eur, 2) from semantic_check.cohort where day = '2026-10-01') || ' ' ||
+         (select orders_total from semantic_check.large where day = '2026-10-01')")" "312.00 3"
+echo "ok: a signup-date range and an amount comparison filter the metrics as SQL by hand does"
 
 # Marketing (SL-8): the simple metrics by day and channel against gold.marketing_daily, the ratios
 # against exposed.channel_performance_daily (per day), then the whole fixture as one period.

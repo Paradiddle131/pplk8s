@@ -72,6 +72,17 @@ questions:
         - (select coalesce(sum(r.amount), 0) from silver.returns r join silver.orders o on o.order_id = r.order_id
            join silver.customers c on c.customer_id = o.customer_id where r.return_date = '2026-10-01' and c.country = 'DE')
     metrics: [net_revenue_eur]
+  # Filters on a time and a numeric dimension: a signup cohort's range and orders over an amount.
+  - id: revenue_signup_cohort
+    question: What revenue did customers who signed up in August or September 2024 bring in on 1 October 2026?
+    expected_sql: >-
+      select sum(o.amount) from silver.orders o join silver.customers c on c.customer_id = o.customer_id
+      where o.status <> 'cancelled' and o.order_date = '2026-10-01' and c.signup_date between '2024-08-01' and '2024-09-30'
+    metrics: [revenue_eur]
+  - id: orders_over_100
+    question: How many orders of more than 100 EUR were placed on 1 and 2 October 2026?
+    expected_sql: select count(*) from silver.orders where amount > 100 and order_date between '2026-10-01' and '2026-10-02'
+    metrics: [orders_total]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'
