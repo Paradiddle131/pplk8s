@@ -10,14 +10,27 @@ version: 2
 
 models:
   - name: metricflow_time_spine
-    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine. Alias semantic.time_spine.
+    description: One row per calendar day from 2024-01-01 to 2027-12-31, MetricFlow's time spine, with the fiscal quarter and year each day falls in. Alias semantic.time_spine.
     time_spine:
       standard_granularity_column: date_day
+      custom_granularities:
+        - name: fiscal_quarter
+        - name: fiscal_year
     columns:
       - name: date_day
         description: The calendar day.
         granularity: day
         tests: [not_null, unique]
+      - name: fiscal_quarter
+        description: >-
+          First day of the day's fiscal quarter; the fiscal year starts on 1 February, so its quarters start on
+          1 February, 1 May, 1 August and 1 November (fiscal Q3 of fiscal 2026 is 2026-08-01 to 2026-10-31).
+        tests: [not_null]
+      - name: fiscal_year
+        description: >-
+          First day of the day's fiscal year, which starts on 1 February and is named by the calendar year it
+          starts in (fiscal 2026 is 2026-02-01 to 2027-01-31).
+        tests: [not_null]
 
   - name: semantic_metrics
     description: One row per metric of the semantic layer, with its words; the warehouse copy of the agent catalog's metrics (semantic/PLAN.md SL-3). Alias semantic.metrics.

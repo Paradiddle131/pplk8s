@@ -26,7 +26,9 @@ def list_metrics() -> dict[str, Any]:
     and the saved queries: recurring questions answered the same way every time, each a fixed set
     of metrics, group-bys and filters that query_metrics runs by name.
 
-    not_available_here lists metrics defined only for another warehouse: decline those.
+    custom_time_grains are the business's own periods (the fiscal quarter and year): group a time
+    dimension by them as by a month, e.g. metric_time__fiscal_quarter. not_available_here lists
+    metrics defined only for another warehouse: decline those.
 
     Call this first: an answer may only use these metrics.
     """
@@ -43,6 +45,7 @@ def list_metrics() -> dict[str, Any]:
             {key: query[key] for key in ("name", "question", "metrics", "group_by", "where")}
             for query in catalog().saved_queries.values()
         ],
+        "custom_time_grains": catalog().custom_grains_described,
         "not_available_here": [
             {key: m[key] for key in ("name", "label", "dialects")}
             for m in catalog().unavailable.values()
@@ -96,7 +99,9 @@ def query_metrics(
         metrics: Metric names from list_metrics, e.g. ["revenue_eur"].
         group_by: Dimensions to break the metrics down by, e.g. ["metric_time__day"] for one row per
             day, ["metric_time__month"] per month, or ["order__status"]. Omit for one total row.
-            A date part groups by a piece of the date across periods:
+            A custom grain list_metrics gives (custom_time_grains) groups by the business's own
+            periods, e.g. ["metric_time__fiscal_quarter"]. A date part groups by a piece of the
+            date across periods:
             ["metric_time__extract_dow"] for one row per weekday (1 is Monday, 7 Sunday), or
             __extract_month, __extract_day, __extract_quarter, __extract_year, __extract_doy.
             An entity describe_metric lists, e.g. ["campaign"], gives one row per id; with

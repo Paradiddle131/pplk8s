@@ -143,6 +143,11 @@ questions:
       select percentile_cont(0.5) within group (order by amount) from silver.orders
       where status <> 'cancelled' and order_date = '2026-10-01'
     metrics: []
+  # The fiscal calendar: a year from 1 February, named by the calendar year it starts in.
+  - id: revenue_fiscal_q3
+    question: What was our revenue in the third quarter of fiscal 2026?
+    expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-08-01' and '2026-10-31'
+    metrics: [revenue_eur]
   - id: amsterdam_temperature
     question: What was the average temperature in Amsterdam on 1 October 2026?
     expected_sql: select avg_temperature_c from gold.daily_weather where location = 'Amsterdam' and date = '2026-10-01'

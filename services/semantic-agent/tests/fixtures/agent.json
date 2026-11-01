@@ -5399,5 +5399,15 @@
         "bigquery"
       ]
     }
+  ],
+  "custom_grains": [
+    {
+      "name": "fiscal_quarter",
+      "description": "First day of the day's fiscal quarter; the fiscal year starts on 1 February, so its quarters start on 1 February, 1 May, 1 August and 1 November (fiscal Q3 of fiscal 2026 is 2026-08-01 to 2026-10-31)."
+    },
+    {
+      "name": "fiscal_year",
+      "description": "First day of the day's fiscal year, which starts on 1 February and is named by the calendar year it starts in (fiscal 2026 is 2026-02-01 to 2027-01-31)."
+    }
   ]
 }

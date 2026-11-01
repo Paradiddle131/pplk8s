@@ -469,3 +469,34 @@ def test_a_bigquery_only_metric_is_declined_on_postgres_naming_its_warehouse():
         CATALOG.metric("median_order_value_eur")
     with pytest.raises(QueryError, match="not available here"):
         MetricQuery(metrics=["median_order_value_eur"]).request(CATALOG)
+
+
+# The time spine's custom grains (the fiscal calendar) are grains like month, from the catalog.
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("metric_time__fiscal_quarter", ("metric_time", "fiscal_quarter")),
+        ("customer__signup_date__fiscal_year", ("customer__signup_date", "fiscal_year")),
+    ],
+)
+def test_a_custom_grain_the_catalog_lists_is_a_time_grain(name, expected):
+    assert CATALOG.custom_grains == ["fiscal_quarter", "fiscal_year"]
+    parameter = group_by_parameter(
+        name,
+        CATALOG.dimensions(["revenue_eur"]),
+        CATALOG.entities(["revenue_eur"]),
+        CATALOG.custom_grains,
+    )
+    assert (parameter.name, parameter.grain) == expected
+
+
+def test_a_custom_grain_is_refused_when_the_catalog_has_none():
+    with pytest.raises(QueryError, match="cannot group by"):
+        group_by_parameter("metric_time__fiscal_quarter", CATALOG.dimensions(["revenue_eur"]), [])
+
+
+def test_a_request_groups_by_the_fiscal_quarter():
+    request = MetricQuery(
+        metrics=["revenue_eur"], group_by=["metric_time__fiscal_quarter"]
+    ).request(CATALOG)
+    assert [(p.name, p.grain) for p in request.group_by] == [("metric_time", "fiscal_quarter")]
