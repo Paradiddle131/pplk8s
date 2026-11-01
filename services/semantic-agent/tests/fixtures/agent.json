@@ -854,7 +854,8 @@
       "metrics": [
         "orders_total",
         "revenue_eur",
-        "customers_distinct"
+        "customers_distinct",
+        "signups"
       ],
       "dimensions": [
         "customer__signup_date"
@@ -2401,6 +2402,53 @@
         },
         {
           "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "customers_to_date",
+      "label": "Customers to date",
+      "description": "All customers who had signed up by each day, a running total over all time; grouped by week or month it is the count on that period's last day.",
+      "type": "cumulative",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customers"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
           "description": "Natural key."
         }
       ]
@@ -4225,6 +4273,101 @@
         },
         {
           "name": "order",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "signup_to_first_order_rate",
+      "label": "Signup-to-first-order rate",
+      "description": "Share of customers who placed their first order within 30 days of signing up (the signup day and the 29 after it), counted on the signup day; by signup month, the share of that cohort.",
+      "type": "conversion",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customers",
+        "orders"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "signups",
+      "label": "Signups",
+      "description": "Customers who signed up, counted on the day they signed up (new customers).",
+      "type": "simple",
+      "pipelines": [
+        "sales"
+      ],
+      "readiness": [
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customers"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
           "description": "Natural key."
         }
       ]

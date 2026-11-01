@@ -222,3 +222,24 @@ metrics:
     input_metric: leads
     grain_to_date: month
     period_agg: last
+  # Customers (signups on silver.customers): the running total over all time, and the share of signups that
+  # place an order within 30 days, at day grain the signup day and the 29 after it.
+  - name: customers_to_date
+    description: >-
+      All customers who had signed up by each day, a running total over all time; grouped by week or month it is
+      the count on that period's last day.
+    label: Customers to date
+    type: cumulative
+    input_metric: signups
+    period_agg: last
+  - name: signup_to_first_order_rate
+    description: >-
+      Share of customers who placed their first order within 30 days of signing up (the signup day and the 29
+      after it), counted on the signup day; by signup month, the share of that cohort.
+    label: Signup-to-first-order rate
+    type: conversion
+    entity: customer
+    calculation: conversion_rate
+    base_metric: signups
+    conversion_metric: orders_total
+    window: 30 days

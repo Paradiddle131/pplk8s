@@ -8,7 +8,8 @@
 #     customer country equal SQL written by hand (returns reach the customer through their order),
 #   - a filter on a time dimension (a signup cohort) and on a numeric one (orders over an amount), as
 #     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
-#     equals gold over the six weeks,
+#     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
+#     equal SQL written by hand over two months of signups,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -75,10 +76,10 @@ echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 45 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 45 metrics and 7 saved queries"
-grep -q "check_brief: 45 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 45 metrics of docs/target-architecture.md"
+grep -q "15 semantic models, 48 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 15 semantic models, 48 metrics and 7 saved queries"
+grep -q "check_brief: 48 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 48 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -585,7 +586,7 @@ psql_dev <"$REPO/dbt/dev/fixture_weeks.sql"
 dbt_ build --select tag:sales tag:returns tag:finance tag:marketing --exclude tag:tlc >"$OUT/weeks.log" 2>&1 ||
   { tail -30 "$OUT/weeks.log" >&2; fail "dbt build with fixture_weeks.sql"; }
 expect "layer hops passed with the six weeks" "$(grep -c " PASS hop_" "$OUT/weeks.log")" 30
-first=2026-08-17 last=2026-10-02
+first=2026-08-17 last=2026-10-04 # whole weeks: MetricFlow widens a weekly query to them
 mf_ query --metrics revenue_eur_wow_growth,bookings_wow_growth,leads_wow_growth --group-by metric_time__week \
   --start-time "$first" --end-time "$last" --csv "$OUT/wow.csv" >>"$OUT/query.log" 2>&1 ||
   { cat "$OUT/query.log" >&2; fail "mf query of the week-over-week metrics"; }
@@ -641,5 +642,39 @@ expect "revenue by weekday vs gold (rows differing)" "$(psql_dev -c "
   select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
 expect "weekdays with revenue" "$(psql_dev -c "select count(*) from semantic_check.dow")" 7
 echo "ok: revenue grouped by weekday (a date part, ISO) equals gold over six whole weeks"
+
+# Customers' own metrics, over fixture_weeks.sql's twenty signups of August and September 2026 (and the base
+# fixture's ten of 2024): signups by day, customers to date by month (the count on the month's last day), and
+# the signup-to-first-order rate by signup month (an order on the signup day or within the 29 after it; a month
+# without conversions has no rate in MetricFlow, read as 0).
+mf_ query --metrics signups --group-by metric_time__day --csv "$OUT/signups.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of signups"; }
+mf_ query --metrics customers_to_date,signup_to_first_order_rate --group-by metric_time__month \
+  --start-time 2026-07-01 --end-time 2026-09-30 --csv "$OUT/customers.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of customers to date and the signup-to-first-order rate"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.signups" \
+  -c "create table semantic_check.signups (day date, signups bigint)" \
+  -c "drop table if exists semantic_check.customers" \
+  -c "create table semantic_check.customers (month date, customers_to_date bigint, signup_to_first_order_rate numeric)"
+psql_dev -c "\\copy semantic_check.signups from stdin with (format csv, header true)" <"$OUT/signups.csv"
+psql_dev -c "\\copy semantic_check.customers from stdin with (format csv, header true)" <"$OUT/customers.csv"
+expect "signups by day vs silver.customers (rows differing)" "$(psql_dev -c "
+  with hand as (select signup_date, count(*) from silver.customers group by 1),
+       mf as (select day, signups from semantic_check.signups)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "customers to date and the signup-to-first-order rate by month vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with months as (select generate_series(date '2026-07-01', date '2026-09-01', interval '1 month')::date as month),
+       firsts as (select c.customer_id, c.signup_date, min(o.order_date) as first_order from silver.customers c
+                  left join silver.orders o on o.customer_id = c.customer_id and o.order_date >= c.signup_date group by 1, 2),
+       hand as (select m.month,
+                       (select count(*) from silver.customers where signup_date < m.month + interval '1 month'),
+                       coalesce(round((select count(*) filter (where first_order < signup_date + 30)::numeric / nullif(count(*), 0)
+                                       from firsts where date_trunc('month', signup_date) = m.month), 4), 0)
+                from months m),
+       mf as (select month, customers_to_date, coalesce(round(signup_to_first_order_rate, 4), 0) from semantic_check.customers)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "customers to date at the end of September, and September's signup-to-first-order rate" "$(psql_dev -c "
+  select customers_to_date || ' ' || round(signup_to_first_order_rate, 4) from semantic_check.customers where month = '2026-09-01'")" "30 0.3333"
+echo "ok: signups, customers to date and the signup-to-first-order rate equal SQL by hand; 3 of September's 9 signups ordered within 30 days"
 
 echo "PASS: semantic check"

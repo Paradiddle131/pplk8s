@@ -15,8 +15,8 @@ version: 2
 # Each model's `hop_bronze_to_<model>` test reconciles it with bronze's latest load of each key (SL-9).
 
 models:
-  # Customers carry no metric of their own: the customer entity lets every orders metric group and
-  # filter by the customer's country and signup cohort (customer__signup_date__month).
+  # The customer entity lets every orders metric group and filter by the customer's country and signup
+  # cohort (customer__signup_date__month); signups count customers on the day they signed up.
   - name: slv_customers
     description: One row per customer, latest load wins. Alias silver.customers.
     config:
@@ -27,7 +27,7 @@ models:
               The customers who signed up in the same calendar month. A metric by cohort groups by the month
               its customer signed up, not the month the order was placed.
             synonyms: [cohort, acquisition cohort]
-            metrics: [orders_total, revenue_eur, customers_distinct]
+            metrics: [orders_total, revenue_eur, customers_distinct, signups]
             dimensions: [customer__signup_date]
           - term: Customer country
             description: >-
@@ -39,6 +39,7 @@ models:
     semantic_model:
       enabled: true
       name: customers
+    agg_time_dimension: signup_date
     tests:
       - latest_load_reconciles:
           name: hop_bronze_to_slv_customers
@@ -68,6 +69,13 @@ models:
         dimension:
           type: time
         granularity: day
+    metrics:
+      - name: signups
+        description: Customers who signed up, counted on the day they signed up (new customers).
+        label: Signups
+        type: simple
+        agg: count
+        expr: 1
 
   - name: slv_orders
     description: One row per order, latest load wins. order_date is order_ts in UTC. Alias silver.orders.
@@ -145,7 +153,8 @@ models:
         label: Orders
         type: simple
         agg: count
-        expr: order_id
+        # One per row (order_id is unique and not null): a conversion metric's input must count 1.
+        expr: 1
       - name: orders_cancelled
         description: Orders with status cancelled.
         label: Cancelled orders
