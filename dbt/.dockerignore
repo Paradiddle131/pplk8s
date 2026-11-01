@@ -1,5 +1,6 @@
 # Keep the image to the project itself: no dev fixtures, build output, or packages.
 dev/
+packages/*/dev/
 target/
 logs/
 dbt_packages/

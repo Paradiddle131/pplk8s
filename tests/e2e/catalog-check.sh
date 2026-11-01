@@ -15,6 +15,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=dbt_dev
 OUT=${TMPDIR:-/tmp}/pplk8s-catalog-check
 TARGET="$REPO/dbt/target"
@@ -26,14 +29,14 @@ psql_dev() {
 
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt"
 # The pins come from the image's requirements, so host and image run the same dbt and MetricFlow.
-dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
-py_() { (cd "$REPO/dbt" && uv run --quiet --no-project --with-requirements requirements.txt python "$@"); }
+dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt "$@"); }
+py_() { (cd "$REPO/dbt" && uv run --quiet --no-project --with-requirements requirements-postgres.txt python "$@"); }
 expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 
 rm -rf "$OUT" && mkdir -p "$OUT"
 psql_dev -c "select 1" >/dev/null 2>&1 || docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse createdb -U warehouse "$DB"
-for fixture in fixture.sql tlc_fixture.sql; do
-  psql_dev <"$REPO/dbt/dev/$fixture" 2>&1 | grep -v NOTICE || true
+for fixture in dev/fixture.sql packages/tlc/dev/tlc_fixture.sql; do
+  psql_dev <"$REPO/dbt/$fixture" 2>&1 | grep -v NOTICE || true
 done
 echo "ok: fixtures loaded into $DB"
 

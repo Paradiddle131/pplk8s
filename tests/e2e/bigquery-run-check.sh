@@ -35,6 +35,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
 DB=dbt_dev
 BQ_TARGET=${BQ_TARGET:-emulator}
 OUT=${TMPDIR:-/tmp}/pplk8s-bigquery-run-check-$BQ_TARGET
@@ -74,7 +76,7 @@ case "$BQ_TARGET" in
   *) fail "BQ_TARGET is $BQ_TARGET, not emulator or gcp" ;;
 esac
 STARTED=$(date -u +%FT%TZ)
-run_() { (cd "$PROJECT_DIR" && uv run --quiet --no-project --with-requirements requirements.txt --with "$DBT_BIGQUERY" "$@"); }
+run_() { (cd "$PROJECT_DIR" && uv run --quiet --no-project --with-requirements requirements-postgres.txt --with "$DBT_BIGQUERY" "$@"); }
 
 # A fresh BigQuery holding the fixture's sources: the emulator keeps everything in memory, so recreating it
 # empties it; on the lab project the copier empties the datasets.
@@ -93,7 +95,8 @@ psql_dev -c "select 1" >/dev/null 2>&1 || "${COMPOSE[@]}" exec -T warehouse crea
 psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 rm -rf "$OUT" && mkdir -p "$PROJECT_DIR"
 # A copy of dbt/, because MetricFlow reads <project>/target whatever DBT_TARGET_PATH says.
-(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs -cf - .) | tar -xf - -C "$PROJECT_DIR"
+(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs --exclude=./dbt_packages -cf - .) | tar -xf - -C "$PROJECT_DIR"
+dbt_deps "$PROJECT_DIR"
 # One part on a fresh BigQuery: dbt build of the tags given, its log appended to build.log for the hop count.
 build_part_() {
   local part=$1

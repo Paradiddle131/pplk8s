@@ -15,6 +15,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=dbt_freshness
 OUT=${TMPDIR:-/tmp}/pplk8s-source-freshness-check
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml")
@@ -27,7 +30,7 @@ expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 # parse against dbt_freshness there would send their queries to dbt_freshness (seen after `make demo-check`, #134).
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" DBT_TARGET_PATH=target/source-freshness-check
 # The pins come from the image's requirements, so host and image (the CronJob's) run the same dbt.
-dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
+dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt "$@"); }
 freshness() { dbt_ source freshness >"$OUT/freshness-$1.log" 2>&1; }
 statuses() { psql_db -F= -c "select table_name, status from ops.source_freshness order by table_name" | paste -sd' '; }
 LANDED="partner_returns synthetic_ad_spend synthetic_applications synthetic_bookings synthetic_call_transcripts synthetic_campaign_budgets synthetic_campaigns
@@ -38,8 +41,8 @@ all_with() { local t out=""; for t in $LANDED; do out+="$t=${2:-$1} "; done; ech
 mkdir -p "$OUT"
 psql_db -c "select 1" >/dev/null 2>&1 || "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"
 psql_db -c "drop schema if exists ops cascade" 2>&1 | grep -v NOTICE || true
-for fixture in fixture.sql tlc_fixture.sql; do
-  psql_db <"$REPO/dbt/dev/$fixture" 2>&1 | grep -v NOTICE || true
+for fixture in dev/fixture.sql packages/tlc/dev/tlc_fixture.sql; do
+  psql_db <"$REPO/dbt/$fixture" 2>&1 | grep -v NOTICE || true
 done
 # Every landed table, loaded an hour ago (the fixtures' own _loaded_at are fixed dates in the past).
 loaded() { psql_db -c "update ds_source.$1 set _loaded_at = now() - interval '$2'"; }

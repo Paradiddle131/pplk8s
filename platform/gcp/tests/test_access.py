@@ -73,7 +73,10 @@ def test_every_agent_role_exists_in_the_lab() -> None:
 
 
 def test_the_datasets_are_what_dbt_builds_and_reads() -> None:
-    assert set(ACCESS["datasets"]) == dbt_schemas() | source_schemas()
+    # Plus `ops`: no model builds there, but dbt's run-operations create its tables (the agents' audit,
+    # agent_warehouse; the freshness verdicts, source_freshness_table). The root project only: the TLC
+    # package, whose sources read ops.file_versions, never reaches GCP (semantic/PLAN.md SL-19).
+    assert set(ACCESS["datasets"]) == dbt_schemas() | source_schemas() | {"ops"}
 
 
 def test_dbt_writes_its_layers_and_reads_the_landing_dataset() -> None:

@@ -33,7 +33,7 @@ psql_dev() {
 on_emulator() {
   [ -f "$PROJECT_DIR/target/manifest.json" ] || fail "no emulator build: run make demo STEP=setup"
   (cd "$PROJECT_DIR" && DBT_USE_COLORS=false DBT_TARGET=bigquery_emulator DBT_PROFILES_DIR="$PROJECT_DIR" BQ_API_ENDPOINT="$ENDPOINT" \
-    uv run --quiet --no-project --with-requirements requirements.txt --with "$DBT_BIGQUERY" "$@")
+    uv run --quiet --no-project --with-requirements requirements-postgres.txt --with "$DBT_BIGQUERY" "$@")
 }
 # Aligns the columns of stdin or of the files named after the separator $1 (column(1) is not
 # everywhere, e.g. the cloud sandbox).

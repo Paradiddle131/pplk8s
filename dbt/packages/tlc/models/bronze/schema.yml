@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: brz_tlc_yellow_trips
+    description: >
+      Yellow taxi trips as landed, every file version and chunk, canonical names and types; columns a month or
+      the trip type lacks are NULL. Alias bronze.tlc_yellow_trips. No tests: rows repeat across file versions.
+    columns:
+      - name: data_month
+        description: YYYY-MM of the source file name, the month the file covers.
+
+  - name: brz_tlc_green_trips
+    description: Green taxi trips as landed; same shape as brz_tlc_yellow_trips. Alias bronze.tlc_green_trips.
+    columns:
+      - name: hail_type
+        description: Green's own trip_type column (1 = street hail, 2 = dispatch), renamed so trip_type can name yellow or green.

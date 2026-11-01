@@ -35,6 +35,13 @@ COPY --from=dbt macros /app/dbt/macros
 COPY --from=dbt seeds /app/dbt/seeds
 COPY --from=dbt snapshots /app/dbt/snapshots
 COPY --from=dbt scripts/build_catalog.py /app/dbt/scripts/build_catalog.py
+# The local dbt package (the Airflow lab's TLC pipeline, semantic/PLAN.md SL-19), as the lab's catalog lists its
+# public tables; the same paths, no singular tests. The agent's GCP build leaves it out (#209).
+COPY --from=dbt packages.yml package-lock.yml /app/dbt/
+COPY --from=dbt packages/tlc/dbt_project.yml /app/dbt/packages/tlc/
+COPY --from=dbt packages/tlc/models /app/dbt/packages/tlc/models
+COPY --from=dbt packages/tlc/macros /app/dbt/packages/tlc/macros
+COPY --from=dbt packages/tlc/seeds /app/dbt/packages/tlc/seeds
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -45,9 +52,9 @@ ENV PATH=/app/.venv/bin:$PATH \
     DBT_SEND_ANONYMOUS_USAGE_STATS=False \
     DBT_TARGET_PATH=/app/dbt/target \
     DBT_LOG_PATH=/app/dbt/logs
-# Smoke check without a database: the project parses and the catalog builds; the output is
+# Smoke check without a database: the package installs, the project parses and the catalog builds; the output is
 # discarded so the runtime target starts empty.
-RUN cd /app/dbt && dbt parse --quiet && python scripts/build_catalog.py target \
+RUN cd /app/dbt && dbt deps --quiet && dbt parse --quiet && python scripts/build_catalog.py target \
     && rm -rf target logs && mkdir target logs && chown 10001:10001 target logs
 USER 10001
 EXPOSE 8080

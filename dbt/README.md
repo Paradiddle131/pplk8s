@@ -76,6 +76,8 @@ The image build runs `scripts/check_pipeline_views.py` on the parsed manifest an
 ## The tlc models: one data month per build
 
 The NYC TLC models (PLAN.md D34-D36) replace one data month at a time.
+They live in a local dbt package, `packages/tlc/` (`pplk8s_tlc`: its models, macros, seed, tests, sources and dev fixtures), which `packages.yml` installs into the lab's builds only, so the dbt image's GCP build carries none of it (semantic/PLAN.md SL-19).
+Host dbt runs `dbt deps` once first (`make dbt-deps`; every host check does it for itself); paths below are inside the package.
 `tlc_monthly` passes the month as a var, and these models build only that month:
 
 ```
@@ -94,7 +96,7 @@ Without `data_month`, every landed month is built; a value other than `YYYY-MM` 
 - Reconciliation: `tests/silver/assert_tlc_bronze_equals_silver_plus_quarantine.sql` checks bronze = silver + quarantine for each month, and `tests/gold/assert_tlc_gold_trips_match_silver.sql` checks gold against silver; `tests/exposed/hop_gold_to_exposed_tlc_daily_trips_by_borough.sql` checks the boroughs add up to gold.
 - Retention (`macros/tlc.sql`, `tlc_retire`, PLAN.md D35): `dbt run-operation tlc_retire --args "{keep: '2023-01,2026-08'}"` deletes every month not in `keep` from silver, quarantine and gold; bronze and exposed are views and follow.
   `tlc_monthly` runs it before each load with the months it keeps; an empty `keep` fails, a table not built yet is skipped, and a repeat deletes nothing.
-- Zones: `seeds/bronze/tlc_taxi_zones.csv` is TLC's `taxi_zone_lookup.csv` with a snake_case header.
+- Zones: `packages/tlc/seeds/bronze/tlc_taxi_zones.csv` is TLC's `taxi_zone_lookup.csv` with a snake_case header.
   Seeds sit in a layer folder, so `--select bronze` builds them together with that layer's models.
 
 ## The semantic layer
@@ -128,7 +130,7 @@ Without `--pipelines` it queries every semantic model, as `mf validate-configs` 
 Query a metric with the `mf` CLI from this folder, with the same environment:
 
 ```
-uvx --with-requirements requirements.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
+uvx --with-requirements requirements-postgres.txt --from dbt-metricflow mf query --metrics net_revenue_eur --group-by metric_time__day
 ```
 
 `tests/e2e/semantic-check.sh` (`make semantic-check`) builds the sales, returns, finance, marketing, customer-actions, partner-outreach, recruitment and call-transcripts models on `dev/fixture.sql` in `dbt_dev`, runs `make dbt-validate` on it, loads the metric queries back into the warehouse and asserts they equal the gold and exposed models row for row (a missing count or sum as 0), checks that the 63 layer hops pass, that the activation list leaves out every contact without consent, opted out (a backfilled older snapshot included) or messaged within the cooldown, that the recruitment extracts replayed one at a time, with a build after each, leave the snapshot every stage change and `candidates_in_stage` by `candidate__stage` equal to `gold.candidates_in_stage_daily`, that an incremental build merges a late action into its own day and a redelivered one once, and that a return seeded on a day without orders fails the returns hops, checks the call labels (scored on the golden set, labelled once, seeded wrong labels and too many failed calls failing their tests, failed calls retried), and checks that an undescribed metric, a metric over model-derived labels without "Model-derived", and an unprefixed, undescribed gold model with a personal-data column fail the validation, and, with `dev/fixture_weeks.sql` loaded last, that the week-over-week growth and month-to-date metrics equal SQL written by hand on gold.
@@ -196,6 +198,21 @@ The image's entrypoint is `dbt` and its default command is `build`.
 It runs as uid 10001.
 `dbt parse` runs at build time as a smoke check that needs no database.
 
+One Dockerfile makes two builds (semantic/PLAN.md SL-19), chosen by `--build-arg WAREHOUSE`:
+
+| `WAREHOUSE` | Python packages | Project | Built by |
+|---|---|---|---|
+| `postgres` (default) | `requirements-postgres.txt`, the top-level pins | the root project plus the `tlc` package (`dbt deps` at build time) | `make build`, `make push` |
+| `bigquery` | `requirements-bigquery.txt`, a full lock installed with `--no-deps`, compiled from `requirements-bigquery.in` less `requirements-bigquery.exclude` (Vertex AI, pandas, pyarrow: what dbt-bigquery requires for Python models and DataFrames, which the project never runs) | the root project only; `DBT_TARGET=gcp` | `make gcp-image-check` (on the emulator), `make gcp-images` (to Artifact Registry) |
+
+The GCP build fails on any Postgres package or TLC path in the image, and `make gcp-validate` checks the same offline (`platform/gcp/check_gcp_builds.py`).
+Recompile the lock after changing a pin:
+
+```
+cd dbt && uv pip compile --python-version 3.13 --universal --excludes requirements-bigquery.exclude \
+  requirements-bigquery.in -o requirements-bigquery.txt
+```
+
 ## Development fixture
 
 `dev/fixture.sql` is dev-only.
@@ -212,9 +229,9 @@ Create the scratch database first if the warehouse volume is new: `docker exec p
 Load it after `dev/fixture.sql`, never alone; it leaves the base fixture's days untouched.
 `make semantic-check` loads it last and compares those metrics with SQL written by hand on gold; the agents' fixture (`tests/e2e/agent-fixture.sh`) loads both, so the eval can ask for a change or a running total.
 
-`dev/tlc_fixture.sql` is the tlc counterpart.
+`packages/tlc/dev/tlc_fixture.sql` is the tlc counterpart.
 It holds two months of yellow and green rows in the D34 landing contract, a half-loaded second file version, and one row per quarantine rule.
-`dev/tlc_republish.sql` then completes that second version.
+`packages/tlc/dev/tlc_republish.sql` then completes that second version.
 `tests/e2e/tlc-dbt-check.sh` loads both into `dbt_dev` and builds the months with host dbt (`uvx`, the image's pins).
 It checks that rebuilding one month leaves the other untouched, that the reconciliation holds, that a republished month replaces the old one, and that a month above 10 % quarantined fails the build.
 

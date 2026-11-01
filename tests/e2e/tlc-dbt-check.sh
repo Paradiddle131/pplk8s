@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tlc dbt check (issue #55, PLAN.md D36): host dbt builds the tlc models month by month against
-# dbt/dev/tlc_fixture.sql in the Compose warehouse's dbt_dev database, and asserts that
+# dbt/packages/tlc/dev/tlc_fixture.sql in the Compose warehouse's dbt_dev database, and asserts that
 #   - re-building one month leaves the other month's rows untouched,
 #   - bronze = silver + quarantine per month (the dbt test) and the expected rows land in each,
 #   - a rebuild is idempotent and a half-loaded file version stays invisible,
@@ -11,6 +11,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=dbt_dev
 fail() { echo "FAIL: $*" >&2; exit 1; }
 psql_dev() {
@@ -21,7 +24,7 @@ psql_dev() {
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt"
 # The pins come from the image's requirements, so host and image run the same dbt.
 dbt_tlc() {
-  (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core \
+  (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core \
     dbt build --select tag:tlc --vars "{data_month: $1}") >"/tmp/pplk8s-tlc-dbt-$1.log" 2>&1
 }
 build() { dbt_tlc "$1" || { tail -30 "/tmp/pplk8s-tlc-dbt-$1.log" >&2; fail "dbt build tag:tlc data_month=$1"; }; }
@@ -33,7 +36,7 @@ expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 writers() { psql_dev -c "select string_agg(distinct xmin::text, ',') from silver.tlc_trips where data_month = '$1'"; }
 
 psql_dev -c "select 1" >/dev/null 2>&1 || docker compose -f "$REPO/platform/compose/compose.yaml" exec -T warehouse createdb -U warehouse "$DB"
-psql_dev <"$REPO/dbt/dev/tlc_fixture.sql" 2>&1 | grep -v NOTICE || true
+psql_dev <"$REPO/dbt/packages/tlc/dev/tlc_fixture.sql" 2>&1 | grep -v NOTICE || true
 echo "ok: fixture loaded into $DB"
 
 build 2024-12
@@ -66,7 +69,7 @@ green 2025-01 3
 yellow 2025-01 253"
 echo "ok: rebuilding 2025-01 is idempotent"
 
-psql_dev <"$REPO/dbt/dev/tlc_republish.sql"
+psql_dev <"$REPO/dbt/packages/tlc/dev/tlc_republish.sql"
 build 2025-01
 expect "silver after republishing 2025-01" "$(counts tlc_trips)" "green 2024-12 2
 yellow 2024-12 255
@@ -86,7 +89,7 @@ echo "ok: a second etag replaces 2025-01 (yellow 253 rows, all y2); exposed read
 # Retention (D35, #87): retiring 2024-12 deletes it from silver, quarantine and gold, leaves the kept
 # month's rows unwritten, and a repeat deletes nothing; an empty keep is refused.
 retire() {
-  (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core \
+  (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core \
     dbt run-operation tlc_retire --args "{keep: '$1'}") >/tmp/pplk8s-tlc-dbt-retire.log 2>&1
 }
 kept_writers=$(writers 2025-01)
