@@ -6,3 +6,5 @@ dbt_packages/
 Dockerfile
 .dockerignore
 ruff.toml
+# Host-only: it reads docs/target-architecture.md, outside the image (make dbt-validate runs it).
+scripts/check_brief.py
