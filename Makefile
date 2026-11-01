@@ -8,10 +8,10 @@ export NODE_IMAGE
 
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.3
-DBT_IMAGE ?= localhost:5001/dbt:0.7.18
+ELF_IMAGE ?= localhost:5001/el-factory:0.7.4
+DBT_IMAGE ?= localhost:5001/dbt:0.7.19
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.16
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.17
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -45,7 +45,7 @@ manifest_types = application/vnd.oci.image.index.v1+json,application/vnd.oci.ima
 in_registry = $(shell curl -sf -o /dev/null -H 'Accept: $(manifest_types)' http://$(firstword $(subst /, ,$(1)))/v2/$(firstword $(subst :, ,$(notdir $(1))))/manifests/$(word 2,$(subst :, ,$(notdir $(1)))) && echo yes)
 
 # Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.18
+AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.19
 export AIRFLOW_IMAGE
 
 # The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
@@ -153,7 +153,7 @@ bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery em
 source-freshness-check: services-up ## Run dbt source freshness on the dev fixtures in dbt_freshness: fresh data passes, a stopped source errors, and the warehouse sql_exporter exports each verdict (#130)
 	tests/e2e/source-freshness-check.sh
 
-semantic-check: services-up ## Build the sales, returns, finance, marketing and customer-actions models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models and an incremental build places late actions (#100, #126, #188)
+semantic-check: services-up ## Build the sales, returns, finance, marketing, customer-actions and partner-outreach models on dbt/dev/fixture.sql in dbt_dev, run dbt-validate on it, and assert the metrics equal the hand-written gold and exposed models, an incremental build places late actions, and the activation list honours consent (#100, #126, #188, #190)
 	tests/e2e/semantic-check.sh
 
 migration-check: services-up ## Build the legacy tables, the new layers and migration.parity on dbt/dev/fixture.sql in dbt_dev, and assert the parity report and the gate on each consumer's switch
