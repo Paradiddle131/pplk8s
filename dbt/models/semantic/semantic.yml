@@ -112,3 +112,45 @@ metrics:
     type: ratio
     numerator: positive_calls
     denominator: calls_labelled
+  - name: reply_rate
+    description: Share of outreach messages that got a reply, counted on the day the message was sent, so a day's rate rises as late replies arrive (messages replied over messages sent for the whole period asked, never replies over messages of the same day); the one definition of reply rate and response rate.
+    label: Reply rate
+    type: ratio
+    numerator: messages_replied
+    denominator: messages_sent
+  - name: engaged_customers_7d
+    description: Distinct customers with any site or CRM action in the 7 days ending on the day (that day and the 6 before); weekly engaged customers.
+    label: Engaged customers (7 days)
+    type: cumulative
+    input_metric: acting_customers
+    window: 7 days
+  - name: engaged_customers_28d
+    description: Distinct customers with any site or CRM action in the 28 days ending on the day (that day and the 27 before); monthly engaged customers.
+    label: Engaged customers (28 days)
+    type: cumulative
+    input_metric: acting_customers
+    window: 28 days
+  # The site funnel (SL-15). MetricFlow 0.15 drops a filter on a conversion metric's conversion side, so the
+  # step metrics count `case when action_type = ... then session_id end` instead of filtering, and a base
+  # takes its step's filter on the input. At day grain a window of N days counts a conversion whose day is
+  # fewer than N days after the base's: 2 days is the same day or the next, so a session crossing midnight converts.
+  - name: view_to_cart_rate
+    description: Share of site sessions with a page view that added to cart on the page view's day or the day after, counted on the page view's day.
+    label: View-to-cart rate
+    type: conversion
+    entity: session
+    calculation: conversion_rate
+    base_metric: site_sessions
+    conversion_metric: cart_sessions
+    window: 2 days
+  - name: cart_to_checkout_rate
+    description: Share of site sessions with an add to cart that checked out on the add to cart's day or the day after, counted on the add to cart's day.
+    label: Cart-to-checkout rate
+    type: conversion
+    entity: session
+    calculation: conversion_rate
+    base_metric:
+      name: cart_sessions
+      filter: "{{ Dimension('customer_action__action_type') }} = 'add_to_cart'"
+    conversion_metric: checkout_sessions
+    window: 2 days

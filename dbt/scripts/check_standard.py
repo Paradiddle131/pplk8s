@@ -5,8 +5,9 @@ Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3,
   exposed or legacy model carries the layer's prefix and its relation is the name without it; models, columns,
   semantic models, their entities and dimensions, and metrics are snake case;
 - trust: gold and exposed models, and only they, are public in the analytics group, each with an enforced
-  contract that types every column; semantic models sit on silver, so an agent reaches silver only through
-  a metric;
+  contract that types every column, except one holding a column marked personal data (`meta: {pii: true}`),
+  which is protected and so stays out of the agent catalog; semantic models sit on silver, so an agent
+  reaches silver only through a metric;
 - words: every model that builds a relation is described, every public model's column too, every
   semantic model with its entities, dimensions and measures, and every metric has a description and a label;
   every saved query a description, a label and the business question it answers (`config.meta.question`),
@@ -28,7 +29,15 @@ from pathlib import Path
 PREFIXES = {"bronze": "brz_", "silver": "slv_", "gold": "gld_", "exposed": "exp_", "legacy": "lgc_"}
 LAYERS = (*PREFIXES, "semantic", "migration")
 PUBLIC_LAYERS = {"gold", "exposed"}
+
 PUBLIC_GROUP = "analytics"
+
+
+def is_pii(column: dict) -> bool:
+    """A column marked personal data with `meta: {pii: true}` (under `config` or not)."""
+    return bool((column.get("config") or {}).get("meta", {}).get("pii") or (column.get("meta") or {}).get("pii"))
+
+
 SNAKE = re.compile(r"_?[a-z][a-z0-9_]*")
 
 
@@ -59,8 +68,14 @@ def model_problems(node: dict) -> list[str]:
     ]
 
     public = node.get("access") == "public"
-    if public != (layer in PUBLIC_LAYERS):
-        found.append(f"model {name}: {node.get('access')} in {layer}; only gold and exposed are public")
+    pii = [column for column, spec in node["columns"].items() if is_pii(spec)]
+    if pii and public:
+        found.append(f"model {name}: public with personal data in {', '.join(pii)}; make it protected")
+    elif public != (layer in PUBLIC_LAYERS and not pii):
+        found.append(
+            f"model {name}: {node.get('access')} in {layer}; only gold and exposed are public, "
+            "unless they hold personal data"
+        )
     if public and node.get("group") != PUBLIC_GROUP:
         found.append(f"model {name}: public outside the {PUBLIC_GROUP} group")
     if public and not node["config"].get("contract", {}).get("enforced"):

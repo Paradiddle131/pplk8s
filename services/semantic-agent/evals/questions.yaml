@@ -1,6 +1,7 @@
 # The eval set (semantic/PLAN.md SL-5): business questions over dbt/dev/fixture.sql (orders on
-# 2026-10-01 and 2026-10-02, three partner returns, Amsterdam and Istanbul weather, and three ad
-# campaigns' spend, leads and bookings on the same days).
+# 2026-10-01 and 2026-10-02, three partner returns, Amsterdam and Istanbul weather, three ad
+# campaigns' spend, leads and bookings on the same days, and site and CRM actions from 2026-09-20 to
+# 2026-10-03).
 # expected_sql runs on the warehouse as its owner when the eval starts, so the expected numbers are
 # always the warehouse's own; it may read any layer, the agents may not. A question's answer is right
 # when it carries one of the expected numbers (a rate also as a percentage).
@@ -80,6 +81,48 @@ questions:
     question: What share of our leads from 1 and 2 October 2026 went on to book?
     expected_sql: select count(distinct b.lead_id)::numeric / (select count(*) from silver.leads) from silver.bookings b
     metrics: [lead_to_booking_rate]
+  # Customer actions (semantic/PLAN.md SL-15): actions per type, engaged customers over a trailing window,
+  # and the site funnel; "monthly active" is the glossary's engaged customer, not customers_distinct.
+  - id: page_views_one_day
+    question: How many page views did customers make on our site on 1 October 2026?
+    expected_sql: select actions from gold.customer_actions_daily where activity_date = '2026-10-01' and action_type = 'page_view'
+    metrics: [customer_actions]
+  - id: engaged_customers_week
+    question: How many customers did anything on our site or in the CRM in the week up to 3 October 2026?
+    expected_sql: select engaged_customers_7d from gold.customer_engagement_daily where activity_date = '2026-10-03'
+    metrics: [engaged_customers_7d]
+  - id: monthly_active_customers
+    question: How many monthly active customers did we have on 3 October 2026?
+    expected_sql: select engaged_customers_28d from gold.customer_engagement_daily where activity_date = '2026-10-03'
+    metrics: [engaged_customers_28d]
+  - id: view_to_cart_rate
+    question: What share of the site sessions that viewed a page on 1 October 2026 added something to the cart?
+    expected_sql: select view_to_cart_rate from gold.customer_engagement_daily where activity_date = '2026-10-01'
+    metrics: [view_to_cart_rate]
+  # Partner outreach (semantic/PLAN.md SL-16): messages, the reply rate counted on the message's day, and
+  # engaged partners on the reply's day. The contacts' details are on no metric and in no public model.
+  - id: outreach_messages_sent
+    question: How many outreach messages did we send to partner contacts from 1 to 3 October 2026?
+    expected_sql: select sum(messages_sent) from gold.partner_outreach_daily where outreach_date between '2026-10-01' and '2026-10-03'
+    metrics: [messages_sent]
+  - id: outreach_reply_rate
+    question: What share of the outreach messages we sent from 1 to 3 October 2026 got a reply?
+    expected_sql: select sum(messages_replied)::numeric / sum(messages_sent) from gold.partner_outreach_daily where outreach_date between '2026-10-01' and '2026-10-03'
+    metrics: [reply_rate]
+  - id: partners_engaged_one_day
+    question: How many partners replied to our outreach on 2 October 2026?
+    expected_sql: select partners_engaged from gold.partner_outreach_daily where outreach_date = '2026-10-02'
+    metrics: [partners_engaged]
+  # Recruitment (semantic/PLAN.md SL-17): a stage count as of a date, through the stage history's validity
+  # window, and time to hire, an average over the candidates hired in the period.
+  - id: candidates_in_interview_as_of
+    question: How many candidates were in the interview stage on 4 October 2026?
+    expected_sql: select candidates from gold.candidates_in_stage_daily where stage_date = '2026-10-04' and stage = 'interview'
+    metrics: [candidates_in_stage]
+  - id: time_to_hire
+    question: On average, how many days did it take to hire a candidate, over everyone hired in October 2026?
+    expected_sql: select sum(time_to_hire_days * hires) / sum(hires) from gold.recruitment_daily where recruitment_date between '2026-10-01' and '2026-10-31'
+    metrics: [time_to_hire_days]
   # Call signals (semantic/PLAN.md SL-18): calls on the same two days, labelled from their transcripts; the
   # fixture's calls of the five weeks before them stay out of the answer.
   - id: calls_about_returns
