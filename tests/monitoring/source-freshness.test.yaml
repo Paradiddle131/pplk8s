@@ -97,3 +97,33 @@ tests:
             exp_annotations:
               summary: "dbt source freshness last recorded a result 2h 3m 0s ago; SourceStale is blind."
               runbook: docs/runbook.md#13-a-source-stops-flowing
+
+  # No verdict ever recorded (a fresh lab whose CronJob fails from its first run: the dbt image missing, bad
+  # warehouse credentials, a hook that cannot insert): the table stays empty and exports no series, while the
+  # warehouse exporter is scraped. Quiet through the first hourly run (it may start up to an hour in), firing 2 h
+  # after the exporter came up. With the exporter down, AirflowReadinessMetricsMissing speaks instead.
+  - interval: 1m
+    input_series:
+      - series: 'up{instance="warehouse-sql-exporter:9399", job="warehouse-sql-exporter"}'
+        values: '1x180'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: SourceFreshnessNotChecked
+        exp_alerts: []
+      - eval_time: 121m
+        alertname: SourceFreshnessNotChecked
+        exp_alerts:
+          - exp_labels: {severity: warning, reason: never-recorded}
+            exp_annotations:
+              summary: "dbt source freshness has never recorded a result; SourceStale is blind."
+              runbook: docs/runbook.md#13-a-source-stops-flowing
+
+  # The exporter is not scraped at all: no series of either kind, and SourceFreshnessNotChecked stays quiet.
+  - interval: 1m
+    input_series:
+      - series: 'up{instance="warehouse-sql-exporter:9399", job="warehouse-sql-exporter"}'
+        values: '0x180'
+    alert_rule_test:
+      - eval_time: 150m
+        alertname: SourceFreshnessNotChecked
+        exp_alerts: []
