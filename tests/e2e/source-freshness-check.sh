@@ -56,7 +56,7 @@ expect "dbt source freshness exit code with a stopped source" "$rc" 1
 want=$(all_with pass | sed -e 's/synthetic_orders=pass/synthetic_orders=error/' \
   -e 's/synthetic_leads=pass/synthetic_leads=warn/' -e 's/tlc_green=pass/tlc_green=runtime error/')
 expect "statuses with stopped sources" "$(statuses)" "$want"
-expect "rows per table" "$(psql_db -c "select count(*) from ops.source_freshness")" 14
+expect "rows per table" "$(psql_db -c "select count(*) from ops.source_freshness")" 15
 age=$(psql_db -c "select round(extract(epoch from checked_at - max_loaded_at) / 3600) from ops.source_freshness where table_name = 'synthetic_orders'")
 expect "synthetic_orders' recorded age in hours" "$age" 40
 expect "synthetic_orders' error_after" "$(psql_db -c "select error_after_seconds from ops.source_freshness where table_name = 'synthetic_orders'")" 129600
@@ -92,13 +92,13 @@ for _ in $(seq 30); do
   sleep 1
 done
 printf '%s\n' "$metrics" >"$OUT/metrics.txt"
-expect "exported verdicts" "$(grep -c '^ops_source_freshness_checked_timestamp_seconds{' <<<"$metrics")" 14
+expect "exported verdicts" "$(grep -c '^ops_source_freshness_checked_timestamp_seconds{' <<<"$metrics")" 15
 grep -q '^ops_source_freshness_checked_timestamp_seconds{source="ds_source",status="error",table="synthetic_orders"[,}]' <<<"$metrics" ||
   fail "the exporter does not show synthetic_orders as error (see $OUT/metrics.txt)"
 grep -q '^ops_source_max_loaded_at_seconds{source="ds_source",table="tlc_green"[,}].* 0$' <<<"$metrics" ||
   fail "the exporter does not show tlc_green's load as 0 (see $OUT/metrics.txt)"
 loaded_orders=$(grep '^ops_source_max_loaded_at_seconds{source="ds_source",table="synthetic_orders"[,}]' <<<"$metrics" | awk '{printf "%d", $2}')
 expect "exported age of synthetic_orders in hours" "$(( ($(date +%s) - loaded_orders + 1800) / 3600 ))" 40
-echo "ok: the warehouse sql_exporter's collector exports the 14 verdicts and each table's newest load"
+echo "ok: the warehouse sql_exporter's collector exports the 15 verdicts and each table's newest load"
 
 echo "PASS: source freshness check"
