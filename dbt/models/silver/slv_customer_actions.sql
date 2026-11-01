@@ -19,7 +19,9 @@
 with landed as (
     select *
     from {{ ref('brz_synthetic_customer_actions') }}
-    {%- if is_incremental() %}
+    {#- An offline compile (--no-introspect, the compile-only BigQuery target) cannot ask whether the table
+        exists, so it compiles the first build. #}
+    {%- if flags.INTROSPECT and is_incremental() %}
     where _loaded_at > (
         select {{ hours_before('max(_loaded_at)', var('customer_actions_lookback_hours')) }} from {{ this }}
     )

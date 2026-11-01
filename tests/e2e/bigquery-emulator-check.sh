@@ -116,7 +116,7 @@ def rows(sql):
 
 def metrics(name, columns, keys=("metric_time__day",)):
     with open(f"{out}/{name}.csv") as f:
-        return {"|".join(r[k][:10] for k in keys): tuple(num(r[c] or 0) for c in columns)
+        return {"|".join(r[k][:10] if k.startswith("metric_time") else r[k] for k in keys): tuple(num(r[c] or 0) for c in columns)
                 for r in csv.DictReader(f)}
 
 sales = ["orders_total", "orders_cancelled", "revenue_eur", "customers_distinct", "cancellation_rate"]
