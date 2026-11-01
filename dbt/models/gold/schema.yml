@@ -210,3 +210,237 @@ models:
               arguments:
                 metric: booking_value_eur
                 time_column: activity_date
+
+  - name: gld_lead_conversion_daily
+    description: One row per day a CRM lead was created, with the leads of that day and those that booked within 30 days of being created. A per-day rate; over a period use the metric lead_to_booking_rate. Alias gold.lead_conversion_daily.
+    columns:
+      - name: created_date
+        description: Natural key; the UTC day the leads were created.
+        data_type: date
+        tests: [not_null, unique]
+      - name: leads
+        description: CRM leads created that day, over all channels.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_leads_to_gld_lead_conversion_daily
+              arguments:
+                metric: leads
+                time_column: created_date
+      - name: booked_leads
+        description: Of those leads, the ones that booked on their creation day or in the 29 days after.
+        data_type: bigint
+      - name: lead_to_booking_rate
+        description: Share of that day's leads that booked within 30 days of being created.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_lead_to_booking_rate_to_gld_lead_conversion_daily
+              arguments:
+                metric: lead_to_booking_rate
+                time_column: created_date
+
+  - name: gld_customer_actions_daily
+    description: One row per (activity_date, action_type) with any site or CRM action; an action that arrived late counts on the day it happened. Alias gold.customer_actions_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['activity_date', 'action_type']
+    columns:
+      - name: activity_date
+        description: UTC day the actions happened.
+        data_type: date
+        tests: [not_null]
+      - name: action_type
+        description: page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.
+        data_type: *text
+        tests: [not_null]
+      - name: channel
+        description: Where the action happened, site or crm.
+        data_type: *text
+      - name: actions
+        description: Actions of the type that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_customer_actions_to_gld_customer_actions_daily
+              arguments:
+                metric: customer_actions
+                time_column: activity_date
+      - name: customers
+        description: Distinct customers with an action of the type that day.
+        data_type: bigint
+
+  - name: gld_customer_engagement_daily
+    description: One row per day with any site or CRM action, with engaged customers over the trailing 7 and 28 days and the site funnel's sessions and step rates. Per-day rates; over a period use the metrics view_to_cart_rate and cart_to_checkout_rate. Alias gold.customer_engagement_daily.
+    columns:
+      - name: activity_date
+        description: Natural key; the UTC day.
+        data_type: date
+        tests: [not_null, unique]
+      - name: engaged_customers_7d
+        description: Distinct customers with any action that day or in the 6 days before.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_engaged_customers_7d_to_gld_customer_engagement_daily
+              arguments:
+                metric: engaged_customers_7d
+                time_column: activity_date
+      - name: engaged_customers_28d
+        description: Distinct customers with any action that day or in the 27 days before.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_engaged_customers_28d_to_gld_customer_engagement_daily
+              arguments:
+                metric: engaged_customers_28d
+                time_column: activity_date
+      - name: site_sessions
+        description: Site sessions with a page view that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_site_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: site_sessions
+                time_column: activity_date
+      - name: cart_sessions
+        description: Site sessions with an add to cart that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_cart_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: cart_sessions
+                time_column: activity_date
+      - name: checkout_sessions
+        description: Site sessions with a checkout that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_checkout_sessions_to_gld_customer_engagement_daily
+              arguments:
+                metric: checkout_sessions
+                time_column: activity_date
+      - name: view_to_cart_rate
+        description: Share of that day's page-view sessions that added to cart that day or the next; NULL without page views.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_view_to_cart_rate_to_gld_customer_engagement_daily
+              arguments:
+                metric: view_to_cart_rate
+                time_column: activity_date
+      - name: cart_to_checkout_rate
+        description: Share of that day's add-to-cart sessions that checked out that day or the next; NULL without adds to cart.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_cart_to_checkout_rate_to_gld_customer_engagement_daily
+              arguments:
+                metric: cart_to_checkout_rate
+                time_column: activity_date
+
+  - name: gld_partner_outreach_daily
+    description: One row per day with any outreach message sent or reply received. Per-day rate; over a period use the metric reply_rate. Alias gold.partner_outreach_daily.
+    columns:
+      - name: outreach_date
+        description: Natural key; the UTC day a message was sent or a reply arrived.
+        data_type: date
+        tests: [not_null, unique]
+      - name: messages_sent
+        description: Outreach messages sent that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_sent_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_sent
+                time_column: outreach_date
+      - name: messages_replied
+        description: Messages sent that day that have a reply, whenever it arrived.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_replied_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_replied
+                time_column: outreach_date
+      - name: replies
+        description: Replies that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_replies_to_gld_partner_outreach_daily
+              arguments:
+                metric: replies
+                time_column: outreach_date
+      - name: partners_engaged
+        description: Distinct partners with a reply that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_partners_engaged_to_gld_partner_outreach_daily
+              arguments:
+                metric: partners_engaged
+                time_column: outreach_date
+      - name: reply_rate
+        description: messages_replied / messages_sent for that day's messages; NULL on a day without messages.
+        data_type: numeric
+
+  - name: gld_recruitment_daily
+    description: One row per day with any application or hire. Per-day average; over a period use the metric time_to_hire_days. Alias gold.recruitment_daily.
+    columns:
+      - name: recruitment_date
+        description: Natural key; the UTC day a candidate applied or was hired.
+        data_type: date
+        tests: [not_null, unique]
+      - name: applications
+        description: Candidates who applied that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_applications_to_gld_recruitment_daily
+              arguments:
+                metric: applications
+                time_column: recruitment_date
+      - name: hires
+        description: Candidates hired that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_hires_to_gld_recruitment_daily
+              arguments:
+                metric: hires
+                time_column: recruitment_date
+      - name: time_to_hire_days
+        description: Average days from applying to being hired of that day's hires; NULL on a day without hires.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_time_to_hire_days_to_gld_recruitment_daily
+              arguments:
+                metric: time_to_hire_days
+                time_column: recruitment_date
+
+  - name: gld_candidates_in_stage_daily
+    description: >
+      One row per day and hiring stage with any candidate in it at the end of the day, from the stage history. Ask
+      per day; summing days double-counts candidates. Alias gold.candidates_in_stage_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['stage_date', 'stage']
+    columns:
+      - name: stage_date
+        description: The UTC day.
+        data_type: date
+        tests: [not_null]
+      - name: stage
+        description: applied, screen, interview, offer, hired or rejected.
+        data_type: *text
+        tests: [not_null]
+      - name: candidates
+        description: Candidates in the stage at the end of the day.
+        data_type: bigint

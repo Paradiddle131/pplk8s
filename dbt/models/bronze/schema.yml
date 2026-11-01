@@ -103,3 +103,77 @@ models:
     columns:
       - name: booking_id
         tests: [not_null]
+
+  - name: brz_synthetic_customer_actions
+    description: >
+      Site and CRM actions as landed, cast only; append-only and extracted by received_ts, so an event can
+      land a day after its event_ts and a redelivered event repeats. Alias bronze.synthetic_customer_actions.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'event_id']
+    columns:
+      - name: event_id
+        tests: [not_null]
+      - name: event_ts
+        tests: [not_null]
+
+  # Partner outreach (semantic/PLAN.md SL-16): partners, their contacts' snapshots, messages and replies.
+  - name: brz_synthetic_partners
+    description: Partners as landed, cast only; a full snapshot per run. Alias bronze.synthetic_partners.
+    columns:
+      - name: partner_id
+        tests: [not_null]
+
+  - name: brz_synthetic_partner_contacts
+    description: >
+      Partner contacts as landed, cast only; each run lands a snapshot of every contact as it stood at the end of
+      the run's interval, so a backfill lands an older state after a newer one. Name, email and phone are personal
+      data. Alias bronze.synthetic_partner_contacts.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'contact_id']
+    columns:
+      - name: contact_id
+        tests: [not_null]
+      - name: updated_ts
+        tests: [not_null]
+      - name: contact_name
+        config:
+          meta: {pii: true}
+      - name: email
+        config:
+          meta: {pii: true}
+      - name: phone
+        config:
+          meta: {pii: true}
+
+  - name: brz_synthetic_outreach_messages
+    description: Outreach messages as landed, cast only. Alias bronze.synthetic_outreach_messages.
+    columns:
+      - name: message_id
+        tests: [not_null]
+
+  - name: brz_synthetic_outreach_replies
+    description: Replies to outreach messages as landed, cast only. Alias bronze.synthetic_outreach_replies.
+    columns:
+      - name: reply_id
+        tests: [not_null]
+
+  # Recruitment (semantic/PLAN.md SL-17): candidates in their current stage, one extract per run.
+  - name: brz_synthetic_applications
+    description: >
+      Candidates as landed, cast only; each run lands every candidate in the stage they were in at the end of the
+      run's interval, so a backfill lands an older stage after a newer one. Alias bronze.synthetic_applications.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['_run_id', 'candidate_id']
+    columns:
+      - name: candidate_id
+        tests: [not_null]
+      - name: stage
+        tests: [not_null]
+      - name: stage_ts
+        tests: [not_null]

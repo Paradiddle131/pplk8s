@@ -201,6 +201,117 @@
       ]
     },
     {
+      "name": "gld_candidates_in_stage_daily",
+      "relation": "dbt_dev.gold.candidates_in_stage_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "recruitment"
+      ],
+      "description": "One row per day and hiring stage with any candidate in it at the end of the day, from the stage history. Ask per day; summing days double-counts candidates. Alias gold.candidates_in_stage_daily.\n",
+      "grain": [
+        "stage_date",
+        "stage"
+      ],
+      "columns": [
+        {
+          "name": "stage_date",
+          "description": "The UTC day."
+        },
+        {
+          "name": "stage",
+          "description": "applied, screen, interview, offer, hired or rejected."
+        },
+        {
+          "name": "candidates",
+          "description": "Candidates in the stage at the end of the day."
+        }
+      ]
+    },
+    {
+      "name": "gld_customer_actions_daily",
+      "relation": "dbt_dev.gold.customer_actions_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "description": "One row per (activity_date, action_type) with any site or CRM action; an action that arrived late counts on the day it happened. Alias gold.customer_actions_daily.",
+      "grain": [
+        "activity_date",
+        "action_type"
+      ],
+      "columns": [
+        {
+          "name": "activity_date",
+          "description": "UTC day the actions happened."
+        },
+        {
+          "name": "action_type",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM."
+        },
+        {
+          "name": "channel",
+          "description": "Where the action happened, site or crm."
+        },
+        {
+          "name": "actions",
+          "description": "Actions of the type that day."
+        },
+        {
+          "name": "customers",
+          "description": "Distinct customers with an action of the type that day."
+        }
+      ]
+    },
+    {
+      "name": "gld_customer_engagement_daily",
+      "relation": "dbt_dev.gold.customer_engagement_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "description": "One row per day with any site or CRM action, with engaged customers over the trailing 7 and 28 days and the site funnel's sessions and step rates. Per-day rates; over a period use the metrics view_to_cart_rate and cart_to_checkout_rate. Alias gold.customer_engagement_daily.",
+      "grain": [
+        "activity_date"
+      ],
+      "columns": [
+        {
+          "name": "activity_date",
+          "description": "Natural key; the UTC day."
+        },
+        {
+          "name": "engaged_customers_7d",
+          "description": "Distinct customers with any action that day or in the 6 days before."
+        },
+        {
+          "name": "engaged_customers_28d",
+          "description": "Distinct customers with any action that day or in the 27 days before."
+        },
+        {
+          "name": "site_sessions",
+          "description": "Site sessions with a page view that day."
+        },
+        {
+          "name": "cart_sessions",
+          "description": "Site sessions with an add to cart that day."
+        },
+        {
+          "name": "checkout_sessions",
+          "description": "Site sessions with a checkout that day."
+        },
+        {
+          "name": "view_to_cart_rate",
+          "description": "Share of that day's page-view sessions that added to cart that day or the next; NULL without page views."
+        },
+        {
+          "name": "cart_to_checkout_rate",
+          "description": "Share of that day's add-to-cart sessions that checked out that day or the next; NULL without adds to cart."
+        }
+      ]
+    },
+    {
       "name": "gld_customer_lifetime",
       "relation": "dbt_dev.gold.customer_lifetime",
       "layer": "gold",
@@ -319,6 +430,37 @@
       ]
     },
     {
+      "name": "gld_lead_conversion_daily",
+      "relation": "dbt_dev.gold.lead_conversion_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "marketing"
+      ],
+      "description": "One row per day a CRM lead was created, with the leads of that day and those that booked within 30 days of being created. A per-day rate; over a period use the metric lead_to_booking_rate. Alias gold.lead_conversion_daily.",
+      "grain": [
+        "created_date"
+      ],
+      "columns": [
+        {
+          "name": "created_date",
+          "description": "Natural key; the UTC day the leads were created."
+        },
+        {
+          "name": "leads",
+          "description": "CRM leads created that day, over all channels."
+        },
+        {
+          "name": "booked_leads",
+          "description": "Of those leads, the ones that booked on their creation day or in the 29 days after."
+        },
+        {
+          "name": "lead_to_booking_rate",
+          "description": "Share of that day's leads that booked within 30 days of being created."
+        }
+      ]
+    },
+    {
       "name": "gld_marketing_daily",
       "relation": "dbt_dev.gold.marketing_daily",
       "layer": "gold",
@@ -363,6 +505,76 @@
         {
           "name": "booking_value_eur",
           "description": "Value of those bookings, EUR."
+        }
+      ]
+    },
+    {
+      "name": "gld_partner_outreach_daily",
+      "relation": "dbt_dev.gold.partner_outreach_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "description": "One row per day with any outreach message sent or reply received. Per-day rate; over a period use the metric reply_rate. Alias gold.partner_outreach_daily.",
+      "grain": [
+        "outreach_date"
+      ],
+      "columns": [
+        {
+          "name": "outreach_date",
+          "description": "Natural key; the UTC day a message was sent or a reply arrived."
+        },
+        {
+          "name": "messages_sent",
+          "description": "Outreach messages sent that day."
+        },
+        {
+          "name": "messages_replied",
+          "description": "Messages sent that day that have a reply, whenever it arrived."
+        },
+        {
+          "name": "replies",
+          "description": "Replies that arrived that day."
+        },
+        {
+          "name": "partners_engaged",
+          "description": "Distinct partners with a reply that arrived that day."
+        },
+        {
+          "name": "reply_rate",
+          "description": "messages_replied / messages_sent for that day's messages; NULL on a day without messages."
+        }
+      ]
+    },
+    {
+      "name": "gld_recruitment_daily",
+      "relation": "dbt_dev.gold.recruitment_daily",
+      "layer": "gold",
+      "group": "analytics",
+      "pipelines": [
+        "recruitment"
+      ],
+      "description": "One row per day with any application or hire. Per-day average; over a period use the metric time_to_hire_days. Alias gold.recruitment_daily.",
+      "grain": [
+        "recruitment_date"
+      ],
+      "columns": [
+        {
+          "name": "recruitment_date",
+          "description": "Natural key; the UTC day a candidate applied or was hired."
+        },
+        {
+          "name": "applications",
+          "description": "Candidates who applied that day."
+        },
+        {
+          "name": "hires",
+          "description": "Candidates hired that day."
+        },
+        {
+          "name": "time_to_hire_days",
+          "description": "Average days from applying to being hired of that day's hires; NULL on a day without hires."
         }
       ]
     },
@@ -477,6 +689,52 @@
       "model": "slv_customers"
     },
     {
+      "term": "Engaged customer",
+      "description": "A customer with any site or CRM action (a page view, a cart, a checkout, an email opened, a support contact) in the trailing window ending on the day: 7 days for weekly, 28 for monthly. It is not an active customer, which counts customers who placed a non-cancelled order.",
+      "synonyms": [
+        "weekly active customers",
+        "monthly active customers",
+        "WAU",
+        "MAU",
+        "engaged users"
+      ],
+      "metrics": [
+        "engaged_customers_7d",
+        "engaged_customers_28d"
+      ],
+      "dimensions": [],
+      "model": "slv_customer_actions"
+    },
+    {
+      "term": "Engaged partner",
+      "description": "A partner at least one of whose contacts replied to an outreach message in the period asked. A reply to a message sent before the first loaded day counts as a reply but names no partner.",
+      "synonyms": [
+        "responsive partners",
+        "partners who replied",
+        "active partners"
+      ],
+      "metrics": [
+        "partners_engaged"
+      ],
+      "dimensions": [],
+      "model": "slv_outreach_replies"
+    },
+    {
+      "term": "Hiring stage",
+      "description": "Where a candidate is in hiring: applied, screen, interview, offer, then hired, or rejected at any stage before hired. A candidate's stage on a day is the one they were in at the end of that day, from the stage history the warehouse snapshots after every load, so two changes between loads keep the later.",
+      "synonyms": [
+        "pipeline stage",
+        "recruitment stage",
+        "candidate status",
+        "funnel stage"
+      ],
+      "metrics": [
+        "candidates_in_stage"
+      ],
+      "dimensions": [],
+      "model": "slv_applications"
+    },
+    {
       "term": "Market",
       "description": "The ISO-2 country a campaign targets. It can differ from a lead's own country and a customer's country, so spend, leads and bookings by market group by the campaign, not the person.",
       "synonyms": [
@@ -545,9 +803,94 @@
         "customer__signup_date"
       ],
       "model": "slv_customers"
+    },
+    {
+      "term": "Site funnel",
+      "description": "The steps a site session walks: page view, then add to cart, then checkout. A step's rate counts the sessions that took the next step on the same day as the step before or the day after, on the day of the step before.",
+      "synonyms": [
+        "conversion funnel",
+        "checkout funnel",
+        "cart conversion"
+      ],
+      "metrics": [
+        "site_sessions",
+        "cart_sessions",
+        "checkout_sessions",
+        "view_to_cart_rate",
+        "cart_to_checkout_rate"
+      ],
+      "dimensions": [],
+      "model": "slv_customer_actions"
     }
   ],
   "metrics": [
+    {
+      "name": "acting_customers",
+      "label": "Acting customers",
+      "description": "Distinct customers with any site or CRM action in the period asked.",
+      "type": "simple",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
     {
       "name": "ad_clicks",
       "label": "Ad clicks",
@@ -640,6 +983,95 @@
           "name": "campaign__market",
           "type": "categorical",
           "description": "ISO-2 country the campaign targets."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "applications",
+      "label": "Applications",
+      "description": "Candidates who applied, on the day they applied (one application per candidate).",
+      "type": "simple",
+      "pipelines": [
+        "recruitment"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "applications"
+      ],
+      "dimensions": [
+        {
+          "name": "candidate__applied_date",
+          "type": "time",
+          "description": "UTC date the candidate applied."
+        },
+        {
+          "name": "candidate__channel",
+          "type": "categorical",
+          "description": "How the candidate applied - referral, job_board or agency.",
+          "values": [
+            "referral",
+            "job_board",
+            "agency"
+          ]
+        },
+        {
+          "name": "candidate__current_stage",
+          "type": "categorical",
+          "description": "The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__hired_date",
+          "type": "time",
+          "description": "UTC date the candidate was hired; NULL until then."
+        },
+        {
+          "name": "candidate__role",
+          "type": "categorical",
+          "description": "engineering, sales or support; the job family applied for.",
+          "values": [
+            "engineering",
+            "sales",
+            "support"
+          ]
+        },
+        {
+          "name": "candidate__stage",
+          "type": "categorical",
+          "description": "The hiring stage held from valid_from to valid_to.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__valid_from_date",
+          "type": "time",
+          "description": "UTC date the stage began."
+        },
+        {
+          "name": "candidate__valid_to_date",
+          "type": "time",
+          "description": "UTC date the stage ended; NULL while current."
         },
         {
           "name": "metric_time",
@@ -874,6 +1306,301 @@
       ]
     },
     {
+      "name": "candidates_in_stage",
+      "label": "Candidates in stage",
+      "description": "Candidates who had applied by the end of each day, counted per day; grouped by candidate__stage (or filtered on it) it is the number in each hiring stage at the end of that day, from the stage history. Ask it per day: over a longer period it counts the candidates who were in the stage on any of its days.",
+      "type": "simple",
+      "pipelines": [
+        "recruitment"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "candidate_days"
+      ],
+      "dimensions": [
+        {
+          "name": "candidate__applied_date",
+          "type": "time",
+          "description": "UTC date the candidate applied."
+        },
+        {
+          "name": "candidate__channel",
+          "type": "categorical",
+          "description": "How the candidate applied - referral, job_board or agency.",
+          "values": [
+            "referral",
+            "job_board",
+            "agency"
+          ]
+        },
+        {
+          "name": "candidate__current_stage",
+          "type": "categorical",
+          "description": "The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__hired_date",
+          "type": "time",
+          "description": "UTC date the candidate was hired; NULL until then."
+        },
+        {
+          "name": "candidate__role",
+          "type": "categorical",
+          "description": "engineering, sales or support; the job family applied for.",
+          "values": [
+            "engineering",
+            "sales",
+            "support"
+          ]
+        },
+        {
+          "name": "candidate__stage",
+          "type": "categorical",
+          "description": "The hiring stage held from valid_from to valid_to.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__valid_from_date",
+          "type": "time",
+          "description": "UTC date the stage began."
+        },
+        {
+          "name": "candidate__valid_to_date",
+          "type": "time",
+          "description": "UTC date the stage ended; NULL while current."
+        },
+        {
+          "name": "candidate_day__calendar_date",
+          "type": "time",
+          "description": "The UTC day."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "cart_sessions",
+      "label": "Cart sessions",
+      "description": "Site sessions with an add to cart, on the day of the add to cart.",
+      "type": "simple",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "cart_to_checkout_rate",
+      "label": "Cart-to-checkout rate",
+      "description": "Share of site sessions with an add to cart that checked out on the add to cart's day or the day after, counted on the add to cart's day.",
+      "type": "conversion",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "checkout_sessions",
+      "label": "Checkout sessions",
+      "description": "Site sessions with a checkout, on the day of the checkout.",
+      "type": "simple",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
       "name": "cost_per_booking_eur",
       "label": "Cost per booking (EUR)",
       "description": "Ad spend divided by bookings over the whole period asked (total spend over total bookings, never an average of daily ratios); the one definition of cost per conversion.",
@@ -966,6 +1693,73 @@
       ]
     },
     {
+      "name": "customer_actions",
+      "label": "Customer actions",
+      "description": "Site and CRM actions, on the day they happened; group by customer_action__action_type for actions per type.",
+      "type": "simple",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
       "name": "customers_distinct",
       "label": "Active customers",
       "description": "Distinct customers with at least one non-cancelled order.",
@@ -1023,6 +1817,229 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ]
+    },
+    {
+      "name": "engaged_customers_28d",
+      "label": "Engaged customers (28 days)",
+      "description": "Distinct customers with any site or CRM action in the 28 days ending on the day (that day and the 27 before); monthly engaged customers.",
+      "type": "cumulative",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "engaged_customers_7d",
+      "label": "Engaged customers (7 days)",
+      "description": "Distinct customers with any site or CRM action in the 7 days ending on the day (that day and the 6 before); weekly engaged customers.",
+      "type": "cumulative",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "hires",
+      "label": "Hires",
+      "description": "Candidates hired, on the day they were hired.",
+      "type": "simple",
+      "pipelines": [
+        "recruitment"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "applications"
+      ],
+      "dimensions": [
+        {
+          "name": "candidate__applied_date",
+          "type": "time",
+          "description": "UTC date the candidate applied."
+        },
+        {
+          "name": "candidate__channel",
+          "type": "categorical",
+          "description": "How the candidate applied - referral, job_board or agency.",
+          "values": [
+            "referral",
+            "job_board",
+            "agency"
+          ]
+        },
+        {
+          "name": "candidate__current_stage",
+          "type": "categorical",
+          "description": "The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__hired_date",
+          "type": "time",
+          "description": "UTC date the candidate was hired; NULL until then."
+        },
+        {
+          "name": "candidate__role",
+          "type": "categorical",
+          "description": "engineering, sales or support; the job family applied for.",
+          "values": [
+            "engineering",
+            "sales",
+            "support"
+          ]
+        },
+        {
+          "name": "candidate__stage",
+          "type": "categorical",
+          "description": "The hiring stage held from valid_from to valid_to.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__valid_from_date",
+          "type": "time",
+          "description": "UTC date the stage began."
+        },
+        {
+          "name": "candidate__valid_to_date",
+          "type": "time",
+          "description": "UTC date the stage ended; NULL while current."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
       ]
     },
@@ -1134,6 +2151,112 @@
           "name": "metric_time",
           "type": "time",
           "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "messages_replied",
+      "label": "Messages replied",
+      "description": "Outreach messages that got a reply, on the day the message was sent; grows as late replies arrive.",
+      "type": "simple",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "outreach_messages"
+      ],
+      "dimensions": [
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "outreach_message__channel",
+          "type": "categorical",
+          "description": "email, phone or sms.",
+          "values": [
+            "email",
+            "phone",
+            "sms"
+          ]
+        },
+        {
+          "name": "outreach_message__sent_date",
+          "type": "time",
+          "description": "UTC date the message was sent."
+        },
+        {
+          "name": "partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "messages_sent",
+      "label": "Messages sent",
+      "description": "Outreach messages sent to partner contacts, on the day they were sent.",
+      "type": "simple",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "outreach_messages"
+      ],
+      "dimensions": [
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "outreach_message__channel",
+          "type": "categorical",
+          "description": "email, phone or sms.",
+          "values": [
+            "email",
+            "phone",
+            "sms"
+          ]
+        },
+        {
+          "name": "outreach_message__sent_date",
+          "type": "time",
+          "description": "UTC date the message was sent."
+        },
+        {
+          "name": "partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
         }
       ]
     },
@@ -1301,6 +2424,205 @@
             "placed",
             "shipped",
             "cancelled"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "partners_engaged",
+      "label": "Partners engaged",
+      "description": "Distinct partners with at least one reply from their contacts in the period asked.",
+      "type": "simple",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "outreach_replies"
+      ],
+      "dimensions": [
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "outreach_message__channel",
+          "type": "categorical",
+          "description": "email, phone or sms.",
+          "values": [
+            "email",
+            "phone",
+            "sms"
+          ]
+        },
+        {
+          "name": "outreach_message__partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "outreach_message__partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
+        },
+        {
+          "name": "outreach_message__sent_date",
+          "type": "time",
+          "description": "UTC date the message was sent."
+        },
+        {
+          "name": "outreach_reply__replied_date",
+          "type": "time",
+          "description": "UTC date the reply arrived."
+        },
+        {
+          "name": "partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "replies",
+      "label": "Replies",
+      "description": "Replies to outreach messages, on the day they arrived.",
+      "type": "simple",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "outreach_replies"
+      ],
+      "dimensions": [
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "outreach_message__channel",
+          "type": "categorical",
+          "description": "email, phone or sms.",
+          "values": [
+            "email",
+            "phone",
+            "sms"
+          ]
+        },
+        {
+          "name": "outreach_message__partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "outreach_message__partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
+        },
+        {
+          "name": "outreach_message__sent_date",
+          "type": "time",
+          "description": "UTC date the message was sent."
+        },
+        {
+          "name": "outreach_reply__replied_date",
+          "type": "time",
+          "description": "UTC date the reply arrived."
+        },
+        {
+          "name": "partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reply_rate",
+      "label": "Reply rate",
+      "description": "Share of outreach messages that got a reply, counted on the day the message was sent, so a day's rate rises as late replies arrive (messages replied over messages sent for the whole period asked, never replies over messages of the same day); the one definition of reply rate and response rate.",
+      "type": "ratio",
+      "pipelines": [
+        "partner_outreach"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "outreach_messages"
+      ],
+      "dimensions": [
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "outreach_message__channel",
+          "type": "categorical",
+          "description": "email, phone or sms.",
+          "values": [
+            "email",
+            "phone",
+            "sms"
+          ]
+        },
+        {
+          "name": "outreach_message__sent_date",
+          "type": "time",
+          "description": "UTC date the message was sent."
+        },
+        {
+          "name": "partner__country",
+          "type": "categorical",
+          "description": "ISO-2 country of the partner."
+        },
+        {
+          "name": "partner__partner_type",
+          "type": "categorical",
+          "description": "clinic, agency or reseller.",
+          "values": [
+            "clinic",
+            "agency",
+            "reseller"
           ]
         }
       ]
@@ -1515,6 +2837,229 @@
             "shipped",
             "cancelled"
           ]
+        }
+      ]
+    },
+    {
+      "name": "site_sessions",
+      "label": "Site sessions",
+      "description": "Site sessions with a page view, on the day of the page view.",
+      "type": "simple",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "time_to_hire_days",
+      "label": "Time to hire (days)",
+      "description": "Average days from applying to being hired over the candidates hired in the period asked, on the day they were hired; the one definition of time to hire and days to hire.",
+      "type": "simple",
+      "pipelines": [
+        "recruitment"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "applications"
+      ],
+      "dimensions": [
+        {
+          "name": "candidate__applied_date",
+          "type": "time",
+          "description": "UTC date the candidate applied."
+        },
+        {
+          "name": "candidate__channel",
+          "type": "categorical",
+          "description": "How the candidate applied - referral, job_board or agency.",
+          "values": [
+            "referral",
+            "job_board",
+            "agency"
+          ]
+        },
+        {
+          "name": "candidate__current_stage",
+          "type": "categorical",
+          "description": "The candidate's stage at the newest load; for the stage on a past day, use candidate__stage.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__hired_date",
+          "type": "time",
+          "description": "UTC date the candidate was hired; NULL until then."
+        },
+        {
+          "name": "candidate__role",
+          "type": "categorical",
+          "description": "engineering, sales or support; the job family applied for.",
+          "values": [
+            "engineering",
+            "sales",
+            "support"
+          ]
+        },
+        {
+          "name": "candidate__stage",
+          "type": "categorical",
+          "description": "The hiring stage held from valid_from to valid_to.",
+          "values": [
+            "applied",
+            "screen",
+            "interview",
+            "offer",
+            "hired",
+            "rejected"
+          ]
+        },
+        {
+          "name": "candidate__valid_from_date",
+          "type": "time",
+          "description": "UTC date the stage began."
+        },
+        {
+          "name": "candidate__valid_to_date",
+          "type": "time",
+          "description": "UTC date the stage ended; NULL while current."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        }
+      ]
+    },
+    {
+      "name": "view_to_cart_rate",
+      "label": "View-to-cart rate",
+      "description": "Share of site sessions with a page view that added to cart on the page view's day or the day after, counted on the page view's day.",
+      "type": "conversion",
+      "pipelines": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "customer_actions"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "customer_action__action_type",
+          "type": "categorical",
+          "description": "page_view, add_to_cart or checkout on the site; email_open or support_contact in the CRM.",
+          "values": [
+            "page_view",
+            "add_to_cart",
+            "checkout",
+            "email_open",
+            "support_contact"
+          ]
+        },
+        {
+          "name": "customer_action__channel",
+          "type": "categorical",
+          "description": "Where the action happened, site or crm.",
+          "values": [
+            "site",
+            "crm"
+          ]
+        },
+        {
+          "name": "customer_action__event_date",
+          "type": "time",
+          "description": "UTC date the action happened, which a late action keeps."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
         }
       ]
     }

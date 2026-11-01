@@ -56,6 +56,32 @@ def test_catalog_lists_the_marketing_pipeline(client):
     ]
 
 
+def test_catalog_lists_the_customer_actions_pipeline(client):
+    response = client.get("/catalog?pipeline=customer_actions")
+
+    assert response.status_code == 200
+    assert response.get_json() == [{"source": "synthetic", "entity": "customer_actions"}]
+
+
+def test_catalog_lists_the_partner_outreach_pipeline(client):
+    response = client.get("/catalog?pipeline=partner_outreach")
+
+    assert response.status_code == 200
+    assert response.get_json() == [
+        {"source": "synthetic", "entity": "partners"},
+        {"source": "synthetic", "entity": "partner_contacts"},
+        {"source": "synthetic", "entity": "outreach_messages"},
+        {"source": "synthetic", "entity": "outreach_replies"},
+    ]
+
+
+def test_catalog_lists_the_recruitment_pipeline(client):
+    response = client.get("/catalog?pipeline=recruitment")
+
+    assert response.status_code == 200
+    assert response.get_json() == [{"source": "synthetic", "entity": "applications"}]
+
+
 def test_catalog_requires_a_pipeline_parameter(client):
     response = client.get("/catalog")
 
@@ -237,11 +263,17 @@ def test_startup_provisions_every_source_table(make_client, warehouse):
         "open_meteo_hourly_weather",
         "partner_returns",
         "synthetic_ad_spend",
+        "synthetic_applications",
         "synthetic_bookings",
         "synthetic_campaigns",
+        "synthetic_customer_actions",
         "synthetic_customers",
         "synthetic_leads",
         "synthetic_orders",
+        "synthetic_outreach_messages",
+        "synthetic_outreach_replies",
+        "synthetic_partner_contacts",
+        "synthetic_partners",
     ]
 
 
@@ -249,11 +281,17 @@ SOURCE_TABLES = [
     "open_meteo_hourly_weather",
     "partner_returns",
     "synthetic_ad_spend",
+    "synthetic_applications",
     "synthetic_bookings",
     "synthetic_campaigns",
+    "synthetic_customer_actions",
     "synthetic_customers",
     "synthetic_leads",
     "synthetic_orders",
+    "synthetic_outreach_messages",
+    "synthetic_outreach_replies",
+    "synthetic_partner_contacts",
+    "synthetic_partners",
 ]
 
 

@@ -16,6 +16,13 @@ flags:
   indirect_selection: cautious
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # How far back an incremental build of silver.customer_actions re-reads bronze's loads (SL-15): loads
+  # that commit after a newer one was merged still land, and the bronze -> silver hop checks these days.
+  customer_actions_lookback_hours: 72
+  # The outreach activation list leaves out a contact messaged this many days before its as_of (SL-16).
+  outreach_cooldown_days: 7
+
 # After `dbt source freshness`, record each source's verdict in ops.source_freshness for the SourceStale
 # alert (#130, semantic/PLAN.md SL-12); every other command leaves it untouched (macros/source_freshness.sql).
 on-run-end:
