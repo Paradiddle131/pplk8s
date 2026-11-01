@@ -27,11 +27,14 @@ PREFIXES = {"bronze": "brz_", "silver": "slv_", "gold": "gld_", "exposed": "exp_
 LAYERS = (*PREFIXES, "semantic", "migration")
 PUBLIC_LAYERS = {"gold", "exposed"}
 
+PUBLIC_GROUP = "analytics"
+
 
 def is_pii(column: dict) -> bool:
     """A column marked personal data with `meta: {pii: true}` (under `config` or not)."""
     return bool((column.get("config") or {}).get("meta", {}).get("pii") or (column.get("meta") or {}).get("pii"))
-PUBLIC_GROUP = "analytics"
+
+
 SNAKE = re.compile(r"_?[a-z][a-z0-9_]*")
 
 
