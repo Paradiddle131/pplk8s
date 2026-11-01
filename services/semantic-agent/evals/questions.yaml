@@ -99,3 +99,27 @@ questions:
     question: What share of the site sessions that viewed a page on 1 October 2026 added something to the cart?
     expected_sql: select view_to_cart_rate from gold.customer_engagement_daily where activity_date = '2026-10-01'
     metrics: [view_to_cart_rate]
+  # Partner outreach (semantic/PLAN.md SL-16): messages, the reply rate counted on the message's day, and
+  # engaged partners on the reply's day. The contacts' details are on no metric and in no public model.
+  - id: outreach_messages_sent
+    question: How many outreach messages did we send to partner contacts from 1 to 3 October 2026?
+    expected_sql: select sum(messages_sent) from gold.partner_outreach_daily where outreach_date between '2026-10-01' and '2026-10-03'
+    metrics: [messages_sent]
+  - id: outreach_reply_rate
+    question: What share of the outreach messages we sent from 1 to 3 October 2026 got a reply?
+    expected_sql: select sum(messages_replied)::numeric / sum(messages_sent) from gold.partner_outreach_daily where outreach_date between '2026-10-01' and '2026-10-03'
+    metrics: [reply_rate]
+  - id: partners_engaged_one_day
+    question: How many partners replied to our outreach on 2 October 2026?
+    expected_sql: select partners_engaged from gold.partner_outreach_daily where outreach_date = '2026-10-02'
+    metrics: [partners_engaged]
+  # Recruitment (semantic/PLAN.md SL-17): a stage count as of a date, through the stage history's validity
+  # window, and time to hire, an average over the candidates hired in the period.
+  - id: candidates_in_interview_as_of
+    question: How many candidates were in the interview stage on 4 October 2026?
+    expected_sql: select candidates from gold.candidates_in_stage_daily where stage_date = '2026-10-04' and stage = 'interview'
+    metrics: [candidates_in_stage]
+  - id: time_to_hire
+    question: On average, how many days did it take to hire a candidate, over everyone hired in October 2026?
+    expected_sql: select sum(time_to_hire_days * hires) / sum(hires) from gold.recruitment_daily where recruitment_date between '2026-10-01' and '2026-10-31'
+    metrics: [time_to_hire_days]

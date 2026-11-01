@@ -341,3 +341,106 @@ models:
               arguments:
                 metric: cart_to_checkout_rate
                 time_column: activity_date
+
+  - name: gld_partner_outreach_daily
+    description: One row per day with any outreach message sent or reply received. Per-day rate; over a period use the metric reply_rate. Alias gold.partner_outreach_daily.
+    columns:
+      - name: outreach_date
+        description: Natural key; the UTC day a message was sent or a reply arrived.
+        data_type: date
+        tests: [not_null, unique]
+      - name: messages_sent
+        description: Outreach messages sent that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_sent_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_sent
+                time_column: outreach_date
+      - name: messages_replied
+        description: Messages sent that day that have a reply, whenever it arrived.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_messages_replied_to_gld_partner_outreach_daily
+              arguments:
+                metric: messages_replied
+                time_column: outreach_date
+      - name: replies
+        description: Replies that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_replies_to_gld_partner_outreach_daily
+              arguments:
+                metric: replies
+                time_column: outreach_date
+      - name: partners_engaged
+        description: Distinct partners with a reply that arrived that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_partners_engaged_to_gld_partner_outreach_daily
+              arguments:
+                metric: partners_engaged
+                time_column: outreach_date
+      - name: reply_rate
+        description: messages_replied / messages_sent for that day's messages; NULL on a day without messages.
+        data_type: numeric
+
+  - name: gld_recruitment_daily
+    description: One row per day with any application or hire. Per-day average; over a period use the metric time_to_hire_days. Alias gold.recruitment_daily.
+    columns:
+      - name: recruitment_date
+        description: Natural key; the UTC day a candidate applied or was hired.
+        data_type: date
+        tests: [not_null, unique]
+      - name: applications
+        description: Candidates who applied that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_applications_to_gld_recruitment_daily
+              arguments:
+                metric: applications
+                time_column: recruitment_date
+      - name: hires
+        description: Candidates hired that day.
+        data_type: bigint
+        tests:
+          - matches_metric:
+              name: hop_metric_hires_to_gld_recruitment_daily
+              arguments:
+                metric: hires
+                time_column: recruitment_date
+      - name: time_to_hire_days
+        description: Average days from applying to being hired of that day's hires; NULL on a day without hires.
+        data_type: numeric
+        tests:
+          - matches_metric:
+              name: hop_metric_time_to_hire_days_to_gld_recruitment_daily
+              arguments:
+                metric: time_to_hire_days
+                time_column: recruitment_date
+
+  - name: gld_candidates_in_stage_daily
+    description: >
+      One row per day and hiring stage with any candidate in it at the end of the day, from the stage history. Ask
+      per day; summing days double-counts candidates. Alias gold.candidates_in_stage_daily.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['stage_date', 'stage']
+    columns:
+      - name: stage_date
+        description: The UTC day.
+        data_type: date
+        tests: [not_null]
+      - name: stage
+        description: applied, screen, interview, offer, hired or rejected.
+        data_type: *text
+        tests: [not_null]
+      - name: candidates
+        description: Candidates in the stage at the end of the day.
+        data_type: bigint

@@ -11,14 +11,16 @@ CATALOG = Catalog.load(FIXTURES / "agent.json")
 ORDER_DIMENSIONS = CATALOG.dimensions(["revenue_eur"])
 
 
-def test_the_catalog_holds_every_metric_of_s2_marketing_and_customer_actions():
+def test_the_catalog_holds_every_metric_of_s2_and_every_domain():
     assert sorted(CATALOG.metrics) == [
         "acting_customers",
         "ad_clicks",
         "ad_spend_eur",
+        "applications",
         "booking_value_eur",
         "bookings",
         "cancellation_rate",
+        "candidates_in_stage",
         "cart_sessions",
         "cart_to_checkout_rate",
         "checkout_sessions",
@@ -28,15 +30,22 @@ def test_the_catalog_holds_every_metric_of_s2_marketing_and_customer_actions():
         "customers_distinct",
         "engaged_customers_28d",
         "engaged_customers_7d",
+        "hires",
         "lead_to_booking_rate",
         "leads",
+        "messages_replied",
+        "messages_sent",
         "net_revenue_eur",
         "orders_cancelled",
         "orders_total",
+        "partners_engaged",
+        "replies",
+        "reply_rate",
         "returns_count",
         "returns_eur",
         "revenue_eur",
         "site_sessions",
+        "time_to_hire_days",
         "view_to_cart_rate",
     ]
 

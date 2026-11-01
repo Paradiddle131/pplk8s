@@ -61,6 +61,42 @@ sources:
         columns:
           - name: event_id
             tests: [not_null]
+      - name: synthetic_partners
+        description: Full partner snapshot per run (synthetic partner outreach, semantic/PLAN.md SL-16).
+        columns:
+          - name: partner_id
+            tests: [not_null]
+      - name: synthetic_partner_contacts
+        description: >
+          Every partner contact as it stood at the end of the run's interval (synthetic): consent, an opt-out
+          once it has happened, and updated_ts when either changed. Name, email and phone are personal data.
+        columns:
+          - name: contact_id
+            tests: [not_null]
+      - name: synthetic_outreach_messages
+        description: Messages the outreach automation sent in the run's interval (synthetic), by sent_ts.
+        columns:
+          - name: message_id
+            tests: [not_null]
+      - name: synthetic_outreach_replies
+        description: >
+          Replies received in the run's interval (synthetic), by replied_ts; a reply arrives up to a few days
+          after its message, so a run can land none.
+        config:
+          # A quiet day lands no reply; two quiet days in a row are normal, three are a stop.
+          freshness:
+            warn_after: {count: 48, period: hour}
+            error_after: {count: 72, period: hour}
+        columns:
+          - name: reply_id
+            tests: [not_null]
+      - name: synthetic_applications
+        description: >
+          Every candidate who had applied by the end of the run's interval, in the hiring stage they were in then and
+          since when (stage_ts); the source keeps no stage history (synthetic recruitment, semantic/PLAN.md SL-17).
+        columns:
+          - name: candidate_id
+            tests: [not_null]
       - name: partner_returns
         description: >
           Partner return lines loaded from landed NDJSON files (EL Factory POST /load).

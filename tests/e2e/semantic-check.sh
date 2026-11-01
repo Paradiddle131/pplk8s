@@ -11,6 +11,12 @@
 #     total spend over the total count, not an average of the daily ratios (SL-8),
 #   - the order metrics by customer country equal exposed.sales_by_country_daily, and revenue by
 #     signup cohort equals a direct join of silver (the customers semantic model),
+#   - the partner-outreach metrics equal gold.partner_outreach_daily, the reply rate over the fixture is
+#     messages replied over messages sent, and the activation list leaves out every contact without consent,
+#     opted out (an older snapshot backfilled later included) or messaged within the cooldown (SL-16),
+#   - the recruitment metrics equal gold.recruitment_daily; replayed one extract at a time with a dbt build after each,
+#     as recruitment_elt runs, the snapshot keeps every stage change, a backfill of an older extract moves nobody back,
+#     and candidates_in_stage by candidate__stage (MetricFlow's SCD join) equals gold.candidates_in_stage_daily (SL-17),
 #   - the customer-actions metrics (actions per type, engaged customers over 7 and 28 days, the site
 #     funnel) equal gold.customer_actions_daily and gold.customer_engagement_daily, and an incremental
 #     build merges a late action into its own day and a redelivered one once (SL-15),
@@ -42,17 +48,17 @@ psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 echo "ok: fixture loaded into $DB"
 
 # The time spine is tagged sales, so the sales build carries it; tlc has its own fixture and check.
-dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
-  { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions"; }
+dbt_ build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+  { tail -30 "$OUT/build.log" >&2; fail "dbt build tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment"; }
 expect "time spine rows" "$(psql_dev -c "select count(*) from semantic.time_spine")" 1461
-echo "ok: sales, returns, finance, marketing and customer actions built; semantic.time_spine has 1461 days"
-expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 40
-echo "ok: the 40 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
+echo "ok: sales, returns, finance, marketing, customer actions, partner outreach and recruitment built; semantic.time_spine has 1461 days"
+expect "layer hops passed" "$(grep -c " PASS hop_" "$OUT/build.log")" 56
+echo "ok: the 56 layer hops (bronze -> silver -> gold -> exposed, metric -> gold) reconcile in dbt build"
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "8 semantic models, 25 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 8 semantic models, 25 metrics and 7 saved queries"
+grep -q "14 semantic models, 34 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 14 semantic models, 34 metrics and 7 saved queries"
 echo "ok: make dbt-validate (parse, check_standard, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -193,6 +199,80 @@ expect "the funnel and engaged customers on 2026-10-01 and 2026-10-03" "$(psql_d
   from semantic_check.engagement where day in ('2026-10-01', '2026-10-03')")" "0.80 6 7, 0.33 9 10"
 echo "ok: the customer-actions metrics equal gold.customer_actions_daily and gold.customer_engagement_daily"
 
+# Partner outreach (SL-16): the message and reply metrics by day against gold.partner_outreach_daily, the
+# reply rate over the whole fixture, and the activation list the automation reads. C-0102 opted out on
+# 2026-10-02 and a backfill loaded last carries their older snapshot: silver keeps the opt-out.
+mf_ query --metrics messages_sent,messages_replied,replies,partners_engaged,reply_rate \
+  --group-by metric_time__day --order metric_time__day --csv "$OUT/outreach.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the outreach metrics"; }
+mf_ query --metrics messages_sent,messages_replied,reply_rate --group-by partner__partner_type \
+  --order partner__partner_type --csv "$OUT/outreach_type.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the outreach metrics by partner type"; }
+mf_ query --metrics reply_rate --csv "$OUT/outreach_period.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the reply rate over the fixture"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.outreach" \
+  -c "create table semantic_check.outreach (day date, messages_sent bigint, messages_replied bigint, replies bigint, partners_engaged bigint, reply_rate numeric)"
+psql_dev -c "\\copy semantic_check.outreach from stdin with (format csv, header true)" <"$OUT/outreach.csv"
+expect "outreach metrics vs gold.partner_outreach_daily (rows differing)" "$(psql_dev -c "
+  with gold as (select outreach_date, messages_sent, messages_replied, replies, partners_engaged, round(reply_rate, 6) from gold.partner_outreach_daily),
+       mf as (select day, coalesce(messages_sent, 0), coalesce(messages_replied, 0), coalesce(replies, 0), coalesce(partners_engaged, 0),
+                     round(reply_rate, 6) from semantic_check.outreach)
+  select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
+# Over the fixture 4 of 7 messages got a reply: 0.57, not 0.54, the average of the daily rates.
+expect "the fixture's reply rate" "$(tail -n +2 "$OUT/outreach_period.csv" | cut -c1-4)" "0.57"
+expect "the average of gold's daily reply rates (what the metric is not)" "$(psql_dev -c "
+  select round(avg(reply_rate), 2) from gold.partner_outreach_daily")" "0.54"
+expect "messages sent and replied by partner type" "$(tail -n +2 "$OUT/outreach_type.csv" | cut -d, -f1-3 | paste -sd ' ')" "agency,2,2 clinic,3,2 reseller,2,0"
+expect "the activation list" "$(psql_dev -c "select string_agg(contact_id, ' ' order by contact_id) from exposed.outreach_activation")" "C-0103 C-0301"
+expect "C-0102 after a backfill of an older snapshot" "$(psql_dev -c "
+  select opted_out_ts || ' ' || reachable from silver.partner_contacts where contact_id = 'C-0102'")" "2026-10-02 15:00:00+00 false"
+echo "ok: the outreach metrics equal gold.partner_outreach_daily; the reply rate is 0.57 over the fixture; the activation list leaves out no-consent, opted-out and recently contacted contacts"
+
+# Recruitment (SL-17): the source keeps only each candidate's current stage, so the stage history is the
+# snapshot's. The fixture's build above snapshotted once, after every extract had landed; replay the extracts
+# one at a time in load order with a build after each, as recruitment_elt would, from an empty snapshot.
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.applications" \
+  -c "create table semantic_check.applications as select * from ds_source.synthetic_applications" \
+  -c "truncate ds_source.synthetic_applications" -c "drop table silver.candidate_stage_snapshots cascade"
+for run in run-rec-1 run-rec-2 run-rec-3 run-rec-1b run-rec-4; do
+  psql_dev -c "insert into ds_source.synthetic_applications select * from semantic_check.applications where _run_id = '$run'"
+  dbt_ build --select tag:recruitment >"$OUT/recruitment-$run.log" 2>&1 ||
+    { tail -30 "$OUT/recruitment-$run.log" >&2; fail "dbt build tag:recruitment after $run"; }
+done
+expect "recruitment hops after the last extract" "$(grep -c " PASS hop_" "$OUT/recruitment-run-rec-4.log")" 7
+expect "the stage history" "$(psql_dev -c "
+  select string_agg(candidate_id || ':' || stage || '@' || to_char(valid_from_date, 'MM-DD'), ' ' order by candidate_id, valid_from)
+  from silver.candidate_stages")" \
+  "K-001:interview@09-30 K-001:offer@10-02 K-001:hired@10-03 K-002:screen@10-01 K-002:interview@10-02 K-002:rejected@10-04 K-003:applied@10-01 K-003:screen@10-02 K-003:interview@10-03 K-004:applied@10-02 K-004:screen@10-04 K-005:offer@09-30 K-005:hired@10-02 K-006:screen@10-01 K-006:rejected@10-02"
+mf_ query --metrics applications,hires,time_to_hire_days --group-by metric_time__day --order metric_time__day \
+  --csv "$OUT/recruitment.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of the recruitment metrics"; }
+mf_ query --metrics candidates_in_stage --group-by metric_time__day,candidate__stage \
+  --order metric_time__day,candidate__stage --csv "$OUT/in_stage.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of candidates_in_stage by candidate__stage"; }
+mf_ query --metrics candidates_in_stage --group-by metric_time__day --where "{{ Dimension('candidate__stage') }} = 'interview'" \
+  --where "{{ TimeDimension('metric_time', 'day') }} between '2026-10-01' and '2026-10-04'" --order metric_time__day \
+  --csv "$OUT/in_interview.csv" >>"$OUT/query.log" 2>&1 || { cat "$OUT/query.log" >&2; fail "mf query of candidates in interview"; }
+mf_ query --metrics time_to_hire_days --csv "$OUT/time_to_hire.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of time to hire over the fixture"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.recruitment" \
+  -c "create table semantic_check.recruitment (day date, applications bigint, hires bigint, time_to_hire_days numeric)" \
+  -c "drop table if exists semantic_check.in_stage" -c "create table semantic_check.in_stage (day date, stage text, candidates bigint)"
+psql_dev -c "\\copy semantic_check.recruitment from stdin with (format csv, header true)" <"$OUT/recruitment.csv"
+psql_dev -c "\\copy semantic_check.in_stage from stdin with (format csv, header true)" <"$OUT/in_stage.csv"
+expect "recruitment metrics vs gold.recruitment_daily (rows differing)" "$(psql_dev -c "
+  with gold as (select recruitment_date, applications, hires, round(time_to_hire_days, 4) from gold.recruitment_daily),
+       mf as (select day, coalesce(applications, 0), coalesce(hires, 0), round(time_to_hire_days, 4) from semantic_check.recruitment)
+  select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
+# MetricFlow joins each candidate-day to the stage valid on it (validity_params); a day before a candidate's first
+# snapshot has no stage, which gold leaves out and MetricFlow groups under an empty stage.
+expect "candidates_in_stage by stage vs gold.candidates_in_stage_daily (rows differing)" "$(psql_dev -c "
+  with gold as (select stage_date, stage, candidates from gold.candidates_in_stage_daily),
+       mf as (select day, stage, candidates from semantic_check.in_stage where stage is not null)
+  select count(*) from ((select * from gold except select * from mf) union all (select * from mf except select * from gold)) d")" 0
+expect "candidates in interview at the end of 1 to 4 October" "$(tail -n +2 "$OUT/in_interview.csv" | tr -d '\r' | cut -d, -f2 | paste -sd ' ')" "1 1 2 1"
+expect "time to hire over the fixture (K-005 7.2083 and K-001 4.9583 days)" "$(tail -n +2 "$OUT/time_to_hire.csv" | cut -c1-4)" "6.08"
+echo "ok: replayed extract by extract, the snapshot keeps every stage change and no backfill moves a candidate back; the recruitment metrics equal gold.recruitment_daily, candidates_in_stage by stage equals gold.candidates_in_stage_daily, 2 in interview on 3 October"
+
 # Incremental silver (SL-15): a later load brings an action that happened on 2026-10-01 and redelivers
 # E-0021; the build merges only that load, the late action lands on its own day, E-0021 stays one row,
 # and every hop still passes. A full refresh afterwards restores the fixture's silver.
@@ -270,13 +350,16 @@ echo "ok: a return on a day without orders lands in exposed.net_sales_daily with
 stray="$REPO/dbt/models/semantic/zz_semantic_check_stray.yml"
 stray_model="$REPO/dbt/models/gold/zz_semantic_check_stray.sql"
 trap 'rm -f "$stray" "$stray_model"' EXIT
-echo "select 1 as stray_id" >"$stray_model"
+echo "select 1 as stray_id, 'a@b.example' as stray_email" >"$stray_model"
 cat >"$stray" <<'YAML'
 version: 2
 models:
   - name: zz_semantic_check_stray
     columns:
       - name: stray_id
+      - name: stray_email
+        config:
+          meta: {pii: true}
 metrics:
   - name: zz_stray_orders
     label: Stray
@@ -289,11 +372,12 @@ for problem in "metric zz_stray_orders: no description" \
   "model zz_semantic_check_stray: in gold, so its name starts with gld_" \
   "public model zz_semantic_check_stray: no description" \
   "public model zz_semantic_check_stray: column stray_id has no description" \
-  "public model zz_semantic_check_stray: column stray_id has no data_type"; do
+  "public model zz_semantic_check_stray: column stray_id has no data_type" \
+  "model zz_semantic_check_stray: public with personal data in stray_email; make it protected"; do
   grep -qF "check_standard: $problem" "$OUT/stray.log" ||
     { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on: $problem"; }
 done
 rm -f "$stray" "$stray_model"
-echo "ok: an undescribed metric and an unprefixed, undescribed, untyped gold model fail make dbt-validate"
+echo "ok: an undescribed metric and an unprefixed, undescribed, untyped gold model with personal data fail make dbt-validate"
 
 echo "PASS: semantic check"

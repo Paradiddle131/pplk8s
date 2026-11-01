@@ -13,6 +13,15 @@ pipelines:
   # Synthetic customer actions (semantic/PLAN.md SL-15): an append-only stream, extracted by arrival.
   customer_actions:
     - {source: synthetic, entity: customer_actions}
+  # Synthetic partner outreach (semantic/PLAN.md SL-16): partners, contacts with consent, messages, replies.
+  partner_outreach:
+    - {source: synthetic, entity: partners}
+    - {source: synthetic, entity: partner_contacts}
+    - {source: synthetic, entity: outreach_messages}
+    - {source: synthetic, entity: outreach_replies}
+  # Synthetic recruitment (semantic/PLAN.md SL-17): candidates in their current stage only; dbt snapshots the history.
+  recruitment:
+    - {source: synthetic, entity: applications}
   weather:
     - {source: open_meteo, entity: hourly_weather}
   # NYC TLC trip files, one data month per run (D35); FHVHV is kept for the big-file drill only.

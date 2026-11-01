@@ -1,0 +1,19 @@
+version: 2
+
+# Consumers of the exposed models that are not part of the migration rehearsal (migration/consumers.yml),
+# one exposure each, so dbt's lineage names who reads what.
+exposures:
+  - name: partner_outreach_automation
+    label: Partner outreach automation
+    type: application
+    maturity: medium
+    owner:
+      name: Partnerships
+    description: >
+      A job that emails, calls or messages the partner contacts on exposed.outreach_activation through each
+      contact's preferred channel. It acts on rows unseen, so the list's exclusions (no consent, opted out,
+      contacted within the cooldown) are a test that fails the build (semantic/PLAN.md SL-16).
+    depends_on: [ref('exp_outreach_activation')]
+    config:
+      meta:
+        kind: automation
