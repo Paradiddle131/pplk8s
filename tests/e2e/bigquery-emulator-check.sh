@@ -40,7 +40,7 @@ DBT_BIGQUERY=dbt-bigquery==1.12.1
 export DBT_TARGET=bigquery_emulator DBT_PROFILES_DIR="$PROJECT_DIR" BQ_API_ENDPOINT="$ENDPOINT"
 run_() { (cd "$PROJECT_DIR" && uv run --quiet --no-project --with-requirements requirements.txt --with "$DBT_BIGQUERY" "$@"); }
 
-# A fresh emulator holding the fixture's sources: it keeps everything in memory, so recreating it empties it.
+# A fresh emulator holding the fixture's sources: recreating the container empties its database file.
 fresh_emulator_() {
   "${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >/dev/null 2>&1 ||
     { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come up"; }
@@ -50,6 +50,13 @@ fresh_emulator_() {
     { cat "$OUT/fixture.log" >&2; fail "copying the fixture into the emulator"; }
   echo "ok: fixture sources copied into the emulator"
 }
+# The emulator's memory grows with every statement, and past about 5 GiB a DROP TABLE panics inside its engine
+# (googlesqlite: slice bounds out of range [-2147...:], #246). It keeps its data in a file in its own container
+# (compose.yaml), so a restart frees the memory and keeps the tables; a recreate empties it.
+restart_emulator_() {
+  "${COMPOSE[@]}" restart bigquery >/dev/null 2>&1 && "${COMPOSE[@]}" up -d --wait bigquery-api >/dev/null 2>&1 ||
+    { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come back after a restart"; }
+}
 
 psql_dev -c "select 1" >/dev/null 2>&1 || "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"
 psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
@@ -58,10 +65,19 @@ rm -rf "$OUT" && mkdir -p "$PROJECT_DIR"
 (cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs -cf - .) | tar -xf - -C "$PROJECT_DIR"
 fresh_emulator_
 
-run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
-  { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build on the emulator"; }
+# The build in two halves with a restart between, as one build of every domain outgrows the emulator's memory:
+# the platform's pipelines and the semantic and migration models, then the newer domains, which read only
+# their own sources and the time spine.
+run_ dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:semantic tag:migration --exclude tag:tlc >"$OUT/build.log" 2>&1 ||
+  { grep -E "ERROR|Error" "$OUT/build.log" | tail -20 >&2; fail "dbt build of sales, returns, finance, marketing, semantic and migration on the emulator"; }
 summary=$(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build.log" | tail -1)
-echo "ok: dbt build on the emulator: $summary"
+restart_emulator_
+run_ dbt build --select tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts --exclude tag:tlc >"$OUT/build-domains.log" 2>&1 ||
+  { grep -E "ERROR|Error" "$OUT/build-domains.log" | tail -20 >&2; fail "dbt build of customer actions, partner outreach, recruitment and call transcripts on the emulator"; }
+summary="$summary, then $(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build-domains.log" | tail -1)"
+cat "$OUT/build-domains.log" >>"$OUT/build.log"
+restart_emulator_
+echo "ok: dbt build on the emulator, in two halves with a restart between: $summary"
 hops=$(grep -c " PASS hop_" "$OUT/build.log" || true)
 [ "$hops" -eq 61 ] || fail "expected the 61 layer hops to pass on the emulator, got $hops"
 echo "ok: the 61 layer hops reconcile on the emulator (semantic/PLAN.md SL-9)"
