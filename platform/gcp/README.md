@@ -15,7 +15,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 | `guardrails-check.sh` | `make gcp-guardrails-check`: reads back the daily query quota, the enabled APIs against the free path, Firestore's databases and the byte cap (#205) | — | live: ok |
 | `tofu.sh` | `make gcp-plan`, `gcp-up`, `gcp-down`: credentials, the state at `gs://<project>-tfstate/default.tfstate` (no slash in the name: the cloud proxy breaks slashed object names), refuses without `GCP_PROJECT` | — | applied; `gcp-plan`: no changes |
 | `cost-check.sh` | `make gcp-cost-check`: the month's cost from the billing export, by service and SKU (#233) | — | live: no export rows yet |
-| (dbt's `gcp` output, `tests/e2e/bigquery-run-check.sh`) | `make bigquery-live-check`: the emulator check on the lab project: its dbt datasets emptied, the fixture loaded by load jobs, the semantic path built and its metrics asserted against gold, then the bytes billed; the cost check before and after (#206) | `make bigquery-emulator-check` | waits for `gcp-up`'s datasets |
+| (dbt's `gcp` output, `tests/e2e/bigquery-run-check.sh`) | `make bigquery-live-check`: the emulator check on the lab project: its dbt datasets emptied, the fixture loaded by load jobs, the semantic path built and its metrics asserted against gold, then the bytes billed; the cost check before and after (#206) | `make bigquery-emulator-check` | live: passed 2026-11-01, 7.8 GiB billed, $0.00 |
 
 ## The $0.00 rule
 
