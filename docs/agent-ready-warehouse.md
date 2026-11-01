@@ -83,9 +83,9 @@ At work that is a dataset-level read grant per agent identity.
 
 ## Where each calculated field lives
 
-Every calculated field is defined once, as a metric, on a semantic model over silver (R1, SL-1):
+Every calculated field is defined once, as a metric, on a semantic model over silver (R1, SL-1); the [target-architecture brief](target-architecture.md#where-each-calculated-field-lives) lists each one and where it lives:
 - a sum, count or distinct count over one silver model is a simple metric in that model's YAML (`dbt/models/silver/schema.yml`);
-- a ratio or a combination of metrics is a ratio or derived metric, in the model's YAML when its inputs share it, in `dbt/models/semantic/semantic.yml` when they do not.
+- a metric built from other metrics (ratio, derived, conversion) is declared in `dbt/models/semantic/semantic.yml`, even when its inputs share one model: on dbt-core 1.12.6 one declared on a model is added twice by the next partial parse ([`semantic/PLAN.md`](../semantic/PLAN.md) § 6).
 
 Gold and exposed keep their hand-written aggregates as the parity oracle (`make semantic-check` asserts the metrics equal them, and a `hop_metric_<metric>_to_<model>` test on the column fails `dbt build` when they drift, semantic/PLAN.md SL-9); a new number an agent should answer becomes a metric first, and a gold column only when a consumer needs the table.
 A ratio is never stored per day for agents to average: the metric divides the totals for whatever period and grouping is asked.

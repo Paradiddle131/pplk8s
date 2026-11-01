@@ -12,6 +12,7 @@
 #     signup cohort equals a direct join of silver (the customers semantic model),
 #   - a public model whose SQL renames or retypes a column its contract declares fails dbt build,
 #   - a metric without a description or a label, or a public column without a data_type, fails the validation,
+#   - a metric missing from docs/target-architecture.md's table fails the validation,
 #   - every layer hop reconciles in dbt build, and a return seeded on a day without orders lands in
 #     exposed.net_sales_daily as a day with revenue 0, every hop passing (semantic/PLAN.md SL-9, #150).
 # Expects `make services-up`; never touches the `warehouse` database.
@@ -213,5 +214,22 @@ for problem in "metric zz_stray_orders: no description" \
 done
 rm -f "$stray" "$stray_model"
 echo "ok: an undescribed metric and an unprefixed, undescribed, untyped gold model fail make dbt-validate"
+
+# A metric the standard accepts but the target-architecture brief does not list fails the validation too.
+cat >"$stray" <<'YAML'
+version: 2
+metrics:
+  - name: zz_stray_orders
+    label: Stray orders
+    description: Orders again, to show a metric the brief does not list.
+    type: derived
+    expr: orders_total
+    input_metrics: [orders_total]
+YAML
+if make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/brief.log" 2>&1; then fail "dbt-validate passed a metric the brief does not list"; fi
+grep -qF "check_brief: metric zz_stray_orders: missing from the table" "$OUT/brief.log" ||
+  { tail -20 "$OUT/brief.log" >&2; fail "the validation failed, but not on the metric missing from the brief"; }
+rm -f "$stray"
+echo "ok: a metric missing from docs/target-architecture.md fails make dbt-validate"
 
 echo "PASS: semantic check"
