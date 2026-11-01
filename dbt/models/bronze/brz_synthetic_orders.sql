@@ -5,7 +5,7 @@ select
     cast(customer_id as integer) as customer_id,
     cast(order_ts as {{ type_timestamptz() }}) as order_ts,
     cast(status as {{ dbt.type_string() }}) as status,
-    cast(amount as numeric(12,2)) as amount,
+    {{ cast_decimal("amount", 12, 2) }} as amount,
     cast(currency as {{ dbt.type_string() }}) as currency,
     _run_id,
     _interval_start,
