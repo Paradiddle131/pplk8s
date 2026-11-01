@@ -8,6 +8,8 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 |---|---|---|---|
 | `free-path.yaml` | every API and OpenTofu resource type the project may use, each with its free-tier source; the APIs GCP turns on by itself; the caps; the paid list | — | in `make gcp-validate` |
 | `check_free_path.py`, `tests/` | fails on anything off the free path, offline | — | in `make gcp-validate` |
+| `check_gcp_builds.py` | SL-19's check: each GCP image build's lockfile holds no Postgres package and its stage copies no TLC path, offline | — | in `make gcp-validate` |
+| (`dbt/Dockerfile`, `WAREHOUSE=bigquery`) | `make gcp-images`: the dbt image for GCP (149 MiB stored, #206) built and pushed to `<region>-docker.pkg.dev/<project>/pplk8s/dbt:<DBT_IMAGE's version>`; `make gcp-image-check` runs it on the emulator first | the local `dbt` image in the kind registry | waits for `gcp-up`'s repository |
 | `infra/` | the one OpenTofu root: the free-path APIs, the kill switch, Artifact Registry's `pplk8s` Docker repository (two versions per image, scanning off; #230), the BigQuery datasets, workload service accounts and their grants, the daily query quota, Firestore's free database (#205) | Compose and kind; the kind registry (`localhost:5001`) | applied by the owner; #230's and #205's resources wait for `gcp-up` |
 | `access.yaml` | each workload's service account and the datasets it reads or writes, held to the lab's roles by `tests/test_access.py` | the warehouse roles of `dbt/macros/agent_warehouse.sql` | in `make gcp-validate` |
 | `guardrails-check.sh` | `make gcp-guardrails-check`: reads back the daily query quota, the enabled APIs against the free path, Firestore's databases and the byte cap (#205) | — | live: ok |

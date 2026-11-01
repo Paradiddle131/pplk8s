@@ -132,26 +132,3 @@ sources:
             tests: [not_null]
           - name: observed_at
             tests: [not_null]
-      - name: tlc_yellow
-        description: >
-          NYC TLC yellow taxi trip files, one Parquet file per data month, landed chunk by chunk (PLAN.md D34).
-          Every published column under its lower-cased name, added and widened as months drift; file tables
-          carry _run_id, _source_uri, _etag, _chunk, _loaded_at. EL Factory creates the table on the first load.
-        config: &tlc_freshness
-          # tlc_monthly loads a month on the 1st; a skipped month warns, two error. A month TLC has not yet
-          # published is the alert of #89, not this one: freshness says our loads stopped, not the publisher.
-          freshness:
-            warn_after: {count: 35, period: day}
-            error_after: {count: 62, period: day}
-      - name: tlc_green
-        description: NYC TLC green taxi trip files; same landing contract as tlc_yellow.
-        config: *tlc_freshness
-
-  - name: ops
-    description: Operational ledgers EL Factory writes next to the landing tables.
-    schema: ops
-    tables:
-      - name: file_versions
-        description: >
-          One row per completed file version (source_uri, etag), written with its last chunk (D34);
-          silver reads only the latest completed version of each month (D36).

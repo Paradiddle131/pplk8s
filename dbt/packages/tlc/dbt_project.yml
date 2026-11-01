@@ -1,0 +1,54 @@
+# The Airflow lab's TLC pipeline (PLAN.md D34-D36): its models, macros, seed, tests and dev fixtures, a local
+# dbt package that only the local builds install (semantic/PLAN.md SL-19): the dbt image's Postgres build runs
+# `dbt deps` on ../../packages.yml, and its BigQuery build for GCP leaves the package and packages.yml out.
+# The layers are configured as in the root project; the tlc models stay Postgres-only (SL-6).
+name: pplk8s_tlc
+version: "0.1.0"
+config-version: 2
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+models:
+  pplk8s_tlc:
+    bronze:
+      +schema: bronze
+      +tags: [bronze]
+      +materialized: view
+      +access: protected
+    silver:
+      +schema: silver
+      +tags: [silver]
+      +materialized: table
+      +access: protected
+    gold:
+      +schema: gold
+      +tags: [gold]
+      +materialized: table
+      +access: public
+      +group: analytics
+      +persist_docs: {relation: true, columns: true}
+      +contract: {enforced: true}
+    exposed:
+      +schema: exposed
+      +tags: [exposed]
+      +materialized: view
+      +access: public
+      +group: analytics
+      +persist_docs: {relation: true, columns: true}
+      +contract: {enforced: true}
+
+seeds:
+  pplk8s_tlc:
+    bronze:
+      +schema: bronze
+      +tags: [bronze]
+      tlc_taxi_zones:
+        +tags: [tlc]
+        +column_types:
+          location_id: integer
+          borough: text
+          zone: text
+          service_zone: text

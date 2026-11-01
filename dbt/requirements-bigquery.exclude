@@ -1,0 +1,10 @@
+# Left out of the dbt image's GCP build (semantic/PLAN.md SL-19), passed to `uv pip compile --excludes`.
+# dbt-bigquery requires them for what this project never runs: Vertex AI for Python models and BigFrames (imported
+# only when one runs), pandas and pyarrow for google-cloud-bigquery's DataFrame reads (dbt and MetricFlow read rows).
+# Together about half the image as Artifact Registry stores it (270 to 149 MiB, #206); `make gcp-image-check` runs
+# the image's dbt build and MetricFlow without them.
+google-cloud-aiplatform
+pandas-gbq
+db-dtypes
+pandas
+pyarrow

@@ -1,0 +1,9 @@
+# The dbt image's GCP build (WAREHOUSE=bigquery, semantic/PLAN.md SL-19): the image's pins with the BigQuery
+# adapter instead of Postgres's. Compiled to requirements-bigquery.txt, the lock the image installs and
+# `make gcp-validate` reads (platform/gcp/check_gcp_builds.py):
+#   uv pip compile --python-version 3.13 --universal --excludes requirements-bigquery.exclude \
+#     requirements-bigquery.in -o requirements-bigquery.txt
+dbt-core==1.12.6
+dbt-bigquery==1.12.1
+# MetricFlow: the semantic layer (semantic/PLAN.md SL-1); the extra names the adapter.
+dbt-metricflow[dbt-bigquery]==0.15.0

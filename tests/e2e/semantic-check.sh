@@ -48,6 +48,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=dbt_dev
 OUT=${TMPDIR:-/tmp}/pplk8s-semantic-check
 SQL_EXPORTER_IMAGE=burningalchemist/sql_exporter:0.24.9 # compose.yaml's
@@ -59,8 +62,8 @@ psql_dev() {
 
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt"
 # The pins come from the image's requirements, so host and image run the same dbt and MetricFlow.
-dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
-mf_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf "$@"); }
+dbt_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt "$@"); }
+mf_() { (cd "$REPO/dbt" && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-metricflow mf "$@"); }
 expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 
 mkdir -p "$OUT"
@@ -661,7 +664,7 @@ expect "revenue month to date on 2026-09-15, and the September growth weeks" "$(
 echo "ok: over six weeks, the week-over-week growth and month-to-date metrics of revenue, bookings and leads equal gold"
 
 # A date part (the weekday, ISO: 1 Monday) as query_metrics groups by it, over the six whole weeks, against gold.
-(cd "$REPO/dbt" && uv run --quiet --no-project --with-requirements requirements.txt \
+(cd "$REPO/dbt" && uv run --quiet --no-project --with-requirements requirements-postgres.txt \
   python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-08-17 2026-09-27 "$OUT/dow.csv") >>"$OUT/query.log" 2>&1 ||
   { cat "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday"; }
 psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.dow" \

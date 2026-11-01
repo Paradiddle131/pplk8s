@@ -14,6 +14,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=agent_standalone
 OUT=${TMPDIR:-/tmp}/pplk8s-agent-standalone
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -30,7 +33,7 @@ echo "ok: make agent-warehouse created the roles' grants and ops.agent_queries i
 
 psql_db <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
 (cd "$REPO/dbt" && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_PROFILES_DIR="$REPO/dbt" \
-  uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts --exclude tag:tlc) \
+  uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt build --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts --exclude tag:tlc) \
   >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "dbt build"; }
 make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { tail -30 "$OUT/catalog.log" >&2; fail "make dbt-catalog"; }
 echo "ok: the fixture's models and the catalog built in $DB"

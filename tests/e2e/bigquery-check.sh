@@ -15,6 +15,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
 OUT=${TMPDIR:-/tmp}/pplk8s-bigquery-check
 PROJECT="$OUT/dbt"
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -23,10 +25,11 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 DBT_BIGQUERY=dbt-bigquery==1.12.1
 SQLGLOT=sqlglot==27.28.1
 export DBT_TARGET=bigquery DBT_PROFILES_DIR="$PROJECT"
-run_() { (cd "$PROJECT" && uv run --quiet --no-project --with-requirements requirements.txt --with "$DBT_BIGQUERY" "$@"); }
+run_() { (cd "$PROJECT" && uv run --quiet --no-project --with-requirements requirements-postgres.txt --with "$DBT_BIGQUERY" "$@"); }
 
 rm -rf "$OUT" && mkdir -p "$PROJECT"
-(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs -cf - .) | tar -xf - -C "$PROJECT"
+(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs --exclude=./dbt_packages -cf - .) | tar -xf - -C "$PROJECT"
+dbt_deps "$PROJECT"
 
 run_ dbt parse --quiet || fail "dbt parse on the bigquery target"
 run_ mf validate-configs --skip-dw >"$OUT/validate.log" 2>&1 || { tail -20 "$OUT/validate.log" >&2; fail "mf validate-configs --skip-dw"; }

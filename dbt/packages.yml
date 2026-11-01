@@ -1,0 +1,4 @@
+# Local builds only (semantic/PLAN.md SL-19): the Airflow lab's TLC pipeline, a local package. The dbt image's
+# GCP build (WAREHOUSE=bigquery) copies neither this file nor packages/; run `dbt deps` once before host dbt.
+packages:
+  - local: packages/tlc

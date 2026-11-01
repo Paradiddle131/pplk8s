@@ -148,13 +148,3 @@ seeds:
           next_step: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
           status: "{{ 'STRING' if target.type == 'bigquery' else 'text' }}"
           recorded_at: "{{ 'TIMESTAMP' if target.type == 'bigquery' else 'timestamptz' }}"
-    bronze:
-      +schema: bronze
-      +tags: [bronze]
-      tlc_taxi_zones:
-        +tags: [tlc]
-        +column_types:
-          location_id: integer
-          borough: text
-          zone: text
-          service_zone: text

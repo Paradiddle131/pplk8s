@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: gld_tlc_daily_trips
+    description: >
+      One row per (data_month, trip_type, pickup_date, pickup_location_id), one month replaced per build.
+      Alias gold.tlc_daily_trips.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['data_month', 'trip_type', 'pickup_date', 'pickup_location_id']
+    columns:
+      - name: data_month
+        description: The TLC data month (YYYY-MM) the trips were published in; one month is replaced per build.
+        data_type: text
+      - name: trip_type
+        description: yellow or green.
+        data_type: text
+      - name: pickup_date
+        description: Local date of the pickup.
+        data_type: date
+      - name: pickup_location_id
+        description: TLC taxi zone id of the pickup (bronze.tlc_taxi_zones).
+        data_type: integer
+      - name: trips
+        description: Number of trips.
+        data_type: bigint
+      - name: passengers
+        description: Sum of the passenger counts.
+        data_type: numeric
+      - name: trip_distance_mi
+        description: Sum of the trip distances, in miles.
+        data_type: float
+      - name: fare_amount_usd
+        description: Sum of the metered fares, in USD.
+        data_type: float
+      - name: tip_amount_usd
+        description: Sum of the tips, in USD.
+        data_type: float
+      - name: total_amount_usd
+        description: Sum of the total amounts charged, in USD.
+        data_type: float

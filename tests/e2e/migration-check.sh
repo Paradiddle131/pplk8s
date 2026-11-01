@@ -13,6 +13,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=lib/dbt-deps.sh
+source "$REPO/tests/e2e/lib/dbt-deps.sh"
+dbt_deps "$REPO/dbt"
 DB=dbt_dev
 OUT=${TMPDIR:-/tmp}/pplk8s-migration-check
 COPY="$OUT/dbt"
@@ -22,7 +25,7 @@ psql_dev() {
     psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"
 }
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB"
-dbt_in() { local dir=$1; shift; (cd "$dir" && DBT_PROFILES_DIR="$dir" uvx --quiet --with-requirements requirements.txt --from dbt-core dbt "$@"); }
+dbt_in() { local dir=$1; shift; (cd "$dir" && DBT_PROFILES_DIR="$dir" uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt "$@"); }
 expect() { [ "$2" = "$3" ] || fail "$1: expected [$3], got [$2]"; }
 
 rm -rf "$OUT" && mkdir -p "$OUT"
@@ -46,7 +49,8 @@ expect "the sales agent's differing keys" "$(psql_dev -c "
 echo "ok: migration.parity matches the dashboard and the automation; the agent's revenue differs on the 4 country-days with a cancellation"
 
 # Each case edits the consumers in a fresh copy of dbt/ and runs the gate alone; failing rows are stored.
-(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs -cf - .) | tar -xf - -C "$(mkdir -p "$COPY" && echo "$COPY")"
+(cd "$REPO/dbt" && tar --exclude=./target --exclude=./logs --exclude=./dbt_packages -cf - .) | tar -xf - -C "$(mkdir -p "$COPY" && echo "$COPY")"
+dbt_deps "$COPY"
 gate() { # <case name> <python statement over `s`, the text of consumers.yml>
   local name=$1 edit=$2
   cp "$REPO/dbt/models/migration/consumers.yml" "$COPY/models/migration/consumers.yml"

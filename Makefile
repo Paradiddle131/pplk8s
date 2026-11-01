@@ -9,9 +9,9 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.8
-DBT_IMAGE ?= localhost:5001/dbt:0.7.38
+DBT_IMAGE ?= localhost:5001/dbt:0.7.39
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.35
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.36
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-cost-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -102,7 +102,7 @@ el-factory-down: ## Stop the local EL Factory lite container
 	scripts/el-factory-local.sh down
 
 STAGE ?= bronze
-tlc-dbt-check: services-up ## Build the tlc dbt models month by month on dbt/dev/tlc_fixture.sql in dbt_dev and assert month replacement (#55)
+tlc-dbt-check: services-up ## Build the tlc dbt models month by month on dbt/packages/tlc/dev/tlc_fixture.sql in dbt_dev and assert month replacement (#55)
 	tests/e2e/tlc-dbt-check.sh
 
 dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed|semantic) against the warehouse
@@ -114,30 +114,35 @@ dbt-build: ## Run `dbt build --select $(STAGE)` (bronze|silver|gold|exposed|sema
 # brief's metric table holds every metric as the project defines it (docs/target-architecture.md), and MetricFlow
 # validates the semantic models, dimensions, entities, measures and metrics against the warehouse.
 DBT_DBNAME ?= warehouse
-dbt-validate: ## Validate the semantic layer against the Compose warehouse (DBT_DBNAME=warehouse|dbt_dev): dbt parse, the agent-ready standard, the brief's metric table, mf validate-configs
+# Host dbt needs dbt/packages.yml's local package (the Airflow lab's TLC pipeline, semantic/PLAN.md SL-19)
+# installed first; `dbt deps` links it into dbt/dbt_packages/.
+dbt-deps: ## Install the dbt project's local packages into dbt/dbt_packages (host dbt runs it first)
+	cd dbt && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt deps --quiet
+
+dbt-validate: dbt-deps ## Validate the semantic layer against the Compose warehouse (DBT_DBNAME=warehouse|dbt_dev): dbt parse, the agent-ready standard, the brief's metric table, mf validate-configs
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt parse --quiet \
 	  && python3 scripts/check_standard.py target \
 	  && python3 scripts/check_brief.py target \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf validate-configs
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-metricflow mf validate-configs
 
 # The catalog (semantic/PLAN.md SL-3), with the same host dbt: the agent catalog and the BigQuery data
 # agent's authored context under dbt/target/catalog/ (offline), then the semantic stage, whose
 # semantic.metrics table is the warehouse copy; persist_docs comments gold and exposed as they build.
-dbt-catalog: ## Write the agent catalog and the data agent's authored context to dbt/target/catalog, and build semantic.metrics (DBT_DBNAME=warehouse|dbt_dev)
+dbt-catalog: dbt-deps ## Write the agent catalog and the data agent's authored context to dbt/target/catalog, and build semantic.metrics (DBT_DBNAME=warehouse|dbt_dev)
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
-	  && uv run --quiet --no-project --with-requirements requirements.txt python scripts/build_catalog.py \
-	  && uv run --quiet --no-project --with-requirements requirements.txt python scripts/check_catalog.py \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt build --quiet --select semantic
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt parse --quiet \
+	  && uv run --quiet --no-project --with-requirements requirements-postgres.txt python scripts/build_catalog.py \
+	  && uv run --quiet --no-project --with-requirements requirements-postgres.txt python scripts/check_catalog.py \
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt build --quiet --select semantic
 
 # Query metrics through MetricFlow from the host, as an agent's query_metrics does (docs/demo.md).
 METRICS ?= revenue_eur,returns_eur,net_revenue_eur
 GROUP_BY ?= metric_time__day
-metric-query: ## Query metrics with `mf query` on the Compose warehouse (METRICS=a,b GROUP_BY=metric_time__day DBT_DBNAME=warehouse|dbt_dev)
+metric-query: dbt-deps ## Query metrics with `mf query` on the Compose warehouse (METRICS=a,b GROUP_BY=metric_time__day DBT_DBNAME=warehouse|dbt_dev)
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt parse --quiet \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-metricflow mf query --metrics $(METRICS) --group-by $(GROUP_BY) --order $(GROUP_BY)
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt parse --quiet \
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-metricflow mf query --metrics $(METRICS) --group-by $(GROUP_BY) --order $(GROUP_BY)
 
 SQL ?= select 1
 warehouse-sql: ## Run one psql command on the Compose warehouse as its owner (SQL='\d+ gold.daily_sales' DBT_DBNAME=warehouse|dbt_dev)
@@ -151,6 +156,9 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
 	tests/e2e/bigquery-run-check.sh
+
+gcp-image-check: services-up ## Build the dbt image for GCP (WAREHOUSE=bigquery) and run its own dbt build of the platform part and a MetricFlow query on a fresh BigQuery emulator (#206, SL-19)
+	BUILD_CA=$(BUILD_CA) tests/e2e/gcp-image-check.sh
 
 # The same check on real BigQuery (#206, semantic/PLAN.md SL-13): opt-in like agent-eval, never in `make check`;
 # the cost check before and after it, as for every live step (platform/gcp/README.md).
@@ -181,13 +189,13 @@ migration-check: services-up ## Build the legacy tables, the new layers and migr
 # The semantic agent's warehouse objects (semantic/PLAN.md SL-4, SL-10; #166): its roles, their grants and the
 # audit table, from one dbt macro (dbt/macros/agent_warehouse.sql) on any database the dbt project builds in,
 # with its own target path so a catalog built for another database stays. services-up runs it on warehouse.
-agent-warehouse: ## Create the semantic agent's roles, grants and ops.agent_queries in a database dbt builds in (DBT_DBNAME=warehouse|dbt_dev|...)
+agent-warehouse: dbt-deps ## Create the semantic agent's roles, grants and ops.agent_queries in a database dbt builds in (DBT_DBNAME=warehouse|dbt_dev|...)
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/agent-warehouse \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation agent_warehouse
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt run-operation agent_warehouse
 
-source-freshness-table: ## Create ops.source_freshness, which the source-freshness CronJob fills, in a database dbt builds in (DBT_DBNAME=warehouse|...; #130)
+source-freshness-table: dbt-deps ## Create ops.source_freshness, which the source-freshness CronJob fills, in a database dbt builds in (DBT_DBNAME=warehouse|...; #130)
 	cd dbt && export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(DBT_DBNAME) DBT_PROFILES_DIR=$(CURDIR)/dbt DBT_TARGET_PATH=target/source-freshness-table \
-	  && uvx --quiet --with-requirements requirements.txt --from dbt-core dbt run-operation source_freshness_table
+	  && uvx --quiet --with-requirements requirements-postgres.txt --from dbt-core dbt run-operation source_freshness_table
 
 # The semantic agent and its text-to-SQL baseline (semantic/PLAN.md SL-2, SL-5). Only the semantic agent is
 # deployed (workloads-up); the baseline is the eval's control, served here only beside it for the local demo.
@@ -357,6 +365,7 @@ gcp-validate: ## Offline: tofu fmt and validate, tflint, and the free-path allow
 	cd platform/gcp/infra && tflint --init >/dev/null && tflint
 	uvx ruff@0.17.0 check platform/gcp && uvx ruff@0.17.0 format --check platform/gcp
 	uv run --no-project --with pyyaml==6.0.2 python platform/gcp/check_free_path.py
+	python3 platform/gcp/check_gcp_builds.py
 	uvx --from pytest==8.4.2 --with pyyaml==6.0.2 pytest -q platform/gcp/tests
 
 gcp-plan: ## Live, read-only: show what `gcp-up` would change on the lab project (GCP_PROJECT)
@@ -370,6 +379,19 @@ gcp-down: ## Live, the owner's step: destroy what platform/gcp/infra created on 
 
 gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the daily query quota, enabled APIs against the free path, Firestore's one free database, the byte cap (GCP_PROJECT; #205)
 	platform/gcp/guardrails-check.sh
+
+# The images that run on GCP (semantic/PLAN.md SL-19): each built from its one Dockerfile for BigQuery and pushed to
+# Artifact Registry's `pplk8s` repository under the version its local tag holds (D16). Docker needs the registry's
+# credential first (`gcloud auth configure-docker $(GCP_REGION)-docker.pkg.dev`); the cost check before and after.
+GCP_REGION ?= us-central1
+GCP_IMAGES = $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/pplk8s
+gcp_tag = $(GCP_IMAGES)/$(firstword $(subst :, ,$(notdir $(1)))):$(word 2,$(subst :, ,$(notdir $(1))))
+gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: today dbt) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206)
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the images go to the registry of the lab project (platform/gcp/README.md)}"
+	platform/gcp/cost-check.sh
+	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) --build-arg WAREHOUSE=bigquery dbt
+	docker push $(call gcp_tag,$(DBT_IMAGE))
+	platform/gcp/cost-check.sh
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
 	platform/gcp/cost-check.sh

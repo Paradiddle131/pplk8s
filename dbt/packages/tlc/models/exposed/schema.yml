@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: exp_tlc_daily_trips_by_borough
+    description: Daily trips, passengers and revenue per pickup borough and trip type. Alias exposed.tlc_daily_trips_by_borough.
+    tests:
+      - unique_combination:
+          arguments:
+            columns: ['pickup_date', 'data_month', 'trip_type', 'borough']
+    columns:
+      - name: pickup_date
+        description: Local date of the pickup.
+        data_type: date
+      - name: data_month
+        description: The TLC data month (YYYY-MM) the trips were published in.
+        data_type: text
+      - name: trip_type
+        description: yellow or green.
+        data_type: text
+      - name: borough
+        description: Pickup borough from the taxi zone lookup; Unknown for zones it lacks.
+        data_type: text
+      - name: trips
+        description: Number of trips.
+        data_type: numeric
+      - name: passengers
+        description: Sum of the passenger counts.
+        data_type: numeric
+      - name: total_amount_usd
+        description: Sum of the total amounts charged, in USD.
+        data_type: float

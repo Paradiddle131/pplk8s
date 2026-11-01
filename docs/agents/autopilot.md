@@ -37,6 +37,7 @@ Cloud runs, with their counts in the handoff:
 - EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
 - alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
 - `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
+- `make gcp-image-check` when `dbt/**` changed: the dbt image's GCP build, run on the emulator (SL-19)
 - the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make tools`, `make cluster-up`, `make workloads-up`, and `make agent-deploy-check` for the semantic agent
 
 - Airflow when `airflow/**` or `platform/helm/**` changed: `make ci-integration`, and the phase checks the change touches, with `DAG_DELIVERY=local` (git-sync needs the laptop's deploy key)
