@@ -2454,6 +2454,124 @@
       ]
     },
     {
+      "name": "damaged_return_share",
+      "label": "Damaged-return share",
+      "description": "Share of returns whose reason was damaged goods (damaged returns over all returns, both counted on the returned order's date, over the whole period asked).",
+      "type": "ratio",
+      "pipelines": [
+        "returns"
+      ],
+      "readiness": [
+        "returns.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "returns"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "order__customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "return__order_date",
+          "type": "time",
+          "description": "UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a return in October of a September order counts against September's orders. Empty while the order is not in silver."
+        },
+        {
+          "name": "return__reason",
+          "type": "categorical",
+          "description": "The partner's return reason (damaged, wrong size, late delivery).",
+          "values": [
+            "damaged",
+            "wrong size",
+            "late delivery"
+          ]
+        },
+        {
+          "name": "return__return_date",
+          "type": "time",
+          "description": "UTC date the return was recorded (returned_at in UTC)."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "The returned order."
+        },
+        {
+          "name": "return",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
       "name": "engaged_customers_28d",
       "label": "Engaged customers (28 days)",
       "description": "Distinct customers with any site or CRM action in the 28 days ending on the day (that day and the 27 before); monthly engaged customers.",
@@ -3976,6 +4094,85 @@
       ]
     },
     {
+      "name": "return_rate",
+      "label": "Return rate",
+      "description": "Share of orders that were returned (returns over orders, both counted on the day the order was placed, over the whole period asked); a return in October of a September order counts against September.",
+      "type": "ratio",
+      "pipelines": [
+        "returns",
+        "sales"
+      ],
+      "readiness": [
+        "returns.silver",
+        "sales.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "orders",
+        "returns"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "The returned order."
+        }
+      ]
+    },
+    {
       "name": "returns_count",
       "label": "Returns",
       "description": "Number of partner returns.",
@@ -4056,6 +4253,11 @@
             "shipped",
             "cancelled"
           ]
+        },
+        {
+          "name": "return__order_date",
+          "type": "time",
+          "description": "UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a return in October of a September order counts against September's orders. Empty while the order is not in silver."
         },
         {
           "name": "return__reason",
@@ -4169,6 +4371,129 @@
             "shipped",
             "cancelled"
           ]
+        },
+        {
+          "name": "return__order_date",
+          "type": "time",
+          "description": "UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a return in October of a September order counts against September's orders. Empty while the order is not in silver."
+        },
+        {
+          "name": "return__reason",
+          "type": "categorical",
+          "description": "The partner's return reason (damaged, wrong size, late delivery).",
+          "values": [
+            "damaged",
+            "wrong size",
+            "late delivery"
+          ]
+        },
+        {
+          "name": "return__return_date",
+          "type": "time",
+          "description": "UTC date the return was recorded (returned_at in UTC)."
+        }
+      ],
+      "entities": [
+        {
+          "name": "customer",
+          "description": "Must exist in slv_customers."
+        },
+        {
+          "name": "order",
+          "description": "The returned order."
+        },
+        {
+          "name": "return",
+          "description": "Natural key."
+        }
+      ]
+    },
+    {
+      "name": "returns_on_order_date",
+      "label": "Returns by order date",
+      "description": "Number of partner returns, counted on the day the returned order was placed rather than the day of the return; the return rate's numerator.",
+      "type": "simple",
+      "pipelines": [
+        "returns"
+      ],
+      "readiness": [
+        "returns.silver"
+      ],
+      "time_grain": "day",
+      "semantic_models": [
+        "returns"
+      ],
+      "dimensions": [
+        {
+          "name": "customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "metric_time",
+          "type": "time",
+          "description": "The metric's own time dimension; group by metric_time__day, __week, __month or __year."
+        },
+        {
+          "name": "order__amount",
+          "type": "numeric",
+          "description": "The order's amount in its currency (EUR in the lab); a numeric dimension, so orders over or under an amount are a filter (order__amount > 100), not a band."
+        },
+        {
+          "name": "order__currency",
+          "type": "categorical",
+          "description": "ISO-4217 code of the order amount."
+        },
+        {
+          "name": "order__customer__country",
+          "type": "categorical",
+          "description": "ISO-2 country code of the customer (NL, TR, GB, DE, FR, US).",
+          "values": [
+            "NL",
+            "TR",
+            "GB",
+            "DE",
+            "FR",
+            "US"
+          ]
+        },
+        {
+          "name": "order__customer__signup_date",
+          "type": "time",
+          "description": "UTC date the customer signed up; group by its month for signup cohorts."
+        },
+        {
+          "name": "order__order_date",
+          "type": "time",
+          "description": "UTC date the order was placed."
+        },
+        {
+          "name": "order__status",
+          "type": "categorical",
+          "description": "placed, shipped or cancelled.",
+          "values": [
+            "placed",
+            "shipped",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "return__order_date",
+          "type": "time",
+          "description": "UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a return in October of a September order counts against September's orders. Empty while the order is not in silver."
         },
         {
           "name": "return__reason",

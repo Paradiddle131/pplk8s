@@ -16,7 +16,7 @@
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
 #     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
-#     signup-to-first-order rate by month against SQL by hand, the marketing metrics by day and channel
+#     signup-to-first-order rate by month and the return rate by order day against SQL by hand, the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
@@ -149,7 +149,18 @@ if part == "platform":
                countif(c.signup_date < date_add(month, interval 1 month)), 0
         from unnest(generate_date_array(date '2024-01-01', date '2024-12-01', interval 1 month)) as month
         cross join `pplk8s-lab.silver.customers` c group by month""")
+    # The return rate and damaged-return share by the returned order's day (all three returns are of 1 October's
+    # orders), against SQL by hand.
+    return_rate = rows("""
+        with orders as (select order_date, count(*) as n from `pplk8s-lab.silver.orders` group by 1),
+             returned as (select o.order_date, count(*) as n, countif(r.reason = 'damaged') as damaged
+                          from `pplk8s-lab.silver.returns` r join `pplk8s-lab.silver.orders` o on o.order_id = r.order_id
+                          group by 1)
+        select cast(o.order_date as string), coalesce(r.n, 0) / o.n, coalesce(safe_divide(r.damaged, r.n), 0)
+        from orders o left join returned r on r.order_date = o.order_date""")
     compared = [("gold.daily_sales", gold, metrics("sales", sales)),
+                ("return rate by order day (SQL by hand)", return_rate,
+                 metrics("return_rate", ["return_rate", "damaged_return_share"])),
                 ("customers by month (SQL by hand)", customers,
                  metrics("customers", ["signups", "customers_to_date", "signup_to_first_order_rate"], ("metric_time__month",))),
                 ("revenue by weekday (ISO)", weekday, by_weekday),
@@ -172,7 +183,8 @@ if part == "platform":
         bad.append(f"migration.parity on the emulator: {parity}")
     said = (f"the sales metrics equal gold.daily_sales and exposed.net_sales_daily on {len(gold)} days, net revenue"
             f" by customer country SQL by hand on {len(by_country)} day-countries, revenue by weekday on"
-            f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the marketing"
+            f" {len(weekday)} weekdays, the customers' metrics on {len(customers)} months, the return rate on"
+            f" {len(return_rate)} order days, the marketing"
             f" metrics gold.marketing_daily on {len(gold_marketing)} day-channels, and migration.parity reports as on Postgres")
 elif part == "customer_actions":
     actions = keyed("select concat(cast(activity_date as string), ' ', action_type), actions"
@@ -350,6 +362,9 @@ run_ mf query --metrics revenue_eur,returns_eur,net_revenue_eur --group-by metri
 run_ mf query --metrics signups,customers_to_date,signup_to_first_order_rate --group-by metric_time__month \
   --start-time 2024-01-01 --end-time 2024-12-31 --csv "$OUT/customers.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the customers' metrics on the emulator"; }
+run_ mf query --metrics return_rate,damaged_return_share --group-by metric_time__day \
+  --csv "$OUT/return_rate.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the return rate on the emulator"; }
 run_ python -I "$REPO/tests/e2e/lib/mf_date_part.py" revenue_eur dow 2026-09-28 2026-10-04 "$OUT/dow.csv" >>"$OUT/query.log" 2>&1 ||
   { tail -20 "$OUT/query.log" >&2; fail "MetricFlow query of revenue by weekday on the emulator"; }
 run_ mf query --metrics ad_spend_eur,ad_clicks,leads,bookings,booking_value_eur \

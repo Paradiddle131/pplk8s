@@ -83,6 +83,7 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `replies` | Replies | simple | `outreach_replies` | `dbt/models/silver/schema.yml` |
 | `returns_count` | Returns | simple | `returns` | `dbt/models/silver/schema.yml` |
 | `returns_eur` | Returns (EUR) | simple | `returns` | `dbt/models/silver/schema.yml` |
+| `returns_on_order_date` | Returns by order date | simple | `returns` | `dbt/models/silver/schema.yml` |
 | `cancellation_rate` | Cancellation rate | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
 | `cost_per_booking_eur` | Cost per booking (EUR) | ratio | `ad_spend`, `bookings` | `dbt/models/semantic/semantic.yml` |
 | `cost_per_lead_eur` | Cost per lead (EUR) | ratio | `ad_spend`, `leads` | `dbt/models/semantic/semantic.yml` |
@@ -104,6 +105,8 @@ The table holds the rows of `semantic.metrics`; `dbt/scripts/check_brief.py` (in
 | `customers_to_date` | Customers to date | cumulative | `customers` | `dbt/models/semantic/semantic.yml` |
 | `signup_to_first_order_rate` | Signup-to-first-order rate | conversion | `customers`, `orders` | `dbt/models/semantic/semantic.yml` |
 | `repeat_revenue_share` | Repeat-customer revenue share | ratio | `orders` | `dbt/models/semantic/semantic.yml` |
+| `return_rate` | Return rate | ratio | `orders`, `returns` | `dbt/models/semantic/semantic.yml` |
+| `damaged_return_share` | Damaged-return share | ratio | `returns` | `dbt/models/semantic/semantic.yml` |
 
 - Rules: [`agent-ready-warehouse.md` § Where each calculated field lives](agent-ready-warehouse.md#where-each-calculated-field-lives)
 - Proof: `make semantic-check` (every metric equals gold and exposed, day by day), `make bigquery-emulator-check` (the same on the emulator)

@@ -10,7 +10,8 @@
 #     query_metrics writes them, equals SQL written by hand, and revenue grouped by weekday (a date part)
 #     equals gold over the six weeks, and the customers' signups, customers to date and signup-to-first-order rate
 #     equal SQL written by hand over two months of signups, and the repeat-customer metrics (a Metric() filter)
-#     equal SQL by hand, a query's dates leaving the inner order count unlimited,
+#     equal SQL by hand, a query's dates leaving the inner order count unlimited, and the return rate and
+#     damaged-return share by the returned order's month equal SQL by hand,
 #   - the marketing metrics by day and channel equal gold.marketing_daily, their daily ratios equal
 #     exposed.channel_performance_daily, the lead-to-booking rate by day equals gold.lead_conversion_daily,
 #     and over the whole fixture cost per lead and per booking are
@@ -77,10 +78,10 @@ echo "ok: the 62 layer hops (bronze -> silver -> gold -> exposed, metric -> gold
 
 make -s -C "$REPO" dbt-validate DBT_DBNAME="$DB" >"$OUT/validate.log" 2>&1 ||
   { tail -30 "$OUT/validate.log" >&2; fail "make dbt-validate against $DB"; }
-grep -q "15 semantic models, 51 metrics and 7 saved queries described" "$OUT/validate.log" ||
-  fail "check_standard did not report the 15 semantic models, 51 metrics and 7 saved queries"
-grep -q "check_brief: 51 metrics in the brief's table" "$OUT/validate.log" ||
-  fail "check_brief did not report the 51 metrics of docs/target-architecture.md"
+grep -q "15 semantic models, 54 metrics and 7 saved queries described" "$OUT/validate.log" ||
+  fail "check_standard did not report the 15 semantic models, 54 metrics and 7 saved queries"
+grep -q "check_brief: 54 metrics in the brief's table" "$OUT/validate.log" ||
+  fail "check_brief did not report the 54 metrics of docs/target-architecture.md"
 echo "ok: make dbt-validate (parse, check_standard, check_brief, mf validate-configs) passes against $DB"
 
 # Parity: every metric queried by day, loaded back into the warehouse and compared both ways with
@@ -705,5 +706,28 @@ expect "repeat customers, their revenue and share by day vs SQL by hand (rows di
 expect "the repeat share over 1 to 10 October, and 2 October's repeat revenue alone" "$(
   tail -1 "$OUT/repeat_period.csv" | awk -F, '{ printf "%.4f", $2 }') $(tail -1 "$OUT/repeat_day.csv" | tr -d '\r')" "0.8657 868.65"
 echo "ok: repeat customers, their revenue and share equal SQL by hand; a query's dates do not limit who counts as a repeat customer"
+
+# Returns against the orders they return, both on the order's date: the return rate and the damaged-return share
+# by order month over August to October (the six weeks' three returns land in October against August and
+# September orders), against SQL by hand.
+mf_ query --metrics return_rate,damaged_return_share --group-by metric_time__month --start-time 2026-08-01 \
+  --end-time 2026-10-31 --csv "$OUT/return_rate.csv" >>"$OUT/query.log" 2>&1 ||
+  { cat "$OUT/query.log" >&2; fail "mf query of the return rate"; }
+psql_dev -c "set client_min_messages = warning" -c "drop table if exists semantic_check.return_rate" \
+  -c "create table semantic_check.return_rate (month date, return_rate numeric, damaged_return_share numeric)"
+psql_dev -c "\\copy semantic_check.return_rate from stdin with (format csv, header true)" <"$OUT/return_rate.csv"
+expect "return rate and damaged-return share by order month vs SQL by hand (rows differing)" "$(psql_dev -c "
+  with orders as (select date_trunc('month', order_date)::date as month, count(*) as n from silver.orders
+                  where order_date between '2026-08-01' and '2026-10-31' group by 1),
+       returned as (select date_trunc('month', o.order_date)::date as month, count(*) as n,
+                           count(*) filter (where r.reason = 'damaged') as damaged
+                    from silver.returns r join silver.orders o on o.order_id = r.order_id group by 1),
+       hand as (select o.month, round(coalesce(r.n, 0)::numeric / o.n, 6), round(r.damaged::numeric / r.n, 6)
+                from orders o left join returned r on r.month = o.month),
+       mf as (select month, round(return_rate, 6), round(damaged_return_share, 6) from semantic_check.return_rate)
+  select count(*) from ((select * from hand except select * from mf) union all (select * from mf except select * from hand)) d")" 0
+expect "September's return rate and damaged-return share" "$(psql_dev -c "
+  select round(return_rate, 4) || ' ' || round(damaged_return_share, 2) from semantic_check.return_rate where month = '2026-09-01'")" "0.0167 0.50"
+echo "ok: the return rate and the damaged-return share by order month equal SQL by hand; September: 2 of 120 orders returned, 1 damaged"
 
 echo "PASS: semantic check"

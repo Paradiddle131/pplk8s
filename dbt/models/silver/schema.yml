@@ -265,6 +265,14 @@ models:
         entity:
           type: foreign
           name: customer
+      - name: order_date
+        description: >-
+          UTC date the returned order was placed (silver.orders); the return rate counts a return on this day, so a
+          return in October of a September order counts against September's orders. Empty while the order is not
+          in silver.
+        dimension:
+          type: time
+        granularity: day
       - name: return_date
         description: UTC date the return was recorded (returned_at in UTC).
         tests: [not_null]
@@ -292,6 +300,15 @@ models:
         type: simple
         agg: count
         expr: return_id
+      - name: returns_on_order_date
+        description: >-
+          Number of partner returns, counted on the day the returned order was placed rather than the day of the
+          return; the return rate's numerator.
+        label: Returns by order date
+        type: simple
+        agg: count
+        expr: 1
+        agg_time_dimension: order_date
 
   - name: slv_tlc_trips
     description: >
