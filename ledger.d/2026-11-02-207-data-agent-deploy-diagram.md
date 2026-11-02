@@ -1,0 +1,6 @@
+## 2026-11-02 — Semantic track — how the data agent is built, configured and deployed, drawn (#207)
+
+- Done: `docs/data-agent-deploy.md` answers where the data agent's instructions, verified queries, glossary and knowledge sources come from: generated from the dbt YAML by `build_catalog.py` and published by `publish.py` through the Gemini Data Analytics v1 REST API, neither OpenTofu nor gcloud; two sheets drawn with claude-dotfiles' `draw-architecture` kit, each with its new headline: `assets/data-agent-deploy.html` (the YAML, `make bigquery-check`'s generated files and checks, `make gcp-data-agent`'s calls in order, the resource, and which console field comes from which context field) and `assets/data-agent-setup.html` (OpenTofu's APIs and datasets, the owner's one-off role grants, `make bigquery-live-load`, and the semantic agent's `DataAgentToolset`); linked from `platform/gcp/README.md`'s `data-agent/` row.
+- Evidence: the kit's `bin/check.cjs` on both sheets: 0 problems in light and dark, 0 crossings; every box and call drawn from the files the doc links, read on this branch.
+- Decisions: two sheets, one story each; cobalt marks what the build generates, vermilion the live calls on the lab project, on both sheets.
+- Open: the console's field labels are as the owner saw them, not read from the console in this session.

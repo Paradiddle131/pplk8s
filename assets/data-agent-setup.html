@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Data agent setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap">
+<style>
+/* A draw-architecture diagram. Between the sheet: markers is the kit, refreshed by its bin/build.cjs;
+   draw below, in the module script, from y 64 down (the headline holds the top), then run bin/check.cjs. */
+/* sheet:css */
+/* draw-architecture: the sheet's tokens and classes. bin/build.cjs inlines this file into each diagram
+   between the sheet:css markers; edit it here, never in a copy. */
+:root {
+  --paper: #fbfbf9;
+  --dot: #bebdb8;
+  --card: #ffffff;
+  --pkg: #ebeae5;
+  --ink: #1b1b1d;
+  --rule: #85858b;
+  --hair: #cfcec9;
+  --muted: #5d5d65;
+  --cobalt: #2f4bc4;
+  --vermilion: #b83d16;
+  --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
+  color-scheme: dark;
+}
+html, body { margin: 0; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px;
+  padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+}
+.stage { max-width: 1200px; margin: 0 auto; display: grid; gap: 12px; }
+.bar { display: flex; justify-content: flex-end; }
+.bar:empty, .bar[hidden] { display: none; }
+.seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 2px; overflow: hidden; }
+.seg button {
+  font: 400 13px/1 var(--sans); color: var(--muted); background: var(--card); border: 0;
+  padding: 8px 16px; cursor: pointer; min-height: 32px;
+}
+.seg button + button { border-left: 1px solid var(--ink); }
+.seg button[aria-pressed="true"] { color: var(--paper); background: var(--ink); font-weight: 700; }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+figure { margin: 0; overflow-x: auto; }
+svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-family: var(--sans); }
+
+.frame { fill: none; stroke: var(--rule); stroke-width: 1; }
+/* depth banding: second, fourth, ... levels screened with a dot pattern, a drafter's screen (flat grey is
+   a package card's); the levels between back on paper */
+.frame.band-tint { fill: url(#screen); }
+.screen-bg { fill: var(--paper); }
+.screen-dot { fill: var(--dot); }
+.frame.band-paper { fill: var(--paper); }
+.knock { fill: var(--paper); }
+.knock.tint { fill: url(#screen); }
+.card { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.card.pkg { fill: var(--pkg); }
+.card.behind { stroke: var(--rule); }
+.card.quiet { stroke: var(--rule); }
+.outline { fill: none; stroke: var(--ink); stroke-width: 1; }
+.phantom { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 14 3 2 3; }
+.card.phantom { fill: var(--card); }
+.hatch-line { stroke: var(--hair); stroke-width: 1.2; }
+.region { fill: none; stroke-width: 1.2; stroke: var(--muted); }
+.region.cobalt { stroke: var(--cobalt); }
+.region.vermilion { stroke: var(--vermilion); }
+
+/* the headline: the one line above the drawing, one step up the scale from a card's title, regular weight */
+.headline { font-size: 17px; font-weight: 400; fill: var(--ink); }
+.ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.sub { font-size: 11px; fill: var(--muted); }
+.mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.mono.dim { fill: var(--muted); }
+.over { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.cobalt-text { fill: var(--cobalt); }
+.vermilion-text { fill: var(--vermilion); }
+.halo { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+
+.edge { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.edge.thin { stroke: var(--rule); stroke-width: 1; }
+.edge.reads { stroke-dasharray: 4 3; }
+.edge.cobalt { stroke: var(--cobalt); }
+.edge.vermilion { stroke: var(--vermilion); }
+.elabel { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; } /* the halo clears a screen's dots under the glyphs */
+.elabel.mono { font-family: var(--mono); }
+.mark { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.mark-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.logo { color: var(--ink); }
+/* a logo in its brand colours, or its one-ink copy in a theme where the colours do not read (registry) */
+.logo .lm, .logo[data-light="mono"] .lc { display: none; }
+.logo[data-light="mono"] .lm { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo .lc { display: inline; }
+  :root:not([data-theme="light"]) .logo .lm { display: none; }
+  :root:not([data-theme="light"]) .logo[data-dark="mono"] .lc { display: none; }
+  :root:not([data-theme="light"]) .logo[data-dark="mono"] .lm { display: inline; }
+}
+:root[data-theme="dark"] .logo .lc { display: inline; }
+:root[data-theme="dark"] .logo .lm { display: none; }
+:root[data-theme="dark"] .logo[data-dark="mono"] .lc { display: none; }
+:root[data-theme="dark"] .logo[data-dark="mono"] .lm { display: inline; }
+/* /sheet:css */
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="bar" id="bar"></div>
+  <figure>
+    <svg class="sheet" id="d" viewBox="0 0 1200 852" role="img" aria-label="Who provisions what the BigQuery data agent needs, and who asks it. The owner, once, from their own shell with the Owner role: make gcp-up applies OpenTofu, which turns on the free-path APIs geminidataanalytics, dataplex and cloudaicompanion until 2026-12-30 and creates the BigQuery datasets; and gcloud, runbook step 8, grants the cloud session's account pplk8s-automation Data Agent Creator and Data Agent User, both expiring 2026-12-31. A cloud session with that account's token runs make bigquery-live-load, which loads dbt_dev's fixture into ds_source and runs dbt build on the gcp target, so the tables the knowledge sources name exist; make gcp-data-agent, which publishes the context to the data agent dataAgents/pplk8s-semantic; and make agent-eval ARM=data_agent, where the semantic agent's ADK DataAgentToolset asks the data agent, guard.py states freshness from the tables its generated SQL reads, and audit.py records every call. A chat runs the agent's SQL against BigQuery as the caller, each query capped."></svg>
+  </figure>
+</div>
+<script>
+/* sheet:logos */
+const LOGOS = window.LOGOS = {
+ "adk": {
+  "title": "Agent Development Kit",
+  "coverage": 0.317,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> </defs></g>",
+  "mono": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g></g>"
+ },
+ "googlebigquery": {
+  "title": "BigQuery",
+  "coverage": 0.36,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"rgb(102, 157, 246)\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>"
+ },
+ "dbt": {
+  "title": "dbt",
+  "coverage": 0.359,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"rgb(255, 105, 74)\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"currentColor\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>"
+ }
+};
+/* /sheet:logos */
+/* sheet:js */
+/* draw-architecture: the drawing API. bin/build.cjs inlines this file into each diagram between the
+   sheet:js markers; edit it here, never in a copy. SKILL.md documents the calls. */
+function Sheet(svg, opt = {}) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const LOGO = 14; // the one logo size on every sheet, in user units
+  const INSET = 8; // a card's logo slot: this far in from its right edge, centred on its first text row
+  const modes = opt.modes ?? [];
+  const ids = modes.map(m => m.id);
+  let mode = ids[0] ?? null;
+  const logos = opt.logos ?? {};
+  const swaps = []; // run in creation order on every mode change
+  const phantoms = []; // chain-line outlines that go solid in opt.solidIn
+  const frames = []; // every frame, for the depth banding done() applies
+  const knocks = []; // every knock-out, painted by done() to match what lies behind each half
+  const edges = []; // every edge, for the bridges done() draws where two cross
+  const HOP = 4; // a bridge's radius
+  const HEAD = [24, 32]; // the headline's baseline start; the drawing starts at TOP or below
+  const TOP = 64;
+
+  const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
+  const pick = v => (isModal(v) ? v[mode] : v);
+  const el = (tag, attrs = {}, parent = svg) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) n.setAttribute(k, v);
+    (parent ?? svg).appendChild(n);
+    return n;
+  };
+  const text = (parent, x, y, s, cls, attrs = {}) => {
+    const t = el('text', { x, y, class: cls, ...attrs }, parent);
+    const set = () => { t.textContent = pick(s) ?? ''; };
+    set();
+    if (isModal(s)) swaps.push(set);
+    return t;
+  };
+  const len = t => (t.textContent ? t.getBBox().width : 0); // the glyphs' box, wider than the advance in some fonts
+  // A knock-out: the patch of a line a title sits on, in two halves (above and below the line), so each
+  // half takes the fill of whatever surrounds it once done() knows the banding.
+  const knock = (y, parent = svg, before = null) => {
+    const g = document.createElementNS(NS, 'g');
+    parent.insertBefore(g, before);
+    const halves = [el('rect', { y: y - 8, height: 8, class: 'knock' }, g), el('rect', { y, height: 8, class: 'knock' }, g)];
+    knocks.push(...halves);
+    return { set: (x, w) => halves.forEach(r => { r.setAttribute('x', x); r.setAttribute('width', w); }) };
+  };
+
+  // A logo: a registry mark in a fixed 14-unit box, drawn only through a card's or a frame's slot.
+  const logo = (parent, id, slot) => {
+    const box = el('svg', { width: LOGO, height: LOGO, viewBox: '0 0 24 24', class: 'logo', 'data-slot': slot }, parent);
+    const set = () => {
+      const now = pick(id);
+      if (now && !logos[now]) throw new Error(`draw-architecture: no logo "${now}" in the registry`);
+      // both copies are drawn; the sheet's CSS shows the colour one, or the one-ink copy in a theme where
+      // the registry measured the colours as not reading against the card
+      box.innerHTML = now ? `<g class="lc">${logos[now].body}</g><g class="lm">${logos[now].mono}</g>` : '';
+      if (now) Object.assign(box.dataset, { logo: now, light: logos[now].light, dark: logos[now].dark });
+      else box.removeAttribute('data-logo');
+      box.style.display = now ? '' : 'none';
+    };
+    set();
+    if (isModal(id)) swaps.push(set);
+    return { box, present: () => !!pick(id) };
+  };
+
+  const defs = el('defs');
+  for (const [id, color] of [['ink', 'ink'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
+    const m = el('marker', { id: `arrow-${id}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m).style.fill = `var(--${color})`;
+  }
+  const hatch = el('pattern', { id: 'hatch', patternUnits: 'userSpaceOnUse', width: 7, height: 7, patternTransform: 'rotate(45)' }, defs);
+  el('line', { x1: 0, y1: 0, x2: 0, y2: 7, class: 'hatch-line' }, hatch);
+  // the depth screen: a fine dot on paper, tiled in the sheet's own units so every screened area and
+  // every knock-out half on one lines up dot for dot
+  const screen = el('pattern', { id: 'screen', patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, defs);
+  el('rect', { width: 6, height: 6, class: 'screen-bg' }, screen);
+  el('circle', { cx: 3, cy: 3, r: 0.75, class: 'screen-dot' }, screen);
+
+  // The headline: the one line above the drawing that says the question the sheet answers, or its
+  // takeaway; drawn first, at the top left, so the drawing starts below it (the checker holds the rest).
+  if (opt.headline !== undefined) text(svg, HEAD[0], HEAD[1], opt.headline, 'headline');
+
+  // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
+  // edge: 'bottom' (a title block, for a frame that edges enter from above).
+  const frame = ({ x, y: top, w, h, title, note, logo: id, edge: side = 'top' }) => {
+    const y = side === 'bottom' ? top + h : top;
+    frames.push({ x, y: top, w, h, rect: el('rect', { x, y: top, width: w, height: h, rx: 2, class: 'frame' }) });
+    const k = knock(y);
+    const g = el('g');
+    const lg = id ? logo(g, id, 'frame') : null;
+    const t = text(g, 0, y + 4.5, title, 'ftitle');
+    const n = note ? text(g, 0, y + 4, note, 'sub') : null;
+    const fit = () => {
+      let cx = x + 16;
+      if (lg?.present()) { lg.box.setAttribute('x', cx); lg.box.setAttribute('y', y - LOGO / 2); cx += LOGO + 6; }
+      t.setAttribute('x', cx); cx += len(t);
+      if (n) { n.setAttribute('x', cx + 10); cx += 10 + len(n); }
+      k.set(x + 10, cx - x - 4);
+    };
+    fit(); swaps.push(fit);
+  };
+
+  // A card: an optional overline (the package a grey card is), a title, then lines: a string is sans,
+  // {mono: '...'} is mono; any text may be {<mode>: '...'}. The logo sits in the top-right slot.
+  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id }) => {
+    const g = el('g');
+    const r = el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${pkg ? 'pkg' : ''} ${cls}` }, g);
+    if (cls.includes('phantom')) phantoms.push(r);
+    if (hatched) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
+    const halo = hatched ? ' halo' : '';
+    let ty = lines.length || pkg ? y + 19 : y + h / 2 + 4.5;
+    const row = pkg ? y + 13 : ty - 4.5; // the optical middle of the first text row
+    if (pkg) { text(g, x + 12, y + 17, pkg, 'over' + halo); ty = y + 34; }
+    text(g, x + 12, ty, title, tcls + halo);
+    lines.forEach((line, i) => {
+      const y1 = ty + 16 + i * 15;
+      const mono = line !== null && typeof line === 'object' && 'mono' in line;
+      text(g, x + 12, y1, mono ? line.mono : line, (mono ? 'mono dim' : 'sub') + halo);
+    });
+    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', row - LOGO / 2); }
+    return r;
+  };
+
+  // A chain-line outline round a group of cards, its label knocked into the top line at the right.
+  const phantom = ({ x, y, w, h, label }) => {
+    const r = el('rect', { x, y, width: w, height: h, rx: 2, class: 'outline phantom' }); // solid in solidIn: 'outline' alone
+    phantoms.push(r);
+    if (label) {
+      const k = knock(y);
+      const t = text(svg, x + w - 16, y + 4.5, label, 'mono', { 'text-anchor': 'end' });
+      const fit = () => { const l = len(t); k.set(x + w - 22 - l, l + 12); };
+      fit(); swaps.push(fit);
+    }
+    return r;
+  };
+
+  // A role or trust region: one coloured outline; its title left and its role right, knocked into its
+  // top line, or its bottom line with edge: 'bottom' (when the top line sits close under a frame title).
+  const region = ({ x, y: top, w, h, tone = '', title, role, edge: side = 'top' }) => {
+    const y = side === 'bottom' ? top + h : top;
+    el('rect', { x, y: top, width: w, height: h, rx: 2, class: `region ${tone}` });
+    const g = el('g');
+    const tc = tone ? ` ${tone}-text` : '';
+    const parts = [];
+    if (title) parts.push([text(g, x + 12, y + 4.5, title, 'title' + tc), 'start']);
+    if (role) parts.push([text(g, x + w - 12, y + 4, role, 'mono' + tc, { 'text-anchor': 'end' }), 'end']);
+    for (const [t, side] of parts) {
+      const k = knock(y, svg, g);
+      const fit = () => { const l = len(t); k.set(side === 'start' ? x + 6 : x + w - 18 - l, l + 12); };
+      fit(); swaps.push(fit);
+    }
+  };
+
+  // An edge: an SVG path; tone colours it, reads dashes it, thin greys it; labels sit where `at` says.
+  const edge = (d, o = {}) => {
+    const tone = o.tone ?? (o.thin ? 'rule' : 'ink');
+    const cls = ['edge', o.reads ? 'reads' : '', o.thin ? 'thin' : '', o.tone ?? ''].join(' ');
+    const marker = `url(#arrow-${tone})`;
+    edges.push({ d, path: el('path', { d, class: cls, 'marker-end': o.noEnd ? null : marker, 'marker-start': o.both ? marker : null }) });
+    for (const l of o.labels ?? (o.label ? [o.label] : [])) {
+      const t = text(svg, l.at[0], l.at[1], l.text, `elabel${l.mono ? ' mono' : ''}${o.tone ? ` ${o.tone}-text` : ''}`, { 'text-anchor': l.anchor ?? 'middle' });
+      t.dataset.edgeLabel = '1';
+    }
+  };
+
+  // Marks: a check that runs on every build, drawn on the hop it checks; an equality (parity) mark.
+  const tick = (x, y, parent = svg) => {
+    el('circle', { cx: x, cy: y, r: 6, class: 'mark' }, parent);
+    el('path', { d: `M${x - 3},${y} l2,2.2 l4,-4.4`, class: 'mark-ink' }, parent);
+  };
+  const equal = (x, y, parent = svg) => {
+    el('circle', { cx: x, cy: y, r: 6.5, class: 'mark' }, parent);
+    text(parent, x, y + 4, '=', 'mono', { 'text-anchor': 'middle' });
+  };
+
+  // A legend that lays itself out from (x, y), left to right, or top to bottom with {column: true} (in a
+  // margin beside the sheet); each item is [kind, label].
+  const legend = (x, y0, items, { column = false } = {}) => {
+    let y = y0;
+    const g = el('g', { class: 'legend' });
+    const sw = {
+      card: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g),
+      pkg: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card pkg' }, g),
+      hatch: cx => { el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g); el('rect', { x: cx + 0.5, y: y - 7.5, width: 29, height: 15, fill: 'url(#hatch)' }, g); },
+      phantom: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'phantom' }, g),
+      calls: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'edge', 'marker-end': 'url(#arrow-ink)' }, g),
+      reads: cx => el('path', { d: `M${cx},${y} H${cx + 30}`, class: 'edge reads', 'marker-end': 'url(#arrow-ink)' }, g),
+      cobalt: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region cobalt' }, g),
+      vermilion: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region vermilion' }, g),
+      tick: cx => tick(cx + 15, y, g),
+      equal: cx => equal(cx + 15, y, g),
+    };
+    let cx = x;
+    for (const [kind, label] of items) {
+      sw[kind](cx);
+      const t = text(g, cx + 40, y + 4, label, 'sub');
+      if (column) y += 28; else cx += 40 + len(t) + 32;
+    }
+    return column ? y : cx;
+  };
+
+  // The mode switch: buttons in `bar`, remembered per page, overridden by ?mode=<id>; ?static hides it.
+  const setMode = m => {
+    mode = m;
+    swaps.forEach(f => f());
+    phantoms.forEach(r => r.classList.toggle('phantom', m !== opt.solidIn));
+    opt.bar?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+    try { if (opt.storageKey) localStorage.setItem(opt.storageKey, m); } catch (e) { /* storage off */ }
+  };
+  // Depth banding: a frame inside an odd number of frames (a second, fourth, ... level) is screened with
+  // a fine dot pattern, the levels between stay paper, the outermost have no fill. Frames move beneath
+  // everything, outermost first, and each knock-out half takes the fill of the frame it sits in.
+  const inside = (a, b) => a !== b && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
+  const band = () => {
+    for (const f of frames) f.depth = frames.filter(o => inside(f, o)).length;
+    for (const f of frames) f.rect.classList.add(f.depth === 0 ? 'band-open' : f.depth % 2 ? 'band-tint' : 'band-paper');
+    const first = svg.querySelector('defs')?.nextSibling ?? svg.firstChild;
+    for (const f of [...frames].sort((a, b) => a.depth - b.depth)) svg.insertBefore(f.rect, first);
+    for (const r of knocks) {
+      const c = { x: +r.getAttribute('x') + 1, y: +r.getAttribute('y') + 4, w: 0, h: 0 };
+      const home = frames.filter(f => inside(c, f) || (c.x >= f.x && c.x <= f.x + f.w && c.y > f.y && c.y < f.y + f.h)).sort((a, b) => b.depth - a.depth)[0];
+      r.classList.toggle('tint', !!home && home.depth % 2 === 1);
+    }
+  };
+
+  // Bridges: where two edges cross at right angles, one hops over the other with a small arc, the way a
+  // circuit drawing shows wires that do not join. The horizontal one hops, unless the crossing sits too
+  // close to its ends, then the vertical one; a crossing neither can take is reported to the checker.
+  const bridge = () => {
+    const polys = edges.map(e => {
+      const out = []; let cur = null, x = 0, y = 0;
+      for (const [, c, a] of e.d.matchAll(/([MLHV])\s*([-\d.,\s]+)/gi)) {
+        const n = a.trim().split(/[\s,]+/).map(Number);
+        if (/m/i.test(c)) { x = n[0]; y = n[1]; cur = [[x, y]]; out.push(cur); continue; }
+        if (/h/i.test(c)) x = n[0]; else if (/v/i.test(c)) y = n[0]; else { x = n[0]; y = n[1]; }
+        cur.push([x, y]);
+      }
+      return out;
+    });
+    const segs = [];
+    polys.forEach((ps, ei) => ps.forEach((p, pi) => p.slice(1).forEach((b, si) => {
+      const a = p[si];
+      const o = a[1] === b[1] ? 'h' : a[0] === b[0] ? 'v' : 'o';
+      segs.push({ ei, pi, si, a, b, o, hops: [] });
+    })));
+    const between = (v, a, b, m) => v > Math.min(a, b) + m && v < Math.max(a, b) - m;
+    let unbridged = 0;
+    for (const s1 of segs) for (const s2 of segs) {
+      if (s1.ei >= s2.ei || s1.o === s2.o || s1.o === 'o' || s2.o === 'o') continue;
+      const [h, v] = s1.o === 'h' ? [s1, s2] : [s2, s1];
+      const px = v.a[0], py = h.a[1];
+      if (!between(px, h.a[0], h.b[0], 0.5) || !between(py, v.a[1], v.b[1], 0.5)) continue;
+      if (between(px, h.a[0], h.b[0], HOP + 2)) h.hops.push(px);
+      else if (between(py, v.a[1], v.b[1], HOP + 2)) v.hops.push(py);
+      else unbridged++;
+    }
+    edges.forEach((e, ei) => {
+      let d = '', hops = 0;
+      polys[ei].forEach((p, pi) => {
+        d += `M${p[0][0]},${p[0][1]}`;
+        p.slice(1).forEach((b, si) => {
+          const sg = segs.find(q => q.ei === ei && q.pi === pi && q.si === si);
+          const a = p[si], dir = sg.o === 'h' ? Math.sign(b[0] - a[0]) : Math.sign(b[1] - a[1]);
+          for (const at of [...sg.hops].sort((m, n) => (m - n) * dir)) {
+            hops++;
+            if (sg.o === 'h') d += ` L${at - HOP * dir},${a[1]} A${HOP},${HOP} 0 0 ${dir > 0 ? 1 : 0} ${at + HOP * dir},${a[1]}`;
+            else d += ` L${a[0]},${at - HOP * dir} A${HOP},${HOP} 0 0 ${dir > 0 ? 1 : 0} ${a[0]},${at + HOP * dir}`;
+          }
+          d += ` L${b[0]},${b[1]}`;
+        });
+      });
+      e.path.setAttribute('d', d);
+      e.path.dataset.hops = hops;
+    });
+    svg.dataset.unbridged = unbridged;
+  };
+
+  // done({unmarked: {id: 'why'}}): a technology the sheet names without its logo, and why.
+  const done = ({ unmarked = {} } = {}) => {
+    band();
+    bridge();
+    const params = new URLSearchParams(location.search);
+    if (opt.bar && modes.length > 1) {
+      if (params.has('static')) opt.bar.hidden = true;
+      const seg = document.createElement('div');
+      seg.className = 'seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', opt.switchLabel ?? 'Which names to show');
+      for (const m of modes) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.dataset.mode = m.id; b.textContent = m.label; b.setAttribute('aria-pressed', String(m.id === mode));
+        b.addEventListener('click', () => setMode(m.id));
+        seg.appendChild(b);
+      }
+      opt.bar.appendChild(seg);
+      let saved = null;
+      try { saved = opt.storageKey ? localStorage.getItem(opt.storageKey) : null; } catch (e) { /* storage off */ }
+      const want = params.get('mode') ?? saved;
+      if (want && ids.includes(want) && want !== mode) setMode(want);
+    }
+    window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked };
+  };
+
+  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO, TOP };
+}
+
+// Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
+// loads lazily, on first use, so text drawn before any mono text exists is measured in a fallback font.
+Sheet.ready = () => Promise.all([
+  '700 13px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Mono"',
+].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
+/* /sheet:js */
+Sheet.ready().then(() => {
+  const S = Sheet(document.getElementById('d'), {
+    logos: LOGOS,
+    headline: 'Who provisions the data agent, and who asks it',
+  });
+
+  // ---- the owner, once
+  S.frame({ x: 24, y: 72, w: 440, h: 208, title: "the owner's shell", note: 'Owner role, once' });
+  S.card({ x: 40, y: 104, w: 408, h: 64, title: 'make gcp-up', lines: ['OpenTofu: the free-path APIs, the datasets', { mono: 'infra/apis.tf, infra/bigquery.tf' }] });
+  S.card({ x: 40, y: 184, w: 408, h: 80, title: 'gcloud, runbook step 8', lines: ["grants the cloud session's account two roles", { mono: 'dataAgentCreator, dataAgentUser' }, 'both expiring 2026-12-31'] });
+
+  // ---- a cloud session, every time
+  S.frame({ x: 24, y: 312, w: 440, h: 480, title: 'a cloud session', note: "pplk8s-automation's token" });
+  S.card({ x: 40, y: 344, w: 408, h: 64, title: 'make bigquery-live-load', lines: ["dbt_dev's fixture into ds_source, then", 'dbt build on the gcp target, every job capped'] });
+  S.card({ x: 40, y: 424, w: 408, h: 56, title: 'make gcp-data-agent', lines: ['builds, checks and publishes the context'] });
+  S.frame({ x: 40, y: 512, w: 408, h: 264, title: 'semantic agent', note: 'make agent-eval ARM=data_agent', logo: 'adk' });
+  S.card({ x: 56, y: 544, w: 376, h: 64, pkg: 'google.adk', title: 'DataAgentToolset', lines: [{ mono: 'ask_data_agent, get_data_agent_info' }] });
+  S.edge('M244,608 V624');
+  S.card({ x: 56, y: 624, w: 376, h: 64, title: 'guard.py', lines: ['freshness from the tables its generatedSql', 'reads, looked up in agent.json'] });
+  S.edge('M244,688 V704');
+  S.card({ x: 56, y: 704, w: 376, h: 56, title: 'audit.py', lines: ['a row per call, through the warehouse seam'] });
+
+  // ---- the lab project
+  S.frame({ x: 496, y: 72, w: 680, h: 576, title: 'GCP project', note: 'GCP_PROJECT, at $0.00' });
+  S.card({ x: 512, y: 104, w: 648, h: 72, title: 'APIs on the free path', lines: [{ mono: 'geminidataanalytics, dataplex, cloudaicompanion' }, 'on until 2026-12-30, dated in free-path.yaml'] });
+  S.edge('M448,136 H512');
+  S.card({ x: 512, y: 192, w: 648, h: 72, title: 'IAM on the project', lines: ['pplk8s-automation: Data Agent Creator and Data Agent User,', 'beside its BigQuery Job User and Viewer'] });
+  S.edge('M448,232 H512');
+  S.frame({ x: 512, y: 296, w: 648, h: 144, title: 'BigQuery', note: 'datasets from OpenTofu', logo: 'googlebigquery' });
+  S.card({ x: 528, y: 336, w: 176, h: 72, title: 'ds_source', tcls: 'mono', lines: ['the fixture, landed', 'by load jobs'] });
+  S.card({ x: 736, y: 336, w: 408, h: 72, title: 'silver, gold, exposed, semantic', tcls: 'mono', lines: ['built by dbt: the tables the knowledge', 'sources name, which must exist'], logo: 'dbt' });
+  S.edge('M704,372 H736');
+  S.edge('M448,376 H528', { tone: 'vermilion' });
+  S.card({ x: 512, y: 552, w: 648, h: 80, title: 'the data agent', lines: [{ mono: 'dataAgents/pplk8s-semantic' }, 'Gemini Data Analytics v1, location us; its context: the other sheet', 'its tokens free until 2026-12-31, while the API is on'] });
+  S.edge('M448,460 H600 V552', { tone: 'vermilion' });
+  S.edge('M432,576 H512', { tone: 'vermilion' });
+  S.edge('M780,552 V408', { tone: 'vermilion', reads: true, label: { text: 'its SQL, as the caller, capped', at: [788, 496], anchor: 'start' } });
+
+  S.legend(24, 828, [['card', 'a script, a resource'], ['pkg', 'a package'], ['vermilion', 'live calls on the lab project'], ['calls', 'flows into, calls'], ['reads', 'reads']]);
+  S.done();
+});
+</script>
+</body>
+</html>
