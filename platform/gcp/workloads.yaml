@@ -1,0 +1,44 @@
+# The lab's Cloud Run workloads (#209): the agent's service and the dbt image's two Jobs, sized and
+# scheduled in one place. infra/run.tf and infra/scheduler.tf read this file, and check_free_path.py holds it
+# to the free path: the service bills per request (request-based billing, minimum 0 instances, at most
+# free-path.yaml's `caps.cloud_run_max_instances`), and every scheduled Job's worst case (each run for its
+# whole timeout, at least the minute Cloud Run Jobs bill an instance) stays inside the Jobs' free tier.
+# The kind stand-ins they replace: platform/k8s/workloads/semantic-agent-deployment.yaml, the dbt Job of
+# platform/k8s/dbt-job.template.yaml and platform/k8s/workloads/source-freshness-cronjob.yaml.
+# `image` names a key of OpenTofu's `images` variable (platform/gcp/tofu.sh): a workload exists only when it is set.
+
+services:
+  semantic-agent:
+    image: semantic-agent
+    service_account: semantic-agent
+    cpu: 1
+    # The kind Deployment asks 512 MiB and allows 1 GiB; slice B's `gcp-image-check` measures the GCP image's
+    # memory.peak, and a peak above this is the reason to raise it (GiB-seconds stay free either way).
+    memory: 512Mi
+    timeout_s: 300 # a turn waits on the model for up to MODEL_TIMEOUT_S (120 s) twice, plus the queries
+    concurrency: 4 # one instance, a handful of people
+
+jobs:
+  # dbt's platform part (sales, returns, finance, marketing, semantic, migration), the part the lab project's
+  # ds_source holds (tests/e2e/gcp-image-check.sh builds the same selection); the GCP image has no TLC package.
+  dbt-build:
+    image: dbt
+    service_account: dbt-runner
+    cpu: 1
+    memory: 512Mi
+    timeout_s: 600 # the kind dbt Job's activeDeadlineSeconds
+    schedule: "23 4 * * *" # daily, UTC
+    args: [build, --select, tag:sales, tag:returns, tag:finance, tag:marketing, tag:semantic, tag:migration]
+    env: {}
+  # `dbt source freshness` as the kind CronJob runs it: exit 1 is a stale source, whose verdict the on-run-end
+  # hook records in ops.source_freshness, so the Job succeeds; exit 2 is dbt failing to run, and the Job fails.
+  # JSON logs carry each source's verdict for the log-based alert (#209, slice D).
+  dbt-source-freshness:
+    image: dbt
+    service_account: dbt-runner
+    cpu: 1
+    memory: 512Mi
+    timeout_s: 240 # the CronJob allows 300 s; 744 hourly runs of 240 s keep both Jobs under the free vCPU-seconds
+    schedule: "17 * * * *" # hourly, off the hour, as the CronJob
+    command: [sh, -c, 'dbt source freshness; rc=$?; [ "$rc" -le 1 ]']
+    env: {DBT_LOG_FORMAT: json}

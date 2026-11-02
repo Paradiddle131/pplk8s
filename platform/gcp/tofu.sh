@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # OpenTofu on the lab project's root (platform/gcp/infra), for `make gcp-plan|gcp-up|gcp-down`.
-# Usage: platform/gcp/tofu.sh plan|apply|destroy
+# Usage: platform/gcp/tofu.sh plan|apply|destroy; IMAGES='{"semantic-agent": "<ref>", "dbt": "<ref>"}' names the
+# Cloud Run workloads' images (below), else the deployed ones are kept.
 # Refuses without GCP_PROJECT. Credentials, as GOOGLE_OAUTH_ACCESS_TOKEN (read by the provider and the gcs
 # backend), first that holds: one already set; a cloud session's proxy-injected token
 # (CLOUDSDK_AUTH_ACCESS_TOKEN); a short-lived token of a signed-in gcloud account ($GCP_ACCOUNT, default the
@@ -38,6 +39,37 @@ print(json.dumps({p["quotaId"]: p["name"].rsplit("/", 1)[1] for p in prefs if p[
   { echo "tofu.sh: could not list the project's quota preferences" >&2; exit 1; }
 vars+=(-var "existing_quota_preferences=$existing")
 [ -n "${KILL_SWITCH_USD:-}" ] && vars+=(-var "kill_switch_usd=$KILL_SWITCH_USD")
+
+# The Cloud Run workloads exist only while `images` names their images (infra/run.tf). IMAGES (a JSON map,
+# `make gcp-workloads-up`) sets them; otherwise the images running now are read back from the Run Admin API,
+# so a plain plan, apply or destroy keeps (or, for destroy, removes) what is deployed and never diffs it.
+# Read live rather than from state: the API is the truth after a console change, and an absent workload
+# (404) or a Run API not enabled yet (403 SERVICE_DISABLED) means no image; any other answer stops here,
+# because guessing "none" would plan the workloads' removal.
+if [ -z "${IMAGES:-}" ]; then
+  deployed() { # $1: services|jobs, $2: name, $3: the images key; prints `"key": "image"` or nothing
+    local body code
+    body=$(curl -sS -w '\n%{http_code}' -H "Authorization: Bearer $token" \
+      "https://run.googleapis.com/v2/projects/$GCP_PROJECT/locations/us-central1/$1/$2") || return 1
+    code=${body##*$'\n'}
+    body=${body%$'\n'*}
+    case "$code" in
+      200) python3 -c 'import json, sys
+t = json.load(sys.stdin)["template"]
+print(json.dumps(sys.argv[1]) + ": " + json.dumps(t.get("template", t)["containers"][0]["image"]))' "$3" <<<"$body" ;;
+      404) ;;
+      403) grep -q SERVICE_DISABLED <<<"$body" || { echo "tofu.sh: $1/$2: $body" >&2; return 1; } ;;
+      *) echo "tofu.sh: $1/$2: HTTP $code: $body" >&2; return 1 ;;
+    esac
+  }
+  if ! agent=$(deployed services semantic-agent semantic-agent) || ! dbt=$(deployed jobs dbt-build dbt); then
+    echo "tofu.sh: could not read the deployed Cloud Run images; set IMAGES to name them" >&2
+    exit 1
+  fi
+  IMAGES="{$agent${agent:+${dbt:+, }}$dbt}"
+  echo "tofu.sh: images deployed now: $IMAGES"
+fi
+vars+=(-var "images=$IMAGES")
 
 tofu -chdir="$infra" init -input=false -reconfigure -backend-config="bucket=$GCP_PROJECT-tfstate" >/dev/null
 # A plan reads only: no state lock, so a credential that can read the state bucket but not write it can plan.

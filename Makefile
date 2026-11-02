@@ -404,6 +404,8 @@ gcp-validate: ## Offline: tofu fmt and validate, tflint, and the free-path allow
 	# Its own working directory: one a live gcp- target initialised remembers the gcs backend and its credentials.
 	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra init -backend=false -input=false >/dev/null
 	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra validate
+	# infra/tests/: plans on a mock provider, so which workloads exist for which images is checked offline.
+	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra test
 	cd platform/gcp/infra && tflint --init >/dev/null && tflint
 	uvx ruff@0.17.0 check platform/gcp && uvx ruff@0.17.0 format --check platform/gcp
 	uv run --no-project --with pyyaml==6.0.2 python platform/gcp/check_free_path.py
@@ -438,4 +440,18 @@ gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: today dbt) and pu
 	platform/gcp/cost-check.sh
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
+	platform/gcp/cost-check.sh
+
+# The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
+# (gcp-images opens with the cost check), the apply that names them, the ops tables (`dbt run-operation
+# agent_warehouse`, run as an args override of the dbt-build Job), one dbt build, and the cost check after.
+# The agent's secret needs its version first (platform/gcp/README.md, the owner's runbook).
+GCP_RUN_JOB = gcloud run jobs execute --project="$$GCP_PROJECT" --region=$(GCP_REGION) --wait $${GCP_ACCOUNT:+--account="$$GCP_ACCOUNT"}
+.PHONY: gcp-workloads-up
+gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the agent's Cloud Run service and the dbt Jobs with their Scheduler jobs, create the ops tables and build dbt once (GCP_PROJECT; #209)
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the workloads go to the lab project (platform/gcp/README.md)}"
+	$(MAKE) --no-print-directory gcp-images
+	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
+	$(GCP_RUN_JOB) dbt-build --args=run-operation,agent_warehouse
+	$(GCP_RUN_JOB) dbt-build
 	platform/gcp/cost-check.sh
