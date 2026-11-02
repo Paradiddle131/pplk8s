@@ -106,7 +106,9 @@ resource "google_monitoring_alert_policy" "stale_source" {
       # the first stale run and stays open, one per table, until a run finds the table fresh and the window empties.
       comparison      = "COMPARISON_GT"
       threshold_value = 0
-      duration        = "0s"
+      # Not 0s: the API refuses evaluation_missing_data on a zero duration. The window holds a stale run's count
+      # for 90 minutes, so holding it a minute only opens the incident a minute later.
+      duration = "60s"
 
       aggregations {
         alignment_period     = "5400s"
