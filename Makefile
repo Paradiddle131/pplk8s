@@ -423,8 +423,9 @@ gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the
 	platform/gcp/guardrails-check.sh
 
 # The images that run on GCP (semantic/PLAN.md SL-19): each built from its one Dockerfile for BigQuery and pushed to
-# Artifact Registry's `pplk8s` repository under the version its local tag holds (D16). Docker needs the registry's
-# credential first (`gcloud auth configure-docker $(GCP_REGION)-docker.pkg.dev`); the cost check before and after.
+# Artifact Registry's `pplk8s` repository under the version its local tag holds (D16). Docker signs in to the
+# registry itself (platform/gcp/docker-login.sh: a short-lived token of the active gcloud account, or GCP_ACCOUNT's,
+# no credential helper, so the Windows SDK on WSL works too, #289); the cost check before and after.
 GCP_REGION ?= us-central1
 GCP_IMAGES = $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/pplk8s
 gcp_tag = $(GCP_IMAGES)/$(firstword $(subst :, ,$(notdir $(1)))):$(word 2,$(subst :, ,$(notdir $(1))))
@@ -432,6 +433,7 @@ gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: today dbt) and pu
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the images go to the registry of the lab project (platform/gcp/README.md)}"
 	platform/gcp/cost-check.sh
 	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) --build-arg WAREHOUSE=bigquery dbt
+	platform/gcp/docker-login.sh $(GCP_REGION)-docker.pkg.dev
 	docker push $(call gcp_tag,$(DBT_IMAGE))
 	platform/gcp/cost-check.sh
 
