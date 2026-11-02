@@ -554,12 +554,15 @@ expect "exposed.net_sales_daily on the seeded return's day" "$seeded_row" "0.00|
 dbt_ build --select tag:returns tag:finance >"$OUT/hop.log" 2>&1 || { tail -30 "$OUT/hop.log" >&2; fail "rebuild after the seeded return"; }
 echo "ok: a return on a day without orders lands in exposed.net_sales_daily with revenue 0, every hop passing"
 
-# Straying from the standard fails the stage: a labelled, undescribed metric beside the real ones, and
-# a gold model without the layer's prefix, a description, a described column or a column type.
+# Straying from the standard fails the stage: a labelled, undescribed metric beside the real ones, a
+# gold model without the layer's prefix, a description, a described column or a column type, and a silver
+# table whose personal column carries no policy tag and is a semantic model's dimension (SL-22).
 stray="$REPO/dbt/models/semantic/zz_semantic_check_stray.yml"
 stray_model="$REPO/dbt/models/gold/zz_semantic_check_stray.sql"
-trap 'rm -f "$stray" "$stray_model"' EXIT
+stray_people="$REPO/dbt/models/silver/slv_zz_semantic_check_people.sql"
+trap 'rm -f "$stray" "$stray_model" "$stray_people"' EXIT
 echo "select 1 as stray_id, 'a@b.example' as stray_email" >"$stray_model"
+echo "{{ config(alias='zz_semantic_check_people') }} select 1 as stray_id, 'a@b.example' as stray_email" >"$stray_people"
 cat >"$stray" <<'YAML'
 version: 2
 models:
@@ -569,6 +572,23 @@ models:
       - name: stray_email
         config:
           meta: {pii: true}
+  - name: slv_zz_semantic_check_people
+    description: People, to show a personal column an agent could group by.
+    semantic_model:
+      enabled: true
+      name: zz_stray_people
+    columns:
+      - name: stray_id
+        description: The person.
+        entity:
+          type: primary
+          name: stray_person
+      - name: stray_email
+        description: The person's email.
+        config:
+          meta: {pii: true}
+        dimension:
+          type: categorical
 metrics:
   - name: zz_stray_orders
     label: Stray
@@ -589,12 +609,14 @@ for problem in "metric zz_stray_orders: no description" \
   "public model zz_semantic_check_stray: no description" \
   "public model zz_semantic_check_stray: column stray_id has no description" \
   "public model zz_semantic_check_stray: column stray_id has no data_type" \
-  "model zz_semantic_check_stray: public with personal data in stray_email; make it protected"; do
+  "model zz_semantic_check_stray: public with personal data in stray_email; make it protected" \
+  "model slv_zz_semantic_check_people: personal column stray_email has no policy_tags" \
+  "semantic model zz_stray_people: dimension stray_email names personal column stray_email"; do
   grep -qF "check_standard: $problem" "$OUT/stray.log" ||
     { tail -20 "$OUT/stray.log" >&2; fail "the validation failed, but not on: $problem"; }
 done
-rm -f "$stray" "$stray_model"
-echo "ok: an undescribed metric, a metric over model-derived labels not saying so, and an unprefixed, undescribed, untyped gold model with personal data fail make dbt-validate"
+rm -f "$stray" "$stray_model" "$stray_people"
+echo "ok: an undescribed metric, a metric over model-derived labels not saying so, an unprefixed, undescribed, untyped gold model with personal data, and a personal column without a policy tag or as a dimension fail make dbt-validate"
 
 # A metric the standard accepts but the target-architecture brief does not list fails the validation too.
 cat >"$stray" <<'YAML'

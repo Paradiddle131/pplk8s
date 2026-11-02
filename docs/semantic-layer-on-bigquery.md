@@ -115,7 +115,7 @@ This is how that maps to BigQuery; IAM on a real project stays out of scope, so 
 
 | Option | What it is | For | Against |
 |---|---|---|---|
-| A. Dataset-level read per agent identity | One service account per agent; BigQuery Data Viewer on each dataset it reads, Job User in the project its queries run in | Maps one to one onto the lab's roles; one grant per dataset; the audit names the agent by its service account | A grant covers the whole dataset: the semantic agent reads every column of silver, which MetricFlow needs for its semantic models |
+| A. Dataset-level read per agent identity | One service account per agent; BigQuery Data Viewer on each dataset it reads, Job User in the project its queries run in | Maps one to one onto the lab's roles; one grant per dataset; the audit names the agent by its service account | A grant covers the whole dataset: the semantic agent reads every column of silver, which MetricFlow needs for its semantic models, except the personal columns a policy tag keeps (below) |
 | B. Authorized views or an authorized dataset | The agent reads a dataset of views and has no grant on the source datasets; the views are authorized on them ([stated](https://docs.cloud.google.com/bigquery/docs/authorized-views): principals "can view the shared data and run queries on it, but they can't access the source dataset directly") | Narrows an agent to chosen columns and rows; dbt-bigquery grants a view model access with `grant_access_to` ([stated](https://docs.getdbt.com/reference/resource-configs/bigquery-configs)) | A view per table an agent reads, and the semantic models would have to sit on those views instead of silver |
 | C. A separate project for the agents | The agents' service accounts run their jobs in an agent project and read the data project's datasets through A or B | Separates the agents' jobs, quotas and billing from the pipelines' | A second project to run, and it still needs A or B for the reads |
 
@@ -123,6 +123,25 @@ This is how that maps to BigQuery; IAM on a real project stays out of scope, so 
 The lab deploys one agent; the text-to-SQL baseline runs only inside the eval (SL-5), so its `agent_sql` role needs no counterpart unless the eval itself runs against BigQuery, where it would get its own identity on gold and exposed.
 Add B only for an agent that must see part of a dataset, and C only when the agents' query cost or quota needs its own budget.
 On the lab project, A is declared in [`platform/gcp/access.yaml`](../platform/gcp/access.yaml) (#205): `dbt-runner`, `semantic-agent` and `agent-audit`, each with BigQuery Job User and the dataset grants of the lab role it stands for, which `platform/gcp/tests/test_access.py` compares with `dbt/macros/agent_warehouse.sql`; the table-level grants on `ops` come with their tables (#209).
+
+### Personal data by column
+
+The lab keeps a column marked `meta: {pii: true}` from every agent role by column privileges (`dbt/macros/agent_pii_columns.sql`, SL-22): each model with one runs a post-hook that leaves its agent roles SELECT on every other column, and gives the whole relation to its `config.meta.pii_readers`, the outreach automation; `make agent-columns-check` logs in as each role and shows `select *` refused.
+BigQuery does the same with policy tags, and can mask instead of refuse:
+
+| | Column-level access control | Dynamic data masking |
+|---|---|---|
+| What it is | A policy tag from a taxonomy on the column; reading it takes Fine-Grained Reader on the tag, "even when the user has dataset access" ([stated](https://docs.cloud.google.com/bigquery/docs/column-level-security-intro)) | A data policy on the policy tag: a Masked Reader reads the column masked, a Fine-Grained Reader reads it raw, anyone else is denied; rules include nullify, SHA-256 hash, an email mask (`XXXXX` for the user name), first or last four characters and a default value ([stated](https://docs.cloud.google.com/bigquery/docs/column-data-masking-intro)) |
+| Lab counterpart | The column grants above; `select *` fails for an agent, as BigQuery's error lists the denied columns and `SELECT * EXCEPT (...)` reads the rest (stated, first page) | None: the lab refuses, it never masks |
+| Where it applies | BigQuery, BigLake and Omni tables, not views (stated, first page); a view over a tagged column checks the tag on the table under it, and an authorized view only that ([stated](https://docs.cloud.google.com/bigquery/docs/column-level-security-intro)) | The same tags, so the same tables |
+| Edition | Enterprise, Enterprise Plus and on-demand pricing; Standard has "No access to fine-grained security controls" ([stated](https://docs.cloud.google.com/bigquery/docs/editions-intro)) | The same row of the same table |
+| Cost | Uses BigQuery and Data Catalog, "so both products' pricing applies" (stated, first page); no figure for a taxonomy or a tag on the pages read (Unverified) | As column-level access control, plus the masked query's own bytes |
+| From dbt | `policy_tags` on the column in the YAML, written only with column-level `persist_docs` (measured (source): dbt-bigquery 1.12.1 `update_columns` sets each documented column's tags to its `policy_tags`, an empty list when none, so a tag set outside dbt is cleared on the next build) | Data policies are not a dbt config: IAM and the data policy API, beside the service accounts |
+
+**Recommendation: column-level access control, no masking.**
+`silver.partner_contacts` carries `policy_tags: ["{{ var('pii_policy_tag') }}"]` on its personal columns, persisted only when the var names a tag, so the lab writes none; `exposed.outreach_activation` is a view and inherits the table's tags.
+The agents' service accounts get no Fine-Grained Reader, so they read every other column, as the lab's roles do; the automation's account and `dbt-runner`, which builds the views and tables over the contacts, get it on the tag.
+Masking is for a consumer that needs a stand-in value (an email's domain, a hash to join on); no agent here does, and a masked column would still be a dimension MetricFlow could group by, which `check_standard.py` forbids for a personal column anyway.
 
 ### What is logged where
 
@@ -147,3 +166,4 @@ That record's table comes from the dbt project, `dbt run-operation agent_warehou
 - Cloud Run Job overrides: read from the Jobs API reference, not tried.
 - Whose identity a native data agent's queries run as (the caller's or a service account's), and so what the audit log names; and whether MetricFlow's BigQuery client lets each query set its own job labels.
 - In which project's audit log a cross-project read (option C) lands.
+- What a taxonomy and its policy tags cost in Data Catalog (Knowledge Catalog), and so whether column-level access control fits the lab project's $0.00 (SL-13); the lab has not created one.
