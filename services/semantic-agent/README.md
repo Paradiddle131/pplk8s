@@ -48,13 +48,21 @@ The database, not the prompt, keeps each agent in its tables (SL-4).
 ## Audit
 
 Every call to a data tool (`query_metrics`, `execute_sql`, or whatever replaces them), answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
-`guard.py` builds both agents' ADK `after_tool_callback` and `audit.py` writes the row, so the tools themselves stay unchanged.
+`guard.py` builds both agents' ADK `after_tool_callback`, which the MCP server's data calls share ([Over MCP](#over-mcp)), and `audit.py` writes the row, so the tools themselves stay unchanged.
 A data tool is every tool but the ones the toolset seam names as reading only the catalog (`tools.CATALOG_TOOLS`: listing and describing metrics), so the audit survives a swap to `DataAgentToolset`, whose data tool is `ask_data_agent` (#177); a catalog tool the swap forgets to name is audited, not a data tool skipped.
 - The row is written as `agent_audit`, a role that may only insert into that table: it cannot read, change or delete a row, or write anywhere else.
 - The agents' own roles write nothing, the audit included: the baseline runs whatever single statement its model writes, and the transaction mode is only one guard (before the tool refused a second statement, `commit; begin read write` left it), so a role's privileges keep the audit unforged.
 - An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
+
+## Over MCP
+
+Agents outside ADK (Claude, Gemini CLI, a Vertex AI agent) reach the same three tools through `mcp_server.py`, the MCP Python SDK's `MCPServer` over streamable HTTP (SL-20): `make agent-mcp` serves `localhost:8765/mcp` for the clients named in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.
+- The tools are `tools.py`'s, with their names, docstrings and argument checks; a data call's result passes through `guard.guarded`, the function ADK's after-tool callback calls, so it gets its freshness and its audit row, or is withheld when the row cannot be written.
+- The bearer token names the agent the row is written as; a call without a known token is refused with 401 before any tool runs, and a server with no client refuses to start.
+- It runs with uv, not in the image: the MCP SDK is uv's `mcp` group and `.dockerignore` leaves `mcp_server.py` out (SL-19).
+- `make agent-mcp-check` drives it with a scripted MCP client and no model; `examples/mcp_client` is an agent with only an `McpToolset` on the server, for `uv run adk run examples/mcp_client "<question>"` with `SEMANTIC_MCP_TOKEN` set (one free-tier model turn per tool call).
 
 ## Freshness
 

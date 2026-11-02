@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+# ADK's session store, left by `adk run`
+.adk/
 
 # dbt
 dbt/target/
