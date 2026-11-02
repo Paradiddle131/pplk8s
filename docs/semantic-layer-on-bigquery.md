@@ -59,12 +59,28 @@ The Conversational Analytics API's [integration patterns](https://docs.cloud.goo
 |---|---|---|
 | 6 ADK schema-driven | `BigQueryToolset.ask_data_insights` with inline table references; SQL from schema inference, no semantic guardrails | the eval baseline |
 | 7 ADK governed | `DataAgentToolset.ask_data_agent` on a pre-configured data agent (knowledge sources, descriptions, instructions, verified queries, glossary) | the semantic agent, with a MetricFlow toolset in the data agent's place |
-| 9 MCP | MCP Toolbox `bigquery-conversational-analytics` wrapping `chat`; ADK connects through `McpToolset` | not built; the toolset seam covers it |
+| 9 MCP | MCP Toolbox `bigquery-conversational-analytics` wrapping `chat`; ADK connects through `McpToolset` | the three metric tools over MCP (`make agent-mcp`, SL-20), [below](#the-semantic-layer-over-mcp) |
 
 [BigQuery data agents](https://docs.cloud.google.com/bigquery/docs/conversational-analytics) take custom table and field metadata, instructions, verified queries and glossary terms, in that priority.
 They advise curated views over agent-chosen joins, and at most 100 knowledge sources (about 20 per agent in practice).
 The authored context's [`system_instruction` YAML](https://docs.cloud.google.com/gemini/docs/conversational-analytics-api/data-agent-authored-context-bq) is what `build_catalog.py` writes and `check_catalog.py` checks.
 `DataAgentToolset` ([ADK docs](https://adk-labs.github.io/adk-docs/integrations/data-agent)) takes a `DataAgentCredentialsConfig` and a `DataAgentToolConfig` (`location`, `max_query_result_rows`) and names an agent `projects/{project}/locations/{location}/dataAgents/{agent}`.
+
+## The semantic layer over MCP
+
+The lab serves `list_metrics`, `describe_metric` and `query_metrics` over MCP (streamable HTTP) for agents outside ADK (SL-20): `make agent-mcp`, with one bearer token per client in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.
+Every data call goes through the same code as ADK's after-tool callback (`guard.guarded`): its audit row in `ops.agent_queries`, written as the agent its token names, and its metrics' freshness statement in the result.
+`make agent-mcp-check` drives it with a scripted MCP client and no model: the three tools listed, net revenue on 2 October 2026 answered as 861.4 with its freshness, the call's audit row found, and a call without a known token refused with 401.
+
+A run from an MCP-capable agent CLI (2026-11-02): `adk run` on `services/semantic-agent/examples/mcp_client`, an agent whose only tools are an `McpToolset` on the server, on OpenRouter's free `nvidia/nemotron-3.5-super-vl:free`, with the server on the agents' fixture (`dbt_dev`).
+Asked the eval's `net_revenue_one_day` question ("What was net revenue on 1 October 2026, after partner returns?"), it called `list_metrics`, then `query_metrics` on `net_revenue_eur` for that day, and answered "Net revenue on 1 October 2026 was 964.19 EUR", followed by the freshness statement word for word; the eval's expected SQL gives 964.19, and the call's audit row names the client's agent (`adk_cli_demo`), its MCP session and the request's id.
+
+| | Lab | At work (stated) | Keeps | Loses |
+|---|---|---|---|---|
+| Governed metrics over MCP | the lab's MCP server over MetricFlow | [MCP Toolbox for Databases](https://mcp-toolbox.dev/integrations/bigquery/tools/bigquery-conversational-analytics/) `bigquery-conversational-analytics` (or `conversational-analytics-ask-data-agent`) over a data agent | one definition per metric, the data agent's context, the client's own identity (its service account) | the lab's exact metric arithmetic (a data agent writes SQL from the definitions, it does not run MetricFlow); the audit row and freshness statement, which move to the Data Access audit log and the readiness tables ([Agent access and audit](#agent-access-and-audit)) |
+| Raw SQL over MCP | the eval baseline (`execute_sql`) | [BigQuery's remote MCP server](https://docs.cloud.google.com/bigquery/docs/use-bigquery-mcp) (`https://bigquery.googleapis.com/mcp`, OAuth and IAM; GA 2026-04-20), `execute_sql_readonly` and others | IAM on the datasets, the platform's audit log | every semantic guardrail: the model writes the SQL, which is the baseline the eval scores against |
+
+Client identity: the lab's bearer token per client stands in for the client's service account; the server's `TokenVerifier` is the seam a real issuer's tokens would fill (unverified).
 
 ## Dialect
 
