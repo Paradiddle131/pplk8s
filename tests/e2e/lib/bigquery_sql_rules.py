@@ -18,6 +18,18 @@ from sqlglot import exp
 
 # Postgres spellings the dialect macros replace; sqlglot alone reads some of them leniently.
 POSTGRES_ONLY = re.compile(r"at time zone|generate_series\(|timestamptz|::| as text\)", re.IGNORECASE)
+# A reserved word as a bare column name, after `AS` or a dot: BigQuery refuses it ("Unexpected keyword ORDER"),
+# sqlglot accepts it. MetricFlow 0.213 names an entity's column after the entity, unquoted (`order_id AS order`),
+# so a governed model that groups by an order's dimension did (SL-24, measured on the lab project 2026-11-02). The
+# reserved words that are also type names (array, enum, interval, proto, struct) are left out: `CAST(x AS ...)`.
+RESERVED_NAME = re.compile(
+    r"(?:\b[Aa][Ss]\s+|\.)(all|and|any|as|asc|assert_rows_modified|at|between|by|case|cast|collate|contains|create|"
+    r"cross|cube|current|default|define|desc|distinct|else|end|escape|except|exclude|exists|extract|false|fetch|"
+    r"following|for|from|full|group|grouping|groups|hash|having|if|ignore|in|inner|intersect|into|is|join|lateral|"
+    r"left|like|limit|lookup|merge|natural|new|no|not|null|nulls|of|on|or|order|outer|over|partition|preceding|"
+    r"qualify|range|recursive|respect|right|rollup|rows|select|set|some|tablesample|then|to|treat|true|unbounded|"
+    r"union|unnest|using|when|where|window|with|within)\b(?!`)"
+)
 
 
 def problems(name: str, sql: str) -> list[str]:
@@ -29,6 +41,8 @@ def problems(name: str, sql: str) -> list[str]:
         return [f"{name}: {str(e).splitlines()[0][:120]}"]
     if match := POSTGRES_ONLY.search(sql):
         found.append(f"{name}: Postgres-only {match[0]!r}")
+    if match := RESERVED_NAME.search(sql):
+        found.append(f"{name}: a reserved word as an unquoted name, BigQuery refuses it: {match[0]!r}")
     for statement in filter(None, statements):
         for cast in statement.find_all(exp.Cast):
             if cast.to.expressions:

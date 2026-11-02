@@ -7,6 +7,8 @@
 #     with none of the Postgres-only constructs the dialect macros replace (macros/dialect.sql);
 #   - the call labels compile to BigQuery's AI.GENERATE with an output schema and a named endpoint,
 #     never to the lab's recordings (semantic/PLAN.md SL-18; compiled, never run);
+#   - the agent-ready standard holds on the BigQuery parse, where the governed models are enabled, and those
+#     models (dbt/models/governed/, SL-24) compile and are what scripts/build_governed.py generates now;
 #   - build_catalog.py writes the agent catalog and the data agent's authored context for BigQuery:
 #     relations are `project.dataset.table` and every verified query reads backticked BigQuery
 #     tables, each one a table reference of context.json (the v1 Context, #204); check_catalog.py passes;
@@ -34,11 +36,12 @@ rm -rf "$OUT" && mkdir -p "$PROJECT"
 dbt_deps "$PROJECT"
 
 run_ dbt parse --quiet || fail "dbt parse on the bigquery target"
+run_ python scripts/check_standard.py target >/dev/null || fail "the agent-ready standard on the bigquery target (the governed models)"
 run_ mf validate-configs --skip-dw >"$OUT/validate.log" 2>&1 || { tail -20 "$OUT/validate.log" >&2; fail "mf validate-configs --skip-dw"; }
 echo "ok: dbt parse and mf validate-configs --skip-dw pass on the bigquery target"
 
 run_ dbt compile --quiet --no-introspect --no-populate-cache \
-  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
+  --select tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:semantic tag:governed --exclude tag:tlc >"$OUT/compile.log" 2>&1 ||
   { tail -20 "$OUT/compile.log" >&2; fail "dbt compile of the semantic path on the bigquery target"; }
 uvx --quiet --with "$SQLGLOT" python -I "$REPO/tests/e2e/lib/bigquery_sql_rules.py" "$PROJECT/target/compiled/pplk8s/models" ||
   fail "compiled SQL breaks BigQuery's rules"
@@ -94,6 +97,9 @@ for problem in "context.json: datasourceReferences.bq.tableReferences[0].schema.
   grep -qF "$problem" "$OUT/stray.log" || { cat "$OUT/stray.log" >&2; fail "check_catalog did not report: $problem"; }
 done
 echo "ok: a key the v1 schema lacks, a glossary term without its display name and 11 terms on one table fail check_catalog"
+
+# The governed tables' models are generated from MetricFlow (SL-24): the repo's must be what the generator writes now.
+"$REPO/tests/e2e/governed-models.sh" || fail "dbt/models/governed/ drifted: run make governed-models"
 
 rm -rf "$REPO/dbt/target/bigquery" && mkdir -p "$REPO/dbt/target/bigquery"
 cp -r "$PROJECT/target/catalog" "$REPO/dbt/target/bigquery/"

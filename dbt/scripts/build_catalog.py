@@ -20,7 +20,8 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
   And each semantic model's table with its readiness products, so an answer that names tables instead of
-  metrics (a native data agent's generated SQL) still finds its freshness (#207).
+  metrics (a native data agent's generated SQL) still finds its freshness (#207); and each governed table
+  (governed.py, SL-24) with its metrics and their readiness products, for the same reason.
 - `data_agent/context.json`: a BigQuery data agent's whole context in the Conversational Analytics API's v1
   structured form (`Context`, ready for a DataAgent's `dataAnalyticsAgent.publishedContext`; #204), which
   Google prefers wherever a structured field exists: `datasourceReferences.bq.tableReferences`, one per table
@@ -37,6 +38,12 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
 - `data_agent/example_queries.json`: the verified queries (`naturalLanguageQuestion`, `sqlQuery`): one per
   metric, the metric by day, and one per saved query, its question, each as MetricFlow compiles it; the same
   list as context.json's `exampleQueries`.
+- `data_agent_governed/context.json`: a second data agent's v1 `Context` (SL-24, `pplk8s-governed`), whose only
+  tables are the governed tables the BigQuery target builds (dbt/models/governed/, from MetricFlow's compiled
+  SQL) and the time spine: the governed tables' words (governed.py), a system instruction saying the numbers
+  are computed already and how a non-additive one combines, each metric's glossary term naming its governed
+  column, each glossary term the governed columns of its metrics and dimensions, and verified queries that
+  only select and sum governed columns (each metric by day, each ratio over a week from its components).
 
 The third artefact, the warehouse comments, is built by dbt itself: `persist_docs` on gold and exposed,
 and the `semantic.metrics` and `semantic.glossary` models (models/semantic/).
@@ -50,13 +57,26 @@ Usage, from dbt/ with the image's pins: python scripts/build_catalog.py [target_
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
+from governed import (
+    DATASET,
+    TIME,
+    TOTAL,
+    Table,
+    column_descriptions,
+    plan,
+    ratio_components,
+    table_description,
+    table_of,
+)
 
 LAYER_TAGS = {"bronze", "silver", "gold", "exposed", "semantic"}
 
@@ -272,6 +292,11 @@ class SemanticIndex:
         """The business question a saved query answers, from its `config.meta.question`."""
         return (self._saved_query_meta.get(saved_query["name"], {}).get("question") or "").strip()
 
+    @property
+    def database(self) -> str | None:
+        """The target's database (on BigQuery, its project) the semantic models' tables are in."""
+        return next(iter(self.semantic_models.values()))["node_relation"].get("database")
+
     @staticmethod
     def table(model: dict) -> str:
         relation = model["node_relation"]
@@ -309,6 +334,21 @@ def saved_queries(index: SemanticIndex) -> list[dict]:
     return found
 
 
+def governed_tables(index: SemanticIndex, tables: list[Table]) -> list[dict]:
+    """The governed tables with their relation, kind, metrics and the readiness products of those metrics."""
+    metrics = {metric["name"]: metric for metric in index.metrics}
+    return [
+        {
+            "name": table.name,
+            "relation": _relation(index.database, DATASET, table.name),
+            "kind": table.kind,
+            "metrics": list(table.metrics),
+            "readiness": sorted({p for name in table.metrics for p in index.readiness(metrics[name])}),
+        }
+        for table in tables
+    ]
+
+
 def agent_catalog(
     manifest: dict,
     index: SemanticIndex,
@@ -340,6 +380,9 @@ def agent_catalog(
             for model in sorted(index.semantic_models.values(), key=lambda model: model["name"])
         ],
         "saved_queries": saved_queries(index),
+        # The governed tables the BigQuery target builds (governed.py, SL-24), each with its metrics' readiness
+        # products: a governed data agent's SQL names these, not the semantic models' tables.
+        "governed_tables": governed_tables(index, plan(index.metrics, dimensions)),
         "unavailable_metrics": unavailable_metrics(manifest),
         "custom_grains": custom_grains(manifest, index),
     }
@@ -594,11 +637,149 @@ def example_queries(
     return by_metric + by_saved_query
 
 
-def _metricflow(
-    project_dir: Path, index: SemanticIndex
-) -> tuple[Callable[[str], list[dict]], Callable[[str], list[dict]], Callable[[str], str], Callable[[str], str]]:
-    """Dimensions and compiled SQL, of a metric and of a saved query, from MetricFlow's engine, set up as the
-    mf CLI sets it up."""
+GOVERNED_INSTRUCTION = (
+    "You answer business questions from governed tables: every number in them was computed by MetricFlow from "
+    "the business's metric definitions, so select, filter and add up those numbers, and never re-derive a metric "
+    "from other data or invent another definition. "
+    f"A table named *_daily holds additive metrics, one row per day ({TIME}) and combination of its dimensions: "
+    "filter the days and dimension values asked and SUM the metric's column. "
+    "A table named *_by_period holds metrics that do not add up (ratios, distinct counts, averages, balances, "
+    "running totals, conversion rates, growth): read the one row of the grain asked (day, week from Monday, or "
+    f"calendar month, by period_start) and slice ('{TOTAL}', or on a day one dimension and its value), and never "
+    "SUM or AVG such a column over rows. "
+    "For a span that is not one such row, each column's description says how to combine the daily tables' "
+    "additive columns (a ratio is the SUM of its numerator divided by the SUM of its denominator over the same "
+    "rows); where it says there is no additive form, say that the governed tables cannot answer for that span. "
+    "Fiscal quarters and years: join the time spine on its date_day to the day. Dates are UTC days. "
+    "A glossary term names the governed columns its metrics and dimensions are."
+)
+# The span the ratios' verified queries combine their components over: one ISO week outside the eval's dates.
+EXAMPLE_SPAN = ("2026-09-07", "2026-09-13", "the week of 7 September 2026")
+
+
+def governed_context(
+    manifest: dict, index: SemanticIndex, tables: list[Table], terms: list[dict], dimensions: Callable
+) -> dict:
+    """The governed data agent's v1 `Context` (SL-24): the governed tables and the time spine as its only tables,
+    each metric's glossary term naming its governed column, verified queries that only select and sum them."""
+    metrics = {metric["name"]: metric for metric in index.metrics}
+
+    def described(name: str) -> dict[str, str]:
+        return {d["name"]: d.get("description") or "" for d in dimensions(name)}
+
+    refs = []
+    for table in tables:
+        dims = {key: text for name in table.metrics for key, text in described(name).items()}
+        fields = []
+        for column, text in column_descriptions(table, metrics, tables, dims).items():
+            if column in table.metrics:
+                kind = ["additive measure"] if table.kind == "daily" else ["non-additive measure"]
+                synonyms = [metrics[column]["label"]]
+            elif column in (TIME, "period_start"):
+                kind, synonyms = ["time dimension"], []
+            else:
+                kind, synonyms = ["categorical dimension"], []
+            types = {TIME: "DATE", "period_start": "DATE", "grain": "STRING", "slice": "STRING"}
+            fields.append(
+                _fields(name=column, type=types.get(column, ""), description=text, synonyms=synonyms, tags=kind)
+            )
+        refs.append(
+            _fields(
+                projectId=index.database,
+                datasetId=DATASET,
+                tableId=table.name,
+                schema=_fields(
+                    description=table_description(table), tags=["governed", table.kind, table.home], fields=fields
+                ),
+            )
+        )
+    spines = {spine["node_relation"]["alias"] for spine in index.time_spines}
+    refs += [ref for ref in table_references(manifest, index) if ref["tableId"] in spines]
+
+    def column_of(name: str) -> str:
+        table = table_of(tables, name)
+        how = "add it up over rows" if table.kind == "daily" else "one row per period and slice, never added up"
+        return f"{DATASET}.{table.name}.{name} ({how})"
+
+    glossary = [
+        _fields(
+            displayName=metric["label"],
+            description=f"{_words(metric['description'])} Governed column: {column_of(metric['name'])}.",
+            labels=[metric["name"]],
+        )
+        for metric in index.metrics
+    ]
+    for term in terms:
+        mapping = []
+        if term["metrics"]:
+            mapping.append(f"Metrics: {', '.join(column_of(name) for name in term['metrics'] if name in metrics)}.")
+        for dimension in term["dimensions"]:
+            daily = [f"{DATASET}.{t.name}" for t in tables if t.kind == "daily" and dimension in t.dimensions]
+            sliced = [f"{DATASET}.{t.name}" for t in tables if t.kind == "by_period" and dimension in t.dimensions]
+            where = [f"a column of {', '.join(daily)}"] if daily else []
+            where += [f"slice '{dimension}' of {', '.join(sliced)}"] if sliced else []
+            mapping.append(f"Dimension {dimension}: {'; '.join(where) or 'in no governed table'}.")
+        glossary.append(
+            _fields(
+                displayName=term["term"], description=" ".join([term["description"], *mapping]), labels=term["synonyms"]
+            )
+        )
+
+    def ref(table: Table) -> str:
+        return ".".join(f"`{part}`" for part in (index.database, DATASET, table.name) if part)
+
+    queries = []
+    for metric in index.metrics:
+        table = table_of(tables, metric["name"])
+        name = metric["name"]
+        if table.kind == "daily":
+            sql = f"SELECT {TIME}, SUM({name}) AS {name}\nFROM {ref(table)}\nGROUP BY {TIME}\nORDER BY {TIME}"
+        else:
+            sql = (
+                f"SELECT period_start AS {TIME}, {name}\nFROM {ref(table)}\n"
+                f"WHERE grain = 'day' AND slice = '{TOTAL}'\nORDER BY period_start"
+            )
+        label = metric["label"][0].lower() + metric["label"][1:]
+        queries.append({"naturalLanguageQuestion": f"What is {label} by day?", "sqlQuery": sql})
+    start, end, words = EXAMPLE_SPAN
+    for metric in index.metrics:
+        found = ratio_components(metric, metrics, tables)
+        if not found:
+            continue
+        sums = []
+        for part in found:
+            where = f"{TIME} BETWEEN DATE '{start}' AND DATE '{end}'" + (
+                f" AND {part.condition}" if part.condition else ""
+            )
+            sums.append(f"(SELECT SUM({part.column}) FROM {ref(part.table)} WHERE {where})")
+        label = metric["label"][0].lower() + metric["label"][1:]
+        queries.append(
+            {
+                "naturalLanguageQuestion": f"What was {label} over {words}?",
+                "sqlQuery": f"SELECT {sums[0]}\n  / NULLIF({sums[1]}, 0) AS {metric['name']}",
+            }
+        )
+    return _fields(
+        datasourceReferences={"bq": {"tableReferences": refs}},
+        systemInstruction=GOVERNED_INSTRUCTION,
+        glossaryTerms=glossary,
+        exampleQueries=queries,
+    )
+
+
+class MetricFlow(NamedTuple):
+    """What the generators ask MetricFlow's engine, offline."""
+
+    dimensions: Callable[[str], list[dict]]
+    entities: Callable[[str], list[dict]]
+    compiled_sql: Callable[[str], str]
+    compiled_saved_query: Callable[[str], str]
+    compiled: Callable[[list[str], list[str]], str]
+
+
+def _metricflow(project_dir: Path, index: SemanticIndex) -> MetricFlow:
+    """Dimensions and compiled SQL, of a metric, of a saved query and of metrics by group-bys, from MetricFlow's
+    engine, set up as the mf CLI sets it up."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
     from metricflow.engine.metricflow_engine import MetricFlowEngine, MetricFlowQueryRequest
 
@@ -644,17 +825,25 @@ def _metricflow(
     def compiled_saved_query(name: str) -> str:
         return engine.explain(MetricFlowQueryRequest.create(saved_query_name=name)).sql_statement.sql
 
-    return dimensions, entities, compiled_sql, compiled_saved_query
+    def compiled(metrics: list[str], group_by: list[str]) -> str:
+        request = MetricFlowQueryRequest.create(metric_names=metrics, group_by_names=group_by)
+        return engine.explain(request).sql_statement.sql
+
+    return MetricFlow(dimensions, entities, compiled_sql, compiled_saved_query, compiled)
 
 
 def main() -> int:
     target = Path(sys.argv[1] if len(sys.argv) > 1 else "target")
     manifest = json.loads((target / "manifest.json").read_text())
     index = SemanticIndex(manifest, json.loads((target / "semantic_manifest.json").read_text()))
-    dimensions, entities, compiled_sql, compiled_saved_query = _metricflow(Path(__file__).resolve().parents[1], index)
+    dimensions, entities, compiled_sql, compiled_saved_query, _ = _metricflow(
+        Path(__file__).resolve().parents[1], index
+    )
+    dimensions = functools.cache(dimensions)
 
     out = target / "catalog"
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
+    (out / "data_agent_governed").mkdir(parents=True, exist_ok=True)
     catalog = agent_catalog(manifest, index, dimensions, entities)
     (out / "agent.json").write_text(json.dumps(catalog, indent=2) + "\n")
     instruction = yaml.safe_dump(system_instruction(index), sort_keys=False, allow_unicode=True, width=110)
@@ -663,11 +852,16 @@ def main() -> int:
     (out / "data_agent" / "example_queries.json").write_text(json.dumps(queries, indent=2) + "\n")
     data_agent = context(manifest, index, catalog["glossary"], instruction, queries)
     (out / "data_agent" / "context.json").write_text(json.dumps(data_agent, indent=2) + "\n")
+    tables = plan(index.metrics, dimensions)
+    governed = governed_context(manifest, index, tables, catalog["glossary"], dimensions)
+    (out / "data_agent_governed" / "context.json").write_text(json.dumps(governed, indent=2) + "\n")
     print(
         f"build_catalog: {len(catalog['models'])} public models, {len(catalog['metrics'])} metrics "
         f"and {len(catalog['glossary'])} glossary terms in {out}; {len(catalog['saved_queries'])} saved queries; "
         f"context.json: {len(data_agent['datasourceReferences']['bq']['tableReferences'])} tables, "
-        f"{len(data_agent['glossaryTerms'])} glossary terms and {len(data_agent['exampleQueries'])} example queries"
+        f"{len(data_agent['glossaryTerms'])} glossary terms and {len(data_agent['exampleQueries'])} example queries; "
+        f"the governed context: {len(governed['datasourceReferences']['bq']['tableReferences'])} tables and "
+        f"{len(governed['exampleQueries'])} example queries"
     )
     return 0
 

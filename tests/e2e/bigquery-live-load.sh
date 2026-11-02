@@ -3,9 +3,11 @@
 # (`make agent-eval ARM=data_agent`) asks a data agent over the same rows the expected numbers come from.
 # Builds dbt_dev as the eval does (tests/e2e/agent-fixture.sh: dbt/dev/fixture.sql and fixture_weeks.sql, every
 # semantic domain), copies its landed sources into the lab project (tests/e2e/lib/fixture_to_bigquery.py, which
-# empties the dbt datasets first, never `ops`), then runs `dbt build` of the same domains on the `gcp` target,
-# every job capped at the free path's per-query bytes. Live: GCP_PROJECT, the live gate before and after (platform/gcp/live-gate.sh); the
-# credential as tests/e2e/bigquery-run-check.sh picks it. Expects `make services-up`.
+# empties the dbt datasets first, never `ops`), then runs `dbt build` of the same domains on the `gcp` target, and
+# of the governed tables over them (semantic/PLAN.md SL-24) with their hop to gold, which `make agent-eval
+# ARM=data_agent_governed` asks through `pplk8s-governed`; every job capped at the free path's per-query bytes.
+# Live: GCP_PROJECT, the live gate before and after (platform/gcp/live-gate.sh); the credential as
+# tests/e2e/bigquery-run-check.sh picks it. Expects `make services-up`.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -13,7 +15,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 : "${GCP_PROJECT:?GCP_PROJECT is unset: the load goes to the lab project (platform/gcp/README.md)}"
 DB=${DB:-dbt_dev}
 OUT=${TMPDIR:-/tmp}/pplk8s-bigquery-live-load
-TAGS=(tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts)
+TAGS=(tag:sales tag:returns tag:finance tag:marketing tag:customer_actions tag:partner_outreach tag:recruitment tag:call_transcripts tag:governed)
 
 if [ -z "${GCP_ACCESS_TOKEN:-}" ]; then
   if [ -n "${CLOUDSDK_AUTH_ACCESS_TOKEN:-}" ]; then
