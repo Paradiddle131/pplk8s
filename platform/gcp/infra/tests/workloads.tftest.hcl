@@ -75,6 +75,11 @@ run "both_images" {
   }
 
   assert {
+    condition     = one([for e in google_cloud_run_v2_service.workload["semantic-agent"].template[0].containers[0].env : e.value if e.name == "SESSION_SERVICE_URI"]) == "firestore://"
+    error_message = "Sessions go to the free (default) Firestore database: a host in firestore://<host> names another database."
+  }
+
+  assert {
     condition = alltrue([for j in google_cloud_run_v2_job.workload : alltrue([
       j.template[0].task_count == 1,
       j.template[0].parallelism == 1,

@@ -18,12 +18,14 @@ locals {
   # ADK's Firestore session service keeps every session under this root collection of the free (default) database.
   session_collection = "agent-sessions"
   agent_env = merge(local.agent_model_env, {
-    AGENT_WAREHOUSE               = "bigquery"
-    DBT_TARGET                    = "gcp"
-    GCP_PROJECT                   = var.project
-    BQ_MAXIMUM_BYTES_BILLED       = tostring(local.caps.bigquery_maximum_bytes_billed)
-    AUDIT_SERVICE_ACCOUNT         = google_service_account.workload["agent-audit"].email
-    SESSION_SERVICE_URI           = "firestore://${local.session_collection}"
+    AGENT_WAREHOUSE         = "bigquery"
+    DBT_TARGET              = "gcp"
+    GCP_PROJECT             = var.project
+    BQ_MAXIMUM_BYTES_BILLED = tostring(local.caps.bigquery_maximum_bytes_billed)
+    AUDIT_SERVICE_ACCOUNT   = google_service_account.workload["agent-audit"].email
+    # `firestore://` with no host is the free (default) database: the agent's services.py reads a host as a
+    # database name, so the collection goes in ADK's own variable below, never in the URI.
+    SESSION_SERVICE_URI           = "firestore://"
     ADK_FIRESTORE_ROOT_COLLECTION = local.session_collection
   })
 }
