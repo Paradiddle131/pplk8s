@@ -82,7 +82,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent
+.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check bigquery-live-load migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -193,6 +193,10 @@ bigquery-live-check: services-up ## Live: the bigquery-emulator-check script on 
 	platform/gcp/cost-check.sh
 	BQ_TARGET=gcp tests/e2e/bigquery-run-check.sh
 	platform/gcp/cost-check.sh
+
+# The data-agent eval's rows on the lab project (#207): dbt_dev's fixture, every semantic domain, built there.
+bigquery-live-load: services-up ## Live: load dbt_dev's fixture (every semantic domain) into the lab project (GCP_PROJECT) and build it there, so the data-agent eval asks over the eval's rows; the cost check before and after
+	tests/e2e/bigquery-live-load.sh
 
 # The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
 # failing when it differs from the script; demo-check rehearses them all, timed, on a fresh emulator.

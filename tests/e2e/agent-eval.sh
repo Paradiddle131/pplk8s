@@ -13,6 +13,7 @@
 # loaded there, with the expected numbers from dbt_dev as always; no baseline; writes
 # docs/research/data-agent-eval.md. Refuses without GCP_PROJECT and runs the cost check before and after,
 # as every live step does (platform/gcp/README.md). Its chat calls count against the API's 30 a minute.
+# The lab project must hold dbt_dev's rows: `make bigquery-live-load` first.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -40,8 +41,9 @@ case "${ARM:-metricflow}" in
         fi
       fi
     fi
-    "$REPO/platform/gcp/cost-check.sh"
-    trap '"$REPO/platform/gcp/cost-check.sh"' EXIT ;;
+    "$REPO/platform/gcp/cost-check.sh" || [ "${GCP_COST_UNPROVEN_OK:-}" = 1 ] ||
+      fail "the cost check did not prove \$0.00 (GCP_COST_UNPROVEN_OK=1 proceeds on the owner's say-so)"
+    trap '"$REPO/platform/gcp/cost-check.sh" || true' EXIT ;;
   *) fail "ARM=$ARM is not one of metricflow, data_agent" ;;
 esac
 

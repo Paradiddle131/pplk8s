@@ -15,14 +15,15 @@ polled until done or `--timeout`. Every request body is validated first against 
 Location `us` by default: the lab's datasets are in BigQuery's US multi-region, and the `us` endpoint keeps the
 agent and its ML processing in that jurisdiction, which `global` does not; an agent at any location reads
 datasets in any location (https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/data-residency).
-BigQuery Agent Analytics (Preview, enrolled projects only) is on, into `ops.data_agent_analytics`, unless
-`--no-analytics`: a project that is not enrolled stores the fields and writes no rows.
+BigQuery Agent Analytics (Preview, enrolled projects only) is off unless `--analytics` (into
+`ops.data_agent_analytics`): the lab project is not enrolled, and its API accepts the two fields and drops
+them (measured 2026-11-02: the PATCH succeeds, a GET returns neither), so setting them would write on every run.
 
 Credentials, as platform/gcp/tofu.sh picks them, first that holds: GCP_ACCESS_TOKEN; a cloud session's
 proxy-injected CLOUDSDK_AUTH_ACCESS_TOKEN; a short-lived token of a signed-in gcloud account ($GCP_ACCOUNT,
 default the active one). Refuses without GCP_PROJECT. `--dry-run` prints the bodies and sends nothing.
 
-Usage: python3 platform/gcp/data-agent/publish.py [--context PATH] [--dry-run] [--no-publish] [--no-analytics]
+Usage: python3 platform/gcp/data-agent/publish.py [--context PATH] [--dry-run] [--no-publish] [--analytics]
 Run by `make gcp-data-agent` (Live: the cost check before and after).
 """
 
@@ -478,7 +479,9 @@ def main(
         help="dataset.table for Agent Analytics rows",
     )
     parser.add_argument(
-        "--no-analytics", action="store_true", help="leave BigQuery Agent Analytics off"
+        "--analytics",
+        action="store_true",
+        help="turn BigQuery Agent Analytics on (enrolled projects only; others drop the fields)",
     )
     parser.add_argument(
         "--no-publish", action="store_true", help="update the staging context only"
@@ -504,9 +507,7 @@ def main(
             raise PublishError(f"{args.context} is missing: run make bigquery-check")
         context = retarget(json.loads(args.context.read_text()), project)
         analytics = (
-            None
-            if args.no_analytics
-            else analytics_table(args.analytics_table, project)
+            analytics_table(args.analytics_table, project) if args.analytics else None
         )
         agent = desired(context, analytics)
         pin = load_pin()
