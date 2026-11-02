@@ -16,6 +16,7 @@ Checks, against the manifests the artefacts were built from (semantic/PLAN.md SL
   from Knowledge Catalog per table;
 - example_queries.json holds one verified query per metric and one per saved query, with the documented keys only;
 - agent.json lists every saved query with its question, metrics and group-bys (#164);
+- agent.json lists every semantic model with its table and readiness products (#207);
 - every glossary term (`config.meta.glossary` on a model) is in agent.json, has a description, maps to at
   least one metric or dimension, names only metrics the semantic manifest defines and dimensions one of its
   metrics groups by, and neither repeats another term nor a metric's name or label (a metric is its own
@@ -265,6 +266,17 @@ def problems(target: Path) -> list[str]:
         for name, query in sorted(listed_saved.items())
         for field in ("question", "metrics", "readiness")
         if not query.get(field)
+    ]
+
+    models = sorted(model["name"] for model in semantic_manifest["semantic_models"])
+    listed_models = {model["name"]: model for model in catalog.get("semantic_models", [])}
+    if sorted(listed_models) != models:
+        found.append(f"agent.json: semantic models {sorted(listed_models)} != manifest {models}")
+    found += [
+        f"agent.json: semantic model {name} has no {field}"
+        for name, model in sorted(listed_models.items())
+        for field in ("relation", "readiness")
+        if not model.get(field)
     ]
 
     queries = json.loads((catalog_dir / "data_agent" / "example_queries.json").read_text())

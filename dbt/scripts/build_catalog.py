@@ -19,6 +19,8 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
+  And each semantic model's table with its readiness products, so an answer that names tables instead of
+  metrics (a native data agent's generated SQL) still finds its freshness (#207).
 - `data_agent/context.json`: a BigQuery data agent's whole context in the Conversational Analytics API's v1
   structured form (`Context`, ready for a DataAgent's `dataAnalyticsAgent.publishedContext`; #204), which
   Google prefers wherever a structured field exists: `datasourceReferences.bq.tableReferences`, one per table
@@ -241,12 +243,13 @@ class SemanticIndex:
 
     def readiness(self, metric: dict) -> list[str]:
         """The readiness products the metric's models are: `<pipeline>.<layer>`, as the DAGs record them."""
-        products = set()
-        for model in self.models_of_metric(metric):
-            tags = self.tags_of_semantic_model[model["name"]]
-            layers = [tag for tag in tags if tag in LAYER_TAGS]
-            products |= {f"{pipeline}.{layer}" for pipeline in _pipelines(tags) for layer in layers}
-        return sorted(products)
+        return sorted({p for model in self.models_of_metric(metric) for p in self.readiness_of_model(model)})
+
+    def readiness_of_model(self, model: dict) -> list[str]:
+        """The readiness products one semantic model's table is: `<pipeline>.<layer>` from its dbt tags."""
+        tags = self.tags_of_semantic_model[model["name"]]
+        layers = [tag for tag in tags if tag in LAYER_TAGS]
+        return sorted({f"{pipeline}.{layer}" for pipeline in _pipelines(tags) for layer in layers})
 
     def time_grain(self, metric: dict) -> str | None:
         grains = set()
@@ -329,6 +332,12 @@ def agent_catalog(
                 "entities": entities(metric["name"]),
             }
             for metric in index.metrics
+        ],
+        # The table each semantic model reads, and its readiness products: how an answer that names its
+        # tables, not its metrics (a data agent's generated SQL), finds its freshness (#207).
+        "semantic_models": [
+            {"name": model["name"], "relation": index.table(model), "readiness": index.readiness_of_model(model)}
+            for model in sorted(index.semantic_models.values(), key=lambda model: model["name"])
         ],
         "saved_queries": saved_queries(index),
         "unavailable_metrics": unavailable_metrics(manifest),

@@ -18,6 +18,8 @@ the query read), on BigQuery by a DML insert as the `agent-audit` service accoun
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -49,11 +51,66 @@ class Caller:
         )
 
 
+def _steps(value: Any, key: str) -> Iterator[Any]:
+    """Every value under `key` anywhere in a tool result (a data agent's steps nest them)."""
+    if isinstance(value, dict):
+        for name, item in value.items():
+            if name == key:
+                yield item
+            else:
+                yield from _steps(item, key)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _steps(item, key)
+
+
+def generated_sql(response: dict[str, Any]) -> list[str]:
+    """The SQL a native data agent generated: its `ask_data_agent` steps' `data.generatedSql`."""
+    return [sql for sql in _steps(response, "generatedSql") if isinstance(sql, str)]
+
+
+def retrieved_rows(response: dict[str, Any]) -> int | None:
+    """The rows a data agent's `Data Retrieved` steps returned, or None when it retrieved none."""
+    steps = [step for step in _steps(response, "Data Retrieved") if isinstance(step, dict)]
+    counted = [len(step["rows"]) for step in steps if isinstance(step.get("rows"), list)]
+    return sum(counted) if counted else None
+
+
+# A table after FROM or JOIN: BigQuery's `project.dataset.table`, quoted whole or by part, or bare.
+_TABLE = re.compile(
+    r"\b(?:from|join)\s+((?:`[^`]+`|[\w-]+)(?:\s*\.\s*(?:`[^`]+`|[\w-]+))*)", re.IGNORECASE
+)
+
+
+def tables_read(sql: list[str]) -> list[str]:
+    """The tables the SQL reads, `dataset.table` or longer, without quotes; CTE names (one part)
+    and table functions are left out."""
+    found = set()
+    for statement in sql:
+        for match in _TABLE.finditer(statement):
+            name = re.sub(r"[`\s]", "", match.group(1))
+            if name.count(".") >= 1:
+                found.add(name)
+    return sorted(found)
+
+
+def error_of(response: dict[str, Any]) -> str | None:
+    """A tool result's error: ours (`error`), or a Google API tool's (`status` ERROR, as ADK's
+    `DataAgentToolset` returns one, with its `error_details`)."""
+    if response.get("error"):
+        return str(response["error"])
+    if response.get("status") == "ERROR":
+        return str(response.get("error_details") or "the tool returned status ERROR")
+    return None
+
+
 def audit_row(
     tool: str, args: dict[str, Any], caller: Caller, response: dict[str, Any]
 ) -> dict[str, Any]:
     """The audit row of one tool call: what was asked, by whom, and what came back."""
     rows = response.get("rows")
+    rows_returned = len(rows) if isinstance(rows, list) else retrieved_rows(response)
+    sql = args.get("sql") or response.get("sql") or "\n;\n".join(generated_sql(response))
     freshness = response.get("freshness") or {}
     return {
         "agent": caller.agent,
@@ -65,11 +122,12 @@ def audit_row(
         "metrics": args.get("metrics") or response.get("metrics"),
         "filters": args.get("filters"),
         "arguments": args,
-        # The model's own SQL for the baseline, the SQL MetricFlow compiled for the semantic agent.
-        "sql": args.get("sql") or response.get("sql"),
-        "rows_returned": len(rows) if isinstance(rows, list) else None,
+        # The model's own SQL for the baseline, the SQL MetricFlow compiled for the semantic agent,
+        # the SQL a native data agent generated (#207).
+        "sql": sql or None,
+        "rows_returned": rows_returned,
         "freshness": freshness.get("statement"),
-        "error": response.get("error"),
+        "error": error_of(response),
     }
 
 

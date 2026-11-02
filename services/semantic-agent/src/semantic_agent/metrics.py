@@ -63,6 +63,7 @@ class Catalog:
     saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
     unavailable: dict[str, dict[str, Any]] = field(default_factory=dict)
     custom_grains_described: list[dict[str, Any]] = field(default_factory=list)
+    semantic_models: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -79,6 +80,21 @@ class Catalog:
             saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
             unavailable={m["name"]: m for m in data.get("unavailable_metrics", [])},
             custom_grains_described=data.get("custom_grains", []),
+            semantic_models=data.get("semantic_models", []),
+        )
+
+    def readiness_of_tables(self, tables: list[str]) -> list[str]:
+        """The readiness products of the semantic models' tables among `tables`, matched on their
+        dataset and table (`silver.orders`), so a project or database name in front does not matter;
+        a table no semantic model reads names none."""
+        wanted = {".".join(table.lower().split(".")[-2:]) for table in tables}
+        return sorted(
+            {
+                product
+                for model in self.semantic_models
+                if ".".join(model["relation"].lower().split(".")[-2:]) in wanted
+                for product in model["readiness"]
+            }
         )
 
     @property
