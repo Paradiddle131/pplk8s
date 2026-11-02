@@ -5,14 +5,14 @@
 # Usage: platform/gcp/docker-login.sh <region>-docker.pkg.dev
 # The token: a signed-in gcloud account's ($GCP_ACCOUNT, default the active one, as platform/gcp/tofu.sh picks it).
 # It lives an hour: the login is redone on every `make gcp-images`, so a stale one never matters.
-# A cloud session (CLOUDSDK_AUTH_ACCESS_TOKEN set) is refused: its egress proxy injects the real credential only
-# for *.googleapis.com, never for <region>-docker.pkg.dev, so `docker login` there fails; push from the owner's shell.
+# A cloud session (CLOUDSDK_AUTH_ACCESS_TOKEN set) needs no login: its egress proxy signs requests to
+# us-central1-docker.pkg.dev itself (in the environment's network secret since 2026-11-02), as for ghcr.io.
 set -euo pipefail
 host=${1:?usage: docker-login.sh <region>-docker.pkg.dev}
 
 if [ -n "${CLOUDSDK_AUTH_ACCESS_TOKEN:-}" ]; then
-  echo "docker-login.sh: a cloud session's credential is injected only for *.googleapis.com, so it cannot sign Docker in to $host: run make gcp-images from the owner's shell" >&2
-  exit 1
+  echo "docker-login.sh: no login: the session's egress proxy signs requests to $host itself (as for ghcr.io)"
+  exit 0
 fi
 command -v gcloud >/dev/null || { echo "docker-login.sh: gcloud is missing: install and sign in to it (platform/gcp/README.md)" >&2; exit 1; }
 who=${GCP_ACCOUNT:-$(gcloud config get-value account 2>/dev/null)}
