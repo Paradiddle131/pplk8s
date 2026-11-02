@@ -2,7 +2,8 @@
 
 The toolset is the part that changes at work (`DataAgentToolset` for the lab's MetricFlow tools), so
 the freshness and the audit are not the toolset's: `guarded` gives every call to a data tool,
-answered or refused, its audit row and attaches its metrics' freshness to an answered one. Two
+answered or refused, its audit row and attaches its metrics' freshness to an answered one, and the
+row scope of the agent's role when it has one (scope.py, SL-21). Two
 surfaces call it: `after_data_tool`, ADK's `after_tool_callback`, and the MCP server
 (mcp_server.py), so an agent outside ADK gets the same audit and freshness. A data tool is every
 tool but the ones the seam names as reading only the catalog, so a tool the seam forgets to name is
@@ -21,6 +22,7 @@ from google.adk.tools import BaseTool, ToolContext
 
 from semantic_agent import audit
 from semantic_agent import freshness as ledger
+from semantic_agent import scope as rows
 from semantic_agent.metrics import Catalog, QueryError
 
 AfterTool = Callable[[BaseTool, dict[str, Any], ToolContext, Any], dict[str, Any] | None]
@@ -63,12 +65,18 @@ def guarded(
     catalog: Callable[[], Catalog] | None = None,
 ) -> dict[str, Any]:
     """What a data call's caller is shown: its result with, given the metric `catalog`, the
-    freshness of the metrics an answered call named, once its audit row is written; or the error
-    that withholds the result when the row cannot be written."""
+    freshness of the metrics an answered call named and, for a scoped role, the scope of the rows
+    it counted, once its audit row is written; or the error that withholds the result when the
+    row cannot be written."""
     response = response if isinstance(response, dict) else {"result": response}
     if catalog is not None and "error" not in response and "freshness" not in response:
         metrics = metrics_named(args, response)
         response = {**response, "freshness": freshness_of(tool, metrics, catalog())}
+    if catalog is not None and "error" not in response and "scope" not in response:
+        sql = response.get("sql")
+        found = rows.scope(sql if isinstance(sql, str) else None)
+        if found is not None:
+            response = {**response, "scope": found}
     withheld = audit.audit(tool, args, caller, response)
     return withheld if withheld is not None else response
 

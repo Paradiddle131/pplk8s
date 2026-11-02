@@ -28,6 +28,13 @@ make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 || { ta
 psql_dev -c "set client_min_messages = warning" -f /docker-entrypoint-initdb.d/01-schemas.sql
 make -s -C "$REPO" agent-warehouse DBT_DBNAME="$DB" >"$OUT/agent-warehouse.log" 2>&1 ||
   { tail -30 "$OUT/agent-warehouse.log" >&2; fail "make agent-warehouse"; }
+# The models were built before the macro created ops.agent_countries, so their post-hooks skipped the row
+# policies and the macro applied them (SL-21); agent_metrics_de then reads Germany's customers alone.
+[ "$(psql_dev -c "select count(*) from pg_policies where policyname = 'agent_scope' and schemaname = 'silver'")" = 3 ] ||
+  fail "make agent-warehouse did not put the agent_scope policy on silver.customers, orders and returns"
+[ "$(docker compose -f "$REPO/platform/compose/compose.yaml" exec -T -e PGPASSWORD=agent_metrics_de warehouse \
+  psql -h localhost -U agent_metrics_de -d "$DB" -qAt -c "select string_agg(distinct country, ',') from silver.customers")" = DE ] ||
+  fail "agent_metrics_de reads customers outside DE"
 # The fixture's days as the DAGs would record them, so every answer states a freshness (SL-4):
 # sales.silver, marketing.silver, customer_actions.silver, partner_outreach.silver, recruitment.silver and call_transcripts.silver take their pipelines' deadlines (36 h) and
 # are long late; returns.silver has none.

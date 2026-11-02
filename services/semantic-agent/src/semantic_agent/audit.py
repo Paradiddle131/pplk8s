@@ -3,10 +3,10 @@
 Both agents' `after_tool_callback` and the MCP server (guard.py) call `audit` for every call to a
 data tool, every tool but the catalog ones, so the tools stay as they are and each call, answered or
 refused, lands in `ops.agent_queries`: which agent, user, session and call (a `Caller`); the
-metrics, filters and dates or the SQL; the rows returned; the freshness statement; the error. The
-row is written as `agent_audit`, a role that may only insert into that table, never as the agent's
-own read role: the baseline runs whatever SQL its model writes, so a role that could write the
-audit could also forge it.
+metrics, filters and dates or the SQL; the rows returned; the freshness and scope statements; the
+error. The row is written as `agent_audit`, a role that may only insert into that table, never as
+the agent's own read role: the baseline runs whatever SQL its model writes, so a role that could
+write the audit could also forge it.
 
 An audit that cannot be written withholds the result: the model gets an error instead of rows.
 
@@ -27,10 +27,11 @@ from psycopg.types.json import Jsonb
 SQL = """
 insert into ops.agent_queries (
   agent, tool, user_id, session_id, invocation_id, call_id,
-  metrics, filters, arguments, sql, rows_returned, freshness, error
+  metrics, filters, arguments, sql, rows_returned, freshness, error, scope
 ) values (
   %(agent)s, %(tool)s, %(user_id)s, %(session_id)s, %(invocation_id)s, %(call_id)s,
-  %(metrics)s, %(filters)s, %(arguments)s, %(sql)s, %(rows_returned)s, %(freshness)s, %(error)s
+  %(metrics)s, %(filters)s, %(arguments)s, %(sql)s, %(rows_returned)s, %(freshness)s, %(error)s,
+  %(scope)s
 )
 """
 
@@ -72,6 +73,7 @@ def audit_row(
     """The audit row of one tool call: what was asked, by whom, and what came back."""
     rows = response.get("rows")
     freshness = response.get("freshness") or {}
+    scope = response.get("scope") or {}
     return {
         "agent": caller.agent,
         "tool": tool,
@@ -87,6 +89,7 @@ def audit_row(
         "rows_returned": len(rows) if isinstance(rows, list) else None,
         "freshness": freshness.get("statement"),
         "error": response.get("error"),
+        "scope": scope.get("statement"),
     }
 
 

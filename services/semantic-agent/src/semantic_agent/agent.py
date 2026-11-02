@@ -33,7 +33,9 @@ saved_query, narrowed by start_date, end_date and filters as the question asks.
 If no metric answers the question, say that the semantic layer has no such metric and name the
 closest metrics; do not answer from general knowledge.
 Answer in one or two sentences: the figure with its unit, and the days or period it covers.
-Then add the freshness statement that query_metrics returned, word for word.
+Then add the freshness statement that query_metrics returned, word for word, and, when it
+returned a scope, the scope statement word for word, so a figure for some countries is never read
+as the company's.
 """
 
 

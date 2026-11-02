@@ -123,6 +123,22 @@ The lab deploys one agent; the text-to-SQL baseline runs only inside the eval (S
 Add B only for an agent that must see part of a dataset, and C only when the agents' query cost or quota needs its own budget.
 On the lab project, A is declared in [`platform/gcp/access.yaml`](../platform/gcp/access.yaml) (#205): `dbt-runner`, `semantic-agent` and `agent-audit`, each with BigQuery Job User and the dataset grants of the lab role it stands for, which `platform/gcp/tests/test_access.py` compares with `dbt/macros/agent_warehouse.sql`; the table-level grants on `ops` come with their tables (#209).
 
+### Rows an agent may read
+
+A grant covers a whole table, so an agent for one market reads every market's rows unless the warehouse filters them ([`semantic/PLAN.md`](../semantic/PLAN.md) SL-21).
+The lab's stand-in is a Postgres row policy on `silver.customers`, `silver.orders` and `silver.returns` (`dbt/macros/agent_row_scope.sql`): the role `agent_metrics_de` reads only Germany's customers and their orders and returns, so MetricFlow's queries run unchanged and simply see fewer rows (measured (Postgres), `tests/e2e/agent-standalone-check.sh`).
+Every answer from a scoped role carries a scope statement beside its freshness (`Scoped: this figure counts only customers in DE (…)`), and the audit row keeps it in `scope`, so a German total is never read as the company's.
+
+| Lab (Postgres) | BigQuery |
+|---|---|
+| `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and `CREATE POLICY agent_scope … USING (…)` | `CREATE ROW ACCESS POLICY <name> ON <table> GRANT TO ("serviceAccount:<agent>") FILTER USING (<condition>)` ([row-level security](https://docs.cloud.google.com/bigquery/docs/row-level-security-intro)) |
+| The role's countries in `ops.agent_scopes`, read by the policy through `ops.agent_countries(role)` | The grantees of each policy: one policy per scope, naming the agent's service account; a principal no policy grants sees no rows of a table that has one, so the pipelines' and the unscoped agents' accounts need a policy of their own with `FILTER USING (TRUE)` (stated on the same page; not measured here) |
+| A dbt post-hook on each scoped model re-applies the policy after dbt replaces the table | The same: dbt-bigquery has no row policy config, so a post-hook runs `CREATE OR REPLACE ROW ACCESS POLICY`; Terraform's `google_bigquery_row_access_policy` would declare it outside dbt instead (unverified), and a table dbt replaces drops its policies either way |
+| Orders reach the country through the reader's own view of customers (a subquery under the customers policy) | A `FILTER USING` condition may not reference other tables in the way a Postgres policy can (unverified), so orders would need the country on the row, or the scope moves into an authorized view (option B above) |
+| The scope statement reads the role's countries and the tables with a policy | `INFORMATION_SCHEMA.ROW_ACCESS_POLICIES` lists a dataset's policies and their grantees (unverified); not built |
+
+Cost: a row filter does not prune partitions, and BigQuery leaves bytes billed out of `INFORMATION_SCHEMA.JOBS` for queries on tables with row access policies (stated on the row-level security overview and [the JOBS view](https://docs.cloud.google.com/bigquery/docs/information-schema-jobs); not measured), which matters for the per-question cost report.
+
 ### What is logged where
 
 | Lab (`ops.agent_queries`) | BigQuery |
