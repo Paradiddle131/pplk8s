@@ -61,6 +61,7 @@ The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the 
 Agents outside ADK (Claude, Gemini CLI, a Vertex AI agent) reach the same three tools through `mcp_server.py`, the MCP Python SDK's `MCPServer` over streamable HTTP (SL-20): `make agent-mcp` serves `localhost:8765/mcp` for the clients named in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.
 - The tools are `tools.py`'s, with their names, docstrings and argument checks; a data call's result passes through `guard.guarded`, the function ADK's after-tool callback calls, so it gets its freshness and its audit row, or is withheld when the row cannot be written.
 - The bearer token names the agent the row is written as; a call without a known token is refused with 401 before any tool runs, and a server with no client refuses to start.
+- It runs with uv, not in the image: the MCP SDK is uv's `mcp` group and `.dockerignore` leaves `mcp_server.py` out (SL-19).
 - `make agent-mcp-check` drives it with a scripted MCP client and no model; `examples/mcp_client` is an agent with only an `McpToolset` on the server, for `uv run adk run examples/mcp_client "<question>"` with `SEMANTIC_MCP_TOKEN` set (one free-tier model turn per tool call).
 
 ## Freshness

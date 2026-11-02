@@ -9,3 +9,5 @@ evals/
 README.md
 # Eval-only: runs with uv (`make agent-eval`), imports the eval group and the warehouse owner's driver.
 src/semantic_agent/evaluation.py
+# Not deployed: the MCP server runs with uv (`make agent-mcp`), and its SDK is the `mcp` group.
+src/semantic_agent/mcp_server.py

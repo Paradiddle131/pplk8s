@@ -2309,7 +2309,6 @@ dependencies = [
     { name = "dbt-postgres" },
     { name = "google-adk", extra = ["db"] },
     { name = "litellm" },
-    { name = "mcp" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyyaml" },
 ]
@@ -2322,6 +2321,9 @@ dev = [
 eval = [
     { name = "google-adk", extra = ["eval"] },
 ]
+mcp = [
+    { name = "mcp" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -2331,7 +2333,6 @@ requires-dist = [
     { name = "dbt-postgres", specifier = "==1.11.0" },
     { name = "google-adk", extras = ["db"], specifier = "==2.13.0" },
     { name = "litellm", specifier = "==1.96.2" },
-    { name = "mcp", specifier = "==2.3.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "pyyaml" },
 ]
@@ -2342,6 +2343,7 @@ dev = [
     { name = "ruff" },
 ]
 eval = [{ name = "google-adk", extras = ["eval"], specifier = "==2.13.0" }]
+mcp = [{ name = "mcp", specifier = "==2.3.0" }]
 
 [[package]]
 name = "six"

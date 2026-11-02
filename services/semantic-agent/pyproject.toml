@@ -13,8 +13,6 @@ dependencies = [
     "dbt-metricflow[dbt-postgres]==0.15.0",
     "psycopg[binary]==3.3.6",
     "asyncpg==0.31.0",
-    # The MCP server that serves the three tools to agents outside ADK (mcp_server.py).
-    "mcp==2.3.0",
     "pyyaml",
 ]
 
@@ -23,7 +21,7 @@ requires = ["uv_build>=0.11.7,<0.12"]
 build-backend = "uv_build"
 
 [dependency-groups]
-# Neither group is installed in any image (`uv sync --no-default-groups` in the Dockerfile).
+# No group is installed in any image (`uv sync --no-default-groups` in the Dockerfile).
 # dev: the test and lint tools.
 dev = [
     "pytest",
@@ -33,10 +31,14 @@ dev = [
 eval = [
     "google-adk[eval]==2.13.0",
 ]
+# mcp: the MCP server for agents outside ADK (semantic_agent.mcp_server, `make agent-mcp`), not deployed.
+mcp = [
+    "mcp==2.3.0",
+]
 
 [tool.uv]
-# `uv run` and `uv sync` on a laptop or a cloud session get both, so the tests and the eval run as before.
-default-groups = ["dev", "eval"]
+# `uv run` and `uv sync` on a laptop or a cloud session get every group, so the tests, the eval and the MCP server run.
+default-groups = ["dev", "eval", "mcp"]
 
 [tool.uv.build-backend]
 module-name = ["semantic_agent", "sql_baseline"]
