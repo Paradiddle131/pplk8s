@@ -62,7 +62,7 @@ The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the 
 `AGENT_TOOLSET` picks what the agent answers through (`toolset.py`, #207); each implementation names the tools that read only the catalog, and every other tool's calls are audited and given their freshness by `guard.py`:
 - `metricflow` (the default, `toolset_metricflow.py`): the three metric tools above, `list_metrics` and `describe_metric` the catalog ones.
 - `data_agent` (`toolset_data_agent.py`): ADK's `DataAgentToolset` on the lab project's native data agent, built from the same generated context (`make gcp-data-agent` publishes it): `get_data_agent_info` (catalog) and `ask_data_agent`.
-  The data agent is `DATA_AGENT_NAME`, else `projects/<GCP_PROJECT>/locations/<DATA_AGENT_LOCATION, global>/dataAgents/<DATA_AGENT_ID, pplk8s-semantic>`, and it refuses without either; it asks as the token in `GCP_ACCESS_TOKEN` (a cloud session's proxy), else application default credentials.
+  The data agent is `DATA_AGENT_NAME`, else `projects/<GCP_PROJECT>/locations/<DATA_AGENT_LOCATION, us>/dataAgents/<DATA_AGENT_ID, pplk8s-semantic>`, and it refuses without either; it asks as the token in `GCP_ACCESS_TOKEN` (a cloud session's proxy), else application default credentials.
   Its answer names tables, not metrics, so the freshness comes from the tables its generated SQL reads: the catalog lists each semantic model's table with its readiness products (`semantic_models` in `agent.json`), matched on dataset and table; SQL that reads none of them gets "Freshness unknown", saying why.
   The audit row holds the generated SQL and the rows its `Data Retrieved` steps returned.
 

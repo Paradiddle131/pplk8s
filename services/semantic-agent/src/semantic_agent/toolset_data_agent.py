@@ -9,7 +9,7 @@ rows among them. Its answer names tables, not metrics, so the guard looks the fr
 tables the generated SQL reads (guard.py); every call is audited as on MetricFlow.
 
 Which data agent: `DATA_AGENT_NAME`, a resource name, else `projects/<GCP_PROJECT>/locations/
-<DATA_AGENT_LOCATION, default global>/dataAgents/<DATA_AGENT_ID, default pplk8s-semantic>`; without
+<DATA_AGENT_LOCATION, default us>/dataAgents/<DATA_AGENT_ID, default pplk8s-semantic>`; without
 either it refuses, so it never asks a data agent of gcloud's active project by accident. Its
 credentials: the access token in `GCP_ACCESS_TOKEN` where a proxy injects the real one (cloud
 sessions), else application default credentials (Cloud Run's service account, a laptop's gcloud).
@@ -30,7 +30,7 @@ from google.adk.tools.data_agent import (
 from semantic_agent.toolset import Toolset
 
 DEFAULT_ID = "pplk8s-semantic"
-DEFAULT_LOCATION = "global"
+DEFAULT_LOCATION = "us"  # where `make gcp-data-agent` publishes it, beside the US datasets
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 CATALOG_TOOLS = ("list_accessible_data_agents", "get_data_agent_info")
 TOOLS = ["get_data_agent_info", "ask_data_agent"]

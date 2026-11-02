@@ -23,7 +23,7 @@ from semantic_agent.toolset import Toolset, toolset
 from tests.conftest import FIXTURES, ScriptedLlm, final_text, run_turn
 
 CATALOG = ("list_accessible_data_agents", "get_data_agent_info")
-AGENT = "projects/example-project/locations/global/dataAgents/pplk8s-semantic"
+AGENT = "projects/example-project/locations/us/dataAgents/pplk8s-semantic"
 SQL = (
     "SELECT\n  SUM(orders.amount_eur) AS revenue_eur\nFROM\n  `example-project.silver.orders`"
     " AS orders\nWHERE\n  orders.ordered_at >= '2026-10-01'"
@@ -207,7 +207,7 @@ def test_the_data_agent_toolset_asks_the_lab_projects_agent(monkeypatch):
     (data_agents,) = chosen.tools
     names = [tool.name for tool in asyncio.run(data_agents.get_tools())]
     assert names == ["get_data_agent_info", "ask_data_agent"]
-    assert "projects/lab-project/locations/global/dataAgents/pplk8s-semantic" in chosen.instruction
+    assert "projects/lab-project/locations/us/dataAgents/pplk8s-semantic" in chosen.instruction
     assert set(names) - set(chosen.catalog_tools) == {"ask_data_agent"}
 
 
@@ -229,5 +229,5 @@ def test_the_served_agent_builds_over_the_data_agent():
         [sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True
     )
     first, metricflow = out.stdout.splitlines()
-    assert "projects/lab-project/locations/global/dataAgents/pplk8s-semantic" in first
+    assert "projects/lab-project/locations/us/dataAgents/pplk8s-semantic" in first
     assert metricflow == "False"
