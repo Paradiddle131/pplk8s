@@ -135,6 +135,8 @@ models:
       message sent. Alias exposed.outreach_activation.
     config:
       access: protected
+      # The one role besides the owner that reads the personal columns (macros/agent_pii_columns.sql, SL-22).
+      meta: {pii_readers: [outreach_automation]}
     columns:
       - name: contact_id
         description: Natural key.

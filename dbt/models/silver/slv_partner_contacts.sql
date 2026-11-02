@@ -1,4 +1,5 @@
-{{ config(alias='partner_contacts', tags=['partner_outreach']) }}
+{{ config(alias='partner_contacts', tags=['partner_outreach'],
+          persist_docs={'columns': var('pii_policy_tag') != ''}) }}
 
 -- Latest state per contact_id by when the source changed it (updated_ts), then the latest load.
 -- Each run lands a snapshot of every contact, so a backfill of an older interval lands an older

@@ -8,6 +8,9 @@ Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3,
   contract that types every column, except one holding a column marked personal data (`meta: {pii: true}`),
   which is protected and so stays out of the agent catalog; semantic models sit on silver, so an agent
   reaches silver only through a metric;
+- personal data (SL-22): no model of the semantic stage holds a column marked `meta: {pii: true}`, no
+  semantic model names one as a dimension or an entity, and every such column of a table carries
+  `policy_tags`, BigQuery's counterpart of the lab's column grants (macros/agent_pii_columns.sql);
 - words: every model that builds a relation is described, every public model's column too, every
   semantic model with its entities, dimensions and measures, and every metric has a description and a label;
   every saved query a description, a label and the business question it answers (`config.meta.question`),
@@ -31,6 +34,8 @@ LAYERS = (*PREFIXES, "semantic", "migration")
 PUBLIC_LAYERS = {"gold", "exposed"}
 
 PUBLIC_GROUP = "analytics"
+# Materializations that build a table, the relation a BigQuery policy tag protects (a view inherits it).
+TABLES = {"table", "incremental"}
 
 
 def is_pii(column: dict) -> bool:
@@ -76,6 +81,14 @@ def model_problems(node: dict) -> list[str]:
             f"model {name}: {node.get('access')} in {layer}; only gold and exposed are public, "
             "unless they hold personal data"
         )
+    if pii and layer == "semantic":
+        found.append(f"model {name}: in semantic with personal data in {', '.join(pii)}")
+    if node["config"].get("materialized") in TABLES:
+        found += [
+            f"model {name}: personal column {column} has no policy_tags"
+            for column in pii
+            if not node["columns"][column].get("policy_tags")
+        ]
     if public and node.get("group") != PUBLIC_GROUP:
         found.append(f"model {name}: public outside the {PUBLIC_GROUP} group")
     if public and not node["config"].get("contract", {}).get("enforced"):
@@ -123,6 +136,26 @@ def semantic_problems(semantic_manifest: dict) -> list[str]:
             for field in ("description", "label")
             if not (metric.get(field) or "").strip()
         ]
+    return found
+
+
+def personal_semantic_problems(manifest: dict) -> list[str]:
+    """A semantic model that names a personal column of its model as a dimension or an entity."""
+    found = []
+    for semantic_model in sorted(manifest.get("semantic_models", {}).values(), key=lambda m: m["name"]):
+        pii = {
+            column
+            for unique_id in semantic_model["depends_on"]["nodes"]
+            for column, spec in manifest["nodes"].get(unique_id, {}).get("columns", {}).items()
+            if is_pii(spec)
+        }
+        for kind, noun in (("dimensions", "dimension"), ("entities", "entity")):
+            for element in semantic_model.get(kind) or []:
+                named = set(re.findall(r"[a-z_][a-z0-9_]*", str(element.get("expr") or element["name"]).lower()))
+                found += [
+                    f"semantic model {semantic_model['name']}: {noun} {element['name']} names personal column {column}"
+                    for column in sorted(named & pii)
+                ]
     return found
 
 
@@ -196,6 +229,7 @@ def problems(manifest: dict, semantic_manifest: dict) -> list[str]:
     return (
         found
         + semantic_problems(semantic_manifest)
+        + personal_semantic_problems(manifest)
         + model_derived_problems(manifest, semantic_manifest)
         + saved_query_problems(manifest)
     )

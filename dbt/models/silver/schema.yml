@@ -1103,7 +1103,8 @@ models:
     description: >
       One row per partner contact in its newest state: the latest updated_ts wins, then the latest load, so a
       backfilled older snapshot never undoes an opt-out. reachable is consent given and no opt-out. Name, email and
-      phone are personal data (meta.pii); only the outreach automation's activation list may carry them on.
+      phone are personal data (meta.pii): no agent role may select them (semantic/PLAN.md SL-22), and only the
+      outreach automation's activation list may carry them on.
       Alias silver.partner_contacts.
     columns:
       - name: contact_id
@@ -1119,14 +1120,17 @@ models:
                 field: partner_id
       - name: contact_name
         description: The contact's full name.
+        policy_tags: ["{{ var('pii_policy_tag') }}"]
         config:
           meta: {pii: true}
       - name: email
         description: The contact's email address.
+        policy_tags: ["{{ var('pii_policy_tag') }}"]
         config:
           meta: {pii: true}
       - name: phone
         description: The contact's phone number.
+        policy_tags: ["{{ var('pii_policy_tag') }}"]
         config:
           meta: {pii: true}
       - name: preferred_channel

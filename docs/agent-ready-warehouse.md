@@ -77,7 +77,9 @@ dbt has no glossary node; `meta` on the model keeps the term beside the columns 
 
 Gold and exposed models, and only they, are `access: public` in the `analytics` group (`dbt/models/groups.yml`); bronze, silver and the semantic stage are `protected` (SL-4).
 A column of personal data carries `meta: {pii: true}` from bronze on; a gold or exposed model holding one is `protected` instead, so it stays out of the agent catalog, and its consumer is an automation or a person, never an agent (`exp_outreach_activation`, semantic/PLAN.md SL-16).
-No semantic model sits on a model with personal data, so no metric or dimension can name a personal column.
+No semantic model names a personal column as a dimension or an entity, and no agent role can select one: the warehouse grants it by column, the owner and the model's `config.meta.pii_readers` (the automation) reading it, every agent role every other column (`dbt/macros/agent_pii_columns.sql`, semantic/PLAN.md SL-22).
+`make agent-columns-check` logs in as each role and shows it, whichever of `make agent-warehouse` and `dbt build` runs first.
+A personal column of a table also carries `policy_tags`, the BigQuery policy tag that does the same there.
 A public model enforces a contract (`contract: {enforced: true}`, set per layer in `dbt_project.yml`) and gives every column a `data_type`, so a change that renames, drops, adds or retypes a column an agent relies on fails `dbt build` before it replaces the table, instead of leaving the agent's context stale.
 A type is spelled so both warehouses accept it: `date`, `numeric`, `bigint` and `integer` as they are, a string as the file's `text` anchor (`text` on Postgres, `string` on BigQuery).
 A view gets the same name and type check, but no constraints; the standard asks for none.
@@ -112,11 +114,12 @@ A ratio is never stored per day for agents to average: the metric divides the to
 - a model outside a layer folder, building outside its layer's dataset, without its layer's prefix, or whose relation is not its name without the prefix;
 - a name that is not snake case: model, column, semantic model, entity, dimension, measure or metric;
 - a public model outside gold and exposed or outside the `analytics` group, a gold or exposed model that is not public unless it holds a column marked `meta: {pii: true}`, a public model that holds one, or a semantic model off silver;
+- a model of the semantic stage holding a column marked `meta: {pii: true}`, a semantic model naming one as a dimension or an entity, or one on a table without `policy_tags`;
 - a public model without an enforced contract, or a public model's column without a `data_type`;
 - a missing description on any of the things the rules above name, or a metric without a label;
 - a metric over a model-derived column (`meta: {derived_by: model}`, a label a language model read out of text), directly or through its input metrics, whose description does not start with "Model-derived" (semantic/PLAN.md SL-18).
 
-It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric, on a metric over model-derived labels that does not say so, and on an unprefixed, undescribed, untyped gold model with a personal-data column, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
+It runs in `make dbt-validate` and in the dbt image build; `make semantic-check` shows it failing on an undescribed metric, on a metric over model-derived labels that does not say so, on an unprefixed, undescribed, untyped gold model with a personal-data column, and on a silver table whose personal column has no policy tag and is a semantic model's dimension, and `dbt build` failing on a public model whose SQL renames or retypes a contracted column.
 `check_catalog.py` (`make dbt-catalog`) checks the catalog artefacts built from the same manifests, glossary terms included (an unknown metric, a dimension none of the term's metrics has, a term repeating a metric), and `make catalog-check` that every gold and exposed column has its comment in the warehouse.
 
 A column the SQL selects but the YAML does not name is absent from the manifest, so the parse cannot see it; the contract can, and the build fails on it.

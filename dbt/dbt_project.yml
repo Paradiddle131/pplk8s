@@ -26,6 +26,10 @@ vars:
   customer_actions_lookback_hours: 72
   # The outreach activation list leaves out a contact messaged this many days before its as_of (SL-16).
   outreach_cooldown_days: 7
+  # The BigQuery policy tag of personal columns (semantic/PLAN.md SL-22), a resource name
+  # projects/<project>/locations/<location>/taxonomies/<id>/policyTags/<id> a deployment creates; while it is
+  # empty, as in the lab, silver.partner_contacts persists no column docs, so no tag is written.
+  pii_policy_tag: ""
   # The fiscal year starts on the first day of this month (2: February); the time spine's fiscal quarters
   # and years follow it (models/semantic/metricflow_time_spine.sql).
   fiscal_year_start_month: 2
@@ -67,6 +71,9 @@ on-run-end:
 
 models:
   pplk8s:
+    # Personal data by column (semantic/PLAN.md SL-22): a model with a column marked meta.pii keeps it from
+    # every role but its owner and its meta.pii_readers (macros/agent_pii_columns.sql); a no-op elsewhere.
+    +post-hook: "{{ agent_pii_columns() }}"
     # Trust tiers (semantic/PLAN.md SL-4): gold and exposed are the agent-facing models, public in the
     # analytics group, with their descriptions persisted as warehouse comments (the catalog's words, SL-3)
     # and an enforced contract, so a renamed, dropped or retyped column fails the build;
