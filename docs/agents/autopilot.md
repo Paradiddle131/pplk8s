@@ -7,16 +7,21 @@ Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit
 
 ## Delivery
 
-`per-issue`: branch `claude/<n>-<slug>`, one draft PR per issue; stack on an open PR's branch when the issue depends on it.
+`train claude/autopilot-train` (owner, 2026-11-02): one open train PR that every wake lands on (`export AUTOPILOT_TRAIN=claude/autopilot-train` before the scripts); the per-issue PRs open before the switch finish as they are, under the skill's resume rules.
+On the train, an image whose contents change gets its `Makefile` tag bumped once above `main`'s; later wakes on the same train keep that tag (each wake's kind is fresh), and the next train bumps again (D16).
 
 ## Digest
 
-The body of [#43](../../../../issues/43) lists open owner questions only; PRs waiting for the laptop are the `needs-local-verify` label, so drop any other section of that body when you next edit it.
+The body of [#43](../../../../issues/43) lists open owner questions only, under two steering lines the owner edits:
+- `Mode: paused | offline | full`: `paused` ends the wake after Orient (no claim, no writes); `offline` is § Offline wakes below; `full` lets a wake do Map #212's live steps.
+  The stricter of this line and the routine prompt wins; no line means `offline`.
+- `Owner lane: <maps or issues> — <path globs>`: the owner's attended work.
+  A wake picks no issue in those maps or naming a file under those globs, and, among the rest, prefers the one whose files lie furthest from them (docs-only first); `Owner lane: none` clears it.
 
 ## Merge policy
 
-Never merge (owner, 2026-10-12): the real exit checks need the laptop's kind cluster.
-A finished, cloud-verified PR is marked ready and labelled `needs-local-verify`; the owner's local session runs its checklist and merges.
+Wakes never merge.
+The train PR is marked ready and labelled `needs-local-verify` once its gates pass (no `local` gates, so cloud's counts are the verification); the owner, or a session the owner asks, merges it with a merge commit, so each issue's commits stay findable.
 
 ## Queue
 
