@@ -177,3 +177,63 @@ def test_runs_per_month_is_the_worst_month() -> None:
     assert runs_per_month("*/15 * * * *") == 2976
     assert runs_per_month("0 9 * * 1-5") == 25
     assert runs_per_month("0 0 1 * 0") == 6
+
+
+def test_the_alerting_policy_expires_before_monitoring_charges_for_it(
+    copy: Path,
+) -> None:
+    # Cloud Monitoring charges for alerting "no sooner than September 1, 2027".
+    assert problems(copy, dt.date(2027, 8, 31)) == []
+    assert any(
+        "google_monitoring_alert_policy declared past its free window" in p
+        for p in problems(copy, dt.date(2027, 9, 1))
+    )
+
+
+def test_a_paid_notification_channel_fails(copy: Path) -> None:
+    edit(
+        copy / "infra" / "monitoring.tf",
+        'type         = "email"',
+        'type         = "sms"',
+    )
+    assert any("notification channel of type sms" in p for p in problems(copy))
+
+
+def test_a_second_log_based_metric_fails(copy: Path) -> None:
+    (copy / "infra" / "more.tf").write_text(
+        'resource "google_logging_metric" "another" {}\n'
+    )
+    assert any("one google_logging_metric" in p for p in problems(copy))
+
+
+def test_log_metric_series_past_the_free_bytes_fail(copy: Path) -> None:
+    # 500 series x 44,640 points x 8 bytes = 170 MiB, past the free 150 MiB.
+    edit(copy / "free-path.yaml", "log_metric_series: 100", "log_metric_series: 500")
+    assert any("free 150 MiB" in p for p in problems(copy))
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("unit: instances, value: 4}", "unit: instances, value: 100}"),
+        ("unit: milli_vcpu, value: 4000}", "unit: milli_vcpu, value: 4001}"),
+        ("unit: bytes, value: 2147483648}", "unit: bytes, value: 4294967296}"),
+    ],
+)
+def test_a_cloud_run_quota_above_the_workloads_fails(
+    copy: Path, old: str, new: str
+) -> None:
+    edit(copy / "free-path.yaml", old, new)
+    assert any("workloads.yaml can use at once" in p for p in problems(copy))
+
+
+def test_cloud_run_quotas_are_what_the_workloads_use_at_once() -> None:
+    # The agent at its cap, one task of each Job, one more agent instance for a rollout: 4 x (1 vCPU, 512 MiB).
+    caps = yaml.safe_load((GCP / "free-path.yaml").read_text())["caps"]
+    assert {
+        q["unit"]: q["value"] for q in caps["cloud_run_regional_quotas"].values()
+    } == {
+        "instances": 4,
+        "milli_vcpu": 4000,
+        "bytes": 4 * 512 * 2**20,
+    }

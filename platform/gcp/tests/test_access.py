@@ -89,3 +89,57 @@ def test_every_grant_names_a_declared_dataset() -> None:
     for account in ACCESS["service_accounts"].values():
         assert set(account["reads"]) | set(account["writes"]) <= set(ACCESS["datasets"])
         assert not set(account["reads"]) & set(account["writes"])
+
+
+TABLE_GRANT = re.compile(r"GRANT (SELECT|INSERT) ON (ops\.[a-z_]+) TO ([a-z_]+);")
+ACCESS_FOR = {"SELECT": "read", "INSERT": "insert"}
+
+
+def table_grants(role: str) -> dict[str, str]:
+    """The lab role's table-level grants, as access.yaml spells them."""
+    return {
+        table: ACCESS_FOR[privilege]
+        for privilege, table, grantee in TABLE_GRANT.findall(MACRO)
+        if grantee == role
+    }
+
+
+def test_the_semantic_agent_reads_the_two_freshness_tables() -> None:
+    (agent,) = accounts_for("agent_metrics")
+    assert (
+        agent["tables"]
+        == table_grants("agent_metrics")
+        == {"ops.readiness": "read", "ops.product_deadlines": "read"}
+    )
+
+
+def test_the_audit_writer_inserts_into_the_audit_table_and_nothing_else() -> None:
+    (audit,) = accounts_for("agent_audit")
+    assert (
+        audit["tables"]
+        == table_grants("agent_audit")
+        == {"ops.agent_queries": "insert"}
+    )
+
+
+def test_table_grants_are_in_ops_and_name_a_table_access() -> None:
+    # infra/bigquery.tf grants on the ops tables tofu.sh finds; another dataset's table would never be granted.
+    for account in ACCESS["service_accounts"].values():
+        for table, access in (account.get("tables") or {}).items():
+            assert table.split(".")[0] == "ops"
+            assert access in ACCESS["table_access"]
+
+
+def test_insert_is_a_custom_role_that_cannot_read_or_drop_the_table() -> None:
+    # Least privilege for a DML INSERT ... VALUES: write the rows and read the table's schema, nothing else;
+    # bigquery.jobs.create comes from BigQuery Job User on the project (infra/bigquery.tf job_user).
+    access = ACCESS["table_access"]
+    assert access["read"] == {"role": "roles/bigquery.dataViewer"}
+    assert set(access["insert"]["permissions"]) == {
+        "bigquery.tables.get",
+        "bigquery.tables.updateData",
+    }
+    # updateData still permits UPDATE and DELETE statements: BigQuery IAM has no insert-only permission.
+    assert (
+        "updateData still permits UPDATE, DELETE" in (GCP / "access.yaml").read_text()
+    )

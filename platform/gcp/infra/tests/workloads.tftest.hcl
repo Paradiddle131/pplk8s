@@ -11,7 +11,8 @@ mock_provider "google" {
 }
 
 variables {
-  project = "lab-project"
+  project     = "lab-project"
+  alert_email = "owner@example.com"
 }
 
 run "a_plain_gcp_up_has_no_workloads" {
@@ -91,6 +92,11 @@ run "both_images" {
   assert {
     condition     = google_cloud_run_v2_job.workload["dbt-source-freshness"].template[0].template[0].containers[0].command[2] == "dbt source freshness; rc=$?; [ \"$rc\" -le 1 ]"
     error_message = "The freshness Job exits 0 on a stale source, as the kind CronJob does."
+  }
+
+  assert {
+    condition     = google_cloud_scheduler_job.run_job["dbt-source-freshness"].paused && !google_cloud_scheduler_job.run_job["dbt-build"].paused
+    error_message = "The hourly freshness check stays paused until #227 lands sources; the daily build runs."
   }
 
   assert {

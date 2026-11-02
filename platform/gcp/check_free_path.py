@@ -3,14 +3,18 @@
 Checks, against free-path.yaml:
 - every API listed has an https source and is not on its `paid` list;
 - an API past its `until` date is not enabled;
-- every resource type the OpenTofu root declares is listed, and its API is enabled;
+- every resource type the OpenTofu root declares is listed, and its API is enabled; one given as
+  {api, source, until} has an https source and is not declared past its `until` (alerting policies);
 - every `*.googleapis.com` host the root names (resources, workflow sources) is an enabled API;
 - every API GCP enables by itself (`implicit`) has an https source and is not paid;
 - the daily query cap, every day of a 31-day month, stays inside BigQuery's free 1 TiB of queries;
 - Cloud Run (#209): no public invoker, no service with a minimum instance, a maximum above
   `caps.cloud_run_max_instances` or CPU outside requests, one task and one attempt per Job run;
   workloads.yaml's scheduled Jobs, each run for its whole timeout, inside the Jobs' free vCPU- and
-  GiB-seconds, and no more Scheduler jobs than `caps.cloud_scheduler_jobs`, itself at most the free three.
+  GiB-seconds, and no more Scheduler jobs than `caps.cloud_scheduler_jobs`, itself at most the free three;
+  Cloud Run's regional quota caps no higher than what workloads.yaml can run at once plus a rollout's instance;
+- the freshness alert (#209): one log-based metric, `caps.log_metric_series` inside Monitoring's free 150 MiB,
+  and notification channels only of `caps.notification_channel_types`.
 
 Usage: python platform/gcp/check_free_path.py [gcp dir]; run by `make gcp-validate`.
 """
@@ -33,6 +37,12 @@ FREE_JOB_VCPU_SECONDS = 240_000
 FREE_JOB_GIB_SECONDS = 450_000
 JOB_MINIMUM_S = 60
 FREE_SCHEDULER_JOBS = 3
+# Cloud Monitoring (https://cloud.google.com/stackdriver/pricing#metrics-charged-by-bytes): user-defined
+# log-based metrics are chargeable, 8 bytes per point of a counter, the first 150 MiB a month per billing
+# account free; a log-based metric writes at most one point a minute per time series.
+FREE_METRIC_BYTES = 150 * 1024 * 1024
+POINT_BYTES = 8
+MINUTES_PER_MONTH = 31 * 24 * 60
 RESOURCE = re.compile(r'^\s*resource\s+"([a-z0-9_]+)"', re.MULTILINE)
 PUBLIC = re.compile(r"\ball(?:Authenticated)?Users\b")
 COMMENT = re.compile(r"^\s*(?:#|//).*$", re.MULTILINE)
@@ -40,15 +50,34 @@ SETTING = re.compile(
     r"^\s*([a-z_]+)\s*=\s*([0-9]+|true|false)\s*(?:#.*)?$", re.MULTILINE
 )
 HOST = re.compile(r"\b([a-z0-9-]+\.googleapis\.com)\b")
+CHANNEL = re.compile(
+    r'^resource\s+"google_monitoring_notification_channel"\s+"[^"]+"\s*\{(.*?)^\}',
+    re.MULTILINE | re.DOTALL,
+)
+CHANNEL_TYPE = re.compile(r'^\s*type\s*=\s*"([^"]*)"', re.MULTILINE)
 
 
 def problems(gcp: Path, today: dt.date | None = None) -> list[str]:
     today = today or dt.datetime.now(dt.UTC).date()
     spec = yaml.safe_load((gcp / "free-path.yaml").read_text())
     apis: dict[str, dict] = spec.get("apis") or {}
-    resources: dict[str, str] = spec.get("resources") or {}
     paid = set(spec.get("paid") or [])
     out: list[str] = []
+
+    for kind, entry in (spec.get("resources") or {}).items():
+        if isinstance(entry, dict) and not str(entry.get("source", "")).startswith(
+            "https://"
+        ):
+            out.append(f"{kind}: a resource type entry without an https source")
+    resources = {
+        kind: entry["api"] if isinstance(entry, dict) else entry
+        for kind, entry in (spec.get("resources") or {}).items()
+    }
+    dated = {
+        kind: dt.date.fromisoformat(str(entry["until"]))
+        for kind, entry in (spec.get("resources") or {}).items()
+        if isinstance(entry, dict) and entry.get("until")
+    }
 
     for name, api in apis.items():
         if name in paid:
@@ -87,19 +116,26 @@ def problems(gcp: Path, today: dt.date | None = None) -> list[str]:
         )
 
     out += workload_problems(gcp, caps)
+    out += monitoring_caps_problems(caps)
     infra = gcp / "infra"
-    schedulers = 0
+    schedulers = metrics = 0
     for path in sorted([*infra.glob("*.tf"), *infra.glob("*.yaml")]):
         text = path.read_text()
         if path.suffix == ".tf":
             out += run_problems(path.name, text, caps)
+            out += channel_problems(path.name, text, caps)
             schedulers += RESOURCE.findall(text).count("google_cloud_scheduler_job")
+            metrics += RESOURCE.findall(text).count("google_logging_metric")
         for kind in RESOURCE.findall(text):
             api = resources.get(kind)
             if api is None:
                 out.append(f"{path.name}: resource type {kind} is not on the free path")
             elif api not in enabled:
                 out.append(f"{path.name}: {kind} needs {api}, which is not enabled")
+            elif kind in dated and today > dated[kind]:
+                out.append(
+                    f"{path.name}: {kind} declared past its free window ({dated[kind]})"
+                )
         for host in HOST.findall(text):
             if host not in enabled:
                 out.append(
@@ -109,6 +145,41 @@ def problems(gcp: Path, today: dt.date | None = None) -> list[str]:
         out.append(
             "infra: one google_cloud_scheduler_job resource, over workloads.yaml's schedules, so the cap counts them all"
         )
+    if metrics > 1:
+        out.append(
+            "infra: one google_logging_metric, whose time series tests/test_freshness_alert.py bounds by caps.log_metric_series"
+        )
+    return out
+
+
+def monitoring_caps_problems(caps: dict) -> list[str]:
+    """The log-based metrics' worst month inside Monitoring's free bytes, and a channel allowlist."""
+    out = []
+    series = caps.get("log_metric_series")
+    if not isinstance(series, int) or series <= 0:
+        out.append(
+            "caps.log_metric_series: missing; a log-based metric's labels set its series"
+        )
+    elif series * MINUTES_PER_MONTH * POINT_BYTES > FREE_METRIC_BYTES:
+        out.append(
+            f"caps.log_metric_series: {series} series a point a minute ingest past Monitoring's free 150 MiB a month"
+        )
+    if not isinstance(caps.get("notification_channel_types"), list):
+        out.append("caps.notification_channel_types: missing")
+    return out
+
+
+def channel_problems(name: str, text: str, caps: dict) -> list[str]:
+    """Notification channels of a type outside `caps.notification_channel_types`."""
+    allowed = set(caps.get("notification_channel_types") or [])
+    out = []
+    for body in CHANNEL.findall(COMMENT.sub("", text)):
+        kind = CHANNEL_TYPE.search(body)
+        if kind is None or kind.group(1) not in allowed:
+            found = kind.group(1) if kind else "none"
+            out.append(
+                f"{name}: a notification channel of type {found}, not one of caps.notification_channel_types {sorted(allowed)}"
+            )
     return out
 
 
@@ -228,6 +299,51 @@ def workload_problems(gcp: Path, caps: dict) -> list[str]:
         out.append(
             f"workloads.yaml: {scheduled} scheduled Jobs, above caps.cloud_scheduler_jobs ({schedulers})"
         )
+    out += run_quota_problems(spec, caps)
+    return out
+
+
+def run_quota_problems(spec: dict, caps: dict) -> list[str]:
+    """Cloud Run's regional quota caps against the most workloads.yaml can run at once.
+
+    The agent's service at `caps.cloud_run_max_instances`, one task of each Job, and one more instance of the
+    largest service for a revision rollout: a cap above that only lets a runaway run longer.
+    """
+    quotas = caps.get("cloud_run_regional_quotas")
+    if not isinstance(quotas, dict) or not quotas:
+        return [
+            "caps.cloud_run_regional_quotas: missing; Cloud Run's regional default is 100 instances"
+        ]
+    instances = caps.get("cloud_run_max_instances")
+    if not isinstance(instances, int):
+        return []
+    services = list((spec.get("services") or {}).values())
+    shapes = [(instances, s) for s in services] + [
+        (1, j) for j in (spec.get("jobs") or {}).values()
+    ]
+    if services:
+        largest = max(services, key=lambda s: (float(s["cpu"]), gib(s["memory"])))
+        shapes.append((1, largest))
+    peak = {
+        "instances": sum(n for n, _ in shapes),
+        "milli_vcpu": sum(n * float(w["cpu"]) * 1000 for n, w in shapes),
+        "bytes": sum(n * gib(w["memory"]) * 2**30 for n, w in shapes),
+    }
+    out = []
+    for metric, quota in quotas.items():
+        unit, value = (quota or {}).get("unit"), (quota or {}).get("value")
+        if unit not in peak:
+            out.append(
+                f"caps.cloud_run_regional_quotas: {metric}: unit {unit!r}, not one of {sorted(peak)}"
+            )
+        elif not isinstance(value, int) or value <= 0:
+            out.append(
+                f"caps.cloud_run_regional_quotas: {metric}: {value!r}; a cap is a positive number"
+            )
+        elif value > peak[unit]:
+            out.append(
+                f"caps.cloud_run_regional_quotas: {metric}: {value} {unit}, above the {peak[unit]:,.0f} workloads.yaml can use at once"
+            )
     return out
 
 

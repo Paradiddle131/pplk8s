@@ -421,7 +421,7 @@ gcp-up: ## Live, the owner's step: apply platform/gcp/infra to the lab project f
 gcp-down: ## Live, the owner's step: destroy what platform/gcp/infra created on the lab project (GCP_PROJECT)
 	platform/gcp/tofu.sh destroy
 
-gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the daily query quota, enabled APIs against the free path, Firestore's one free database, the byte cap (GCP_PROJECT; #205)
+gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the daily query quota, enabled APIs against the free path, Firestore's one free database, the byte cap (#205); Cloud Run's scaling, IAM and regional quotas, the Scheduler count (GCP_PROJECT; #209)
 	platform/gcp/guardrails-check.sh
 
 # The images that run on GCP (semantic/PLAN.md SL-19): each built from its one Dockerfile for BigQuery and pushed to
@@ -452,14 +452,16 @@ gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab pro
 
 # The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
 # (gcp-images opens with the cost check), the apply that names them, the ops tables (`dbt run-operation
-# agent_warehouse`, run as an args override of the dbt-build Job), one dbt build, and the cost check after.
+# agent_warehouse`, run as an args override of the dbt-build Job), a second apply for the table grants that wait
+# for those tables (access.yaml `tables:`), one dbt build, and the cost check after.
 # The agent's secret needs its version first (platform/gcp/README.md, the owner's runbook).
 GCP_RUN_JOB = gcloud run jobs execute --project="$$GCP_PROJECT" --region=$(GCP_REGION) --wait $${GCP_ACCOUNT:+--account="$$GCP_ACCOUNT"}
 .PHONY: gcp-workloads-up
-gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the agent's Cloud Run service and the dbt Jobs with their Scheduler jobs, create the ops tables and build dbt once (GCP_PROJECT; #209)
+gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the agent's Cloud Run service, the dbt Jobs with their Scheduler jobs and the freshness alert, create the ops tables and their grants, build dbt once (GCP_PROJECT; #209)
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the workloads go to the lab project (platform/gcp/README.md)}"
 	$(MAKE) --no-print-directory gcp-images
 	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
 	$(GCP_RUN_JOB) dbt-build --args=run-operation,agent_warehouse
+	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
 	$(GCP_RUN_JOB) dbt-build
 	platform/gcp/cost-check.sh

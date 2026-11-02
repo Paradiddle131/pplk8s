@@ -174,6 +174,50 @@ resource "google_service_account_iam_member" "agent_impersonates_audit" {
   member             = "serviceAccount:${google_service_account.workload["semantic-agent"].email}"
 }
 
+# Cloud Run's regional quotas in var.region, lowered to free-path.yaml's `caps.cloud_run_regional_quotas` (#209):
+# a stop on how many instances, vCPUs and bytes of memory may run at once, whatever a deploy or a console edit asks
+# (the services' own max_instance_count is the first stop). Held whether or not a workload is deployed. Quota
+# preferences cannot be deleted: tofu.sh passes the ones on the project, keyed `<service>/<quota id>`, and they are
+# imported (infra/bigquery.tf's variable), never created twice.
+locals {
+  run_quotas = local.caps.cloud_run_regional_quotas
+  run_quota_preferences = {
+    for metric, q in local.run_quotas : metric => var.existing_quota_preferences["run.googleapis.com/${q.quota_id}"]
+    if contains(keys(var.existing_quota_preferences), "run.googleapis.com/${q.quota_id}")
+  }
+}
+
+import {
+  for_each = local.run_quota_preferences
+  to       = google_cloud_quotas_quota_preference.cloud_run[each.key]
+  id       = "projects/${var.project}/locations/global/quotaPreferences/${each.value}"
+}
+
+resource "google_cloud_quotas_quota_preference" "cloud_run" {
+  for_each = local.run_quotas
+
+  parent        = "projects/${var.project}"
+  name          = lookup(local.run_quota_preferences, each.key, lower("run-${each.value.quota_id}-${var.region}"))
+  service       = "run.googleapis.com"
+  quota_id      = each.value.quota_id
+  dimensions    = { region = var.region }
+  justification = "The lab project caps what Cloud Run may run at once, inside its free tier (semantic/PLAN.md SL-13)."
+  # Lowering a default of 100 instances to a handful is a decrease of more than 10%, which the API refuses
+  # unless told it is meant; this preference only ever lowers (check_free_path.py).
+  ignore_safety_checks = "QUOTA_DECREASE_PERCENTAGE_TOO_HIGH"
+
+  quota_config {
+    preferred_value = tostring(each.value.value)
+  }
+
+  lifecycle {
+    # A flag on the request, not a property of the preference: an imported one would otherwise plan an update.
+    ignore_changes = [ignore_safety_checks]
+  }
+
+  depends_on = [google_project_service.free_path]
+}
+
 output "agent_url" {
   description = "The agent's Cloud Run URL (IAM callers only: `gcloud run services proxy semantic-agent`), or null without its image."
   value       = try(google_cloud_run_v2_service.workload["semantic-agent"].uri, null)
