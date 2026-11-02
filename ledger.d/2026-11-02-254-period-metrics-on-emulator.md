@@ -1,0 +1,5 @@
+## 2026-11-02 — Semantic track — the week-over-week and month-to-date metrics run on the BigQuery emulator (#254)
+
+- Done: `tests/e2e/bigquery-run-check.sh` gains a periods part, on a fresh emulator before the platform's: `dbt/dev/fixture_weeks.sql` loaded into `dbt_dev` after the base fixture, its sources copied in, sales, returns, finance and marketing built, and `revenue_eur_wow_growth`, `bookings_wow_growth`, `leads_wow_growth`, `revenue_eur_mtd`, `bookings_mtd` and `leads_mtd` compared with SQL by hand on gold there (ISO weeks from Monday, each day's total from the first of its month), with the same anchor as on Postgres (5,668.75 revenue month to date on 2026-09-15, 32.65 % growth in the week of 2026-09-14). The base fixture goes back into `dbt_dev` before the platform part, so its numbers are unchanged; the periods build stays out of the 63-hop count. `docs/semantic-layer-on-bigquery.md` records the six metrics as measured (emulator).
+- Evidence: see the PR's handoff for the gate counts.
+- Decisions: none changed.
