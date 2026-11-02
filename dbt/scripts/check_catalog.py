@@ -4,7 +4,16 @@ Checks, against the manifests the artefacts were built from (semantic/PLAN.md SL
 - agent.json lists exactly the public models and every metric; every public model and every one of its
   columns is described (persist_docs turns the words into warehouse comments);
 - system_instruction.yaml parses and uses only the keys Google documents for a BigQuery data agent's
-  authored context, with the documented relationship and join types;
+  authored context, with the documented relationship and join types, and no `glossaries`, which the structured
+  context carries;
+- context.json is a valid v1 `Context` of the Conversational Analytics API, against the pinned copy of its
+  schemas (scripts/schemas/, from the API's discovery document; scripts/pin_context_schema.py renews it): no
+  key the schema lacks, every field it calls "Required.", every text within its "at most N bytes", nothing
+  output-only or deprecated; it names every table the semantic models and the time spine read, holds one
+  glossary term per metric and per glossary term, the same example queries as example_queries.json and
+  system_instruction.yaml as its `systemInstruction`;
+- no table carries more than 10 glossary terms (build_catalog.glossary_tables), the most a data agent reads
+  from Knowledge Catalog per table;
 - example_queries.json holds one verified query per metric and one per saved query, with the documented keys only;
 - agent.json lists every saved query with its question, metrics and group-bys (#164);
 - every glossary term (`config.meta.glossary` on a model) is in agent.json, has a description, maps to at
@@ -18,10 +27,16 @@ Usage: python scripts/check_catalog.py [target_dir]  (after build_catalog.py)
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
 import yaml
+from build_catalog import GLOSSARY_TERMS_PER_TABLE, SemanticIndex, glossary, glossary_tables
+
+CONTEXT_SCHEMA = Path(__file__).resolve().parent / "schemas" / "geminidataanalytics-v1-context.json"
+REQUIRED = re.compile(r"\s*Required\.")
+AT_MOST_BYTES = re.compile(r"[Mm]ust be at most ([\d,]+) bytes")
 
 # Documented authored-context keys: each container key maps to the keys its items may hold.
 AUTHORED_CONTEXT_KEYS = {
@@ -114,6 +129,90 @@ def authored_context_problems(document: object, parent: str | None = None, path:
     return found
 
 
+def schema_problems(value: object, spec: dict, schemas: dict, path: str = "") -> list[str]:
+    """Walk a value against a discovery-document schema: `$ref`, `type`, `items` and `properties`."""
+    if "$ref" in spec:
+        if spec["$ref"] not in schemas:
+            return [f"{path or 'the root'}: {spec['$ref']} is not in the pinned schema"]
+        return schema_problems(value, schemas[spec["$ref"]], schemas, path)
+    kind = spec.get("type")
+    if kind == "object":
+        if not isinstance(value, dict):
+            return [f"{path or 'the root'}: expected an object"]
+        properties = spec.get("properties", {})
+        found = [f"{path or 'the root'}: unknown key {key!r}" for key in sorted(value.keys() - properties.keys())]
+        for key, prop in properties.items():
+            where = f"{path}.{key}" if path else key
+            if value.get(key) in (None, "", [], {}):
+                if REQUIRED.match(prop.get("description", "")):
+                    found.append(f"{where}: required")
+                continue
+            if prop.get("readOnly") or prop.get("deprecated"):
+                found.append(f"{where}: {'output only' if prop.get('readOnly') else 'deprecated'}")
+            found += schema_problems(value[key], prop, schemas, where)
+        return found
+    if kind == "array":
+        if not isinstance(value, list):
+            return [f"{path}: expected a list"]
+        return [
+            problem
+            for i, item in enumerate(value)
+            for problem in schema_problems(item, spec["items"], schemas, f"{path}[{i}]")
+        ]
+    if kind == "string":
+        if not isinstance(value, str):
+            return [f"{path}: expected text"]
+        bound = AT_MOST_BYTES.search(spec.get("description", ""))
+        if bound and len(value.encode()) > int(bound[1].replace(",", "")):
+            return [f"{path}: {len(value.encode())} bytes, more than {bound[1]}"]
+        return []
+    if kind in ("boolean", "integer", "number"):
+        types = {"boolean": bool, "integer": int, "number": (int, float)}[kind]
+        return [] if isinstance(value, types) else [f"{path}: expected a {kind}"]
+    return [f"{path}: schema type {kind!r} is not handled"]
+
+
+def context_problems(manifest: dict, semantic_manifest: dict, catalog: dict, data_agent: Path) -> list[str]:
+    """context.json against the pinned v1 schema and the other artefacts, and the glossary terms per table."""
+    pin = json.loads(CONTEXT_SCHEMA.read_text())
+    context = json.loads((data_agent / "context.json").read_text())
+    found = schema_problems(context, {"$ref": pin["root"]}, pin["schemas"])
+
+    index = SemanticIndex(manifest, semantic_manifest)
+    tables = {
+        ".".join(part for part in (ref.get("projectId"), ref.get("datasetId"), ref.get("tableId")) if part)
+        for ref in ((context.get("datasourceReferences") or {}).get("bq") or {}).get("tableReferences", [])
+    }
+    expected = {index.table(model) for model in index.semantic_models.values()}
+    expected |= {SemanticIndex.table(spine) for spine in index.time_spines}
+    found += [f"table {table} missing" for table in sorted(expected - tables)]
+
+    names = [metric["label"] for metric in catalog["metrics"]] + [term["term"] for term in catalog["glossary"]]
+    listed = [term.get("displayName", "") for term in context.get("glossaryTerms", [])]
+    found += [f"glossary term {name!r} missing" for name in sorted(set(names) - set(listed))]
+    found += [
+        f"glossaryTerms[{i}] {name!r} is no metric or glossary term"
+        for i, name in enumerate(listed)
+        if name not in names
+    ]
+    if len(listed) != len(names):
+        found.append(f"{len(listed)} glossary terms for {len(names)} metrics and glossary terms")
+    if context.get("exampleQueries") != json.loads((data_agent / "example_queries.json").read_text()):
+        found.append("exampleQueries differ from example_queries.json")
+    if context.get("systemInstruction") != (data_agent / "system_instruction.yaml").read_text():
+        found.append("systemInstruction differs from system_instruction.yaml")
+    found = [f"context.json: {problem}" for problem in found]
+
+    # From the manifest, the generator's own source, so a term added there counts before agent.json holds it.
+    for table, terms in glossary_tables(manifest, index, glossary(manifest)).items():
+        if len(terms) > GLOSSARY_TERMS_PER_TABLE:
+            found.append(
+                f"table {table}: {len(terms)} glossary terms ({', '.join(terms)}); "
+                f"a data agent reads at most {GLOSSARY_TERMS_PER_TABLE} per table"
+            )
+    return found
+
+
 def problems(target: Path) -> list[str]:
     manifest = json.loads((target / "manifest.json").read_text())
     semantic_manifest = json.loads((target / "semantic_manifest.json").read_text())
@@ -154,6 +253,8 @@ def problems(target: Path) -> list[str]:
 
     context = yaml.safe_load((catalog_dir / "data_agent" / "system_instruction.yaml").read_text())
     found += [f"system_instruction.yaml: {problem}" for problem in authored_context_problems(context)]
+    if isinstance(context, list) and any(isinstance(item, dict) and "glossaries" in item for item in context):
+        found.append("system_instruction.yaml: glossaries belong in context.json's glossaryTerms")
 
     saved = sorted(query["name"] for query in semantic_manifest.get("saved_queries", []))
     listed_saved = {query["name"]: query for query in catalog.get("saved_queries", [])}
@@ -175,6 +276,8 @@ def problems(target: Path) -> list[str]:
         required = {"naturalLanguageQuestion", "sqlQuery"}
         if not isinstance(query, dict) or not required <= query.keys() <= EXAMPLE_QUERY_KEYS:
             found.append(f"example_queries.json[{position}]: keys must be {sorted(EXAMPLE_QUERY_KEYS)}")
+
+    found += context_problems(manifest, semantic_manifest, catalog, catalog_dir / "data_agent")
     return found
 
 
@@ -186,7 +289,7 @@ def main() -> int:
     if not found:
         print(
             "check_catalog: every public model, metric, glossary term and saved query is catalogued; "
-            "the authored context uses documented keys"
+            "the authored context uses documented keys; context.json is a valid v1 Context"
         )
     return 1 if found else 0
 

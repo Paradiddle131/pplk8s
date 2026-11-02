@@ -2,7 +2,8 @@
 # Catalog check (issue #101, semantic/PLAN.md SL-3, SL-4): host dbt builds every public model on the
 # dev fixtures in the Compose warehouse's dbt_dev database, runs `make dbt-catalog` on it, and asserts that
 #   - check_catalog.py passes: agent.json lists exactly the public models, every metric and every glossary
-#     term, and the data agent's authored context uses the documented keys only,
+#     term, the data agent's authored context uses the documented keys only, and context.json is a valid
+#     v1 Context on Postgres too (#204),
 #   - every gold and exposed relation, and every one of its columns, carries a comment (persist_docs),
 #   - semantic.metrics holds one row per metric of the semantic manifest, semantic.glossary one per term,
 #   - every example query (a metric's compiled SQL) runs on the warehouse and returns rows,
@@ -55,7 +56,9 @@ make -s -C "$REPO" dbt-catalog DBT_DBNAME="$DB" >"$OUT/catalog.log" 2>&1 ||
 grep -q "17 public models, 56 metrics and 14 glossary terms" "$OUT/catalog.log" ||
   { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report 17 public models, 56 metrics and 14 glossary terms"; }
 grep -q "check_catalog: every public model, metric, glossary term and saved query is catalogued" "$OUT/catalog.log" || fail "check_catalog did not pass"
-echo "ok: make dbt-catalog wrote agent.json, system_instruction.yaml and example_queries.json; check_catalog passes"
+grep -q "context.json: 17 tables, 70 glossary terms and 63 example queries" "$OUT/catalog.log" ||
+  { cat "$OUT/catalog.log" >&2; fail "build_catalog did not report context.json's 17 tables, 70 glossary terms and 63 example queries"; }
+echo "ok: make dbt-catalog wrote agent.json, context.json, system_instruction.yaml and example_queries.json; check_catalog passes"
 # A metric defined for BigQuery only is disabled on Postgres, and listed as not available here (semantic/PLAN.md SL-6).
 unavailable=$(py_ -c "import json; print(' '.join(m['name'] + ':' + ','.join(m['dialects']) for m in json.load(open('target/catalog/agent.json'))['unavailable_metrics']))")
 [ "$unavailable" = "median_order_value_eur:bigquery" ] ||
@@ -88,12 +91,10 @@ terms=$(py_ -c "import json; print('\n'.join(sorted(t['term'] for t in json.load
 expect "semantic.glossary vs the catalog's glossary" "$(psql_dev -c "select term from semantic.glossary order by term collate \"C\"")" "$terms"
 expect "semantic.glossary rows without words or a mapping" "$(psql_dev -c "select count(*) from semantic.glossary where description = '' or metrics || dimensions = ''")" 0
 expect "the data agent's glossary terms" "$(py_ -c "
-import yaml
-context = yaml.safe_load(open('target/catalog/data_agent/system_instruction.yaml'))
-glossaries = next(item['glossaries'] for item in context if 'glossaries' in item)
-print(len(glossaries))
+import json
+print(len(json.load(open('target/catalog/data_agent/context.json'))['glossaryTerms']))
 ")" "$(( $(echo "$metrics" | wc -l) + $(echo "$terms" | wc -l) ))"
-echo "ok: semantic.glossary and the data agent's glossaries hold the $(echo "$terms" | wc -l) glossary terms beside the metrics"
+echo "ok: semantic.glossary and the data agent's glossaryTerms hold the $(echo "$terms" | wc -l) glossary terms beside the metrics"
 
 # The verified queries are the metrics' compiled SQL: each must run and return the fixture's days.
 py_ -c "

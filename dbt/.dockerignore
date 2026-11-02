@@ -9,3 +9,5 @@ Dockerfile
 ruff.toml
 # Host-only: it reads docs/target-architecture.md, outside the image (make dbt-validate runs it).
 scripts/check_brief.py
+# Host-only: it downloads the API discovery document to renew scripts/schemas/ (#204).
+scripts/pin_context_schema.py
