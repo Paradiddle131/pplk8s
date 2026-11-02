@@ -154,7 +154,7 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
 	tests/e2e/bigquery-check.sh
 
-bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
+bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history, and the week-over-week and month-to-date metrics equal SQL by hand over six more weeks (#125, #246)
 	tests/e2e/bigquery-run-check.sh
 
 gcp-image-check: services-up ## Build the dbt image for GCP (WAREHOUSE=bigquery) and run its own dbt build of the platform part and a MetricFlow query on a fresh BigQuery emulator (#206, SL-19)
