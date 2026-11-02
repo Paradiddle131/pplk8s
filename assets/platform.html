@@ -87,6 +87,8 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .region.cobalt { stroke: var(--cobalt); }
 .region.vermilion { stroke: var(--vermilion); }
 
+/* the headline: the one line above the drawing, one step up the scale from a card's title, regular weight */
+.headline { font-size: 17px; font-weight: 400; fill: var(--ink); }
 .ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
 .sub { font-size: 11px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
@@ -126,7 +128,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <div class="stage">
   <div class="bar" id="bar"></div>
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 1172" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: build_catalog.py writes two things from it: the agent pod's initContainer runs it for the agent's catalog, and for work the BigQuery data agent's context and verified queries come from the same generator; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, and every result passes the guard, outside the toolset, which attaches freshness from the readiness ledger and writes its row into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 1212" role="img" aria-label="The whole lab. GitHub syncs the DAGs into the airflow namespace of one kind cluster, where a scheduler pair, a triggerer pair, Celery workers scaled by KEDA, the api-server and the dag-processor run the pipelines; PgBouncer leads to the metadata DB outside the cluster. In the workloads namespace, the Cloud Run stand-ins: the event adapter turns object events from Pub/Sub into DAG runs, EL Factory stages files in object storage and loads ds_source, and dbt job pods build the warehouse's layers from bronze to exposed, each hop checked. The dbt project, with its models, semantic YAML, documentation and tests, is in both the dbt image and the semantic agent's: build_catalog.py writes two things from it: the agent pod's initContainer runs it for the agent's catalog, and for work the BigQuery data agent's context and verified queries come from the same generator; the LlmAgent asks the model for a tool, its metric tools query MetricFlow, read as agent_metrics, and every result passes the guard, outside the toolset, which attaches freshness from the readiness ledger and writes its row into ops.agent_queries. Monitoring holds Prometheus, Alertmanager, alert rules and Grafana. The eval scores the agent against a text-to-SQL baseline that reads gold and exposed as agent_sql. An analyst asks the agent."></svg>
   </figure>
 </div>
 <script>
@@ -255,6 +257,8 @@ function Sheet(svg, opt = {}) {
   const knocks = []; // every knock-out, painted by done() to match what lies behind each half
   const edges = []; // every edge, for the bridges done() draws where two cross
   const HOP = 4; // a bridge's radius
+  const HEAD = [24, 32]; // the headline's baseline start; the drawing starts at TOP or below
+  const TOP = 64;
 
   const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
   const pick = v => (isModal(v) ? v[mode] : v);
@@ -312,6 +316,10 @@ function Sheet(svg, opt = {}) {
   const screen = el('pattern', { id: 'screen', patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, defs);
   el('rect', { width: 6, height: 6, class: 'screen-bg' }, screen);
   el('circle', { cx: 3, cy: 3, r: 0.75, class: 'screen-dot' }, screen);
+
+  // The headline: the one line above the drawing that says the question the sheet answers, or its
+  // takeaway; drawn first, at the top left, so the drawing starts below it (the checker holds the rest).
+  if (opt.headline !== undefined) text(svg, HEAD[0], HEAD[1], opt.headline, 'headline');
 
   // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
   // edge: 'bottom' (a title block, for a frame that edges enter from above).
@@ -532,7 +540,7 @@ function Sheet(svg, opt = {}) {
     window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked };
   };
 
-  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO };
+  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO, TOP };
 }
 
 // Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
@@ -544,6 +552,7 @@ Sheet.ready = () => Promise.all([
 Sheet.ready().then(() => {
   const S = Sheet(document.getElementById('d'), {
     logos: LOGOS,
+    headline: 'What runs where in the lab, and what it becomes on GCP',
     modes: [{ id: 'lab', label: 'Lab' }, { id: 'gcp', label: 'On GCP' }],
     solidIn: 'gcp',
     bar: document.getElementById('bar'),
@@ -551,104 +560,104 @@ Sheet.ready().then(() => {
   });
 
   // ---- above: the internet, and the analyst beside it
-  S.frame({ x: 24, y: 24, w: 1000, h: 80, title: 'the internet' });
-  S.card({ x: 360, y: 40, w: 144, h: 48, title: 'GitHub', lines: ['DAGs, dbt project'], logo: 'github' });
-  S.card({ x: 824, y: 36, w: 176, h: 56, title: 'the model', lines: [{ mono: { lab: 'OpenRouter :free', gcp: 'Gemini' } }, 'chooses tools, arguments'], hatch: true });
-  S.card({ x: 1048, y: 40, w: 128, h: 48, title: 'analyst', lines: ['adk web'] });
+  S.frame({ x: 24, y: 64, w: 1000, h: 80, title: 'the internet' });
+  S.card({ x: 360, y: 80, w: 144, h: 48, title: 'GitHub', lines: ['DAGs, dbt project'], logo: 'github' });
+  S.card({ x: 824, y: 76, w: 176, h: 56, title: 'the model', lines: [{ mono: { lab: 'OpenRouter :free', gcp: 'Gemini' } }, 'chooses tools, arguments'], hatch: true });
+  S.card({ x: 1048, y: 80, w: 128, h: 48, title: 'analyst', lines: ['adk web'] });
 
   // ---- the cluster
-  S.frame({ x: 24, y: 136, w: 1000, h: 688, title: { lab: 'kind cluster', gcp: 'GKE' }, note: { lab: 'three nodes', gcp: 'Stage 2; Composer in Stage 3; the workloads on Cloud Run beside it' }, logo: 'kubernetes' });
+  S.frame({ x: 24, y: 176, w: 1000, h: 688, title: { lab: 'kind cluster', gcp: 'GKE' }, note: { lab: 'three nodes', gcp: 'Stage 2; Composer in Stage 3; the workloads on Cloud Run beside it' }, logo: 'kubernetes' });
 
   // airflow
-  S.frame({ x: 40, y: 164, w: 640, h: 212, title: 'airflow', logo: { lab: 'apacheairflow', gcp: 'googlecloudcomposer' } });
-  S.card({ x: 56, y: 192, w: 144, h: 52, title: 'PgBouncer x2', lines: ['every DB connection'] });
-  S.card({ x: 208, y: 192, w: 144, h: 52, title: 'scheduler x2', lines: ['a pair, one PDB'] });
-  S.card({ x: 360, y: 192, w: 144, h: 52, title: 'dag-processor', lines: [{ lab: 'git-sync of main', gcp: 'Composer bucket' }] });
-  S.card({ x: 512, y: 192, w: 144, h: 52, title: 'triggerer x2', lines: ['readiness waits'] });
-  S.card({ x: 56, y: 260, w: 144, h: 52, title: 'api-server', lines: ['REST API, UI'] });
-  S.card({ x: 208, y: 260, w: 144, h: 52, title: 'Celery workers', lines: [{ mono: 'KEDA: 1 to 4' }] });
-  S.card({ x: 360, y: 260, w: 296, h: 92, title: 'DAGs', lines: [{ mono: 'sales_elt, marketing_elt,' }, { mono: 'returns, finance_daily,' }, { mono: 'tlc_monthly' }, 'extract, wait, build, record'] });
+  S.frame({ x: 40, y: 204, w: 640, h: 212, title: 'airflow', logo: { lab: 'apacheairflow', gcp: 'googlecloudcomposer' } });
+  S.card({ x: 56, y: 232, w: 144, h: 52, title: 'PgBouncer x2', lines: ['every DB connection'] });
+  S.card({ x: 208, y: 232, w: 144, h: 52, title: 'scheduler x2', lines: ['a pair, one PDB'] });
+  S.card({ x: 360, y: 232, w: 144, h: 52, title: 'dag-processor', lines: [{ lab: 'git-sync of main', gcp: 'Composer bucket' }] });
+  S.card({ x: 512, y: 232, w: 144, h: 52, title: 'triggerer x2', lines: ['readiness waits'] });
+  S.card({ x: 56, y: 300, w: 144, h: 52, title: 'api-server', lines: ['REST API, UI'] });
+  S.card({ x: 208, y: 300, w: 144, h: 52, title: 'Celery workers', lines: [{ mono: 'KEDA: 1 to 4' }] });
+  S.card({ x: 360, y: 300, w: 296, h: 92, title: 'DAGs', lines: [{ mono: 'sales_elt, marketing_elt,' }, { mono: 'returns, finance_daily,' }, { mono: 'tlc_monthly' }, 'extract, wait, build, record'] });
 
   // monitoring
-  S.frame({ x: 696, y: 164, w: 312, h: 212, title: 'monitoring' });
-  S.card({ x: 712, y: 192, w: 136, h: 52, title: { lab: 'Prometheus', gcp: 'Monitoring' }, lines: [{ lab: 'StatsD, exporters', gcp: 'Cloud Monitoring' }], logo: { lab: 'prometheus' } });
-  S.card({ x: 856, y: 192, w: 136, h: 52, title: { lab: 'Alertmanager', gcp: 'alerting' }, lines: ['drills, late data'] });
-  S.card({ x: 712, y: 260, w: 136, h: 52, title: { lab: 'Grafana', gcp: 'dashboards' }, lines: [{ lab: 'dashboards', gcp: 'per drill' }], logo: { lab: 'grafana' } });
-  S.card({ x: 856, y: 260, w: 136, h: 52, title: 'alert rules', lines: ['a runbook each'] });
+  S.frame({ x: 696, y: 204, w: 312, h: 212, title: 'monitoring' });
+  S.card({ x: 712, y: 232, w: 136, h: 52, title: { lab: 'Prometheus', gcp: 'Monitoring' }, lines: [{ lab: 'StatsD, exporters', gcp: 'Cloud Monitoring' }], logo: { lab: 'prometheus' } });
+  S.card({ x: 856, y: 232, w: 136, h: 52, title: { lab: 'Alertmanager', gcp: 'alerting' }, lines: ['drills, late data'] });
+  S.card({ x: 712, y: 300, w: 136, h: 52, title: { lab: 'Grafana', gcp: 'dashboards' }, lines: [{ lab: 'dashboards', gcp: 'per drill' }], logo: { lab: 'grafana' } });
+  S.card({ x: 856, y: 300, w: 136, h: 52, title: 'alert rules', lines: ['a runbook each'] });
 
   // workloads: the pipeline's services on the left, the dbt project and the agent on the right
-  S.frame({ x: 40, y: 400, w: 968, h: 408, title: { lab: 'workloads', gcp: 'Cloud Run' }, logo: { gcp: 'googlecloudrun' } });
-  S.card({ x: 56, y: 428, w: 144, h: 64, title: 'event adapter', lines: ['Pub/Sub to a', 'DAG run'] });
-  S.card({ x: 208, y: 428, w: 144, h: 64, title: 'EL Factory', lines: ['synthetic, weather,', 'NYC TLC files'] });
-  S.card({ x: 360, y: 428, w: 144, h: 64, title: 'dbt job', lines: ['a pod per stage,', 'build and test'], logo: 'dbt' });
+  S.frame({ x: 40, y: 440, w: 968, h: 408, title: { lab: 'workloads', gcp: 'Cloud Run' }, logo: { gcp: 'googlecloudrun' } });
+  S.card({ x: 56, y: 468, w: 144, h: 64, title: 'event adapter', lines: ['Pub/Sub to a', 'DAG run'] });
+  S.card({ x: 208, y: 468, w: 144, h: 64, title: 'EL Factory', lines: ['synthetic, weather,', 'NYC TLC files'] });
+  S.card({ x: 360, y: 468, w: 144, h: 64, title: 'dbt job', lines: ['a pod per stage,', 'build and test'], logo: 'dbt' });
 
-  S.frame({ x: 536, y: 424, w: 456, h: 140, title: 'dbt project', note: 'in the dbt and agent images' });
-  S.card({ x: 548, y: 448, w: 216, h: 44, title: 'models', lines: ['bronze to exposed, per pipeline'] });
-  S.card({ x: 776, y: 448, w: 204, h: 44, title: 'semantic YAML', lines: ['each metric once, saved queries'] });
-  S.card({ x: 548, y: 504, w: 216, h: 44, title: 'documentation', lines: ['glossary, naming, descriptions'] });
-  S.card({ x: 776, y: 504, w: 204, h: 44, title: 'tests', lines: ['contracts, hops, the standard'] });
+  S.frame({ x: 536, y: 464, w: 456, h: 140, title: 'dbt project', note: 'in the dbt and agent images' });
+  S.card({ x: 548, y: 488, w: 216, h: 44, title: 'models', lines: ['bronze to exposed, per pipeline'] });
+  S.card({ x: 776, y: 488, w: 204, h: 44, title: 'semantic YAML', lines: ['each metric once, saved queries'] });
+  S.card({ x: 548, y: 544, w: 216, h: 44, title: 'documentation', lines: ['glossary, naming, descriptions'] });
+  S.card({ x: 776, y: 544, w: 204, h: 44, title: 'tests', lines: ['contracts, hops, the standard'] });
 
-  S.frame({ x: 536, y: 588, w: 456, h: 204, title: 'semantic agent pod', note: 'adk api_server', logo: 'adk' });
-  S.card({ x: 548, y: 616, w: 132, h: 64, title: 'initContainer', lines: [{ mono: 'build_catalog.py' }, 'writes the catalog'] });
-  S.card({ x: 692, y: 616, w: 156, h: 64, title: 'LlmAgent', lines: ['Runner, sessions'], pkg: 'google.adk' });
-  S.phantom({ x: 548, y: 700, w: 312, h: 80, label: 'DataAgentToolset' });
-  S.card({ x: 560, y: 716, w: 120, h: 52, title: 'MetricFlow', pkg: 'metricflow' });
-  S.card({ x: 692, y: 716, w: 156, h: 52, title: 'metric tools', lines: [{ mono: 'query_metrics' }] });
-  S.card({ x: 872, y: 716, w: 108, h: 52, title: 'guard', lines: ['freshness, audit'] });
+  S.frame({ x: 536, y: 628, w: 456, h: 204, title: 'semantic agent pod', note: 'adk api_server', logo: 'adk' });
+  S.card({ x: 548, y: 656, w: 132, h: 64, title: 'initContainer', lines: [{ mono: 'build_catalog.py' }, 'writes the catalog'] });
+  S.card({ x: 692, y: 656, w: 156, h: 64, title: 'LlmAgent', lines: ['Runner, sessions'], pkg: 'google.adk' });
+  S.phantom({ x: 548, y: 740, w: 312, h: 80, label: 'DataAgentToolset' });
+  S.card({ x: 560, y: 756, w: 120, h: 52, title: 'MetricFlow', pkg: 'metricflow' });
+  S.card({ x: 692, y: 756, w: 156, h: 52, title: 'metric tools', lines: [{ mono: 'query_metrics' }] });
+  S.card({ x: 872, y: 756, w: 108, h: 52, title: 'guard', lines: ['freshness, audit'] });
 
   // ---- below: outside the cluster
-  S.frame({ x: 24, y: 856, w: 1000, h: 288, title: { lab: 'outside the cluster', gcp: 'managed services' }, edge: 'bottom' });
-  S.card({ x: 56, y: 880, w: 144, h: 64, title: 'Pub/Sub', lines: [{ lab: 'emulator', gcp: 'Pub/Sub, Eventarc' }, 'object events'], logo: 'googlepubsub' });
-  S.card({ x: 208, y: 880, w: 144, h: 64, title: 'object storage', lines: [{ lab: 'fake-gcs-server', gcp: 'Cloud Storage' }, 'staging, task logs'], logo: { gcp: 'googlecloudstorage' } });
-  S.card({ x: 360, y: 880, w: 144, h: 64, title: 'image registry', lines: [{ lab: 'kind registry', gcp: 'Artifact Registry' }] });
-  S.card({ x: 56, y: 960, w: 296, h: 64, title: 'metadata DB', lines: [{ lab: 'Postgres', gcp: 'Cloud SQL' }, { mono: 'airflow, agent_sessions' }] });
-  S.card({ x: 360, y: 960, w: 144, h: 64, title: 'data agent', lines: [{ mono: 'build_catalog.py' }, 'context, verified queries'], cls: 'phantom' });
-  S.card({ x: 208, y: 1048, w: 296, h: 64, title: 'eval', lines: [{ mono: 'make agent-eval' }, 'the agent against text-to-SQL'] });
+  S.frame({ x: 24, y: 896, w: 1000, h: 288, title: { lab: 'outside the cluster', gcp: 'managed services' }, edge: 'bottom' });
+  S.card({ x: 56, y: 920, w: 144, h: 64, title: 'Pub/Sub', lines: [{ lab: 'emulator', gcp: 'Pub/Sub, Eventarc' }, 'object events'], logo: 'googlepubsub' });
+  S.card({ x: 208, y: 920, w: 144, h: 64, title: 'object storage', lines: [{ lab: 'fake-gcs-server', gcp: 'Cloud Storage' }, 'staging, task logs'], logo: { gcp: 'googlecloudstorage' } });
+  S.card({ x: 360, y: 920, w: 144, h: 64, title: 'image registry', lines: [{ lab: 'kind registry', gcp: 'Artifact Registry' }] });
+  S.card({ x: 56, y: 1000, w: 296, h: 64, title: 'metadata DB', lines: [{ lab: 'Postgres', gcp: 'Cloud SQL' }, { mono: 'airflow, agent_sessions' }] });
+  S.card({ x: 360, y: 1000, w: 144, h: 64, title: 'data agent', lines: [{ mono: 'build_catalog.py' }, 'context, verified queries'], cls: 'phantom' });
+  S.card({ x: 208, y: 1088, w: 296, h: 64, title: 'eval', lines: [{ mono: 'make agent-eval' }, 'the agent against text-to-SQL'] });
 
-  S.frame({ x: 536, y: 880, w: 456, h: 248, title: 'warehouse', note: { lab: 'Postgres', gcp: 'BigQuery' }, logo: { lab: 'postgresql', gcp: 'googlebigquery' }, edge: 'bottom' });
-  S.region({ x: 548, y: 896, w: 268, h: 80, tone: 'cobalt', role: 'agent_metrics', edge: 'bottom' });
-  S.card({ x: 560, y: 912, w: 120, h: 48, title: 'semantic', lines: ['metrics, glossary'] });
-  S.card({ x: 692, y: 912, w: 112, h: 48, title: 'ops.readiness', lines: ['and deadlines'], tcls: 'mono' });
-  S.region({ x: 828, y: 896, w: 152, h: 80, role: 'agent_audit', edge: 'bottom' });
-  S.card({ x: 840, y: 912, w: 128, h: 48, title: 'ops', lines: [{ mono: 'agent_queries' }] });
-  S.region({ x: 808, y: 1016, w: 172, h: 76, tone: 'vermilion', role: 'agent_sql' });
-  S.card({ x: 548, y: 1036, w: 80, h: 40, title: 'ds_source', tcls: 'mono' });
-  S.card({ x: 640, y: 1036, w: 72, h: 40, title: 'bronze' });
-  S.card({ x: 724, y: 1036, w: 72, h: 40, title: 'silver' });
-  S.card({ x: 820, y: 1036, w: 68, h: 40, title: 'gold' });
-  S.card({ x: 900, y: 1036, w: 72, h: 40, title: 'exposed' });
-  S.edge('M628,1056 H640');
-  S.edge('M712,1056 H724');
-  S.edge('M796,1056 H820');
-  S.edge('M888,1056 H900');
-  S.tick(718, 1028); S.tick(808, 1028); S.tick(894, 1028);
+  S.frame({ x: 536, y: 920, w: 456, h: 248, title: 'warehouse', note: { lab: 'Postgres', gcp: 'BigQuery' }, logo: { lab: 'postgresql', gcp: 'googlebigquery' }, edge: 'bottom' });
+  S.region({ x: 548, y: 936, w: 268, h: 80, tone: 'cobalt', role: 'agent_metrics', edge: 'bottom' });
+  S.card({ x: 560, y: 952, w: 120, h: 48, title: 'semantic', lines: ['metrics, glossary'] });
+  S.card({ x: 692, y: 952, w: 112, h: 48, title: 'ops.readiness', lines: ['and deadlines'], tcls: 'mono' });
+  S.region({ x: 828, y: 936, w: 152, h: 80, role: 'agent_audit', edge: 'bottom' });
+  S.card({ x: 840, y: 952, w: 128, h: 48, title: 'ops', lines: [{ mono: 'agent_queries' }] });
+  S.region({ x: 808, y: 1056, w: 172, h: 76, tone: 'vermilion', role: 'agent_sql' });
+  S.card({ x: 548, y: 1076, w: 80, h: 40, title: 'ds_source', tcls: 'mono' });
+  S.card({ x: 640, y: 1076, w: 72, h: 40, title: 'bronze' });
+  S.card({ x: 724, y: 1076, w: 72, h: 40, title: 'silver' });
+  S.card({ x: 820, y: 1076, w: 68, h: 40, title: 'gold' });
+  S.card({ x: 900, y: 1076, w: 72, h: 40, title: 'exposed' });
+  S.edge('M628,1096 H640');
+  S.edge('M712,1096 H724');
+  S.edge('M796,1096 H820');
+  S.edge('M888,1096 H900');
+  S.tick(718, 1068); S.tick(808, 1068); S.tick(894, 1068);
 
   // ---- edges: the pipeline
-  S.edge('M432,88 V192', { label: { text: { lab: 'git-sync', gcp: 'copied to the bucket' }, at: [440, 124], anchor: 'start' } });
-  S.edge('M280,312 V428', { label: { text: 'calls', at: [288, 388], anchor: 'start' } });
-  S.edge('M340,312 V412 H432 V428', { label: { text: 'launches', at: [440, 388], anchor: 'start' } });
-  S.edge('M184,428 V312', { label: { text: 'triggers', at: [192, 388], anchor: 'start' } });
-  S.edge('M128,880 V492', { label: { text: 'events', at: [136, 520], anchor: 'start' } });
-  S.edge('M280,492 V880', { label: { text: 'stages', at: [288, 520], anchor: 'start' } });
-  S.edge('M330,492 V848 H520 V1048 H548', { label: { text: 'loads', at: [338, 576], anchor: 'start' } });
-  S.edge('M432,492 V836 H528 V1064 H548', { label: { text: 'dbt build', at: [440, 520], anchor: 'start' } });
-  S.edge('M56,218 H32 V992 H56');
-  S.edge('M536,460 H504');
-  S.edge('M504,1104 H902 V1092', { reads: true, tone: 'vermilion' });
+  S.edge('M432,128 V232', { label: { text: { lab: 'git-sync', gcp: 'copied to the bucket' }, at: [440, 164], anchor: 'start' } });
+  S.edge('M280,352 V468', { label: { text: 'calls', at: [288, 428], anchor: 'start' } });
+  S.edge('M340,352 V452 H432 V468', { label: { text: 'launches', at: [440, 428], anchor: 'start' } });
+  S.edge('M184,468 V352', { label: { text: 'triggers', at: [192, 428], anchor: 'start' } });
+  S.edge('M128,920 V532', { label: { text: 'events', at: [136, 560], anchor: 'start' } });
+  S.edge('M280,532 V920', { label: { text: 'stages', at: [288, 560], anchor: 'start' } });
+  S.edge('M330,532 V888 H520 V1088 H548', { label: { text: 'loads', at: [338, 616], anchor: 'start' } });
+  S.edge('M432,532 V876 H528 V1104 H548', { label: { text: 'dbt build', at: [440, 560], anchor: 'start' } });
+  S.edge('M56,258 H32 V1032 H56');
+  S.edge('M536,500 H504');
+  S.edge('M504,1144 H902 V1132', { reads: true, tone: 'vermilion' });
 
   // ---- edges: the agent
-    S.edge('M614,680 V716');
-  S.edge('M712,680 V716');
-  S.edge('M692,742 H680');
-  S.edge('M848,742 H872');
-  S.edge('M926,716 V664 H848');
-  S.edge('M848,626 H1000 V120 H952 V92');
-  S.edge('M848,638 H1016 V64 H1048', { both: true });
-  S.edge('M620,768 V912', { reads: true, tone: 'cobalt' });
-  S.edge('M890,768 V868 H760 V912', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [882, 840], anchor: 'end' } });
-  S.edge('M926,768 V912', { label: { text: 'insert', at: [934, 840], anchor: 'start' } });
+    S.edge('M614,720 V756');
+  S.edge('M712,720 V756');
+  S.edge('M692,782 H680');
+  S.edge('M848,782 H872');
+  S.edge('M926,756 V704 H848');
+  S.edge('M848,666 H1000 V160 H952 V132');
+  S.edge('M848,678 H1016 V104 H1048', { both: true });
+  S.edge('M620,808 V952', { reads: true, tone: 'cobalt' });
+  S.edge('M890,808 V908 H760 V952', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [882, 880], anchor: 'end' } });
+  S.edge('M926,808 V952', { label: { text: 'insert', at: [934, 880], anchor: 'start' } });
 
-  S.legend(1048, 160, [['card', 'a component'], ['pkg', 'a package'], ['hatch', 'the model'], ['phantom', 'at work'], ['calls', 'calls, writes'], ['reads', 'reads'], ['tick', 'checked hop'], ['cobalt', 'agent reads'], ['vermilion', 'eval reads']], { column: true });
+  S.legend(1048, 200, [['card', 'a component'], ['pkg', 'a package'], ['hatch', 'the model'], ['phantom', 'at work'], ['calls', 'calls, writes'], ['reads', 'reads'], ['tick', 'checked hop'], ['cobalt', 'agent reads'], ['vermilion', 'eval reads']], { column: true });
   S.done();
 });
 </script>
