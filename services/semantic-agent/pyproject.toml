@@ -4,27 +4,36 @@ version = "0.1.0"
 description = "An ADK agent that answers business questions through the dbt semantic layer's metrics, and its text-to-SQL baseline"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    # The served agent needs ADK's session database and LiteLLM (OpenRouter), not its eval or
-    # extensions extras, which would more than double the image (#230); the eval runs from the `eval` group.
-    "google-adk[db]==2.13.0",
+    # The served agent needs ADK and LiteLLM (OpenRouter), not ADK's eval or extensions extras, which
+    # would more than double the image (#230); the eval runs from the `eval` group.
+    "google-adk==2.13.0",
     "litellm==1.96.2",
     "dbt-core==1.12.6",
-    "dbt-postgres==1.11.0",
-    "dbt-metricflow[dbt-postgres]==0.15.0",
+    "dbt-metricflow==0.15.0",
     "pyyaml",
 ]
 
 [project.optional-dependencies]
-# The warehouse the agent's audit and freshness reach (semantic_agent/warehouse.py, AGENT_WAREHOUSE;
-# semantic/PLAN.md SL-19): an image installs one extra, so it carries only that warehouse's driver.
-# postgres: the lab's Compose warehouse (psycopg) and ADK's Postgres session store (asyncpg).
+# The warehouse the agent reaches and where its sessions live (semantic_agent/warehouse.py,
+# AGENT_WAREHOUSE; semantic/PLAN.md SL-19): an image installs one extra, so it carries only that
+# warehouse's drivers, dbt adapter and session store.
+# postgres: the lab's Compose warehouse (psycopg, dbt-postgres) and ADK's DatabaseSessionService on
+# the metadata DB (its `db` extra, asyncpg).
 postgres = [
     "psycopg[binary]==3.3.6",
     "asyncpg==0.31.0",
+    "google-adk[db]==2.13.0",
+    "dbt-postgres==1.11.0",
+    "dbt-metricflow[dbt-postgres]==0.15.0",
 ]
-# bigquery: the lab project's BigQuery (#209).
+# bigquery: the lab project's BigQuery (google-cloud-bigquery, dbt-bigquery) and ADK's
+# FirestoreSessionService (services.py's firestore:// scheme), which imports google-cloud-firestore
+# without declaring it (#209). The GCP image installs it from requirements-bigquery.txt, its export.
 bigquery = [
     "google-cloud-bigquery==3.47.0",
+    "dbt-bigquery==1.12.1",
+    "dbt-metricflow[dbt-bigquery]==0.15.0",
+    "google-cloud-firestore==2.34.1",
 ]
 
 [build-system]
@@ -33,12 +42,16 @@ build-backend = "uv_build"
 
 [dependency-groups]
 # No group is installed in any image (`uv sync --no-default-groups` in the Dockerfile).
-# dev: the test and lint tools, and both warehouses' drivers, so the tests cover both seams and the
-# eval, the baseline and the e2e checks reach the Compose warehouse.
+# dev: the test and lint tools, the postgres extra (the eval, the baseline and the e2e checks reach the
+# Compose warehouse) and the BigQuery and Firestore clients, so the tests cover both seams; not the
+# bigquery extra, whose dbt-bigquery 1.12.1 caps google-cloud-storage below what the eval group's
+# Vertex AI SDK needs (tool.uv.conflicts).
 dev = [
     "pytest",
     "ruff",
-    "semantic-agent[postgres,bigquery]",
+    "semantic-agent[postgres]",
+    "google-cloud-bigquery==3.47.0",
+    "google-cloud-firestore==2.34.1",
 ]
 # eval: the agent eval against its text-to-SQL baseline (semantic_agent.evaluation, `make agent-eval`).
 eval = [
@@ -52,6 +65,30 @@ mcp = [
 [tool.uv]
 # `uv run` and `uv sync` on a laptop or a cloud session get every group, so the tests, the eval and the MCP server run.
 default-groups = ["dev", "eval", "mcp"]
+# dbt-bigquery 1.12.1 needs google-cloud-storage<3.2, google-adk[eval]'s Vertex AI SDK >=3.10: uv locks
+# each side on its own, and the GCP image never installs the eval group.
+conflicts = [[{ extra = "bigquery" }, { group = "eval" }]]
+
+# dbt-bigquery 1.12.1's own requirements less what the dbt image's GCP build leaves out
+# (dbt/requirements-bigquery.exclude: Vertex AI for Python models, pandas and pyarrow for DataFrames,
+# through google-cloud-bigquery[pandas]), which neither dbt nor MetricFlow imports to run SQL. Vertex AI
+# also caps google-genai below 2, which ADK 2.13 needs, so the bigquery extra resolves only without it.
+# Stated for this version alone: a bump that forgets it fails to lock (semantic/PLAN.md SL-19, #209).
+[[tool.uv.dependency-metadata]]
+name = "dbt-bigquery"
+version = "1.12.1"
+requires-python = ">=3.10.0"
+requires-dist = [
+    "dbt-adapters<2.0,>=1.24.4",
+    "dbt-common<2.0,>=1.10",
+    "dbt-core<2.0,>=1.10.0rc0",
+    "google-api-core>=2.11.0",
+    "google-auth>=2.29.0",
+    "google-cloud-bigquery<4.0,>=3.0",
+    "google-cloud-dataproc~=5.0",
+    "google-cloud-storage<3.2,>=2.4",
+    "nbformat>=5.10.4",
+]
 
 [tool.uv.build-backend]
 module-name = ["semantic_agent", "sql_baseline"]

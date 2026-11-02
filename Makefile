@@ -183,7 +183,7 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history, and the week-over-week and month-to-date metrics equal SQL by hand over six more weeks (#125, #246)
 	tests/e2e/bigquery-run-check.sh
 
-gcp-image-check: services-up ## Build the dbt image for GCP (WAREHOUSE=bigquery) and run its own dbt build of the platform part and a MetricFlow query on a fresh BigQuery emulator (#206, SL-19)
+gcp-image-check: services-up ## Build the dbt and semantic agent images for GCP (WAREHOUSE=bigquery); on a fresh BigQuery emulator run the dbt image's build of the platform part and a MetricFlow query, then serve the agent and ask it one question through a scripted model: its catalog built at start, its audit row and freshness, peak memory and compressed sizes within the free path (#206, #209, SL-19)
 	BUILD_CA=$(BUILD_CA) tests/e2e/gcp-image-check.sh
 
 # The same check on real BigQuery (#206, semantic/PLAN.md SL-13): opt-in like agent-eval, never in `make check`;
@@ -429,12 +429,17 @@ gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the
 GCP_REGION ?= us-central1
 GCP_IMAGES = $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/pplk8s
 gcp_tag = $(GCP_IMAGES)/$(firstword $(subst :, ,$(notdir $(1)))):$(word 2,$(subst :, ,$(notdir $(1))))
-gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: today dbt) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206)
+# No provenance or SBOM attestation: each would be one more version in the registry, whose cleanup keeps the two
+# newest versions per package (#230), so a push stores one version, not an index, an image and an attestation.
+GCP_BUILD_FLAGS = --build-arg WAREHOUSE=bigquery --provenance=false --sbom=false
+gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the semantic agent) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206, #209)
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the images go to the registry of the lab project (platform/gcp/README.md)}"
 	platform/gcp/cost-check.sh
-	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) --build-arg WAREHOUSE=bigquery dbt
+	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) $(GCP_BUILD_FLAGS) dbt
+	$(call docker_build,$(call gcp_tag,$(AGENT_IMAGE)),semantic-agent-gcp) $(GCP_BUILD_FLAGS) --build-context dbt=dbt services/semantic-agent
 	platform/gcp/docker-login.sh $(GCP_REGION)-docker.pkg.dev
 	docker push $(call gcp_tag,$(DBT_IMAGE))
+	docker push $(call gcp_tag,$(AGENT_IMAGE))
 	platform/gcp/cost-check.sh
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
