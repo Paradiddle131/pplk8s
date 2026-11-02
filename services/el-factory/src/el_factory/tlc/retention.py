@@ -7,24 +7,19 @@ later load of a retired month starts from scratch. BigQuery expires the month's 
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any
 
-from el_factory.sources.tlc import TlcEntity
-
-
-class RetentionWarehouse(Protocol):
-    def file_uris(self, pattern: str) -> list[str]: ...
-
-    def retire_file(self, table_name: str, source_uri: str) -> int: ...
+from el_factory.tlc.source import TlcEntity
+from el_factory.warehouse import FileLedger
 
 
-def held_months(entity: TlcEntity, warehouse: RetentionWarehouse) -> list[str]:
+def held_months(entity: TlcEntity, warehouse: FileLedger) -> list[str]:
     """Months with any ledger row (loading or complete) for this entity, oldest first."""
     months = {entity.month_of(uri) for uri in warehouse.file_uris(_pattern(entity))}
     return sorted(m for m in months if m is not None)
 
 
-def retire(entity: TlcEntity, keep: list[str], warehouse: RetentionWarehouse) -> dict[str, Any]:
+def retire(entity: TlcEntity, keep: list[str], warehouse: FileLedger) -> dict[str, Any]:
     """Retire every held month not in ``keep``; return the months retired and rows deleted."""
     retired: list[dict[str, Any]] = []
     for uri in warehouse.file_uris(_pattern(entity)):

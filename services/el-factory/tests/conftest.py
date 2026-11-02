@@ -95,6 +95,32 @@ class FakeWarehouse:
         return sum(len(rows) for rows in self.tables.get(table_name, {}).values())
 
 
+class FakeFileLedger(FakeWarehouse):
+    """A warehouse that keeps a file ledger (el_factory.warehouse.FileLedger), so the app serves
+    the file sources; the chunk and retention calls run on Postgres (test_tlc_extract)."""
+
+    def landing_columns(self, table_name: str) -> dict[str, str]:
+        raise NotImplementedError
+
+    def prepare_landing_table(self, table_name: str, add: Any, widen: Any) -> None:
+        raise NotImplementedError
+
+    def file_progress(self, source_uri: str, etag: str) -> Any:
+        raise NotImplementedError
+
+    def replace_chunk(self, table_name: str, load: Any, columns: Any, csv: Any) -> int:
+        raise NotImplementedError
+
+    def complete_version(self, table_name: str, source_uri: str, etag: str) -> None:
+        raise NotImplementedError
+
+    def file_uris(self, pattern: str) -> list[str]:
+        return []
+
+    def retire_file(self, table_name: str, source_uri: str) -> int:
+        raise NotImplementedError
+
+
 def make_config(**overrides: Any) -> Config:
     values: dict[str, Any] = {
         "warehouse_dsn": "postgresql://unused",

@@ -301,19 +301,21 @@ dependencies = [
     { name = "flask" },
     { name = "google-cloud-storage" },
     { name = "gunicorn" },
-    { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "requests" },
 ]
 
 [package.optional-dependencies]
+files = [
+    { name = "pyarrow" },
+]
 postgres = [
     { name = "psycopg", extra = ["binary"] },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "el-factory", extra = ["postgres"] },
+    { name = "el-factory", extra = ["files", "postgres"] },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -324,15 +326,15 @@ requires-dist = [
     { name = "google-cloud-storage", specifier = "==3.17.0" },
     { name = "gunicorn", specifier = "==26.2.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = "==3.3.6" },
-    { name = "pyarrow", specifier = "==21.0.0" },
+    { name = "pyarrow", marker = "extra == 'files'", specifier = "==21.0.0" },
     { name = "pyyaml" },
     { name = "requests", specifier = "==2.34.2" },
 ]
-provides-extras = ["postgres"]
+provides-extras = ["postgres", "files"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "el-factory", extras = ["postgres"] },
+    { name = "el-factory", extras = ["postgres", "files"] },
     { name = "pytest" },
     { name = "ruff" },
 ]

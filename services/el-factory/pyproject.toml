@@ -9,7 +9,6 @@ dependencies = [
     "google-cloud-storage==3.17.0",
     "requests==2.34.2",
     "pyyaml",
-    "pyarrow==21.0.0",
 ]
 
 [project.optional-dependencies]
@@ -19,18 +18,25 @@ dependencies = [
 postgres = [
     "psycopg[binary]==3.3.6",
 ]
+# The file sources (el_factory/tlc, the Airflow lab's TLC pipeline, PLAN.md D34-D35): Parquet by
+# pyarrow. Served only on a warehouse that keeps their ledger (Postgres), so only the postgres image
+# installs it (the Dockerfile's builder-postgres); the GCP build carries neither it nor el_factory/tlc.
+files = [
+    "pyarrow==21.0.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12"]
 build-backend = "uv_build"
 
 # No group is installed in any image (`uv sync --no-dev` in the Dockerfile).
-# dev: the test and lint tools and the postgres extra, so the tests cover the Postgres seam.
+# dev: the test and lint tools, the postgres and files extras, so the tests cover the Postgres seam
+# and the file sources.
 [dependency-groups]
 dev = [
     "pytest",
     "ruff",
-    "el-factory[postgres]",
+    "el-factory[postgres,files]",
 ]
 
 [tool.uv.build-backend]

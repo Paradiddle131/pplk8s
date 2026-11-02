@@ -13,23 +13,24 @@ import io
 import re
 import threading
 from collections.abc import Callable, Iterator
-from typing import Any, Protocol
+from typing import Any
 
 import pyarrow as pa
 import pyarrow.csv as pacsv
 import pyarrow.parquet as pq
 
 from el_factory.model import Interval
-from el_factory.remote_file import RangeReader, RemoteFile, head
-from el_factory.sources.tlc import (
+from el_factory.storage import Storage
+from el_factory.tlc.remote_file import RangeReader, RemoteFile, head
+from el_factory.tlc.source import (
     ChunkTooLarge,
+    ColumnPlan,
     TlcEntity,
     chunk_span,
     data_month,
     plan_columns,
 )
-from el_factory.storage import Storage
-from el_factory.warehouse import ChunkLoad, FileProgress
+from el_factory.warehouse import ChunkLoad, FileLedger
 
 # One chunk in flight per gunicorn process: a yellow row group costs ~400 MB while it loads, and
 # three concurrent months peaked at 1.24 GiB without this (D35 ceiling: 1 GiB per instance).
@@ -46,20 +47,6 @@ CSV_BATCH_ROWS = 25_000
 MAX_CHUNK_BYTES = 64 * 2**20
 
 
-class ChunkWarehouse(Protocol):
-    def landing_columns(self, table_name: str) -> dict[str, str]: ...
-
-    def prepare_landing_table(self, table_name: str, add: Any, widen: Any) -> None: ...
-
-    def file_progress(self, source_uri: str, etag: str) -> FileProgress: ...
-
-    def replace_chunk(
-        self, table_name: str, load: ChunkLoad, columns: Any, csv: Iterator[bytes]
-    ) -> int: ...
-
-    def complete_version(self, table_name: str, source_uri: str, etag: str) -> None: ...
-
-
 def extract_file(
     entity: TlcEntity,
     run_id: str,
@@ -67,7 +54,7 @@ def extract_file(
     *,
     bucket: str,
     storage: Storage,
-    warehouse: ChunkWarehouse,
+    warehouse: FileLedger,
     max_run_time: float,
     clock: Callable[[], float],
 ) -> dict[str, Any]:
@@ -139,7 +126,7 @@ def _stage_chunk(
     storage: Storage,
     reader: RangeReader,
     parquet: pq.ParquetFile,
-    plan: Any,
+    plan: ColumnPlan,
 ) -> str:
     """Read one row group in one ranged GET and stage its typed columns, lower-cased, as Parquet.
 

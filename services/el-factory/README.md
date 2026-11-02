@@ -20,6 +20,8 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
 - `POST /retire` with the JSON body `{source, entity, keep: ["YYYY-MM", ...]}` retires every held month not in `keep`: it deletes the month's landed rows (every version) and its `ops.file_chunks` and `ops.file_versions` rows, so a later load of that month starts over (issue #87).
   The response is `{"status":"ok","source","entity","kept","retired":[{"month","rows"}],"rows"}`; an empty or malformed `keep` is 400, because retiring everything is never what a caller means.
   The caller owns the policy and EL Factory only deletes; on BigQuery the same retirement is the month partition's expiration.
+- `/publication`, `/months`, `/retire` and `/extract` of source `tlc` are the file sources' (`el_factory/tlc`, a Flask blueprint), served only where the warehouse keeps their ledger (`FileLedger`, Postgres only) and the build carries `el_factory/tlc` with pyarrow (the `files` extra; semantic/PLAN.md SL-19).
+  Elsewhere they are 404, and `/catalog` leaves out their entries and the `tlc` pipeline.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
   The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.
@@ -102,6 +104,7 @@ All synthetic output is deterministic and all data is synthetic or public; TLC d
 
 The app reaches the warehouse only through the `Warehouse` protocol in `el_factory/warehouse.py` (semantic/PLAN.md SL-19): `ELF_WAREHOUSE` picks the implementation, and only its module, with its driver, is imported, so an image built for one warehouse carries no other's driver.
 `postgres` (`warehouse_postgres.py`, the `postgres` extra) is the only one so far; BigQuery comes with [#227](../../../../issues/227).
+The file sources need more than a `Warehouse`: the `FileLedger` protocol in the same module (chunked landing tables, the chunk and version ledgers, retirement), which only `warehouse_postgres.py` implements.
 Every driver error leaves the implementation as a `WarehouseError` whose `transient` flag decides the answer: a dropped or refused connection is a retryable 503, anything else a 500.
 The contract below is Postgres's.
 
@@ -150,5 +153,6 @@ docker run --rm "$(make -s print-ELF_IMAGE)" id -u   # prints 10001
 ```
 
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.
-Its build argument `WAREHOUSE` (default `postgres`) names the `pyproject.toml` extra it installs and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
+Its build argument `WAREHOUSE` (default `postgres`) names the Dockerfile stage it is built from and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
+The `postgres` stage installs the `postgres` and `files` extras and carries the whole package, the file sources included.
 It runs gunicorn with two workers and the control socket disabled, because that socket is an admin feature the container does not need.
