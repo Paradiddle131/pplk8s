@@ -33,9 +33,16 @@ apis:
   artifactregistry.googleapis.com: {enable: true, source: https://cloud.google.com/artifact-registry/pricing}
   # Firestore: one free database per project, 1 GiB stored, 50,000 reads and 20,000 writes a day (the agent's sessions, #205).
   firestore.googleapis.com: {enable: true, source: https://cloud.google.com/firestore/pricing}
+  # Cloud Run (#209), per billing account a month in us-central1: request-billed services 180,000 vCPU-seconds,
+  # 360,000 GiB-seconds and 2 million requests; Jobs, billed for each instance's whole life (at least a minute),
+  # 240,000 vCPU-seconds and 450,000 GiB-seconds (platform/gcp/workloads.yaml, held by check_free_path.py).
+  run.googleapis.com: {enable: true, source: https://cloud.google.com/run/pricing, issue: 209}
+  # Cloud Scheduler: 3 jobs a month per billing account, not per project (`caps.cloud_scheduler_jobs`).
+  cloudscheduler.googleapis.com: {enable: true, source: https://cloud.google.com/scheduler/pricing, issue: 209}
+  # Secret Manager: 6 active secret versions, 10,000 access operations and 3 rotation notifications a month
+  # per billing account (the agent's model key, one version).
+  secretmanager.googleapis.com: {enable: true, source: https://cloud.google.com/secret-manager/pricing, issue: 209}
   # Later issues on Map #212, off until their PR turns them on.
-  run.googleapis.com: {enable: false, source: https://cloud.google.com/run/pricing, issue: 209}
-  cloudscheduler.googleapis.com: {enable: false, source: https://cloud.google.com/scheduler/pricing, issue: 228}
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
   # The one dated exception: free until 2026-12-31, switched off by #232.
   geminidataanalytics.googleapis.com: {enable: false, source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview, issue: 207, until: 2026-12-31}
@@ -53,6 +60,13 @@ resources:
   google_cloud_quotas_quota_preference: cloudquotas.googleapis.com
   google_artifact_registry_repository: artifactregistry.googleapis.com
   google_artifact_registry_repository_iam_member: artifactregistry.googleapis.com
+  google_service_account_iam_member: iam.googleapis.com
+  google_cloud_run_v2_service: run.googleapis.com
+  google_cloud_run_v2_job: run.googleapis.com
+  google_cloud_run_v2_job_iam_member: run.googleapis.com
+  google_cloud_scheduler_job: cloudscheduler.googleapis.com
+  google_secret_manager_secret: secretmanager.googleapis.com
+  google_secret_manager_secret_iam_member: secretmanager.googleapis.com
 
 # APIs GCP turns on by itself with the ones above (BigQuery, Storage, IAM, Firestore, Workflows): they bill
 # nothing for being on, only for what is used through them, and the lab uses none of them directly.
@@ -78,6 +92,11 @@ caps:
   bigquery_query_mib_per_day: 31457
   # Bytes one query job may bill (cloud sessions' ~/.bigqueryrc, dbt's `gcp` target): 1 GiB.
   bigquery_maximum_bytes_billed: 1073741824
+  # Instances one Cloud Run service may run at once (its max_instance_count; minimum always 0).
+  cloud_run_max_instances: 1
+  # Cloud Scheduler jobs in the project, at most the billing account's 3 free ones: workloads.yaml's two
+  # schedules and the orchestration of #228.
+  cloud_scheduler_jobs: 3
 
 # No Always Free tier, or a free tier the lab cannot hold: never on the list above.
 paid:

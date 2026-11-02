@@ -24,3 +24,14 @@ variable "kill_switch_usd" {
     error_message = "Keep the kill switch between 0 and 20 USD."
   }
 }
+
+variable "images" {
+  description = "Workload image key (workloads.yaml `image`: semantic-agent, dbt) => its reference in the lab's Artifact Registry repository. A workload exists only while its image is named here: tofu.sh passes IMAGES, else the images deployed now, so a plain gcp-up neither creates nor removes one."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for k in keys(var.images) : contains(["semantic-agent", "dbt"], k)])
+    error_message = "images takes the keys semantic-agent and dbt (platform/gcp/workloads.yaml)."
+  }
+}
