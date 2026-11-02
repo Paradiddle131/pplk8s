@@ -13,6 +13,7 @@ The dbt project, its semantic YAML and the catalog generator run on BigQuery's a
 It also runs (measured (emulator), `make bigquery-emulator-check`, [`semantic/PLAN.md`](../semantic/PLAN.md) SL-7):
 - `dbt build` of the semantic path, tests included, on the `bigquery_emulator` output: every model and test passes on GoogleSQL, as the emulator's ZetaSQL analyzer checks it.
 - MetricFlow queries the eight metrics there, and they equal the hand-written gold and exposed tables the same build wrote, day by day.
+- The period metrics run there too: over `dbt/dev/fixture_weeks.sql`'s six weeks, the three week-over-week growths (`offset_window: 1 week`, ISO weeks from Monday) and the three month-to-date totals (`grain_to_date: month`) equal SQL by hand on gold, week by week and day by day, with no shim; changing one metric's `grain_to_date` to `week` fails the check.
 - The emulator needs a shim for two gaps dbt-bigquery hits (`routines.list`, and DDL jobs reported as `SELECT`); real BigQuery has neither.
 
 And it runs on real BigQuery (measured (live), `make bigquery-live-check` on the lab project, 2026-11-01, #206): the same script and fixture as on the emulator, on dbt's `gcp` output.

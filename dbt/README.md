@@ -110,6 +110,7 @@ No metric sets `fill_nulls_with`, because dbt-core 1.12.6 drops it in this spec:
 `metricflow_time_spine.sql` is the daily time spine (`semantic.time_spine`), tagged `sales` because the sales build owns it; `semantic_metrics.sql` (`semantic.metrics`) and `semantic_glossary.sql` (`semantic.glossary`) are tagged `sales` with it.
 
 Business terms that are not metrics (`Signup cohort`, `Channel`, `Market`, `Conversion`) are a glossary in `config.meta.glossary` on the silver model that holds the concept: each term has a description, synonyms, and the metrics and dimensions it maps to.
+A word users say for more than one metric (`Customers`, `Sales`) is a term whose description starts `Ambiguous on its own:` and whose metrics are its meanings, so an agent asks which one is meant ([`docs/agent-ready-warehouse.md`](../docs/agent-ready-warehouse.md)).
 A term never repeats a metric: the metric's label and description are already its glossary entry.
 
 Every metric and semantic model carries a `description`, and every metric a `label`: they become the agent catalog and the warehouse comments, so `scripts/check_standard.py` fails the parse step without them.

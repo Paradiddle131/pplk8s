@@ -175,7 +175,7 @@ def test_the_eval_scores_whether_the_answer_quotes_its_freshness(metricflow, quo
 
 def test_numbers_in_a_quoted_statement_do_not_make_an_answer_right(metricflow):
     """The statement's deadline (36 h) never passes for an expected 36."""
-    expected = {**EXPECTED, "revenue_one_day": [36.0]}
+    expected = {**EXPECTED, "revenue_one_day": [[[36.0]]]}
     cases = eval_cases(QUESTIONS[:1], expected, "semantic_agent", semantic=True)
     agent = semantic.build_agent(Answers())
     outcomes = asyncio.run(evaluation.evaluate(agent, cases, [evaluation.ANSWER_CORRECT]))

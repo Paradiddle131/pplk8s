@@ -9,7 +9,7 @@ export NODE_IMAGE
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.8
-DBT_IMAGE ?= localhost:5001/dbt:0.7.40
+DBT_IMAGE ?= localhost:5001/dbt:0.7.41
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
 AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.39
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
@@ -154,7 +154,7 @@ catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-cat
 bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
 	tests/e2e/bigquery-check.sh
 
-bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history (#125, #246)
+bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history, and the week-over-week and month-to-date metrics equal SQL by hand over six more weeks (#125, #246)
 	tests/e2e/bigquery-run-check.sh
 
 gcp-image-check: services-up ## Build the dbt image for GCP (WAREHOUSE=bigquery) and run its own dbt build of the platform part and a MetricFlow query on a fresh BigQuery emulator (#206, SL-19)
@@ -236,7 +236,7 @@ agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloa
 record-call-labels: ## Live, opt-in: record the call-label prompt's answers for the golden set's calls from an OpenRouter free model into dbt/seeds/silver/call_label_recordings.csv (CALL_LABEL_MODEL=<id>:free; one request per unrecorded call; exit 3 keeps a partial recording on a spent quota)
 	cd dbt && uv run --no-project --quiet --with pyyaml==6.0.3 python scripts/record_call_labels.py $(if $(CALL_LABEL_MODEL),--model $(CALL_LABEL_MODEL))
 
-agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 49 free-tier model turns)
+agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 62 free-tier model turns)
 	tests/e2e/agent-eval.sh
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
