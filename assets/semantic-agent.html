@@ -87,6 +87,8 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .region.cobalt { stroke: var(--cobalt); }
 .region.vermilion { stroke: var(--vermilion); }
 
+/* the headline: the one line above the drawing, one step up the scale from a card's title, regular weight */
+.headline { font-size: 17px; font-weight: 400; fill: var(--ink); }
 .ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
 .sub { font-size: 11px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
@@ -125,7 +127,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <body>
 <div class="stage">
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 736" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 784" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
@@ -182,6 +184,8 @@ function Sheet(svg, opt = {}) {
   const knocks = []; // every knock-out, painted by done() to match what lies behind each half
   const edges = []; // every edge, for the bridges done() draws where two cross
   const HOP = 4; // a bridge's radius
+  const HEAD = [24, 32]; // the headline's baseline start; the drawing starts at TOP or below
+  const TOP = 64;
 
   const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
   const pick = v => (isModal(v) ? v[mode] : v);
@@ -239,6 +243,10 @@ function Sheet(svg, opt = {}) {
   const screen = el('pattern', { id: 'screen', patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, defs);
   el('rect', { width: 6, height: 6, class: 'screen-bg' }, screen);
   el('circle', { cx: 3, cy: 3, r: 0.75, class: 'screen-dot' }, screen);
+
+  // The headline: the one line above the drawing that says the question the sheet answers, or its
+  // takeaway; drawn first, at the top left, so the drawing starts below it (the checker holds the rest).
+  if (opt.headline !== undefined) text(svg, HEAD[0], HEAD[1], opt.headline, 'headline');
 
   // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
   // edge: 'bottom' (a title block, for a frame that edges enter from above).
@@ -459,7 +467,7 @@ function Sheet(svg, opt = {}) {
     window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked };
   };
 
-  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO };
+  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO, TOP };
 }
 
 // Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
@@ -469,85 +477,85 @@ Sheet.ready = () => Promise.all([
 ].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
 /* /sheet:js */
 Sheet.ready().then(() => {
-  const S = Sheet(document.getElementById('d'), { logos: LOGOS });
+  const S = Sheet(document.getElementById('d'), { logos: LOGOS, headline: 'How a question travels through the semantic agent' });
 
   // ---- the caller, outside the pod
-  S.card({ x: 24, y: 74, w: 112, h: 52, title: 'caller', lines: [{ mono: 'adk web, curl' }] });
-  S.edge('M136,92 H200', { label: { text: 'asks', at: [160, 86] } });
-  S.edge('M200,112 H136', { label: { text: 'answer', at: [160, 128] } });
+  S.card({ x: 24, y: 122, w: 112, h: 52, title: 'caller', lines: [{ mono: 'adk web, curl' }] });
+  S.edge('M136,140 H200', { label: { text: 'asks', at: [160, 134] } });
+  S.edge('M200,160 H136', { label: { text: 'answer', at: [160, 176] } });
 
   // ---- the pod: three columns, top to bottom in the order a question travels
-  S.frame({ x: 184, y: 32, w: 700, h: 412, title: 'semantic-agent pod', note: 'adk api_server', logo: 'kubernetes' });
-  S.card({ x: 200, y: 68, w: 164, h: 72, title: 'Runner', lines: [{ mono: 'sessions, events' }], pkg: 'google.adk', logo: 'adk' });
-  S.card({ x: 396, y: 68, w: 220, h: 72, title: 'semantic_agent', lines: [{ mono: 'agent.py' }, { mono: 'LlmAgent, 3 tools' }] });
-  S.card({ x: 648, y: 68, w: 216, h: 72, title: 'model.py', lines: [{ mono: 'MODEL_BACKEND' }, { mono: 'on_model_error_callback' }] });
-  S.edge('M364,100 H396');
-  S.edge('M616,100 H648');
-  S.edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
+  S.frame({ x: 184, y: 80, w: 700, h: 412, title: 'semantic-agent pod', note: 'adk api_server', logo: 'kubernetes' });
+  S.card({ x: 200, y: 116, w: 164, h: 72, title: 'Runner', lines: [{ mono: 'sessions, events' }], pkg: 'google.adk', logo: 'adk' });
+  S.card({ x: 396, y: 116, w: 220, h: 72, title: 'semantic_agent', lines: [{ mono: 'agent.py' }, { mono: 'LlmAgent, 3 tools' }] });
+  S.card({ x: 648, y: 116, w: 216, h: 72, title: 'model.py', lines: [{ mono: 'MODEL_BACKEND' }, { mono: 'on_model_error_callback' }] });
+  S.edge('M364,148 H396');
+  S.edge('M616,148 H648');
+  S.edge('M282,116 V96 H916', { label: { text: 'sessions', at: [760, 90] } });
 
   // the guard: ADK's after_tool_callback, outside the toolset, so a swapped toolset keeps both: every data
   // result gets its metrics' freshness, then its audit row, on its way back to the agent
-  S.card({ x: 432, y: 160, w: 184, h: 64, title: 'guard.py', lines: [{ mono: 'freshness.py, audit.py' }, 'no row, no result'] });
-  S.edge('M420,140 V256');
-  S.edge('M536,256 V224');
-  S.edge('M536,160 V140', { label: { text: 'after_tool_callback', at: [548, 154], anchor: 'start', mono: true } });
-  S.edge('M616,192 H924', { label: { text: 'insert', at: [770, 186] } });
-  S.edge('M616,216 H892 V286 H924', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [770, 210] } });
+  S.card({ x: 432, y: 208, w: 184, h: 64, title: 'guard.py', lines: [{ mono: 'freshness.py, audit.py' }, 'no row, no result'] });
+  S.edge('M420,188 V304');
+  S.edge('M536,304 V272');
+  S.edge('M536,208 V188', { label: { text: 'after_tool_callback', at: [548, 202], anchor: 'start', mono: true } });
+  S.edge('M616,240 H924', { label: { text: 'insert', at: [770, 234] } });
+  S.edge('M616,264 H892 V334 H924', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [770, 258] } });
 
   // the toolset, which the work platform replaces
-  S.phantom({ x: 384, y: 240, w: 492, h: 184, label: 'at work: DataAgentToolset' });
-  S.card({ x: 396, y: 256, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
-  S.card({ x: 648, y: 256, w: 216, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
-  S.card({ x: 648, y: 348, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
-  S.edge('M616,288 H648');
-  S.edge('M756,320 V348');
-  S.edge('M864,380 H924', { reads: true, tone: 'cobalt' });
+  S.phantom({ x: 384, y: 288, w: 492, h: 184, label: 'at work: DataAgentToolset' });
+  S.card({ x: 396, y: 304, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
+  S.card({ x: 648, y: 304, w: 216, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
+  S.card({ x: 648, y: 396, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
+  S.edge('M616,336 H648');
+  S.edge('M756,368 V396');
+  S.edge('M864,428 H924', { reads: true, tone: 'cobalt' });
 
   // the initContainer: the catalog the toolset reads, built for the database the pod reads
-  S.frame({ x: 192, y: 168, w: 172, h: 260, title: 'initContainer' });
-  S.card({ x: 200, y: 188, w: 152, h: 64, title: 'dbt parse', lines: [{ mono: 'manifests' }], pkg: 'dbt-core', logo: 'dbt' });
-  S.card({ x: 200, y: 272, w: 152, h: 52, title: 'build_catalog.py', lines: ["MetricFlow's engine"] });
-  S.card({ x: 200, y: 344, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
-  S.edge('M276,252 V272');
-  S.edge('M276,324 V344');
-  S.edge('M352,380 H648');
+  S.frame({ x: 192, y: 216, w: 172, h: 260, title: 'initContainer' });
+  S.card({ x: 200, y: 236, w: 152, h: 64, title: 'dbt parse', lines: [{ mono: 'manifests' }], pkg: 'dbt-core', logo: 'dbt' });
+  S.card({ x: 200, y: 320, w: 152, h: 52, title: 'build_catalog.py', lines: ["MetricFlow's engine"] });
+  S.card({ x: 200, y: 392, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
+  S.edge('M276,300 V320');
+  S.edge('M276,372 V392');
+  S.edge('M352,428 H648');
 
   // ---- outside the cluster
-  S.frame({ x: 900, y: 16, w: 276, h: 556, title: 'outside the cluster' });
-  S.card({ x: 916, y: 28, w: 244, h: 40, title: 'metadata DB' });
-  S.text(null, 1148, 52.5, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
-  S.card({ x: 916, y: 76, w: 244, h: 66, title: 'the model', lines: [{ mono: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], hatch: true });
-  S.edge('M864,100 H916');
+  S.frame({ x: 900, y: 64, w: 276, h: 556, title: 'outside the cluster' });
+  S.card({ x: 916, y: 76, w: 244, h: 40, title: 'metadata DB' });
+  S.text(null, 1148, 100.5, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
+  S.card({ x: 916, y: 124, w: 244, h: 66, title: 'the model', lines: [{ mono: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], hatch: true });
+  S.edge('M864,148 H916');
 
-  S.frame({ x: 908, y: 160, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
-  S.region({ x: 916, y: 172, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
-  S.card({ x: 924, y: 180, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
-  S.region({ x: 916, y: 252, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
-  S.card({ x: 924, y: 260, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
-  S.card({ x: 924, y: 360, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
-  S.region({ x: 916, y: 484, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
-  S.card({ x: 924, y: 492, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
+  S.frame({ x: 908, y: 208, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
+  S.region({ x: 916, y: 220, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
+  S.card({ x: 924, y: 228, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
+  S.region({ x: 916, y: 300, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 308, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
+  S.card({ x: 924, y: 408, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
+  S.region({ x: 916, y: 532, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 540, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
 
   // ---- the MCP server: the same tools and the same guard for agents outside ADK, served by its own
   // process (make agent-mcp, with uv), not by the pod: the agent image leaves it out (SL-19, SL-20)
-  S.card({ x: 24, y: 496, w: 160, h: 56, title: 'MCP client', lines: [{ mono: 'Claude, Gemini CLI' }] });
-  S.edge('M184,532 H400', { label: { text: 'bearer token', at: [244, 526] } });
-  S.frame({ x: 384, y: 468, w: 500, h: 100, title: 'make agent-mcp', note: 'uv, not in the image', edge: 'bottom' });
-  S.card({ x: 400, y: 496, w: 216, h: 56, title: 'mcp_server.py', lines: [{ mono: 'MCPServer, streamable HTTP' }] });
-  S.edge('M560,496 V336');
-  S.edge('M400,512 H376 V200 H432', { label: { text: 'guarded', at: [384, 460], anchor: 'start', mono: true } });
+  S.card({ x: 24, y: 544, w: 160, h: 56, title: 'MCP client', lines: [{ mono: 'Claude, Gemini CLI' }] });
+  S.edge('M184,580 H400', { label: { text: 'bearer token', at: [244, 574] } });
+  S.frame({ x: 384, y: 516, w: 500, h: 100, title: 'make agent-mcp', note: 'uv, not in the image', edge: 'bottom' });
+  S.card({ x: 400, y: 544, w: 216, h: 56, title: 'mcp_server.py', lines: [{ mono: 'MCPServer, streamable HTTP' }] });
+  S.edge('M560,544 V384');
+  S.edge('M400,560 H376 V248 H432', { label: { text: 'guarded', at: [384, 508], anchor: 'start', mono: true } });
 
   // ---- the eval, in-process
-  S.frame({ x: 24, y: 588, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
-  S.card({ x: 40, y: 612, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
-  S.card({ x: 268, y: 612, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
-  S.card({ x: 496, y: 612, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
-  S.edge('M236,644 H268');
-  S.edge('M464,644 H496');
-  S.edge('M300,612 V444', { label: { text: 'runs semantic_agent', at: [292, 470], anchor: 'end' } });
-  S.edge('M756,632 H892 V512 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [824, 626], mono: true } });
+  S.frame({ x: 24, y: 636, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
+  S.card({ x: 40, y: 660, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
+  S.card({ x: 268, y: 660, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
+  S.card({ x: 496, y: 660, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
+  S.edge('M236,692 H268');
+  S.edge('M464,692 H496');
+  S.edge('M300,660 V492', { label: { text: 'runs semantic_agent', at: [292, 518], anchor: 'end' } });
+  S.edge('M756,680 H892 V560 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [824, 674], mono: true } });
 
-  S.legend(24, 716, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
+  S.legend(24, 764, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
   S.done();
 });
 </script>
