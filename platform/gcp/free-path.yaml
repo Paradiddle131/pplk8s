@@ -77,8 +77,10 @@ implicit:
   bigqueryconnection.googleapis.com: {source: https://cloud.google.com/bigquery/docs/connections-api-intro}
   bigquerydatapolicy.googleapis.com: {source: https://cloud.google.com/bigquery/docs/column-data-masking-intro}
   bigquerymigration.googleapis.com: {source: https://cloud.google.com/bigquery/docs/migration-intro#pricing}
+  containerregistry.googleapis.com: {source: https://cloud.google.com/artifact-registry/pricing}  # on with run.googleapis.com; gcr.io is served by Artifact Registry, nothing stored there
   cloudtrace.googleapis.com: {source: https://cloud.google.com/stackdriver/pricing#trace-costs}
   dataform.googleapis.com: {source: https://cloud.google.com/dataform/pricing}
+  firebaserules.googleapis.com: {source: https://cloud.google.com/firestore/pricing}  # Firestore's Security Rules companion, no charge of its own
   datastore.googleapis.com: {source: https://cloud.google.com/firestore/pricing}
   iamcredentials.googleapis.com: {source: https://cloud.google.com/iam/pricing}
   servicemanagement.googleapis.com: {source: https://cloud.google.com/service-infrastructure/docs/service-management/getting-started}
