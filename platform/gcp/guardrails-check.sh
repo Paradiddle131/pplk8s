@@ -45,7 +45,9 @@ policies=$(python3 -c 'import json, sys
 for s in json.loads(sys.argv[1]).get("services", []):
     print(s["name"])' "$services" | while read -r name; do
   policy=$(read_api "https://run.googleapis.com/v2/$name:getIamPolicy") || exit 1
-  printf '{"service": "%s", "policy": %s}\n' "$name" "$policy"
+  # The API pretty-prints its JSON over many lines: compact it, or the reader splits one policy into several.
+  python3 -c 'import json, sys
+print(json.dumps({"service": sys.argv[1], "policy": json.loads(sys.argv[2])}))' "$name" "$policy"
 done)
 schedules=$(read_api "https://cloudscheduler.googleapis.com/v1/projects/$GCP_PROJECT/locations/us-central1/jobs")
 run_quotas=$(read_api "https://cloudquotas.googleapis.com/v1/projects/$GCP_PROJECT/locations/global/services/run.googleapis.com/quotaInfos?pageSize=200")

@@ -76,8 +76,10 @@ run "the_alert_with_its_channel" {
       one(google_monitoring_alert_policy.stale_source[0].conditions[0].condition_threshold[0].aggregations[0].group_by_fields) == "metric.label.table",
       tonumber(trimsuffix(google_monitoring_alert_policy.stale_source[0].conditions[0].condition_threshold[0].aggregations[0].alignment_period, "s")) > 3600,
       google_monitoring_alert_policy.stale_source[0].alert_strategy[0].auto_close != null,
+      # Cloud Monitoring refuses evaluation_missing_data with a duration of 0s ("must have a non-zero duration").
+      tonumber(trimsuffix(google_monitoring_alert_policy.stale_source[0].conditions[0].condition_threshold[0].duration, "s")) > 0,
     ])
-    error_message = "Count above 0 per table over a window longer than the hourly schedule, closing on its own."
+    error_message = "Count above 0 per table over a window longer than the hourly schedule, held a non-zero duration (the API requires one with evaluation_missing_data), closing on its own."
   }
 }
 
