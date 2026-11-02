@@ -1,6 +1,6 @@
 # `make gcp-validate`, offline (a mock provider, no credentials): the freshness alert exists only with the
 # freshness Job, and its channel only with an address; table grants only on the ops tables that exist, the
-# insert one a custom role; Cloud Run's three regional quota preferences (#209).
+# insert one a custom role; Cloud Run's two regional quota preferences (vCPU and memory) (#209).
 
 mock_provider "google" {
   mock_resource "google_service_account" {
@@ -39,10 +39,10 @@ run "no_freshness_job_no_alert" {
   }
 
   assert {
-    condition = join(",", sort([for p in google_cloud_quotas_quota_preference.cloud_run : "${p.quota_id}=${p.quota_config[0].preferred_value}"])) == "CpuAllocPerProjectRegion=4000,InstancesPerProject=4,MemAllocPerProjectRegion=2147483648" && alltrue([
+    condition = join(",", sort([for p in google_cloud_quotas_quota_preference.cloud_run : "${p.quota_id}=${p.quota_config[0].preferred_value}"])) == "CpuAllocPerProjectRegion=4000,MemAllocPerProjectRegion=2147483648" && alltrue([
       for p in google_cloud_quotas_quota_preference.cloud_run : p.service == "run.googleapis.com" && p.dimensions.region == "us-central1"
     ])
-    error_message = "Cloud Run's three regional quotas lowered in us-central1, whether or not a workload is deployed."
+    error_message = "Cloud Run's two regional quotas lowered in us-central1, whether or not a workload is deployed."
   }
 }
 

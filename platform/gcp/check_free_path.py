@@ -307,12 +307,14 @@ def run_quota_problems(spec: dict, caps: dict) -> list[str]:
     """Cloud Run's regional quota caps against the most workloads.yaml can run at once.
 
     The agent's service at `caps.cloud_run_max_instances`, one task of each Job, and one more instance of the
-    largest service for a revision rollout: a cap above that only lets a runaway run longer.
+    largest service for a revision rollout: a cap above that only lets a runaway run longer. No instance quota:
+    `InstancesPerProject` governs Cloud Run Instances resources only, not services or Jobs, and is 0 in
+    us-central1, so a preference there raises it (free-path.yaml).
     """
     quotas = caps.get("cloud_run_regional_quotas")
     if not isinstance(quotas, dict) or not quotas:
         return [
-            "caps.cloud_run_regional_quotas: missing; Cloud Run's regional default is 100 instances"
+            "caps.cloud_run_regional_quotas: missing; Cloud Run's regional defaults are 200 vCPU and 400 GiB"
         ]
     instances = caps.get("cloud_run_max_instances")
     if not isinstance(instances, int):
@@ -325,7 +327,6 @@ def run_quota_problems(spec: dict, caps: dict) -> list[str]:
         largest = max(services, key=lambda s: (float(s["cpu"]), gib(s["memory"])))
         shapes.append((1, largest))
     peak = {
-        "instances": sum(n for n, _ in shapes),
         "milli_vcpu": sum(n * float(w["cpu"]) * 1000 for n, w in shapes),
         "bytes": sum(n * gib(w["memory"]) * 2**30 for n, w in shapes),
     }
