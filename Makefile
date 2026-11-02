@@ -6,12 +6,31 @@ SHELL := /usr/bin/env bash
 NODE_IMAGE ?= kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
 export NODE_IMAGE
 
+# Image tags name their content (D16): <line>-<12 hex>, the hex hashing the image's build inputs in the working tree
+# (scripts/image-tag.sh), so no change needs a bump and two different builds never share a tag. The pathspecs are
+# each build's contexts, less (':!') tracked files its .dockerignore leaves out that change often (tests, DAGs, evals):
+# leaving one in only costs a rebuild, leaving out one the build reads would deploy a stale image.
+# Each is computed once per top-level make: sub-makes and the scripts make runs inherit it, and an override
+# (`make push DBT_IMAGE=...`) wins.
+# $(call image_ref,<repository>,<line>,<pathspec>... [-- <salt>])
+image_ref = $(1):$(2)-$(or $(shell scripts/image-tag.sh $(3)),$(error scripts/image-tag.sh failed for $(3)))
+DBT_INPUTS = dbt :!dbt/dev
+
 # Workload images, tagged for the local registry so Phase 2 can push them as-is.
 # The only place their tags live (D16): workloads-up.sh deploys these exact references.
-ELF_IMAGE ?= localhost:5001/el-factory:0.7.8
-DBT_IMAGE ?= localhost:5001/dbt:0.7.43
-ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.43
+ifeq ($(origin ELF_IMAGE),undefined)
+ELF_IMAGE := $(call image_ref,localhost:5001/el-factory,0.7,services/el-factory :!services/el-factory/tests)
+endif
+ifeq ($(origin DBT_IMAGE),undefined)
+DBT_IMAGE := $(call image_ref,localhost:5001/dbt,0.7,$(DBT_INPUTS))
+endif
+ifeq ($(origin ADAPTER_IMAGE),undefined)
+ADAPTER_IMAGE := $(call image_ref,localhost:5001/event-adapter,0.1,services/event-adapter :!services/event-adapter/tests)
+endif
+# Its build reads dbt/ too (--build-context dbt=dbt).
+ifeq ($(origin AGENT_IMAGE),undefined)
+AGENT_IMAGE := $(call image_ref,localhost:5001/semantic-agent,0.1,services/semantic-agent :!services/semantic-agent/tests :!services/semantic-agent/evals $(DBT_INPUTS))
+endif
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -39,24 +58,31 @@ docker_build = $(DOCKER_BUILD) -t $(1) $(call cache_flags,$(or $(2),$(firstword 
 # $(call publish,<image ref>,<build args and context>[,<cache name>]): build the image and push it to the local registry.
 # On cloud (BUILD_CA set) the session's disk allowance cannot hold each image in Docker, the local registry and the
 # nodes at once (#119): a tag the registry already serves is not rebuilt (D16: a tag names its content; FORCE_BUILD=1
-# rebuilds it), and after a push Docker's copy and BuildKit's local cache go. The laptop always builds and keeps both.
+# rebuilds it, e.g. after a base image moved under the same Dockerfile), and after a push Docker's copy and BuildKit's local cache go. The laptop always builds and keeps both.
 publish = $(if $(and $(BUILD_CA),$(if $(FORCE_BUILD),,$(call in_registry,$(1)))),@echo "$(1): the local registry has it",$(call docker_build,$(1),$(3)) $(2) && docker push $(1)$(if $(BUILD_CA), && docker image rm $(1) >/dev/null && docker builder prune -af >/dev/null))
 manifest_types = application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json
 in_registry = $(shell curl -sf -o /dev/null -H 'Accept: $(manifest_types)' http://$(firstword $(subst /, ,$(1)))/v2/$(firstword $(subst :, ,$(notdir $(1))))/manifests/$(word 2,$(subst :, ,$(notdir $(1)))) && echo yes)
 
-# Airflow image: 3.3.1 base (D1) plus our suffix revision, bumped when the Dockerfile, requirements or include/ change.
-AIRFLOW_IMAGE ?= localhost:5001/airflow:3.3.1-pplk8s.22
+# Airflow image: the 3.3.1 base (D1) plus our content hash; DAGs reach pods by git-sync, not the image (D23).
+AIRFLOW_INPUTS = airflow :!airflow/dags :!airflow/tests
+ifeq ($(origin AIRFLOW_IMAGE),undefined)
+AIRFLOW_IMAGE := $(call image_ref,localhost:5001/airflow,3.3.1-pplk8s,$(AIRFLOW_INPUTS))
+endif
 export AIRFLOW_IMAGE
 
-# The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo).
-AIRFLOW_DRILL_IMAGE ?= localhost:5001/airflow:3.2.2-pplk8s.4
+# The upgrade drill's older line: Airflow 3.2.2 on chart 1.21.0 (both offered by Composer / the chart repo); its
+# build args join the hash, since they pick what the shared context installs.
+AIRFLOW_DRILL_ARGS = --build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none-
+ifeq ($(origin AIRFLOW_DRILL_IMAGE),undefined)
+AIRFLOW_DRILL_IMAGE := $(call image_ref,localhost:5001/airflow,3.2.2-pplk8s,$(AIRFLOW_INPUTS) -- $(AIRFLOW_DRILL_ARGS))
+endif
 export AIRFLOW_DRILL_IMAGE
 
 # DAG delivery (PLAN.md D23): git-sync of `main` from GitHub, or `local` for this checkout's DAGs.
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
+.PHONY: help tools lint check verify image-tag-test cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -253,10 +279,13 @@ verify: export PPLK8S_REQUIRE_WAREHOUSE := 1
 verify: lint test build ## Pre-merge gate (PLAN.md D26): linters, unit and DagBag tests, every image build (needs services-up)
 	$(call docker_build,$(AIRFLOW_IMAGE)) airflow
 
+image-tag-test: ## Check that image tags follow their build inputs and nothing else (scripts/image-tag.sh, D16)
+	tests/images/image-tag-test.sh
+
 rules-test: ## Check the Prometheus alert rules and run their promtool unit tests (tests/monitoring)
 	tests/monitoring/rules-test.sh
 
-test: airflow-test rules-test agent-test ## Run unit tests and linters
+test: airflow-test rules-test agent-test image-tag-test ## Run unit tests and linters
 	cd services/el-factory && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 	cd services/event-adapter && uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
@@ -325,7 +354,7 @@ db-cleanup-check: airflow-up observability-up ## Run the metadata DB cleanup Cro
 	tests/e2e/db-cleanup-check.sh
 
 airflow-drill-image: ## Build and push the upgrade drill's Airflow 3.2.2 image (AIRFLOW_DRILL_IMAGE)
-	$(call publish,$(AIRFLOW_DRILL_IMAGE),--build-arg AIRFLOW_VERSION=3.2.2 --build-arg REQUIREMENTS=requirements-drill-3.2.2.txt --build-arg DROP_CONSTRAINTS=-none- airflow,airflow-drill)
+	$(call publish,$(AIRFLOW_DRILL_IMAGE),$(AIRFLOW_DRILL_ARGS) airflow,airflow-drill)
 
 metadata-restore-drill: airflow-up observability-up workloads-up ## Phase 6 drill 10: restore the metadata DB to an earlier point, detect the drift from the warehouse, replay the lost runs (~6 min)
 	tests/e2e/metadata-restore-drill.sh
@@ -361,7 +390,7 @@ ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
 	scripts/ledger-fold.sh
 
 lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts, the e2e checks' Python helpers and the BigQuery emulator shim (ruff via uvx)
-	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/monitoring/*.sh
+	uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR scripts/*.sh platform/*/*.sh platform/helm/airflow/*.sh platform/k8s/*.sh tests/e2e/*.sh tests/images/*.sh tests/monitoring/*.sh
 	cd dbt && uvx ruff@0.17.0 check scripts && uvx ruff@0.17.0 format --check scripts
 	uvx ruff@0.17.0 check platform/compose/bigquery-shim && uvx ruff@0.17.0 format --check platform/compose/bigquery-shim
 	uvx ruff@0.17.0 check --config dbt/ruff.toml tests/e2e/lib && uvx ruff@0.17.0 format --config dbt/ruff.toml --check tests/e2e/lib

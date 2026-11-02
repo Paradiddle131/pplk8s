@@ -8,7 +8,7 @@ Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit
 ## Delivery
 
 `train claude/autopilot-train` (owner, 2026-11-02): one open train PR that every wake lands on (`export AUTOPILOT_TRAIN=claude/autopilot-train` before the scripts); the per-issue PRs open before the switch finish as they are, under the skill's resume rules.
-On the train, an image whose contents change gets its `Makefile` tag bumped once above `main`'s; later wakes on the same train keep that tag (each wake's kind is fresh), and the next train bumps again (D16).
+Image tags need no bump on the train: the `Makefile` computes each one from its build inputs (D16).
 
 ## Digest
 
@@ -58,7 +58,7 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 
 - Dispatch a workflow (`ci.yaml` or `integration.yaml`; on-demand only, PLAN.md D26).
 - Edit `LEDGER.md`: add the entry as `ledger.d/<YYYY-MM-DD>-<n>-<slug>.md` in the PR.
-- Change an image's contents without bumping its tag in the `Makefile` (D16): a Dockerfile, dependencies, dbt models, service code, `airflow/include/**`.
+- Pin an image tag by hand in the `Makefile`: tags are computed from their build inputs (D16, `scripts/image-tag.sh`).
 - Change a `PLAN.md` decision without its row in the same PR.
 
 ## Known conditions
@@ -67,6 +67,6 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 - Builds read and write a per-image layer cache at `ghcr.io/<owner>/<repo>/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
 - kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; seen 2026-10-30.
 - The nodes and pods reach the internet through `platform/kind/egress-up.sh` (`make egress-up`, run by `cluster-up` and every deploy target): kind copies the host's loopback `HTTPS_PROXY` into the nodes, where it names the node itself, so a relay container `kind-egress` on the kind gateway pipes to the proxy, containerd uses it with the proxy's CA, and docker.io pulls go to mirror.gcr.io (#119); seen 2026-10-31.
-- The session's disk allowance (about 39 GB) holds the whole lab only without duplicates: on cloud `make push` and `airflow-image` skip a tag the local registry already serves (so an image change needs its tag bump, or `FORCE_BUILD=1`) and drop Docker's copy and BuildKit's cache after a push (Makefile `publish`); on `no space left on device`, `docker builder prune -af` and remove images of old tags (#119); seen 2026-10-31.
+- The session's disk allowance (about 39 GB) holds the whole lab only without duplicates: on cloud `make push` and `airflow-image` skip a tag the local registry already serves (an image change gets a new tag by itself; `FORCE_BUILD=1` rebuilds an unchanged one) and drop Docker's copy and BuildKit's cache after a push (Makefile `publish`); on `no space left on device`, `docker builder prune -af` and remove images of old tags (#119); seen 2026-10-31.
 - A session can start without the cloud setup: no `~/.claude/settings.json` or `/etc/docker/daemon.json`, `dockerd` stopped, and uv warns `UV_NATIVE_TLS is deprecated`; Compose pulls then hit Docker Hub's 429. Write the mirror `daemon.json` (claude-dotfiles `bin/cloud-setup.sh` step 5) and start `dockerd` as `cloud/hooks/session-start.sh` does; seen 2026-10-31 (seven times); fix: claude-dotfiles issue 28.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.

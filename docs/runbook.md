@@ -678,7 +678,7 @@ Diagnosis: `psql -h localhost -p 5433 -U warehouse warehouse -c "SELECT table_na
 Then find the table's producer: the `<pipeline>_elt` DAG for the synthetic tables, a partner drop and `returns_file_arrival` for `partner_returns`, `tlc_monthly` for the TLC tables; is it paused, did EL Factory's extract fail, did the upstream deliver.
 
 Recovery: fix the producer and land the data; the next hourly check records `pass` and the alert resolves after the next scrape (start a Job by hand, above, to see it at once).
-A source whose cadence changed gets new thresholds in `dbt/models/sources.yml` (a dbt image tag bump, D16), not a silence.
+A source whose cadence changed gets new thresholds in `dbt/models/sources.yml` (a new dbt image tag, computed from the change, D16), not a silence.
 
 ### 14. Call labels drift
 
@@ -697,7 +697,7 @@ Diagnosis: `psql -h localhost -p 5433 -U warehouse warehouse -c "SELECT * FROM s
 Then tell the model from the calls: `SELECT model_version, count(*) FROM silver.call_signals GROUP BY 1` shows whether a new model version answered this week; if not, the calls themselves changed (a product launch, a price change), and the dimensions beside the label (`call__topic` against `call__objection`) usually show it.
 `silver.call_label_agreement` says whether the current version still meets its thresholds on the golden set.
 
-Recovery: a new model version is a new prompt version (`call_label_prompt.version` in `dbt/dbt_project.yml`, a dbt image tag bump, D16), labelled beside the old one and scored on the golden set before the metrics switch to it (docs/text-signals.md § Versioning); never relabel the old version in place.
+Recovery: a new model version is a new prompt version (`call_label_prompt.version` in `dbt/dbt_project.yml`, a new dbt image tag, D16), labelled beside the old one and scored on the golden set before the metrics switch to it (docs/text-signals.md § Versioning); never relabel the old version in place.
 A real change in the calls is not a fault: the band follows it once the new weeks become the trailing weeks, and the alert clears with the next week in band.
 
 ## Phase 8 drills

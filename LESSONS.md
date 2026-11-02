@@ -243,6 +243,7 @@ These are forks the lab cannot settle; decide them per pipeline with real volume
 - Make deploy scripts idempotent: create pools and connections on every run.
 - [GKE] Never rebuild an image under a tag that already ran: nodes cache by tag (`imagePullPolicy: IfNotPresent`), so pods keep the old contents without any error. Bump the tag on every content change, including a shared package baked into the image; on the lab the seam changed twice without a bump and a local-delivery deploy could not import `tlc_monthly` (#92).
 - Give each image tag exactly one source that the deploy reads (Kustomize `images:`, a Helm `--set`, an Airflow Variable): a tag repeated across a Makefile, manifests and a code default lets a bump push the new image and deploy the old one.
+- [GKE] Derive image tags from their content (Cloud Build's `$SHORT_SHA`, or a hash of the build context) instead of numbers bumped by hand: parallel branches race for the next number, and on the lab two branches took the same tag for different code, git merged the identical lines silently, and the push skipped the "already built" tag (#291).
 - [Composer] Keep the dbt image with the Cloud Run Job definition, deployed with the image; the DAG names only the Job, so a dbt release never needs a DAG change.
 - Use `postgresql://` in connection URIs (Airflow normalises it), and pass JSON-form connections when extras are needed.
 - Keep lab-default credentials out of real environments (the Helm chart's create-user Job gives `admin`/`admin`), and give an event adapter its own API identity.
