@@ -80,7 +80,8 @@ A refused call (`{"error": ...}`) gets no freshness.
 ## Run with only the dbt project and a warehouse
 
 The agent needs no Airflow, no readiness ledger and no Compose stand-in: a Postgres database the dbt project builds in, and a model key (#166).
-Everything it needs in the warehouse beside the models comes from one dbt macro, `agent_warehouse` (`dbt/macros/agent_warehouse.sql`): the `agent_metrics`, `agent_sql` and `agent_audit` roles, their grants and `ops.agent_queries`.
+Everything it needs in the warehouse beside the models comes from one dbt macro, `agent_warehouse` (`dbt/macros/agent_warehouse.sql`): the `agent_metrics`, `agent_metrics_de`, `agent_sql` and `agent_audit` roles, their grants, the row scopes and `ops.agent_queries`.
+`agent_metrics_de` is `agent_metrics` scoped to Germany's customers and their orders and returns by row policies (`dbt/macros/agent_row_scope.sql`, SL-21): run the agent as it (`DBT_USER=agent_metrics_de DBT_PASSWORD=agent_metrics_de`) and every answer carries a `scope` statement beside its freshness, which the agent quotes and the audit row keeps.
 
 ```bash
 make agent-warehouse DBT_DBNAME=mydb      # dbt run-operation agent_warehouse; idempotent

@@ -1,4 +1,4 @@
-{{ config(alias='customers', tags=['sales']) }}
+{{ config(alias='customers', tags=['sales'], post_hook="{{ agent_row_scope() }}") }}
 
 -- Latest row per customer_id: greatest _loaded_at, then greatest _run_id as tie-breaker.
 with ranked as (

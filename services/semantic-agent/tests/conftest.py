@@ -40,6 +40,14 @@ def no_ledger(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_scope(monkeypatch):
+    """A data call's row scope without a warehouse: the role reads every row."""
+    from semantic_agent import scope
+
+    monkeypatch.setattr(scope, "lookup", lambda: (None, []))
+
+
+@pytest.fixture(autouse=True)
 def audit(monkeypatch) -> list[dict[str, Any]]:
     """The audit rows the agents wrote, kept here instead of in ops.agent_queries."""
     from semantic_agent import audit

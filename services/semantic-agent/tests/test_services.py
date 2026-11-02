@@ -102,15 +102,16 @@ def test_an_audit_row_lands_in_ops_agent_queries(audit_db):
             "rows_returned": 1,
             "freshness": "Fresh: sales.silver is ready up to 2026-10-03T00:00Z.",
             "error": None,
+            "scope": "Scoped: this figure counts only customers in DE (silver.orders), ...",
         }
     )
     with psycopg.connect(WAREHOUSE.format(role="warehouse")) as conn:
         row = conn.execute(
-            "select agent, metrics, filters->0->>'dimension', rows_returned, called_at is not null"
-            " from ops.agent_queries where session_id = %s",
+            "select agent, metrics, filters->0->>'dimension', rows_returned, called_at is not null,"
+            " left(scope, 7) from ops.agent_queries where session_id = %s",
             [session],
         ).fetchone()
-    assert row == ("semantic_agent", ["orders_total"], "order__status", 1, True)
+    assert row == ("semantic_agent", ["orders_total"], "order__status", 1, True, "Scoped:")
 
 
 @pytest.mark.parametrize(

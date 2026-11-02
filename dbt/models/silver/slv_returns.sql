@@ -1,4 +1,4 @@
-{{ config(alias='returns', tags=['returns']) }}
+{{ config(alias='returns', tags=['returns'], post_hook="{{ agent_row_scope() }}") }}
 
 -- Latest row per return_id across files: greatest _loaded_at, then greatest _generation.
 -- reason is conformed to the codes schema.yml declares (#157); bronze keeps the partner's raw value.
