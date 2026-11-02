@@ -5,6 +5,9 @@ labelled and every query capped, and the client's errors leave as WarehouseError
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -319,3 +322,34 @@ def test_labels_follow_bigquerys_rules():
         warehouse_bigquery.label("Manual__2025-10-01T00:00:00+00:00" * 3)
         == ("manual__2025-10-01t00_00_00_00_00" * 3)[:63]
     )
+
+
+# The GCP build.
+
+
+def test_on_bigquery_the_app_imports_neither_psycopg_nor_pyarrow():
+    """The GCP image carries neither (semantic/PLAN.md SL-19): importing the app, choosing the
+    warehouse from ELF_WAREHOUSE and building the app on it must not need them. They are blocked
+    as if not installed, since google-cloud-bigquery imports pyarrow wherever it is installed."""
+    code = (
+        "import json, sys\n"
+        "sys.modules.update(psycopg=None, pyarrow=None)  # not installed\n"
+        "import el_factory.app\n"
+        "from el_factory.config import Config\n"
+        "from el_factory.warehouse import warehouse\n"
+        "from el_factory.warehouse_bigquery import BigQueryWarehouse\n"
+        "from tests.conftest import FakeStorage, make_config\n"
+        "from tests.test_warehouse_bigquery import FakeClient\n"
+        "chosen = warehouse(Config.from_env())\n"
+        "fake = BigQueryWarehouse(FakeClient, maximum_bytes_billed=1)\n"
+        "app = el_factory.app.create_app(make_config(warehouse='bigquery'), FakeStorage(), fake)\n"
+        "rules = {r.rule for r in app.url_map.iter_rules()}\n"
+        "print(json.dumps([type(chosen).__name__, '/publication' in rules,\n"
+        "    sorted(m for m in ('psycopg', 'pyarrow', 'el_factory.tlc') if sys.modules.get(m))]))\n"
+    )
+    env = {**os.environ, "ELF_WAREHOUSE": "bigquery", "GCP_PROJECT": "lab"}
+    out = subprocess.run(
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True
+    )
+
+    assert json.loads(out.stdout) == ["BigQueryWarehouse", False, []]

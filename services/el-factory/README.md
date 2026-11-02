@@ -116,7 +116,7 @@ The contract below is Postgres's; BigQuery's differs only as follows.
 - One multi-statement transaction then deletes the load's scope and copies the staged rows in, stamping `_loaded_at`, so reloads replace rather than add, as on Postgres, and two concurrent loads of one scope cannot interleave: BigQuery aborts one ("concurrent update"), a retryable 503.
   Its DML bills a few tens of MB from the free 1 TiB of queries a month; every query job is capped at `BQ_MAXIMUM_BYTES_BILLED`, and every job is labelled `component=el-factory` with its purpose, table and run.
 - The file sources are not served: BigQuery keeps no `FileLedger`.
-- The BigQuery emulator (Compose profile `bigquery`) runs it, except that a later page's copy finds no row there, an emulator bug in binding a script's parameters; `tests/test_warehouse_bigquery_emulator.py` marks it, and skips without the emulator unless `PPLK8S_REQUIRE_BIGQUERY=1`.
+- The BigQuery emulator (Compose profile `bigquery`) runs it, except that on some runs a later page's copy finds no staged row there, as if the emulator bound the script's parameters wrong (the same statement alone works); `tests/test_warehouse_bigquery_emulator.py` marks that case, and skips without the emulator unless `PPLK8S_REQUIRE_BIGQUERY=1`.
 
 The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each extract or load, so dbt sources resolve even before an entity's first extract.
 Each extract or load ensures all of them, not only its own: a pipeline's dbt build can read a table another pipeline lands (the weather models are tagged `sales`, PLAN.md D20), and a warehouse reset under a running service (`make services-reset`) would otherwise stay without the tables no request names (#172).
@@ -165,4 +165,6 @@ docker run --rm "$(make -s print-ELF_IMAGE)" id -u   # prints 10001
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.
 Its build argument `WAREHOUSE` (default `postgres`) names the Dockerfile stage it is built from and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
 The `postgres` stage installs the `postgres` and `files` extras and carries the whole package, the file sources included.
+The `bigquery` stage (`--build-arg WAREHOUSE=bigquery`, the GCP build, #227) installs `requirements-bigquery.txt`, the `bigquery` extra exported from `uv.lock` (`uv export --frozen --no-default-groups --extra bigquery --no-emit-project -o requirements-bigquery.txt`), and copies the package without `warehouse_postgres.py` and `el_factory/tlc`; its build fails on a Postgres driver, pyarrow or a TLC path, and `make gcp-validate` (`platform/gcp/check_gcp_builds.py`) fails on the same and on a stale export.
+Measured on 2026-11-02 (content size, compressed): 107 MB for the `postgres` build, as before the split, and 66 MB for the `bigquery` one.
 It runs gunicorn with two workers and the control socket disabled, because that socket is an admin feature the container does not need.

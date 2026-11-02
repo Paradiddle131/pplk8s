@@ -23,6 +23,17 @@ RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
     && uv sync --frozen --no-dev --extra postgres --extra files --no-install-project
 
+# The bigquery extra exported from uv.lock (requirements-bigquery.txt; `make gcp-validate` fails when it is
+# stale), installed as it is with no resolution of its own; the build fails on a Postgres package or pyarrow.
+FROM builder-base AS builder-bigquery
+COPY requirements-bigquery.txt ./
+RUN --mount=type=secret,id=build_ca \
+    if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
+    && uv venv --quiet .venv \
+    && VIRTUAL_ENV=/app/.venv uv pip install --no-deps -r requirements-bigquery.txt \
+    && ! VIRTUAL_ENV=/app/.venv uv pip list --format=freeze \
+      | grep -iE '^(psycopg|psycopg2|psycopg2-binary|psycopg-binary|psycopg-c|psycopg-pool|asyncpg|pyarrow)=='
+
 FROM builder-${WAREHOUSE} AS builder
 
 FROM python:3.13-slim AS runtime
@@ -59,6 +70,18 @@ ENV ELF_WAREHOUSE=postgres \
     ARROW_DEFAULT_MEMORY_POOL=system \
     MALLOC_ARENA_MAX=2 \
     MALLOC_MMAP_THRESHOLD_=1048576
+USER 10001
+
+# The GCP build (semantic/PLAN.md SL-19, #227): the package without its Postgres implementation and without
+# the file sources (el_factory/tlc), which only a warehouse with a file ledger serves. Smoke check: no
+# Postgres driver, no pyarrow and no TLC path, and the app imports and builds on BigQuery without touching it.
+FROM runtime AS bigquery
+COPY --exclude=tlc --exclude=warehouse_postgres.py src/el_factory /app/el_factory
+RUN python -m compileall -q /app/el_factory \
+    && ! find /app -ipath '*tlc*' | grep . \
+    && ! python -c 'import psycopg' 2>/dev/null && ! python -c 'import pyarrow' 2>/dev/null \
+    && ELF_WAREHOUSE=bigquery GCP_PROJECT=build-only python -c 'import sys; from el_factory.config import Config; from el_factory.warehouse import warehouse; import el_factory.app; warehouse(Config.from_env()); sys.exit(any(m in sys.modules for m in ("psycopg", "pyarrow", "el_factory.tlc")))'
+ENV ELF_WAREHOUSE=bigquery
 USER 10001
 
 FROM ${WAREHOUSE}

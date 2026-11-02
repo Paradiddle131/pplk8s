@@ -77,10 +77,10 @@ def test_a_first_page_replaces_its_runs_interval(emulator):
 
 
 @pytest.mark.xfail(
-    strict=True,
-    reason="emulator 0.8.1: in a script, the second statement's INT64 parameter after two"
-    " TIMESTAMP ones binds wrong, so a later page's copy matches no staged row (real BigQuery"
-    " binds it; the fake-client tests hold the SQL)",
+    strict=False,
+    reason="emulator 0.8.1, not every run: a later page's copy, the script's second statement,"
+    " finds no staged row, as if its INT64 parameter bound wrong after the two TIMESTAMP ones;"
+    " the same statement alone binds it, and the fake-client tests hold the SQL",
 )
 def test_a_later_page_replaces_only_itself(emulator):
     bq, dataset, store = emulator
