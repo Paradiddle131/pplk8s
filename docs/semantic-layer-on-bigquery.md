@@ -53,6 +53,25 @@ What does not carry over: a native data agent does not run MetricFlow.
 The metric definitions reach it as words and SQL: the glossary, the aggregations in the authored context, and one verified query per metric.
 The lab's agent queries through MetricFlow itself, so its eval shows what the definitions are worth when they are enforced, not only described.
 
+## Governed tables: MetricFlow's numbers for SQL that cannot call it
+
+SQL that cannot call MetricFlow, the semantic agent's fallback tool ([#318](../../../issues/318)) or a native data agent, reads the dataset `governed`, whose tables hold numbers MetricFlow already computed ([`semantic/PLAN.md`](../semantic/PLAN.md) SL-24, #314).
+`dbt/scripts/build_governed.py` writes each as a dbt model from MetricFlow's compiled BigQuery SQL (`dbt/models/governed/`, `make governed-models`; `make bigquery-check` fails on drift):
+- `<home>_daily`: the additive metrics of a semantic model, one row per day and combination of their categorical dimensions; any rows sum.
+- `<home>_by_period`: the rest (ratios, distinct counts, averages, balances, running totals, conversion rates, growth), one row per day, ISO week or month, overall or on a day for one dimension's value; read from one row, never summed.
+Each column's description (written by `persist_docs`) says how it combines over another span, or that it cannot.
+
+| | Data agent over silver (`pplk8s-semantic`) | Data agent over governed tables (`pplk8s-governed`) |
+|---|---|---|
+| Tables in its context | the semantic models' 16 silver tables and the time spine | the 24 governed tables and the time spine |
+| A definition (revenue excludes cancelled orders) | in the glossary and verified queries; the SQL must apply it | in the column; the SQL sums it |
+| A ratio over two days | the SQL must divide sums, not average days | the column says so; the components sit beside it |
+| Freshness of an answer | its SQL's silver tables, by semantic model | its SQL's governed tables, by their metrics (`governed_tables` in the catalog) |
+| A question no governed column answers (a cohort, an amount filter) | it can still try, over silver | it cannot; the semantic agent answers through MetricFlow |
+
+Measured live (2026-11-02, `pplk8s-lab-001`): `make bigquery-live-load` built the 24 tables and their hop to gold and exposed; `pplk8s-governed`, asked "What was our total revenue over 1 and 2 October 2026?", ran `SELECT SUM(revenue_eur) ... FROM governed.orders_daily WHERE metric_time__day IN (...)` and answered €1,850.34; asked "What share of our orders on 1 and 2 October 2026 was cancelled?", it divided `SUM(orders_cancelled)` by `SUM(orders_total)` over the same rows and answered 16.67 % (5 of 30).
+The scored comparison is `make agent-eval ARM=data_agent_governed`, into `docs/research/data-agent-governed-eval.md`.
+
 Scheduled queries and routines (stored procedures, UDFs, table functions) map onto dbt models, functions, macros and metrics as [`routines-and-scheduled-queries.md`](routines-and-scheduled-queries.md) sets out, with the rule for moving them one at a time.
 Signals extracted from text (a transcript's topic, objection, sentiment) are labelled in dbt through BigQuery's AI functions, versioned and tested against a golden set, as [`text-signals.md`](text-signals.md) sets out.
 
