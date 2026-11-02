@@ -137,7 +137,7 @@ def publisher(api: FakeApi, **kwargs) -> Publisher:
 def agent(total: str = "sum(amount)") -> dict:
     return desired(
         retarget(context(total=total), PROJECT),
-        analytics_table("ops.data_agent_analytics", PROJECT),
+        analytics_table("agent_logs.data_agent_conversations", PROJECT),
     )
 
 
@@ -163,8 +163,8 @@ def test_creates_when_missing_then_publishes() -> None:
     )
     assert stored["bigqueryAgentAnalyticsTable"] == {
         "projectId": PROJECT,
-        "datasetId": "ops",
-        "tableId": "data_agent_analytics",
+        "datasetId": "agent_logs",
+        "tableId": "data_agent_conversations",
     }
 
 

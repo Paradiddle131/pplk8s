@@ -15,9 +15,10 @@ polled until done or `--timeout`. Every request body is validated first against 
 Location `us` by default: the lab's datasets are in BigQuery's US multi-region, and the `us` endpoint keeps the
 agent and its ML processing in that jurisdiction, which `global` does not; an agent at any location reads
 datasets in any location (https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/data-residency).
-BigQuery Agent Analytics (Preview, enrolled projects only) is off unless `--analytics` (into
-`ops.data_agent_analytics`): the lab project is not enrolled, and its API accepts the two fields and drops
-them (measured 2026-11-02: the PATCH succeeds, a GET returns neither), so setting them would write on every run.
+Conversation logging (BigQuery Agent Analytics) is off unless `--analytics`, into `agent_logs.data_agent_conversations`
+(`--analytics-table`): `agent_logs` is the dataset `infra/data_agent.tf` makes for it, writable by Google's service
+agent only. Pointed at `ops.data_agent_analytics`, which existed without that grant, the API accepted the two fields
+and dropped them (measured 2026-11-02: the PATCH succeeds, a GET returns neither), so a rerun would write again.
 
 Credentials, as platform/gcp/tofu.sh picks them, first that holds: GCP_ACCESS_TOKEN; a cloud session's
 proxy-injected CLOUDSDK_AUTH_ACCESS_TOKEN; a short-lived token of a signed-in gcloud account ($GCP_ACCOUNT,
@@ -51,7 +52,7 @@ CONTEXT = (
 )
 AGENT_ID = "pplk8s-semantic"
 LOCATION = "us"
-ANALYTICS_TABLE = "ops.data_agent_analytics"
+ANALYTICS_TABLE = "agent_logs.data_agent_conversations"
 DISPLAY_NAME = "pplk8s semantic layer"
 DESCRIPTION = (
     "The lab's metrics, glossary terms and verified queries, generated from the dbt semantic layer "

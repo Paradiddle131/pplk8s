@@ -73,6 +73,8 @@ def test_a_dated_exception_expires(copy: Path) -> None:
     for name in DATA_AGENT_APIS:
         text = text.replace(f"{name}: {{enable: true", f"{name}: {{enable: false")
     spec.write_text(text)
+    # Switching it off (#232) also removes the data agent's own infra, which names its API.
+    (copy / "infra" / "data_agent.tf").unlink()
     assert problems(copy, dt.date(2027, 1, 1)) == []
 
 
