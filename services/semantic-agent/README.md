@@ -57,6 +57,19 @@ A data tool is every tool but the ones the toolset seam names as reading only th
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
 
+## The warehouse seam
+
+`audit.py` and `freshness.py` reach the warehouse only through `warehouse.py` (SL-19, #209), so an image carries only the driver of the warehouse it runs on.
+`AGENT_WAREHOUSE` picks the implementation, and only the chosen module, with its driver, is imported:
+- `postgres` (the default, `warehouse_postgres.py`, psycopg): the Compose warehouse, as above.
+- `bigquery` (`warehouse_bigquery.py`, `google-cloud-bigquery`): the `ops` dataset of the project in `GCP_PROJECT`, or of the BigQuery emulator at `BQ_API_ENDPOINT`.
+  The audit row goes in by a parameterised DML `INSERT`, never a streaming insert (no free tier), with `called_at` set by the job; every job is capped at `BQ_MAXIMUM_BYTES_BILLED` (default 1 GiB, `platform/gcp/free-path.yaml`'s cap) and labelled with the agent, the session and what it is for.
+  `AUDIT_SERVICE_ACCOUNT` makes the audit insert run as that service account (`agent-audit`) by impersonation; the ledger is read as the agent's own credentials.
+
+A warehouse that cannot be reached, refuses or is not configured raises `WarehouseError`, so both fail the same way on either: the audit withholds the result, the freshness says it is unknown.
+Each driver is an extra of `pyproject.toml` (`postgres`, `bigquery`); uv's `dev` group installs both, the local image `--extra postgres`.
+`make bigquery-emulator-check` runs the BigQuery implementation on the emulator: one audit row, and a product's freshness from the ledger and deadlines `agent_warehouse` creates there.
+
 ## Over MCP
 
 Agents outside ADK (Claude, Gemini CLI, a Vertex AI agent) reach the same three tools through `mcp_server.py`, the MCP Python SDK's `MCPServer` over streamable HTTP (SL-20): `make agent-mcp` serves `localhost:8765/mcp` for the clients named in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.

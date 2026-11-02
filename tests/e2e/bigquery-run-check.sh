@@ -29,7 +29,9 @@
 #     the BigQuery-only median order value by day, signups by fiscal quarter, the remaining budget (a balance), the marketing metrics by day and channel
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
-#     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
+#     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read,
+#     then the agent's own BigQuery warehouse seam (AGENT_WAREHOUSE=bigquery, #209): an audit row by DML and a
+#     product's freshness from the ledger and deadlines the macro created.
 # Every part but periods runs `dbt build` with its tests on the `bigquery_emulator` or `gcp` target, the project unchanged; the 63
 # layer hops (semantic/PLAN.md SL-9) reconcile across them.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
@@ -482,6 +484,58 @@ rows = [(r[0], list(r[1]), r[2]) for r in client.query(
 assert rows == [("semantic_agent", ["orders_total"], True)], rows
 EOF
 echo "ok: the agent_warehouse macro created ops.agent_queries on $BQ_WHERE; a row writes and reads back"
+# The agent's own BigQuery seam (services/semantic-agent, AGENT_WAREHOUSE=bigquery, #209): its DML audit insert,
+# and the freshness of a throwaway product from the ledger and deadlines the macro created, in the agent's env.
+# The emulator's project is pplk8s-lab whatever GCP_PROJECT a session sets (tests/e2e/lib/bigquery_target.py).
+agent_project=$([ "$BQ_TARGET" = emulator ] && echo pplk8s-lab || echo "$GCP_PROJECT")
+(cd "$REPO/services/semantic-agent" && AGENT_WAREHOUSE=bigquery GCP_PROJECT="$agent_project" \
+  uv run --quiet python -I -) <<'EOF' || fail "the agent's BigQuery warehouse on $BQ_WHERE"
+import datetime
+import uuid
+
+from google.cloud import bigquery
+
+from semantic_agent import warehouse_bigquery as seam
+from semantic_agent.audit import record
+from semantic_agent.freshness import freshness
+from semantic_agent.warehouse import warehouse
+
+tag = uuid.uuid4().hex[:8]
+product, session = f"sales.bigquery_run_check_{tag}", f"bigquery-run-check-{tag}"
+bq = seam._client()
+ops = f"`{bq.project}.ops"
+
+
+def run(sql, *params):
+    config = bigquery.QueryJobConfig(query_parameters=list(params), maximum_bytes_billed=seam.maximum_bytes_billed())
+    return [tuple(r.values()) for r in bq.query(sql, job_config=config).result()]
+
+
+ready = datetime.datetime.now(datetime.UTC).replace(microsecond=0) - datetime.timedelta(hours=1)
+run(f"insert into {ops}.readiness` (product, interval_start, interval_end, run_id, status, updated_at)"
+    " values (@product, @start, @end, @run, 'ready', current_timestamp())",
+    bigquery.ScalarQueryParameter("product", "STRING", product),
+    bigquery.ScalarQueryParameter("start", "TIMESTAMP", ready - datetime.timedelta(days=1)),
+    bigquery.ScalarQueryParameter("end", "TIMESTAMP", ready),
+    bigquery.ScalarQueryParameter("run", "STRING", session))
+try:
+    rows = warehouse().readiness([product, "nobody.silver"], agent="semantic_agent", session_id=session)
+    assert rows == [("nobody.silver", None, None), (product, ready, datetime.timedelta(hours=36))], rows
+    statement = freshness([product])["statement"]
+    assert statement == f"Fresh: {product} is ready up to {ready:%Y-%m-%dT%H:%MZ}.", statement
+    record({"agent": "semantic_agent", "tool": "query_metrics", "user_id": "u", "session_id": session,
+            "invocation_id": "e-1", "call_id": "c-1", "metrics": ["orders_total"],
+            "filters": [{"dimension": "order__status", "operator": "=", "values": ["cancelled"]}],
+            "arguments": {"metrics": ["orders_total"]}, "sql": "SELECT 1", "rows_returned": 1,
+            "freshness": statement, "error": None})
+    rows = run(f"select agent, metrics, json_value(filters, '$[0].dimension'), json_value(arguments, '$.metrics[0]'),"
+               f" rows_returned, freshness, called_at is not null from {ops}.agent_queries` where session_id = @session",
+               bigquery.ScalarQueryParameter("session", "STRING", session))
+    assert rows == [("semantic_agent", ["orders_total"], "order__status", "orders_total", 1, statement, True)], rows
+finally:
+    run(f"delete from {ops}.readiness` where product = @product", bigquery.ScalarQueryParameter("product", "STRING", product))
+EOF
+echo "ok: the agent's BigQuery warehouse on $BQ_WHERE: an audit row by DML, a product's freshness from the ledger and its pipeline's 36 h deadline"
 
 run_ mf query --metrics orders_total,orders_cancelled,revenue_eur,customers_distinct,cancellation_rate \
   --group-by metric_time__day --order metric_time__day --csv "$OUT/sales.csv" >>"$OUT/query.log" 2>&1 ||

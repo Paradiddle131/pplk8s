@@ -111,12 +111,11 @@ def test_a_refused_query_comes_back_as_an_error_and_is_audited(url, audit):
 
 
 def test_an_unwritable_audit_withholds_the_rows(url, monkeypatch):
-    import psycopg
-
     from semantic_agent import audit
+    from semantic_agent.warehouse import WarehouseError
 
     def refuse(row):
-        raise psycopg.OperationalError("connection refused")
+        raise WarehouseError("connection refused")
 
     monkeypatch.setattr(audit, "record", refuse)
     (query,) = asyncio.run(calls(url, "token-a", ("query_metrics", QUERY)))

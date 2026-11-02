@@ -35,7 +35,7 @@ def no_ledger(monkeypatch):
     monkeypatch.setattr(
         freshness,
         "freshness",
-        lambda products: freshness.assess([(p, None, None) for p in products], now),
+        lambda products, **caller: freshness.assess([(p, None, None) for p in products], now),
     )
 
 
