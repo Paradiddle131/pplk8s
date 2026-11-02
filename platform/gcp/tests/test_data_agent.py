@@ -215,16 +215,14 @@ def test_no_publish_stops_at_the_staging_context() -> None:
     assert "publishedContext" not in api.agents[NAME]["dataAnalyticsAgent"]
 
 
-def test_turning_analytics_off_clears_both_fields() -> None:
+def test_without_analytics_the_logging_setting_is_left_as_it_is() -> None:
+    """Conversation logging switched on in the console survives a plain publish."""
     api = FakeApi()
     publisher(api).publish(agent())
+    writes = len(api.writes())
     publisher(api).publish(desired(retarget(context(), PROJECT), None))
-    assert api.writes()[-1] == (
-        "PATCH",
-        NAME,
-        {"updateMask": "bigqueryAgentAnalyticsEnabled,bigqueryAgentAnalyticsTable"},
-    )
-    assert "bigqueryAgentAnalyticsTable" not in api.agents[NAME]
+    assert len(api.writes()) == writes
+    assert api.agents[NAME]["bigqueryAgentAnalyticsEnabled"] is True
 
 
 def test_an_operation_is_polled_until_done() -> None:

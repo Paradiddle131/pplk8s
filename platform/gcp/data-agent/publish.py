@@ -17,7 +17,7 @@ polled until done or `--timeout`. Every request body is validated first against 
 Location `us` by default: the lab's datasets are in BigQuery's US multi-region, and the `us` endpoint keeps the
 agent and its ML processing in that jurisdiction, which `global` does not; an agent at any location reads
 datasets in any location (https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/data-residency).
-Conversation logging (BigQuery Agent Analytics) is off unless `--analytics`, into `agent_logs.data_agent_conversations`
+Conversation logging (BigQuery Agent Analytics) is left as it is unless `--analytics` sets it, into `agent_logs.data_agent_conversations`
 (`--analytics-table`): `agent_logs` is the dataset `infra/data_agent.tf` makes for it, writable by Google's service
 agent only. Pointed at `ops.data_agent_analytics`, which existed without that grant, the API accepted the two fields
 and dropped them (measured 2026-11-02: the PATCH succeeds, a GET returns neither), so a rerun would write again.
@@ -61,6 +61,9 @@ DESCRIPTION = (
     "The lab's metrics, glossary terms and verified queries, generated from the dbt semantic layer "
     "(dbt/scripts/build_catalog.py) and published by platform/gcp/data-agent/publish.py."
 )
+
+
+ANALYTICS_FIELDS = ("bigqueryAgentAnalyticsEnabled", "bigqueryAgentAnalyticsTable")
 
 
 class Agent(NamedTuple):
@@ -418,9 +421,12 @@ class Publisher:
             current = self.wait(self.call("POST", target, body), f"create {self.name}")
             writes.append(f"created {self.name} with the staging context")
         else:
+            # The logging fields are this publisher's only with --analytics; without it they stay as they are, so a
+            # publish never switches off conversation logging set in the console.
+            owned = [p for p in MANAGED if p not in ANALYTICS_FIELDS or p in agent]
             mask = [
                 path
-                for path in MANAGED
+                for path in owned
                 if canonical(field(current, path)) != canonical(field(agent, path))
             ]
             if mask:
