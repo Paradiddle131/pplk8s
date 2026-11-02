@@ -1,0 +1,7 @@
+## 2026-11-02 — Semantic — gcp-images signs Docker in to Artifact Registry itself
+
+- Done: `platform/gcp/docker-login.sh` signs Docker in to `<region>-docker.pkg.dev` with a short-lived token (`docker login -u oauth2accesstoken --password-stdin`) from the account `tofu.sh` borrows (a cloud session's injected token, else `$GCP_ACCOUNT` or the active gcloud account); `make gcp-images` runs it between the build and `docker push`; the Makefile comment and `platform/gcp/README.md` (the `gcp-images` row, a row for the script, the Owner's runbook) say so and drop `gcloud auth configure-docker`.
+- Why: on WSL, `gcloud auth configure-docker` from the Windows SDK registers `docker-credential-gcloud.cmd`, which Linux Docker cannot run, so the push failed (#289); a token login needs no helper and works with either SDK.
+- Evidence: with the old `us-central1-docker.pkg.dev` login removed from `~/.docker/config.json` and Docker Desktop's credential store, a fresh login shell's `make gcp-images` signed in as the active account and pushed `dbt:0.7.43` (digest `sha256:199eb6f6bb969b5b7fa613484bdd5894f825675e037f9da7c652c5d1d128c538`); the repository then held `0.7.40` and `0.7.43`, 157 MB. `make gcp-cost-check` $0.00 before and after. `make lint` exit 0 (gcp-validate: 32 passed).
+- Decisions: none.
+- Open: none.
