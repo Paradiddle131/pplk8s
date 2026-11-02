@@ -432,14 +432,17 @@ gcp_tag = $(GCP_IMAGES)/$(firstword $(subst :, ,$(notdir $(1)))):$(word 2,$(subs
 # No provenance or SBOM attestation: each would be one more version in the registry, whose cleanup keeps the two
 # newest versions per package (#230), so a push stores one version, not an index, an image and an attestation.
 GCP_BUILD_FLAGS = --build-arg WAREHOUSE=bigquery --provenance=false --sbom=false
+# $(call gcp_publish,<local image ref>,<cache name>,<build args and context>): build and push the image under its
+# content tag (D16) unless the registry already holds that tag. Tags are immutable there and builds are not
+# byte-reproducible, so pushing the same content again from another machine would be refused as a different image.
+gcp_publish = if docker buildx imagetools inspect $(call gcp_tag,$(1)) >/dev/null 2>&1; then echo "$(call gcp_tag,$(1)): the registry has it"; \
+	else $(call docker_build,$(call gcp_tag,$(1)),$(2)) $(GCP_BUILD_FLAGS) $(3) && docker push $(call gcp_tag,$(1)); fi
 gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the semantic agent) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206, #209)
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the images go to the registry of the lab project (platform/gcp/README.md)}"
 	platform/gcp/cost-check.sh
-	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) $(GCP_BUILD_FLAGS) dbt
-	$(call docker_build,$(call gcp_tag,$(AGENT_IMAGE)),semantic-agent-gcp) $(GCP_BUILD_FLAGS) --build-context dbt=dbt services/semantic-agent
 	platform/gcp/docker-login.sh $(GCP_REGION)-docker.pkg.dev
-	docker push $(call gcp_tag,$(DBT_IMAGE))
-	docker push $(call gcp_tag,$(AGENT_IMAGE))
+	$(call gcp_publish,$(DBT_IMAGE),dbt-gcp,dbt)
+	$(call gcp_publish,$(AGENT_IMAGE),semantic-agent-gcp,--build-context dbt=dbt services/semantic-agent)
 	platform/gcp/cost-check.sh
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
