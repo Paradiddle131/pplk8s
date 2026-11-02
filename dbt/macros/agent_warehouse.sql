@@ -22,8 +22,12 @@
 -- declared in platform/gcp/access.yaml.
 
 {% macro agent_warehouse() -%}
+  {#- Only a missing schema: BigQuery checks bigquery.datasets.create before it finds the dataset exists, and the
+      dbt Job's service account holds no such grant on GCP, where infra/ creates every dataset. -#}
   {% for schema in ["silver", "semantic", "gold", "exposed", "ops"] %}
-    {% do adapter.create_schema(api.Relation.create(database=target.database, schema=schema)) %}
+    {% if not adapter.check_schema_exists(target.database, schema) %}
+      {% do adapter.create_schema(api.Relation.create(database=target.database, schema=schema)) %}
+    {% endif %}
   {% endfor %}
   {{ return(adapter.dispatch("agent_warehouse")()) }}
 {%- endmacro %}
