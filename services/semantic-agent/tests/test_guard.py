@@ -137,6 +137,16 @@ def test_a_data_agent_error_is_audited_as_an_error_and_given_no_freshness(audit)
     assert (row["error"], row["sql"]) == ("403 Permission denied", None)
 
 
+def test_an_error_step_in_a_successful_stream_is_an_error(audit):
+    """Seen live (#207): ADK says SUCCESS while the data agent's stream ends in a 403."""
+    denied = {"code": 403, "message": "Cloud Dataplex API has not been used", "status": "DENIED"}
+    model, _ = turn({"status": "SUCCESS", "response": [{"text": {}}, {"error": denied}]})
+    results = {r["name"]: r["response"] for r in model.tool_results()}
+    assert "freshness" not in results["ask_data_agent"]
+    (row,) = audit
+    assert row["error"] == "Cloud Dataplex API has not been used"
+
+
 @pytest.mark.parametrize("named", [(), ("list_accessible_data_agents",)])
 def test_a_tool_the_seam_does_not_name_as_catalog_is_audited(audit, named):
     """Fail closed: a swap that forgets a catalog tool over-audits it, never skips a data tool."""

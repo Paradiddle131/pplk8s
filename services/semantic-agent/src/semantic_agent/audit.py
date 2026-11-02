@@ -95,12 +95,20 @@ def tables_read(sql: list[str]) -> list[str]:
 
 
 def error_of(response: dict[str, Any]) -> str | None:
-    """A tool result's error: ours (`error`), or a Google API tool's (`status` ERROR, as ADK's
-    `DataAgentToolset` returns one, with its `error_details`)."""
+    """A tool result's error: ours (`error`), a Google API tool's (`status` ERROR, as ADK's
+    `DataAgentToolset` returns one, with its `error_details`), or an error step in a data agent's
+    stream."""
     if response.get("error"):
         return str(response["error"])
     if response.get("status") == "ERROR":
         return str(response.get("error_details") or "the tool returned status ERROR")
+    # A data agent's stream can end in an error step while ADK still says SUCCESS (seen live: a 403
+    # for a disabled API, #207).
+    for step in _steps(response.get("response"), "error"):
+        if isinstance(step, dict):
+            return str(step.get("message") or step.get("status") or step)
+        if step:
+            return str(step)
     return None
 
 
