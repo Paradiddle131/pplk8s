@@ -4,7 +4,8 @@
 # out Vertex AI, pandas and pyarrow, dbt/requirements-bigquery.exclude), then, on a fresh BigQuery emulator
 # holding the dev fixture's sources, runs the image's own `dbt build` of the platform part with its tests (the
 # hops include every metric against its gold table) and one MetricFlow query, as Cloud Run would run it.
-# Expects `make services-up` (the fixture loads through the Postgres warehouse).
+# Expects `make services-up`: the fixture loads through the Postgres warehouse's dbt_dev, created here when a
+# fresh session has none, as bigquery-run-check.sh does.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -12,6 +13,8 @@ IMAGE=${GCP_DBT_IMAGE:-pplk8s-dbt-gcp:check}
 OUT=${TMPDIR:-/tmp}/pplk8s-gcp-image-check
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml" --profile bigquery)
 fail() { echo "FAIL: $*" >&2; exit 1; }
+DB=dbt_dev
+psql_dev() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"; }
 rm -rf "$OUT" && mkdir -p "$OUT"
 
 build=(docker build --build-arg WAREHOUSE=bigquery -t "$IMAGE")
@@ -22,11 +25,13 @@ fi
 "${build[@]}" "$REPO/dbt" >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "docker build of the GCP dbt image"; }
 echo "ok: $IMAGE built (WAREHOUSE=bigquery): its in-image checks found no Postgres package and no TLC path, and it parses"
 
+psql_dev -c "select 1" >/dev/null 2>&1 || "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"
+psql_dev <"$REPO/dbt/dev/fixture.sql" >"$OUT/fixture-sql.log" 2>&1 || { tail -20 "$OUT/fixture-sql.log" >&2; fail "loading dbt/dev/fixture.sql into $DB"; }
 "${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >/dev/null 2>&1 ||
   { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come up"; }
 (cd "$REPO/dbt" && BQ_API_ENDPOINT=http://localhost:9050 uv run --quiet --no-project \
   --with-requirements requirements-postgres.txt --with dbt-bigquery==1.12.1 --with 'psycopg[binary]==3.3.6' \
-  python -I "$REPO/tests/e2e/lib/fixture_to_bigquery.py" "host=localhost port=5433 user=warehouse password=warehouse dbname=dbt_dev") \
+  python -I "$REPO/tests/e2e/lib/fixture_to_bigquery.py" "host=localhost port=5433 user=warehouse password=warehouse dbname=$DB") \
   >"$OUT/fixture.log" || { cat "$OUT/fixture.log" >&2; fail "copying the fixture into the emulator"; }
 echo "ok: a fresh emulator holds the fixture's sources"
 
