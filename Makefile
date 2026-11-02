@@ -183,7 +183,7 @@ bigquery-check: ## Parse, validate and compile the dbt project on the compile-on
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history, and the week-over-week and month-to-date metrics equal SQL by hand over six more weeks (#125, #246)
 	tests/e2e/bigquery-run-check.sh
 
-gcp-image-check: services-up ## Build the dbt image for GCP (WAREHOUSE=bigquery) and run its own dbt build of the platform part and a MetricFlow query on a fresh BigQuery emulator (#206, SL-19)
+gcp-image-check: services-up ## Build the dbt and semantic agent images for GCP (WAREHOUSE=bigquery); on a fresh BigQuery emulator run the dbt image's build of the platform part and a MetricFlow query, then serve the agent and ask it one question through a scripted model: its catalog built at start, its audit row and freshness, peak memory and compressed sizes within the free path (#206, #209, SL-19)
 	BUILD_CA=$(BUILD_CA) tests/e2e/gcp-image-check.sh
 
 # The same check on real BigQuery (#206, semantic/PLAN.md SL-13): opt-in like agent-eval, never in `make check`;
@@ -404,6 +404,8 @@ gcp-validate: ## Offline: tofu fmt and validate, tflint, and the free-path allow
 	# Its own working directory: one a live gcp- target initialised remembers the gcs backend and its credentials.
 	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra init -backend=false -input=false >/dev/null
 	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra validate
+	# infra/tests/: plans on a mock provider, so which workloads exist for which images is checked offline.
+	TF_DATA_DIR=.terraform-validate tofu -chdir=platform/gcp/infra test
 	cd platform/gcp/infra && tflint --init >/dev/null && tflint
 	uvx ruff@0.17.0 check platform/gcp && uvx ruff@0.17.0 format --check platform/gcp
 	uv run --no-project --with pyyaml==6.0.2 python platform/gcp/check_free_path.py
@@ -423,17 +425,41 @@ gcp-guardrails-check: ## Live, read-only: read back the lab project's stops: the
 	platform/gcp/guardrails-check.sh
 
 # The images that run on GCP (semantic/PLAN.md SL-19): each built from its one Dockerfile for BigQuery and pushed to
-# Artifact Registry's `pplk8s` repository under the version its local tag holds (D16). Docker needs the registry's
-# credential first (`gcloud auth configure-docker $(GCP_REGION)-docker.pkg.dev`); the cost check before and after.
+# Artifact Registry's `pplk8s` repository under the version its local tag holds (D16). Docker signs in to the
+# registry itself (platform/gcp/docker-login.sh: a short-lived token of the active gcloud account, or GCP_ACCOUNT's,
+# no credential helper, so the Windows SDK on WSL works too, #289); the cost check before and after.
 GCP_REGION ?= us-central1
 GCP_IMAGES = $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/pplk8s
 gcp_tag = $(GCP_IMAGES)/$(firstword $(subst :, ,$(notdir $(1)))):$(word 2,$(subst :, ,$(notdir $(1))))
-gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: today dbt) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206)
+# No provenance or SBOM attestation: each would be one more version in the registry, whose cleanup keeps the two
+# newest versions per package (#230), so a push stores one version, not an index, an image and an attestation.
+GCP_BUILD_FLAGS = --build-arg WAREHOUSE=bigquery --provenance=false --sbom=false
+# $(call gcp_publish,<local image ref>,<cache name>,<build args and context>): build and push the image under its
+# content tag (D16) unless the registry already holds that tag. Tags are immutable there and builds are not
+# byte-reproducible, so pushing the same content again from another machine would be refused as a different image.
+gcp_publish = if docker buildx imagetools inspect $(call gcp_tag,$(1)) >/dev/null 2>&1; then echo "$(call gcp_tag,$(1)): the registry has it"; \
+	else $(call docker_build,$(call gcp_tag,$(1)),$(2)) $(GCP_BUILD_FLAGS) $(3) && docker push $(call gcp_tag,$(1)); fi
+gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the semantic agent) and push them to Artifact Registry (GCP_PROJECT; SL-19, #206, #209)
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the images go to the registry of the lab project (platform/gcp/README.md)}"
 	platform/gcp/cost-check.sh
-	$(call docker_build,$(call gcp_tag,$(DBT_IMAGE)),dbt-gcp) --build-arg WAREHOUSE=bigquery dbt
-	docker push $(call gcp_tag,$(DBT_IMAGE))
+	platform/gcp/docker-login.sh $(GCP_REGION)-docker.pkg.dev
+	$(call gcp_publish,$(DBT_IMAGE),dbt-gcp,dbt)
+	$(call gcp_publish,$(AGENT_IMAGE),semantic-agent-gcp,--build-context dbt=dbt services/semantic-agent)
 	platform/gcp/cost-check.sh
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
+	platform/gcp/cost-check.sh
+
+# The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
+# (gcp-images opens with the cost check), the apply that names them, the ops tables (`dbt run-operation
+# agent_warehouse`, run as an args override of the dbt-build Job), one dbt build, and the cost check after.
+# The agent's secret needs its version first (platform/gcp/README.md, the owner's runbook).
+GCP_RUN_JOB = gcloud run jobs execute --project="$$GCP_PROJECT" --region=$(GCP_REGION) --wait $${GCP_ACCOUNT:+--account="$$GCP_ACCOUNT"}
+.PHONY: gcp-workloads-up
+gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the agent's Cloud Run service and the dbt Jobs with their Scheduler jobs, create the ops tables and build dbt once (GCP_PROJECT; #209)
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the workloads go to the lab project (platform/gcp/README.md)}"
+	$(MAKE) --no-print-directory gcp-images
+	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
+	$(GCP_RUN_JOB) dbt-build --args=run-operation,agent_warehouse
+	$(GCP_RUN_JOB) dbt-build
 	platform/gcp/cost-check.sh

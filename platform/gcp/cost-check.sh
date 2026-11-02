@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # `make gcp-cost-check` (#233): prove from the billing export that the lab project has cost nothing this
 # month, so a mistake surfaces the same day; run it before and after every gcp- step that changes the project.
-# Exit 0: $0.00 after credits. Exit 1: a cost, listed by service and SKU. Exit 3: unknown (no export rows
-# yet, bq failed, or the query failed): treat it as "not proven" and do no live GCP work.
+# Exit 0: $0.00 after credits. Exit 1: a cost, listed by service and SKU. Exit 3: unknown (no export table,
+# or no rows for the project this month yet; bq failed, or the query failed): treat it as "not proven" and do no live GCP work.
 # The export (dataset $GCP_BILLING_DATASET, default billing_export) lags by hours: a pass proves the
 # spend up to the export's last load, which it prints. Its own query reads a few MB under a 100 MB cap.
 set -euo pipefail
@@ -48,8 +48,11 @@ ROWS=$rows python3 - "$GCP_PROJECT" <<'PY'
 import csv, io, os, sys
 project = sys.argv[1]
 rows = list(csv.DictReader(io.StringIO(os.environ["ROWS"])))
-total = float(rows[0]["month_total"]) if rows else 0.0
-until = rows[0]["exported_until"] if rows else "no rows this month"
+if not rows:  # an empty export is its lag, not $0.00: nothing is proven until its first rows land
+    print(f"gcp-cost-check: UNKNOWN: no billing export rows for {project} this month yet (the first rows take about a day after the export is set up)", file=sys.stderr)
+    sys.exit(3)
+total = float(rows[0]["month_total"])
+until = rows[0]["exported_until"]
 costly = [r for r in rows if float(r["net"]) > 0]
 if total > 0 or costly:  # strict: any SKU above zero, even below a cent, stops the work
     print(f"gcp-cost-check: FAIL: {project} has a cost above zero this month (${total:.2f} rounded) (export until {until}):", file=sys.stderr)

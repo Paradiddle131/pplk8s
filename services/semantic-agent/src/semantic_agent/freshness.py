@@ -10,35 +10,18 @@ pipeline is not ready before its layers are.
 `freshness()` returns the facts and one `statement` the agent quotes in its answer; the statement is
 built here, never by the model or its prompt.
 
-Env: dbt's own `DBT_*` connection variables, with profiles.yml's defaults, so the ledger is read
-from the warehouse the metrics come from, as the read-only `agent_metrics` role in the lab.
+The ledger is read through the warehouse seam (warehouse.py): on Postgres with dbt's own `DBT_*`
+connection variables and profiles.yml's defaults, so it is read from the warehouse the metrics come
+from, as the read-only `agent_metrics` role in the lab; on BigQuery from the lab project's `ops`
+dataset, as the agent's own service account.
 """
 
 from __future__ import annotations
 
 import datetime
-import os
 from typing import Any
 
-import psycopg
-
-SQL = """
-select p.product,
-       (select max(r.interval_end) from ops.readiness r
-         where r.product = p.product and r.status = 'ready') as ready_until,
-       coalesce(own.max_age, pipeline.max_age) as max_age
-from unnest(%(products)s::text[]) as p(product)
-left join ops.product_deadlines own on own.product = p.product
-left join ops.product_deadlines pipeline on pipeline.product = split_part(p.product, '.', 1)
-order by p.product
-"""
-
-
-def _url() -> str:
-    env = os.environ.get
-    user, password = env("DBT_USER", "warehouse"), env("DBT_PASSWORD", "warehouse")
-    host, port = env("DBT_HOST", "warehouse"), env("DBT_PORT", "5432")
-    return f"postgresql://{user}:{password}@{host}:{port}/{env('DBT_DBNAME', 'warehouse')}"
+from semantic_agent.warehouse import Readiness, WarehouseError, reason, warehouse
 
 
 def _stamp(value: datetime.datetime) -> str:
@@ -49,10 +32,7 @@ def _hours(age: datetime.timedelta) -> str:
     return f"{age.total_seconds() / 3600:g} h"
 
 
-def assess(
-    rows: list[tuple[str, datetime.datetime | None, datetime.timedelta | None]],
-    now: datetime.datetime,
-) -> dict[str, Any]:
+def assess(rows: list[Readiness], now: datetime.datetime) -> dict[str, Any]:
     """The freshness of each product from its ledger row, and the sentence an answer quotes."""
     products, sentences = [], []
     for product, ready_until, max_age in rows:
@@ -85,8 +65,15 @@ def assess(
     }
 
 
-def freshness(products: list[str], now: datetime.datetime | None = None) -> dict[str, Any]:
-    """The freshness of the given readiness products; an unreadable ledger is said, not raised."""
+def freshness(
+    products: list[str],
+    now: datetime.datetime | None = None,
+    *,
+    agent: str | None = None,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    """The freshness of the given readiness products, read for `agent`'s `session_id` where the
+    warehouse records who asked; an unreadable ledger is said, not raised."""
     now = now or datetime.datetime.now(datetime.UTC)
     if not products:
         return {
@@ -96,13 +83,12 @@ def freshness(products: list[str], now: datetime.datetime | None = None) -> dict
             "metrics (run make dbt-catalog).",
         }
     try:
-        with psycopg.connect(_url(), connect_timeout=10) as conn:
-            rows = conn.execute(SQL, {"products": products}).fetchall()
-    except psycopg.Error as e:
-        reason = str(e).strip().splitlines()[0]
+        rows = warehouse().readiness(products, agent=agent, session_id=session_id)
+    except WarehouseError as e:
         return {
             "products": [],
             "late": None,
-            "statement": f"Freshness unknown: the readiness ledger could not be read ({reason}).",
+            "statement": "Freshness unknown: the readiness ledger could not be read "
+            f"({reason(e)}).",
         }
     return assess(rows, now)

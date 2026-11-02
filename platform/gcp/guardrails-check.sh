@@ -5,9 +5,13 @@
 #   - an enabled API is neither on the free path nor one GCP turns on by itself (free-path.yaml `implicit`),
 #     the sign of a billable service beyond the free path;
 #   - Firestore holds more than its one free database, or a database with point-in-time recovery on;
-#   - this machine's `bq` default byte cap (~/.bigqueryrc) is above the per-job cap.
-# Cloud Run and the Agent Platform have no cap to read yet: Cloud Run's API is off until #209 sets its
-# instance limits, and the Agent Platform's API is on the paid list, so `make gcp-validate` refuses it.
+#   - this machine's `bq` default byte cap (~/.bigqueryrc) is above the per-job cap;
+#   - a Cloud Run service (us-central1) keeps an instance warm, may scale past `caps.cloud_run_max_instances`,
+#     bills CPU outside requests, turns invoker IAM off or grants a public member; a Job runs more than one
+#     task or attempt per run (#209);
+#   - the project holds more Cloud Scheduler jobs than `caps.cloud_scheduler_jobs` (the billing account's free 3).
+# Cloud Run and Cloud Scheduler are skipped, with a note, while their API is not enabled.
+# The Agent Platform has no cap to read: its API is on the paid list, so `make gcp-validate` refuses it.
 set -euo pipefail
 : "${GCP_PROJECT:?GCP_PROJECT is unset: the gcp- targets act on the lab project and need its id (platform/gcp/README.md)}"
 here=$(cd "$(dirname "$0")" && pwd)
@@ -19,7 +23,32 @@ enabled=$(gcloud services list --enabled --project="$GCP_PROJECT" --format='valu
 databases=$(get "https://firestore.googleapis.com/v1/projects/$GCP_PROJECT/databases" 2>/dev/null || echo '{}')
 bqrc=$(cat "$HOME/.bigqueryrc" 2>/dev/null || true)
 
+# A product's REST read as JSON, `{"disabled": true}` while its API is off; anything else fails the check.
+read_api() {
+  local body code
+  body=$(curl -sS -w '\n%{http_code}' -H "Authorization: Bearer $token" "$1")
+  code=${body##*$'\n'}
+  body=${body%$'\n'*}
+  case "$code" in
+    200) printf '%s' "$body" ;;
+    403) if grep -q SERVICE_DISABLED <<<"$body"; then echo '{"disabled": true}'; else echo "$1: $body" >&2; return 1; fi ;;
+    *) echo "$1: HTTP $code: $body" >&2; return 1 ;;
+  esac
+}
+run=https://run.googleapis.com/v2/projects/$GCP_PROJECT/locations/us-central1
+services=$(read_api "$run/services")
+jobs=$(read_api "$run/jobs")
+# Each service's IAM policy, one JSON object per line.
+policies=$(python3 -c 'import json, sys
+for s in json.loads(sys.argv[1]).get("services", []):
+    print(s["name"])' "$services" | while read -r name; do
+  policy=$(read_api "https://run.googleapis.com/v2/$name:getIamPolicy") || exit 1
+  printf '{"service": "%s", "policy": %s}\n' "$name" "$policy"
+done)
+schedules=$(read_api "https://cloudscheduler.googleapis.com/v1/projects/$GCP_PROJECT/locations/us-central1/jobs")
+
 QUOTAS=$quotas ENABLED=$enabled DATABASES=$databases BQRC=$bqrc \
+  SERVICES=$services JOBS=$jobs POLICIES=$policies SCHEDULES=$schedules \
   uv run --no-project --quiet --with pyyaml==6.0.2 python - "$here/free-path.yaml" "$GCP_PROJECT" <<'PY'
 import json, os, re, sys
 import yaml
@@ -62,6 +91,54 @@ elif m:
     ok.append(f"~/.bigqueryrc: {int(m.group(1)) // 2**20} MiB a query")
 else:
     ok.append("~/.bigqueryrc: no default byte cap on this machine (pass --maximum_bytes_billed to every bq query)")
+
+# Cloud Run (#209): request-billed services between 0 and the cap, private; Jobs one task, one attempt.
+services = json.loads(os.environ["SERVICES"])
+if services.get("disabled"):
+    ok.append("Cloud Run: API not enabled, nothing to read")
+else:
+    cap = caps["cloud_run_max_instances"]
+    for s in services.get("services", []):
+        name = s["name"].rsplit("/", 1)[1]
+        scaling = s["template"].get("scaling", {})
+        low, high = scaling.get("minInstanceCount", 0), scaling.get("maxInstanceCount")
+        idle = [c.get("resources", {}).get("cpuIdle", False) for c in s["template"]["containers"]]
+        if low:
+            bad.append(f"Cloud Run {name}: {low} minimum instances bill while idle")
+        if high is None or high > cap:
+            bad.append(f"Cloud Run {name}: at most {high or 'the default 100'} instances, above the cap of {cap}")
+        if not all(idle):
+            bad.append(f"Cloud Run {name}: CPU billed outside requests (cpuIdle off)")
+        if s.get("invokerIamDisabled"):
+            bad.append(f"Cloud Run {name}: invoker IAM is off, so anyone may call it")
+        if not (low or high is None or high > cap or not all(idle) or s.get("invokerIamDisabled")):
+            ok.append(f"Cloud Run {name}: {low} to {high} instances, CPU only during requests, invoker IAM on")
+    for line in filter(None, os.environ["POLICIES"].splitlines()):
+        entry = json.loads(line)
+        members = {m for b in entry["policy"].get("bindings", []) for m in b.get("members", [])}
+        public = sorted(members & {"allUsers", "allAuthenticatedUsers"})
+        name = entry["service"].rsplit("/", 1)[1]
+        if public:
+            bad.append(f"Cloud Run {name}: public members {public}")
+        else:
+            ok.append(f"Cloud Run {name}: {len(members)} IAM member(s), none public")
+    for j in json.loads(os.environ["JOBS"]).get("jobs", []):
+        name, t = j["name"].rsplit("/", 1)[1], j["template"]
+        shape = (t.get("taskCount", 1), t.get("parallelism", 1), t["template"].get("maxRetries", 3))
+        if shape != (1, 1, 0) and shape != (1, 0, 0):
+            bad.append(f"Cloud Run Job {name}: tasks, parallelism, retries {shape}; the free-tier budget counts one instance per run")
+        else:
+            ok.append(f"Cloud Run Job {name}: one task, no retry, timeout {t['template'].get('timeout')}")
+
+schedules = json.loads(os.environ["SCHEDULES"])
+if schedules.get("disabled"):
+    ok.append("Cloud Scheduler: API not enabled, nothing to read")
+else:
+    count = len(schedules.get("jobs", []))
+    if count > caps["cloud_scheduler_jobs"]:
+        bad.append(f"Cloud Scheduler: {count} jobs, above the cap of {caps['cloud_scheduler_jobs']} free per billing account")
+    else:
+        ok.append(f"Cloud Scheduler: {count} of {caps['cloud_scheduler_jobs']} free jobs (us-central1)")
 
 for line in ok:
     print(f"gcp-guardrails-check: ok: {line}")

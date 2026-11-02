@@ -57,6 +57,19 @@ A data tool is every tool but the ones the toolset seam names as reading only th
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
 
+## The warehouse seam
+
+`audit.py` and `freshness.py` reach the warehouse only through `warehouse.py` (SL-19, #209), so an image carries only the driver of the warehouse it runs on.
+`AGENT_WAREHOUSE` picks the implementation, and only the chosen module, with its driver, is imported:
+- `postgres` (the default, `warehouse_postgres.py`, psycopg): the Compose warehouse, as above.
+- `bigquery` (`warehouse_bigquery.py`, `google-cloud-bigquery`): the `ops` dataset of the project in `GCP_PROJECT`, or of the BigQuery emulator at `BQ_API_ENDPOINT`.
+  The audit row goes in by a parameterised DML `INSERT`, never a streaming insert (no free tier), with `called_at` set by the job; every job is capped at `BQ_MAXIMUM_BYTES_BILLED` (default 1 GiB, `platform/gcp/free-path.yaml`'s cap) and labelled with the agent, the session and what it is for.
+  `AUDIT_SERVICE_ACCOUNT` makes the audit insert run as that service account (`agent-audit`) by impersonation; the ledger is read as the agent's own credentials.
+
+A warehouse that cannot be reached, refuses or is not configured raises `WarehouseError`, so both fail the same way on either: the audit withholds the result, the freshness says it is unknown.
+Each driver is an extra of `pyproject.toml` (`postgres`, `bigquery`), with that warehouse's dbt adapter and session store; uv's `dev` group installs the `postgres` extra and BigQuery's client, the local image `--extra postgres` and the GCP image the `bigquery` extra ([The GCP build](#the-gcp-build)).
+`make bigquery-emulator-check` runs the BigQuery implementation on the emulator: one audit row, and a product's freshness from the ledger and deadlines `agent_warehouse` creates there.
+
 ## Over MCP
 
 Agents outside ADK (Claude, Gemini CLI, a Vertex AI agent) reach the same three tools through `mcp_server.py`, the MCP Python SDK's `MCPServer` over streamable HTTP (SL-20): `make agent-mcp` serves `localhost:8765/mcp` for the clients named in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.
@@ -126,6 +139,17 @@ make agent-serve AGENT_DBNAME=dbt_dev
 - An initContainer runs `dbt parse` and `build_catalog.py` at pod start, for the database the pod reads (`AGENT_DBNAME`, default `warehouse`): MetricFlow's compiled SQL names that database.
 - The Secret `semantic-agent-credentials` (written by `workloads-up.sh`) carries the `agent_metrics` and `agent_audit` logins (no `agent_sql`: the baseline is never deployed), the session store (`agent_sessions` on the metadata DB) and `OPENROUTER_API_KEY`.
 - `EGRESS_PROXY` and `EGRESS_CA` route the model calls through a TLS-intercepting proxy (the cloud sandbox); unset elsewhere.
+
+### The GCP build
+
+The same `Dockerfile` with `--build-arg WAREHOUSE=bigquery` is the image Cloud Run runs (semantic/PLAN.md SL-19, #209); `make gcp-images` builds and pushes it with the dbt image.
+- Its packages are the `bigquery` extra exported from `uv.lock`, `requirements-bigquery.txt`, installed as they are with `--no-deps`: BigQuery's client, dbt-bigquery and `google-cloud-firestore`; neither Postgres's drivers, dbt-postgres nor ADK's `db` extra (SQLAlchemy), and the build fails on any Postgres package.
+- Re-export it after changing `pyproject.toml` or `uv.lock`: `uv export --frozen --no-default-groups --extra bigquery --no-emit-project -o requirements-bigquery.txt`; `make gcp-validate` fails on a stale one (`platform/gcp/check_gcp_builds.py`).
+- dbt-bigquery 1.12.1 requires Vertex AI, pandas and pyarrow for Python models and DataFrames, which the dbt image's GCP build leaves out (`dbt/requirements-bigquery.exclude`); `pyproject.toml` states its requirements without them (`[[tool.uv.dependency-metadata]]`), which is also what lets it lock beside ADK 2.13 (Vertex AI caps `google-genai` below 2).
+  Its `google-cloud-storage` cap still clashes with the `eval` group's Vertex AI, so uv locks the `bigquery` extra and the `eval` group apart (`tool.uv.conflicts`), and the `dev` group carries BigQuery's and Firestore's clients rather than the extra.
+- It leaves out `warehouse_postgres.py` and the TLC package, sets `AGENT_WAREHOUSE=bigquery` and `DBT_TARGET=gcp`, and its entrypoint (`gcp-entrypoint.sh`) does what the kind initContainer does: `dbt parse` and `build_catalog.py` at start, for the project in `GCP_PROJECT`, then `adk api_server`.
+- Sessions: `SESSION_SERVICE_URI=firestore://` (the image's default), ADK's `FirestoreSessionService` on the project's `(default)` database, the free one; `src/services.py` registers the scheme, and ADK loads it from the agents directory (`tests/test_session_services.py` fails if it does not, since ADK only logs a broken `services.py`).
+- `make gcp-image-check` serves it on the BigQuery emulator and asks it one question through a scripted model on localhost: the catalog built at start, the answer through MetricFlow, its freshness and its audit row; it prints the container's peak memory and the images' compressed sizes and fails above Cloud Run's 512 MiB or 0.45 GiB for both images.
 
 `make agent-deploy-check` (`tests/e2e/agent-deploy-check.sh`) is the live check: it builds the fixture in `dbt_dev`, deploys with `AGENT_DBNAME=dbt_dev`, asks "What was net revenue on 2 October 2026?" through a port-forwarded Service and asserts the Service lists `semantic_agent` alone and answers 861.4 through `query_metrics`, the session's events in `agent_sessions` and its audit row in `ops.agent_queries` (one model turn).
 `uv run adk web src` from this folder is the demo surface.

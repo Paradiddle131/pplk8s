@@ -107,3 +107,13 @@ def test_a_failed_query_is_unknown(tmp_path: Path) -> None:
     r = run(bindir)
     assert r.returncode == 3
     assert "query failed" in r.stderr
+
+
+@pytest.mark.parametrize("output", ["", HEADER])
+def test_no_rows_this_month_is_unknown(tmp_path: Path, output: str) -> None:
+    """An export table with no rows for the project this month proves nothing yet (the export's lag)."""
+    bindir = fake_bq(tmp_path, listing(), f"printf '{output}\\n'")
+    r = run(bindir)
+    assert r.returncode == 3, r.stdout
+    assert "UNKNOWN: no billing export rows for lab-test this month yet" in r.stderr
+    assert "$0.00" not in r.stdout

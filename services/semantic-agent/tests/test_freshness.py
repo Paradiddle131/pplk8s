@@ -94,7 +94,7 @@ def metricflow(monkeypatch):
     monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": [{"revenue_eur": 868.65}]})
     asked = []
 
-    def stub(products):
+    def stub(products, **caller):
         asked.append(products)
         return assess([(p, at(20), DEADLINE) for p in products], NOW)
 

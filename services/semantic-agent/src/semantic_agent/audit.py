@@ -10,37 +10,20 @@ audit could also forge it.
 
 An audit that cannot be written withholds the result: the model gets an error instead of rows.
 
-Env: `AUDIT_URL`, else dbt's own `DBT_*` host, port and database (as freshness.py) with the
-`agent_audit` login, so the audit lands in the warehouse the query read.
+The row goes through the warehouse seam (warehouse.py): on Postgres as `agent_audit` (`AUDIT_URL`,
+else dbt's own `DBT_*` host, port and database with that login, so the audit lands in the warehouse
+the query read), on BigQuery by a DML insert as the `agent-audit` service account
+(`AUDIT_SERVICE_ACCOUNT`).
 """
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Any
 
-import psycopg
 from google.adk.tools import ToolContext
-from psycopg.types.json import Jsonb
 
-SQL = """
-insert into ops.agent_queries (
-  agent, tool, user_id, session_id, invocation_id, call_id,
-  metrics, filters, arguments, sql, rows_returned, freshness, error
-) values (
-  %(agent)s, %(tool)s, %(user_id)s, %(session_id)s, %(invocation_id)s, %(call_id)s,
-  %(metrics)s, %(filters)s, %(arguments)s, %(sql)s, %(rows_returned)s, %(freshness)s, %(error)s
-)
-"""
-
-
-def _url() -> str:
-    if url := os.environ.get("AUDIT_URL"):
-        return url
-    env = os.environ.get
-    host, port = env("DBT_HOST", "warehouse"), env("DBT_PORT", "5432")
-    return f"postgresql://agent_audit:agent_audit@{host}:{port}/{env('DBT_DBNAME', 'warehouse')}"
+from semantic_agent.warehouse import WarehouseError, reason, warehouse
 
 
 @dataclass(frozen=True)
@@ -91,14 +74,8 @@ def audit_row(
 
 
 def record(row: dict[str, Any]) -> None:
-    """Writes one audit row; raises psycopg.Error when it cannot."""
-    params = {
-        **row,
-        "filters": Jsonb(row["filters"]) if row["filters"] is not None else None,
-        "arguments": Jsonb(row["arguments"]),
-    }
-    with psycopg.connect(_url(), connect_timeout=10) as conn:
-        conn.execute(SQL, params)
+    """Writes one audit row; raises WarehouseError when it cannot."""
+    warehouse().insert_audit(row)
 
 
 def audit(
@@ -107,10 +84,9 @@ def audit(
     """Audits one data call; returns the error that withholds its result when it cannot."""
     try:
         record(audit_row(tool, args, caller, response))
-    except psycopg.Error as e:
-        reason = str(e).strip().splitlines()[0]
+    except WarehouseError as e:
         return {
-            "error": f"the query ran but its audit row could not be written ({reason}), so "
+            "error": f"the query ran but its audit row could not be written ({reason(e)}), so "
             f"its result is withheld; say that the answer is unavailable"
         }
     return None
