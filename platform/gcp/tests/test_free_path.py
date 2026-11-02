@@ -68,13 +68,24 @@ def test_a_dated_exception_expires(copy: Path) -> None:
         for p in problems(copy, dt.date(2026, 12, 31))
     )
     spec = copy / "free-path.yaml"
-    spec.write_text(
-        spec.read_text().replace(
-            "geminidataanalytics.googleapis.com: {enable: true",
-            "geminidataanalytics.googleapis.com: {enable: false",
-        )
-    )
+    text = spec.read_text()
+    # The data agent's API and the two it needs (dataplex, cloudaicompanion) end together.
+    for name in DATA_AGENT_APIS:
+        text = text.replace(f"{name}: {{enable: true", f"{name}: {{enable: false")
+    spec.write_text(text)
     assert problems(copy, dt.date(2027, 1, 1)) == []
+
+
+DATA_AGENT_APIS = (
+    "geminidataanalytics.googleapis.com",
+    "dataplex.googleapis.com",
+    "cloudaicompanion.googleapis.com",
+)
+
+
+def test_the_apis_a_data_agent_needs_end_with_it(copy: Path) -> None:
+    apis = yaml.safe_load((copy / "free-path.yaml").read_text())["apis"]
+    assert {str(apis[name]["until"]) for name in DATA_AGENT_APIS} == {"2026-12-30"}
 
 
 def test_a_raised_query_cap_fails(copy: Path) -> None:

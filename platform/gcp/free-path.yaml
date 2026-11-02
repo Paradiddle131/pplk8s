@@ -49,6 +49,14 @@ apis:
   # the API on enables no other API (it has no Service Usage dependency group, read 2026-11-02). `until` is a day early, the date #232 switches it off by:
   # `make gcp-validate` fails while it is still enabled from 2026-12-31 (UTC) on.
   geminidataanalytics.googleapis.com: {enable: true, source: https://cloud.google.com/products/data-agents/pricing, issue: 207, until: 2026-12-30}
+  # What a data agent needs besides (#207). Every Conversational Analytics chat, a stored agent's or an inline
+  # context's, answers 403 until Dataplex is on (measured 2026-11-02), though Google's setup page calls it optional;
+  # it reads BigQuery's technical metadata, stored free, and its API calls and search are free. Its billed parts
+  # are left off: discovery scans (standard processing, 100 DCU-hours free), and lineage, quality and profiling
+  # (premium; lineage needs datalineage.googleapis.com, on the paid list). cloudaicompanion is on Google's
+  # required list; it bills only Gemini Code Assist licences, which the lab buys none of. Both until #232.
+  dataplex.googleapis.com: {enable: true, source: https://cloud.google.com/dataplex/pricing, issue: 207, until: 2026-12-30}
+  cloudaicompanion.googleapis.com: {enable: true, source: https://cloud.google.com/gemini/pricing, issue: 207, until: 2026-12-30}
   # Later issues on Map #212, off until their PR turns them on.
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
 
@@ -152,6 +160,8 @@ paid:
   - aiplatform.googleapis.com
   - bigqueryreservation.googleapis.com
   - cloudfunctions.googleapis.com
+  # Automatic lineage from BigQuery jobs is Dataplex premium processing, billed per DCU-hour, no free tier.
+  - datalineage.googleapis.com
   # Artifact Analysis: enabling either turns on vulnerability scanning, billed per image scanned.
   - containerscanning.googleapis.com
   - ondemandscanning.googleapis.com
