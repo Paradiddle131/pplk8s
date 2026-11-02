@@ -4,6 +4,9 @@
 # out Vertex AI, pandas and pyarrow, dbt/requirements-bigquery.exclude), then, on a fresh BigQuery emulator
 # holding the dev fixture's sources, runs the image's own `dbt build` of the platform part with its tests (the
 # hops include every metric against its gold table) and one MetricFlow query, as Cloud Run would run it.
+# The emulator gets dbt/dev/fixture.sql's sources alone (31 orders), whatever ran before: the script loads that
+# file into a Postgres database of its own, gcp_image_check, recreated each run, and copies that one, never
+# dbt_dev, which agent-fixture.sh extends by six weeks (fixture_weeks.sql) that time out the emulator's hops.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse).
 set -euo pipefail
 
@@ -12,6 +15,8 @@ IMAGE=${GCP_DBT_IMAGE:-pplk8s-dbt-gcp:check}
 OUT=${TMPDIR:-/tmp}/pplk8s-gcp-image-check
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml" --profile bigquery)
 fail() { echo "FAIL: $*" >&2; exit 1; }
+DB=gcp_image_check
+psql_db() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"; }
 rm -rf "$OUT" && mkdir -p "$OUT"
 
 build=(docker build --build-arg WAREHOUSE=bigquery -t "$IMAGE")
@@ -22,11 +27,16 @@ fi
 "${build[@]}" "$REPO/dbt" >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "docker build of the GCP dbt image"; }
 echo "ok: $IMAGE built (WAREHOUSE=bigquery): its in-image checks found no Postgres package and no TLC path, and it parses"
 
+{ "${COMPOSE[@]}" exec -T warehouse dropdb -U warehouse --if-exists "$DB" &&
+  "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"; } || fail "recreating the Postgres database $DB"
+psql_db <"$REPO/dbt/dev/fixture.sql" >"$OUT/fixture-sql.log" 2>&1 || { tail -20 "$OUT/fixture-sql.log" >&2; fail "loading dbt/dev/fixture.sql into $DB"; }
+orders=$(psql_db -c "select count(*) from ds_source.synthetic_orders")
+echo "ok: $DB recreated with dbt/dev/fixture.sql alone ($orders orders)"
 "${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >/dev/null 2>&1 ||
   { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come up"; }
 (cd "$REPO/dbt" && BQ_API_ENDPOINT=http://localhost:9050 uv run --quiet --no-project \
   --with-requirements requirements-postgres.txt --with dbt-bigquery==1.12.1 --with 'psycopg[binary]==3.3.6' \
-  python -I "$REPO/tests/e2e/lib/fixture_to_bigquery.py" "host=localhost port=5433 user=warehouse password=warehouse dbname=dbt_dev") \
+  python -I "$REPO/tests/e2e/lib/fixture_to_bigquery.py" "host=localhost port=5433 user=warehouse password=warehouse dbname=$DB") \
   >"$OUT/fixture.log" || { cat "$OUT/fixture.log" >&2; fail "copying the fixture into the emulator"; }
 echo "ok: a fresh emulator holds the fixture's sources"
 

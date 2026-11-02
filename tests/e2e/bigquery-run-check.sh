@@ -18,6 +18,10 @@
 #   - call transcripts: the call metrics by day and topic against gold.call_signals_daily, labelled from the
 #     recorded label calls (the emulator fakes AI.CLASSIFY and lacks AI.GENERATE) and scored there on the golden
 #     set (SL-18),
+#   - periods: dbt/dev/fixture_weeks.sql's six weeks before the fixture's days, sales and marketing built, and the
+#     week-over-week growth and month-to-date metrics of revenue, bookings and leads against SQL by hand on gold, as
+#     semantic-check proves them on Postgres (the offset's ISO week and the to-date join on a BigQuery engine;
+#     its models run without tests, which the platform part runs),
 #   - last, the platform: sales, returns, finance, marketing, the semantic and migration models; the eight sales
 #     metrics by day against gold.daily_sales and exposed.net_sales_daily, net revenue by day and customer country
 #     and revenue by weekday (a date part, ISO) against SQL by hand, signups, customers to date and the
@@ -26,7 +30,7 @@
 #     against gold.marketing_daily, the fixture's cost per lead and per booking (39.00, 130.00), migration.parity
 #     as on Postgres with the gate on each consumer's switch (SL-11), and the agent's audit table through the same
 #     entry point as on Postgres (`dbt run-operation agent_warehouse`, #166), twice, with one row written and read.
-# Every part runs `dbt build` with its tests on the `bigquery_emulator` or `gcp` target, the project unchanged; the 63
+# Every part but periods runs `dbt build` with its tests on the `bigquery_emulator` or `gcp` target, the project unchanged; the 63
 # layer hops (semantic/PLAN.md SL-9) reconcile across them.
 # Expects `make services-up` (the fixture loads through the Postgres warehouse); never touches the
 # `warehouse` database. The emulator stays up afterwards on localhost:9050, holding the platform's build, which
@@ -291,6 +295,42 @@ elif part == "call_transcripts":
         bad.append(f"silver.call_signals on {where} holds {labelled} calls, not the fixture's 52")
     compared = [("gold.call_signals_daily", gold_calls, metrics("calls", calls, ("metric_time__day", "call__topic")))]
     said = f"the call metrics equal gold.call_signals_daily on {len(gold_calls)} day-topics"
+elif part == "periods":
+    first, last = os.environ["PERIOD_FIRST"], os.environ["PERIOD_LAST"]
+    daily = f"""daily as (select order_date as day, revenue_eur, 0 as bookings, 0 as leads from `gold.daily_sales`
+                          union all select activity_date, 0, bookings, leads from `gold.marketing_daily`)"""
+    # A week's growth over the week before (ISO weeks, from Monday), where both weeks have rows.
+    wow = rows(f"""
+        with {daily},
+             weekly as (select date_trunc(day, isoweek) as week, sum(revenue_eur) as revenue_eur,
+                               nullif(sum(bookings), 0) as bookings, nullif(sum(leads), 0) as leads
+                        from daily where day between '{first}' and '{last}' group by 1)
+        select cast(w.week as string), safe_divide(w.revenue_eur - p.revenue_eur, p.revenue_eur),
+               safe_divide(w.bookings - p.bookings, p.bookings), safe_divide(w.leads - p.leads, p.leads)
+        from weekly w join weekly p on p.week = date_sub(w.week, interval 7 day)""")
+    # Each day's total from the first of its month, over every day of the spine.
+    mtd = rows(f"""
+        with {daily}
+        select cast(s.date_day as string), coalesce(sum(d.revenue_eur), 0), coalesce(sum(d.bookings), 0),
+               coalesce(sum(d.leads), 0)
+        from `semantic.time_spine` s left join daily d on d.day between date_trunc(s.date_day, month) and s.date_day
+        where s.date_day between '{first}' and '{last}' group by 1""")
+    wow_columns = ["revenue_eur_wow_growth", "bookings_wow_growth", "leads_wow_growth"]
+    with open(f"{out}/wow.csv") as f:
+        got_wow = {r["metric_time__week"][:10]: tuple(num(r[c]) for c in wow_columns)
+                   for r in csv.DictReader(f) if r["revenue_eur_wow_growth"]}
+    complete = [week for week, v in got_wow.items() if None not in v]
+    if len(complete) != 6:
+        bad.append(f"weeks with a growth in all three metrics on {where}: {len(complete)}, expected 6")
+    got_mtd = metrics("mtd", ["revenue_eur_mtd", "bookings_mtd", "leads_mtd"])
+    anchor = (str(got_mtd.get("2026-09-15", (None,))[0]), str(round(got_wow.get("2026-09-14", (decimal.Decimal(0),))[0], 4)))
+    if anchor != ("5668.750000", "0.3265"):
+        bad.append(f"revenue month to date on 2026-09-15 and the growth of the week of 2026-09-14: {anchor},"
+                   " expected (5668.750000, 0.3265) as on Postgres")
+    compared = [("week-over-week growth (SQL by hand on gold)", wow, got_wow),
+                ("month to date (SQL by hand on gold)", mtd, got_mtd)]
+    said = (f"the week-over-week growth of revenue, bookings and leads equals gold on {len(wow)} weeks and their"
+            f" month to date on {len(mtd)} days")
 else:
     sys.exit(f"unknown part {part}")
 for label, oracle, got in compared:
@@ -391,6 +431,28 @@ run_ mf query --metrics calls_labelled,calls_with_objection,positive_calls \
   { tail -20 "$OUT/query.log" >&2; fail "mf query of the call metrics on $BQ_WHERE"; }
 
 parity_ call_transcripts
+
+# Period over period and to date, as semantic-check proves them on Postgres: dbt/dev/fixture_weeks.sql's six
+# weeks before the fixture's days, copied into a fresh BigQuery with the base fixture, the sales and marketing
+# paths built, and the six metrics against SQL by hand on gold there, so the offset's week truncation (ISO weeks,
+# from Monday) and the to-date join run on a BigQuery engine. It runs only the models the six metrics and their
+# oracles read, without tests: the platform part and semantic-check test the same models, and on the emulator a
+# hop test over the six weeks runs for more than ten minutes and then errors. The base fixture goes back in
+# after it, so the platform keeps its numbers.
+psql_dev <"$REPO/dbt/dev/fixture_weeks.sql" 2>&1 | grep -v NOTICE || true
+fresh_
+run_ dbt run --select +gld_daily_sales +gld_marketing_daily metricflow_time_spine >"$OUT/build-periods.log" 2>&1 ||
+  { grep -E "ERROR|Error" "$OUT/build-periods.log" | tail -20 >&2; fail "dbt run with fixture_weeks.sql on $BQ_WHERE"; }
+echo "ok: the six weeks built on $BQ_WHERE: $(grep -o "PASS=[0-9]* WARN=[0-9]* ERROR=[0-9]* SKIP=[0-9]*" "$OUT/build-periods.log" | tail -1)"
+psql_dev <"$REPO/dbt/dev/fixture.sql" 2>&1 | grep -v NOTICE || true
+first=2026-08-17 last=2026-10-04 # whole weeks: MetricFlow widens a weekly query to them
+run_ mf query --metrics revenue_eur_wow_growth,bookings_wow_growth,leads_wow_growth --group-by metric_time__week \
+  --start-time "$first" --end-time "$last" --csv "$OUT/wow.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the week-over-week metrics on $BQ_WHERE"; }
+run_ mf query --metrics revenue_eur_mtd,bookings_mtd,leads_mtd --group-by metric_time__day \
+  --start-time "$first" --end-time "$last" --csv "$OUT/mtd.csv" >>"$OUT/query.log" 2>&1 ||
+  { tail -20 "$OUT/query.log" >&2; fail "mf query of the month-to-date metrics on $BQ_WHERE"; }
+PERIOD_FIRST=$first PERIOD_LAST=$last parity_ periods
 
 # The platform last, so the emulator left running (or the lab project) holds what `make demo` reads.
 build_part_ platform tag:sales tag:returns tag:finance tag:marketing tag:semantic tag:migration
