@@ -1,8 +1,10 @@
 """Publish the lab's native BigQuery data agent from the generated context, staging then published (#207).
 
-Reads the v1 `Context` build_catalog.py writes (default: `dbt/target/bigquery/catalog/data_agent/context.json`,
-from `make bigquery-check`), points its tables, verified queries and system instruction at the lab project,
-and makes the data agent `projects/<GCP_PROJECT>/locations/<location>/dataAgents/<agent id>` hold it:
+Reads the v1 `Context` build_catalog.py writes for the agent id (`make bigquery-check`): for `pplk8s-semantic`, the
+default, `dbt/target/bigquery/catalog/data_agent/context.json`; for `pplk8s-governed` (semantic/PLAN.md SL-24),
+`.../data_agent_governed/context.json`, over the governed tables only. It points the context's tables, verified
+queries and system instruction at the lab project, and makes the data agent
+`projects/<GCP_PROJECT>/locations/<location>/dataAgents/<agent id>` hold it:
 - missing: create it with the context as `dataAnalyticsAgent.stagingContext`;
 - present: PATCH, with an update mask, only the fields that differ (the staging context, the display name and
   description, the BigQuery Agent Analytics fields); nothing when none differ;
@@ -24,7 +26,8 @@ Credentials, as platform/gcp/tofu.sh picks them, first that holds: GCP_ACCESS_TO
 proxy-injected CLOUDSDK_AUTH_ACCESS_TOKEN; a short-lived token of a signed-in gcloud account ($GCP_ACCOUNT,
 default the active one). Refuses without GCP_PROJECT. `--dry-run` prints the bodies and sends nothing.
 
-Usage: python3 platform/gcp/data-agent/publish.py [--context PATH] [--dry-run] [--no-publish] [--analytics]
+Usage: python3 platform/gcp/data-agent/publish.py [--agent-id ID] [--context PATH] [--dry-run] [--no-publish]
+       [--analytics]
 Run by `make gcp-data-agent` (Live: the cost check before and after).
 """
 
@@ -42,14 +45,14 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 PIN = HERE / "schemas" / "geminidataanalytics-v1-data-agent.json"
 FREE_PATH = HERE.parent / "free-path.yaml"
-CONTEXT = (
-    REPO / "dbt" / "target" / "bigquery" / "catalog" / "data_agent" / "context.json"
-)
+CATALOG = REPO / "dbt" / "target" / "bigquery" / "catalog"
+CONTEXT = CATALOG / "data_agent" / "context.json"
 AGENT_ID = "pplk8s-semantic"
 LOCATION = "us"
 ANALYTICS_TABLE = "agent_logs.data_agent_conversations"
@@ -58,6 +61,29 @@ DESCRIPTION = (
     "The lab's metrics, glossary terms and verified queries, generated from the dbt semantic layer "
     "(dbt/scripts/build_catalog.py) and published by platform/gcp/data-agent/publish.py."
 )
+
+
+class Agent(NamedTuple):
+    """A data agent this publisher makes: its default context, display name and description."""
+
+    context: Path
+    display_name: str
+    description: str
+
+
+# The lab's data agents, by id (semantic/PLAN.md SL-24): the semantic layer as context over silver, and the same
+# definitions as governed tables whose numbers MetricFlow computed. `--agent-id` picks one; `--context` overrides
+# its context file.
+AGENTS = {
+    AGENT_ID: Agent(CONTEXT, DISPLAY_NAME, DESCRIPTION),
+    "pplk8s-governed": Agent(
+        CATALOG / "data_agent_governed" / "context.json",
+        "pplk8s governed tables",
+        "The lab's metrics as governed tables MetricFlow computed (dbt/models/governed/, "
+        "dbt/scripts/build_governed.py), with glossary terms and verified queries over them "
+        "(dbt/scripts/build_catalog.py), published by platform/gcp/data-agent/publish.py.",
+    ),
+}
 STAGING = "dataAnalyticsAgent.stagingContext"
 PUBLISHED = "dataAnalyticsAgent.publishedContext"
 # The fields this publisher owns on the agent; any other field is left as the console or the API set it.
@@ -245,11 +271,16 @@ def analytics_table(spec: str, project: str) -> dict:
     return dict(zip(("projectId", "datasetId", "tableId"), parts, strict=True))
 
 
-def desired(context: dict, analytics: dict | None) -> dict:
+def desired(
+    context: dict,
+    analytics: dict | None,
+    display_name: str = DISPLAY_NAME,
+    description: str = DESCRIPTION,
+) -> dict:
     """The `DataAgent` body this publisher owns: the context as the staging context, and the analytics fields."""
     agent = {
-        "displayName": DISPLAY_NAME,
-        "description": DESCRIPTION,
+        "displayName": display_name,
+        "description": description,
         "dataAnalyticsAgent": {"stagingContext": context},
     }
     if analytics:
@@ -495,9 +526,15 @@ def main(
     env = os.environ if env is None else env
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
-        "--context", type=Path, default=CONTEXT, help="build_catalog.py's context.json"
+        "--context",
+        type=Path,
+        help="build_catalog.py's context.json (default: the agent id's, from make bigquery-check)",
     )
-    parser.add_argument("--agent-id", default=AGENT_ID)
+    parser.add_argument(
+        "--agent-id",
+        default=AGENT_ID,
+        help=f"the data agent: one of {', '.join(AGENTS)} (default {AGENT_ID})",
+    )
     parser.add_argument(
         "--location", default=LOCATION, help="global, us, eu or a region (default us)"
     )
@@ -531,15 +568,19 @@ def main(
         )
         return 2
     try:
-        if not args.context.is_file():
-            raise PublishError(f"{args.context} is missing: run make bigquery-check")
-        context = capped(
-            retarget(json.loads(args.context.read_text()), project), query_cap()
-        )
+        if args.agent_id not in AGENTS:
+            raise PublishError(
+                f"--agent-id {args.agent_id!r}: the lab's data agents are {', '.join(AGENTS)}"
+            )
+        known = AGENTS[args.agent_id]
+        path = args.context or known.context
+        if not path.is_file():
+            raise PublishError(f"{path} is missing: run make bigquery-check")
+        context = capped(retarget(json.loads(path.read_text()), project), query_cap())
         analytics = (
             analytics_table(args.analytics_table, project) if args.analytics else None
         )
-        agent = desired(context, analytics)
+        agent = desired(context, analytics, known.display_name, known.description)
         pin = load_pin()
         check_body(agent, pin)
         if args.dry_run:

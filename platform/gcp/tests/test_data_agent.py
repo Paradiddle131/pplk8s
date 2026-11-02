@@ -16,6 +16,7 @@ sys.path.insert(0, str(GCP / "data-agent"))
 
 import pin_schema
 from publish import (
+    AGENTS,
     MANAGED,
     PIN,
     Publisher,
@@ -386,6 +387,42 @@ def test_main_publishes_through_the_transport(tmp_path: Path) -> None:
         == 0
     )
     assert [call[0] for call in api.writes()] == ["POST", "PATCH"]
+
+
+def test_main_publishes_the_governed_agent_under_its_own_id_and_name(
+    tmp_path: Path,
+) -> None:
+    # SL-24: the second data agent is the same publisher with another id, never a fork.
+    api = FakeApi(polls=0)
+    argv = ["--agent-id", "pplk8s-governed", "--context", str(write_context(tmp_path))]
+    assert main(argv, env={"GCP_PROJECT": PROJECT}, transport=api) == 0
+    created = next(call for call in api.writes() if call[0] == "POST")
+    assert created[2] == {"dataAgentId": "pplk8s-governed"}
+    agent = api.agents[f"projects/{PROJECT}/locations/us/dataAgents/pplk8s-governed"]
+    assert agent["displayName"] == "pplk8s governed tables"
+    cap = agent["dataAnalyticsAgent"]["publishedContext"]["options"]["datasource"]
+    assert cap["bigQueryMaxBilledBytes"] == str(query_cap())
+    assert main(argv, env={"GCP_PROJECT": PROJECT}, transport=api) == 0
+    assert [call[0] for call in api.writes()] == ["POST", "PATCH"]
+
+
+def test_the_governed_agent_reads_its_own_context_by_default() -> None:
+    assert AGENTS["pplk8s-governed"].context.parts[-2:] == (
+        "data_agent_governed",
+        "context.json",
+    )
+    assert AGENTS["pplk8s-semantic"].context.parts[-2:] == (
+        "data_agent",
+        "context.json",
+    )
+
+
+def test_main_refuses_an_unknown_agent_id(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    argv = ["--agent-id", "other", "--context", str(write_context(tmp_path))]
+    assert main(argv, env={"GCP_PROJECT": PROJECT}) == 1
+    assert "pplk8s-governed" in capsys.readouterr().err
 
 
 def test_main_reports_a_missing_context(
