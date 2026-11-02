@@ -74,7 +74,8 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `WAREHOUSE_DSN` | required | Postgres DSN, for example `postgresql://warehouse:warehouse@warehouse:5432/warehouse` |
+| `ELF_WAREHOUSE` | `postgres` (the image's `WAREHOUSE`) | The warehouse implementation (`el_factory/warehouse.py`); any other value fails at startup |
+| `WAREHOUSE_DSN` | required on Postgres | Postgres DSN, for example `postgresql://warehouse:warehouse@warehouse:5432/warehouse` |
 | `STORAGE_EMULATOR_HOST` | unset | When set, the GCS client uses anonymous credentials against this host, for example `http://gcs:4443` |
 | `GCS_BUCKET` | `staging` | Bucket for staged pages |
 | `GCP_PROJECT` | `pplk8s` | GCP project passed to the storage client |
@@ -98,6 +99,11 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 All synthetic output is deterministic and all data is synthetic or public; TLC data is downloaded at run time and never committed.
 
 ## Warehouse contract
+
+The app reaches the warehouse only through the `Warehouse` protocol in `el_factory/warehouse.py` (semantic/PLAN.md SL-19): `ELF_WAREHOUSE` picks the implementation, and only its module, with its driver, is imported, so an image built for one warehouse carries no other's driver.
+`postgres` (`warehouse_postgres.py`, the `postgres` extra) is the only one so far; BigQuery comes with [#227](../../../../issues/227).
+Every driver error leaves the implementation as a `WarehouseError` whose `transient` flag decides the answer: a dropped or refused connection is a retryable 503, anything else a 500.
+The contract below is Postgres's.
 
 The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each extract or load, so dbt sources resolve even before an entity's first extract.
 Each extract or load ensures all of them, not only its own: a pipeline's dbt build can read a table another pipeline lands (the weather models are tagged `sales`, PLAN.md D20), and a warehouse reset under a running service (`make services-reset`) would otherwise stay without the tables no request names (#172).
@@ -144,4 +150,5 @@ docker run --rm "$(make -s print-ELF_IMAGE)" id -u   # prints 10001
 ```
 
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.
+Its build argument `WAREHOUSE` (default `postgres`) names the `pyproject.toml` extra it installs and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
 It runs gunicorn with two workers and the control socket disabled, because that socket is an admin feature the container does not need.

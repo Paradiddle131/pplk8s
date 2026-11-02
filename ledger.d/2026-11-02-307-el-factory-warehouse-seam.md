@@ -1,0 +1,6 @@
+## 2026-11-02 — Semantic track — EL Factory's warehouse seam (#307, first PR of #227)
+
+- Done: `el_factory/warehouse.py` keeps the `Warehouse` protocol and its load types, adds `WarehouseError` (a `transient` flag) and a selector on `ELF_WAREHOUSE` (default `postgres`, validated at boot) that imports only the chosen module; the Postgres code moved to `warehouse_postgres.py` unchanged except that every psycopg error leaves as a `WarehouseError` (a connection or serialization failure transient, the rest not); `app.py` imports no driver and answers a transient `WarehouseError` with the same retryable 503 and any other with the same 500; `psycopg` is the `postgres` extra (the `dev` group installs it) and the Dockerfile's `ARG WAREHOUSE` names the extra and sets `ELF_WAREHOUSE`; no behaviour change on the local paths.
+- Evidence: see the PR for `make check`, the image build and an extract and a load against the Compose stack.
+- Decisions: none changed; this carries out SL-19's "EL Factory's loads" seam in the agent's shape (#301).
+- Open: `warehouse_bigquery.py` (load jobs) with #227; `pyarrow` and the TLC routes leave the app in #307's second candidate, which `ELF_WAREHOUSE=bigquery` importing no `pyarrow` waits for.

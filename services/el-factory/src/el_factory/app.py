@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-import psycopg
 import requests
 from flask import Flask, Response, jsonify, request
 from google.api_core import exceptions as gcs_exceptions
@@ -24,7 +23,8 @@ from el_factory.sources import Registry, build_registry, files, load_catalog, tl
 from el_factory.sources.base import Entity
 from el_factory.staging import object_uri, read_staged, stage_page
 from el_factory.storage import GcsStorage, Storage
-from el_factory.warehouse import FileLoad, PageLoad, PostgresWarehouse, Warehouse
+from el_factory.warehouse import FileLoad, PageLoad, Warehouse, WarehouseError
+from el_factory.warehouse import warehouse as configured_warehouse
 
 RUN_ID_PATTERN = re.compile(r"[A-Za-z0-9_.:+-]+")
 CURSOR_PATTERN = re.compile(r"[0-9]+")
@@ -71,8 +71,7 @@ def create_app(
     def upstream_failure(exc: requests.RequestException) -> tuple[Response, int]:
         return _error(503, f"upstream request failed: {exc}", retryable=True)
 
-    # Dropped connections and GCS 5xx/429 are transient; the caller's retry is the remedy.
-    @app.errorhandler(psycopg.OperationalError)
+    # GCS 5xx/429 are transient; the caller's retry is the remedy.
     @app.errorhandler(gcs_exceptions.ServerError)
     @app.errorhandler(gcs_exceptions.TooManyRequests)
     def transient_dependency_failure(exc: Exception) -> tuple[Response, int]:
@@ -87,6 +86,13 @@ def create_app(
     def unexpected(exc: Exception) -> tuple[Response, int]:
         app.logger.exception("unexpected error", exc_info=exc)
         return _error(500, "internal error", retryable=False)
+
+    # The warehouse's errors, whatever its driver: transient ones are retryable, the rest are 500s.
+    @app.errorhandler(WarehouseError)
+    def warehouse_failure(exc: WarehouseError) -> tuple[Response, int]:
+        if exc.transient:
+            return transient_dependency_failure(exc)
+        return unexpected(exc)
 
     @app.get("/healthz")
     def healthz() -> Response:
@@ -261,7 +267,7 @@ def _provision_tables(app: Flask, landing: list[tuple[Callable[[Table], None], T
     for ensure, table in landing:
         try:
             ensure(table)
-        except (psycopg.Error, OSError) as exc:
+        except (WarehouseError, OSError) as exc:
             app.logger.warning("could not provision %s at startup: %s", table.name, exc)
 
 
@@ -270,7 +276,7 @@ def create_app_from_env() -> Flask:
     return create_app(
         config,
         GcsStorage.from_config(config),
-        PostgresWarehouse(config.warehouse_dsn),
+        configured_warehouse(config),
     )
 
 

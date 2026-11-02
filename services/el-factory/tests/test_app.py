@@ -1,7 +1,6 @@
 import json
 from datetime import UTC, datetime
 
-import psycopg
 import pytest
 from google.api_core import exceptions as gcs_exceptions
 
@@ -9,6 +8,7 @@ from el_factory.app import create_app
 from el_factory.model import Interval
 from el_factory.sources.synthetic import build_orders
 from el_factory.staging import object_uri
+from el_factory.warehouse import WarehouseError
 from tests.conftest import make_config
 
 ORDERS_BODY = {
@@ -340,7 +340,7 @@ def test_transient_warehouse_error_is_a_retryable_503(make_client, storage):
         ensure_file_table = ensure_table
 
         def replace_page(self, table, load, rows):
-            raise psycopg.OperationalError("server closed the connection unexpectedly")
+            raise WarehouseError("server closed the connection unexpectedly", transient=True)
 
     app = create_app(make_config(), storage, FlakyWarehouse())
     app.config["TESTING"] = False
@@ -349,6 +349,29 @@ def test_transient_warehouse_error_is_a_retryable_503(make_client, storage):
 
     assert response.status_code == 503
     assert response.get_json()["retryable"] is True
+
+
+def test_a_warehouse_refusal_is_a_500_not_retried(make_client, storage):
+    class RefusingWarehouse:
+        def ensure_table(self, table):
+            pass
+
+        ensure_file_table = ensure_table
+
+        def replace_page(self, table, load, rows):
+            raise WarehouseError('relation "ds_source.orders" does not exist', transient=False)
+
+    app = create_app(make_config(), storage, RefusingWarehouse())
+    app.config["TESTING"] = False
+
+    response = app.test_client().post("/extract", json=ORDERS_BODY)
+
+    assert response.status_code == 500
+    assert response.get_json() == {
+        "status": "error",
+        "retryable": False,
+        "error": "internal error",
+    }
 
 
 def test_transient_storage_error_is_a_retryable_503(make_client, storage, monkeypatch):

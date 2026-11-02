@@ -7,20 +7,30 @@ dependencies = [
     "flask==3.1.3",
     "gunicorn==26.2.0",
     "google-cloud-storage==3.17.0",
-    "psycopg[binary]==3.3.6",
     "requests==2.34.2",
     "pyyaml",
     "pyarrow==21.0.0",
+]
+
+[project.optional-dependencies]
+# The warehouse EL Factory loads (el_factory/warehouse.py, ELF_WAREHOUSE; semantic/PLAN.md SL-19): an
+# image installs one extra (the Dockerfile's WAREHOUSE), so it carries only that warehouse's driver.
+# postgres: the lab's Compose warehouse.
+postgres = [
+    "psycopg[binary]==3.3.6",
 ]
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12"]
 build-backend = "uv_build"
 
+# No group is installed in any image (`uv sync --no-dev` in the Dockerfile).
+# dev: the test and lint tools and the postgres extra, so the tests cover the Postgres seam.
 [dependency-groups]
 dev = [
     "pytest",
     "ruff",
+    "el-factory[postgres]",
 ]
 
 [tool.uv.build-backend]

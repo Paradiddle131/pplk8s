@@ -5,6 +5,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from el_factory.warehouse import IMPLEMENTATIONS
+
 DEFAULT_OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
 DEFAULT_MAX_RUN_TIME = 45.0
 # NYC TLC trip files (D34); the one host the TLC page links to (issue #36).
@@ -28,11 +30,18 @@ class Config:
     open_meteo_url: str
     tlc_base_url: str
     port: int
+    # The warehouse implementation (warehouse.py, SL-19); warehouse_dsn is its Postgres DSN.
+    warehouse: str = "postgres"
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] = os.environ) -> Config:
+        warehouse = env.get("ELF_WAREHOUSE", "").strip() or "postgres"
+        if warehouse not in IMPLEMENTATIONS:
+            raise ConfigError(
+                f"ELF_WAREHOUSE={warehouse!r} is not one of {', '.join(sorted(IMPLEMENTATIONS))}"
+            )
         warehouse_dsn = env.get("WAREHOUSE_DSN", "").strip()
-        if not warehouse_dsn:
+        if warehouse == "postgres" and not warehouse_dsn:
             raise ConfigError("WAREHOUSE_DSN is required")
         fail_rate = _float(env, "FAIL_RATE", 0.0)
         if not 0.0 <= fail_rate <= 1.0:
@@ -45,6 +54,7 @@ class Config:
         if page_size < 1:
             raise ConfigError("PAGE_SIZE must be at least 1")
         return cls(
+            warehouse=warehouse,
             warehouse_dsn=warehouse_dsn,
             storage_emulator_host=env.get("STORAGE_EMULATOR_HOST") or None,
             gcs_bucket=env.get("GCS_BUCKET", "staging"),
