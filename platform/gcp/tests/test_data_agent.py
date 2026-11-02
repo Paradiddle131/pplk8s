@@ -21,9 +21,11 @@ from publish import (
     Publisher,
     PublishError,
     analytics_table,
+    capped,
     desired,
     load_pin,
     main,
+    query_cap,
     retarget,
 )
 
@@ -292,6 +294,17 @@ def test_a_soft_deleted_agent_is_refused() -> None:
     with pytest.raises(PublishError, match="soft-deleted"):
         publisher(api).publish(agent())
     assert api.writes() == []
+
+
+def test_every_query_the_agent_runs_is_capped_at_the_free_paths_cap() -> None:
+    cap = query_cap()
+    assert cap == 1073741824
+    body = capped(retarget(context(), PROJECT), cap)
+    assert body["options"] == {
+        "datasource": {"bigQueryMaxBilledBytes": "1073741824"},
+        "model": "MODEL_UNSPECIFIED",
+    }
+    assert capped(body, cap) == body
 
 
 def test_retarget_moves_tables_queries_and_instruction_together() -> None:

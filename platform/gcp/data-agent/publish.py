@@ -45,6 +45,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 PIN = HERE / "schemas" / "geminidataanalytics-v1-data-agent.json"
+FREE_PATH = HERE.parent / "free-path.yaml"
 CONTEXT = (
     REPO / "dbt" / "target" / "bigquery" / "catalog" / "data_agent" / "context.json"
 )
@@ -178,6 +179,32 @@ def endpoint(location: str) -> str:
     if location in ("us", "eu"):
         return f"https://geminidataanalytics.{location}.rep.googleapis.com"
     return f"https://geminidataanalytics-{location}.googleapis.com"
+
+
+def query_cap(free_path: Path = FREE_PATH) -> int:
+    """free-path.yaml's per-query byte cap (`caps.bigquery_maximum_bytes_billed`), read without a YAML parser."""
+    found = re.search(
+        r"^\s+bigquery_maximum_bytes_billed:\s*(\d+)\s*$",
+        free_path.read_text(),
+        re.MULTILINE,
+    )
+    if not found:
+        raise PublishError(f"{free_path}: no caps.bigquery_maximum_bytes_billed")
+    return int(found.group(1))
+
+
+def capped(context: dict, cap: int) -> dict:
+    """The context with every BigQuery job the data agent runs capped at `cap` bytes billed: without it its
+    queries run uncapped (measured 2026-11-02: the job's maximumBytesBilled unset, #207)."""
+    options = dict(context.get("options") or {})
+    options["datasource"] = {
+        **(options.get("datasource") or {}),
+        "bigQueryMaxBilledBytes": str(cap),
+    }
+    # The API stores options with `model` filled in as its default and returns it so: a context sent without it
+    # would differ on every run; stated here, a rerun writes nothing (measured 2026-11-02).
+    options.setdefault("model", "MODEL_UNSPECIFIED")
+    return {**context, "options": options}
 
 
 def retarget(context: dict, project: str) -> dict:
@@ -505,7 +532,9 @@ def main(
     try:
         if not args.context.is_file():
             raise PublishError(f"{args.context} is missing: run make bigquery-check")
-        context = retarget(json.loads(args.context.read_text()), project)
+        context = capped(
+            retarget(json.loads(args.context.read_text()), project), query_cap()
+        )
         analytics = (
             analytics_table(args.analytics_table, project) if args.analytics else None
         )
