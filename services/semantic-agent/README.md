@@ -10,10 +10,11 @@ It stands in for a Cloud Run service; at work the metric toolset is the seam a n
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../../assets/semantic-agent-dark.png">
-  <img width="1200" alt="Inside the semantic agent, in the order a question travels: a caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py; the agent calls the model through model.py, and the model, hatched, is the only part that is not code: it chooses the tool and its arguments; tools.py's query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics; every result passes through guard.py, ADK's after_tool_callback outside the toolset, which attaches its metrics' freshness from the readiness ledger and inserts one row as agent_audit, or withholds the result; an initContainer runs dbt parse and build_catalog.py into target/; a chain line marks the toolset the work platform replaces with DataAgentToolset; the eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService" src="../../assets/semantic-agent.png">
+  <img width="1200" alt="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService." src="../../assets/semantic-agent.png">
 </picture>
 
 The picture runs top to bottom in the order a question travels.
+Below the pod, `make agent-mcp` serves the same tools to agents outside ADK in a process of its own, run with uv and left out of the image ([Over MCP](#over-mcp)); its data calls reach `guard.py` through `guarded`, the code the pod's callback runs.
 Grey cards are a package's code, named above their title, and white cards this repo's; the hatched card is the model, the only part that is not code; a chain (dash-dot) line marks what the work platform replaces; cobalt is what the agent reads as `agent_metrics`, vermilion what the baseline reads as `agent_sql`; a logo marks a core technology once, at one size.
 The source is [`assets/semantic-agent.html`](../../assets/semantic-agent.html), one level below the whole lab, [`assets/platform.html`](../../assets/platform.html).
 Most of the agent is reuse: ADK owns the runner, the sessions, the event loop, serving and the eval engine; MetricFlow owns the metric definitions and compiles every query; dbt's parse owns the manifests the catalog and the warehouse objects come from.
@@ -48,13 +49,21 @@ The database, not the prompt, keeps each agent in its tables (SL-4).
 ## Audit
 
 Every call to a data tool (`query_metrics`, `execute_sql`, or whatever replaces them), answered or refused, writes one row to `ops.agent_queries` (SL-10): the agent, user, session, invocation and call id; the metrics, filters and other arguments as the model sent them; the SQL (the model's, or the one MetricFlow compiled); the rows returned; the freshness statement; the error.
-`guard.py` builds both agents' ADK `after_tool_callback` and `audit.py` writes the row, so the tools themselves stay unchanged.
+`guard.py` builds both agents' ADK `after_tool_callback`, which the MCP server's data calls share ([Over MCP](#over-mcp)), and `audit.py` writes the row, so the tools themselves stay unchanged.
 A data tool is every tool but the ones the toolset seam names as reading only the catalog (`tools.CATALOG_TOOLS`: listing and describing metrics), so the audit survives a swap to `DataAgentToolset`, whose data tool is `ask_data_agent` (#177); a catalog tool the swap forgets to name is audited, not a data tool skipped.
 - The row is written as `agent_audit`, a role that may only insert into that table: it cannot read, change or delete a row, or write anywhere else.
 - The agents' own roles write nothing, the audit included: the baseline runs whatever single statement its model writes, and the transaction mode is only one guard (before the tool refused a second statement, `commit; begin read write` left it), so a role's privileges keep the audit unforged.
 - An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
+
+## Over MCP
+
+Agents outside ADK (Claude, Gemini CLI, a Vertex AI agent) reach the same three tools through `mcp_server.py`, the MCP Python SDK's `MCPServer` over streamable HTTP (SL-20): `make agent-mcp` serves `localhost:8765/mcp` for the clients named in `SEMANTIC_MCP_CLIENTS=<agent>=<token>,...`.
+- The tools are `tools.py`'s, with their names, docstrings and argument checks; a data call's result passes through `guard.guarded`, the function ADK's after-tool callback calls, so it gets its freshness and its audit row, or is withheld when the row cannot be written.
+- The bearer token names the agent the row is written as; a call without a known token is refused with 401 before any tool runs, and a server with no client refuses to start.
+- It runs with uv, not in the image: the MCP SDK is uv's `mcp` group and `.dockerignore` leaves `mcp_server.py` out (SL-19).
+- `make agent-mcp-check` drives it with a scripted MCP client and no model; `examples/mcp_client` is an agent with only an `McpToolset` on the server, for `uv run adk run examples/mcp_client "<question>"` with `SEMANTIC_MCP_TOKEN` set (one free-tier model turn per tool call).
 
 ## Freshness
 

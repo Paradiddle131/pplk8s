@@ -125,7 +125,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <body>
 <div class="stage">
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 616" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; Every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 736" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
@@ -528,17 +528,26 @@ Sheet.ready().then(() => {
   S.region({ x: 916, y: 484, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
   S.card({ x: 924, y: 492, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
 
-  // ---- the eval, in-process
-  S.frame({ x: 24, y: 468, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
-  S.card({ x: 40, y: 492, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
-  S.card({ x: 268, y: 492, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
-  S.card({ x: 496, y: 492, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
-  S.edge('M236,524 H268');
-  S.edge('M464,524 H496');
-  S.edge('M384,492 V444', { label: { text: 'runs semantic_agent', at: [392, 460], anchor: 'start' } });
-  S.edge('M756,512 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [836, 506], mono: true } });
+  // ---- the MCP server: the same tools and the same guard for agents outside ADK, served by its own
+  // process (make agent-mcp, with uv), not by the pod: the agent image leaves it out (SL-19, SL-20)
+  S.card({ x: 24, y: 496, w: 160, h: 56, title: 'MCP client', lines: [{ mono: 'Claude, Gemini CLI' }] });
+  S.edge('M184,532 H400', { label: { text: 'bearer token', at: [244, 526] } });
+  S.frame({ x: 384, y: 468, w: 500, h: 100, title: 'make agent-mcp', note: 'uv, not in the image', edge: 'bottom' });
+  S.card({ x: 400, y: 496, w: 216, h: 56, title: 'mcp_server.py', lines: [{ mono: 'MCPServer, streamable HTTP' }] });
+  S.edge('M560,496 V336');
+  S.edge('M400,512 H376 V200 H432', { label: { text: 'guarded', at: [384, 460], anchor: 'start', mono: true } });
 
-  S.legend(24, 596, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
+  // ---- the eval, in-process
+  S.frame({ x: 24, y: 588, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
+  S.card({ x: 40, y: 612, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
+  S.card({ x: 268, y: 612, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
+  S.card({ x: 496, y: 612, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
+  S.edge('M236,644 H268');
+  S.edge('M464,644 H496');
+  S.edge('M300,612 V444', { label: { text: 'runs semantic_agent', at: [292, 470], anchor: 'end' } });
+  S.edge('M756,632 H892 V512 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [824, 626], mono: true } });
+
+  S.legend(24, 716, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
   S.done();
 });
 </script>
