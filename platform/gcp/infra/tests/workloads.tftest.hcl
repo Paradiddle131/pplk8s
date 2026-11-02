@@ -11,7 +11,8 @@ mock_provider "google" {
 }
 
 variables {
-  project = "lab-project"
+  project     = "lab-project"
+  alert_email = "owner@example.com"
 }
 
 run "a_plain_gcp_up_has_no_workloads" {

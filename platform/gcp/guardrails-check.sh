@@ -9,7 +9,9 @@
 #   - a Cloud Run service (us-central1) keeps an instance warm, may scale past `caps.cloud_run_max_instances`,
 #     bills CPU outside requests, turns invoker IAM off or grants a public member; a Job runs more than one
 #     task or attempt per run (#209);
-#   - the project holds more Cloud Scheduler jobs than `caps.cloud_scheduler_jobs` (the billing account's free 3).
+#   - the project holds more Cloud Scheduler jobs than `caps.cloud_scheduler_jobs` (the billing account's free 3);
+#   - a Cloud Run regional quota in us-central1, found by its metric, is above `caps.cloud_run_regional_quotas`,
+#     unlimited or not readable (#209).
 # Cloud Run and Cloud Scheduler are skipped, with a note, while their API is not enabled.
 # The Agent Platform has no cap to read: its API is on the paid list, so `make gcp-validate` refuses it.
 set -euo pipefail
@@ -46,9 +48,10 @@ for s in json.loads(sys.argv[1]).get("services", []):
   printf '{"service": "%s", "policy": %s}\n' "$name" "$policy"
 done)
 schedules=$(read_api "https://cloudscheduler.googleapis.com/v1/projects/$GCP_PROJECT/locations/us-central1/jobs")
+run_quotas=$(read_api "https://cloudquotas.googleapis.com/v1/projects/$GCP_PROJECT/locations/global/services/run.googleapis.com/quotaInfos?pageSize=200")
 
 QUOTAS=$quotas ENABLED=$enabled DATABASES=$databases BQRC=$bqrc \
-  SERVICES=$services JOBS=$jobs POLICIES=$policies SCHEDULES=$schedules \
+  SERVICES=$services JOBS=$jobs POLICIES=$policies SCHEDULES=$schedules RUN_QUOTAS=$run_quotas \
   uv run --no-project --quiet --with pyyaml==6.0.2 python - "$here/free-path.yaml" "$GCP_PROJECT" <<'PY'
 import json, os, re, sys
 import yaml
@@ -139,6 +142,29 @@ else:
         bad.append(f"Cloud Scheduler: {count} jobs, above the cap of {caps['cloud_scheduler_jobs']} free per billing account")
     else:
         ok.append(f"Cloud Scheduler: {count} of {caps['cloud_scheduler_jobs']} free jobs (us-central1)")
+
+# Cloud Run's regional quotas (#209), by metric: the us-central1 value, else the default that applies there.
+run_quotas = json.loads(os.environ["RUN_QUOTAS"])
+if services.get("disabled") or run_quotas.get("disabled"):
+    ok.append("Cloud Run quotas: API not enabled, nothing to read")
+else:
+    infos = run_quotas.get("quotaInfos", [])
+    for metric, cap in caps["cloud_run_regional_quotas"].items():
+        values = []
+        for q in infos:
+            if q.get("metric") != metric or (cap.get("quota_id") and q.get("quotaId") != cap["quota_id"]):
+                continue
+            dims = q.get("dimensionsInfos", [])
+            here = [d for d in dims if d.get("dimensions", {}).get("region") == "us-central1"]
+            here = here or [d for d in dims if not d.get("dimensions", {}).get("region")
+                            and "us-central1" in d.get("applicableLocations", ["us-central1"])]
+            values += [(q["quotaId"], int(d["details"]["value"])) for d in here]
+        if not values:
+            bad.append(f"Cloud Run quota {metric}: not readable in us-central1")
+        elif any(v < 0 or v > cap["value"] for _, v in values):
+            bad.append(f"Cloud Run quota {metric}: {values} {cap['unit']}, above the cap of {cap['value']} (or unlimited)")
+        else:
+            ok.append(f"Cloud Run quota {metric}: {values} {cap['unit']}, cap {cap['value']}")
 
 for line in ok:
     print(f"gcp-guardrails-check: ok: {line}")

@@ -3,7 +3,8 @@
 # `enable: true` APIs are the ones infra/ turns on now (it reads this file); the rest wait for the issue
 # that needs them and are turned on by flipping the flag in that issue's PR.
 # check_free_path.py (in `make gcp-validate`) fails on an API or resource type missing here, an entry
-# without a source, and anything on `paid` below, so a paid service cannot slip in by review fatigue.
+# without a source, anything on `paid` below, and an API or resource type past its dated `until`, so a paid
+# service cannot slip in by review fatigue.
 # Free tiers are counted per billing account, in us-central1 and BigQuery's US multi-region.
 
 apis:
@@ -44,9 +45,11 @@ apis:
   secretmanager.googleapis.com: {enable: true, source: https://cloud.google.com/secret-manager/pricing, issue: 209}
   # Later issues on Map #212, off until their PR turns them on.
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
-  # The one dated exception: free until 2026-12-31, switched off by #232.
+  # A dated exception: free until 2026-12-31, switched off by #232.
   geminidataanalytics.googleapis.com: {enable: false, source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview, issue: 207, until: 2026-12-31}
 
+# Resource type => the API it needs; or {api, source, until} for a type free only until a date, which
+# `make gcp-validate` refuses to see declared after it.
 resources:
   google_project_service: serviceusage.googleapis.com
   google_service_account: iam.googleapis.com
@@ -56,6 +59,7 @@ resources:
   google_eventarc_trigger: eventarc.googleapis.com
   google_bigquery_dataset: bigquery.googleapis.com
   google_bigquery_dataset_iam_member: bigquery.googleapis.com
+  google_bigquery_table_iam_member: bigquery.googleapis.com
   google_firestore_database: firestore.googleapis.com
   google_cloud_quotas_quota_preference: cloudquotas.googleapis.com
   google_artifact_registry_repository: artifactregistry.googleapis.com
@@ -67,6 +71,12 @@ resources:
   google_cloud_scheduler_job: cloudscheduler.googleapis.com
   google_secret_manager_secret: secretmanager.googleapis.com
   google_secret_manager_secret_iam_member: secretmanager.googleapis.com
+  # The source-freshness alert (#209): a user-defined log-based metric is a chargeable custom metric, held under
+  # Monitoring's free 150 MiB a month by `caps.log_metric_series`; a notification channel bills nothing; alerting
+  # policies are free until Cloud Monitoring starts charging for them, "no sooner than September 1, 2027".
+  google_logging_metric: {api: logging.googleapis.com, source: https://cloud.google.com/stackdriver/pricing#log-based-metrics}
+  google_monitoring_notification_channel: monitoring.googleapis.com
+  google_monitoring_alert_policy: {api: monitoring.googleapis.com, source: https://cloud.google.com/stackdriver/pricing#pricing-alerting, issue: 209, until: 2027-08-31}
 
 # APIs GCP turns on by itself with the ones above (BigQuery, Storage, IAM, Firestore, Workflows): they bill
 # nothing for being on, only for what is used through them, and the lab uses none of them directly.
@@ -97,6 +107,25 @@ caps:
   # Cloud Scheduler jobs in the project, at most the billing account's 3 free ones: workloads.yaml's two
   # schedules and the orchestration of #228.
   cloud_scheduler_jobs: 3
+  # Cloud Run's regional quotas in us-central1 (#209), by the quota's metric: a stop on how much may run at once,
+  # whatever a deploy asks. The most workloads.yaml can run together (the agent's service at its cap, one task of
+  # each Job) plus one service instance for a revision rollout: 4 instances, 4 vCPU (in milli vCPU), 4 x 512 MiB
+  # (in bytes). check_free_path.py refuses a value above that; infra/run.tf sets each as a quota preference (only
+  # lowered, never raised); `make gcp-guardrails-check` reads them back by metric.
+  # TODO(#209): the quota_ids, which Cloud Run's quota page does not name: read them from the project's
+  # cloudquotas.googleapis.com/v1/projects/<p>/locations/global/services/run.googleapis.com/quotaInfos (each
+  # entry's `metric` and `quotaId`); until then infra/ declares no preference for that quota.
+  cloud_run_regional_quotas:
+    run.googleapis.com/instance_limit_regional: {quota_id: null, unit: instances, value: 4}
+    run.googleapis.com/cpu_allocation: {quota_id: null, unit: milli_vcpu, value: 4000}
+    run.googleapis.com/mem_allocation: {quota_id: null, unit: bytes, value: 2147483648}
+  # Time series across the user-defined log-based metrics (the freshness alert's: one per source table and error
+  # status). Each writes at most a point a minute, 8 bytes, and Monitoring's first 150 MiB a month per billing
+  # account are free: 100 x 44,640 minutes x 8 B = 34 MiB.
+  log_metric_series: 100
+  # Notification channel types infra/ may declare: email needs nothing else; a Pub/Sub or webhook channel hands
+  # each alert to a service with its own bill, and SMS is not on the pricing page at all.
+  notification_channel_types: [email]
 
 # No Always Free tier, or a free tier the lab cannot hold: never on the list above.
 paid:

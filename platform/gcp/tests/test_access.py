@@ -89,3 +89,50 @@ def test_every_grant_names_a_declared_dataset() -> None:
     for account in ACCESS["service_accounts"].values():
         assert set(account["reads"]) | set(account["writes"]) <= set(ACCESS["datasets"])
         assert not set(account["reads"]) & set(account["writes"])
+
+
+TABLE_GRANT = re.compile(r"GRANT (SELECT|INSERT) ON (ops\.[a-z_]+) TO ([a-z_]+);")
+ACCESS_FOR = {"SELECT": "read", "INSERT": "insert"}
+
+
+def table_grants(role: str) -> dict[str, str]:
+    """The lab role's table-level grants, as access.yaml spells them."""
+    return {
+        table: ACCESS_FOR[privilege]
+        for privilege, table, grantee in TABLE_GRANT.findall(MACRO)
+        if grantee == role
+    }
+
+
+def test_the_semantic_agent_reads_the_two_freshness_tables() -> None:
+    (agent,) = accounts_for("agent_metrics")
+    assert (
+        agent["tables"]
+        == table_grants("agent_metrics")
+        == {"ops.readiness": "read", "ops.product_deadlines": "read"}
+    )
+
+
+def test_the_audit_writer_inserts_into_the_audit_table_and_nothing_else() -> None:
+    (audit,) = accounts_for("agent_audit")
+    assert (
+        audit["tables"]
+        == table_grants("agent_audit")
+        == {"ops.agent_queries": "insert"}
+    )
+
+
+def test_table_grants_are_in_ops_and_read_or_insert() -> None:
+    # infra/bigquery.tf grants on the ops tables tofu.sh finds; another dataset's table would never be granted.
+    for account in ACCESS["service_accounts"].values():
+        for table, access in (account.get("tables") or {}).items():
+            assert table.split(".")[0] == "ops"
+            assert access in {"read", "insert"}
+
+
+def test_insert_is_data_editor_on_the_table_and_says_so() -> None:
+    # BigQuery IAM has no insert-only role (tables.updateData also allows UPDATE and DELETE).
+    bigquery = (GCP / "infra" / "bigquery.tf").read_text()
+    assert 'insert = "roles/bigquery.dataEditor"' in bigquery
+    assert 'read = "roles/bigquery.dataViewer"' in bigquery
+    assert "cannot express insert-only" in (GCP / "access.yaml").read_text()

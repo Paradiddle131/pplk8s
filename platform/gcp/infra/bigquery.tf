@@ -1,5 +1,6 @@
 # BigQuery on the lab project (#205): the datasets dbt builds, one service account per workload with
-# dataset-level grants (platform/gcp/access.yaml), and the daily query quota that is the hard stop.
+# dataset-level grants and, on the `ops` tables that exist, table-level ones (platform/gcp/access.yaml, #209),
+# and the daily query quota that is the hard stop.
 # Storage is free up to 10 GiB and queries up to 1 TiB a month; load jobs and DML are free, streaming
 # inserts are not (platform/gcp/README.md).
 
@@ -15,6 +16,24 @@ locals {
       for sa, a in local.access.service_accounts : [for ds in a.writes : { sa = sa, ds = ds }]
     ]) : "${pair.sa}/${pair.ds}" => merge(pair, { role = "roles/bigquery.dataEditor" }) },
   )
+
+  # access.yaml `tables:`: `insert` is Data Editor on the one table, BigQuery IAM having no insert-only role.
+  table_roles = { read = "roles/bigquery.dataViewer", insert = "roles/bigquery.dataEditor" }
+  table_grants = { for pair in flatten([
+    for sa, a in local.access.service_accounts : [
+      for table, access in lookup(a, "tables", {}) : {
+        sa = sa, ds = split(".", table)[0], table = split(".", table)[1], role = local.table_roles[access]
+      }
+    ]
+  ]) : "${pair.sa}/${pair.ds}.${pair.table}" => pair if pair.ds == "ops" && contains(var.existing_ops_tables, pair.table) }
+}
+
+# dbt's run-operations create the `ops` tables (`agent_warehouse`), so a table grant waits for its table: tofu.sh
+# lists the dataset, and a fresh project plans without them instead of failing on a table not there yet.
+variable "existing_ops_tables" {
+  description = "The tables in the `ops` dataset now (tofu.sh lists them): access.yaml's table grants apply to these only."
+  type        = list(string)
+  default     = []
 }
 
 resource "google_bigquery_dataset" "layer" {
@@ -55,27 +74,46 @@ resource "google_bigquery_dataset_iam_member" "grant" {
   member     = "serviceAccount:${google_service_account.workload[each.value.sa].email}"
 }
 
+resource "google_bigquery_table_iam_member" "grant" {
+  for_each = local.table_grants
+
+  dataset_id = google_bigquery_dataset.layer[each.value.ds].dataset_id
+  table_id   = each.value.table
+  role       = each.value.role
+  member     = "serviceAccount:${google_service_account.workload[each.value.sa].email}"
+}
+
 # The hard stop on query spend: bytes a day for the project and for each user, in MiB. 31 days of it stay
 # under the free 1 TiB a month (check_free_path.py), so no month can bill a query; never raised.
 # Quota preferences cannot be deleted, so tofu.sh passes the ones that exist (created in the console,
-# #226) and they are imported, not created twice; `make gcp-down` leaves them in place.
+# #226, or by an earlier gcp-up) and they are imported, not created twice; `make gcp-down` leaves them in place.
+# Cloud Run's (infra/run.tf) come the same way.
 variable "existing_quota_preferences" {
-  description = "Quota id => name of the BigQuery quota preferences already on the project (tofu.sh reads them)."
+  description = "`<service>/<quota id>` => name of the quota preferences already on the project, global or in var.region (tofu.sh reads them)."
   type        = map(string)
   default     = {}
 }
 
+locals {
+  bigquery_query_quotas = toset(["QueryUsagePerDay", "QueryUsagePerUserPerDay"])
+  # Only the quotas declared here: an import needs its target in the configuration.
+  bigquery_quota_preferences = {
+    for key, name in var.existing_quota_preferences : split("/", key)[1] => name
+    if split("/", key)[0] == "bigquery.googleapis.com" && contains(local.bigquery_query_quotas, split("/", key)[1])
+  }
+}
+
 import {
-  for_each = var.existing_quota_preferences
+  for_each = local.bigquery_quota_preferences
   to       = google_cloud_quotas_quota_preference.bigquery_query[each.key]
   id       = "projects/${var.project}/locations/global/quotaPreferences/${each.value}"
 }
 
 resource "google_cloud_quotas_quota_preference" "bigquery_query" {
-  for_each = toset(["QueryUsagePerDay", "QueryUsagePerUserPerDay"])
+  for_each = local.bigquery_query_quotas
 
   parent        = "projects/${var.project}"
-  name          = lookup(var.existing_quota_preferences, each.key, lower("bigquery-${each.key}"))
+  name          = lookup(local.bigquery_quota_preferences, each.key, lower("bigquery-${each.key}"))
   service       = "bigquery.googleapis.com"
   quota_id      = each.key
   justification = "The lab project stays inside BigQuery's free 1 TiB of queries a month (semantic/PLAN.md SL-13)."

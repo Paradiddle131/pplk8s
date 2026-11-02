@@ -32,7 +32,7 @@ jobs:
     env: {}
   # `dbt source freshness` as the kind CronJob runs it: exit 1 is a stale source, whose verdict the on-run-end
   # hook records in ops.source_freshness, so the Job succeeds; exit 2 is dbt failing to run, and the Job fails.
-  # JSON logs carry each source's verdict for the log-based alert (#209, slice D).
+  # JSON logs carry each source's verdict for the log-based alert (infra/monitoring.tf, #209).
   dbt-source-freshness:
     image: dbt
     service_account: dbt-runner

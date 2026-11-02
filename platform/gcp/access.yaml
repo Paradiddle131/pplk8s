@@ -2,8 +2,15 @@
 # docs/semantic-layer-on-bigquery.md, "Who sees what"): one service account per workload, dataset-level
 # grants, BigQuery Job User on the project to run its queries. infra/bigquery.tf reads this file, and
 # tests/test_access.py holds each account to the lab role it stands for (dbt/macros/agent_warehouse.sql).
-# Table-level grants wait for their tables, which dbt creates (#209): the agent on ops.readiness and
-# ops.product_deadlines (its freshness reads), the audit writer on ops.agent_queries (insert only).
+# `tables:` are table-level grants in `ops` (#209), `read` (BigQuery Data Viewer) or `insert`: the agent reads
+# ops.readiness and ops.product_deadlines (its freshness), the audit writer inserts into ops.agent_queries.
+# `dbt run-operation agent_warehouse` creates those tables, so infra/bigquery.tf grants only on the ones that exist
+# (tofu.sh lists the ops dataset), and the apply after it (`make gcp-workloads-up`) adds the rest.
+# BigQuery IAM cannot express insert-only: inserting needs bigquery.tables.updateData, which also allows UPDATE,
+# DELETE and MERGE. `insert` is BigQuery Data Editor on that one table, the narrowest predefined role holding it;
+# it also lets the writer read the table and change or delete it, though no other table or dataset. A custom role
+# with updateData alone would drop the reads and the table's deletion, at the price of one more role to keep; the
+# lab keeps predefined roles (semantic/PLAN.md SL-10). The lab's Postgres role is insert-only.
 
 # One per dbt layer and stage (dbt/dbt_project.yml `+schema`), plus the landing dataset dbt reads.
 datasets:
@@ -28,8 +35,10 @@ service_accounts:
     lab_role: agent_metrics
     reads: [silver, semantic]
     writes: []
+    tables: {ops.readiness: read, ops.product_deadlines: read}
   agent-audit:
     description: Inserts the agent's audit rows into ops.agent_queries, and nothing else (SL-10).
     lab_role: agent_audit
     reads: []
     writes: []
+    tables: {ops.agent_queries: insert}
