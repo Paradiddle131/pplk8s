@@ -50,7 +50,9 @@ def tables_read(sql: str, tables: list[str]) -> list[str]:
     return found
 
 
-def assess(countries: list[str] | None, tables: list[str], sql: str | None) -> dict[str, Any] | None:
+def assess(
+    countries: list[str] | None, tables: list[str], sql: str | None
+) -> dict[str, Any] | None:
     """The scope of one answer, or None when the role reads every row."""
     if not countries:
         return None

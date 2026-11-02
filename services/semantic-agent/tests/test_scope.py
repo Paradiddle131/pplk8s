@@ -85,9 +85,10 @@ def test_the_semantic_agent_passes_the_scope_to_the_model_and_the_audit(monkeypa
     run_turn(agent, "What was revenue?")
     [shown] = model.tool_results()
     result = shown["response"]
-    assert result["scope"]["statement"].startswith("Scoped: this figure counts only customers in DE")
+    statement = result["scope"]["statement"]
+    assert statement.startswith("Scoped: this figure counts only customers in DE")
     [row] = audit
-    assert row["scope"] == result["scope"]["statement"]
+    assert row["scope"] == statement
     assert "scope statement word for word" in agent.instruction
 
 
