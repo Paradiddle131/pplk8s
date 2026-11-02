@@ -57,14 +57,24 @@ def test_an_api_named_but_not_enabled_fails(copy: Path) -> None:
 
 
 def test_a_dated_exception_expires(copy: Path) -> None:
-    spec = copy / "free-path.yaml"
-    text = spec.read_text().replace(
-        "geminidataanalytics.googleapis.com: {enable: false",
-        "geminidataanalytics.googleapis.com: {enable: true",
+    """The data agent's API (#207) is on through 2026-12-30, the day #232 switches it off by, and refused after."""
+    api = yaml.safe_load((copy / "free-path.yaml").read_text())["apis"][
+        "geminidataanalytics.googleapis.com"
+    ]
+    assert api["enable"] and str(api["until"]) == "2026-12-30"
+    assert problems(copy, dt.date(2026, 12, 30)) == []
+    assert any(
+        "geminidataanalytics.googleapis.com: enabled past its free window" in p
+        for p in problems(copy, dt.date(2026, 12, 31))
     )
-    spec.write_text(text)
-    assert problems(copy, dt.date(2026, 12, 1)) == []
-    assert any("free window" in p for p in problems(copy, dt.date(2027, 1, 1)))
+    spec = copy / "free-path.yaml"
+    spec.write_text(
+        spec.read_text().replace(
+            "geminidataanalytics.googleapis.com: {enable: true",
+            "geminidataanalytics.googleapis.com: {enable: false",
+        )
+    )
+    assert problems(copy, dt.date(2027, 1, 1)) == []
 
 
 def test_a_raised_query_cap_fails(copy: Path) -> None:
@@ -183,7 +193,10 @@ def test_the_alerting_policy_expires_before_monitoring_charges_for_it(
     copy: Path,
 ) -> None:
     # Cloud Monitoring charges for alerting "no sooner than September 1, 2027".
-    assert problems(copy, dt.date(2027, 8, 31)) == []
+    assert not any(
+        "google_monitoring_alert_policy" in p
+        for p in problems(copy, dt.date(2027, 8, 31))
+    )
     assert any(
         "google_monitoring_alert_policy declared past its free window" in p
         for p in problems(copy, dt.date(2027, 9, 1))

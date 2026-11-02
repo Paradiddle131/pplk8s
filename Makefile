@@ -82,7 +82,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify image-tag-test cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
+.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -464,4 +464,14 @@ gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the age
 	$(GCP_RUN_JOB) dbt-build --args=run-operation,agent_warehouse
 	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
 	$(GCP_RUN_JOB) dbt-build
+	platform/gcp/cost-check.sh
+
+# The native BigQuery data agent (#207, platform/gcp/data-agent/): the BigQuery catalog's context.json, built
+# offline, published to the lab project's agent `pplk8s-semantic` (staging, then published; no write when nothing
+# changed); the cost check before and after. Its tokens are free until 2026-12-31 only: #232 switches it off.
+gcp-data-agent: ## Live: create or update the lab project's data agent from the BigQuery catalog's context.json, staging then published (GCP_PROJECT; #207); DATA_AGENT_ARGS=--dry-run prints the bodies and sends nothing
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the data agent goes to the lab project (platform/gcp/README.md)}"
+	$(MAKE) --no-print-directory bigquery-check
+	platform/gcp/cost-check.sh
+	python3 platform/gcp/data-agent/publish.py $(DATA_AGENT_ARGS)
 	platform/gcp/cost-check.sh

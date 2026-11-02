@@ -43,10 +43,14 @@ apis:
   # Secret Manager: 6 active secret versions, 10,000 access operations and 3 rotation notifications a month
   # per billing account (the agent's model key, one version).
   secretmanager.googleapis.com: {enable: true, source: https://cloud.google.com/secret-manager/pricing, issue: 209}
+  # The one dated exception: Conversational Analytics tokens are in a free trial "through December 31, 2026",
+  # then $3 and $20 per million input and output tokens, with no spend cap; the page prices tokens only, none
+  # for creating or storing an agent. The data agent (#207, platform/gcp/data-agent/) is the only user; turning
+  # the API on enables no other API (it has no Service Usage dependency group, read 2026-11-02). `until` is a day early, the date #232 switches it off by:
+  # `make gcp-validate` fails while it is still enabled from 2026-12-31 (UTC) on.
+  geminidataanalytics.googleapis.com: {enable: true, source: https://cloud.google.com/products/data-agents/pricing, issue: 207, until: 2026-12-30}
   # Later issues on Map #212, off until their PR turns them on.
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
-  # A dated exception: free until 2026-12-31, switched off by #232.
-  geminidataanalytics.googleapis.com: {enable: false, source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview, issue: 207, until: 2026-12-31}
 
 # Resource type => the API it needs; or {api, source, until} for a type free only until a date, which
 # `make gcp-validate` refuses to see declared after it.
