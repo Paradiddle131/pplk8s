@@ -27,8 +27,8 @@ fi
 "${build[@]}" "$REPO/dbt" >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log" >&2; fail "docker build of the GCP dbt image"; }
 echo "ok: $IMAGE built (WAREHOUSE=bigquery): its in-image checks found no Postgres package and no TLC path, and it parses"
 
-"${COMPOSE[@]}" exec -T warehouse dropdb -U warehouse --if-exists "$DB" &&
-  "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB" || fail "recreating the Postgres database $DB"
+{ "${COMPOSE[@]}" exec -T warehouse dropdb -U warehouse --if-exists "$DB" &&
+  "${COMPOSE[@]}" exec -T warehouse createdb -U warehouse "$DB"; } || fail "recreating the Postgres database $DB"
 psql_db <"$REPO/dbt/dev/fixture.sql" >"$OUT/fixture-sql.log" 2>&1 || { tail -20 "$OUT/fixture-sql.log" >&2; fail "loading dbt/dev/fixture.sql into $DB"; }
 orders=$(psql_db -c "select count(*) from ds_source.synthetic_orders")
 echo "ok: $DB recreated with dbt/dev/fixture.sql alone ($orders orders)"
