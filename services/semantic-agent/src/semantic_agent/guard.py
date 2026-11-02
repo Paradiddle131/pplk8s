@@ -1,12 +1,14 @@
 """What every data call gets, whichever toolset fills the seam (semantic/PLAN.md SL-4, SL-10; #177).
 
 The toolset is the part that changes at work (`DataAgentToolset` for the lab's MetricFlow tools), so
-the freshness and the audit are not the toolset's: `after_data_tool` builds ADK's
-`after_tool_callback` that gives every call to a data tool, answered or refused, its audit row and
-attaches its metrics' freshness to an answered one. A data tool is every tool but the ones the seam
-names as reading only the catalog, so a tool the seam forgets to name is audited, not skipped.
+the freshness and the audit are not the toolset's: `guarded` gives every call to a data tool,
+answered or refused, its audit row and attaches its metrics' freshness to an answered one. Two
+surfaces call it: `after_data_tool`, ADK's `after_tool_callback`, and the MCP server
+(mcp_server.py), so an agent outside ADK gets the same audit and freshness. A data tool is every
+tool but the ones the seam names as reading only the catalog, so a tool the seam forgets to name is
+audited, not skipped.
 
-ADK stops at the first after-tool callback that returns a value, so the two steps are one callback:
+ADK stops at the first after-tool callback that returns a value, so the two steps are one function:
 freshness first, so the audit row holds the statement the model is shown.
 """
 
@@ -53,6 +55,24 @@ def freshness_of(tool: str, metrics: list[str], catalog: Catalog) -> dict[str, A
     return ledger.freshness(products(metrics, catalog))
 
 
+def guarded(
+    tool: str,
+    args: dict[str, Any],
+    response: Any,
+    caller: audit.Caller,
+    catalog: Callable[[], Catalog] | None = None,
+) -> dict[str, Any]:
+    """What a data call's caller is shown: its result with, given the metric `catalog`, the
+    freshness of the metrics an answered call named, once its audit row is written; or the error
+    that withholds the result when the row cannot be written."""
+    response = response if isinstance(response, dict) else {"result": response}
+    if catalog is not None and "error" not in response and "freshness" not in response:
+        metrics = metrics_named(args, response)
+        response = {**response, "freshness": freshness_of(tool, metrics, catalog())}
+    withheld = audit.audit(tool, args, caller, response)
+    return withheld if withheld is not None else response
+
+
 def after_data_tool(
     catalog_tools: Collection[str], catalog: Callable[[], Catalog] | None = None
 ) -> AfterTool:
@@ -64,13 +84,8 @@ def after_data_tool(
     ) -> dict[str, Any] | None:
         if tool.name in catalog_tools:
             return None
-        response = tool_response if isinstance(tool_response, dict) else {"result": tool_response}
-        if catalog is not None and "error" not in response and "freshness" not in response:
-            metrics = metrics_named(args, response)
-            response = {**response, "freshness": freshness_of(tool.name, metrics, catalog())}
-        withheld = audit.audit(tool.name, args, tool_context, response)
-        if withheld is not None:
-            return withheld
+        caller = audit.Caller.of(tool_context)
+        response = guarded(tool.name, args, tool_response, caller, catalog)
         return response if response is not tool_response else None
 
     return callback

@@ -13,6 +13,8 @@ dependencies = [
     "dbt-metricflow[dbt-postgres]==0.15.0",
     "psycopg[binary]==3.3.6",
     "asyncpg==0.31.0",
+    # The MCP server that serves the three tools to agents outside ADK (mcp_server.py).
+    "mcp==2.3.0",
     "pyyaml",
 ]
 

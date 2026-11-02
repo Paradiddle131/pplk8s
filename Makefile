@@ -11,7 +11,7 @@ export NODE_IMAGE
 ELF_IMAGE ?= localhost:5001/el-factory:0.7.8
 DBT_IMAGE ?= localhost:5001/dbt:0.7.40
 ADAPTER_IMAGE ?= localhost:5001/event-adapter:0.1.1
-AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.37
+AGENT_IMAGE ?= localhost:5001/semantic-agent:0.1.39
 export ELF_IMAGE DBT_IMAGE ADAPTER_IMAGE AGENT_IMAGE
 
 # Builds behind a TLS-intercepting proxy (the cloud sandbox): BUILD_CA names the proxy's CA bundle, which
@@ -56,7 +56,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
+.PHONY: help tools lint check verify cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -215,6 +215,16 @@ agent-web: ## Serve both agents locally (the semantic agent and the eval's basel
 
 agent-standalone-check: services-up ## Run the semantic agent on an empty database with only the dbt project: make agent-warehouse, the fixture, one scripted turn; asserts its audit row and "Freshness unknown" (#166; no model quota)
 	tests/e2e/agent-standalone-check.sh
+
+# The three tools over MCP for agents outside ADK (semantic/PLAN.md SL-20): one bearer token per client, named
+# `<agent>=<token>` in SEMANTIC_MCP_CLIENTS; the token's agent is who the audit rows name.
+SEMANTIC_MCP_CLIENTS ?=
+agent-mcp: ## Serve the semantic layer's three tools over MCP (streamable HTTP) on localhost:8765/mcp, audited and with freshness, for MCP clients named in SEMANTIC_MCP_CLIENTS=<agent>=<token>,... (needs services-up and dbt-catalog)
+	cd services/semantic-agent && DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME=$(AGENT_DBNAME) DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics \
+	  SEMANTIC_MCP_CLIENTS='$(SEMANTIC_MCP_CLIENTS)' uv run python -m semantic_agent.mcp_server
+
+agent-mcp-check: services-up ## Serve the three tools over MCP on the agents' fixture and drive them with a scripted MCP client: three tools listed, one answer with its freshness, its audit row as the client's token names, 401 without a token (no model quota)
+	tests/e2e/agent-mcp-check.sh
 
 agent-key-check: ## Ask OpenRouter whether it accepts the agents' key, spending no model request (#158; the cloud proxy adds the key)
 	tests/e2e/openrouter-key-check.sh
