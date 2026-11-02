@@ -18,6 +18,8 @@ The body of [#43](../../../../issues/43) lists open owner questions only, under 
 - `Owner lane: <maps or issues> — <path globs>`: the owner's attended work.
   A wake picks no issue in those maps or naming a file under those globs, and, among the rest, prefers the one whose files lie furthest from them (docs-only first); `Owner lane: none` clears it.
 
+An issue labelled `at-work` runs only at work (paid services the free lab never runs, `semantic/PLAN.md` SL-23): a wake never picks it.
+
 ## Merge policy
 
 Wakes never merge.
