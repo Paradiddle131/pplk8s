@@ -11,8 +11,12 @@ resource "google_artifact_registry_repository" "images" {
   description   = "The lab's workload images (EL Factory, dbt, semantic agent), two versions each."
 
   docker_config {
-    # A tag names one build (PLAN.md D16): pushing a different image under an existing tag fails.
-    immutable_tags = true
+    # Tags stay mutable: in a repository with immutable tags, tagged versions cannot be deleted, not even by the
+    # cleanup policies below, so the registry would only grow (seen 2026-11-02: every delete FAILED_PRECONDITION;
+    # https://docs.cloud.google.com/artifact-registry/docs/repositories/cleanup-policy). A tag still names one build
+    # (PLAN.md D16): tags are computed from the image's content, and `make gcp-images` never pushes over a tag the
+    # registry already holds.
+    immutable_tags = false
   }
 
   vulnerability_scanning_config {
