@@ -13,7 +13,7 @@ import pytest
 from google.api_core import exceptions as gcs_exceptions
 
 from el_factory.app import create_app
-from el_factory.warehouse import PostgresWarehouse
+from el_factory.warehouse_postgres import PostgresWarehouse
 from tests.conftest import FakeStorage, make_config
 from tests.tlc_fixtures import TlcServer, retyped_flag, yellow_2023, yellow_2025
 

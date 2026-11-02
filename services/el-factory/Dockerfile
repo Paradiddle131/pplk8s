@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1
+# One recipe per warehouse (semantic/PLAN.md SL-19): WAREHOUSE names the extra of pyproject.toml the
+# image installs, so it carries only that warehouse's driver, and the image runs with ELF_WAREHOUSE set
+# to it. postgres (the default) is the lab's Compose warehouse.
+ARG WAREHOUSE=postgres
+
 FROM ghcr.io/astral-sh/uv:0.11.7 AS uv
 
 FROM python:3.13-slim AS builder
+ARG WAREHOUSE
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -12,13 +18,14 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
-    && uv sync --frozen --no-dev --no-install-project
+    && uv sync --frozen --no-dev --extra "${WAREHOUSE}" --no-install-project
 COPY src ./src
 RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
-    && uv sync --frozen --no-dev --no-editable
+    && uv sync --frozen --no-dev --extra "${WAREHOUSE}" --no-editable
 
 FROM python:3.13-slim AS runtime
+ARG WAREHOUSE
 RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
@@ -28,7 +35,8 @@ ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    CATALOG_PATH=/app/catalog.yaml
+    CATALOG_PATH=/app/catalog.yaml \
+    ELF_WAREHOUSE=${WAREHOUSE}
 # Memory under the D35 ceiling (1 GiB), measured with real yellow months (one chunk in flight per
 # process, two processes): Arrow's jemalloc pool kept ~500 MB of freed chunk buffers (1.04 GiB
 # for one month), so Arrow uses the system allocator; glibc then kept freed buffers in per-thread
