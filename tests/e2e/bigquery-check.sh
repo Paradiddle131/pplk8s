@@ -9,7 +9,9 @@
 #     never to the lab's recordings (semantic/PLAN.md SL-18; compiled, never run);
 #   - build_catalog.py writes the agent catalog and the data agent's authored context for BigQuery:
 #     relations are `project.dataset.table` and every verified query reads backticked BigQuery
-#     tables; check_catalog.py passes.
+#     tables, each one a table reference of context.json (the v1 Context, #204); check_catalog.py passes;
+#   - a key the v1 schema lacks, a glossary term without its required display name, and a table with
+#     more than 10 glossary terms fail check_catalog.py.
 # It runs in a copy of dbt/, because MetricFlow reads <project>/target whatever DBT_TARGET_PATH
 # says, and leaves the artefacts in dbt/target/bigquery/ for docs/semantic-layer-on-bigquery.md.
 set -euo pipefail
@@ -56,12 +58,43 @@ run_ python - <<'EOF' || fail "the catalog does not name BigQuery tables"
 import json, re
 catalog = json.load(open("target/catalog/agent.json"))
 queries = json.load(open("target/catalog/data_agent/example_queries.json"))
+context = json.load(open("target/catalog/data_agent/context.json"))
 relations = [m["relation"] for m in catalog["models"]]
 assert all(r.count(".") == 2 and not r.startswith(("dbt_dev.", "warehouse.")) for r in relations), relations
 tables = {t for q in queries for t in re.findall(r"FROM (`[^`]+`\.`[^`]+`\.`[^`]+`)", q["sqlQuery"])}
 assert tables and all(q["sqlQuery"].count("`") >= 6 for q in queries), tables
-print(f"{len(relations)} relations like {relations[0]}; verified queries read {sorted(tables)}")
+refs = {"`{projectId}`.`{datasetId}`.`{tableId}`".format(**r) for r in context["datasourceReferences"]["bq"]["tableReferences"]}
+assert tables <= refs, sorted(tables - refs)
+print(f"{len(relations)} relations like {relations[0]}; verified queries read {sorted(tables)}, all in context.json")
 EOF
+
+# Negative cases on a copy of the target: a key the v1 schema lacks, a glossary term without its display name,
+# and two more glossary terms on silver.orders, which already carries nine (#204).
+stray="$OUT/stray"
+mkdir -p "$stray" && cp -r "$PROJECT/target/manifest.json" "$PROJECT/target/semantic_manifest.json" "$PROJECT/target/catalog" "$stray/"
+run_ python - "$stray" <<'EOF'
+import json, sys
+path = sys.argv[1] + "/catalog/data_agent/context.json"
+context = json.load(open(path))
+context["datasourceReferences"]["bq"]["tableReferences"][0]["schema"]["fields"][0]["aggregations"] = ["sum"]
+del context["glossaryTerms"][0]["displayName"]
+json.dump(context, open(path, "w"))
+path = sys.argv[1] + "/manifest.json"
+manifest = json.load(open(path))
+manifest["nodes"]["model.pplk8s.slv_orders"]["config"]["meta"]["glossary"] += [
+    {"term": "Basket", "description": "Made up.", "metrics": ["orders_total"]},
+    {"term": "Ticket", "description": "Made up.", "metrics": ["orders_total"]},
+]
+json.dump(manifest, open(path, "w"))
+EOF
+if run_ python scripts/check_catalog.py "$stray" >"$OUT/stray.log" 2>&1; then fail "check_catalog passed a stray context.json"; fi
+for problem in "context.json: datasourceReferences.bq.tableReferences[0].schema.fields[0]: unknown key 'aggregations'" \
+  "context.json: glossaryTerms[0].displayName: required" \
+  "table pplk8s-lab.silver.orders: 11 glossary terms" "a data agent reads at most 10 per table"; do
+  grep -qF "$problem" "$OUT/stray.log" || { cat "$OUT/stray.log" >&2; fail "check_catalog did not report: $problem"; }
+done
+echo "ok: a key the v1 schema lacks, a glossary term without its display name and 11 terms on one table fail check_catalog"
+
 rm -rf "$REPO/dbt/target/bigquery" && mkdir -p "$REPO/dbt/target/bigquery"
 cp -r "$PROJECT/target/catalog" "$REPO/dbt/target/bigquery/"
 echo "ok: build_catalog and check_catalog pass on the bigquery target; artefacts in dbt/target/bigquery/catalog"

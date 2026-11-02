@@ -19,13 +19,22 @@ From `target/manifest.json` and `target/semantic_manifest.json` (after `dbt pars
   And the glossary: the business terms that are not metrics, from `config.meta.glossary` on the models
   that hold them, each with the metrics and dimensions it maps to; and the saved queries (#164), each with
   its question (`config.meta.question`), metrics, group-bys, filters and readiness products.
-- `data_agent/system_instruction.yaml`: the authored context of a BigQuery data agent, in the shape
-  Google documents (a list of single-key maps: `system_instruction`, `tables` with fields and their
-  aggregations from the simple metrics, `relationships` from the entities, `glossaries` from the metrics
-  and the glossary terms,
-  `additional_descriptions` from the derived and ratio metrics' formulas).
+- `data_agent/context.json`: a BigQuery data agent's whole context in the Conversational Analytics API's v1
+  structured form (`Context`, ready for a DataAgent's `dataAnalyticsAgent.publishedContext`; #204), which
+  Google prefers wherever a structured field exists: `datasourceReferences.bq.tableReferences`, one per table
+  the semantic models and the time spine read, each with its description, synonyms (the semantic model's and
+  its primary entity's names), tags (its layer and pipelines) and fields (each declared column but a
+  personal one, with its description, the entities and dimensions it backs as synonyms and its role as
+  tags); `glossaryTerms`, one per metric (its label, description and name) and one per glossary term (whose
+  description names its metrics and dimensions, as the term has no field for them); `exampleQueries`; and
+  `systemInstruction`, the YAML below as text.
+- `data_agent/system_instruction.yaml`: what the structured form lacks, in the authored-context shape Google
+  documents (a list of single-key maps: `system_instruction`, `tables` with fields and their aggregations from
+  the simple metrics, `relationships` from the entities, `additional_descriptions` from the derived, ratio and
+  cumulative metrics' formulas).
 - `data_agent/example_queries.json`: the verified queries (`naturalLanguageQuestion`, `sqlQuery`): one per
-  metric, the metric by day, and one per saved query, its question, each as MetricFlow compiles it.
+  metric, the metric by day, and one per saved query, its question, each as MetricFlow compiles it; the same
+  list as context.json's `exampleQueries`.
 
 The third artefact, the warehouse comments, is built by dbt itself: `persist_docs` on gold and exposed,
 and the `semantic.metrics` and `semantic.glossary` models (models/semantic/).
@@ -55,6 +64,10 @@ SYSTEM_INSTRUCTION = (
     "never invent another definition of a figure a metric defines. Dates are UTC days. "
     "A glossary term that is not a metric names the metrics and dimensions it maps to."
 )
+
+# Knowledge Catalog: "the data agent can import a maximum of 10 glossary terms per table" and ignores the rest
+# (docs.cloud.google.com/knowledge-catalog/docs/manage-glossaries); check_catalog.py holds glossary_tables to it.
+GLOSSARY_TERMS_PER_TABLE = 10
 
 
 def _relation(database: str | None, schema: str, alias: str) -> str:
@@ -333,7 +346,8 @@ def _primary_key(model: dict) -> str:
     return entity.get("expr") or entity["name"]
 
 
-def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
+def _aggregations(index: SemanticIndex) -> dict[str, dict[str, list[str]]]:
+    """The aggregations the simple metrics apply, by semantic model and column."""
     aggregations: dict[str, dict[str, list[str]]] = {name: {} for name in index.semantic_models}
     for metric in index.metrics:
         params = metric["type_params"]["metric_aggregation_params"]
@@ -346,7 +360,13 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
         aggregation = params["agg"].replace("count_distinct", "count distinct")
         if aggregation not in aggregations[model["name"]].setdefault(field, []):
             aggregations[model["name"]][field].append(aggregation)
+    return aggregations
 
+
+def system_instruction(index: SemanticIndex) -> list[dict]:
+    """What the v1 structured context has no field for: the instruction, the aggregations, the relationships
+    (v1's `schemaRelationships` are derived ones, from Dataplex) and the formulas."""
+    aggregations = _aggregations(index)
     tables = []
     for model in index.semantic_models.values():
         fields = aggregations[model["name"]]
@@ -392,20 +412,6 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
             )
 
     labels = {metric["name"]: metric["label"] for metric in index.metrics}
-    glossaries = [
-        {"glossary": _item(term=metric["label"], description=metric["description"], synonyms=[metric["name"]])}
-        for metric in index.metrics
-    ]
-    for term in terms:
-        # The data agent's glossary has no field for a mapping, so the term's description names it.
-        mapping = []
-        if term["metrics"]:
-            mapping.append(f"Metrics: {', '.join(labels.get(name, name) for name in term['metrics'])}.")
-        if term["dimensions"]:
-            mapping.append(f"Dimensions: {', '.join(term['dimensions'])}.")
-        description = " ".join([term["description"], *mapping])
-        glossaries.append({"glossary": _item(term=term["term"], description=description, synonyms=term["synonyms"])})
-
     descriptions = []
     for metric in index.metrics:
         params = metric["type_params"]
@@ -439,8 +445,125 @@ def system_instruction(index: SemanticIndex, terms: list[dict]) -> list[dict]:
         system_instruction=SYSTEM_INSTRUCTION,
         tables=tables,
         relationships=relationships,
-        glossaries=glossaries,
         additional_descriptions=descriptions,
+    )
+
+
+def _fields(**fields: object) -> dict:
+    """A v1 message: the fields that hold something."""
+    return {key: value for key, value in fields.items() if value not in (None, [], "")}
+
+
+def _words(text: str | None) -> str:
+    return " ".join((text or "").split())
+
+
+def glossary_terms(index: SemanticIndex, terms: list[dict]) -> list[dict]:
+    """The v1 `glossaryTerms`: each metric (its label, description and name), then each glossary term."""
+    labels = {metric["name"]: metric["label"] for metric in index.metrics}
+    found = [
+        _fields(displayName=metric["label"], description=_words(metric["description"]), labels=[metric["name"]])
+        for metric in index.metrics
+    ]
+    for term in terms:
+        # A glossary term has no field for a mapping, so the term's description names it.
+        mapping = []
+        if term["metrics"]:
+            mapping.append(f"Metrics: {', '.join(labels.get(name, name) for name in term['metrics'])}.")
+        if term["dimensions"]:
+            mapping.append(f"Dimensions: {', '.join(term['dimensions'])}.")
+        description = " ".join([term["description"], *mapping])
+        found.append(_fields(displayName=term["term"], description=description, labels=term["synonyms"]))
+    return found
+
+
+def glossary_tables(manifest: dict, index: SemanticIndex, terms: list[dict]) -> dict[str, list[str]]:
+    """The glossary terms each table would carry in Knowledge Catalog, by display name: a simple metric's on the
+    table it aggregates, a glossary term's on the model that defines it (`config.meta.glossary`); a ratio,
+    derived, cumulative or conversion metric combines other metrics, so it sits on no table of its own."""
+    relations = {
+        node["name"]: _relation(node.get("database"), node["schema"], node["alias"])
+        for node in manifest["nodes"].values()
+        if node["resource_type"] == "model"
+    }
+    found: dict[str, list[str]] = {}
+    for metric in index.metrics:
+        params = metric["type_params"]["metric_aggregation_params"]
+        if params is not None:
+            table = index.table(index.semantic_models[params["semantic_model"]])
+            found.setdefault(table, []).append(metric["label"])
+    for term in terms:
+        found.setdefault(relations[term["model"]], []).append(term["term"])
+    return dict(sorted(found.items()))
+
+
+def table_references(manifest: dict, index: SemanticIndex) -> list[dict]:
+    """The v1 `datasourceReferences.bq.tableReferences`: every table a semantic model or the time spine reads,
+    with the dbt model's words; a personal column (`meta: {pii: true}`) is left out, as no agent reads it."""
+    models = {
+        (node.get("database"), node["schema"], node["alias"]): node
+        for node in manifest["nodes"].values()
+        if node["resource_type"] == "model"
+    }
+    aggregations = _aggregations(index)
+    tables = []
+    for model in index.semantic_models.values():
+        relation = model["node_relation"]
+        primary = next((entity["name"] for entity in model["entities"] if entity["type"] == "primary"), None)
+        synonyms: dict[str, list[str]] = {}
+        tags: dict[str, list[str]] = {}
+        for entity in model["entities"]:
+            column = entity.get("expr") or entity["name"]
+            synonyms.setdefault(column, []).append(entity["name"])
+            tags.setdefault(column, []).append(f"{entity['type']} key")
+        for dimension in model["dimensions"]:
+            column = dimension.get("expr") or dimension["name"]
+            synonyms.setdefault(column, []).append(dimension["name"])
+            kind = "numeric" if index.is_numeric(model["name"], column) else dimension["type"]
+            tags.setdefault(column, []).append(f"{kind} dimension")
+        for column in aggregations[model["name"]]:
+            tags.setdefault(column, []).append("measure")
+        tables.append((relation, {model["name"], primary} - {relation["alias"], None}, synonyms, tags))
+    for spine in index.time_spines:
+        tables.append((spine["node_relation"], set(), {}, {spine["primary_column"]["name"]: ["time spine"]}))
+
+    found = []
+    for relation, table_synonyms, synonyms, tags in sorted(tables, key=lambda t: (t[0]["schema_name"], t[0]["alias"])):
+        node = models[(relation.get("database"), relation["schema_name"], relation["alias"])]
+        fields = [
+            _fields(
+                name=name,
+                type=(column.get("data_type") or "").upper(),
+                description=_words(column.get("description")),
+                synonyms=sorted(set(synonyms.get(name, [])) - {name}),
+                tags=sorted(set(tags.get(name, []))),
+            )
+            for name, column in node["columns"].items()
+            if not ((column.get("config") or {}).get("meta", {}).get("pii") or (column.get("meta") or {}).get("pii"))
+        ]
+        found.append(
+            _fields(
+                projectId=relation.get("database"),
+                datasetId=relation["schema_name"],
+                tableId=relation["alias"],
+                schema=_fields(
+                    description=_words(node["description"]),
+                    synonyms=sorted(table_synonyms),
+                    tags=sorted(node["tags"]),
+                    fields=fields,
+                ),
+            )
+        )
+    return found
+
+
+def context(manifest: dict, index: SemanticIndex, terms: list[dict], instruction: str, queries: list[dict]) -> dict:
+    """The data agent's v1 `Context`: the structured fields, and the authored-context YAML for the rest."""
+    return _fields(
+        datasourceReferences={"bq": {"tableReferences": table_references(manifest, index)}},
+        systemInstruction=instruction,
+        glossaryTerms=glossary_terms(index, terms),
+        exampleQueries=queries,
     )
 
 
@@ -525,15 +648,17 @@ def main() -> int:
     (out / "data_agent").mkdir(parents=True, exist_ok=True)
     catalog = agent_catalog(manifest, index, dimensions, entities)
     (out / "agent.json").write_text(json.dumps(catalog, indent=2) + "\n")
-    (out / "data_agent" / "system_instruction.yaml").write_text(
-        yaml.safe_dump(system_instruction(index, catalog["glossary"]), sort_keys=False, allow_unicode=True, width=110)
-    )
-    (out / "data_agent" / "example_queries.json").write_text(
-        json.dumps(example_queries(index, compiled_sql, compiled_saved_query), indent=2) + "\n"
-    )
+    instruction = yaml.safe_dump(system_instruction(index), sort_keys=False, allow_unicode=True, width=110)
+    (out / "data_agent" / "system_instruction.yaml").write_text(instruction)
+    queries = example_queries(index, compiled_sql, compiled_saved_query)
+    (out / "data_agent" / "example_queries.json").write_text(json.dumps(queries, indent=2) + "\n")
+    data_agent = context(manifest, index, catalog["glossary"], instruction, queries)
+    (out / "data_agent" / "context.json").write_text(json.dumps(data_agent, indent=2) + "\n")
     print(
         f"build_catalog: {len(catalog['models'])} public models, {len(catalog['metrics'])} metrics "
-        f"and {len(catalog['glossary'])} glossary terms in {out}; {len(catalog['saved_queries'])} saved queries"
+        f"and {len(catalog['glossary'])} glossary terms in {out}; {len(catalog['saved_queries'])} saved queries; "
+        f"context.json: {len(data_agent['datasourceReferences']['bq']['tableReferences'])} tables, "
+        f"{len(data_agent['glossaryTerms'])} glossary terms and {len(data_agent['exampleQueries'])} example queries"
     )
     return 0
 

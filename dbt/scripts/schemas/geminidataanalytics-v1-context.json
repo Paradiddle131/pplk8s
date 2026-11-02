@@ -1,0 +1,287 @@
+{
+  "revision": "20261022",
+  "root": "GoogleCloudGeminidataanalyticsV1Context",
+  "schemas": {
+    "GoogleCloudGeminidataanalyticsV1BigQueryTableReference": {
+      "description": "Message representing a reference to a single BigQuery table.",
+      "id": "GoogleCloudGeminidataanalyticsV1BigQueryTableReference",
+      "properties": {
+        "datasetId": {
+          "description": "Required. The dataset that the table belongs to.",
+          "type": "string"
+        },
+        "projectId": {
+          "description": "Required. The project that the table belongs to.",
+          "type": "string"
+        },
+        "schema": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1Schema",
+          "description": "Optional. The schema of the datasource."
+        },
+        "tableId": {
+          "description": "Required. The table id.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1BigQueryTableReferences": {
+      "description": "Message representing references to BigQuery tables and property graphs. At least one of `table_references`, `property_graph_references`, or `search_scope` must be populated.",
+      "id": "GoogleCloudGeminidataanalyticsV1BigQueryTableReferences",
+      "properties": {
+        "propertyGraphReferences": {
+          "description": "Optional. References to BigQuery graphs. Note: \"property graph\" is the former name for BigQuery Graph. The field and message names retain the original term for backward compatibility; both refer to the same resource.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1BigQueryPropertyGraphReference"
+          },
+          "type": "array"
+        },
+        "searchScope": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1SearchScope",
+          "description": "Optional. Search over BigQuery resources to discover most relevant tables to the query. When set, at least one of `include_project_ids` or `include_dataset_references` must be populated with non-blank identifiers. Matches from the two fields are unioned (OR-ed). Note: `search_scope` is only supported for standalone conversations (`ChatRequest.inline_context` or `ClientManagedResourceContext.inline_context`) and is not supported in DataAgent."
+        },
+        "tableReferences": {
+          "description": "Optional. References to BigQuery tables.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1BigQueryTableReference"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1Context": {
+      "description": "A collection of context to apply to this conversation",
+      "id": "GoogleCloudGeminidataanalyticsV1Context",
+      "properties": {
+        "datasourceReferences": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1DatasourceReferences",
+          "description": "Required. Data sources that are available for answering the question."
+        },
+        "exampleQueries": {
+          "description": "Optional. A list of example queries, providing examples of relevant and commonly used SQL queries and their corresponding natural language queries optionally present. Currently only used for BigQuery data sources and databases (alloydb, cloudsql, spanner) data sources.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1ExampleQuery"
+          },
+          "type": "array"
+        },
+        "glossaryTerms": {
+          "description": "Optional. Term definitions (currently, only user authored) Not supported for databases (alloydb, cloudsql, spanner) data sources.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1GlossaryTerm"
+          },
+          "type": "array"
+        },
+        "lookerGoldenQueries": {
+          "description": "Optional. A list of golden queries, providing examples of relevant and commonly used Looker queries and their corresponding natural language queries optionally present. Only supported for Looker data sources.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1LookerGoldenQuery"
+          },
+          "type": "array"
+        },
+        "options": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1ConversationOptions",
+          "description": "Optional. Additional options for the conversation."
+        },
+        "schemaRelationships": {
+          "description": "Optional. Relationships between table schema, including referencing and referenced columns.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1ContextSchemaRelationship"
+          },
+          "type": "array"
+        },
+        "systemInstruction": {
+          "description": "Optional. The basic entry point for data owners creating domain knowledge for Agent. Why: Business jargon (e.g., YTD revenue is calculated as\u2026, Retirement Age is 65 in the USA, etc) and system instructions (e.g., answer like a Pirate) can help the model understand the business context around a user question. Must be at most 250,000 bytes (approx. 250,000 characters for English text).",
+          "type": "string"
+        },
+        "userFunctions": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1UserFunctions",
+          "description": "Optional. A collection of user functions to be included in context."
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1DatasourceReferences": {
+      "description": "A collection of references to datasources.",
+      "id": "GoogleCloudGeminidataanalyticsV1DatasourceReferences",
+      "properties": {
+        "bq": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1BigQueryTableReferences",
+          "description": "References to BigQuery tables."
+        },
+        "looker": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1LookerExploreReferences",
+          "description": "References to Looker Explores."
+        },
+        "studio": {
+          "$ref": "GoogleCloudGeminidataanalyticsV1StudioDatasourceReferences",
+          "description": "References to Looker Studio datasources."
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1ExampleQuery": {
+      "description": "Example of relevant and commonly used SQL query and its corresponding natural language queries optionally present. Currently only used for BigQuery data sources.",
+      "id": "GoogleCloudGeminidataanalyticsV1ExampleQuery",
+      "properties": {
+        "naturalLanguageQuestion": {
+          "description": "Optional. A natural language question that a user might ask. For example: \"How many orders were placed last month?\" Must be at most 2,000 bytes (approx. 2,000 characters).",
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Optional. The list of query parameters. Example: The parameterized SQL query \"SELECT * FROM my_table WHERE id = @id\" can be matched with any value of id.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1QueryParameter"
+          },
+          "type": "array"
+        },
+        "sqlQuery": {
+          "description": "Optional. The SQL query that should be generated to answer the natural language question. For example: \"SELECT COUNT(*) FROM orders WHERE order_date BETWEEN '2024-01-01' AND '2024-01-31'\" Must be at most 50,000 bytes (approx. 50,000 characters).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1Field": {
+      "description": "A field in a schema.",
+      "id": "GoogleCloudGeminidataanalyticsV1Field",
+      "properties": {
+        "category": {
+          "description": "Optional. Field category, not required, currently only useful for Looker.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional. A brief description of the field.",
+          "type": "string"
+        },
+        "displayName": {
+          "description": "Optional. Field display_name (same as label in",
+          "type": "string"
+        },
+        "mode": {
+          "description": "Optional. The mode of the field (e.g., NULLABLE, REPEATED).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Optional. The name of the field.",
+          "type": "string"
+        },
+        "subfields": {
+          "description": "Optional. Recursive property for nested schema structures.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1Field"
+          },
+          "type": "array"
+        },
+        "synonyms": {
+          "description": "Optional. A list of alternative names or synonyms that can be used to refer to this field. For example: [\"id\", \"customerid\", \"cust_id\"]. Currently only used for BigQuery data sources.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "description": "Optional. A list of tags or keywords associated with the field, used for categorization. For example: [\"identifier\", \"customer\", \"pii\"]. Currently only used for BigQuery data sources.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "description": "Optional. The type of the field.",
+          "type": "string"
+        },
+        "valueFormat": {
+          "description": "Optional. Looker only. Value format of the field. Ref: https://cloud.google.com/looker/docs/reference/param-field-value-format",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1GlossaryTerm": {
+      "description": "Definition of a term within a specific domain.",
+      "id": "GoogleCloudGeminidataanalyticsV1GlossaryTerm",
+      "properties": {
+        "description": {
+          "description": "Required. The description or meaning of the term. For example: \"Click-through rate\", \"The percentage of users who complete a desired action\", \"An order that is waiting to be processed.\" Must be at most 5,000 bytes (approx. 5,000 characters).",
+          "type": "string"
+        },
+        "displayName": {
+          "description": "Required. User friendly display name of the glossary term being defined. For example: \"CTR\", \"conversion rate\", \"pending\" Must be at most 256 bytes.",
+          "type": "string"
+        },
+        "labels": {
+          "description": "Optional. A list of general purpose labels associated to this term. For example: [\"click rate\", \"clickthrough\", \"waiting\"]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1QueryParameter": {
+      "description": "A query parameter message represents a parameter that can be used to parameterize a SQL query.",
+      "id": "GoogleCloudGeminidataanalyticsV1QueryParameter",
+      "properties": {
+        "dataType": {
+          "description": "Required. The data type of the parameter, e.g. \"STRING\", \"INT64\", \"DATE\", etc. For valid values, see the [BigQuery documentation](https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types). This will be used to populate google.cloud.bigquery.v2.QueryParameterType.type.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional. The description of the parameter that can be used by LLM to extract the parameter value from the user question.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Required. The name of the parameter reference in the SQL query.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudGeminidataanalyticsV1Schema": {
+      "description": "The schema of a Datasource or QueryResult instance.",
+      "id": "GoogleCloudGeminidataanalyticsV1Schema",
+      "properties": {
+        "description": {
+          "description": "Optional. A textual description of the table's content and purpose. For example: \"Contains information about customer orders in our e-commerce store.\" Currently only used for BigQuery data sources.",
+          "type": "string"
+        },
+        "displayName": {
+          "description": "Optional. Table display_name (same as label in cloud/data_analytics/anarres/data/looker/proto/model_explore.proto), not required, currently only Looker has this field.",
+          "type": "string"
+        },
+        "fields": {
+          "description": "Optional. The fields in the schema.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1Field"
+          },
+          "type": "array"
+        },
+        "filters": {
+          "description": "Optional. The filters on the datasource's underlying data. Currently only used for Looker data sources.",
+          "items": {
+            "$ref": "GoogleCloudGeminidataanalyticsV1DataFilter"
+          },
+          "type": "array"
+        },
+        "synonyms": {
+          "description": "Optional. A list of alternative names or synonyms that can be used to refer to the table. For example: [\"sales\", \"orders\", \"purchases\"]. Currently only used for BigQuery data sources.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "description": "Optional. A list of tags or keywords associated with the table, used for categorization. For example: [\"transaction\", \"revenue\", \"customer_data\"]. Currently only used for BigQuery data sources.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "source": "https://geminidataanalytics.googleapis.com/$discovery/rest?version=v1"
+}
