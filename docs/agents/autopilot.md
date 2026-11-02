@@ -20,6 +20,11 @@ The body of [#43](../../../../issues/43) lists open owner questions only, under 
 
 An issue labelled `at-work` runs only at work (paid services the free lab never runs, `semantic/PLAN.md` SL-23): a wake never picks it.
 
+## Parallel track
+
+[Map #324](../../../../issues/324), the semantic agent bet, runs on its own profile, [`autopilot-semantic-bet.md`](autopilot-semantic-bet.md), and its own routine, on branch `claude/semantic-bet` (`semantic/PLAN.md` SL-25).
+This profile's queue never picks a `semantic-bet` issue, and that track never picks one of this queue's.
+
 ## Merge policy
 
 Wakes never merge.
