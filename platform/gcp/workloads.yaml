@@ -40,5 +40,8 @@ jobs:
     memory: 512Mi
     timeout_s: 240 # the CronJob allows 300 s; 744 hourly runs of 240 s keep both Jobs under the free vCPU-seconds
     schedule: "17 * * * *" # hourly, off the hour, as the CronJob
+    # Paused until #227 lands sources on the project: ds_source holds October's fixture, so every hourly run would
+    # open one alert incident per table. The Job stays deployable for a run by hand (`gcloud run jobs execute`).
+    paused: true
     command: [sh, -c, 'dbt source freshness; rc=$?; [ "$rc" -le 1 ]']
     env: {DBT_LOG_FORMAT: json}

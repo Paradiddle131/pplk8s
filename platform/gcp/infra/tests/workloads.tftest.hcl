@@ -95,6 +95,11 @@ run "both_images" {
   }
 
   assert {
+    condition     = google_cloud_scheduler_job.run_job["dbt-source-freshness"].paused && !google_cloud_scheduler_job.run_job["dbt-build"].paused
+    error_message = "The hourly freshness check stays paused until #227 lands sources; the daily build runs."
+  }
+
+  assert {
     condition     = google_cloud_scheduler_job.run_job["dbt-build"].http_target[0].uri == "https://run.googleapis.com/v2/projects/lab-project/locations/us-central1/jobs/dbt-build:run"
     error_message = "Scheduler calls the Run Admin API's run method."
   }

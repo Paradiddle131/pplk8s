@@ -31,6 +31,8 @@ resource "google_cloud_scheduler_job" "run_job" {
   region    = var.region
   schedule  = each.value.schedule
   time_zone = "Etc/UTC"
+  # A job marked `paused` in workloads.yaml exists but does not fire (the freshness check until #227).
+  paused = lookup(each.value, "paused", false)
   # The Admin API answers as soon as the execution starts; the Job's own timeout bounds the run.
   attempt_deadline = "60s"
 
