@@ -43,8 +43,11 @@ def products(metrics: list[str], catalog: Catalog) -> list[str]:
     return sorted(found)
 
 
-def freshness_of(tool: str, metrics: list[str], catalog: Catalog) -> dict[str, Any]:
-    """The freshness of the metrics a call answered with, or why there is none."""
+def freshness_of(
+    tool: str, metrics: list[str], catalog: Catalog, caller: audit.Caller | None = None
+) -> dict[str, Any]:
+    """The freshness of the metrics a call answered with, or why there is none; the ledger read
+    names the `caller` where the warehouse records who asked (BigQuery's job labels)."""
     if not metrics:
         return {
             "products": [],
@@ -52,7 +55,11 @@ def freshness_of(tool: str, metrics: list[str], catalog: Catalog) -> dict[str, A
             "statement": f"Freshness unknown: the {tool} result names no metrics, so their "
             "readiness cannot be looked up.",
         }
-    return ledger.freshness(products(metrics, catalog))
+    return ledger.freshness(
+        products(metrics, catalog),
+        agent=caller.agent if caller else None,
+        session_id=caller.session_id if caller else None,
+    )
 
 
 def guarded(
@@ -68,7 +75,7 @@ def guarded(
     response = response if isinstance(response, dict) else {"result": response}
     if catalog is not None and "error" not in response and "freshness" not in response:
         metrics = metrics_named(args, response)
-        response = {**response, "freshness": freshness_of(tool, metrics, catalog())}
+        response = {**response, "freshness": freshness_of(tool, metrics, catalog(), caller)}
     withheld = audit.audit(tool, args, caller, response)
     return withheld if withheld is not None else response
 

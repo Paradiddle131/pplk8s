@@ -11,9 +11,20 @@ dependencies = [
     "dbt-core==1.12.6",
     "dbt-postgres==1.11.0",
     "dbt-metricflow[dbt-postgres]==0.15.0",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+# The warehouse the agent's audit and freshness reach (semantic_agent/warehouse.py, AGENT_WAREHOUSE;
+# semantic/PLAN.md SL-19): an image installs one extra, so it carries only that warehouse's driver.
+# postgres: the lab's Compose warehouse (psycopg) and ADK's Postgres session store (asyncpg).
+postgres = [
     "psycopg[binary]==3.3.6",
     "asyncpg==0.31.0",
-    "pyyaml",
+]
+# bigquery: the lab project's BigQuery (#209).
+bigquery = [
+    "google-cloud-bigquery==3.47.0",
 ]
 
 [build-system]
@@ -22,10 +33,12 @@ build-backend = "uv_build"
 
 [dependency-groups]
 # No group is installed in any image (`uv sync --no-default-groups` in the Dockerfile).
-# dev: the test and lint tools.
+# dev: the test and lint tools, and both warehouses' drivers, so the tests cover both seams and the
+# eval, the baseline and the e2e checks reach the Compose warehouse.
 dev = [
     "pytest",
     "ruff",
+    "semantic-agent[postgres,bigquery]",
 ]
 # eval: the agent eval against its text-to-SQL baseline (semantic_agent.evaluation, `make agent-eval`).
 eval = [

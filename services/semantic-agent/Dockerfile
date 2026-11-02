@@ -12,10 +12,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 # `build_ca`: the TLS-intercepting proxy's CA where one sits between the build and PyPI (Makefile BUILD_CA).
+# `--extra postgres`: the Compose warehouse's driver for the audit and freshness (AGENT_WAREHOUSE's default).
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi \
-    && uv sync --frozen --no-default-groups --no-install-project
+    && uv sync --frozen --no-default-groups --extra postgres --no-install-project
 
 FROM python:3.13-slim AS runtime
 RUN groupadd --system --gid 10001 app \

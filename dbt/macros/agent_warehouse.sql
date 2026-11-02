@@ -15,8 +15,11 @@
 --     exposed.outreach_activation and its personal columns; no agent role reads a personal column
 --     (agent_pii_columns.sql, SL-22), so this macro re-applies those column grants after its schema grants.
 --   Default privileges reach tables dbt creates later, when dbt builds as the same user as this runs.
--- BigQuery: ops.agent_queries only. The agents' identities and grants are IAM, one service account per
--- deployed agent (docs/semantic-layer-on-bigquery.md, option A), which the lab leaves out of scope.
+-- BigQuery: ops.agent_queries, and the readiness ledger and its deadlines when missing (ops.readiness,
+-- ops.product_deadlines: the Compose init's on Postgres, platform/compose/warehouse-init/01-schemas.sql), whose
+-- deadline rows it resets to that file's, so a new dataset answers with freshness. The agents' identities
+-- and grants are IAM, one service account per deployed agent (docs/semantic-layer-on-bigquery.md, option A),
+-- declared in platform/gcp/access.yaml.
 
 {% macro agent_warehouse() -%}
   {% for schema in ["silver", "semantic", "gold", "exposed", "ops"] %}
@@ -119,5 +122,41 @@ create table if not exists {{ table }} (
   error         string
 )
   {% endcall %}
-  {% do log("agent_warehouse: ops.agent_queries in " ~ target.database ~ "; the agents' identities and grants are IAM, out of the lab's scope", info=true) %}
+  {#- The readiness ledger and its deadlines (PLAN.md §3, D37), as 01-schemas.sql creates them on Postgres:
+      no primary key (BigQuery enforces none) and no column default, so updated_at is the writer's. -#}
+  {% call statement("agent_warehouse_readiness") %}
+create table if not exists {{ adapter.quote(target.database) }}.ops.readiness (
+  product        string not null,
+  interval_start timestamp not null,
+  interval_end   timestamp not null,
+  watermark      timestamp,
+  run_id         string not null,
+  status         string not null,
+  updated_at     timestamp not null,
+  dag_id         string
+)
+  {% endcall %}
+  {% call statement("agent_warehouse_deadlines") %}
+create table if not exists {{ adapter.quote(target.database) }}.ops.product_deadlines (
+  product string not null,
+  max_age interval not null
+)
+  {% endcall %}
+  {#- 01-schemas.sql's deadline rows, which it upserts (platform/gcp/tests/test_ops_tables.py holds the two
+      lists equal): delete and insert rather than MERGE, whose source the emulator takes only as a table. -#}
+  {% set deadlines = [
+    ("sales", 36), ("marketing", 36), ("customer_actions", 36), ("partner_outreach", 36),
+    ("recruitment", 36), ("call_transcripts", 36), ("finance.exposed", 36)
+  ] %}
+  {% set table = adapter.quote(target.database) ~ ".ops.product_deadlines" %}
+  {% call statement("agent_warehouse_deadlines_reset") %}
+delete from {{ table }} where product in ({% for product, _ in deadlines %}'{{ product }}'{{ ", " if not loop.last }}{% endfor %})
+  {% endcall %}
+  {% call statement("agent_warehouse_deadlines_insert") %}
+insert into {{ table }} (product, max_age) values
+{%- for product, hours in deadlines %}
+  ('{{ product }}', interval {{ hours }} hour){{ "," if not loop.last }}
+{%- endfor %}
+  {% endcall %}
+  {% do log("agent_warehouse: ops.agent_queries, ops.readiness and ops.product_deadlines (" ~ deadlines | length ~ " deadlines) in " ~ target.database ~ "; the agents' identities and grants are IAM (platform/gcp/access.yaml)", info=true) %}
 {%- endmacro %}

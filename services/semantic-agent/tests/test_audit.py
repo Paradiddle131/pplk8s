@@ -1,10 +1,10 @@
 """Every data query either agent runs leaves one audit row (scripted model, no warehouse)."""
 
-import psycopg
 import pytest
 
 from semantic_agent import agent as semantic
 from semantic_agent import audit, tools
+from semantic_agent.warehouse import WarehouseError
 from sql_baseline import agent as baseline
 from tests.conftest import ScriptedLlm, final_text, run_turn
 
@@ -88,7 +88,7 @@ def test_the_baselines_sql_is_audited_as_the_model_wrote_it(monkeypatch, audit):
 
 def test_an_unwritable_audit_withholds_the_rows(metricflow, monkeypatch):
     def refuse(row):
-        raise psycopg.OperationalError("connection refused")
+        raise WarehouseError("connection refused")
 
     monkeypatch.setattr(audit, "record", refuse)
     model = ScriptedLlm(steps=[("query_metrics", QUERY), "The answer is unavailable."])
