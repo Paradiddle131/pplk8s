@@ -158,7 +158,8 @@ else:
             here = [d for d in dims if d.get("dimensions", {}).get("region") == "us-central1"]
             here = here or [d for d in dims if not d.get("dimensions", {}).get("region")
                             and "us-central1" in d.get("applicableLocations", ["us-central1"])]
-            values += [(q["quotaId"], int(d["details"]["value"])) for d in here]
+            # A value of 0 is left out of the JSON (a proto3 default): `details` comes back {}.
+            values += [(q["quotaId"], int(d.get("details", {}).get("value", 0))) for d in here]
         if not values:
             bad.append(f"Cloud Run quota {metric}: not readable in us-central1")
         elif any(v < 0 or v > cap["value"] for _, v in values):

@@ -112,13 +112,15 @@ caps:
   cloud_scheduler_jobs: 3
   # Cloud Run's regional quotas in us-central1 (#209), by the quota's metric: a stop on how much may run at once,
   # whatever a deploy asks. The most workloads.yaml can run together (the agent's service at its cap, one task of
-  # each Job: 3 instances, 3 vCPU, 1.5 GiB) plus one service instance for a revision rollout: 4 instances, 4 vCPU
-  # (in milli vCPU), 4 x 512 MiB (in bytes). check_free_path.py refuses a value above that; infra/run.tf sets each
-  # as a quota preference with dimension region (only lowered, never raised); `make gcp-guardrails-check` reads
-  # them back by metric. Ids, metrics and units as the project's run.googleapis.com quotaInfos list them
-  # (2026-11-02): us-central1 defaults 200,000 milli vCPU, 400 GiB, and no listed instance value.
+  # each Job: 3 vCPU, 1.5 GiB) plus one service instance for a revision rollout: 4 vCPU (in milli vCPU),
+  # 4 x 512 MiB (in bytes). check_free_path.py refuses a value above that; infra/run.tf sets each as a quota
+  # preference with dimension region (only lowered, never raised); `make gcp-guardrails-check` reads them back by
+  # metric. Ids, metrics and units as the project's run.googleapis.com quotaInfos list them (2026-11-02):
+  # us-central1 defaults 200,000 milli vCPU and 400 GiB. No instance quota: `InstancesPerProject` governs
+  # "Cloud Run Instances resources, not instances of Cloud Run Services, Jobs, or Worker Pools" (its display
+  # name), and its us-central1 value is 0, so a preference of 4 is an increase the API refuses without a contact
+  # email; each service's max_instance_count, and the vCPU quota at 1 vCPU an instance, bound the instances.
   cloud_run_regional_quotas:
-    run.googleapis.com/instances: {quota_id: InstancesPerProject, unit: instances, value: 4}
     run.googleapis.com/cpu_allocation: {quota_id: CpuAllocPerProjectRegion, unit: milli_vcpu, value: 4000}
     run.googleapis.com/mem_allocation: {quota_id: MemAllocPerProjectRegion, unit: bytes, value: 2147483648}
   # Time series across the user-defined log-based metrics (the freshness alert's: one per source table and error

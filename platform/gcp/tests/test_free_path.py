@@ -215,7 +215,6 @@ def test_log_metric_series_past_the_free_bytes_fail(copy: Path) -> None:
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("unit: instances, value: 4}", "unit: instances, value: 100}"),
         ("unit: milli_vcpu, value: 4000}", "unit: milli_vcpu, value: 4001}"),
         ("unit: bytes, value: 2147483648}", "unit: bytes, value: 4294967296}"),
     ],
@@ -227,13 +226,24 @@ def test_a_cloud_run_quota_above_the_workloads_fails(
     assert any("workloads.yaml can use at once" in p for p in problems(copy))
 
 
+def test_an_instance_quota_fails(copy: Path) -> None:
+    # InstancesPerProject is 0 in us-central1 and governs Cloud Run Instances resources, not services or Jobs:
+    # a preference of 4 raises it, and the API refuses that without a contact email.
+    edit(
+        copy / "free-path.yaml",
+        "  cloud_run_regional_quotas:\n",
+        "  cloud_run_regional_quotas:\n"
+        "    run.googleapis.com/instances: {quota_id: InstancesPerProject, unit: instances, value: 4}\n",
+    )
+    assert any("unit 'instances', not one of" in p for p in problems(copy))
+
+
 def test_cloud_run_quotas_are_what_the_workloads_use_at_once() -> None:
     # The agent at its cap, one task of each Job, one more agent instance for a rollout: 4 x (1 vCPU, 512 MiB).
     caps = yaml.safe_load((GCP / "free-path.yaml").read_text())["caps"]
     assert {
         q["unit"]: q["value"] for q in caps["cloud_run_regional_quotas"].values()
     } == {
-        "instances": 4,
         "milli_vcpu": 4000,
         "bytes": 4 * 512 * 2**20,
     }
