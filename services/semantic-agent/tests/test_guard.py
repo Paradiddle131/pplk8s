@@ -112,7 +112,7 @@ def test_an_answer_that_reads_no_semantic_models_table_says_why_it_has_no_freshn
     statement = results["ask_data_agent"]["freshness"]["statement"]
     assert statement == (
         "Freshness unknown: the ask_data_agent result names no metrics and reads no semantic "
-        "model's table, so their readiness cannot be looked up."
+        "model's or governed table, so their readiness cannot be looked up."
     )
     (row,) = audit
     assert (row["tool"], row["metrics"], row["freshness"]) == ("ask_data_agent", None, statement)
@@ -183,6 +183,46 @@ def test_semantic_models_tables_map_to_their_readiness_whatever_the_project():
         "sales.silver",
     ]
     assert catalog.readiness_of_tables(["lab-project.legacy.orders_v1", "orders"]) == []
+
+
+def test_governed_tables_map_to_their_metrics_readiness_whatever_the_project():
+    """A governed table (semantic/PLAN.md SL-24) is its metrics' readiness products: the governed
+    data agent's SQL names those tables, never the semantic models' ones."""
+    catalog = Catalog.load(FIXTURES / "agent.json")
+    customers = catalog.readiness_of_tables(["pplk8s-lab-001.governed.customers_daily"])
+    assert customers == ["sales.silver"]
+    # Net revenue, revenue less returns, sits in the orders' daily table: it reads both pipelines.
+    assert catalog.readiness_of_tables(["pplk8s-lab-001.governed.orders_daily"]) == [
+        "returns.silver",
+        "sales.silver",
+    ]
+    # return_rate divides returns by orders: the by-period table of returns reads both pipelines.
+    returns = catalog.readiness_of_tables(["GOVERNED.returns_by_period"])
+    assert returns == ["returns.silver", "sales.silver"]
+    assert catalog.readiness_of_tables(
+        ["p.governed.ad_spend_daily", "p.governed.leads_daily", "p.semantic.time_spine"]
+    ) == ["marketing.silver"]
+    assert catalog.readiness_of_tables(["p.governed.no_such_table"]) == []
+
+
+def test_every_metric_sits_in_one_governed_table():
+    catalog = Catalog.load(FIXTURES / "agent.json")
+    placed = sorted(name for table in catalog.governed_tables for name in table["metrics"])
+    assert placed == sorted(catalog.metrics)
+
+
+def test_a_governed_data_agents_answer_gets_its_metrics_freshness(audit):
+    """The governed data agent's SQL over a daily table and a by-period one finds both pipelines."""
+    sql = (
+        "SELECT (SELECT SUM(returns_on_order_date) FROM `p`.`governed`.`returns_daily`)"
+        " / NULLIF((SELECT SUM(orders_total) FROM `p`.`governed`.`orders_daily`), 0)"
+    )
+    model, _ = turn(answer(sql))
+    results = {r["name"]: r["response"] for r in model.tool_results()}
+    statement = results["ask_data_agent"]["freshness"]["statement"]
+    assert "returns.silver" in statement and "sales.silver" in statement
+    (row,) = audit
+    assert (row["sql"], row["freshness"]) == (sql, statement)
 
 
 # The seam.

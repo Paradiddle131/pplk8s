@@ -22,7 +22,10 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 
 case "${ARM:-metricflow}" in
   metricflow) ;;
-  data_agent)
+  data_agent | data_agent_governed)
+    # data_agent_governed (semantic/PLAN.md SL-24): the second data agent, over the governed tables only
+    # (`make gcp-data-agent DATA_AGENT_ID=pplk8s-governed`), into docs/research/data-agent-governed-eval.md.
+    if [ "$ARM" = data_agent_governed ]; then export DATA_AGENT_ID=pplk8s-governed; fi
     : "${GCP_PROJECT:?GCP_PROJECT is unset: the data-agent arm asks the data agent of the lab project (platform/gcp/README.md)}"
     export AGENT_TOOLSET=data_agent
     # The credential, as tests/e2e/bigquery-run-check.sh picks it: GCP_ACCESS_TOKEN already set; a cloud
@@ -43,7 +46,7 @@ case "${ARM:-metricflow}" in
     fi
     "$REPO/platform/gcp/live-gate.sh" || fail "the live gate stopped the step (platform/gcp/README.md)"
     trap '"$REPO/platform/gcp/live-gate.sh" || true' EXIT ;;
-  *) fail "ARM=$ARM is not one of metricflow, data_agent" ;;
+  *) fail "ARM=$ARM is not one of metricflow, data_agent, data_agent_governed" ;;
 esac
 
 # A key OpenRouter refuses fails every question (issue #116): check it before the build.

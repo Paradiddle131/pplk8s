@@ -5590,6 +5590,306 @@
       ]
     }
   ],
+  "governed_tables": [
+    {
+      "name": "ad_spend_by_period",
+      "relation": "dbt_dev.governed.ad_spend_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "cost_per_booking_eur",
+        "cost_per_lead_eur"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "ad_spend_daily",
+      "relation": "dbt_dev.governed.ad_spend_daily",
+      "kind": "daily",
+      "metrics": [
+        "ad_clicks",
+        "ad_spend_eur"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "applications_by_period",
+      "relation": "dbt_dev.governed.applications_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "time_to_hire_days"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ]
+    },
+    {
+      "name": "applications_daily",
+      "relation": "dbt_dev.governed.applications_daily",
+      "kind": "daily",
+      "metrics": [
+        "applications",
+        "hires"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ]
+    },
+    {
+      "name": "bookings_by_period",
+      "relation": "dbt_dev.governed.bookings_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "bookings_mtd",
+        "bookings_wow_growth"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "bookings_daily",
+      "relation": "dbt_dev.governed.bookings_daily",
+      "kind": "daily",
+      "metrics": [
+        "booking_value_eur",
+        "bookings"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "call_signals_by_period",
+      "relation": "dbt_dev.governed.call_signals_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "objection_rate",
+        "positive_sentiment_share"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ]
+    },
+    {
+      "name": "call_signals_daily",
+      "relation": "dbt_dev.governed.call_signals_daily",
+      "kind": "daily",
+      "metrics": [
+        "calls_labelled",
+        "calls_with_objection",
+        "positive_calls"
+      ],
+      "readiness": [
+        "call_transcripts.silver"
+      ]
+    },
+    {
+      "name": "campaign_budgets_by_period",
+      "relation": "dbt_dev.governed.campaign_budgets_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "remaining_budget_eur"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "candidate_days_by_period",
+      "relation": "dbt_dev.governed.candidate_days_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "candidates_in_stage"
+      ],
+      "readiness": [
+        "recruitment.silver"
+      ]
+    },
+    {
+      "name": "customer_actions_by_period",
+      "relation": "dbt_dev.governed.customer_actions_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "acting_customers",
+        "cart_sessions",
+        "cart_to_checkout_rate",
+        "checkout_sessions",
+        "engaged_customers_28d",
+        "engaged_customers_7d",
+        "site_sessions",
+        "view_to_cart_rate"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ]
+    },
+    {
+      "name": "customer_actions_daily",
+      "relation": "dbt_dev.governed.customer_actions_daily",
+      "kind": "daily",
+      "metrics": [
+        "customer_actions"
+      ],
+      "readiness": [
+        "customer_actions.silver"
+      ]
+    },
+    {
+      "name": "customers_by_period",
+      "relation": "dbt_dev.governed.customers_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "customers_to_date",
+        "signup_to_first_order_rate"
+      ],
+      "readiness": [
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "customers_daily",
+      "relation": "dbt_dev.governed.customers_daily",
+      "kind": "daily",
+      "metrics": [
+        "signups"
+      ],
+      "readiness": [
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "leads_by_period",
+      "relation": "dbt_dev.governed.leads_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "lead_to_booking_rate",
+        "leads_mtd",
+        "leads_wow_growth"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "leads_daily",
+      "relation": "dbt_dev.governed.leads_daily",
+      "kind": "daily",
+      "metrics": [
+        "leads"
+      ],
+      "readiness": [
+        "marketing.silver"
+      ]
+    },
+    {
+      "name": "orders_by_period",
+      "relation": "dbt_dev.governed.orders_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "average_order_value_eur",
+        "cancellation_rate",
+        "customers_distinct",
+        "repeat_customers",
+        "repeat_revenue_share",
+        "revenue_eur_mtd",
+        "revenue_eur_wow_growth"
+      ],
+      "readiness": [
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "orders_daily",
+      "relation": "dbt_dev.governed.orders_daily",
+      "kind": "daily",
+      "metrics": [
+        "net_revenue_eur",
+        "orders_cancelled",
+        "orders_total",
+        "revenue_eur",
+        "revenue_repeat_customers_eur"
+      ],
+      "readiness": [
+        "returns.silver",
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "outreach_messages_by_period",
+      "relation": "dbt_dev.governed.outreach_messages_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "reply_rate"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ]
+    },
+    {
+      "name": "outreach_messages_daily",
+      "relation": "dbt_dev.governed.outreach_messages_daily",
+      "kind": "daily",
+      "metrics": [
+        "messages_replied",
+        "messages_sent"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ]
+    },
+    {
+      "name": "outreach_replies_by_period",
+      "relation": "dbt_dev.governed.outreach_replies_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "partners_engaged"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ]
+    },
+    {
+      "name": "outreach_replies_daily",
+      "relation": "dbt_dev.governed.outreach_replies_daily",
+      "kind": "daily",
+      "metrics": [
+        "replies"
+      ],
+      "readiness": [
+        "partner_outreach.silver"
+      ]
+    },
+    {
+      "name": "returns_by_period",
+      "relation": "dbt_dev.governed.returns_by_period",
+      "kind": "by_period",
+      "metrics": [
+        "damaged_return_share",
+        "return_rate"
+      ],
+      "readiness": [
+        "returns.silver",
+        "sales.silver"
+      ]
+    },
+    {
+      "name": "returns_daily",
+      "relation": "dbt_dev.governed.returns_daily",
+      "kind": "daily",
+      "metrics": [
+        "returns_count",
+        "returns_eur",
+        "returns_on_order_date"
+      ],
+      "readiness": [
+        "returns.silver"
+      ]
+    }
+  ],
   "unavailable_metrics": [
     {
       "name": "median_order_value_eur",

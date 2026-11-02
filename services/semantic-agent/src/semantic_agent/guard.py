@@ -55,16 +55,17 @@ def freshness_of(
     caller: audit.Caller | None = None,
     tables: list[str] | None = None,
 ) -> dict[str, Any]:
-    """The freshness of the metrics a call answered with, else of the semantic models' tables its
-    SQL read, or why there is none; the ledger read names the `caller` where the warehouse records
-    who asked (BigQuery's job labels)."""
+    """The freshness of the metrics a call answered with, else of the semantic models' and the
+    governed tables its SQL read (a governed table's are its metrics', SL-24), or why there is
+    none; the ledger read names the `caller` where the warehouse records who asked (BigQuery's job
+    labels)."""
     found = products(metrics, catalog) if metrics else catalog.readiness_of_tables(tables or [])
     if not metrics and not found:
         return {
             "products": [],
             "late": None,
             "statement": f"Freshness unknown: the {tool} result names no metrics and reads no "
-            "semantic model's table, so their readiness cannot be looked up.",
+            "semantic model's or governed table, so their readiness cannot be looked up.",
         }
     return ledger.freshness(
         found,

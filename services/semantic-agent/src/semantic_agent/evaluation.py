@@ -28,6 +28,10 @@ The data-agent arm (`AGENT_TOOLSET=data_agent`, `make agent-eval ARM=data_agent`
 semantic agent over the lab project's native data agent instead (toolset.py), on the same questions
 and expected numbers, and writes `docs/research/data-agent-eval.md`: no `metric_choice` (a data
 agent names no metrics) and no baseline beside it (the text-to-SQL baseline on BigQuery is #299).
+`make agent-eval ARM=data_agent_governed` (`DATA_AGENT_ID=pplk8s-governed`, semantic/PLAN.md
+SL-24) runs the same arm over the second data agent, whose only tables are the governed tables
+MetricFlow computed, and writes `docs/research/data-agent-governed-eval.md`: each data agent has its
+own report.
 """
 
 from __future__ import annotations
@@ -443,6 +447,34 @@ DATA_AGENT_ARM = Arm(
     path=DATA_AGENT_REPORT,
     metric_choice=False,
 )
+# The second data agent (semantic/PLAN.md SL-24): the same definitions as governed tables whose
+# numbers MetricFlow computed, so its SQL only selects, filters and sums them.
+GOVERNED_ARM = Arm(
+    title="Governed data agent eval",
+    agent="Semantic agent over the governed data agent",
+    baseline="Baseline (not run: #299)",
+    on="through the governed data agent `pplk8s-governed` of the lab project `{project}` "
+    "(`AGENT_TOOLSET=data_agent`, `DATA_AGENT_ID=pplk8s-governed`, SL-24), whose only tables "
+    "are the governed tables MetricFlow computed from the same fixture, built there by "
+    "`make bigquery-live-load`; the expected numbers come from the Compose warehouse's `dbt_dev`",
+    path=REPORT.with_name("data-agent-governed-eval.md"),
+    metric_choice=False,
+)
+DATA_AGENT_ARMS = {"pplk8s-semantic": DATA_AGENT_ARM, "pplk8s-governed": GOVERNED_ARM}
+
+
+def data_agent_arm(name: str) -> Arm:
+    """The report of a run over the data agent `name`
+    (`projects/<p>/locations/<l>/dataAgents/<id>`): each of the lab's data agents its own, any
+    other one a report named after its id, so one data agent's run never overwrites another's."""
+    project, agent_id = name.split("/")[1], name.rsplit("/", 1)[-1]
+    arm = DATA_AGENT_ARMS.get(agent_id) or dataclasses.replace(
+        DATA_AGENT_ARM,
+        title=f"Data agent eval: {agent_id}",
+        on=DATA_AGENT_ARM.on.replace("the native data agent", f"the data agent `{agent_id}`"),
+        path=REPORT.with_name(f"data-agent-{agent_id}-eval.md"),
+    )
+    return dataclasses.replace(arm, on=arm.on.format(project=project))
 
 
 def definitions(questions: list[Question]) -> dict[str, str]:
@@ -787,8 +819,9 @@ async def main(ids: list[str]) -> int:
         )
     arm = Arm()
     if data_agent:
-        project = os.environ.get("GCP_PROJECT") or os.environ["DATA_AGENT_NAME"].split("/")[1]
-        arm = dataclasses.replace(DATA_AGENT_ARM, on=DATA_AGENT_ARM.on.format(project=project))
+        from semantic_agent.toolset_data_agent import data_agent_name
+
+        arm = data_agent_arm(data_agent_name())
     text = report(
         questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID), arm
     )

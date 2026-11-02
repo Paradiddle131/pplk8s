@@ -452,6 +452,31 @@ def test_the_data_agent_arm_is_scored_without_metric_choice_and_reported_on_its_
     assert arm.path.name == "data-agent-eval.md"
 
 
+@pytest.mark.parametrize(
+    ("agent_id", "title", "report"),
+    [
+        ("pplk8s-semantic", "Data agent eval", "data-agent-eval.md"),
+        ("pplk8s-governed", "Governed data agent eval", "data-agent-governed-eval.md"),
+        ("someone-elses", "Data agent eval: someone-elses", "data-agent-someone-elses-eval.md"),
+    ],
+)
+def test_each_data_agent_has_its_own_report(agent_id, title, report):
+    """`ARM=data_agent_governed` asks pplk8s-governed (SL-24): never the other's report."""
+    arm = evaluation.data_agent_arm(f"projects/lab-project/locations/us/dataAgents/{agent_id}")
+    assert (arm.title, arm.path.name, arm.metric_choice) == (title, report, False)
+    assert "`lab-project`" in arm.on and "{project}" not in arm.on
+
+
+def test_the_governed_arm_is_chosen_by_the_data_agent_id(monkeypatch):
+    from semantic_agent.toolset_data_agent import data_agent_name
+
+    monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
+    monkeypatch.setenv("GCP_PROJECT", "lab-project")
+    monkeypatch.setenv("DATA_AGENT_ID", "pplk8s-governed")
+    arm = evaluation.data_agent_arm(data_agent_name())
+    assert arm.path.name == "data-agent-governed-eval.md"
+
+
 def test_the_data_agent_arm_refuses_without_the_lab_project(monkeypatch, capsys):
     monkeypatch.setenv("AGENT_TOOLSET", "data_agent")
     monkeypatch.delenv("GCP_PROJECT", raising=False)
