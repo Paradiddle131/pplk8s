@@ -195,7 +195,7 @@ bigquery-live-check: services-up ## Live: the bigquery-emulator-check script on 
 	platform/gcp/cost-check.sh
 
 # The data-agent eval's rows on the lab project (#207): dbt_dev's fixture, every semantic domain, built there.
-bigquery-live-load: services-up ## Live: load dbt_dev's fixture (every semantic domain) into the lab project (GCP_PROJECT) and build it there, so the data-agent eval asks over the eval's rows; the cost check before and after
+bigquery-live-load: services-up ## Live: load dbt_dev's fixture (every semantic domain) into the lab project (GCP_PROJECT) and build it there, so the data-agent eval asks over the eval's rows; the live gate before and after
 	tests/e2e/bigquery-live-load.sh
 
 # The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
@@ -479,10 +479,10 @@ gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the age
 
 # The native BigQuery data agent (#207, platform/gcp/data-agent/): the BigQuery catalog's context.json, built
 # offline, published to the lab project's agent `pplk8s-semantic` (staging, then published; no write when nothing
-# changed); the cost check before and after. Its tokens are free until 2026-12-31 only: #232 switches it off.
+# changed); the live gate before and after (platform/gcp/live-gate.sh). Its tokens are free until 2026-12-31 only: #232 switches it off.
 gcp-data-agent: ## Live: create or update the lab project's data agent from the BigQuery catalog's context.json, staging then published (GCP_PROJECT; #207); DATA_AGENT_ARGS=--dry-run prints the bodies and sends nothing
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the data agent goes to the lab project (platform/gcp/README.md)}"
 	$(MAKE) --no-print-directory bigquery-check
-	platform/gcp/cost-check.sh
+	platform/gcp/live-gate.sh
 	python3 platform/gcp/data-agent/publish.py $(DATA_AGENT_ARGS)
-	platform/gcp/cost-check.sh
+	platform/gcp/live-gate.sh

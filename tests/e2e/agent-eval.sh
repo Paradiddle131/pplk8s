@@ -11,8 +11,8 @@
 # ARM=data_agent (#207): the semantic agent over the lab project's native data agent instead
 # (AGENT_TOOLSET=data_agent; `make gcp-data-agent` publishes it), on the fixture `make bigquery-live-check`
 # loaded there, with the expected numbers from dbt_dev as always; no baseline; writes
-# docs/research/data-agent-eval.md. Refuses without GCP_PROJECT and runs the cost check before and after,
-# as every live step does (platform/gcp/README.md). Its chat calls count against the API's 30 a minute.
+# docs/research/data-agent-eval.md. Refuses without GCP_PROJECT and runs the live gate before and after,
+# as every live step does (platform/gcp/live-gate.sh, platform/gcp/README.md). Its chat calls count against the API's 30 a minute.
 # The lab project must hold dbt_dev's rows: `make bigquery-live-load` first.
 set -euo pipefail
 
@@ -41,9 +41,8 @@ case "${ARM:-metricflow}" in
         fi
       fi
     fi
-    "$REPO/platform/gcp/cost-check.sh" || [ "${GCP_COST_UNPROVEN_OK:-}" = 1 ] ||
-      fail "the cost check did not prove \$0.00 (GCP_COST_UNPROVEN_OK=1 proceeds on the owner's say-so)"
-    trap '"$REPO/platform/gcp/cost-check.sh" || true' EXIT ;;
+    "$REPO/platform/gcp/live-gate.sh" || fail "the live gate stopped the step (platform/gcp/README.md)"
+    trap '"$REPO/platform/gcp/live-gate.sh" || true' EXIT ;;
   *) fail "ARM=$ARM is not one of metricflow, data_agent" ;;
 esac
 

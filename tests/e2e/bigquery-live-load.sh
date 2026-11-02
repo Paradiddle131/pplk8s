@@ -4,7 +4,7 @@
 # Builds dbt_dev as the eval does (tests/e2e/agent-fixture.sh: dbt/dev/fixture.sql and fixture_weeks.sql, every
 # semantic domain), copies its landed sources into the lab project (tests/e2e/lib/fixture_to_bigquery.py, which
 # empties the dbt datasets first, never `ops`), then runs `dbt build` of the same domains on the `gcp` target,
-# every job capped at the free path's per-query bytes. Live: GCP_PROJECT, the cost check before and after; the
+# every job capped at the free path's per-query bytes. Live: GCP_PROJECT, the live gate before and after (platform/gcp/live-gate.sh); the
 # credential as tests/e2e/bigquery-run-check.sh picks it. Expects `make services-up`.
 set -euo pipefail
 
@@ -28,9 +28,8 @@ if [ -z "${GCP_ACCESS_TOKEN:-}" ]; then
   fi
 fi
 
-"$REPO/platform/gcp/cost-check.sh" || [ "${GCP_COST_UNPROVEN_OK:-}" = 1 ] ||
-  fail "the cost check did not prove \$0.00 (GCP_COST_UNPROVEN_OK=1 proceeds on the owner's say-so)"
-trap '"$REPO/platform/gcp/cost-check.sh" || true' EXIT
+"$REPO/platform/gcp/live-gate.sh" || fail "the live gate stopped the step (platform/gcp/README.md)"
+trap '"$REPO/platform/gcp/live-gate.sh" || true' EXIT
 
 DB="$DB" "$REPO/tests/e2e/agent-fixture.sh"
 mkdir -p "$OUT"

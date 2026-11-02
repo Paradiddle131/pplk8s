@@ -26,6 +26,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 
 - Use only what `free-path.yaml` lists; a new API or resource type joins it, with its source, in the PR that needs it, and `make gcp-validate` (in `make lint`) refuses anything else.
 - Run `make gcp-usage-check` before and after every live step: it is the gate, minutes behind the usage; exit 1 (a free tier past its share) or 3 (a source unreadable) means no live GCP work until the owner says so.
+- `platform/gcp/live-gate.sh` runs the two together, as the live scripts do before and after their step (`make gcp-data-agent`, `bigquery-live-load`, `agent-eval ARM=data_agent`).
 - Run `make gcp-cost-check` beside it: the billing export is the proof after the fact, hours behind; its exit 1 (a cost) stops the work too, and its 3 (not provable yet) is reported, not a stop, while the usage check passes.
 - Dry-run a query before running it, and keep `maximum_bytes_billed` on every job; no streaming inserts (no free tier).
 - Artifact Registry holds at most 0.5 GiB-month across the billing account: images go there only to be pulled by Cloud Run in us-central1, never pulled to a laptop or a cloud session (internet egress), and the Container Scanning and On-Demand Scanning APIs stay off (billed per image).

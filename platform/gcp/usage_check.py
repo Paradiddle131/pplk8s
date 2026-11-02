@@ -74,12 +74,15 @@ class Tier:
     read: str | None = None
     note: str | None = None
     share: float | None = None  # the entry's own limit in percent, instead of --share
+    warn: str | None = (
+        None  # why this reading only warns: past its limit it is WARN, never OVER
+    )
 
 
 @dataclasses.dataclass(frozen=True)
 class Line:
     tier: Tier
-    status: str  # ok, OVER, UNKNOWN, info, not measured
+    status: str  # ok, OVER, WARN, UNKNOWN, info, not measured
     used: float | None = None
     detail: str = ""
 
@@ -108,6 +111,7 @@ def tiers(spec: dict) -> list[Tier]:
             read=entry.get("read"),
             note=entry.get("note"),
             share=entry.get("share"),
+            warn=entry.get("warn"),
         )
         if tier.window not in WINDOWS:
             raise ValueError(
@@ -259,10 +263,16 @@ def measure(gcp: Gcp, project: str, region: str, tier: Tier, now: dt.datetime) -
 
 
 def judge(lines: list[Line], threshold: float) -> tuple[list[Line], int]:
-    """Mark each line past its limit (its entry's own share, else the threshold); the exit code: 1 over,
-    else 3 unknown, else 0."""
+    """Mark each line past its limit (its entry's own share, else the threshold) OVER, or WARN when its entry
+    says why it only warns; the exit code: 1 over, else 3 unknown, else 0 (a WARN is printed, not failed)."""
     out = [
-        dataclasses.replace(line, status="OVER")
+        dataclasses.replace(
+            line,
+            status="WARN" if line.tier.warn else "OVER",
+            detail=f"{line.detail}; warns only: {line.tier.warn}"
+            if line.tier.warn
+            else line.detail,
+        )
         if line.status == "ok"
         and line.share is not None
         and line.share > limit(line.tier, threshold)

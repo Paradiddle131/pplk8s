@@ -108,6 +108,23 @@ def test_exactly_the_threshold_passes_and_just_past_it_fails():
     assert "OVER" in lines[1] and "50.0%" in lines[1]
 
 
+def test_a_reading_that_only_warns_is_printed_past_its_limit_but_never_fails():
+    spec = spec_of(entry(warn="a push's peak, not what bills"))
+    lines, code = run(FakeGcp(metrics={"m/a": 900}), spec)
+    assert code == 0
+    assert "WARN" in lines[1] and "warns only: a push's peak" in lines[1]
+
+
+def test_the_registry_gates_on_its_size_and_only_warns_on_the_gauge():
+    registry = {
+        e["name"]: e
+        for e in SPEC["usage"]
+        if e["api"] == "artifactregistry.googleapis.com"
+    }
+    assert "warn" not in registry["Artifact Registry storage"]
+    assert registry["Artifact Registry storage (metric)"]["warn"]
+
+
 def test_an_entrys_own_share_replaces_the_threshold():
     spec = spec_of(entry(name="Cloud Scheduler jobs", free=3, share=100))
     assert run(FakeGcp(metrics={"m/a": 3}), spec)[1] == 0

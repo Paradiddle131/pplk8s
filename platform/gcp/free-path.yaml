@@ -190,11 +190,13 @@ usage:
   - {name: Cloud Run services requests, api: run.googleapis.com, free: 2000000, unit: requests, window: month, metric: run.googleapis.com/request_count, resource: cloud_run_revision, source: https://cloud.google.com/run/pricing}
   - {name: Cloud Run Jobs vCPU, api: run.googleapis.com, free: 240000, unit: vCPU-seconds, window: month, metric: run.googleapis.com/container/cpu/allocation_time, resource: cloud_run_job, source: https://cloud.google.com/run/pricing}
   - {name: Cloud Run Jobs memory, api: run.googleapis.com, free: 450000, unit: GiB-seconds, window: month, metric: run.googleapis.com/container/memory/allocation_time, resource: cloud_run_job, source: https://cloud.google.com/run/pricing}
-  # Two readings of the registry, which disagreed tenfold on 2026-11-02 (#313): the repositories' sizeBytes, and
-  # Monitoring's repository/size gauge (unreferenced layers wait for a daily sweep); both are held to the free
-  # 0.5 GiB until one is shown to be what bills. Two versions per image hold it near 0.45 GiB by design (#230).
+  # Two readings of the registry, which disagreed tenfold on 2026-11-02 (#313): the repositories' sizeBytes, which
+  # gates, and Monitoring's repository/size gauge, which only warns: its 11 points this month all fall in one
+  # 16-minute push (16:11-16:27Z), swinging between 1 MiB and 3.9 GiB, so its newest point is an upload's peak, not
+  # the GiB-months storage bills; the billing export's Artifact Registry SKU settles which one bills (#313).
+  # Two versions per image hold the registry near 0.45 GiB by design (#230).
   - {name: Artifact Registry storage, api: artifactregistry.googleapis.com, free: 536870912, unit: bytes, window: now, read: artifact_registry_bytes, share: 100, source: https://cloud.google.com/artifact-registry/pricing}
-  - {name: Artifact Registry storage (metric), api: artifactregistry.googleapis.com, free: 536870912, unit: bytes, window: now, metric: artifactregistry.googleapis.com/repository/size, share: 100, source: https://cloud.google.com/artifact-registry/pricing}
+  - {name: Artifact Registry storage (metric), api: artifactregistry.googleapis.com, free: 536870912, unit: bytes, window: now, metric: artifactregistry.googleapis.com/repository/size, share: 100, warn: "a push's peak, not what bills, until the export shows (#313)", source: https://cloud.google.com/artifact-registry/pricing}
   # 5 GB-months of Standard storage in us-central1, us-east1 and us-west1, read as 10^9 bytes (the stricter reading).
   - {name: Cloud Storage, api: storage.googleapis.com, free: 5000000000, unit: bytes, window: now, metric: storage.googleapis.com/storage/v2/total_bytes, source: https://cloud.google.com/storage/pricing#cloud-storage-always-free}
   # Firestore's free quota is daily, reset around midnight Pacific time, for the one free database.
@@ -215,3 +217,5 @@ usage:
   - {name: Monitoring read API, api: monitoring.googleapis.com, free: 1000000, unit: time series, window: month, metric: monitoring.googleapis.com/billing/time_series_billed_for_queries_count, source: https://cloud.google.com/stackdriver/pricing#monitoring-pricing-summary}
   - {name: Eventarc events, api: eventarc.googleapis.com, free: null, unit: events, window: month, note: "Pub/Sub-sourced events bill $0: no tier to count", source: https://cloud.google.com/eventarc/pricing}
   - {name: Data agents tokens, api: geminidataanalytics.googleapis.com, free: null, unit: tokens, window: month, metric: [geminidataanalytics.googleapis.com/chat/input_token_count, geminidataanalytics.googleapis.com/chat/output_token_count], note: "free trial until 2026-12-31 (the API's until)", source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview}
+  - {name: Knowledge Catalog, api: dataplex.googleapis.com, free: null, unit: DCU-hours, window: month, note: "API calls, search and BigQuery's technical metadata bill $0; scans and lineage, the billed parts, are not used", source: https://cloud.google.com/dataplex/pricing}
+  - {name: Gemini for Google Cloud, api: cloudaicompanion.googleapis.com, free: null, unit: licences, window: month, note: "bills only Gemini Code Assist licences, none bought", source: https://cloud.google.com/gemini/pricing}
