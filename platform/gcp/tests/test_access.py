@@ -122,17 +122,24 @@ def test_the_audit_writer_inserts_into_the_audit_table_and_nothing_else() -> Non
     )
 
 
-def test_table_grants_are_in_ops_and_read_or_insert() -> None:
+def test_table_grants_are_in_ops_and_name_a_table_access() -> None:
     # infra/bigquery.tf grants on the ops tables tofu.sh finds; another dataset's table would never be granted.
     for account in ACCESS["service_accounts"].values():
         for table, access in (account.get("tables") or {}).items():
             assert table.split(".")[0] == "ops"
-            assert access in {"read", "insert"}
+            assert access in ACCESS["table_access"]
 
 
-def test_insert_is_data_editor_on_the_table_and_says_so() -> None:
-    # BigQuery IAM has no insert-only role (tables.updateData also allows UPDATE and DELETE).
-    bigquery = (GCP / "infra" / "bigquery.tf").read_text()
-    assert 'insert = "roles/bigquery.dataEditor"' in bigquery
-    assert 'read = "roles/bigquery.dataViewer"' in bigquery
-    assert "cannot express insert-only" in (GCP / "access.yaml").read_text()
+def test_insert_is_a_custom_role_that_cannot_read_or_drop_the_table() -> None:
+    # Least privilege for a DML INSERT ... VALUES: write the rows and read the table's schema, nothing else;
+    # bigquery.jobs.create comes from BigQuery Job User on the project (infra/bigquery.tf job_user).
+    access = ACCESS["table_access"]
+    assert access["read"] == {"role": "roles/bigquery.dataViewer"}
+    assert set(access["insert"]["permissions"]) == {
+        "bigquery.tables.get",
+        "bigquery.tables.updateData",
+    }
+    # updateData still permits UPDATE and DELETE statements: BigQuery IAM has no insert-only permission.
+    assert (
+        "updateData still permits UPDATE, DELETE" in (GCP / "access.yaml").read_text()
+    )

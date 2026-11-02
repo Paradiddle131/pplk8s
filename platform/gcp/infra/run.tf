@@ -176,11 +176,11 @@ resource "google_service_account_iam_member" "agent_impersonates_audit" {
 
 # Cloud Run's regional quotas in var.region, lowered to free-path.yaml's `caps.cloud_run_regional_quotas` (#209):
 # a stop on how many instances, vCPUs and bytes of memory may run at once, whatever a deploy or a console edit asks
-# (the services' own max_instance_count is the first stop). Held whether or not a workload is deployed. A quota
-# with no `quota_id` yet (free-path.yaml's TODO) gets no preference. Quota preferences cannot be deleted: tofu.sh
-# passes the ones on the project and they are imported (infra/bigquery.tf's variable), never created twice.
+# (the services' own max_instance_count is the first stop). Held whether or not a workload is deployed. Quota
+# preferences cannot be deleted: tofu.sh passes the ones on the project, keyed `<service>/<quota id>`, and they are
+# imported (infra/bigquery.tf's variable), never created twice.
 locals {
-  run_quotas = { for metric, q in local.caps.cloud_run_regional_quotas : metric => q if q.quota_id != null }
+  run_quotas = local.caps.cloud_run_regional_quotas
   run_quota_preferences = {
     for metric, q in local.run_quotas : metric => var.existing_quota_preferences["run.googleapis.com/${q.quota_id}"]
     if contains(keys(var.existing_quota_preferences), "run.googleapis.com/${q.quota_id}")

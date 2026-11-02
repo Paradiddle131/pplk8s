@@ -54,6 +54,7 @@ resources:
   google_project_service: serviceusage.googleapis.com
   google_service_account: iam.googleapis.com
   google_project_iam_member: cloudresourcemanager.googleapis.com
+  google_project_iam_custom_role: {api: iam.googleapis.com, source: https://cloud.google.com/iam/pricing}
   google_pubsub_topic: pubsub.googleapis.com
   google_workflows_workflow: workflows.googleapis.com
   google_eventarc_trigger: eventarc.googleapis.com
@@ -109,16 +110,15 @@ caps:
   cloud_scheduler_jobs: 3
   # Cloud Run's regional quotas in us-central1 (#209), by the quota's metric: a stop on how much may run at once,
   # whatever a deploy asks. The most workloads.yaml can run together (the agent's service at its cap, one task of
-  # each Job) plus one service instance for a revision rollout: 4 instances, 4 vCPU (in milli vCPU), 4 x 512 MiB
-  # (in bytes). check_free_path.py refuses a value above that; infra/run.tf sets each as a quota preference (only
-  # lowered, never raised); `make gcp-guardrails-check` reads them back by metric.
-  # TODO(#209): the quota_ids, which Cloud Run's quota page does not name: read them from the project's
-  # cloudquotas.googleapis.com/v1/projects/<p>/locations/global/services/run.googleapis.com/quotaInfos (each
-  # entry's `metric` and `quotaId`); until then infra/ declares no preference for that quota.
+  # each Job: 3 instances, 3 vCPU, 1.5 GiB) plus one service instance for a revision rollout: 4 instances, 4 vCPU
+  # (in milli vCPU), 4 x 512 MiB (in bytes). check_free_path.py refuses a value above that; infra/run.tf sets each
+  # as a quota preference with dimension region (only lowered, never raised); `make gcp-guardrails-check` reads
+  # them back by metric. Ids, metrics and units as the project's run.googleapis.com quotaInfos list them
+  # (2026-11-02): us-central1 defaults 200,000 milli vCPU, 400 GiB, and no listed instance value.
   cloud_run_regional_quotas:
-    run.googleapis.com/instance_limit_regional: {quota_id: null, unit: instances, value: 4}
-    run.googleapis.com/cpu_allocation: {quota_id: null, unit: milli_vcpu, value: 4000}
-    run.googleapis.com/mem_allocation: {quota_id: null, unit: bytes, value: 2147483648}
+    run.googleapis.com/instances: {quota_id: InstancesPerProject, unit: instances, value: 4}
+    run.googleapis.com/cpu_allocation: {quota_id: CpuAllocPerProjectRegion, unit: milli_vcpu, value: 4000}
+    run.googleapis.com/mem_allocation: {quota_id: MemAllocPerProjectRegion, unit: bytes, value: 2147483648}
   # Time series across the user-defined log-based metrics (the freshness alert's: one per source table and error
   # status). Each writes at most a point a minute, 8 bytes, and Monitoring's first 150 MiB a month per billing
   # account are free: 100 x 44,640 minutes x 8 B = 34 MiB.

@@ -17,8 +17,12 @@ locals {
     ]) : "${pair.sa}/${pair.ds}" => merge(pair, { role = "roles/bigquery.dataEditor" }) },
   )
 
-  # access.yaml `tables:`: `insert` is Data Editor on the one table, BigQuery IAM having no insert-only role.
-  table_roles = { read = "roles/bigquery.dataViewer", insert = "roles/bigquery.dataEditor" }
+  # access.yaml `tables:`, each access its `table_access` role: a predefined one, or the custom role below.
+  table_roles = {
+    for access, a in local.access.table_access : access => (
+      can(a.role) ? a.role : "projects/${var.project}/roles/${google_project_iam_custom_role.table_access[access].role_id}"
+    )
+  }
   table_grants = { for pair in flatten([
     for sa, a in local.access.service_accounts : [
       for table, access in lookup(a, "tables", {}) : {
@@ -72,6 +76,20 @@ resource "google_bigquery_dataset_iam_member" "grant" {
   dataset_id = google_bigquery_dataset.layer[each.value.ds].dataset_id
   role       = each.value.role
   member     = "serviceAccount:${google_service_account.workload[each.value.sa].email}"
+}
+
+# access.yaml `table_access` given as permissions: a project custom role each (IAM roles are free), granted only on
+# tables. A deleted custom role stays soft-deleted: the provider undeletes it on a re-create within 7 days, but its
+# id is taken for up to 37, so a gcp-down and gcp-up 7 to 37 days apart needs the role's id changed.
+resource "google_project_iam_custom_role" "table_access" {
+  for_each = { for access, a in local.access.table_access : access => a if can(a.permissions) }
+
+  role_id     = "pplk8sTable${title(each.key)}"
+  title       = "pplk8s table ${each.key}"
+  description = "The lab's `${each.key}` access to one BigQuery table (platform/gcp/access.yaml, #209)."
+  permissions = each.value.permissions
+
+  depends_on = [google_project_service.free_path]
 }
 
 resource "google_bigquery_table_iam_member" "grant" {

@@ -1,6 +1,6 @@
 # `make gcp-validate`, offline (a mock provider, no credentials): the freshness alert exists only with the
-# freshness Job, and its channel only with an address; table grants only on the ops tables that exist; Cloud
-# Run's quota preferences only for the quotas whose id free-path.yaml names (#209).
+# freshness Job, and its channel only with an address; table grants only on the ops tables that exist, the
+# insert one a custom role; Cloud Run's three regional quota preferences (#209).
 
 mock_provider "google" {
   mock_resource "google_service_account" {
@@ -39,8 +39,10 @@ run "no_freshness_job_no_alert" {
   }
 
   assert {
-    condition     = length(google_cloud_quotas_quota_preference.cloud_run) == length([for q in yamldecode(file("../free-path.yaml")).caps.cloud_run_regional_quotas : q if q.quota_id != null])
-    error_message = "One Cloud Run quota preference per quota whose id free-path.yaml names."
+    condition = join(",", sort([for p in google_cloud_quotas_quota_preference.cloud_run : "${p.quota_id}=${p.quota_config[0].preferred_value}"])) == "CpuAllocPerProjectRegion=4000,InstancesPerProject=4,MemAllocPerProjectRegion=2147483648" && alltrue([
+      for p in google_cloud_quotas_quota_preference.cloud_run : p.service == "run.googleapis.com" && p.dimensions.region == "us-central1"
+    ])
+    error_message = "Cloud Run's three regional quotas lowered in us-central1, whether or not a workload is deployed."
   }
 }
 
@@ -109,11 +111,16 @@ run "table_grants_wait_for_their_tables" {
 
   assert {
     condition = alltrue([
-      google_bigquery_table_iam_member.grant["agent-audit/ops.agent_queries"].role == "roles/bigquery.dataEditor",
+      google_bigquery_table_iam_member.grant["agent-audit/ops.agent_queries"].role == "projects/lab-project/roles/pplk8sTableInsert",
       google_bigquery_table_iam_member.grant["semantic-agent/ops.readiness"].role == "roles/bigquery.dataViewer",
       google_bigquery_table_iam_member.grant["agent-audit/ops.agent_queries"].table_id == "agent_queries",
     ])
-    error_message = "The audit writer's insert is Data Editor on its one table; the agent reads."
+    error_message = "The audit writer's insert is the custom role on its one table; the agent reads."
+  }
+
+  assert {
+    condition     = join(",", keys(google_project_iam_custom_role.table_access)) == "insert" && join(",", sort(google_project_iam_custom_role.table_access["insert"].permissions)) == "bigquery.tables.get,bigquery.tables.updateData"
+    error_message = "One custom role, holding only what a DML INSERT ... VALUES needs on its target table."
   }
 }
 
