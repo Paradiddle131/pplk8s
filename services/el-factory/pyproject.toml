@@ -18,6 +18,11 @@ dependencies = [
 postgres = [
     "psycopg[binary]==3.3.6",
 ]
+# bigquery: the lab project's BigQuery (el_factory/warehouse_bigquery.py, #227), loaded by load
+# jobs; the version the semantic agent pins (services/semantic-agent/pyproject.toml).
+bigquery = [
+    "google-cloud-bigquery==3.47.0",
+]
 # The file sources (el_factory/tlc, the Airflow lab's TLC pipeline, PLAN.md D34-D35): Parquet by
 # pyarrow. Served only on a warehouse that keeps their ledger (Postgres), so only the postgres image
 # installs it (the Dockerfile's builder-postgres); the GCP build carries neither it nor el_factory/tlc.
@@ -30,13 +35,12 @@ requires = ["uv_build>=0.11.7,<0.12"]
 build-backend = "uv_build"
 
 # No group is installed in any image (`uv sync --no-dev` in the Dockerfile).
-# dev: the test and lint tools, the postgres and files extras, so the tests cover the Postgres seam
-# and the file sources.
+# dev: the test and lint tools and every extra, so the tests cover both seams and the file sources.
 [dependency-groups]
 dev = [
     "pytest",
     "ruff",
-    "el-factory[postgres,files]",
+    "el-factory[postgres,bigquery,files]",
 ]
 
 [tool.uv.build-backend]

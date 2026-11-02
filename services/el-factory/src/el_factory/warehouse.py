@@ -2,8 +2,8 @@
 
 The app reaches the warehouse through a `Warehouse`, never through a driver, so an image carries
 only the driver of the warehouse it runs on: `ELF_WAREHOUSE` picks the implementation (`postgres`,
-the default: the lab's Compose warehouse, `warehouse_postgres.py`), and only the chosen module, with
-its driver, is imported.
+the default: the lab's Compose warehouse, `warehouse_postgres.py`; `bigquery`: the lab project,
+`warehouse_bigquery.py`, #227), and only the chosen module, with its driver, is imported.
 The file sources (`el_factory.tlc`: the chunked file extract and retention, PLAN.md D34-D35) need
 more than a `Warehouse`: a `FileLedger`, which only Postgres keeps, so they are served only on it.
 
@@ -25,9 +25,12 @@ if TYPE_CHECKING:
     from el_factory.config import Config
 
 # The implementation of each ELF_WAREHOUSE value, imported only when chosen.
-IMPLEMENTATIONS = {"postgres": "el_factory.warehouse_postgres"}
+IMPLEMENTATIONS = {
+    "postgres": "el_factory.warehouse_postgres",
+    "bigquery": "el_factory.warehouse_bigquery",
+}
 # Each implementation's driver, as the extra of pyproject.toml that installs it.
-EXTRAS = {"postgres": "postgres"}
+EXTRAS = {"postgres": "postgres", "bigquery": "bigquery"}
 
 
 class WarehouseError(Exception):
