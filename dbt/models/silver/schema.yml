@@ -36,6 +36,13 @@ models:
             synonyms: [country]
             metrics: [orders_total, revenue_eur, customers_distinct, returns_eur, net_revenue_eur]
             dimensions: [customer__country]
+          - term: Customers
+            description: >-
+              Ambiguous on its own: customers can mean signups (customers who signed up in the period), active
+              customers (distinct customers with a non-cancelled order in the period) or customers to date (everyone
+              signed up by a day). When the question does not say which, ask which one is meant or give each, named.
+            synonyms: [customer count, number of customers, our customers]
+            metrics: [signups, customers_distinct, customers_to_date]
     semantic_model:
       enabled: true
       name: customers
@@ -89,6 +96,13 @@ models:
             synonyms: [cancelled order, shipped order, placed order]
             metrics: [orders_total, orders_cancelled, cancellation_rate, revenue_eur, customers_distinct]
             dimensions: [order__status]
+          - term: Sales
+            description: >-
+              Ambiguous on its own: sales can mean revenue (gross, the non-cancelled orders' amounts) or net revenue
+              (revenue minus partner returns, finance's net sales). When the question does not say gross or net, ask
+              which one is meant or give both, named.
+            synonyms: [turnover, takings]
+            metrics: [revenue_eur, net_revenue_eur]
     semantic_model:
       enabled: true
       name: orders

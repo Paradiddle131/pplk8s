@@ -1,14 +1,20 @@
 """The scored eval (semantic/PLAN.md SL-5): the semantic agent and the text-to-SQL baseline on the
 same questions and the same model, through ADK's own eval engine (`LocalEvalService`).
 
-`evals/questions.yaml` holds the questions; each one's expected numbers come from the warehouse
-when the run starts. Three custom ADK metrics score a run:
+`evals/questions.yaml` holds the cases: a question, or a conversation of turns in one session
+(follow-ups, "how was that computed?"); each turn's expected numbers come from the warehouse when
+the run starts. Five custom ADK metrics score a run, each on the turns it applies to:
 - `answer_correct`: the final answer carries an expected number; for the semantic agent on a
   question no metric covers, it says the semantic layer has no such metric instead. Numbers inside
   a quoted freshness statement do not count.
 - `metric_choice` (semantic agent only): its `query_metrics` calls named the expected metrics.
 - `freshness_quoted` (semantic agent only, SL-4): the answer quotes every freshness statement its
   data calls returned.
+- `definition_quoted`: asked how a figure was computed, the answer quotes the definition of each
+  metric behind it, the metric's description in the catalog.
+- `term_disambiguated`: asked with a term that means more than one metric (an `Ambiguous` glossary
+  term), the answer asks which one is meant or gives every meaning's number; picking one silently
+  fails.
 
 Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [question ids]
 Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`. A run that
@@ -24,7 +30,7 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +81,8 @@ DATES = re.compile(
     re.IGNORECASE,
 )
 NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+# A sentence that asks the user to choose: it ends in "?" and offers or names a choice.
+ASKS_WHICH = re.compile(r"[^.!?]*\b(?:which|or|mean|meant)\b[^.!?]*\?", re.IGNORECASE)
 DECLINE = re.compile(
     r"no (?:such |\w+ )?metric|not (?:available|defined|covered|in the semantic layer)|"
     r"(?:does not|doesn't|do not|don't) (?:have|define|include|cover|contain)|"
@@ -84,25 +92,80 @@ DECLINE = re.compile(
 
 
 @dataclass(frozen=True)
-class Question:
-    id: str
+class Turn:
+    """One user message and what its answer must carry.
+
+    expected_sql: the number the answer carries; empty for a turn that asks for none.
+    metrics: the metrics the semantic agent should query; [] with expected_sql means none covers it.
+    define: "how was that computed?": the metrics whose definitions the answer quotes.
+    ambiguous: the metrics a term in the question can mean; expected_sql gives one column each.
+    """
+
     question: str
-    expected_sql: str
-    metrics: list[str]
+    expected_sql: str = ""
+    metrics: list[str] = field(default_factory=list)
+    define: list[str] = field(default_factory=list)
+    ambiguous: list[str] = field(default_factory=list)
+
+    @property
+    def kind(self) -> str:
+        return "define" if self.define else "ambiguous" if self.ambiguous else "number"
+
+
+@dataclass(frozen=True)
+class Question:
+    """An eval case: one question, or a conversation whose turns share a session."""
+
+    id: str
+    turns: list[Turn]
+
+    @classmethod
+    def single(cls, id: str, question: str, expected_sql: str, metrics: list[str]) -> Question:
+        return cls(id, [Turn(question, expected_sql, metrics)])
+
+    @classmethod
+    def from_yaml(cls, item: dict[str, Any]) -> Question:
+        item = dict(item)
+        case_id = item.pop("id")
+        turns = item.pop("turns", None) or [item]
+        return cls(case_id, [Turn(**turn) for turn in turns])
+
+    @property
+    def question(self) -> str:
+        return " → ".join(t.question for t in self.turns)
+
+    @property
+    def metrics(self) -> list[str]:
+        """Every metric the case names, in any role."""
+        names = [n for t in self.turns for n in [*t.metrics, *t.define, *t.ambiguous]]
+        return list(dict.fromkeys(names))
+
+    @property
+    def plain(self) -> bool:
+        """One question that asks for one number: the main table's shape."""
+        return len(self.turns) == 1 and self.turns[0].kind == "number"
+
+
+# A case's expected numbers: per turn, one list per number the turn expects (a meaning of an
+# ambiguous term each), every list the forms an answer may carry it in.
+Expected = list[list[list[float]]]
 
 
 def load_questions(ids: list[str] | None = None) -> list[Question]:
-    questions = [Question(**q) for q in yaml.safe_load(QUESTIONS.read_text())["questions"]]
+    items = yaml.safe_load(QUESTIONS.read_text())["questions"]
+    questions = [Question.from_yaml(item) for item in items]
     return [q for q in questions if not ids or q.id in ids]
 
 
-def expected_numbers(questions: list[Question], url: str) -> dict[str, list[float]]:
-    """Each question's expected number from the warehouse, a rate also as a percentage."""
-    found = {}
+def expected_numbers(questions: list[Question], url: str) -> dict[str, Expected]:
+    """Each turn's expected numbers from the warehouse, a rate also as a percentage."""
+    found: dict[str, Expected] = {}
     with psycopg.connect(url) as conn:
         for q in questions:
-            (value,) = conn.execute(q.expected_sql).fetchone()  # type: ignore[arg-type, misc]
-            found[q.id] = as_expected(float(value))
+            found[q.id] = []
+            for turn in q.turns:
+                row = conn.execute(turn.expected_sql).fetchone() if turn.expected_sql else ()  # type: ignore[arg-type]
+                found[q.id].append([as_expected(float(v)) for v in row or ()])
     return found
 
 
@@ -143,20 +206,25 @@ def _spec(expected: Invocation) -> dict[str, Any]:
     return json.loads(_text(expected.final_response))
 
 
-def _result(scores: list[float], actual: list[Invocation], expected: list[Invocation]):
-    status = EvalStatus.PASSED if all(s == 1.0 for s in scores) else EvalStatus.FAILED
+def _status(score: float | None) -> EvalStatus:
+    if score is None:
+        return EvalStatus.NOT_EVALUATED
+    return EvalStatus.PASSED if score == 1.0 else EvalStatus.FAILED
+
+
+def _result(scores: list[float | None], actual: list[Invocation], expected: list[Invocation]):
+    """A case's result from its turns' scores; a turn the metric does not apply to scores None,
+    and a case with no such turn is not evaluated."""
     per = [
         PerInvocationResult(
-            actual_invocation=a,
-            expected_invocation=e,
-            score=s,
-            eval_status=EvalStatus.PASSED if s == 1.0 else EvalStatus.FAILED,
+            actual_invocation=a, expected_invocation=e, score=s, eval_status=_status(s)
         )
         for a, e, s in zip(actual, expected, scores, strict=True)
     ]
-    overall = sum(scores) / len(scores) if scores else None
+    scored = [s for s in scores if s is not None]
+    overall = sum(scored) / len(scored) if scored else None
     return EvaluationResult(
-        overall_score=overall, overall_eval_status=status, per_invocation_results=per
+        overall_score=overall, overall_eval_status=_status(overall), per_invocation_results=per
     )
 
 
@@ -175,18 +243,67 @@ def _squash(text: str) -> str:
     return " ".join(text.split())
 
 
+def _answer(actual: Invocation) -> str:
+    """The answer's text, its quoted freshness statements left out."""
+    text = _squash(_text(actual.final_response))
+    for statement in freshness_statements(actual):
+        text = text.replace(_squash(statement), " ")
+    return text
+
+
 def answer_correct(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
-    """1 when the answer carries an expected number, or declines where it should."""
-    scores = []
+    """1 when the answer carries the expected number, or declines where it should; a turn that
+    asks for no number (a definition, an ambiguous term) is scored by its own metric."""
+    scores: list[float | None] = []
     for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
-        spec, text = _spec(expected), _squash(_text(actual.final_response))
-        for statement in freshness_statements(actual):
-            text = text.replace(_squash(statement), " ")
+        spec, text = _spec(expected), _answer(actual)
+        if spec["kind"] != "number":
+            scores.append(None)
+            continue
+        number = spec["expected"][0]
         if spec["decline"]:
-            right = bool(DECLINE.search(text)) and not carries(text, spec["expected"])
+            right = bool(DECLINE.search(text)) and not carries(text, number)
         else:
-            right = carries(text, spec["expected"])
+            right = carries(text, number)
         scores.append(1.0 if right else 0.0)
+    return _result(scores, actual_invocations, expected_invocations or [])
+
+
+def _words(text: str) -> str:
+    """Text as a reader compares a quotation: case, punctuation and spacing do not count."""
+    return " ".join(re.sub(r"[^0-9a-z]+", " ", text.lower()).split())
+
+
+def definition_quoted(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
+    """1 when an answer to "how was that computed?" quotes every definition it should."""
+    scores: list[float | None] = []
+    for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
+        definitions = _spec(expected)["define"]
+        if not definitions:
+            scores.append(None)
+            continue
+        text = _words(_text(actual.final_response))
+        scores.append(1.0 if all(_words(d) in text for d in definitions.values()) else 0.0)
+    return _result(scores, actual_invocations, expected_invocations or [])
+
+
+def asks_or_gives_each(text: str, meanings: list[list[float]]) -> bool:
+    """An answer to a question with an ambiguous term: it asks which meaning the user wants, or it
+    carries every meaning's number. One number and no question is a silent pick."""
+    return bool(ASKS_WHICH.search(text)) or all(carries(text, m) for m in meanings)
+
+
+def term_disambiguated(
+    eval_metric, actual_invocations, expected_invocations, conversation_scenario
+):
+    """1 when a question with an ambiguous term is answered by asking which meaning, or by all."""
+    scores: list[float | None] = []
+    for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
+        spec = _spec(expected)
+        if spec["kind"] != "ambiguous":
+            scores.append(None)
+            continue
+        scores.append(1.0 if asks_or_gives_each(_answer(actual), spec["expected"]) else 0.0)
     return _result(scores, actual_invocations, expected_invocations or [])
 
 
@@ -210,10 +327,13 @@ def queried_metrics(invocation: Invocation) -> set[str]:
 
 def metric_choice(eval_metric, actual_invocations, expected_invocations, conversation_scenario):
     """1 when the semantic agent's queries named every expected metric."""
-    scores = [
-        1.0 if set(_spec(expected)["metrics"]) <= queried_metrics(actual) else 0.0
-        for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True)
-    ]
+    scores: list[float | None] = []
+    for actual, expected in zip(actual_invocations, expected_invocations or [], strict=True):
+        spec = _spec(expected)
+        if spec["kind"] != "number":
+            scores.append(None)
+        else:
+            scores.append(1.0 if set(spec["metrics"]) <= queried_metrics(actual) else 0.0)
     return _result(scores, actual_invocations, expected_invocations or [])
 
 
@@ -233,28 +353,63 @@ def freshness_quoted(eval_metric, actual_invocations, expected_invocations, conv
 ANSWER_CORRECT = EvalMetric(metric_name="answer_correct", threshold=1.0)
 METRIC_CHOICE = EvalMetric(metric_name="metric_choice", threshold=1.0)
 FRESHNESS_QUOTED = EvalMetric(metric_name="freshness_quoted", threshold=1.0)
+DEFINITION_QUOTED = EvalMetric(metric_name="definition_quoted", threshold=1.0)
+TERM_DISAMBIGUATED = EvalMetric(metric_name="term_disambiguated", threshold=1.0)
+SEMANTIC_METRICS = [
+    ANSWER_CORRECT,
+    METRIC_CHOICE,
+    FRESHNESS_QUOTED,
+    DEFINITION_QUOTED,
+    TERM_DISAMBIGUATED,
+]
+BASELINE_METRICS = [ANSWER_CORRECT, DEFINITION_QUOTED, TERM_DISAMBIGUATED]
+
+
+def definitions(questions: list[Question]) -> dict[str, str]:
+    """The catalog's description of every metric a turn asks to define: the text quoted."""
+    from semantic_agent.tools import catalog
+
+    names = {name for q in questions for t in q.turns for name in t.define}
+    return {name: catalog().metric(name)["description"] for name in sorted(names)}
 
 
 def eval_cases(
-    questions: list[Question], expected: dict[str, list[float]], app_name: str, semantic: bool
+    questions: list[Question],
+    expected: dict[str, Expected],
+    app_name: str,
+    semantic: bool,
+    described: dict[str, str] | None = None,
 ) -> list[EvalCase]:
+    """Each case as ADK's EvalCase: one invocation per turn, its expected final response the turn's
+    spec (what the custom metrics read)."""
+    described = described if described is not None else definitions(questions)
     cases = []
     for q in questions:
-        spec = {
-            "expected": expected[q.id],
-            "metrics": q.metrics,
-            "decline": semantic and not q.metrics,
-        }
-        uses = [types.FunctionCall(name="query_metrics", args={"metrics": q.metrics})]
-        invocation = Invocation(
-            user_content=types.Content(role="user", parts=[types.Part(text=q.question)]),
-            final_response=types.Content(role="model", parts=[types.Part(text=json.dumps(spec))]),
-            intermediate_data=IntermediateData(tool_uses=uses if semantic and q.metrics else []),
-        )
+        conversation = []
+        for turn, numbers in zip(q.turns, expected[q.id], strict=True):
+            spec = {
+                "kind": turn.kind,
+                "expected": numbers,
+                "metrics": turn.metrics,
+                "decline": semantic and turn.kind == "number" and not turn.metrics,
+                "define": {name: described[name] for name in turn.define},
+            }
+            uses = [types.FunctionCall(name="query_metrics", args={"metrics": turn.metrics})]
+            conversation.append(
+                Invocation(
+                    user_content=types.Content(role="user", parts=[types.Part(text=turn.question)]),
+                    final_response=types.Content(
+                        role="model", parts=[types.Part(text=json.dumps(spec))]
+                    ),
+                    intermediate_data=IntermediateData(
+                        tool_uses=uses if semantic and turn.metrics else []
+                    ),
+                )
+            )
         cases.append(
             EvalCase(
                 eval_id=q.id,
-                conversation=[invocation],
+                conversation=conversation,
                 session_input=SessionInput(app_name=app_name, user_id="eval"),
             )
         )
@@ -333,7 +488,10 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
             spent = failure if failure.ends_run else None
         else:
             succeeded.append(result)
-    answers = {r.eval_case_id: _text(r.inferences[-1].final_response) for r in succeeded}
+    answers = {
+        r.eval_case_id: " → ".join(_text(i.final_response) for i in r.inferences or [])
+        for r in succeeded
+    }
     evaluate_request = EvaluateRequest(
         inference_results=succeeded,
         evaluate_config=EvaluateConfig(eval_metrics=metrics, parallelism=1),
@@ -345,6 +503,9 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
     return outcomes
 
 
+ANSWER_METRICS = ("answer_correct", "definition_quoted", "term_disambiguated")
+
+
 def report(questions, expected, semantic, baseline, model_id: str) -> str:
     def mark(outcome: CaseOutcome | None, metric: str) -> str:
         if outcome is None:
@@ -353,13 +514,28 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
             return "skipped"
         if outcome.error:
             return "error"
+        if metric in outcome.scores and outcome.scores[metric] is None:
+            return "none"
         return "✓" if outcome.scores.get(metric) == 1.0 else "✗"
 
-    with_metric = [q for q in questions if q.metrics]
-    without = [q for q in questions if not q.metrics]
+    def answered(outcome: CaseOutcome | None) -> str:
+        """A case's answers: right when every answer metric that applies to it passed."""
+        if outcome is None or outcome.skipped or outcome.error:
+            return mark(outcome, "answer_correct")
+        scored = [outcome.scores[m] for m in ANSWER_METRICS if outcome.scores.get(m) is not None]
+        return "✓" if scored and all(score == 1.0 for score in scored) else "✗"
 
-    def count(outcomes, subset, metric="answer_correct"):
-        return sum(1 for q in subset if mark(outcomes.get(q.id), metric) == "✓")
+    plain = [q for q in questions if q.plain]
+    with_metric = [q for q in plain if q.metrics]
+    without = [q for q in plain if not q.metrics]
+    conversations = [q for q in questions if not q.plain]
+
+    def count(outcomes, subset, metric=None):
+        return sum(
+            1
+            for q in subset
+            if (mark(outcomes.get(q.id), metric) if metric else answered(outcomes.get(q.id))) == "✓"
+        )
 
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
     lines = [
@@ -367,9 +543,11 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
         "",
         f"Run {stamp} by `make agent-eval` (`services/semantic-agent`, semantic/PLAN.md SL-5), "
         f"model `{model_id}`, on `dbt/dev/fixture.sql` and `dbt/dev/fixture_weeks.sql`.",
-        "Each agent answers each question once through ADK's `LocalEvalService`; "
-        "an answer is right when it carries the number the warehouse gives "
-        "(`evals/questions.yaml`).",
+        "Each agent answers each case once through ADK's `LocalEvalService`, the turns of a "
+        "conversation in one session; an answer is right when it carries the number the "
+        "warehouse gives (`evals/questions.yaml`), quotes the metric's definition when asked how "
+        "a figure was computed, and asks which meaning (or gives each) when a term has more than "
+        "one.",
         "",
         "| | Semantic agent | Text-to-SQL baseline |",
         "|---|---|---|",
@@ -379,13 +557,20 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
         f"{count(baseline, with_metric)} right |",
         f"| Questions no metric covers ({len(without)}) | {count(semantic, without)} said so | "
         f"{count(baseline, without)} right |",
+    ]
+    if conversations:
+        lines.append(
+            f"| Follow-ups, definitions and ambiguous terms ({len(conversations)}) | "
+            f"{count(semantic, conversations)} right | {count(baseline, conversations)} right |"
+        )
+    lines += [
         f"| All ({len(questions)}) | {count(semantic, questions)} | {count(baseline, questions)} |",
         "",
         "| Question | Expected | Semantic | Metric | Freshness | Baseline |",
         "|---|---|---|---|---|---|",
     ]
-    for q in questions:
-        number = expected[q.id][0]
+    for q in plain:
+        number = expected[q.id][0][0][0]
         chose = mark(semantic.get(q.id), "metric_choice") if q.metrics else "none"
         quoted = mark(semantic.get(q.id), "freshness_quoted") if q.metrics else "none"
         lines.append(
@@ -393,12 +578,36 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
             f"{mark(semantic.get(q.id), 'answer_correct')} | {chose} | {quoted} | "
             f"{mark(baseline.get(q.id), 'answer_correct')} |"
         )
+    if conversations:
+        lines += [
+            "",
+            "A conversation runs its turns in one session; a column no turn of a case applies to "
+            "says none.",
+            "",
+            "| Case | Expected | Semantic: numbers | Definition | Asks which | Metric | Freshness "
+            "| Baseline: numbers | Definition | Asks which |",
+            "|---|---|---|---|---|---|---|---|---|---|",
+        ]
+        for q in conversations:
+            numbers = " → ".join(
+                " / ".join(f"{n[0]:g}" for n in turn) or "–" for turn in expected[q.id]
+            )
+            s, b = semantic.get(q.id), baseline.get(q.id)
+            lines.append(
+                f"| `{q.id}` {q.question} | {numbers} | "
+                + " | ".join(
+                    mark(s, m) for m in (*ANSWER_METRICS, "metric_choice", "freshness_quoted")
+                )
+                + " | "
+                + " | ".join(mark(b, m) for m in ANSWER_METRICS)
+                + " |"
+            )
     lines += ["", "## Answers", ""]
     for q in questions:
         for name, outcomes in (("semantic", semantic), ("baseline", baseline)):
             outcome = outcomes.get(q.id)
             said = outcome.error if outcome and outcome.error else outcome.answer if outcome else ""
-            said = " ".join(said.split())[:400]
+            said = " ".join(said.split())[: 400 * len(q.turns)]
             lines.append(f"- `{q.id}` {name}: {said}")
     errors = {o.error for o in [*semantic.values(), *baseline.values()] if o.error}
     if errors:
@@ -420,7 +629,7 @@ async def main(ids: list[str]) -> int:
     semantic = await evaluate(
         build_semantic(),
         eval_cases(questions, expected, "semantic_agent", semantic=True),
-        [ANSWER_CORRECT, METRIC_CHOICE, FRESHNESS_QUOTED],
+        SEMANTIC_METRICS,
     )
     spent = next((o for o in semantic.values() if o.skipped), None)
     if spent:
@@ -429,7 +638,7 @@ async def main(ids: list[str]) -> int:
         baseline = await evaluate(
             build_baseline(),
             eval_cases(questions, expected, "sql_baseline", semantic=False),
-            [ANSWER_CORRECT],
+            BASELINE_METRICS,
         )
     text = report(
         questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)

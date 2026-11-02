@@ -126,13 +126,18 @@ make agent-serve AGENT_DBNAME=dbt_dev
 | Command | What it proves | Model |
 |---|---|---|
 | `make agent-test` (in `make test`) | the tools, the request checks, freshness (fresh, late, no ready row), the agent loop through ADK's `Runner`, the audit row of each data query (and a result withheld when it cannot be written), the audit and freshness kept for a stand-in `DataAgentToolset` whose data tool has another name, the eval driver, a spent quota and a refused key through the real LiteLLM client against a local 429 or 401 server; with `make services-up`, the ledger read as `agent_metrics`, the baseline's role (no `ops`, no `silver`, no writes, the timeout), the audit writer limited to inserting audit rows, no agent role writing the audit even in a read-write transaction and sessions surviving a new session service on Postgres | scripted; no test reaches a live model (`OPENROUTER_API_BASE` points at a closed local port) |
-| `make agent-eval` | the scored eval below | live, ~2 x 49 turns |
+| `make agent-eval` | the scored eval below | live, ~2 x 62 turns |
 
 `make agent-eval` (`tests/e2e/agent-eval.sh`) builds `dev/fixture.sql` and the six weeks before it (`dev/fixture_weeks.sql`) in `dbt_dev`, writes the catalog, grants the roles, records the fixture's days in `ops.readiness`, and runs `python -m semantic_agent.evaluation`.
-Each question of `evals/questions.yaml` gets its expected number from the warehouse at run time, then goes once through each agent on ADK's `LocalEvalService`, scored by three custom metrics declared in `evals/eval_config.json`:
+Each case of `evals/questions.yaml`, a question or a conversation whose turns share one session, gets its expected numbers from the warehouse at run time, then goes once through each agent on ADK's `LocalEvalService`, scored by five custom metrics declared in `evals/eval_config.json`, each on the turns it applies to:
 - `answer_correct`: the answer carries the warehouse's number, or, for the semantic agent on a question no metric covers, says so; numbers inside a quoted freshness statement do not count.
 - `metric_choice`: the semantic agent queried the expected metrics.
 - `freshness_quoted`: the semantic agent's answer quotes every freshness statement its queries returned.
+- `definition_quoted`: asked how a figure was computed, the answer quotes the description of each metric behind it, the catalog's words (case and punctuation aside).
+- `term_disambiguated`: asked with a term that means more than one metric (a glossary term whose description starts `Ambiguous on its own:`, such as customers or sales), the answer asks which meaning the user wants (a sentence ending in `?` that offers a choice: `which`, `or`, `mean`) or carries every meaning's number; one number and no question is a silent pick and fails.
+
+A conversation's later turns test what a session keeps: a follow-up that adds a breakdown, changes the period or switches the metric is scored like a question, and an answer to an ambiguous term is followed by the user's choice.
+Both agents are scored on the conversations; the baseline has no glossary, so it shows what a team without one gets.
 
 The scores go to stdout and [`docs/research/semantic-agent-eval.md`](../../docs/research/semantic-agent-eval.md); question ids as arguments run only those and write no report.
 A failed model call is reported per question with its answer, never dropped.

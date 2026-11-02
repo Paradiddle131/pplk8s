@@ -8,9 +8,13 @@ from semantic_agent import agent as semantic
 from semantic_agent import evaluation, tools
 from semantic_agent.evaluation import (
     ANSWER_CORRECT,
+    BASELINE_METRICS,
     METRIC_CHOICE,
+    SEMANTIC_METRICS,
     Question,
+    Turn,
     as_expected,
+    asks_or_gives_each,
     carries,
     eval_cases,
     load_questions,
@@ -28,6 +32,36 @@ def test_the_question_set_is_about_fifty_with_some_no_metric_covers():
     assert any(not q.metrics for q in questions)
     known = set(tools.catalog().metrics)
     assert all(set(q.metrics) <= known for q in questions)
+
+
+def test_the_set_has_follow_ups_definitions_and_ambiguous_terms():
+    questions = load_questions()
+    conversations = [q for q in questions if len(q.turns) > 1]
+    assert len(conversations) >= 4
+    assert sum(1 for q in questions for t in q.turns if t.define) >= 1
+    ambiguous = [t for q in questions for t in q.turns if t.ambiguous]
+    assert len(ambiguous) >= 2
+    # An ambiguous turn's meanings are one glossary term's metrics, the data the agent reads.
+    terms = [set(term["metrics"]) for term in tools.catalog().glossary]
+    assert all(any(set(t.ambiguous) == metrics for metrics in terms) for t in ambiguous)
+
+
+def test_a_case_is_one_question_or_a_conversation_of_turns():
+    single = Question.from_yaml(
+        {"id": "a", "question": "Q?", "expected_sql": "select 1", "metrics": ["revenue_eur"]}
+    )
+    assert single.turns == [Turn("Q?", "select 1", ["revenue_eur"])] and single.plain
+    talk = Question.from_yaml(
+        {
+            "id": "b",
+            "turns": [
+                {"question": "Q?", "metrics": ["orders_total"]},
+                {"question": "How?", "define": ["orders_total"]},
+            ],
+        }
+    )
+    assert [t.kind for t in talk.turns] == ["number", "define"] and not talk.plain
+    assert talk.question == "Q? → How?"
 
 
 @pytest.mark.parametrize(
@@ -78,10 +112,10 @@ def test_an_answer_carries_a_number_within_rounding():
 
 
 QUESTIONS = [
-    Question("revenue_one_day", "Revenue on 2 October 2026?", "", ["revenue_eur"]),
-    Question("amsterdam_temperature", "Temperature in Amsterdam?", "", []),
+    Question.single("revenue_one_day", "Revenue on 2 October 2026?", "", ["revenue_eur"]),
+    Question.single("amsterdam_temperature", "Temperature in Amsterdam?", "", []),
 ]
-EXPECTED = {"revenue_one_day": [868.65], "amsterdam_temperature": [11.0]}
+EXPECTED = {"revenue_one_day": [[[868.65]]], "amsterdam_temperature": [[[11.0]]]}
 
 
 class AnswersByQuestion(ScriptedLlm):
@@ -164,3 +198,97 @@ def test_a_wrong_number_or_an_answer_where_it_should_decline_fails(monkeypatch):
     )
     assert outcomes["revenue_one_day"].scores == {"answer_correct": 0.0, "metric_choice": 0.0}
     assert outcomes["amsterdam_temperature"].scores["answer_correct"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("answer", "right"),
+    [
+        ("Do you mean revenue (gross) or net revenue, after partner returns?", True),
+        ("Sales can mean two things. Which one do you mean: gross or net?", True),
+        ("Gross revenue was 981.69 EUR and net revenue 964.19 EUR on 1 October 2026.", True),
+        ("Revenue was 981.69 EUR on 1 October 2026.", False),  # a silent pick
+        ("Revenue was 981.69 EUR on 1 October 2026. Anything else I can help with?", False),
+    ],
+)
+def test_an_ambiguous_term_is_answered_by_asking_or_giving_each(answer, right):
+    assert asks_or_gives_each(answer, [as_expected(981.69), as_expected(964.19)]) is right
+
+
+TALK = [
+    Question(
+        "how_computed",
+        [
+            Turn("Net revenue on 1 October 2026?", "", ["net_revenue_eur"]),
+            Turn("How was that computed?", define=["net_revenue_eur"]),
+        ],
+    ),
+    Question(
+        "ambiguous_sales",
+        [Turn("Sales on 1 October 2026?", "", [], [], ["revenue_eur", "net_revenue_eur"])],
+    ),
+]
+TALK_EXPECTED = {"how_computed": [[[964.19]], []], "ambiguous_sales": [[[981.69], [964.19]]]}
+DEFINITION = "Revenue minus partner returns (finance's net sales)."
+
+
+class Converses(ScriptedLlm):
+    """Answers each turn of the test conversations from the latest user message."""
+
+    quote: bool = True
+
+    async def generate_content_async(self, llm_request, stream=False):
+        users = [c for c in llm_request.contents if c.role == "user" and c.parts[0].text]
+        question = users[-1].parts[0].text
+        last = llm_request.contents[-1].parts[0]
+        if question.startswith("Net revenue") and not last.function_response:
+            self.steps = [("query_metrics", {"metrics": ["net_revenue_eur"]})]
+        elif question.startswith("Net revenue"):
+            self.steps = ["Net revenue was 964.19 EUR on 1 October 2026."]
+        elif question.startswith("How"):
+            said = "Revenue minus partner returns (finance’s net sales)" if self.quote else "Sales"
+            self.steps = [f"Net revenue is defined as {said}: the SQL subtracts returns."]
+        else:
+            self.steps = [
+                "Do you mean gross revenue or net revenue?" if self.quote else "981.69 EUR."
+            ]
+        self.requests = []
+        async for response in super().generate_content_async(llm_request, stream):
+            yield response
+
+
+@pytest.mark.parametrize("quote", [True, False])
+def test_a_conversation_runs_in_one_session_and_scores_each_turn(monkeypatch, quote):
+    monkeypatch.setattr(
+        tools, "run", lambda query, catalog: {"rows": [{"net_revenue_eur": 964.19}]}
+    )
+    described = {"net_revenue_eur": DEFINITION}
+    cases = eval_cases(TALK, TALK_EXPECTED, "semantic_agent", semantic=True, described=described)
+    outcomes = asyncio.run(
+        evaluation.evaluate(semantic.build_agent(Converses(quote=quote)), cases, SEMANTIC_METRICS)
+    )
+    talk, sales = outcomes["how_computed"], outcomes["ambiguous_sales"]
+    score = 1.0 if quote else 0.0
+    # The follow-up's turn asks for no number, so only the first turn counts for the answer.
+    assert talk.scores["answer_correct"] == 1.0
+    assert talk.scores["metric_choice"] == 1.0
+    assert talk.scores["definition_quoted"] == score
+    assert talk.scores["term_disambiguated"] is None
+    assert "964.19" in talk.answer and " → " in talk.answer
+    assert sales.scores["term_disambiguated"] == score
+    assert sales.scores["answer_correct"] is None and sales.scores["definition_quoted"] is None
+    text = evaluation.report(TALK, TALK_EXPECTED, outcomes, {}, "scripted")
+    assert (
+        f"| Follow-ups, definitions and ambiguous terms (2) | {2 if quote else 0} right |" in text
+    )
+    assert "| `ambiguous_sales` Sales on 1 October 2026? | 981.69 / 964.19 |" in text
+    assert (
+        "| `how_computed` Net revenue on 1 October 2026? → How was that computed? | 964.19 → – |"
+        in text
+    )
+
+
+def test_the_baseline_is_scored_on_definitions_and_ambiguous_terms_too():
+    baseline = {m.metric_name for m in BASELINE_METRICS}
+    assert baseline == {"answer_correct", "definition_quoted", "term_disambiguated"}
+    names = {m.metric_name for m in SEMANTIC_METRICS}
+    assert names == set(evaluation.EVAL_CONFIG.criteria)
