@@ -43,10 +43,22 @@ apis:
   # Secret Manager: 6 active secret versions, 10,000 access operations and 3 rotation notifications a month
   # per billing account (the agent's model key, one version).
   secretmanager.googleapis.com: {enable: true, source: https://cloud.google.com/secret-manager/pricing, issue: 209}
+  # The one dated exception: Conversational Analytics tokens are in a free trial "through December 31, 2026",
+  # then $3 and $20 per million input and output tokens, with no spend cap; the page prices tokens only, none
+  # for creating or storing an agent. The data agent (#207, platform/gcp/data-agent/) is the only user; turning
+  # the API on enables no other API (it has no Service Usage dependency group, read 2026-11-02). `until` is a day early, the date #232 switches it off by:
+  # `make gcp-validate` fails while it is still enabled from 2026-12-31 (UTC) on.
+  geminidataanalytics.googleapis.com: {enable: true, source: https://cloud.google.com/products/data-agents/pricing, issue: 207, until: 2026-12-30}
+  # What a data agent needs besides (#207). Every Conversational Analytics chat, a stored agent's or an inline
+  # context's, answers 403 until Dataplex is on (measured 2026-11-02), though Google's setup page calls it optional;
+  # it reads BigQuery's technical metadata, stored free, and its API calls and search are free. Its billed parts
+  # are left off: discovery scans (standard processing, 100 DCU-hours free), and lineage, quality and profiling
+  # (premium; lineage needs datalineage.googleapis.com, on the paid list). cloudaicompanion is on Google's
+  # required list; it bills only Gemini Code Assist licences, which the lab buys none of. Both until #232.
+  dataplex.googleapis.com: {enable: true, source: https://cloud.google.com/dataplex/pricing, issue: 207, until: 2026-12-30}
+  cloudaicompanion.googleapis.com: {enable: true, source: https://cloud.google.com/gemini/pricing, issue: 207, until: 2026-12-30}
   # Later issues on Map #212, off until their PR turns them on.
   modelarmor.googleapis.com: {enable: false, source: https://cloud.google.com/security-command-center/pricing, issue: 229}
-  # A dated exception: free until 2026-12-31, switched off by #232.
-  geminidataanalytics.googleapis.com: {enable: false, source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview, issue: 207, until: 2026-12-31}
 
 # Resource type => the API it needs; or {api, source, until} for a type free only until a date, which
 # `make gcp-validate` refuses to see declared after it.
@@ -148,6 +160,62 @@ paid:
   - aiplatform.googleapis.com
   - bigqueryreservation.googleapis.com
   - cloudfunctions.googleapis.com
+  # Automatic lineage from BigQuery jobs is Dataplex premium processing, billed per DCU-hour, no free tier.
+  - datalineage.googleapis.com
   # Artifact Analysis: enabling either turns on vulnerability scanning, billed per image scanned.
   - containerscanning.googleapis.com
   - ondemandscanning.googleapis.com
+
+# `make gcp-usage-check` (#313, usage_check.py): this month's usage of each free tier from sources minutes behind,
+# so a live step shows at once that it stayed free; the billing export lags hours to days and stays the proof after
+# the fact. Each entry:
+#   free: the free amount in `unit`; 0 for a SKU with no free tier, so any use fails; null for no tier to measure
+#     against (its `metric` is shown for information, or its `note` says why it is not measured);
+#   window: month (since the 1st at 00:00 Pacific time, Cloud Billing's month), day (since 00:00 Pacific today: the
+#     daily free quotas) or now (a size held now, against a free GiB-month: what the month costs at that size);
+#   metric: a Cloud Monitoring metric, or a list summed; a DELTA metric is summed over the window, a GAUGE (window
+#     now) is each series' newest point in the last 7 days, summed; `resource` keeps one monitored resource type;
+#   read: instead of a metric, a REST read (artifact_registry_bytes, scheduler_jobs, secret_versions);
+#   share: the entry's own limit in percent, for a tier the lab fills by design, instead of `USAGE_SHARE` (50);
+#   source: the page that states the free tier.
+# Monitoring's read API bills time series returned past the first million a month per billing account; each metric
+# here is aggregated server-side into one or two series, so a run returns about 30, counted by its own entry.
+usage:
+  - {name: BigQuery queries, api: bigquery.googleapis.com, free: 1099511627776, unit: bytes, window: month, metric: bigquery.googleapis.com/query/statement_scanned_bytes_billed, source: https://cloud.google.com/bigquery/pricing#free-usage-tier}
+  - {name: BigQuery storage, api: bigquery.googleapis.com, free: 10737418240, unit: bytes, window: now, metric: bigquery.googleapis.com/storage/stored_bytes, source: https://cloud.google.com/bigquery/pricing#free-usage-tier}
+  - {name: BigQuery streaming inserts, api: bigquery.googleapis.com, free: 0, unit: bytes, window: month, metric: bigquery.googleapis.com/storage/insertall_inserted_bytes, source: https://cloud.google.com/bigquery/pricing#data-ingestion-pricing}
+  # Request-billed services and instance-billed Jobs have separate free tiers (the `run.googleapis.com` entry above).
+  - {name: Cloud Run services vCPU, api: run.googleapis.com, free: 180000, unit: vCPU-seconds, window: month, metric: run.googleapis.com/container/cpu/allocation_time, resource: cloud_run_revision, source: https://cloud.google.com/run/pricing}
+  - {name: Cloud Run services memory, api: run.googleapis.com, free: 360000, unit: GiB-seconds, window: month, metric: run.googleapis.com/container/memory/allocation_time, resource: cloud_run_revision, source: https://cloud.google.com/run/pricing}
+  - {name: Cloud Run services requests, api: run.googleapis.com, free: 2000000, unit: requests, window: month, metric: run.googleapis.com/request_count, resource: cloud_run_revision, source: https://cloud.google.com/run/pricing}
+  - {name: Cloud Run Jobs vCPU, api: run.googleapis.com, free: 240000, unit: vCPU-seconds, window: month, metric: run.googleapis.com/container/cpu/allocation_time, resource: cloud_run_job, source: https://cloud.google.com/run/pricing}
+  - {name: Cloud Run Jobs memory, api: run.googleapis.com, free: 450000, unit: GiB-seconds, window: month, metric: run.googleapis.com/container/memory/allocation_time, resource: cloud_run_job, source: https://cloud.google.com/run/pricing}
+  # Two readings of the registry, which disagreed tenfold on 2026-11-02 (#313): the repositories' sizeBytes, which
+  # gates, and Monitoring's repository/size gauge, which only warns: its 11 points this month all fall in one
+  # 16-minute push (16:11-16:27Z), swinging between 1 MiB and 3.9 GiB, so its newest point is an upload's peak, not
+  # the GiB-months storage bills; the billing export's Artifact Registry SKU settles which one bills (#313).
+  # Two versions per image hold the registry near 0.45 GiB by design (#230).
+  - {name: Artifact Registry storage, api: artifactregistry.googleapis.com, free: 536870912, unit: bytes, window: now, read: artifact_registry_bytes, share: 100, source: https://cloud.google.com/artifact-registry/pricing}
+  - {name: Artifact Registry storage (metric), api: artifactregistry.googleapis.com, free: 536870912, unit: bytes, window: now, metric: artifactregistry.googleapis.com/repository/size, share: 100, warn: "a push's peak, not what bills, until the export shows (#313)", source: https://cloud.google.com/artifact-registry/pricing}
+  # 5 GB-months of Standard storage in us-central1, us-east1 and us-west1, read as 10^9 bytes (the stricter reading).
+  - {name: Cloud Storage, api: storage.googleapis.com, free: 5000000000, unit: bytes, window: now, metric: storage.googleapis.com/storage/v2/total_bytes, source: https://cloud.google.com/storage/pricing#cloud-storage-always-free}
+  # Firestore's free quota is daily, reset around midnight Pacific time, for the one free database.
+  - {name: Firestore reads, api: firestore.googleapis.com, free: 50000, unit: documents, window: day, metric: firestore.googleapis.com/document/read_count, source: https://cloud.google.com/firestore/pricing}
+  - {name: Firestore writes, api: firestore.googleapis.com, free: 20000, unit: documents, window: day, metric: firestore.googleapis.com/document/write_count, source: https://cloud.google.com/firestore/pricing}
+  - {name: Firestore deletes, api: firestore.googleapis.com, free: 20000, unit: documents, window: day, metric: firestore.googleapis.com/document/delete_count, source: https://cloud.google.com/firestore/pricing}
+  - {name: Firestore storage, api: firestore.googleapis.com, free: 1073741824, unit: bytes, window: now, metric: firestore.googleapis.com/storage/data_and_index_storage_bytes, source: https://cloud.google.com/firestore/pricing}
+  # Message Delivery Basic throughput: published and delivered bytes, as Pub/Sub's quota metrics count them.
+  - {name: Pub/Sub throughput, api: pubsub.googleapis.com, free: 10737418240, unit: bytes, window: month, metric: [pubsub.googleapis.com/topic/byte_cost, pubsub.googleapis.com/subscription/byte_cost], source: https://cloud.google.com/pubsub/pricing}
+  - {name: Workflows internal steps, api: workflows.googleapis.com, free: 5000, unit: steps, window: month, metric: workflows.googleapis.com/internal_step_count, source: https://cloud.google.com/workflows/pricing}
+  - {name: Workflows external steps, api: workflows.googleapis.com, free: 2000, unit: steps, window: month, metric: workflows.googleapis.com/external_step_count, source: https://cloud.google.com/workflows/pricing}
+  # The lab plans all three free jobs (`caps.cloud_scheduler_jobs`): only a fourth fails.
+  - {name: Cloud Scheduler jobs, api: cloudscheduler.googleapis.com, free: 3, unit: jobs, window: now, read: scheduler_jobs, share: 100, source: https://cloud.google.com/scheduler/pricing}
+  - {name: Secret Manager versions, api: secretmanager.googleapis.com, free: 6, unit: versions, window: now, read: secret_versions, source: https://cloud.google.com/secret-manager/pricing}
+  - {name: Secret Manager accesses, api: secretmanager.googleapis.com, free: null, unit: operations, window: month, note: "no Monitoring metric; 10,000 a month are free", source: https://cloud.google.com/secret-manager/pricing}
+  - {name: Cloud Logging ingestion, api: logging.googleapis.com, free: 53687091200, unit: bytes, window: month, metric: logging.googleapis.com/billing/bytes_ingested, source: https://cloud.google.com/stackdriver/pricing#logging-pricing-summary}
+  - {name: Monitoring chargeable metrics, api: monitoring.googleapis.com, free: 157286400, unit: bytes, window: month, metric: monitoring.googleapis.com/billing/bytes_ingested, source: https://cloud.google.com/stackdriver/pricing#monitoring-pricing-summary}
+  - {name: Monitoring read API, api: monitoring.googleapis.com, free: 1000000, unit: time series, window: month, metric: monitoring.googleapis.com/billing/time_series_billed_for_queries_count, source: https://cloud.google.com/stackdriver/pricing#monitoring-pricing-summary}
+  - {name: Eventarc events, api: eventarc.googleapis.com, free: null, unit: events, window: month, note: "Pub/Sub-sourced events bill $0: no tier to count", source: https://cloud.google.com/eventarc/pricing}
+  - {name: Data agents tokens, api: geminidataanalytics.googleapis.com, free: null, unit: tokens, window: month, metric: [geminidataanalytics.googleapis.com/chat/input_token_count, geminidataanalytics.googleapis.com/chat/output_token_count], note: "free trial until 2026-12-31 (the API's until)", source: https://cloud.google.com/gemini/docs/conversational-analytics-api/overview}
+  - {name: Knowledge Catalog, api: dataplex.googleapis.com, free: null, unit: DCU-hours, window: month, note: "API calls, search and BigQuery's technical metadata bill $0; scans and lineage, the billed parts, are not used", source: https://cloud.google.com/dataplex/pricing}
+  - {name: Gemini for Google Cloud, api: cloudaicompanion.googleapis.com, free: null, unit: licences, window: month, note: "bills only Gemini Code Assist licences, none bought", source: https://cloud.google.com/gemini/pricing}

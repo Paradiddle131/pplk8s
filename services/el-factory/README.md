@@ -20,6 +20,8 @@ Airflow sees only HTTP; it never touches the source, the bucket, or the warehous
 - `POST /retire` with the JSON body `{source, entity, keep: ["YYYY-MM", ...]}` retires every held month not in `keep`: it deletes the month's landed rows (every version) and its `ops.file_chunks` and `ops.file_versions` rows, so a later load of that month starts over (issue #87).
   The response is `{"status":"ok","source","entity","kept","retired":[{"month","rows"}],"rows"}`; an empty or malformed `keep` is 400, because retiring everything is never what a caller means.
   The caller owns the policy and EL Factory only deletes; on BigQuery the same retirement is the month partition's expiration.
+- `/publication`, `/months`, `/retire` and `/extract` of source `tlc` are the file sources' (`el_factory/tlc`, a Flask blueprint), served only where the warehouse keeps their ledger (`FileLedger`, Postgres only) and the build carries `el_factory/tlc` with pyarrow (the `files` extra; semantic/PLAN.md SL-19).
+  Elsewhere they are 404, and `/catalog` leaves out their entries and the `tlc` pipeline.
 - `POST /load` with the JSON body `{entity, bucket, object, generation, run_id}` loads one landed NDJSON file into `ds_source.<entity>`.
   `generation` is the GCS object generation as a decimal string or integer; EL Factory reads exactly that generation.
   The response is `{"status":"ok","entity","object","generation","rows"}`, with `object` as a `gs://` URI and `generation` as a string.
@@ -78,7 +80,10 @@ The interval must be exactly one calendar month; the file is `<TLC_BASE_URL>/<en
 | `WAREHOUSE_DSN` | required on Postgres | Postgres DSN, for example `postgresql://warehouse:warehouse@warehouse:5432/warehouse` |
 | `STORAGE_EMULATOR_HOST` | unset | When set, the GCS client uses anonymous credentials against this host, for example `http://gcs:4443` |
 | `GCS_BUCKET` | `staging` | Bucket for staged pages |
-| `GCP_PROJECT` | `pplk8s` | GCP project passed to the storage client |
+| `GCP_PROJECT` | `pplk8s`; required on BigQuery | GCP project of the storage client and of the BigQuery warehouse |
+| `BQ_API_ENDPOINT` | unset | On BigQuery: the BigQuery emulator's endpoint (no credentials), for example `http://localhost:9050` |
+| `GCP_ACCESS_TOKEN` | unset | On BigQuery: an access token where a proxy injects the real one (cloud sessions); unset, application default credentials |
+| `BQ_MAXIMUM_BYTES_BILLED` | `1073741824` | On BigQuery: the bytes one query job may bill (free-path.yaml's `caps.bigquery_maximum_bytes_billed`) |
 | `PAGE_SIZE` | `100` | Rows per page for the synthetic sources |
 | `FAIL_RATE` | `0` | Probability in `[0, 1]` that `/extract` returns a retryable 503 before doing any work |
 | `MAX_RUN_TIME` | `45` | Seconds one `/extract` request keeps loading pages before it answers `next_url`; `0` gives one page per request. Keep it at most half the caller's read timeout (120 s in `ElFactoryHook`) |
@@ -101,9 +106,17 @@ All synthetic output is deterministic and all data is synthetic or public; TLC d
 ## Warehouse contract
 
 The app reaches the warehouse only through the `Warehouse` protocol in `el_factory/warehouse.py` (semantic/PLAN.md SL-19): `ELF_WAREHOUSE` picks the implementation, and only its module, with its driver, is imported, so an image built for one warehouse carries no other's driver.
-`postgres` (`warehouse_postgres.py`, the `postgres` extra) is the only one so far; BigQuery comes with [#227](../../../../issues/227).
+`postgres` (`warehouse_postgres.py`, the `postgres` extra) is the lab's Compose warehouse; `bigquery` (`warehouse_bigquery.py`, the `bigquery` extra) is the lab project's ([#227](../../../../issues/227)).
+The file sources need more than a `Warehouse`: the `FileLedger` protocol in the same module (chunked landing tables, the chunk and version ledgers, retirement), which only `warehouse_postgres.py` implements.
 Every driver error leaves the implementation as a `WarehouseError` whose `transient` flag decides the answer: a dropped or refused connection is a retryable 503, anything else a 500.
-The contract below is Postgres's.
+The contract below is Postgres's; BigQuery's differs only as follows.
+
+- `ds_source` is a dataset the infrastructure creates; each table is created from the same columns, typed for BigQuery (`text` as `STRING`, `integer` as `INT64`, `numeric(p,s)` as `NUMERIC`, `timestamptz` as `TIMESTAMP`), with the same metadata columns, `REQUIRED` where Postgres has `NOT NULL`, and no index.
+- Rows go in by a load job (free), never by a streaming insert, which has no free tier: a page's or file's rows, with their metadata columns, are uploaded as NDJSON into a staging table of their own (`elf_staging_<table>_<id>`, expiring after an hour, dropped after the load).
+- One multi-statement transaction then deletes the load's scope and copies the staged rows in, stamping `_loaded_at`, so reloads replace rather than add, as on Postgres, and two concurrent loads of one scope cannot interleave: BigQuery aborts one ("concurrent update"), a retryable 503.
+  Its DML bills a few tens of MB from the free 1 TiB of queries a month; every query job is capped at `BQ_MAXIMUM_BYTES_BILLED`, and every job is labelled `component=el-factory` with its purpose, table and run.
+- The file sources are not served: BigQuery keeps no `FileLedger`.
+- The BigQuery emulator (Compose profile `bigquery`) runs it, except that on some runs a later page's copy finds no staged row there, as if the emulator bound the script's parameters wrong (the same statement alone works); `tests/test_warehouse_bigquery_emulator.py` marks that case, and skips without the emulator unless `PPLK8S_REQUIRE_BIGQUERY=1`.
 
 The tables live in schema `ds_source` and are created with `CREATE TABLE IF NOT EXISTS` for every registered entity at startup (best effort) and again before each extract or load, so dbt sources resolve even before an entity's first extract.
 Each extract or load ensures all of them, not only its own: a pipeline's dbt build can read a table another pipeline lands (the weather models are tagged `sales`, PLAN.md D20), and a warehouse reset under a running service (`make services-reset`) would otherwise stay without the tables no request names (#172).
@@ -150,5 +163,8 @@ docker run --rm "$(make -s print-ELF_IMAGE)" id -u   # prints 10001
 ```
 
 The image is multi-stage, runs as uid 10001, exposes 8080, and has a `/healthz` health check.
-Its build argument `WAREHOUSE` (default `postgres`) names the `pyproject.toml` extra it installs and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
+Its build argument `WAREHOUSE` (default `postgres`) names the Dockerfile stage it is built from and sets the image's `ELF_WAREHOUSE`, so the image carries that warehouse's driver only (SL-19).
+The `postgres` stage installs the `postgres` and `files` extras and carries the whole package, the file sources included.
+The `bigquery` stage (`--build-arg WAREHOUSE=bigquery`, the GCP build, #227) installs `requirements-bigquery.txt`, the `bigquery` extra exported from `uv.lock` (`uv export --frozen --no-default-groups --extra bigquery --no-emit-project -o requirements-bigquery.txt`), and copies the package without `warehouse_postgres.py` and `el_factory/tlc`; its build fails on a Postgres driver, pyarrow or a TLC path, and `make gcp-validate` (`platform/gcp/check_gcp_builds.py`) fails on the same and on a stale export.
+Measured on 2026-11-02 (content size, compressed): 107 MB for the `postgres` build, as before the split, and 66 MB for the `bigquery` one.
 It runs gunicorn with two workers and the control socket disabled, because that socket is an admin feature the container does not need.

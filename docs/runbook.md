@@ -739,7 +739,7 @@ Which month and chunk: EL Factory's access log on the restarted container (`$K l
 A 422 `chunk N is ... bytes compressed, over the 67108864-byte limit` is the chunk cap, not an OOMKill: that file cannot be loaded by chunks, and retrying cannot help.
 
 Recovery: nothing to undo; the kubelet restarts the container and the task's retry resumes after the last loaded chunk (D34).
-If the near-limit alert keeps firing, measure with `make el-factory-memory-drill` before changing anything: lower `CSV_BATCH_ROWS` or `MAX_CHUNK_BYTES` in `services/el-factory/src/el_factory/chunks.py` first, and raise the 1Gi limit only with a matching change to D35.
+If the near-limit alert keeps firing, measure with `make el-factory-memory-drill` before changing anything: lower `CSV_BATCH_ROWS` or `MAX_CHUNK_BYTES` in `services/el-factory/src/el_factory/tlc/chunks.py` first, and raise the 1Gi limit only with a matching change to D35.
 
 ### 2. Lose EL Factory in the middle of a file
 

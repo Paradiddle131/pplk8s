@@ -43,20 +43,31 @@ def products(metrics: list[str], catalog: Catalog) -> list[str]:
     return sorted(found)
 
 
+def tables_named(response: dict[str, Any]) -> list[str]:
+    """The tables a data call's generated SQL reads (a data agent's answer names no metrics)."""
+    return audit.tables_read(audit.generated_sql(response))
+
+
 def freshness_of(
-    tool: str, metrics: list[str], catalog: Catalog, caller: audit.Caller | None = None
+    tool: str,
+    metrics: list[str],
+    catalog: Catalog,
+    caller: audit.Caller | None = None,
+    tables: list[str] | None = None,
 ) -> dict[str, Any]:
-    """The freshness of the metrics a call answered with, or why there is none; the ledger read
-    names the `caller` where the warehouse records who asked (BigQuery's job labels)."""
-    if not metrics:
+    """The freshness of the metrics a call answered with, else of the semantic models' tables its
+    SQL read, or why there is none; the ledger read names the `caller` where the warehouse records
+    who asked (BigQuery's job labels)."""
+    found = products(metrics, catalog) if metrics else catalog.readiness_of_tables(tables or [])
+    if not metrics and not found:
         return {
             "products": [],
             "late": None,
-            "statement": f"Freshness unknown: the {tool} result names no metrics, so their "
-            "readiness cannot be looked up.",
+            "statement": f"Freshness unknown: the {tool} result names no metrics and reads no "
+            "semantic model's table, so their readiness cannot be looked up.",
         }
     return ledger.freshness(
-        products(metrics, catalog),
+        found,
         agent=caller.agent if caller else None,
         session_id=caller.session_id if caller else None,
     )
@@ -73,9 +84,11 @@ def guarded(
     freshness of the metrics an answered call named, once its audit row is written; or the error
     that withholds the result when the row cannot be written."""
     response = response if isinstance(response, dict) else {"result": response}
-    if catalog is not None and "error" not in response and "freshness" not in response:
+    if catalog is not None and not audit.error_of(response) and "freshness" not in response:
         metrics = metrics_named(args, response)
-        response = {**response, "freshness": freshness_of(tool, metrics, catalog(), caller)}
+        tables = [] if metrics else tables_named(response)
+        freshness = freshness_of(tool, metrics, catalog(), caller, tables)
+        response = {**response, "freshness": freshness}
     withheld = audit.audit(tool, args, caller, response)
     return withheld if withheld is not None else response
 

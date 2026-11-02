@@ -15,9 +15,9 @@ freshness says it is unknown.
 from __future__ import annotations
 
 import datetime
-import importlib
-import os
 from typing import Any, Protocol
+
+from semantic_agent.seam import choose
 
 # The implementation of each AGENT_WAREHOUSE value, imported only when chosen.
 IMPLEMENTATIONS = {
@@ -57,15 +57,7 @@ def reason(error: BaseException) -> str:
 
 def warehouse() -> Warehouse:
     """The warehouse AGENT_WAREHOUSE names (default `postgres`), its module imported when chosen."""
-    name = os.environ.get("AGENT_WAREHOUSE", "postgres")
-    if name not in IMPLEMENTATIONS:
-        raise WarehouseError(
-            f"AGENT_WAREHOUSE={name!r} is not one of {', '.join(sorted(IMPLEMENTATIONS))}"
-        )
-    try:
-        module = importlib.import_module(IMPLEMENTATIONS[name])
-    except ImportError as e:
-        raise WarehouseError(
-            f"the {name} warehouse needs the {EXTRAS[name]!r} extra of semantic-agent ({e})"
-        ) from e
+    module = choose(
+        "AGENT_WAREHOUSE", IMPLEMENTATIONS, default="postgres", extras=EXTRAS, error=WarehouseError
+    )
     return module.warehouse()

@@ -1,0 +1,6 @@
+## 2026-11-02 — Semantic track — the data agent behind the toolset seam, and its eval arm (#207, offline part)
+
+- Done: `AGENT_TOOLSET` picks the agent's toolset (`toolset.py`): `metricflow` (the default, the three metric tools and their instruction, moved from `agent.py`) or `data_agent` (ADK's `DataAgentToolset` on the lab project's data agent, `get_data_agent_info` as its catalog tool, `ask_data_agent` its data tool); both seams (`AGENT_WAREHOUSE` too) select through one helper, `seam.py`'s `choose` (#307's third candidate); the catalog lists each semantic model's table with its readiness products, so a data agent's answer, which names tables in its generated SQL rather than metrics, gets its freshness from them; the audit row holds the generated SQL and the retrieved rows; `make agent-eval ARM=data_agent` scores the arm into `docs/research/data-agent-eval.md`, refusing without `GCP_PROJECT`, the cost check before and after.
+- Evidence: see the PR for the agent's tests, `make catalog` on the fixture and `make check`.
+- Decisions: SL-19 records the one selector for env-chosen seams.
+- Open: the live run (the data agent published on the lab project, the arm scored, the three Unverified lines answered) waits for the owner's API, roles and a provable $0.00, before 2026-12-31 (#207, #232).
