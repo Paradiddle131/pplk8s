@@ -21,7 +21,7 @@ DB=agent_columns
 OUT=${TMPDIR:-/tmp}/pplk8s-agent-columns
 fail() { echo "FAIL: $*" >&2; exit 1; }
 compose() { docker compose -f "$REPO/platform/compose/compose.yaml" "$@"; }
-psql_db() { compose exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"; }
+psql_db() { compose exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt; }
 # A query as a lab role, logged in with its password over TCP, as the agents connect.
 as_role() {
   compose exec -T -e PGPASSWORD="$1" warehouse \
