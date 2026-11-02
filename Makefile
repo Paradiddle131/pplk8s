@@ -82,7 +82,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check bigquery-live-load migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent
+.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check bigquery-live-load migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent gcp-usage-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -453,6 +453,13 @@ gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the seman
 
 gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
 	platform/gcp/cost-check.sh
+
+# The immediate gate of a live step (#313): each free tier's use this month from Cloud Monitoring and REST reads,
+# minutes behind, where the billing export lags hours to days; the export stays the proof after the fact.
+USAGE_SHARE ?= 50
+gcp-usage-check: ## Live, read-only: this month's usage of each free-path service against its free tier, minutes behind; exit 1 past USAGE_SHARE percent (default 50) of one, 3 when a source is unreadable (GCP_PROJECT; #313)
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the gcp- targets act on the lab project and need its id (platform/gcp/README.md)}"
+	uv run --no-project --quiet --with pyyaml==6.0.2 python platform/gcp/usage_check.py --share $(USAGE_SHARE)
 
 # The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
 # (gcp-images opens with the cost check), the apply that names them, the ops tables (`dbt run-operation
