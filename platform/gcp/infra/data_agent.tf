@@ -34,3 +34,9 @@ resource "google_bigquery_dataset_iam_member" "agent_logs_writer" {
   role       = "roles/bigquery.dataEditor"
   member     = "serviceAccount:service-${data.google_project.lab.number}@gcp-sa-geminidataanalytics.iam.gserviceaccount.com"
 }
+
+import {
+  for_each = local.data_agent_on && contains(var.existing_datasets, "agent_logs") ? toset(["agent_logs"]) : toset([])
+  to       = google_bigquery_dataset.agent_logs[0]
+  id       = "projects/${var.project}/datasets/agent_logs"
+}
