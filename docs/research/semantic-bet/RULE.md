@@ -93,3 +93,6 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Scope caveats ("cannot split", "cannot filter", "covers all", "not broken down by") join the judge's `HEDGE_LIKE` candidates: a figure for a wider scope than asked, said to be so, goes to the judge, which decides whether it is hedged.
   Every log is scored on read under the current wordings, the live arms' included, without rewriting a line (`bet_eval.recode`); the local log is rescored (`--rescore`).
 - 2026-11-03 ([#368](../../../../../issues/368)): the code reads typographic apostrophes (’ and ‘) as `'` before it matches a decline, a listed hedge or a hedge-like phrase (`bet_rule.fold`), so "can’t" reads as "can't"; every log is scored on read again, and no turn moved.
+- 2026-11-03 ([#356](../../../../../issues/356), before the hard set is first scored): both sets decide.
+  The frozen set and the hard set each go through § The rule on their own; the verdict holds where the two agree, and where they disagree the report says so and names the groups that drive it.
+  The owner's answer, 2026-11-03, in a session: "#356: which question set does the verdict rest on? we can go both as you recommended".
