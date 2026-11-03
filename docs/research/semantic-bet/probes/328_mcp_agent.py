@@ -38,15 +38,31 @@ PROJECT = os.environ.get("GCP_PROJECT", "pplk8s-lab-001")
 BIGQUERY_MCP = os.environ.get("BET_BIGQUERY_MCP", "https://bigquery.googleapis.com/mcp")
 CATALOG_MCP = os.environ.get("BET_CATALOG_MCP", "https://dataplex.googleapis.com/mcp")
 MAX_BYTES = int(os.environ.get("BET_MAX_BYTES", str(10 * 1024 * 1024)))
-# The read-only tools Google's docs list (2026-11-03); execute_sql, which runs DML and DDL, is left out.
+# execute_query's own cap is on bytes billed, which BigQuery rounds up to 10 MB per table read.
+MAX_BILLED = int(os.environ.get("BET_MAX_BILLED", str(100 * 1024 * 1024)))
+# Every read-only tool the two servers list (tools/list, 2026-11-03: 9 on BigQuery's, 17 on Knowledge
+# Catalog's); left out: execute_sql (DML and DDL), cancel_job, and the catalog's writes (create, update,
+# upsert, delete, set_entry_group_iam_policy). execute_query runs a BigQuery job, capped by the guard.
 BIGQUERY_TOOLS = [
     "list_dataset_ids",
     "list_table_ids",
     "get_dataset_info",
     "get_table_info",
     "execute_sql_readonly",
+    "get_job",
+    "get_query_results",
 ]
-CATALOG_TOOLS = ["search_entries", "lookup_context", "lookup_entry"]
+CATALOG_TOOLS = [
+    "search_entries",
+    "lookup_context",
+    "lookup_entry",
+    "lookup_entry_links",
+    "list_entries",
+    "get_glossary",
+    "get_operation",
+    "compile_query",
+    "execute_query",
+]
 
 INSTRUCTION = f"""\
 You answer business questions about the data in BigQuery project {PROJECT}.
@@ -78,7 +94,15 @@ def _payload(result: Any) -> dict[str, Any]:
 async def cost_guard(
     tool: BaseTool, args: dict[str, Any], tool_context: Any
 ) -> dict[str, Any] | None:
-    """Pins every query to the lab project and lets it run only if a dry run passes under the cap."""
+    """Pins every query to the lab project and lets it run only if a dry run passes under the cap;
+    `execute_query`, which takes the cap itself, gets it set."""
+    if tool.name == "execute_query":
+        args["projectId"] = PROJECT
+        bigquery = (
+            args.get("bigquery") if isinstance(args.get("bigquery"), dict) else {}
+        )
+        args["bigquery"] = {**bigquery, "maximumBilledBytes": str(MAX_BILLED)}
+        return None
     if tool.name != "execute_sql_readonly":
         return None
     args["projectId"] = PROJECT
