@@ -1,6 +1,7 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-03T04:07Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-03T10:58Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Arms are compared on one model, paired on the cases every arm reached.
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 Unclear turns (no number parses and no decline) await the blind judge and count as wrong here.
 
@@ -23,4 +24,4 @@ Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (
 - Accuracy: +0.277 [+0.128, +0.426]: a difference.
 - Confident-wrong: -0.128 [-0.234, -0.043]: a difference.
 
-Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored (#333).
+Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.

@@ -65,11 +65,24 @@ from semantic_agent.evaluation import (
 RESEARCH = evaluation.ROOT.parents[1] / "docs" / "research" / "semantic-bet"
 LOG = RESEARCH / "eval-local.jsonl"
 REPORT = RESEARCH / "eval-local.md"
+# Every arm's scores side by side, from eval-local.jsonl and each live arm's eval-<arm>.jsonl.
+ALL_REPORT = RESEARCH / "eval.md"
 RUNS = 3
 # A run that errors (not a spent quota) is asked again once on a later pass; twice is scored wrong.
 MAX_ERRORS = 2
 # The two local arms, in the order a run asks them: the pair compared is baseline → metricflow.
 ARMS = ("baseline", "custom-metricflow")
+# RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
+RUNG = {
+    "native-context": 1,
+    "native-kc": 1,
+    "native-governed": 2,
+    "native-shaped": 2,
+    "native-graph": 2,
+    "native-mcp": 3,
+    "custom-toolbox": 3,
+    "custom-metricflow": 4,
+}
 
 
 @dataclass(frozen=True)
@@ -173,6 +186,54 @@ def read_log(path: Path = LOG) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
+def read_logs(directory: Path = RESEARCH) -> list[dict[str, Any]]:
+    """Every arm's runs: the local arms' log, then each `eval-<arm>.jsonl` beside it, whose rows
+    take the arm from the file name when they do not name one."""
+    entries = read_log(directory / LOG.name)
+    for path in sorted(directory.glob("eval-*.jsonl")):
+        if path.name == LOG.name:
+            continue
+        arm = path.stem.removeprefix("eval-")
+        entries += [{"arm": arm, **e} for e in read_log(path)]
+    return entries
+
+
+def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
+    """The arms logged on this model: the local pair first, then in the order they appear."""
+    seen = list(dict.fromkeys(e["arm"] for e in entries if e["model"] == model))
+    return [a for a in ARMS if a in seen] + [a for a in seen if a not in ARMS]
+
+
+def managed_comparison(scores: Mapping[str, ArmScore]) -> list[str]:
+    """RULE.md § The rule, 1 and 2: the managed best, and whether each arm of ours beats it."""
+    managed = [a for a in scores if RUNG.get(a, 9) <= 2]
+    if not managed:
+        return []
+    best = max(managed, key=lambda a: (scores[a].accuracy, -RUNG[a]))
+    lines = [
+        "",
+        f"The managed best (RULE.md § The rule, 1): `{best}`, "
+        f"accuracy {pct(scores[best].accuracy)}.",
+        "Paired by case against it, percentile bootstrap 95% (10,000 resamples, seed 325):",
+        "",
+    ]
+    for arm in [a for a in scores if RUNG.get(a, 9) in (3, 4)]:
+        acc = paired_interval(scores[best].right, scores[arm].right)
+        wrong = paired_interval(scores[best].wrong_confidently, scores[arm].wrong_confidently)
+        worth = (acc.differs and acc.mean > 0) or (
+            not acc.differs and wrong.differs and wrong.mean < 0
+        )
+        verdict = (
+            "worth building (RULE.md § The rule, 2)." if worth else "not worth building on this."
+        )
+        lines.append(
+            f"- `{arm}` (rung {RUNG[arm]}): accuracy {acc.mean:+.3f} [{acc.low:+.3f}, "
+            f"{acc.high:+.3f}], confident-wrong {wrong.mean:+.3f} [{wrong.low:+.3f}, "
+            f"{wrong.high:+.3f}]: " + verdict
+        )
+    return lines
+
+
 def append_log(entry: dict[str, Any], path: Path = LOG) -> None:
     with path.open("a") as out:
         out.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -272,7 +333,7 @@ def score_log(bet: BetSet, entries: Sequence[dict[str, Any]], model: str, runs: 
     every arm reached (partial, described as such)."""
     done = finished(entries, model)
     ids = [q.id for q in bet.questions]
-    arms = [a for a in ARMS if any(k[0] == a for k in done)]
+    arms = [a for a in arms_of(entries, model) if any(k[0] == a for k in done)]
     rounds = 0
     while rounds < runs and all((a, rounds + 1, c) in done for a in arms for c in ids):
         rounds += 1
@@ -300,19 +361,35 @@ def pct(value: float) -> str:
     return f"{100 * value:.1f}%"
 
 
-def report(bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS) -> str:
+def report(
+    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS, every_arm: bool = False
+) -> str:
+    """eval-local.md (the local pair), or with `every_arm` eval.md: every logged arm side by side,
+    the rule's comparison against the managed best, and how far each arm got."""
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
     models = list(dict.fromkeys(e["model"] for e in entries))
     total = len(bet.questions) * runs
+    title, source = (
+        (
+            "# Every arm on the frozen set",
+            "[`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl`",
+        )
+        if every_arm
+        else (
+            "# The bet's local arms on the frozen set",
+            "[`eval-local.jsonl`](eval-local.jsonl), the log of every run,",
+        )
+    )
     lines = [
-        "# The bet's local arms on the frozen set",
+        title,
         "",
         f"Written {stamp} by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from "
-        "[`eval-local.jsonl`](eval-local.jsonl), the log of every run, under "
+        f"{source} under "
         "[the rule](RULE.md): "
         f"{len(bet.questions)} cases of `services/semantic-agent/evals/semantic_bet.yaml`, "
         f"k = {runs} runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and "
         "`fixture_weeks.sql` in the Compose warehouse.",
+        "Arms are compared on one model, paired on the cases every arm reached.",
         "`custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the "
         "`legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads "
         "the generated docs.",
@@ -375,8 +452,9 @@ def report(bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS) -> 
                 + ("a difference." if wrong.differs else "no difference."),
                 "",
                 "Both local arms are on rung 3 or 4 and none is the managed best, so this pair is "
-                "descriptive (RULE.md § The rule, 5) until the native arms are scored (#333).",
+                "descriptive (RULE.md § The rule, 5) until the native arms are scored.",
             ]
+        lines += managed_comparison(s.scores)
         unclear = sorted({c for a in arms for c in s.scores[a].unclear})
         if unclear:
             lines += ["", "Cases with an unclear turn: " + ", ".join(f"`{c}`" for c in unclear)]
@@ -434,6 +512,8 @@ async def main(argv: Sequence[str]) -> int:
     REPORT.write_text(text)
     print(text)
     print(f"stopped: {why}; written to {REPORT}")
+    ALL_REPORT.write_text(report(bet, read_logs(), args.runs, every_arm=True))
+    print(f"every arm: written to {ALL_REPORT}")
     complete = all(score_log(bet, read_log(), m, args.runs).complete for m in [model])
     return 0 if complete else 3
 

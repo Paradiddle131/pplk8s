@@ -184,3 +184,63 @@ def test_the_log_is_rescored_from_its_text_without_a_model():
     (entry,) = bet_eval.rescore(BET, [logged], EXPECTED, {})
     assert entry["outcome"] == "declined" and entry["turns"][0]["outcome"] == "declined"
     assert entry["turns"][0]["text"] == logged["turns"][0]["text"]
+
+
+def _rows(arm: str, outcomes: dict[str, list[str]]) -> list[dict]:
+    return [
+        {"arm": arm, "model": "m", "run": r, "case": c, "outcome": o}
+        for c, runs in outcomes.items()
+        for r, o in enumerate(runs, 1)
+    ]
+
+
+def test_every_arm_is_read_from_its_own_log_and_named_by_the_file(tmp_path):
+    local = _rows("baseline", {"revenue_one_day": ["right"]})
+    (tmp_path / "eval-local.jsonl").write_text("".join(json.dumps(e) + "\n" for e in local))
+    live = [{"model": "m", "run": 1, "case": "revenue_one_day", "outcome": "right"}]
+    (tmp_path / "eval-native-mcp.jsonl").write_text(json.dumps(live[0]) + "\n")
+    entries = bet_eval.read_logs(tmp_path)
+    assert [e["arm"] for e in entries] == ["baseline", "native-mcp"]
+    assert bet_eval.arms_of(entries, "m") == ["baseline", "native-mcp"]
+
+
+def test_a_third_arm_is_scored_beside_the_local_pair_on_the_cases_all_reached():
+    both = {"revenue_one_day": ["right"], "bet_median_order": ["confident-wrong"]}
+    entries = (
+        _rows("baseline", both)
+        + _rows("custom-metricflow", both)
+        + _rows("native-mcp", {"revenue_one_day": ["right"]})
+    )
+    scored = bet_eval.score_log(BET, entries, "m", runs=3)
+    assert list(scored.scores) == ["baseline", "custom-metricflow", "native-mcp"]
+    assert scored.cases == ["revenue_one_day"] and not scored.complete
+    text = bet_eval.report(BET, entries, runs=3, every_arm=True)
+    assert text.startswith("# Every arm on the frozen set")
+    assert "| Accuracy | 100.0% | 100.0% | 100.0% |" in text
+
+
+def test_an_arm_of_ours_is_judged_against_the_managed_best_under_the_rule():
+    def both(revenue: str, median: str) -> dict[str, list[str]]:
+        return {"revenue_one_day": [revenue] * 3, "bet_median_order": [median] * 3}
+
+    entries = (
+        _rows("native-context", both("wrong", "right"))
+        + _rows("native-shaped", both("right", "wrong"))
+        + _rows("native-mcp", both("right", "right"))
+        + _rows(
+            "custom-toolbox",
+            {"revenue_one_day": ["right"] * 3, "bet_median_order": ["confident-wrong"] * 3},
+        )
+    )
+    text = bet_eval.report(BET, entries, runs=3, every_arm=True)
+    # A tie on accuracy goes to the lower rung.
+    assert "The managed best (RULE.md § The rule, 1): `native-context`, accuracy 50.0%." in text
+    assert "- `native-mcp` (rung 3): accuracy +0.500" in text
+    # Two cases cannot exclude zero: neither arm of ours is worth building on this.
+    assert text.count("not worth building on this.") == 2
+
+
+def test_no_managed_arm_means_no_rule_comparison():
+    both = {"revenue_one_day": ["right"], "bet_median_order": ["right"]}
+    entries = _rows("baseline", both) + _rows("native-mcp", both)
+    assert "managed best" not in bet_eval.report(BET, entries, runs=1, every_arm=True)
