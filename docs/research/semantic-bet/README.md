@@ -17,7 +17,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 |---|---|---|---|---|
 | Q1 | What does Knowledge Catalog store when it imports our dbt MetricFlow project, and what can an agent read back (`lookup_context`)? | #326 | measuring | [2026-11-03](findings/2026-11-03-326-kc-dbt-import.md) |
 | Q2 | Does a BigQuery data agent use the imported metric definitions, compared with no context and with our generated context? | #327 | open | |
-| Q3 | Can an ADK agent built only on Google's managed MCP servers (Knowledge Catalog, BigQuery) answer through the metrics? | #328 | open | |
+| Q3 | Can an ADK agent built only on Google's managed MCP servers (Knowledge Catalog, BigQuery) answer through the metrics? | #328, #346 | measuring | [offline part](findings/2026-11-03-346-mcp-offline.md) |
 | Q4 | Do governed views, table functions and parameterised verified queries make a data agent use the defined metrics; does `bqRoutines` take a table function? | #329 | measuring | [offline part](findings/2026-11-03-329-bet-shaped.md) |
 | Q5 | How far can generated MCP Toolbox tools over those table functions go, and what falls outside their shapes? | #330, #344 | measuring | [offline part](findings/2026-11-03-344-toolbox-shapes.md) |
 | Q6 | Which metrics compile to graph measures, and does a data agent aggregate through them when it has the graph beside the tables? | #331 | measuring | [offline part](findings/2026-11-03-331-graph-measures.md) |
