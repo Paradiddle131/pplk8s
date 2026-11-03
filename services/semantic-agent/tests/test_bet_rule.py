@@ -300,3 +300,38 @@ def test_a_scope_caveat_is_a_hedge_like_phrase_for_the_judge(answer, phrases):
 
 def test_a_plain_figure_for_a_wider_scope_has_no_hedge_like_phrase():
     assert bet_rule.unlisted_hedges("Total revenue on 1 October 2026 was €981.69.", HEDGES) == []
+
+
+# #368: custom-lightdash, cost_per_lead_search, run 1, verbatim, with its typographic apostrophe.
+CANT_ISOLATE = (
+    "How much did a lead from search campaigns cost us in early October 2026?",
+    "The semantic layer has no “cost per lead” metric, and neither ad spend nor leads are broken "
+    "out by campaign channel, so I can’t isolate search‑campaign lead cost. The closest available "
+    "metrics are: - **ad_spend_eur** – ad spend across campaigns, in EUR - **leads** – CRM leads "
+    "created, on the day they were created If you can tell me which campaign IDs are the search "
+    "campaigns, I can pull their spend and lead counts for early October 2026.",
+)
+
+
+def test_a_typographic_apostrophe_is_read_as_an_ascii_one():
+    question, text = CANT_ISOLATE
+    assert bet_rule.fold("can’t ‘x’") == "can't 'x'"
+    # "can't isolate" is a scope caveat, not a decline wording: with no number the code still
+    # leaves the answer to the judge, and beside a figure it sends it there as hedge-like.
+    assert bet_rule.unlisted_hedges(text, HEDGES) == ["can't isolate", "If you"]
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.UNCLEAR
+    figure = text.replace("lead cost.", "lead cost; all leads cost 12.40 EUR each.")
+    assert turn_outcome(figure, False, HEDGES, question) is Outcome.CONFIDENT_WRONG
+    assert "can't isolate" in bet_rule.unlisted_hedges(figure, HEDGES)
+
+
+@pytest.mark.parametrize(
+    ("text", "outcome"),
+    [
+        ("I can’t answer that.", Outcome.DECLINED),
+        ("The warehouse doesn’t track replies.", Outcome.DECLINED),
+        ("The warehouse doesn’t track replies; sent messages were 40.", Outcome.WRONG),
+    ],
+)
+def test_declines_and_hedges_match_with_a_typographic_apostrophe(text, outcome):
+    assert turn_outcome(text, False, HEDGES) is outcome

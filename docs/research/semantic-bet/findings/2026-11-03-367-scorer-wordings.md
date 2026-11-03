@@ -65,8 +65,19 @@ The judge (`judge.jsonl`), on `net_revenue_germany`: "This is a different number
 ## Still unknown
 
 - Wordings outside both lists still stay confident-wrong unjudged: of the 68 confident-wrong turns now in the logs, 65 hold no listed or hedge-like phrase and 3 were judged confident-wrong ("based on", #366), but no human read them all.
-- The curly apostrophe: `DECLINE` and `NOT_IN_DATA` match "can't" but not "can’t" (`custom-lightdash` `cost_per_lead_search` writes "can’t isolate"); here the judge decided it, but a decline written that way reaches the code as unclear.
+- The curly apostrophe: answered by [#368](../../../../../../issues/368), § Typographic apostrophes below.
 - Turns logged after this branch's head need `--judge` again: 2 requests per new candidate.
+
+## Typographic apostrophes (#368)
+
+Question: `DECLINE`, `NOT_IN_DATA` and `HEDGE_LIKE` spell the apostrophe as ASCII `'`; does a "can’t" or "doesn’t" in an answer escape them, and does folding it move any turn?
+
+- Changed: `bet_rule.fold` reads ’ and ‘ as `'` before `declines`, the set's `hedges` and `unlisted_hedges` match (a dated line in [`RULE.md`](../RULE.md) § Changes since freezing; the set's `hedges` untouched).
+  Every log is scored on read through it (`bet_eval.recode`, #367); the eval's own `answer_correct` keeps `DECLINE` unfolded, as `bet_rule` never changes how `evals/questions.yaml` is scored.
+- Run 2026-11-03T21:01Z (`measured`, `bet_eval --report-only` and a read of every log): of every turn in the seven logs, one answer holds a typographic apostrophe: `custom-lightdash` `cost_per_lead_search` run 1, "… so I can’t isolate search‑campaign lead cost …".
+  Folded, it holds the hedge-like "can't isolate", which matters only beside a figure; it gives no number, and "can't isolate" is a scope caveat, not a decline wording, so the code still leaves it unclear and the judge's cached declined / declined stands (its answer hash is unchanged).
+- Moved: no turn, on any arm; `eval.md` still reads "Turns the current wordings score otherwise than their log …: 4" (#367's four), and no new judge candidate (0 requests; the free count read 942 of 1,000 at 21:01Z).
+- Still unknown: the same answer's curly quotes ("no “cost per lead” metric") keep `DECLINE`'s `no (such |word )metric` from matching a quoted multi-word name; no logged turn's outcome depends on it today.
 
 ## Sources
 

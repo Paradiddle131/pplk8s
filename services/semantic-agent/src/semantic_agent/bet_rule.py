@@ -56,8 +56,19 @@ NOT_IN_DATA = re.compile(
 )
 
 
+# Typographic apostrophes, folded to ASCII before any wording is matched (#368, RULE.md § Changes
+# since freezing): the patterns spell "can't", and models write "can’t" as often.
+APOSTROPHES = str.maketrans({"\u2019": "'", "\u2018": "'"})
+
+
+def fold(text: str) -> str:
+    """The answer as the wording patterns read it: ’ and ‘ as '."""
+    return text.translate(APOSTROPHES)
+
+
 def declines(text: str) -> bool:
     """The answer says it cannot answer, or that the data does not hold the figure."""
+    text = fold(text)
     return bool(DECLINE.search(text) or NOT_IN_DATA.search(text))
 
 
@@ -73,7 +84,7 @@ def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = 
     if right:
         return Outcome.RIGHT
     if stated(text, question):
-        lowered = text.lower()
+        lowered = fold(text).lower()
         # A decline beside the number says it is not from governed definitions: a hedge too.
         hedged = any(h.lower() in lowered for h in hedges) or declines(text)
         return Outcome.WRONG if hedged else Outcome.CONFIDENT_WRONG
@@ -168,8 +179,8 @@ HEDGE_LIKE = re.compile(
 
 def unlisted_hedges(text: str, hedges: Sequence[str]) -> list[str]:
     """The hedge-like phrases an answer holds that the set's `hedges` list does not."""
-    listed = [h.lower() for h in hedges]
-    found = [m.group(0) for m in HEDGE_LIKE.finditer(text)]
+    listed = [fold(h).lower() for h in hedges]
+    found = [m.group(0) for m in HEDGE_LIKE.finditer(fold(text))]
     return [f for f in found if not any(f.lower() in h or h in f.lower() for h in listed)]
 
 
