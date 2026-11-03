@@ -19,9 +19,16 @@ it (other passes append to them at the same time), and every report applies the 
 
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
   python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300]
+    [--dollars 4.00] [--label <pass>] [--arms custom-metricflow] [--log <path>]
     [--report-only | --rescore | --judge] [case ids]
 The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
 `--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
+On Claude (`MODEL_BACKEND=anthropic`, #361) a pass takes a `--dollars` budget instead: it stops
+before a case-run as dear as its dearest so far, or a call (spend.METER), would cross it; each
+logged run carries its token usage and dollars, every call goes to the calls log, and the pass's
+row (with the owner's anomaly checks) to the spend ledger (spend.py). Without
+`BET_ANTHROPIC_API_KEY` a Claude pass is skipped with that reason. `--log` sends the runs to another
+log (the cost probe's) and leaves the scored reports alone.
 Exit 0: the report holds every run; 3: incomplete (the quota, a budget or the ids given cut it),
 the report written from what the log holds.
 """
@@ -46,7 +53,7 @@ from google.adk.evaluation.eval_case import Invocation
 from google.adk.models.llm_request import LlmRequest
 from google.genai import types
 
-from semantic_agent import evaluation
+from semantic_agent import evaluation, spend
 from semantic_agent.bet_rule import (
     ArmScore,
     Outcome,
@@ -487,8 +494,8 @@ async def run_bet(
 ) -> str:
     """Ask every (run, case, arm) the log has not finished, in that order, so a cut run still
     leaves both arms paired on the cases it reached. Returns why it stopped: `done`, `quota`
-    (the model's quota or key ended the run), `time` (past the deadline) or `requests` (this pass
-    spent its share of the shared free quota)."""
+    (the model's quota or key ended the run), `time` (past the deadline), `requests` (this pass
+    spent its share of the shared free quota) or `budget` (its Claude dollars, spend.METER)."""
     spent = 0
     for run in range(1, runs + 1):
         for question in bet.questions:
@@ -501,16 +508,20 @@ async def run_bet(
                     return "time"
                 if requests is not None and spent >= requests:
                     return "requests"
+                if not spend.METER.room_for_case():
+                    return "budget"
                 semantic = arm == "custom-metricflow"
                 cases = evaluation.eval_cases(
                     [question], dict(expected), agents[arm].name, semantic, dict(described)
                 )
+                mark = spend.METER.begin_case(model, arm=arm, run=run, case=question.id)
                 outcome = (await evaluation.evaluate(agents[arm], cases, [ANSWER_CORRECT]))[
                     question.id
                 ]
+                usage = spend.METER.end_case(mark)
                 spent += outcome.model_calls
                 if outcome.skipped or outcome.ends_run:
-                    return "quota"
+                    return "budget" if spend.METER.stopped else "quota"
                 entry: dict[str, Any] = {
                     "arm": arm,
                     "model": model,
@@ -519,6 +530,8 @@ async def run_bet(
                     "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "model_calls": outcome.model_calls,
                 }
+                if usage.calls:
+                    entry["usage"] = usage.as_dict()
                 if outcome.error:
                     entry["error"] = " ".join(outcome.error.split())[:300]
                     append_log(entry, log)
@@ -721,6 +734,14 @@ async def main(argv: Sequence[str]) -> int:
         "--requests", type=int, default=None, help="stop once this pass spent this many requests"
     )
     parser.add_argument(
+        "--dollars", type=float, default=None, help="a Claude pass's budget in USD (spend.py)"
+    )
+    parser.add_argument("--label", default=None, help="the pass's name in the spend ledger")
+    parser.add_argument("--arms", nargs="*", default=list(ARMS), choices=ARMS)
+    parser.add_argument(
+        "--log", type=Path, default=None, help="log the runs here, not to eval-local.jsonl"
+    )
+    parser.add_argument(
         "--rescore", action="store_true", help="score the log's answers again, ask none"
     )
     parser.add_argument("--report-only", action="store_true", help="rewrite the report, ask none")
@@ -729,9 +750,11 @@ async def main(argv: Sequence[str]) -> int:
     )
     args = parser.parse_args(argv)
 
-    from semantic_agent.model import DEFAULT_MODEL_ID, judge_model_id
+    from semantic_agent.model import DEFAULT_MODEL_ID, MissingKey, claude_key, judge_model_id
 
     model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
+    claude = os.environ.get("MODEL_BACKEND", "openrouter") == "anthropic"
+    log = args.log or LOG
     bet = load_bet()
     why = "report"
     if args.judge:
@@ -752,10 +775,16 @@ async def main(argv: Sequence[str]) -> int:
             "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
         )
         expected = evaluation.expected_numbers(bet.questions, owner_url)
-        entries = rescore(bet, read_log(), expected, evaluation.definitions(bet.questions))
-        LOG.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries))
+        entries = rescore(bet, read_log(log), expected, evaluation.definitions(bet.questions))
+        log.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries))
         why = "rescored"
     elif not args.report_only:
+        if claude:
+            try:
+                claude_key()
+            except MissingKey as missing:
+                print(f"skipped: {missing}")
+                return 3
         from semantic_agent.agent import build_agent as build_semantic
         from sql_baseline.agent import build_agent as build_baseline
 
@@ -766,11 +795,25 @@ async def main(argv: Sequence[str]) -> int:
         )
         expected = evaluation.expected_numbers(asked.questions, owner_url)
         described = evaluation.definitions(asked.questions)
-        agents = {"baseline": build_baseline(), "custom-metricflow": build_semantic()}
+        builders = {"baseline": build_baseline, "custom-metricflow": build_semantic}
+        agents = {arm: builders[arm]() for arm in args.arms}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
+        if claude:
+            spend.METER.start(args.label or f"{model} {','.join(args.arms)}", args.dollars)
         why = await run_bet(
-            asked, expected, agents, described, model, args.runs, LOG, deadline, args.requests
+            asked, expected, agents, described, model, args.runs, log, deadline, args.requests
         )
+        if claude:
+            found = spend.finish_pass(note=f"stopped: {why}")
+            usage = spend.total(u for _, u in spend.METER.pass_calls)
+            print("ANOMALIES: " + ("; ".join(found) if found else "none"))
+            print(
+                f"spend: {usage.calls} calls, {usage.tokens} tokens, ${usage.dollars:.4f} "
+                f"of the pass's budget {args.dollars}; ledger row in {spend.LEDGER}"
+            )
+    if args.log is not None:
+        print(f"stopped: {why}; runs logged to {log} (the scored reports are left alone)")
+        return 0 if why == "done" else 3
     verdicts = read_verdicts(JUDGE_LOG, judge_model_id())
     text = report(bet, apply_verdicts(read_log(), verdicts), args.runs)
     REPORT.write_text(text)
