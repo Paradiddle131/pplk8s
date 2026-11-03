@@ -81,6 +81,8 @@ RUNG = {
     "native-graph": 2,
     "native-mcp": 3,
     "custom-toolbox": 3,
+    # A self-hosted semantic-layer server over our MetricFlow project (#363), like MetricFlow.
+    "custom-lightdash": 4,
     "custom-metricflow": 4,
 }
 
