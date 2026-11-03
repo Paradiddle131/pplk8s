@@ -22,7 +22,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 | Q5 | How far can generated MCP Toolbox tools over those table functions go, and what falls outside their shapes? | #330 | open | |
 | Q6 | Which metrics compile to graph measures, and does a data agent aggregate through them when it has the graph beside the tables? | #331 | measuring | [offline part](findings/2026-11-03-331-graph-measures.md) |
 | Q7 | Do row policies hold through views, table functions and authorized routines; does conversation logging keep row-scoped answers read through a view? | #332 | open | |
-| Q8 | On a frozen question set, which path gives the right number, and which fails confidently? | #325, #340, #333 | measuring | [the frozen set and rule](findings/2026-11-03-325-frozen-eval.md), [RULE.md](RULE.md), [its scoring](findings/2026-11-03-340-rule-scoring.md) |
+| Q8 | On a frozen question set, which path gives the right number, and which fails confidently? | #325, #340, #341, #333 | measuring | [the frozen set and rule](findings/2026-11-03-325-frozen-eval.md), [RULE.md](RULE.md), [its scoring](findings/2026-11-03-340-rule-scoring.md), [the local arms](findings/2026-11-03-341-local-arms.md) ([eval-local.md](eval-local.md)) |
 | Q9 | What do Lightdash and dbt-mcp give a team on our project for free, and what is Enterprise or platform only? | #334 | answered | [dbt-mcp](findings/2026-11-03-334-dbt-mcp.md), [Lightdash](findings/2026-11-03-334-lightdash.md) |
 | Q10 | What moved at Google, dbt and Apache Ossie while the track ran? | #335 | open | [watch](findings/watch.md) |
 | Q11 | Verdict: what is worth building, where (a new repo or not), what not, and what transfers to work? | #336 | open | |
