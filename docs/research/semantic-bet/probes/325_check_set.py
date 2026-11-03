@@ -1,11 +1,13 @@
 """Check the bet's frozen set on the fixture: every expected number exists, and every trap and distractor bites.
 
-Measures: for each case of services/semantic-agent/evals/semantic_bet.yaml, its expected SQL's first value on
-dbt_dev, and for a `trap` its naive SQL's, for a `distractor` its legacy SQL's; fails when an expected value is
-empty or a trap's or distractor's value is within the eval's tolerance (0.006) of the expected one.
+Measures: for each case of a bet set (services/semantic-agent/evals/semantic_bet.yaml, or the set the first
+argument names, e.g. semantic_bet_hard.yaml, #356), every turn's expected SQL on dbt_dev (each column, one meaning
+of an ambiguous turn each), and for a `trap` its naive SQL's first value, for a `distractor` its legacy SQL's;
+fails when an expected value is empty, an ambiguous turn's meanings agree within the eval's tolerance (0.006), or a
+trap's or distractor's value is within that tolerance of the first turn's expected one.
 Run (from the repo root), after tests/e2e/agent-fixture.sh and the legacy models built in dbt_dev
 (`dbt run --select path:models/legacy` as autopilot.md § Gates runs dbt):
-  python3 -I docs/research/semantic-bet/probes/325_check_set.py
+  python3 -I docs/research/semantic-bet/probes/325_check_set.py [services/semantic-agent/evals/<set>.yaml]
 Offline: reads the Compose warehouse (`docker exec pplk8s-warehouse-1 psql`), writes nothing; needs PyYAML
 (`uv run --with pyyaml python ...` when python3 has none).
 """
@@ -20,7 +22,7 @@ SET = Path("services/semantic-agent/evals/semantic_bet.yaml")
 TOLERANCE = 0.006
 
 
-def value(sql: str) -> str:
+def row(sql: str) -> list[str]:
     cmd = [
         "docker",
         "exec",
@@ -35,30 +37,47 @@ def value(sql: str) -> str:
         sql,
     ]
     out = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.strip()
-    return out.split("|")[0].split("\n")[0]
+    return out.split("\n")[0].split("|")
 
 
-def first_sql(case: dict) -> str | None:
-    turn = (case.get("turns") or [case])[0]
-    return turn.get("expected_sql")
+def value(sql: str) -> str:
+    return row(sql)[0]
+
+
+def check_turn(cid: str, turn: dict, failures: list[str]) -> list[str]:
+    """A turn's expected values, one per column; records an empty one, or meanings that agree."""
+    values = row(turn["expected_sql"])
+    if any(v == "" for v in values):
+        failures.append(f"{cid}: no expected value")
+    if turn.get("ambiguous") and len(values) > 1 and "" not in values:
+        numbers = [float(v) for v in values]
+        if any(
+            abs(a - b) <= TOLERANCE
+            for i, a in enumerate(numbers)
+            for b in numbers[i + 1 :]
+        ):
+            failures.append(f"{cid}: two meanings give the same number")
+    return values
 
 
 def main() -> int:
-    spec = yaml.safe_load(SET.read_text())
+    path = Path(sys.argv[1]) if len(sys.argv) > 1 else SET
+    spec = yaml.safe_load(path.read_text())
     groups, failures = spec["groups"], []
     print("case\tgroups\texpected\tnaive\tlegacy")
     for case in spec["questions"]:
-        cid, sql = case["id"], first_sql(case)
-        if sql is None:
+        cid = case["id"]
+        turns = [t for t in case.get("turns") or [case] if t.get("expected_sql")]
+        if not turns:
             continue
-        expected = value(sql)
+        values = [check_turn(cid, t, failures) for t in turns]
+        expected = values[0][0]
         naive = value(spec["naive_sql"][cid]) if cid in spec["naive_sql"] else ""
         legacy = value(spec["legacy_sql"][cid]) if cid in spec["legacy_sql"] else ""
-        print(f"{cid}\t{','.join(groups[cid])}\t{expected}\t{naive}\t{legacy}")
-        if expected == "":
-            failures.append(f"{cid}: no expected value")
+        shown = " / ".join(",".join(v) for v in values)
+        print(f"{cid}\t{','.join(groups[cid])}\t{shown}\t{naive}\t{legacy}")
         for name, other in (("naive", naive), ("legacy", legacy)):
-            if other and abs(float(other) - float(expected)) <= TOLERANCE:
+            if other and expected and abs(float(other) - float(expected)) <= TOLERANCE:
                 failures.append(f"{cid}: {name} gives the expected number")
     cases = len(spec["questions"])
     uncovered = sum("uncovered" in g for g in groups.values())

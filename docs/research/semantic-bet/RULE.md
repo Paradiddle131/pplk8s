@@ -24,6 +24,9 @@ The set is [`services/semantic-agent/evals/semantic_bet.yaml`](../../../services
 At least 30% of the cases are `uncovered`; a case may be in `trap` or `distractor` and `covered` at once.
 Every case keeps `questions.yaml`'s shape, so `services/semantic-agent`'s eval can load it; the groups sit in the file's `groups` map.
 
+2026-11-03, [#356](../../../../../issues/356): a second set, [`services/semantic-agent/evals/semantic_bet_hard.yaml`](../../../services/semantic-agent/evals/semantic_bet_hard.yaml) (43 cases, 44% `uncovered`; SHA-256 in [its finding](findings/2026-11-03-356-hard-set.md)), is an addition the owner asked for, not a correction: "were the agents asked such hard questions, difficult to measure and easy to fail due to the complexity of the business query, as well as the lack of knowledge around the terms? If not, I would really like to … add hard queries and measure accordingly" (owner, 2026-11-03).
+It is scored beside the first set under this same rule (outcomes, the two numbers, the paired comparison, the ladder), each set reported on its own, and it is frozen from now on, before any arm runs on it, as § What freezing means says of the first.
+
 ## The arms
 
 The arms of [the register](README.md#the-arms), each built by its own issue: `native-context`, `native-governed`, `native-kc`, `native-shaped`, `native-graph`, `native-mcp`, `custom-metricflow`, `custom-toolbox`, and `baseline` (the reference, text-to-SQL that reads the generated docs).
