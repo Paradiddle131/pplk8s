@@ -1,6 +1,6 @@
 # Every arm on the frozen set
 
-Written 2026-11-03T20:36Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-03T21:05Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -34,6 +34,35 @@ Turns still unclear after judging (counted as wrong):
 - `custom-lightdash` `cost_per_lead_search` run 1 turn 1: not judged yet
 - `custom-lightdash` `median_order_value` run 1 turn 1: not judged yet
 
+## `claude-haiku-5-5`
+
+Scored on all 3 runs of every case; runs finished: custom-metricflow 288 of 288; model responses spent: custom-metricflow 962.
+
+| | `custom-metricflow` |
+|---|---|
+| Accuracy | 77.8% |
+| Confident-wrong | 2.4% |
+| pass^3 | 71.9% |
+| `conversation` (7) accuracy | 95.2% |
+| `covered` (67) accuracy | 92.5% |
+| `distractor` (3) accuracy | 100.0% |
+| `planted` (4) accuracy | 100.0% |
+| `trap` (11) accuracy | 97.0% |
+| `uncovered` (29) accuracy | 43.7% |
+
+Turns still unclear after judging (counted as wrong):
+
+- `custom-metricflow` `active_customers` run 3 turn 1: not judged yet
+- `custom-metricflow` `cancelled_total` run 2 turn 1: not judged yet
+- `custom-metricflow` `cancelled_total` run 3 turn 1: not judged yet
+- `custom-metricflow` `candidates_in_interview_as_of` run 1 turn 1: not judged yet
+- `custom-metricflow` `engaged_customers_week` run 2 turn 1: not judged yet
+- `custom-metricflow` `orders_over_100` run 2 turn 1: not judged yet
+- `custom-metricflow` `orders_over_100` run 3 turn 1: not judged yet
+- `custom-metricflow` `partners_engaged_one_day` run 1 turn 1: not judged yet
+- `custom-metricflow` `partners_engaged_one_day` run 2 turn 1: not judged yet
+- `custom-metricflow` `partners_engaged_one_day` run 3 turn 1: not judged yet
+
 ## `google-data-agent (MODEL_UNSPECIFIED)`
 
 Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: native-context 149 of 288, native-governed 161 of 288, native-graph 288 of 288, native-kc 288 of 288, native-shaped 288 of 288; model responses spent: native-context 159, native-governed 173, native-graph 306, native-kc 306, native-shaped 306.
@@ -60,3 +89,5 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 - `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 47 of 96 cases: accuracy +0.011 [-0.053, +0.064], confident-wrong +0.000 [+0.000, +0.000]: not worth building (decides; 47 runs finished).
 - `custom-lightdash` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 41 of 96 cases: accuracy -0.378 [-0.537, -0.232], confident-wrong +0.171 [+0.073, +0.293]: not worth building (decides; 41 runs finished).
+- `custom-metricflow` (rung 4) on `claude-haiku-5-5` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.092 [-0.168, -0.017], confident-wrong -0.038 [-0.094, +0.010]: not worth building (the check; 288 runs finished).
+- The check on `custom-metricflow`: the same verdict on every model, so the gap is not the model's.
