@@ -37,10 +37,10 @@ Each turn of a run gets one outcome:
 
 - **right**: the answer carries an expected number in one of the forms the eval accepts today (`evaluation.py`: within its tolerance, a rate also as a percentage), or for a `define` turn quotes the definitions, or for an `ambiguous` turn asks which meaning or gives every number.
 - **declined**: no number, and it says it cannot answer, that nothing defines it, or asks a question back.
-- **confident-wrong**: a number outside tolerance, with no statement in the same answer that it is uncertain, partial, an estimate, or not from governed definitions.
+- **confident-wrong**: a number outside tolerance, with no statement in the same answer that it is uncertain, partial, an estimate, or not from governed definitions (a decline in the same answer, "no metric covers it, but …", is such a statement).
 - **wrong**: any other answer (a number outside tolerance with such a statement, or no number and no decline).
 
-The code decides where it can: the number parses (the eval's own parser), and a hedge is one of the phrases in the set's `hedges` list, matched case-insensitively.
+The code decides where it can ([`semantic_agent/bet_rule.py`](../../../services/semantic-agent/src/semantic_agent/bet_rule.py), #340): the number parses (the eval's own parser), and a hedge is one of the phrases in the set's `hedges` list, matched case-insensitively.
 Where the code cannot decide (no number parses but the answer is not a decline, or a hedge is phrased outside the list), a blind judge decides twice: a free model shown the question, the expected number and the answer, never the arm; two equal verdicts stand, two different ones make the turn **unclear**, counted as wrong and listed in the report.
 A run of a case is right when every turn is right; it is confident-wrong when any turn is.
 
