@@ -87,7 +87,10 @@ async def main() -> int:
     expected = evaluation.expected_numbers(bet.questions, url)
     described = evaluation.definitions(bet.questions)
     agent = _agent_module(args.agent)
-    model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
+    # A probe whose agent answers with a model of its own (a data agent) names it; the others take MODEL_ID's.
+    model = getattr(agent, "MODEL", None) or os.environ.get(
+        "MODEL_ID", DEFAULT_MODEL_ID
+    )
     deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
 
     async def converse_fresh(questions):

@@ -12,6 +12,9 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 
 - 2026-11-03T11:49Z and 11:50Z, each after an ok `make gcp-cost-check` and `make gcp-usage-check` (the 11:49Z one after the 11:48Z checks; ok again after 11:50Z): `python3 -I probes/354_data_agent.py --legacy native-kc native-shaped native-graph` republished `bet-kc`, `bet-shaped` and `bet-graph` with their published context plus `legacy.channel_daily`, `legacy.country_sales` and `legacy.daily_net_sales`, as RULE.md wants for every SQL arm.
 
+- 2026-11-03T11:51Z to 12:11Z, after the 11:50Z checks: the first pass, `328_mcp_live.py --agent 354_data_agent.py --arm native-kc --runs 3 --requests 150 --minutes 20` into [`eval-native-kc.jsonl`](../eval-native-kc.jsonl); it stopped on its 20-minute cap.
+  The pass logged each row's `model` as the runner's OpenRouter `MODEL_ID` though Google's model answers a data agent; the 112 rows were relabelled `google-data-agent (MODEL_UNSPECIFIED)` (nothing else changed), and the probe now names its model (`MODEL`), which the runner logs.
+
 ## Observed
 
 - `measured` (the run above): `revenue_one_day` right ("total net revenue (excluding cancelled orders) was **€868.65**", its SQL over `silver.orders` with `LOWER(status) != 'cancelled'`); `followup_how_computed` turn 1 right (€964.19 on 1 October), turn 2 wrong under the rule (it explained its own SQL, "Sum of all order amounts in `pplk8s-lab-001.silver.orders` … excluding cancelled orders", rather than quoting the metric's definition), so the run is wrong.
@@ -21,13 +24,18 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 - `measured` (the republish above): each agent read back with the legacy tables published beside its own: `bet-kc` and `bet-shaped` the seven silver tables plus the three legacy ones, `bet-graph` its three silver tables plus the three legacy ones (its graph and other context kept as published).
   Rerunning 327_kc_agent.py, 329_shaped_agent.py or 331_graph_agent.py republishes its agent without them; run `--legacy` again after.
 
+- `measured` (the pass above, [eval.md](../eval.md)): run 1 of all 96 cases and 16 of run 2 in 20 minutes, 118 chats, about 10 s a case; on run 1, `native-kc` is right on 64.6% of cases, confident-wrong on 4.2%; `covered` 71.6%, `trap` 63.6%, `uncovered` 48.3% (declining is right there), `conversation` 57.1%, `distractor` and `planted` 100% (3 and 4 cases).
+  Over all 112 runs logged: 78 right, 24 declined, 6 wrong, 4 confident-wrong.
+
 ## What it means for the verdict
 
-Nothing yet: the passes are still to run.
+- A data agent's whole run of the set fits in about 16 minutes, so k = 3 on the three built data-agent arms takes about two and a half hours of passes, well before 2026-12-24.
+- RULE.md compares arms on the same model, and a data agent answers only with Google's model: as written, the rule pairs no data-agent arm with ours, so the managed-best comparison needs the owner's call (#333).
 
 ## Still unknown
 
-- The arms' numbers on the whole set.
+- `native-kc` runs 2 and 3, and `native-shaped` and `native-graph` on the whole set.
+- How the rule compares a managed arm (Google's model) with ours (a free OpenRouter model).
 
 ## Sources
 

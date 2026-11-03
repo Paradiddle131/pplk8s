@@ -31,6 +31,9 @@ from pathlib import Path
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
+# The model a data agent answers with: Google's, chosen by the service (`options.model: MODEL_UNSPECIFIED`), never
+# the runner's MODEL_ID; logged as the rows' `model`, so the report never pairs these arms with an OpenRouter one.
+MODEL = "google-data-agent (MODEL_UNSPECIFIED)"
 # Each built data-agent arm's agent, in RULE.md's rung order; native-context and native-governed have none yet.
 AGENTS = {
     "native-kc": "bet-kc",

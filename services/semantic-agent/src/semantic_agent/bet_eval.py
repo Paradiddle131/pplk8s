@@ -214,10 +214,18 @@ def managed_comparison(scores: Mapping[str, ArmScore]) -> list[str]:
         "",
         f"The managed best (RULE.md § The rule, 1): `{best}`, "
         f"accuracy {pct(scores[best].accuracy)}.",
+    ]
+    ours = [a for a in scores if RUNG.get(a, 9) in (3, 4)]
+    if not ours:
+        return [
+            *lines,
+            "No arm of ours (rung 3 or 4) ran on this model: nothing to compare it with.",
+        ]
+    lines += [
         "Paired by case against it, percentile bootstrap 95% (10,000 resamples, seed 325):",
         "",
     ]
-    for arm in [a for a in scores if RUNG.get(a, 9) in (3, 4)]:
+    for arm in ours:
         acc = paired_interval(scores[best].right, scores[arm].right)
         wrong = paired_interval(scores[best].wrong_confidently, scores[arm].wrong_confidently)
         worth = (acc.differs and acc.mean > 0) or (

@@ -244,3 +244,11 @@ def test_no_managed_arm_means_no_rule_comparison():
     both = {"revenue_one_day": ["right"], "bet_median_order": ["right"]}
     entries = _rows("baseline", both) + _rows("native-mcp", both)
     assert "managed best" not in bet_eval.report(BET, entries, runs=1, every_arm=True)
+
+
+def test_a_managed_arm_alone_on_its_model_says_there_is_nothing_to_compare():
+    both = {"revenue_one_day": ["right"], "bet_median_order": ["declined"]}
+    text = bet_eval.report(BET, _rows("native-kc", both), runs=1, every_arm=True)
+    assert "The managed best (RULE.md § The rule, 1): `native-kc`, accuracy 50.0%." in text
+    assert "No arm of ours (rung 3 or 4) ran on this model" in text
+    assert "Paired by case against it" not in text and not text.endswith("\n\n")
