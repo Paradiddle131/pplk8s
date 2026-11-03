@@ -20,7 +20,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 | Q3 | Can an ADK agent built only on Google's managed MCP servers (Knowledge Catalog, BigQuery) answer through the metrics? | #328 | open | |
 | Q4 | Do governed views, table functions and parameterised verified queries make a data agent use the defined metrics; does `bqRoutines` take a table function? | #329 | measuring | [offline part](findings/2026-11-03-329-bet-shaped.md) |
 | Q5 | How far can generated MCP Toolbox tools over those table functions go, and what falls outside their shapes? | #330 | open | |
-| Q6 | Which metrics compile to graph measures, and does a data agent aggregate through them when it has the graph beside the tables? | #331 | open | |
+| Q6 | Which metrics compile to graph measures, and does a data agent aggregate through them when it has the graph beside the tables? | #331 | measuring | [offline part](findings/2026-11-03-331-graph-measures.md) |
 | Q7 | Do row policies hold through views, table functions and authorized routines; does conversation logging keep row-scoped answers read through a view? | #332 | open | |
 | Q8 | On a frozen question set, which path gives the right number, and which fails confidently? | #325, #333 | open | |
 | Q9 | What do Lightdash and dbt-mcp give a team on our project for free, and what is Enterprise or platform only? | #334 | answered | [dbt-mcp](findings/2026-11-03-334-dbt-mcp.md), [Lightdash](findings/2026-11-03-334-lightdash.md) |
