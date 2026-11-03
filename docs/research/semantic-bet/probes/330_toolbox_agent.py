@@ -23,6 +23,7 @@ Live: yes (BigQuery on the lab project); run make gcp-cost-check and gcp-usage-c
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import os
 import sys
@@ -32,7 +33,12 @@ from google.adk.agents import LlmAgent
 from google.adk.runners import InMemoryRunner
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 from google.genai import types
-from semantic_agent.model import answer_model_failure, build_model, request_config
+from semantic_agent.model import (
+    answer_model_failure,
+    build_model,
+    failure_of,
+    request_config,
+)
 
 TOOLBOX_MCP = os.environ.get("BET_TOOLBOX_MCP", "http://127.0.0.1:5000/mcp")
 APP = "bet_custom_toolbox"
@@ -75,10 +81,12 @@ async def ask(question: str) -> dict[str, Any]:
     calls: dict[str, dict[str, Any]] = {}
     answer = ""
     thought = ""
+    events = []
     message = types.Content(role="user", parts=[types.Part(text=question)])
     async for event in runner.run_async(
         user_id="bet", session_id=session.id, new_message=message
     ):
+        events.append(event)
         for part in (event.content.parts if event.content else None) or []:
             if part.function_call:
                 calls[part.function_call.id or str(len(calls))] = {
@@ -95,11 +103,14 @@ async def ask(question: str) -> dict[str, Any]:
             elif part.text and event.is_final_response():
                 answer += part.text
     await runner.close()
+    # A failed model call ends the turn with an answer naming it: the caller must not score that.
+    failure = failure_of(events)
     return {
         "question": question,
         "calls": list(calls.values()),
         "answer": answer.strip(),
         "thought": thought.strip(),
+        **({"failure": dataclasses.asdict(failure)} if failure else {}),
     }
 
 

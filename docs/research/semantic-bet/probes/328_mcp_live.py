@@ -70,6 +70,15 @@ async def main() -> None:
             continue
         turn = question.turns[0]
         result = await agent.ask(turn.question)
+        if failure := result.get("failure"):
+            # Not an answer: left out of the log, so a later pass asks this case again.
+            print(
+                f"{question.id}: not logged, the model call failed: {result['answer']}",
+                flush=True,
+            )
+            if failure["kind"] in ("daily_quota", "auth"):
+                break  # no later call can succeed until someone acts
+            continue
         numbers = expected[question.id][0]
         right = number_right(result["answer"], numbers)
         outcome = turn_outcome(result["answer"], right, bet.hedges, turn.question)

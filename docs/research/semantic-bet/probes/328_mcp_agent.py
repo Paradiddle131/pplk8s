@@ -25,6 +25,7 @@ probes/328_mcp_standin.py (probes/328_standin_check.sh).
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import os
 import re
@@ -36,7 +37,12 @@ from google.adk.runners import InMemoryRunner
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 from google.genai import types
-from semantic_agent.model import answer_model_failure, build_model, request_config
+from semantic_agent.model import (
+    answer_model_failure,
+    build_model,
+    failure_of,
+    request_config,
+)
 
 PROJECT = os.environ.get("GCP_PROJECT", "pplk8s-lab-001")
 BIGQUERY_MCP = os.environ.get("BET_BIGQUERY_MCP", "https://bigquery.googleapis.com/mcp")
@@ -183,10 +189,12 @@ async def ask(question: str) -> dict[str, Any]:
     ] = {}  # by function-call id: parallel calls answer out of order
     answer = ""
     thought = ""
+    events = []
     message = types.Content(role="user", parts=[types.Part(text=question)])
     async for event in runner.run_async(
         user_id="bet", session_id=session.id, new_message=message
     ):
+        events.append(event)
         for part in (event.content.parts if event.content else None) or []:
             if part.function_call:
                 calls[part.function_call.id or str(len(calls))] = {
@@ -203,11 +211,14 @@ async def ask(question: str) -> dict[str, Any]:
             elif part.text and event.is_final_response():
                 answer += part.text
     await runner.close()
+    # A failed model call ends the turn with an answer naming it: the caller must not score that.
+    failure = failure_of(events)
     return {
         "question": question,
         "calls": list(calls.values()),
         "answer": answer.strip(),
         "thought": thought.strip(),
+        **({"failure": dataclasses.asdict(failure)} if failure else {}),
     }
 
 
