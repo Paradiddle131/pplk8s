@@ -15,6 +15,8 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 - 2026-11-03T11:51Z to 12:11Z, after the 11:50Z checks: the first pass, `328_mcp_live.py --agent 354_data_agent.py --arm native-kc --runs 3 --requests 150 --minutes 20` into [`eval-native-kc.jsonl`](../eval-native-kc.jsonl); it stopped on its 20-minute cap.
   The pass logged each row's `model` as the runner's OpenRouter `MODEL_ID` though Google's model answers a data agent; the 112 rows were relabelled `google-data-agent (MODEL_UNSPECIFIED)` (nothing else changed), and the probe now names its model (`MODEL`), which the runner logs.
 
+- 2026-11-03T12:41Z to 13:14Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 12:38Z and 12:41Z (both ok and unchanged again at 13:14Z): the second pass, the same command with `--requests 200 --minutes 35`, on a fresh session's Compose warehouse (`make services-up`, then `DB=dbt_dev tests/e2e/agent-fixture.sh` for the expected numbers); it finished runs 2 and 3 (176 runs, 188 chats) and stopped `done`.
+
 ## Observed
 
 - `measured` (the run above): `revenue_one_day` right ("total net revenue (excluding cancelled orders) was **€868.65**", its SQL over `silver.orders` with `LOWER(status) != 'cancelled'`); `followup_how_computed` turn 1 right (€964.19 on 1 October), turn 2 wrong under the rule (it explained its own SQL, "Sum of all order amounts in `pplk8s-lab-001.silver.orders` … excluding cancelled orders", rather than quoting the metric's definition), so the run is wrong.
@@ -27,6 +29,10 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 - `measured` (the pass above, [eval.md](../eval.md)): run 1 of all 96 cases and 16 of run 2 in 20 minutes, 118 chats, about 10 s a case; on run 1, `native-kc` is right on 64.6% of cases, confident-wrong on 4.2%; `covered` 71.6%, `trap` 63.6%, `uncovered` 48.3% (declining is right there), `conversation` 57.1%, `distractor` and `planted` 100% (3 and 4 cases).
   Over all 112 runs logged: 78 right, 24 declined, 6 wrong, 4 confident-wrong.
 
+- `measured` (the second pass, [eval.md](../eval.md)): `native-kc` on all 3 runs of all 96 cases, 306 chats in all: accuracy 64.2%, confident-wrong 4.2%, pass^3 59.4%; `covered` 71.1%, `trap` 63.6%, `uncovered` 48.3%, `conversation` 52.4%, `distractor` 88.9%, `planted` 100%.
+  Runs 2 and 3 alone: 107 right, 47 declined, 14 wrong, 8 confident-wrong of 176, so run 1's 64.6% held (the agent is stable across runs; pass^3 is 5 points under accuracy).
+  `make gcp-usage-check`'s `Data agents tokens` line read 0 tokens before and after both passes, so its Monitoring source does not show these chats yet (a lag or a metric the chats don't write); cost stayed $0.000010.
+
 ## What it means for the verdict
 
 - A data agent's whole run of the set fits in about 16 minutes, so k = 3 on the three built data-agent arms takes about two and a half hours of passes, well before 2026-12-24.
@@ -34,7 +40,7 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 
 ## Still unknown
 
-- `native-kc` runs 2 and 3, and `native-shaped` and `native-graph` on the whole set.
+- `native-shaped` and `native-graph` on the whole set (`native-kc` is done).
 - How the rule compares a managed arm (Google's model) with ours (a free OpenRouter model).
 
 ## Sources
