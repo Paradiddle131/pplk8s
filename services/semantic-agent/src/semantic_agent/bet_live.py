@@ -8,7 +8,10 @@ with `bet_eval.score_case`, and every finished run appended to the arm's own log
 reads it beside the local pair and a cut pass resumes where it stopped.
 
 A run whose model call failed is left out of the log, so a later pass asks it again; a spent daily
-quota or a refused key ends the pass, since no later call can succeed until someone acts.
+quota, a refused key, a billing refusal or a spent Claude budget ends the pass, since no later call
+can succeed until someone acts. On Claude (#361) each logged run carries its token usage and
+dollars (spend.METER); the caller opens the pass with `spend.METER.start(label, dollars)` and closes
+it with `spend.finish_pass()`.
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from google.adk.evaluation.eval_case import Invocation
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
+from semantic_agent import spend
 from semantic_agent.bet_eval import (
     RESEARCH,
     RUNS,
@@ -43,8 +47,8 @@ from semantic_agent.model import failure_of
 RESULT_HEAD = 400
 # A conversation: its turns' questions in, one dict per turn answered out (`converse`'s shape).
 Converse = Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]
-# The failures after which no later call can succeed this pass.
-FATAL = ("daily_quota", "auth")
+# The failures after which no later call can succeed this pass (ModelFailure.ends_run).
+FATAL = ("daily_quota", "auth", "billing", "budget")
 
 
 def log_path(arm: str, directory: Path = RESEARCH) -> Path:
@@ -129,7 +133,8 @@ async def run_live(
 ) -> str:
     """Ask every (run, case) the arm's log has not finished, run 1 of every case first, so a cut
     pass leaves whole rounds behind it. Returns why it stopped: `done`, `quota` (the model's daily
-    quota or key), `time` (past the deadline) or `requests` (this pass spent its budget)."""
+    quota or key), `time` (past the deadline), `requests` (this pass spent its budget) or `budget`
+    (its Claude dollars)."""
     log = log or log_path(arm)
     spent = 0
     for run in range(1, runs + 1):
@@ -141,11 +146,17 @@ async def run_live(
                 return "time"
             if requests is not None and spent >= requests:
                 return "requests"
+            if not spend.METER.room_for_case():
+                return "budget"
+            mark = spend.METER.begin_case(model, arm=arm, run=run, case=question.id)
             turns = await ask([t.question for t in question.turns])
+            usage = spend.METER.end_case(mark)
             spent += sum(t.get("model_calls", 0) for t in turns)
             failed = next((t["failure"] for t in turns if t.get("failure")), None)
             if failed:
                 say(f"{question.id} run {run}: not logged, the model call failed: {failed}")
+                if failed["kind"] == "budget":
+                    return "budget"
                 if failed["kind"] in FATAL:
                     return "quota"
                 continue
@@ -165,6 +176,7 @@ async def run_live(
                     "case": question.id,
                     "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "model_calls": sum(t["model_calls"] for t in turns),
+                    **({"usage": usage.as_dict()} if usage.calls else {}),
                     "turns": [
                         {"text": text, "outcome": o.value, "calls": t["calls"]}
                         for (text, o), t in zip(scored, turns, strict=False)
