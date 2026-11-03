@@ -74,7 +74,6 @@ Then keep working on whatever the blocker doesn't touch.
 ## Known conditions
 
 - The $0 guard refuses every `gcloud dataplex` call, `--help` included, and this session's gcloud (570.0.0) is older than the dbt import needs (586.0.0): read the import's flags from its docs page, never from the CLI; seen 2026-11-03.
-- `make gcp-cost-check` exits 1 on $0.000010 of Artifact Registry intercontinental egress (2026-11-02) until [#347](../../../../pull/347) merges and the train takes `main` in: the owner accepted incidental charges under $1.00 a month (2026-11-03, [#338](../../../../issues/338)) and #347 makes the check pass below that and list them; until then, no live step (pick the offline issues); delete this line once the train's check passes; seen 2026-11-03.
 - MetricFlow's `CLIConfiguration.setup` (the `mf` CLI, `dbt/scripts/build_catalog.py`) runs dbt's connection test, `select 1`, and the proxy's injected Google credential carries it to BigQuery even on the compile-only `bigquery` target (refused: no project `pplk8s-lab`; `BigQuery adapter:` in the copy's `logs/dbt.log` tells it): never point that target at the lab project; [#339](../../../../issues/339) removes the test; seen 2026-11-03.
 
 ## Never

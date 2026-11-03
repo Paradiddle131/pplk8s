@@ -29,11 +29,13 @@ def fake_bq(tmp_path: Path, ls: str, query: str = "") -> Path:
     return bindir
 
 
-def run(bindir: Path) -> subprocess.CompletedProcess[str]:
-    env = {
-        **os.environ,
+def run(bindir: Path, **extra: str) -> subprocess.CompletedProcess[str]:
+    """The script with the fake bq first on PATH; the tolerance is its default unless `extra` sets it."""
+    env = {k: v for k, v in os.environ.items() if k != "GCP_COST_TOLERANCE_USD"}
+    env |= {
         "PATH": f"{bindir}{os.pathsep}{os.environ['PATH']}",
         "GCP_PROJECT": "lab-test",
+        **extra,
     }
     return subprocess.run(
         ["bash", str(SCRIPT)], env=env, capture_output=True, text=True, check=False
@@ -94,12 +96,67 @@ def test_zero_cost_passes(tmp_path: Path) -> None:
     assert "has cost $0.00" in r.stdout
 
 
-def test_any_cost_fails(tmp_path: Path) -> None:
-    rows = f"{HEADER}\\nBigQuery,Analysis,0.000100,0.00,2026-11-01T10:00Z"
+def cost_rows(*lines: str) -> str:
+    return "\\n".join([HEADER, *lines])
+
+
+def test_a_cost_under_the_accepted_tolerance_passes_and_is_listed(
+    tmp_path: Path,
+) -> None:
+    """The owner accepts incidental charges under $1.00 a month (#338): the check passes but names them."""
+    rows = cost_rows(
+        "Artifact Registry,Network Internet Egress Intercontinental,0.000010,0.00,2026-11-03T01:12Z",
+        "BigQuery,Analysis,0.000000,0.00,2026-11-03T01:12Z",
+    )
+    bindir = fake_bq(tmp_path, listing(), f"printf '{rows}\\n'")
+    r = run(bindir)
+    assert r.returncode == 0, r.stderr
+    assert (
+        "ok: lab-test has cost $0.000010 this month, under the accepted $1.00"
+        in r.stdout
+    )
+    assert "Artifact Registry / Network Internet Egress Intercontinental" in r.stdout
+    assert "BigQuery / Analysis" not in r.stdout
+
+
+def test_a_cost_at_the_tolerance_fails(tmp_path: Path) -> None:
+    """The tolerance is on the month's total, not per SKU: two small lines that reach it stop the work."""
+    rows = cost_rows(
+        "Cloud Run,CPU,0.600000,1.00,2026-11-01T10:00Z",
+        "BigQuery,Analysis,0.400000,1.00,2026-11-01T10:00Z",
+    )
     bindir = fake_bq(tmp_path, listing(), f"printf '{rows}\\n'")
     r = run(bindir)
     assert r.returncode == 1
+    assert (
+        "FAIL: lab-test has cost $1.000000 this month, at or above the accepted $1.00"
+        in r.stderr
+    )
+    assert "Cloud Run / CPU" in r.stderr and "BigQuery / Analysis" in r.stderr
+
+
+def test_a_zero_tolerance_is_the_strict_rule(tmp_path: Path) -> None:
+    rows = cost_rows("BigQuery,Analysis,0.000100,0.00,2026-11-01T10:00Z")
+    bindir = fake_bq(tmp_path, listing(), f"printf '{rows}\\n'")
+    r = run(bindir, GCP_COST_TOLERANCE_USD="0")
+    assert r.returncode == 1
     assert "BigQuery / Analysis" in r.stderr
+
+
+def test_credits_that_net_a_cost_to_zero_pass_as_zero(tmp_path: Path) -> None:
+    rows = cost_rows("BigQuery,Analysis,0.000000,0.00,2026-11-01T10:00Z")
+    bindir = fake_bq(tmp_path, listing(), f"printf '{rows}\\n'")
+    r = run(bindir, GCP_COST_TOLERANCE_USD="0")
+    assert r.returncode == 0, r.stderr
+    assert "has cost $0.00" in r.stdout
+
+
+def test_a_malformed_tolerance_is_refused(tmp_path: Path) -> None:
+    rows = cost_rows("BigQuery,Analysis,0.000000,0.00,2026-11-01T10:00Z")
+    bindir = fake_bq(tmp_path, listing(), f"printf '{rows}\\n'")
+    r = run(bindir, GCP_COST_TOLERANCE_USD="lots")
+    assert r.returncode == 3
+    assert "GCP_COST_TOLERANCE_USD" in r.stderr
 
 
 def test_a_failed_query_is_unknown(tmp_path: Path) -> None:

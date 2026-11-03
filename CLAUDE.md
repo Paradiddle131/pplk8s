@@ -38,6 +38,6 @@ Durable readiness/watermark tables in the warehouse gate cross-pipeline hand-off
 
 - Put each sentence of Markdown prose on its own line.
 - Every component comes up and down through a single scripted entry point; a fresh clone plus documented prerequisites reproduces the lab.
-- The GCP lab project bills $0.00: every live step follows [`platform/gcp/README.md`](platform/gcp/README.md)'s $0.00 rule (free-path services only, `make gcp-cost-check` before and after, never a raised quota, cap or budget).
+- The GCP lab project bills $0.00: every live step follows [`platform/gcp/README.md`](platform/gcp/README.md)'s $0.00 rule (free-path services only, `make gcp-cost-check` before and after, never a raised quota, cap or budget); incidental charges under $1.00 a month pass the cost check and are listed (owner, 2026-11-03).
 - Work counts as done when its check passes: the phase's exit criterion, a test, or an observed run.
 - Name the GitHub owner and repo through the origin remote (Makefile `GITHUB_REPO`), and link this repo's issues relatively (`../../issues/N`), so a fork works against itself; on cloud, claude-dotfiles' pre-commit guard (`bin/check-portable.sh`) refuses a commit that adds the owner's login. History (`LEDGER.md`, `ledger.d/`, dated decisions) keeps its facts.
