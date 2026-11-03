@@ -115,3 +115,42 @@ def test_the_interval_is_deterministic_and_paired_on_the_same_cases():
     assert paired_interval(a, b) == paired_interval(a, b)
     with pytest.raises(ValueError, match="same cases"):
         paired_interval(a, {**b, "extra": 1.0})
+
+
+# Answers verbatim from the first pass's log (docs/research/semantic-bet/eval-local.jsonl), which
+# the parser first called confident-wrong.
+ECHOED = (
+    "How many orders of more than 100 EUR were placed on 1 and 2 October 2026?",
+    "The available tables only contain daily sales aggregates (e.g., `orders_total`, "
+    "`revenue_eur`) and no per‑order amount detail, so the number of individual orders above 100 "
+    "EUR on 1–2 October 2026 cannot be determined from the warehouse.",
+)
+NOT_SEPARATE = (
+    "How much did returns of damaged goods cost us?",
+    "The tables do not separately identify returns of damaged goods. Total returns across all "
+    "reasons cost 89.75 EUR from 2026-08-17 to 2026-10-10.",
+)
+NOT_PROVIDED = (
+    "What was our net revenue from customers in Germany on 1 October 2026, after returns?",
+    "On 1 October 2026, revenue for Germany (country code DE) was 379.75 EUR across 3 orders in "
+    "exposed.sales_by_country_daily. However, the warehouse does not provide a country-level net "
+    "revenue after returns (returns are only aggregated globally in exposed.net_sales_daily), so "
+    "a Germany-specific after-returns net figure cannot be computed from the available tables.",
+)
+
+
+def test_numbers_the_question_holds_are_not_stated_by_the_answer():
+    question, text = ECHOED
+    assert bet_rule.stated(text, question) == []
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.DECLINED
+
+
+@pytest.mark.parametrize("question, text", [NOT_SEPARATE, NOT_PROVIDED])
+def test_another_figure_beside_not_in_the_data_is_hedged(question, text):
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.WRONG
+
+
+def test_a_plain_wrong_number_stays_confident_wrong_beside_the_questions_numbers():
+    question = "What share of the orders placed in September 2026 were returned?"
+    text = "0% of the 120 orders placed in September 2026 were returned."
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.CONFIDENT_WRONG

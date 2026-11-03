@@ -170,3 +170,17 @@ def test_a_pass_stops_once_it_spent_its_requests(monkeypatch, tmp_path):
     )
     assert stopped == "requests"
     assert len(bet_eval.read_log(log)) == 2  # one answer each, then the budget is spent
+
+
+def test_the_log_is_rescored_from_its_text_without_a_model():
+    logged = {
+        "arm": "baseline",
+        "model": "m",
+        "run": 1,
+        "case": "bet_median_order",
+        "turns": [{"text": "It cannot be determined for 2 October 2026.", "outcome": "wrong"}],
+        "outcome": "wrong",
+    }
+    (entry,) = bet_eval.rescore(BET, [logged], EXPECTED, {})
+    assert entry["outcome"] == "declined" and entry["turns"][0]["outcome"] == "declined"
+    assert entry["turns"][0]["text"] == logged["turns"][0]["text"]

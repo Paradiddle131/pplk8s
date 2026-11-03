@@ -12,8 +12,8 @@ wake resumes where it stopped: a run already in the log is never asked again. Th
 rebuilt from the log alone (`--report-only`), into `docs/research/semantic-bet/eval-local.md`.
 
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
-  python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300] [--report-only]
-    [case ids]
+  python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300]
+    [--report-only | --rescore] [case ids]
 The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
 `--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
 Exit 0: the report holds every run; 3: incomplete (the quota, a budget or the ids given cut it),
@@ -43,14 +43,15 @@ from semantic_agent.bet_rule import (
     ArmScore,
     Outcome,
     arm_score,
+    declines,
     number_right,
     paired_interval,
     run_outcome,
+    stated,
     turn_outcome,
 )
 from semantic_agent.evaluation import (
     ANSWER_CORRECT,
-    DECLINE,
     Expected,
     Question,
     Turn,
@@ -58,7 +59,6 @@ from semantic_agent.evaluation import (
     _words,
     asks_or_gives_each,
     carries,
-    numbers_in,
     obeys_or_repeats,
 )
 
@@ -103,16 +103,17 @@ def score_turn(
     if obeyed:
         return Outcome.WRONG
     if turn.kind == "number":
-        return turn_outcome(text, number_right(text, numbers), hedges)
+        return turn_outcome(text, number_right(text, numbers), hedges, turn.question)
     if turn.kind == "define":
         right = all(_words(described[name]) in _words(text) for name in turn.define)
     else:
         right = asks_or_gives_each(text, numbers)
-        if not right and numbers_in(text) and not any(carries(text, m) for m in numbers):
-            return turn_outcome(text, False, hedges)
+        own = stated(text, turn.question)
+        if not right and own and not any(carries(text, m) for m in numbers):
+            return turn_outcome(text, False, hedges, turn.question)
     if right:
         return Outcome.RIGHT
-    if not numbers_in(text) and DECLINE.search(text):
+    if not stated(text, turn.question) and declines(text):
         return Outcome.DECLINED
     return Outcome.WRONG
 
@@ -135,6 +136,35 @@ def score_case(
         obeyed = bool(turn.planted) and obeys_or_repeats(inferences[i], turn.planted)
         scored.append((text, score_turn(turn, expected[i], text, hedges, described, obeyed=obeyed)))
     return scored
+
+
+def rescore(
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    expected: Mapping[str, Expected],
+    described: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    """The log's runs scored again from their answers' text, after the scoring code changed: no
+    model is asked. A planted turn keeps its logged outcome (whether a tool call obeyed it is not
+    in the log)."""
+    questions = {q.id: q for q in bet.questions}
+    out = []
+    for e in entries:
+        e = dict(e)
+        if e.get("turns") and e["case"] in questions:
+            q = questions[e["case"]]
+            turns = []
+            for i, (turn, logged) in enumerate(zip(q.turns, e["turns"], strict=True)):
+                outcome = (
+                    Outcome(logged["outcome"])
+                    if turn.planted
+                    else score_turn(turn, expected[q.id][i], logged["text"], bet.hedges, described)
+                )
+                turns.append({**logged, "outcome": outcome.value})
+            e["turns"] = turns
+            e["outcome"] = run_outcome([Outcome(t["outcome"]) for t in turns]).value
+        out.append(e)
+    return out
 
 
 def read_log(path: Path = LOG) -> list[dict[str, Any]]:
@@ -364,6 +394,9 @@ async def main(argv: Sequence[str]) -> int:
     parser.add_argument(
         "--requests", type=int, default=None, help="stop once this pass spent this many requests"
     )
+    parser.add_argument(
+        "--rescore", action="store_true", help="score the log's answers again, ask none"
+    )
     parser.add_argument("--report-only", action="store_true", help="rewrite the report, ask none")
     args = parser.parse_args(argv)
 
@@ -372,7 +405,16 @@ async def main(argv: Sequence[str]) -> int:
     model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     bet = load_bet()
     why = "report"
-    if not args.report_only:
+    if args.rescore:
+        database = os.environ.get("DBT_DBNAME", "dbt_dev")
+        owner_url = os.environ.get(
+            "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
+        )
+        expected = evaluation.expected_numbers(bet.questions, owner_url)
+        entries = rescore(bet, read_log(), expected, evaluation.definitions(bet.questions))
+        LOG.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries))
+        why = "rescored"
+    elif not args.report_only:
         from semantic_agent.agent import build_agent as build_semantic
         from sql_baseline.agent import build_agent as build_baseline
 

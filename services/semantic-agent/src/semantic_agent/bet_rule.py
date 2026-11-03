@@ -11,11 +11,12 @@ and nothing changes how evals/questions.yaml's eval is scored.
 from __future__ import annotations
 
 import random
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from semantic_agent.evaluation import ASKS_WHICH, DECLINE, carries, numbers_in
+from semantic_agent.evaluation import ASKS_WHICH, DECLINE, NUMBER, carries, numbers_in
 
 RESAMPLES = 10_000
 SEED = 325
@@ -37,16 +38,38 @@ def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
     return bool(meanings) and all(carries(text, list(forms)) for forms in meanings)
 
 
-def turn_outcome(text: str, right: bool, hedges: Sequence[str]) -> Outcome:
+# Sentences that say the data cannot give the figure, beyond the eval's DECLINE: the bet's code
+# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers.
+NOT_IN_DATA = re.compile(
+    r"cannot be (?:determined|computed|calculated|derived|answered)|"
+    r"(?:does not|doesn't|do not|don't) (?:provide|separately|record|store|track|split)|"
+    r"not (?:separately|possible to (?:determine|compute|calculate))",
+    re.IGNORECASE,
+)
+
+
+def declines(text: str) -> bool:
+    """The answer says it cannot answer, or that the data does not hold the figure."""
+    return bool(DECLINE.search(text) or NOT_IN_DATA.search(text))
+
+
+def stated(text: str, question: str = "") -> list[float]:
+    """The numbers an answer states (dates left out), less those the question itself holds: an
+    answer that repeats "over 100 EUR on 1 and 2 October" states nothing of its own."""
+    asked = {float(n.replace(",", "")) for n in NUMBER.findall(question)}
+    return [n for n in numbers_in(text) if n not in asked]
+
+
+def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = "") -> Outcome:
     """One turn's outcome, given whether the eval's own scorer found it right."""
     if right:
         return Outcome.RIGHT
-    if numbers_in(text):
+    if stated(text, question):
         lowered = text.lower()
         # A decline beside the number says it is not from governed definitions: a hedge too.
-        hedged = any(h.lower() in lowered for h in hedges) or bool(DECLINE.search(text))
+        hedged = any(h.lower() in lowered for h in hedges) or declines(text)
         return Outcome.WRONG if hedged else Outcome.CONFIDENT_WRONG
-    if DECLINE.search(text) or ASKS_WHICH.search(text):
+    if declines(text) or ASKS_WHICH.search(text):
         return Outcome.DECLINED
     return Outcome.UNCLEAR
 
