@@ -1,6 +1,6 @@
 # Every arm on the frozen set
 
-Written 2026-11-03T20:36Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-03T20:53Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -12,7 +12,7 @@ Scored on partial: 1 run(s) of 41 of 96 cases; runs finished: baseline 48 of 288
 | | `baseline` | `custom-metricflow` | `custom-lightdash` |
 |---|---|---|---|
 | Accuracy | 63.4% | 95.1% | 58.5% |
-| Confident-wrong | 14.6% | 0.0% | 17.1% |
+| Confident-wrong | 14.6% | 0.0% | 9.8% |
 | pass^1 | 63.4% | 95.1% | 58.5% |
 | `covered` (39) accuracy | 64.1% | 100.0% | 61.5% |
 | `distractor` (2) accuracy | 100.0% | 100.0% | 50.0% |
@@ -26,13 +26,8 @@ Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
-Turns judged: 2 (0 the code left unclear, 2 confident-wrong with a hedge outside the list); verdicts that stood: 2.
-Confident-wrong turns the judge moved: 0 of 2 (0 to wrong, hedged; 0 to unclear).
-
-Turns still unclear after judging (counted as wrong):
-
-- `custom-lightdash` `cost_per_lead_search` run 1 turn 1: not judged yet
-- `custom-lightdash` `median_order_value` run 1 turn 1: not judged yet
+Turns judged: 7 (2 the code left unclear, 5 confident-wrong with a hedge outside the list); verdicts that stood: 7.
+Confident-wrong turns the judge moved: 3 of 5 (3 to wrong, hedged; 0 to unclear).
 
 ## `google-data-agent (MODEL_UNSPECIFIED)`
 
@@ -50,8 +45,10 @@ Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: native-context 149
 | `trap` (11) accuracy | 100.0% | 100.0% | 63.6% | 63.6% | 45.5% |
 | `uncovered` (29) accuracy | 69.0% | 31.0% | 48.3% | 48.3% | 51.7% |
 
-Turns judged: 20 (16 the code left unclear, 4 confident-wrong with a hedge outside the list); verdicts that stood: 20.
-Confident-wrong turns the judge moved: 3 of 4 (3 to wrong, hedged; 0 to unclear).
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 4 (`native-governed` 1 confident-wrong to wrong; `native-shaped` 1 confident-wrong to wrong; `native-shaped` 2 unclear to declined).
+
+Turns judged: 16 (14 the code left unclear, 2 confident-wrong with a hedge outside the list); verdicts that stood: 16.
+Confident-wrong turns the judge moved: 1 of 2 (1 to wrong, hedged; 0 to unclear).
 
 ## The rule across models
 
@@ -59,4 +56,4 @@ The managed best (RULE.md § The rule, 1): `native-context` on `google-data-agen
 Each arm of ours on each model it ran with, paired by case against it on the cases both reached (each case's share over its finished runs), percentile bootstrap 95% (10,000 resamples, seed 325); ours on `nvidia/nemotron-3.5-super-vl:free` decides (RULE.md § The rule, 2), ours on any other model is the check on whether a gap is the model's:
 
 - `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 47 of 96 cases: accuracy +0.011 [-0.053, +0.064], confident-wrong +0.000 [+0.000, +0.000]: not worth building (decides; 47 runs finished).
-- `custom-lightdash` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 41 of 96 cases: accuracy -0.378 [-0.537, -0.232], confident-wrong +0.171 [+0.073, +0.293]: not worth building (decides; 41 runs finished).
+- `custom-lightdash` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 41 of 96 cases: accuracy -0.378 [-0.537, -0.232], confident-wrong +0.098 [+0.024, +0.195]: not worth building (decides; 41 runs finished).
