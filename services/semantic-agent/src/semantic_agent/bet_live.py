@@ -1,11 +1,12 @@
-"""The semantic bet's live arms on the frozen set (docs/research/semantic-bet/RULE.md).
+"""The semantic bet's live arms on its sets (docs/research/semantic-bet/RULE.md).
 
 The arms whose agent is a probe beside the findings (`native-mcp` on Google's MCP servers,
 `custom-toolbox` on generated Toolbox tools) answer the frozen set the way the local arms do in
 bet_eval.py: every turn of a conversation in one session, each run in a fresh one, each turn scored
 with `bet_eval.score_case`, and every finished run appended to the arm's own log,
-`docs/research/semantic-bet/eval-<arm>.jsonl`, in `eval-local.jsonl`'s shape, so `bet_eval.report`
-reads it beside the local pair and a cut pass resumes where it stopped.
+`docs/research/semantic-bet/eval-<arm>.jsonl` (`eval-hard-<arm>.jsonl` on the hard set), in
+`eval-local.jsonl`'s shape, so `bet_eval.report` reads it beside the local pair and a cut pass
+resumes where it stopped.
 
 A run whose model call failed is left out of the log, so a later pass asks it again; a spent daily
 quota, a refused key, a billing refusal or a spent Claude budget ends the pass, since no later call
@@ -31,8 +32,10 @@ from google.genai import types
 
 from semantic_agent import spend
 from semantic_agent.bet_eval import (
+    FROZEN,
     RESEARCH,
     RUNS,
+    SETS,
     BetSet,
     append_log,
     finished,
@@ -51,8 +54,9 @@ Converse = Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]
 FATAL = ("daily_quota", "auth", "billing", "budget")
 
 
-def log_path(arm: str, directory: Path = RESEARCH) -> Path:
-    return directory / f"eval-{arm}.jsonl"
+def log_path(arm: str, directory: Path = RESEARCH, name: str = FROZEN) -> Path:
+    """The arm's log on one set: `eval-<arm>.jsonl` (the frozen set), `eval-hard-<arm>.jsonl`."""
+    return SETS[name].arm_log(arm, directory)
 
 
 async def converse(agent: LlmAgent, questions: Sequence[str]) -> list[dict[str, Any]]:

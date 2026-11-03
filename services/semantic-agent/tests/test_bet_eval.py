@@ -471,3 +471,84 @@ def test_two_verdicts_on_a_hedged_number(tmp_path, verdicts, outcome):
         bet_eval.judge_turns(BET, entries, EXPECTED, StubJudge({text: verdicts}), "j", cache)
     )
     assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache))[0]["outcome"] == outcome
+
+
+def _write(path, rows) -> None:
+    path.write_text("".join(json.dumps(e) + "\n" for e in rows))
+
+
+def test_each_set_reads_only_its_own_logs_and_names_its_arms_by_the_file(tmp_path):
+    _write(tmp_path / "eval-local.jsonl", _rows("baseline", {"revenue_one_day": ["right"]}))
+    live = {"model": "m", "run": 1, "case": "revenue_one_day", "outcome": "right"}
+    _write(tmp_path / "eval-native-kc.jsonl", [live])
+    _write(tmp_path / "eval-hard-local.jsonl", _rows("baseline", {"hard_aov": ["wrong"]}))
+    _write(tmp_path / "eval-hard-native-kc.jsonl", [{**live, "case": "hard_aov"}])
+
+    frozen = bet_eval.read_logs(tmp_path)
+    assert [(e["arm"], e["case"]) for e in frozen] == [
+        ("baseline", "revenue_one_day"),
+        ("native-kc", "revenue_one_day"),
+    ]
+    hard = bet_eval.read_logs(tmp_path, "hard")
+    assert [(e["arm"], e["case"]) for e in hard] == [
+        ("baseline", "hard_aov"),
+        ("native-kc", "hard_aov"),
+    ]
+    files = bet_eval.SETS["hard"]
+    assert files.local_log(tmp_path).name == "eval-hard-local.jsonl"
+    assert files.local_report(tmp_path).name == "eval-hard-local.md"
+    assert files.arm_log("native-kc", tmp_path).name == "eval-hard-native-kc.jsonl"
+
+
+def test_the_hard_set_loads_by_name_with_its_groups():
+    hard = bet_eval.load_set("hard")
+    assert hard.name == "hard" and len(hard.questions) >= 40
+    assert all(q.id.startswith("hard_") for q in hard.questions)
+    assert set(hard.groups) == {q.id for q in hard.questions}
+    assert bet_eval.load_set().name == "frozen" and len(bet_eval.load_set().questions) == 96
+
+
+def test_the_judge_cache_keeps_each_sets_verdicts_apart(tmp_path):
+    murky = "Revenue was strong, led by Germany."
+    entries = [_unclear("native-kc", "revenue_one_day", murky)]
+    cache = tmp_path / "judge.jsonl"
+    hard = BetSet(BET.questions, BET.groups, BET.hedges, "hard")
+    judge = StubJudge({murky: ["wrong", "wrong"]})
+    assert asyncio.run(bet_eval.judge_turns(hard, entries, EXPECTED, judge, "j", cache)) == (
+        "done",
+        2,
+    )
+    assert {r["set"] for r in bet_eval.read_log(cache)} == {"hard"}
+    # The hard set's verdicts are never the frozen set's, even on the same turn key.
+    assert bet_eval.read_verdicts(cache, "j") == {}
+    assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache, "j", "hard"))[0][
+        "outcome"
+    ] == ("wrong")
+    # The frozen set's pass asks its own, and a row naming no set (before #364) is the frozen set's.
+    frozen = StubJudge({murky: ["right", "right"]})
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, frozen, "j", cache))[1] == 2
+    rows = [r for r in bet_eval.read_log(cache) if r["set"] == "frozen"]
+    _write(cache, [{k: v for k, v in r.items() if k != "set"} for r in rows])
+    assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache, "j"))[0]["outcome"] == (
+        "right"
+    )
+    assert bet_eval.read_verdicts(cache, "j", "hard") == {}
+
+
+def test_eval_md_scores_each_set_in_its_own_section(monkeypatch, tmp_path):
+    monkeypatch.setattr("semantic_agent.model.judge_model_id", lambda: "j")
+    frozen = bet_eval.load_set().questions[0].id
+    hard = bet_eval.load_set("hard").questions[0].id
+    _write(tmp_path / "eval-native-kc.jsonl", _rows("native-kc", {frozen: ["right"]}))
+    _write(tmp_path / "eval-hard-native-kc.jsonl", _rows("native-kc", {hard: ["declined"]}))
+    path = bet_eval.write_every_arm(tmp_path, runs=1)
+    assert path == tmp_path / "eval.md"
+    text = path.read_text()
+    assert text.startswith("# Every arm on the bet's sets\n")
+    before, after = text.split("\n## Every arm on the hard set\n")
+    assert "\n## Every arm on the frozen set\n" in before
+    assert "96 cases of `services/semantic-agent/evals/semantic_bet.yaml`" in before
+    assert "accuracy 100.0%" in before and "### The rule across models" in before
+    assert "cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`" in after
+    assert "[`eval-hard-local.jsonl`](eval-hard-local.jsonl)" in after
+    assert "accuracy 0.0%" in after and "### The rule across models" in after
