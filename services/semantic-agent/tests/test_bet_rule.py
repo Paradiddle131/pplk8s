@@ -164,3 +164,25 @@ def test_a_plain_wrong_number_stays_confident_wrong_beside_the_questions_numbers
     question = "What share of the orders placed in September 2026 were returned?"
     text = "0% of the 120 orders placed in September 2026 were returned."
     assert turn_outcome(text, False, HEDGES, question) is Outcome.CONFIDENT_WRONG
+
+
+def test_float_noise_never_makes_an_interval_exclude_zero():
+    """#357: native-context-bare against native-context, shares in thirds, read a low bound of
+    5.8e-19 where the exact one is 0, and so "a difference"."""
+    pairs = {
+        (3, 3): 79,
+        (0, 0): 8,
+        (2, 3): 4,
+        (1, 3): 1,
+        (1, 0): 1,
+        (0, 2): 1,
+        (1, 2): 1,
+        (3, 2): 1,
+    }
+    a, b = {}, {}
+    for (x, y), k in pairs.items():
+        for _ in range(k):
+            case = f"c{len(a):02d}"
+            a[case], b[case] = x / 3, y / 3
+    gap = paired_interval(a, b)
+    assert gap.low == 0 and not gap.differs

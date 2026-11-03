@@ -1,9 +1,10 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-03T10:58Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-03T21:59Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Arms are compared on one model, paired on the cases every arm reached.
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 Unclear turns (no number parses and no decline) await the blind judge and count as wrong here.
+0 of `baseline`'s 48 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
