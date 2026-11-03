@@ -8,7 +8,7 @@
 -- - MetricFlow's comments were dropped; every aggregate, join, filter and ratio is MetricFlow's.
 -- Run on the lab project as one script, after a dry run:
 --   bq query --use_legacy_sql=false --dry_run < docs/research/semantic-bet/probes/329_bet_shaped.sql
--- Not yet run anywhere (2026-11-03): the lab project's live steps wait on its cost check.
+-- Run on pplk8s-lab-001 2026-11-03T06:40Z (findings/2026-11-03-329-bet-shaped.md, part 2).
 
 CREATE SCHEMA IF NOT EXISTS bet_shaped OPTIONS (location = 'US');
 
