@@ -164,3 +164,31 @@ def test_a_plain_wrong_number_stays_confident_wrong_beside_the_questions_numbers
     question = "What share of the orders placed in September 2026 were returned?"
     text = "0% of the 120 orders placed in September 2026 were returned."
     assert turn_outcome(text, False, HEDGES, question) is Outcome.CONFIDENT_WRONG
+
+
+def test_the_judge_sees_the_question_the_expected_number_and_the_answer_never_the_arm():
+    prompt = bet_rule.judge_prompt(
+        "Share of orders cancelled?", [as_expected(1 / 6)], "Most orders went through."
+    )
+    assert "Share of orders cancelled?" in prompt and "Most orders went through." in prompt
+    assert "0.1667 (16.6667%)" in prompt
+    assert "native" not in prompt and "arm" not in prompt.lower()
+
+
+@pytest.mark.parametrize(
+    ("reply", "verdict"),
+    [
+        ("No number is given.\nVERDICT: wrong", Outcome.WRONG),
+        ("VERDICT: **Confident-wrong**", Outcome.CONFIDENT_WRONG),
+        ("Could be right. VERDICT: declined", Outcome.DECLINED),
+        ("I think it is wrong.", None),
+    ],
+)
+def test_the_judges_verdict_is_its_last_verdict_line(reply, verdict):
+    assert bet_rule.parse_verdict(reply) is verdict
+
+
+def test_two_equal_verdicts_stand_and_two_different_leave_the_turn_unclear():
+    assert bet_rule.two_verdicts(Outcome.DECLINED, Outcome.DECLINED) is Outcome.DECLINED
+    assert bet_rule.two_verdicts(Outcome.DECLINED, Outcome.WRONG) is Outcome.UNCLEAR
+    assert bet_rule.two_verdicts(None, None) is Outcome.UNCLEAR

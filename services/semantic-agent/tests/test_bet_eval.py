@@ -3,6 +3,8 @@
 import asyncio
 import json
 
+import pytest
+
 from semantic_agent import agent as semantic
 from semantic_agent import bet_eval, tools
 from semantic_agent.bet_eval import BetSet, score_turn
@@ -234,10 +236,13 @@ def test_an_arm_of_ours_is_judged_against_the_managed_best_under_the_rule():
     )
     text = bet_eval.report(BET, entries, runs=3, every_arm=True)
     # A tie on accuracy goes to the lower rung.
-    assert "The managed best (RULE.md § The rule, 1): `native-context`, accuracy 50.0%." in text
-    assert "- `native-mcp` (rung 3): accuracy +0.500" in text
+    assert "The managed best (RULE.md § The rule, 1): `native-context` on `m`, accuracy 50.0%." in (
+        text
+    )
+    assert "- `native-mcp` (rung 3) on `m` against `native-context` on `m`" in text
+    assert "accuracy +0.500" in text
     # Two cases cannot exclude zero: neither arm of ours is worth building on this.
-    assert text.count("not worth building on this.") == 2
+    assert text.count(": not worth building (the check;") == 2
 
 
 def test_no_managed_arm_means_no_rule_comparison():
@@ -249,6 +254,162 @@ def test_no_managed_arm_means_no_rule_comparison():
 def test_a_managed_arm_alone_on_its_model_says_there_is_nothing_to_compare():
     both = {"revenue_one_day": ["right"], "bet_median_order": ["declined"]}
     text = bet_eval.report(BET, _rows("native-kc", both), runs=1, every_arm=True)
-    assert "The managed best (RULE.md § The rule, 1): `native-kc`, accuracy 50.0%." in text
-    assert "No arm of ours (rung 3 or 4) ran on this model" in text
-    assert "Paired by case against it" not in text and not text.endswith("\n\n")
+    assert "The managed best (RULE.md § The rule, 1): `native-kc` on `m`, accuracy 50.0%." in text
+    assert "No arm of ours (rung 3 or 4) is logged on any model" in text
+    assert "paired by case against it" not in text and not text.endswith("\n\n")
+
+
+def _unclear(arm: str, case: str, text: str, run: int = 1) -> dict:
+    turn = {"text": text, "outcome": "unclear"}
+    return {
+        "arm": arm,
+        "model": "m",
+        "run": run,
+        "case": case,
+        "turns": [turn],
+        "outcome": "unclear",
+    }
+
+
+class StubJudge:
+    """Gives scripted verdicts in turn, by the answer it is shown; counts what it was asked."""
+
+    def __init__(self, verdicts: dict[str, list[str]]):
+        self.verdicts = {k: list(v) for k, v in verdicts.items()}
+        self.prompts: list[str] = []
+
+    async def __call__(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        answer = next(a for a in self.verdicts if a in prompt)
+        return f"Reasoning.\nVERDICT: {self.verdicts[answer].pop(0)}"
+
+
+def test_the_judge_decides_unclear_turns_twice_and_a_rescore_spends_nothing(tmp_path):
+    declined = "The data covers orders and returns, but there are no page views."
+    murky = "Revenue was strong, led by Germany."
+    entries = [
+        _unclear("native-shaped", "bet_median_order", declined),
+        _unclear("native-shaped", "revenue_one_day", murky),
+        {"arm": "native-shaped", "model": "m", "run": 1, "case": "x", "outcome": "right"},
+    ]
+    cache = tmp_path / "judge.jsonl"
+    judge = StubJudge({declined: ["declined", "declined"], murky: ["wrong", "right"]})
+    why, spent = asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, judge, "j:free", cache))
+    assert (why, spent) == ("done", 4)
+    # Blind: the prompt holds the question, the expected number and the answer, never the arm.
+    assert "Median order value on 2 October 2026?" in judge.prompts[0]
+    assert "42.5" in judge.prompts[0] and "native-shaped" not in judge.prompts[0]
+
+    judged = bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache, "j:free"))
+    assert judged[0]["outcome"] == "declined"
+    assert judged[0]["turns"][0]["judged"] == ["declined", "declined"]
+    assert judged[1]["outcome"] == "unclear"  # two different verdicts: unclear, counted wrong
+    assert judged[2] == entries[2]
+
+    # The cache holds every verdict: a second pass asks nothing, and another judge model's
+    # verdicts are not this one's.
+    again = StubJudge({})
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, again, "j:free", cache)) == (
+        "done",
+        0,
+    )
+    assert bet_eval.read_verdicts(cache, "other:free") == {}
+
+    # A changed answer is judged again: the cache is keyed on its hash.
+    changed = [_unclear("native-shaped", "bet_median_order", declined + " Sorry.")]
+    assert bet_eval.apply_verdicts(changed, bet_eval.read_verdicts(cache))[0]["outcome"] == (
+        "unclear"
+    )
+
+    text = bet_eval.report(BET, bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache)))
+    assert "Turns judged: 2; verdicts that stood: 1." in text
+    assert "- `native-shaped` `revenue_one_day` run 1 turn 1: wrong / right" in text
+    assert "`bet_median_order` run 1" not in text
+
+
+def test_the_judge_keeps_to_its_request_budget_and_resumes(tmp_path):
+    entries = [_unclear("native-kc", "bet_median_order", "Nothing on medians here.")]
+    cache = tmp_path / "judge.jsonl"
+    judge = StubJudge({"Nothing on medians": ["declined", "declined"]})
+    assert asyncio.run(
+        bet_eval.judge_turns(BET, entries, EXPECTED, judge, "j:free", cache, requests=1)
+    ) == ("requests", 1)
+    assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache))[0]["outcome"] == (
+        "unclear"
+    )
+    asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, judge, "j:free", cache))
+    assert len(judge.prompts) == 2
+    assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache))[0]["outcome"] == (
+        "declined"
+    )
+
+
+def test_a_spent_quota_stops_the_judge(tmp_path):
+    entries = [_unclear("native-kc", "bet_median_order", "Nothing on medians here.")]
+
+    async def spent(prompt: str) -> str:
+        raise rate_limit_error("free-models-per-day", 3600)
+
+    cache = tmp_path / "judge.jsonl"
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, spent, "j:free", cache)) == (
+        "quota",
+        1,
+    )
+    assert not cache.exists()
+
+
+def test_an_unjudged_turn_is_listed_as_not_judged_yet():
+    entries = [_unclear("native-kc", "bet_median_order", "Nothing on medians here.")]
+    text = bet_eval.report(BET, entries, runs=1, every_arm=True)
+    assert "- `native-kc` `bet_median_order` run 1 turn 1: not judged yet" in text
+
+
+def test_the_judge_is_a_free_openrouter_model_from_the_factory(monkeypatch):
+    from semantic_agent import model
+
+    monkeypatch.setenv("MODEL_BACKEND", "gemini")  # the arms' backend never moves the judge
+    assert model.judge_model_id().endswith(":free")
+    assert model.build_judge().model == f"openrouter/{model.judge_model_id()}"
+    monkeypatch.setenv("JUDGE_MODEL_ID", "some/paid-model")
+    with pytest.raises(ValueError, match="must be free"):
+        model.build_judge()
+
+
+def _on(model: str, arm: str, outcomes: dict[str, list[str]]) -> list[dict]:
+    return [{**e, "model": model} for e in _rows(arm, outcomes)]
+
+
+def test_a_managed_arm_on_its_model_is_paired_with_ours_on_another(monkeypatch):
+    cases = [f"c{i}" for i in range(12)]
+    bet = BetSet([Question.single(c, f"Question {c}?", "", []) for c in cases], {}, HEDGES)
+    bet.groups.update({c: ["covered"] for c in cases})
+    google, free, claude = "google-data-agent (MODEL_UNSPECIFIED)", "free:free", "claude-x"
+    monkeypatch.setattr("semantic_agent.model.DEFAULT_MODEL_ID", free)
+    entries = (
+        # The managed arms: native-kc beats native-shaped, both on Google's model only.
+        _on(google, "native-kc", {c: ["wrong"] * 3 for c in cases})
+        + _on(google, "native-shaped", {c: ["wrong"] * 3 for c in cases[:6]})
+        + _on(google, "native-shaped", {c: ["right"] * 3 for c in cases[6:]})
+        # Ours on the free model: right everywhere, but only run 1 of 10 cases so far.
+        + _on(free, "custom-metricflow", {c: ["right"] for c in cases[:10]})
+        + _on(free, "baseline", {c: ["right"] for c in cases[:10]})
+        # Ours on Claude: no better than the managed best.
+        + _on(claude, "custom-metricflow", {c: ["wrong"] * 3 for c in cases[:6]})
+        + _on(claude, "custom-metricflow", {c: ["right"] * 3 for c in cases[6:]})
+    )
+    lines = bet_eval.managed_comparison(bet, entries, runs=3)
+    text = "\n".join(lines)
+    assert f"`native-shaped` on `{google}`, accuracy 50.0%" in text
+    decides = next(line for line in lines if f"`custom-metricflow` (rung 4) on `{free}`" in line)
+    assert f"against `native-shaped` on `{google}`, 10 of 12 cases" in decides
+    assert (
+        "accuracy +0.600" in decides and ": worth building (decides; 10 runs finished)" in decides
+    )
+    check = next(line for line in lines if f"on `{claude}`" in line)
+    assert "accuracy +0.000" in check and ": not worth building (the check;" in check
+    assert "the verdict moves with the model" in text
+    # The baseline is the reference, on no rung: it is never compared under the rule.
+    assert "`baseline` (" not in text
+    # eval.md shows the pair in its own section after the models'.
+    report = bet_eval.report(bet, entries, runs=3, every_arm=True)
+    assert report.index("## The rule across models") > report.index(f"## `{claude}`")

@@ -1,9 +1,9 @@
 # Every arm on the frozen set
 
-Written 2026-11-03T17:13Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
-Arms are compared on one model, paired on the cases every arm reached.
+Written 2026-11-03T20:10Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
-Unclear turns (no number parses and no decline) await the blind judge and count as wrong here.
+A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
@@ -42,7 +42,11 @@ Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: native-context 149
 | `trap` (11) accuracy | 100.0% | 100.0% | 63.6% | 63.6% | 45.5% |
 | `uncovered` (29) accuracy | 69.0% | 31.0% | 48.3% | 48.3% | 51.7% |
 
-The managed best (RULE.md § The rule, 1): `native-context`, accuracy 87.5%.
-No arm of ours (rung 3 or 4) ran on this model: nothing to compare it with.
+Turns judged: 16; verdicts that stood: 16.
 
-Cases with an unclear turn: `bet_customers_september`, `bet_median_days_to_interview`, `bet_peak_page_view_hour`
+## The rule across models
+
+The managed best (RULE.md § The rule, 1): `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, accuracy 87.5%.
+Each arm of ours on each model it ran with, paired by case against it on the cases both reached (each case's share over its finished runs), percentile bootstrap 95% (10,000 resamples, seed 325); ours on `nvidia/nemotron-3.5-super-vl:free` decides (RULE.md § The rule, 2), ours on any other model is the check on whether a gap is the model's:
+
+- `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 47 of 96 cases: accuracy +0.011 [-0.053, +0.064], confident-wrong +0.000 [+0.000, +0.000]: not worth building (decides; 47 runs finished).

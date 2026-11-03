@@ -1,15 +1,17 @@
 """The semantic bet's scoring rule (docs/research/semantic-bet/RULE.md), as pure functions.
 
 A turn's outcome is right, declined, confident-wrong or wrong; the code leaves to a blind judge
-the answers it cannot decide (unclear, counted as wrong until judged). A run of a case is right when
-every turn is, confident-wrong when any turn is. An arm's accuracy and confident-wrong rate are
-means over cases of the share of its k runs with that outcome; two arms compare by the paired
-percentile bootstrap of their per-case differences. Nothing here calls a model or a warehouse,
-and nothing changes how evals/questions.yaml's eval is scored.
+the answers it cannot decide (unclear, counted as wrong until judged). The judge's prompt and how
+its two verdicts combine are here too; asking the judge (a model) is bet_eval.py's. A run of a
+case is right when every turn is, confident-wrong when any turn is. An arm's accuracy and
+confident-wrong rate are means over cases of the share of its k runs with that outcome; two arms
+compare by the paired percentile bootstrap of their per-case differences. Nothing here calls a
+model or a warehouse, and nothing changes how evals/questions.yaml's eval is scored.
 """
 
 from __future__ import annotations
 
+import hashlib
 import random
 import re
 from collections.abc import Mapping, Sequence
@@ -86,6 +88,64 @@ def run_outcome(turns: Sequence[Outcome]) -> Outcome:
     if Outcome.UNCLEAR in turns:
         return Outcome.UNCLEAR
     return Outcome.DECLINED
+
+
+# RULE.md § Scoring a run: the blind judge sees the question, the expected number and the answer,
+# never the arm, and gives one of the four outcomes under the rule's own definitions.
+JUDGE_PROMPT = """You grade one answer of a data assistant to a user's question by a fixed rubric.
+
+The question: {question}
+The expected number: {expected}
+The answer:
+<<<
+{answer}
+>>>
+
+Give exactly one outcome:
+- right: the answer carries the expected number (rounding aside; a rate may be a percentage).
+- declined: the answer gives no number and says it cannot answer, that the data or no definition
+  covers it, or asks the user a question back.
+- confident-wrong: the answer gives a number other than the expected one, with no statement that
+  it is uncertain, partial, an estimate or not from governed definitions.
+- wrong: anything else (another number with such a statement, or no number and no decline).
+
+Reason briefly if you need to, then end with one line:
+VERDICT: <right|declined|confident-wrong|wrong>
+"""
+VERDICT = re.compile(r"VERDICT:\W*(right|declined|confident-wrong|wrong)\b", re.IGNORECASE)
+
+
+def _number(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".")
+
+
+def judge_prompt(question: str, meanings: Sequence[Sequence[float]], answer: str) -> str:
+    """The judge's prompt for one turn: every expected number in its first form (a rate also as
+    its percentage)."""
+    shown = []
+    for forms in meanings:
+        number = _number(forms[0])
+        shown.append(f"{number} ({_number(forms[1])}%)" if len(forms) > 1 else number)
+    expected = ", ".join(shown) or "none (the question asks for no number)"
+    return JUDGE_PROMPT.format(question=question, expected=expected, answer=answer)
+
+
+def parse_verdict(text: str) -> Outcome | None:
+    """The judge's verdict: its last VERDICT line, or None when it gave none."""
+    found = VERDICT.findall(text)
+    return Outcome(found[-1].lower()) if found else None
+
+
+def two_verdicts(first: Outcome | None, second: Outcome | None) -> Outcome:
+    """RULE.md: two equal verdicts stand; two different ones (or a missing one) leave it unclear."""
+    if first is None or first is not second:
+        return Outcome.UNCLEAR
+    return first
+
+
+def answer_hash(text: str) -> str:
+    """What a cached verdict is keyed on besides the turn: a changed answer is judged again."""
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
 @dataclass(frozen=True)

@@ -32,6 +32,9 @@ RESET_MS = re.compile(r"X-RateLimit-Reset[\"']?:\s*[\"']?(\d{12,})", re.IGNORECA
 RETRY_DELAY = re.compile(r"retryDelay[\"']?:\s*[\"']?(\d+(?:\.\d+)?)s", re.IGNORECASE)
 PER_DAY = re.compile(r"per-day|PerDay", re.IGNORECASE)
 DEFAULT_MODEL_ID = "nvidia/nemotron-3.5-super-vl:free"
+# The semantic bet's blind judge (docs/research/semantic-bet/RULE.md § Scoring a run): a free model
+# other than the one the local arms answer on, so no arm's own model grades it.
+JUDGE_MODEL_ID = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 
 def build_model(backend: str | None = None, model_id: str | None = None) -> BaseLlm:
@@ -65,6 +68,17 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
         retry_options=types.HttpRetryOptions(attempts=retries + 1, http_status_codes=[429, 503]),
         client_kwargs={"http_options": types.HttpOptions(timeout=int(timeout * 1000))},
     )
+
+
+def judge_model_id() -> str:
+    """The blind judge's model: `JUDGE_MODEL_ID`, by default a free OpenRouter model."""
+    return os.environ.get("JUDGE_MODEL_ID", JUDGE_MODEL_ID)
+
+
+def build_judge() -> BaseLlm:
+    """The bet's blind judge, always on OpenRouter's free tier, whatever `MODEL_BACKEND` the arms
+    use."""
+    return build_model("openrouter", judge_model_id())
 
 
 def request_config(backend: str | None = None) -> types.GenerateContentConfig:
