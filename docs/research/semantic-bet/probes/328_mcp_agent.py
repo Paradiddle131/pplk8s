@@ -7,6 +7,9 @@ read-only tools; the one piece of our code is a before-tool guard, because BigQu
 takes no `maximumBytesBilled` (its input schema, read 2026-11-03): the guard pins `projectId` to the lab
 project and dry-runs every query through the same tool, refusing one that would process more than
 `BET_MAX_BYTES` (10 MiB) or that the dry run rejects.
+With `BET_SQL_DENY` set (#350: `governed,gold,exposed,legacy,bet_*`), the guard also refuses any query that
+names one of those datasets, and `execute_query` outright, so only the catalog's definitions and `silver`
+are left to answer from; the agent still sees the datasets in listings and the catalog.
 
 Env: `GCP_PROJECT` (the lab project); `BET_BIGQUERY_MCP` and `BET_CATALOG_MCP` (Google's endpoints by
 default, the stand-in's for the offline check); `BET_MCP_TOKEN` (a bearer token; on a cloud session the
@@ -24,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sys
 from typing import Any
 
@@ -40,6 +44,21 @@ CATALOG_MCP = os.environ.get("BET_CATALOG_MCP", "https://dataplex.googleapis.com
 MAX_BYTES = int(os.environ.get("BET_MAX_BYTES", str(10 * 1024 * 1024)))
 # execute_query's own cap is on bytes billed, which BigQuery rounds up to 10 MB per table read.
 MAX_BILLED = int(os.environ.get("BET_MAX_BILLED", str(100 * 1024 * 1024)))
+# Datasets the agent's SQL may not name (#350), comma-separated; a trailing * matches a prefix.
+SQL_DENY = [
+    d.strip() for d in os.environ.get("BET_SQL_DENY", "").split(",") if d.strip()
+]
+
+
+def denied(sql: str) -> str | None:
+    """The first denied dataset the query names as `<dataset>.` (bare, project-qualified or backticked)."""
+    for name in SQL_DENY:
+        pattern = re.escape(name.rstrip("*")) + (r"\w*" if name.endswith("*") else "")
+        if re.search(rf"(?<![\w-])`?(?:{pattern})`?\s*\.", sql, re.IGNORECASE):
+            return name
+    return None
+
+
 # Every read-only tool the two servers list (tools/list, 2026-11-03: 9 on BigQuery's, 17 on Knowledge
 # Catalog's); left out: execute_sql (DML and DDL), cancel_job, and the catalog's writes (create, update,
 # upsert, delete, set_entry_group_iam_policy). execute_query runs a BigQuery job, capped by the guard.
@@ -96,6 +115,8 @@ async def cost_guard(
 ) -> dict[str, Any] | None:
     """Pins every query to the lab project and lets it run only if a dry run passes under the cap;
     `execute_query`, which takes the cap itself, gets it set."""
+    if tool.name == "execute_query" and SQL_DENY:
+        return {"error": "refused: execute_query is off in this configuration"}
     if tool.name == "execute_query":
         args["projectId"] = PROJECT
         bigquery = (
@@ -106,6 +127,11 @@ async def cost_guard(
     if tool.name != "execute_sql_readonly":
         return None
     args["projectId"] = PROJECT
+    blocked = denied(str(args.get("query", "")))
+    if blocked:
+        return {
+            "error": f"refused: the query reads dataset {blocked}, which is out of reach; use silver"
+        }
     if args.get("dryRun"):
         return None
     dry = _payload(
