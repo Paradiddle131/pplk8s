@@ -5,6 +5,7 @@ servers (does it search the dbt metrics, read their definitions, try `compile_qu
 its answer, and the answer's outcome under RULE.md (bet_rule's `number_right` and `turn_outcome`, with the
 expected numbers from the Compose warehouse's dbt_dev, as the eval takes them).
 Writes one JSON line per case and run to the file named by `--out`; a case already in it is skipped.
+`--agent 330_toolbox_agent.py` runs the `custom-toolbox` arm (#330) through the same loop and scoring.
 
 Env: probes/328_mcp_agent.py's (`GCP_PROJECT`, the endpoints, `BET_MCP_TOKEN`), the model's, and the expected
 numbers' warehouse (`WAREHOUSE_OWNER_URL`, `DBT_DBNAME=dbt_dev`, needs `make services-up` and the agents'
@@ -30,8 +31,8 @@ from semantic_agent.bet_rule import number_right, turn_outcome
 from semantic_agent.model import DEFAULT_MODEL_ID
 
 
-def _agent_module():
-    path = Path(__file__).with_name("328_mcp_agent.py")
+def _agent_module(name: str):
+    path = Path(__file__).with_name(name)
     spec = importlib.util.spec_from_file_location("bet_mcp_agent", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore[union-attr]
@@ -42,6 +43,11 @@ async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--run", type=int, default=1)
+    parser.add_argument(
+        "--agent",
+        default="328_mcp_agent.py",
+        help="the probe beside this one whose ask() answers (330_toolbox_agent.py: the custom-toolbox arm)",
+    )
     parser.add_argument("ids", nargs="+")
     args = parser.parse_args()
 
@@ -58,7 +64,7 @@ async def main() -> None:
         for line in args.out.read_text().splitlines():
             row = json.loads(line)
             done.add((row["case"], row["run"]))
-    agent = _agent_module()
+    agent = _agent_module(args.agent)
     for question in bet.questions:
         if (question.id, args.run) in done:
             continue
