@@ -7,8 +7,10 @@ stateless multi-turn mode takes it. The agents are the ones each arm's probe bui
 (`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py), chatted
 as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
 answers, free until 2026-12-31, so no OpenRouter quota is spent.
-A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` and 429 `daily_quota`
-(each ends the pass), anything else `error` (asked again on a later pass).
+A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` (ends the pass), anything
+else asked again on a later pass. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
+(160 a project, no daily cap), and Google sheds load with 429 `Request throttled at the client by
+AdaptiveThrottler`, so a throttled chat is retried after BACKOFF_S before it fails; each attempt is one request.
 
 Run through the runner, live, after `make gcp-cost-check` and `make gcp-usage-check` (from services/semantic-agent):
   GCP_PROJECT=pplk8s-lab-001 DBT_DBNAME=dbt_dev uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py \
@@ -56,7 +58,7 @@ def failure(status: int, payload: object) -> dict[str, Any] | None:
     """A refused chat in the runner's failure shape (semantic_agent.model.ModelFailure's fields)."""
     if status == 200:
         return None
-    kind = {401: "auth", 403: "auth", 429: "daily_quota"}.get(status, "error")
+    kind = {401: "auth", 403: "auth", 429: "rate_limit"}.get(status, "error")
     message = f"HTTP {status}: {json.dumps(payload, default=str)[:300]}"
     return {"kind": kind, "message": message, "retry_after_s": None}
 
@@ -96,14 +98,16 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
         turns = []
         for question in questions:
             history.append({"userMessage": {"text": question}})
-            status, stream, _ = chat_with(shaped, send, project, history)
+            status, stream, attempts = chat_throttled(
+                lambda h=history: chat_with(shaped, send, project, h)[:2]
+            )
             if failed := failure(status, stream):
                 turns.append(
                     {
                         "question": question,
                         "calls": [],
                         "answer": "",
-                        "model_calls": 1,
+                        "model_calls": attempts,
                         "failure": failed,
                     }
                 )
@@ -112,7 +116,9 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
             history += [
                 m for m in streamed if isinstance(m, dict) and "systemMessage" in m
             ]
-            turns.append(turn_of(question, shaped.summarise(stream)))
+            turns.append(
+                {**turn_of(question, shaped.summarise(stream)), "model_calls": attempts}
+            )
         return turns
 
     async def ask(questions: Sequence[str]) -> list[dict[str, Any]]:
@@ -121,6 +127,28 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
         return await anyio.to_thread.run_sync(conversation, questions)
 
     return ask
+
+
+# Seconds to wait before each retry of a throttled (429) chat.
+BACKOFF_S = (15, 30, 60)
+
+
+def chat_throttled(
+    chat: Callable[[], tuple[int, object]],
+    backoff: Sequence[float] = BACKOFF_S,
+    wait: Callable[[float], None] = time.sleep,
+) -> tuple[int, object, int]:
+    """chat() retried after each of `backoff`'s waits while it answers 429: its last status and payload,
+    and how many requests it sent."""
+    status, payload = chat()
+    attempts = 1
+    for seconds in backoff:
+        if status != 429:
+            break
+        wait(seconds)
+        status, payload = chat()
+        attempts += 1
+    return status, payload, attempts
 
 
 def chat_with(
