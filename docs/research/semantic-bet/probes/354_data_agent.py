@@ -4,8 +4,8 @@ What it measures: per turn, what the data agent did (its generated SQL and any m
 `calls`) and its final answer, every turn of a frozen case in one stateless conversation: each `:chat` request
 carries the conversation so far (the user's messages and every message the agent streamed back), as the API's
 stateless multi-turn mode takes it. The agents are the ones each arm's probe built and published
-(`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py), chatted
-as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
+(`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py; `bet-context`
+and `bet-governed` by `--copy` below), chatted as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
 answers, free until 2026-12-31, so no OpenRouter quota is spent.
 A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` (ends the pass), anything
 else asked again on a later pass. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
@@ -17,6 +17,9 @@ Run through the runner, live, after `make gcp-cost-check` and `make gcp-usage-ch
     --agent 354_data_agent.py --arm native-kc [--runs 3] [--requests 100] [--minutes 35] [case id...]
 `--legacy <arm>...` (run from the repo root as `python3 -I`): republish each arm's agent with its published context
 plus the `legacy` tables, which RULE.md puts in reach of every SQL arm; everything else in the context is kept.
+`--copy <arm>...` (the same way): create or update `bet-context` from `pplk8s-semantic`'s published context (our
+generated context, PR #310's publish.py) and `bet-governed` from `pplk8s-governed`'s, each with the legacy tables;
+the source agents are only read.
 Env: GCP_PROJECT (required); the credential as platform/gcp/data-agent/publish.py picks it (on cloud the proxy
 injects it).
 """
@@ -36,8 +39,10 @@ HERE = Path(__file__).resolve().parent
 # The model a data agent answers with: Google's, chosen by the service (`options.model: MODEL_UNSPECIFIED`), never
 # the runner's MODEL_ID; logged as the rows' `model`, so the report never pairs these arms with an OpenRouter one.
 MODEL = "google-data-agent (MODEL_UNSPECIFIED)"
-# Each built data-agent arm's agent, in RULE.md's rung order; native-context and native-governed have none yet.
+# Each data-agent arm's agent, in RULE.md's rung order.
 AGENTS = {
+    "native-context": "bet-context",
+    "native-governed": "bet-governed",
     "native-kc": "bet-kc",
     "native-shaped": "bet-shaped",
     "native-graph": "bet-graph",
@@ -191,6 +196,58 @@ def with_legacy(context: dict[str, Any], project: str) -> dict[str, Any]:
     return context
 
 
+# The main track's agents whose published context `--copy` gives a bet arm (read, never written).
+SOURCES = {
+    "native-context": "pplk8s-semantic",
+    "native-governed": "pplk8s-governed",
+}
+
+
+def published_tables(agent: dict[str, Any]) -> list[str]:
+    """The `dataset.table` names an agent's published context references."""
+    context = (agent.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
+    refs = ((context.get("datasourceReferences") or {}).get("bq") or {}).get(
+        "tableReferences"
+    ) or []
+    return [f"{r['datasetId']}.{r['tableId']}" for r in refs]
+
+
+def copy_agent(arm: str) -> int:
+    """Publish the arm's bet agent from its source agent's published context plus the legacy tables."""
+    source = SOURCES.get(arm) or sys.exit(
+        f"354_data_agent: --copy takes {sorted(SOURCES)}, not {arm}"
+    )
+    project = os.environ.get("GCP_PROJECT") or sys.exit("GCP_PROJECT is required")
+    shaped = _shaped()
+    publish = shaped.load_publish()
+    send = publish.http_transport(publish.access_token(dict(os.environ)), project)
+    base = f"{publish.endpoint(shaped.LOCATION)}/v1/projects/{project}/locations/{shaped.LOCATION}/dataAgents"
+    reader = publish.Publisher(send, project, shaped.LOCATION, source)
+    current = reader.call("GET", f"{base}/{source}")
+    published = (current.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
+    if not published:
+        print(f"354_data_agent: {source} has no published context")
+        return 2
+    agent = publish.desired(
+        with_legacy(published, project),
+        None,
+        display_name=f"bet {arm}",
+        description=f"The semantic bet's {arm} arm: {source}'s published context plus the legacy tables.",
+    )
+    publisher = publish.Publisher(send, project, shaped.LOCATION, AGENTS[arm])
+    try:
+        writes = publisher.publish(agent)
+    except publish.PublishError as error:
+        print(f"354_data_agent: {AGENTS[arm]} publish refused: {error}")
+        return 2
+    again = publisher.call("GET", f"{base}/{AGENTS[arm]}")
+    print(
+        f"354_data_agent: {AGENTS[arm]} from {source}: writes {writes}; "
+        f"published tables {published_tables(again)}"
+    )
+    return 0
+
+
 def give_legacy(arm: str) -> int:
     """Republish the arm's agent with its published context plus the legacy tables; everything else kept."""
     project = os.environ.get("GCP_PROJECT") or sys.exit("GCP_PROJECT is required")
@@ -233,7 +290,10 @@ def give_legacy(arm: str) -> int:
 
 
 if __name__ == "__main__":
-    # python3 -I 354_data_agent.py --legacy <arm>...: give each arm's agent the legacy tables (RULE.md).
-    if sys.argv[1:2] != ["--legacy"] or not sys.argv[2:]:
-        sys.exit("usage: 354_data_agent.py --legacy <arm>...")
-    raise SystemExit(max(give_legacy(arm) for arm in sys.argv[2:]))
+    # python3 -I 354_data_agent.py --legacy <arm>...: give each arm's agent the legacy tables (RULE.md);
+    # --copy <arm>...: publish bet-context / bet-governed from the main track's agents.
+    actions = {"--legacy": give_legacy, "--copy": copy_agent}
+    if sys.argv[1:2] not in ([a] for a in actions) or not sys.argv[2:]:
+        sys.exit("usage: 354_data_agent.py --legacy|--copy <arm>...")
+    action = actions[sys.argv[1]]
+    raise SystemExit(max(action(arm) for arm in sys.argv[2:]))
