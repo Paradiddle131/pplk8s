@@ -23,20 +23,17 @@ Live: yes (BigQuery on the lab project); run make gcp-cost-check and gcp-usage-c
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import json
 import os
 import sys
 from typing import Any
 
 from google.adk.agents import LlmAgent
-from google.adk.runners import InMemoryRunner
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
-from google.genai import types
+from semantic_agent.bet_live import converse
 from semantic_agent.model import (
     answer_model_failure,
     build_model,
-    failure_of,
     request_config,
 )
 
@@ -75,43 +72,8 @@ def build_agent() -> LlmAgent:
 
 
 async def ask(question: str) -> dict[str, Any]:
-    runner = InMemoryRunner(agent=build_agent(), app_name=APP)
-    session = await runner.session_service.create_session(app_name=APP, user_id="bet")
-    # By function-call id: parallel calls answer out of order.
-    calls: dict[str, dict[str, Any]] = {}
-    answer = ""
-    thought = ""
-    events = []
-    message = types.Content(role="user", parts=[types.Part(text=question)])
-    async for event in runner.run_async(
-        user_id="bet", session_id=session.id, new_message=message
-    ):
-        events.append(event)
-        for part in (event.content.parts if event.content else None) or []:
-            if part.function_call:
-                calls[part.function_call.id or str(len(calls))] = {
-                    "tool": part.function_call.name,
-                    "args": dict(part.function_call.args or {}),
-                }
-            elif part.function_response and part.function_response.id in calls:
-                calls[part.function_response.id]["result"] = json.dumps(
-                    part.function_response.response, default=str
-                )[:400]
-            elif part.text and part.thought:
-                # The model's reasoning, which ADK marks as a thought part: kept apart, never scored.
-                thought += part.text
-            elif part.text and event.is_final_response():
-                answer += part.text
-    await runner.close()
-    # A failed model call ends the turn with an answer naming it: the caller must not score that.
-    failure = failure_of(events)
-    return {
-        "question": question,
-        "calls": list(calls.values()),
-        "answer": answer.strip(),
-        "thought": thought.strip(),
-        **({"failure": dataclasses.asdict(failure)} if failure else {}),
-    }
+    """One question in a fresh session: its tool calls, answer, reasoning and any model failure."""
+    return (await converse(build_agent(), [question]))[0]
 
 
 if __name__ == "__main__":
