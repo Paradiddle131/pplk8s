@@ -71,6 +71,11 @@ Then keep working on whatever the blocker doesn't touch.
 - [#336](../../../../issues/336): `docs/research/semantic-bet/REPORT.md` and an HTML version (an artifact on Map #324, and a published page when the Artifact tool exists), answering every register question with evidence or "still unknown", with the verdict.
 - When it lands, the digest says "Report ready" and the wake's final message starts with `OWNER NEEDED: report ready; read it and turn the routine off`.
 
+## Known conditions
+
+- The $0 guard refuses every `gcloud dataplex` call, `--help` included, and this session's gcloud (570.0.0) is older than the dbt import needs (586.0.0): read the import's flags from its docs page, never from the CLI; seen 2026-11-03.
+- `make gcp-cost-check` exits 1 for all of November on $0.000010 of Artifact Registry intercontinental egress (2026-11-02) until the owner answers [#338](../../../../issues/338): no live step; pick the offline issues (#334, then the offline parts of the others); seen 2026-11-03.
+
 ## Never
 
 - Merge; push any branch but `claude/semantic-bet`.
