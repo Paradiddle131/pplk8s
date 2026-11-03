@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+import yaml
 
 from semantic_agent import agent as semantic
 from semantic_agent import evaluation, tools
@@ -483,3 +484,24 @@ def test_the_data_agent_arm_refuses_without_the_lab_project(monkeypatch, capsys)
     monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
     assert asyncio.run(evaluation.main([])) == 2
     assert "needs GCP_PROJECT" in capsys.readouterr().out
+
+
+def test_the_bets_frozen_set_keeps_its_shape_and_groups():
+    # docs/research/semantic-bet/RULE.md: questions.yaml's cases copied, at least 30% no metric
+    # covers, every case in a group, each trap with its naive SQL, each distractor its legacy SQL.
+    spec = yaml.safe_load(evaluation.BET_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert len(set(ids)) == len(ids) == len(spec["groups"])
+    assert set(spec["groups"]) == set(ids)
+    assert [q.id for q in load_questions()] == ids[: len(load_questions())]
+    groups = spec["groups"]
+    uncovered = [i for i in ids if "uncovered" in groups[i]]
+    assert len(uncovered) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in uncovered)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]}
+    assert set(spec["legacy_sql"]) == {i for i in ids if "distractor" in groups[i]}
+    assert all("covered" in groups[i] for i in [*spec["naive_sql"], *spec["legacy_sql"]])
+    known = set(tools.catalog().metrics)
+    assert all(set(q.metrics) <= known for q in questions)
+    assert spec["frozen"] == "2026-11-03" and spec["hedges"]

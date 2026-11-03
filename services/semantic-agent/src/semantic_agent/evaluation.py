@@ -82,6 +82,9 @@ from semantic_agent.model import ModelFailure, failure_of
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "evals" / "questions.yaml"
+# The semantic bet's frozen set (docs/research/semantic-bet/RULE.md): questions.yaml's shape, plus
+# its groups.
+BET_QUESTIONS = ROOT / "evals" / "semantic_bet.yaml"
 # The metrics and their code: also what `adk eval ... --config_file_path` takes.
 EVAL_CONFIG = EvalConfig.model_validate_json((ROOT / "evals" / "eval_config.json").read_text())
 REPORT = ROOT.parents[1] / "docs" / "research" / "semantic-agent-eval.md"
@@ -173,8 +176,8 @@ class Question:
 Expected = list[list[list[float]]]
 
 
-def load_questions(ids: list[str] | None = None) -> list[Question]:
-    items = yaml.safe_load(QUESTIONS.read_text())["questions"]
+def load_questions(ids: list[str] | None = None, path: Path = QUESTIONS) -> list[Question]:
+    items = yaml.safe_load(path.read_text())["questions"]
     questions = [Question.from_yaml(item) for item in items]
     return [q for q in questions if not ids or q.id in ids]
 
