@@ -11,9 +11,15 @@ Every finished run of a case is appended to a JSONL log as it finishes, so a spe
 wake resumes where it stopped: a run already in the log is never asked again. The report is
 rebuilt from the log alone (`--report-only`), into `docs/research/semantic-bet/eval-local.md`.
 
+A turn the code cannot decide (unclear) goes to the blind judge (`--judge`, RULE.md § Scoring a
+run): a free model asked twice, shown the question, the expected number and the answer, never the
+arm. Each verdict is appended to `judge.jsonl` beside the arms' logs, keyed by the turn and a hash
+of its answer, so a rescore or a second pass spends nothing; the arms' logs are never rewritten for
+it (other passes append to them at the same time), and every report applies the verdicts on read.
+
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
   python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300]
-    [--report-only | --rescore] [case ids]
+    [--report-only | --rescore | --judge] [case ids]
 The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
 `--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
 Exit 0: the report holds every run; 3: incomplete (the quota, a budget or the ids given cut it),
@@ -29,7 +35,7 @@ import json
 import os
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -37,18 +43,24 @@ from typing import Any
 import yaml
 from google.adk.agents import LlmAgent
 from google.adk.evaluation.eval_case import Invocation
+from google.adk.models.llm_request import LlmRequest
+from google.genai import types
 
 from semantic_agent import evaluation
 from semantic_agent.bet_rule import (
     ArmScore,
     Outcome,
+    answer_hash,
     arm_score,
     declines,
+    judge_prompt,
     number_right,
     paired_interval,
+    parse_verdict,
     run_outcome,
     stated,
     turn_outcome,
+    two_verdicts,
 )
 from semantic_agent.evaluation import (
     ANSWER_CORRECT,
@@ -67,6 +79,11 @@ LOG = RESEARCH / "eval-local.jsonl"
 REPORT = RESEARCH / "eval-local.md"
 # Every arm's scores side by side, from eval-local.jsonl and each live arm's eval-<arm>.jsonl.
 ALL_REPORT = RESEARCH / "eval.md"
+# The blind judge's verdicts, one line each, beside the logs (never in them: other passes append
+# to the arms' logs while the judge runs).
+JUDGE_LOG = RESEARCH / "judge.jsonl"
+# RULE.md: the judge decides twice.
+VERDICTS = 2
 RUNS = 3
 # A run that errors (not a spent quota) is asked again once on a later pass; twice is scored wrong.
 MAX_ERRORS = 2
@@ -196,6 +213,143 @@ def read_logs(directory: Path = RESEARCH) -> list[dict[str, Any]]:
         arm = path.stem.removeprefix("eval-")
         entries += [{"arm": arm, **e} for e in read_log(path)]
     return entries
+
+
+# A blind judge: a prompt in, the model's text out (bet_rule.judge_prompt, parse_verdict).
+Judge = Callable[[str], Awaitable[str]]
+# A turn's place in the logs: arm, the arm's model, case, run and turn index.
+TurnKey = tuple[str, str, str, int, int]
+
+
+def model_judge() -> Judge:
+    """The judge on the model factory's judge model (model.build_judge), one request per call."""
+    from semantic_agent.model import build_judge
+
+    llm = build_judge()
+
+    async def ask(prompt: str) -> str:
+        request = LlmRequest(
+            model=llm.model,
+            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
+            config=types.GenerateContentConfig(),
+        )
+        text = ""
+        async for response in llm.generate_content_async(request, stream=False):
+            parts = response.content.parts if response.content else None
+            text += "".join(p.text or "" for p in parts or [] if not p.thought)
+        return text
+
+    return ask
+
+
+def unclear_turns(entries: Sequence[dict[str, Any]]) -> list[tuple[TurnKey, str]]:
+    """Every turn the code left unclear, with its answer's text, in log order."""
+    found = []
+    for e in entries:
+        for i, turn in enumerate(e.get("turns") or []):
+            if turn["outcome"] == Outcome.UNCLEAR.value:
+                found.append(((e["arm"], e["model"], e["case"], e["run"], i), turn["text"]))
+    return found
+
+
+def read_verdicts(path: Path = JUDGE_LOG, judge: str | None = None) -> dict[tuple, list[Any]]:
+    """The cached verdicts, by (turn key, answer hash): each attempt's verdict (None when the judge
+    gave none), only those of this judge model when one is named."""
+    verdicts: dict[tuple, list[Any]] = {}
+    for row in read_log(path):
+        if judge is not None and row["judge"] != judge:
+            continue
+        key = (row["arm"], row["model"], row["case"], row["run"], row["turn"], row["answer"])
+        attempts = verdicts.setdefault(key, [None] * VERDICTS)
+        attempts[row["n"] - 1] = row["verdict"] or ""
+    return verdicts
+
+
+def apply_verdicts(
+    entries: Sequence[dict[str, Any]], verdicts: Mapping[tuple, list[Any]]
+) -> list[dict[str, Any]]:
+    """The logs' runs with each unclear turn's two verdicts applied: equal verdicts stand, different
+    ones leave it unclear; the turn keeps its verdicts (`judged`) and the run is scored again."""
+    out = []
+    for e in entries:
+        turns = e.get("turns") or []
+        if not any(t["outcome"] == Outcome.UNCLEAR.value for t in turns):
+            out.append(e)
+            continue
+        judged = []
+        for i, turn in enumerate(turns):
+            key = (e["arm"], e["model"], e["case"], e["run"], i, answer_hash(turn["text"]))
+            attempts = verdicts.get(key)
+            if turn["outcome"] != Outcome.UNCLEAR.value or not attempts or None in attempts:
+                judged.append(turn)
+                continue
+            first, second = (Outcome(v) if v else None for v in attempts)
+            outcome = two_verdicts(first, second)
+            judged.append({**turn, "outcome": outcome.value, "judged": list(attempts)})
+        out.append(
+            {**e, "turns": judged, "outcome": run_outcome([Outcome(t["outcome"]) for t in judged])}
+        )
+    return out
+
+
+async def judge_turns(
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    expected: Mapping[str, Expected],
+    judge: Judge,
+    judge_model: str,
+    path: Path = JUDGE_LOG,
+    requests: int | None = None,
+) -> tuple[str, int]:
+    """Ask the judge each verdict the cache lacks for an unclear turn, appending each to `path` as
+    it comes; returns why it stopped (`done`, `requests` or `quota`) and the requests sent."""
+    from semantic_agent.model import classify
+
+    questions = {q.id: q for q in bet.questions}
+    spent = 0
+    for (arm, model, case, run, i), text in unclear_turns(entries):
+        if case not in questions:
+            continue
+        digest = answer_hash(text)
+        key = (arm, model, case, run, i, digest)
+        cached = read_verdicts(path, judge_model).get(key, [None] * VERDICTS)
+        for n in range(1, VERDICTS + 1):
+            if cached[n - 1] is not None:
+                continue
+            if requests is not None and spent >= requests:
+                return "requests", spent
+            prompt = judge_prompt(questions[case].turns[i].question, expected[case][i], text)
+            spent += 1
+            try:
+                reply = await judge(prompt)
+            except Exception as error:  # a failed request: asked again on a later pass
+                if classify(error).ends_run:
+                    return "quota", spent
+                continue
+            verdict = parse_verdict(reply)
+            row = {
+                "arm": arm,
+                "model": model,
+                "case": case,
+                "run": run,
+                "turn": i,
+                "answer": digest,
+                "judge": judge_model,
+                "n": n,
+                "verdict": verdict.value if verdict else None,
+                "reply": " ".join(reply.split())[-300:],
+                "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+            append_log(row, path)
+    return "done", spent
+
+
+def judged_logs(directory: Path = RESEARCH) -> list[dict[str, Any]]:
+    """Every arm's runs with the current judge model's verdicts applied."""
+    from semantic_agent.model import judge_model_id
+
+    verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id())
+    return apply_verdicts(read_logs(directory), verdicts)
 
 
 def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
@@ -365,6 +519,32 @@ def score_log(bet: BetSet, entries: Sequence[dict[str, Any]], model: str, runs: 
     return Scored(model, used, cases, rounds == runs, scores, requests, count)
 
 
+def judge_lines(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
+    """The judged turns on this model, and every turn still unclear after judging."""
+    rows = [e for e in entries if e["model"] == model]
+    judged = [t for e in rows for t in e.get("turns") or [] if "judged" in t]
+    unclear = [
+        (e, i, t)
+        for e in rows
+        for i, t in enumerate(e.get("turns") or [])
+        if t["outcome"] == Outcome.UNCLEAR.value
+    ]
+    lines = []
+    if judged:
+        stood = sum(t["outcome"] != Outcome.UNCLEAR.value for t in judged)
+        lines += ["", f"Turns judged: {len(judged)}; verdicts that stood: {stood}."]
+    if unclear:
+        lines += ["", "Turns still unclear after judging (counted as wrong):", ""]
+        for e, i, t in sorted(unclear, key=lambda x: (x[0]["arm"], x[0]["case"], x[0]["run"])):
+            verdicts = (
+                " / ".join(v or "no verdict" for v in t["judged"])
+                if "judged" in t
+                else "not judged yet"
+            )
+            lines.append(f"- `{e['arm']}` `{e['case']}` run {e['run']} turn {i + 1}: {verdicts}")
+    return lines
+
+
 def pct(value: float) -> str:
     return f"{100 * value:.1f}%"
 
@@ -374,6 +554,8 @@ def report(
 ) -> str:
     """eval-local.md (the local pair), or with `every_arm` eval.md: every logged arm side by side,
     the rule's comparison against the managed best, and how far each arm got."""
+    from semantic_agent.model import judge_model_id
+
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
     models = list(dict.fromkeys(e["model"] for e in entries))
     total = len(bet.questions) * runs
@@ -401,8 +583,10 @@ def report(
         "`custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the "
         "`legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads "
         "the generated docs.",
-        "Unclear turns (no number parses and no decline) await the blind judge and count as "
-        "wrong here.",
+        f"A turn the code cannot decide (no number parses and no decline) goes to the blind "
+        f"judge, `{judge_model_id()}` asked {VERDICTS} times ([`judge.jsonl`](judge.jsonl), "
+        "RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong "
+        "and is listed under its model.",
     ]
     if not models:
         lines += ["", "No run is logged yet."]
@@ -463,9 +647,7 @@ def report(
                 "descriptive (RULE.md § The rule, 5) until the native arms are scored.",
             ]
         lines += managed_comparison(s.scores)
-        unclear = sorted({c for a in arms for c in s.scores[a].unclear})
-        if unclear:
-            lines += ["", "Cases with an unclear turn: " + ", ".join(f"`{c}`" for c in unclear)]
+        lines += judge_lines(entries, model)
     errors = sorted({e["error"] for e in entries if e.get("error")})
     if errors:
         lines += ["", "## Errors", ""] + [f"- {e}" for e in errors]
@@ -484,14 +666,29 @@ async def main(argv: Sequence[str]) -> int:
         "--rescore", action="store_true", help="score the log's answers again, ask none"
     )
     parser.add_argument("--report-only", action="store_true", help="rewrite the report, ask none")
+    parser.add_argument(
+        "--judge", action="store_true", help="ask the blind judge about every unclear turn"
+    )
     args = parser.parse_args(argv)
 
-    from semantic_agent.model import DEFAULT_MODEL_ID
+    from semantic_agent.model import DEFAULT_MODEL_ID, judge_model_id
 
     model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     bet = load_bet()
     why = "report"
-    if args.rescore:
+    if args.judge:
+        pending = {key[2] for key, _ in unclear_turns(read_logs())}
+        asked = load_bet(ids=sorted(pending)) if pending else BetSet([], {}, [])
+        database = os.environ.get("DBT_DBNAME", "dbt_dev")
+        owner_url = os.environ.get(
+            "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
+        )
+        expected = evaluation.expected_numbers(asked.questions, owner_url) if pending else {}
+        why, spent = await judge_turns(
+            asked, read_logs(), expected, model_judge(), judge_model_id(), JUDGE_LOG, args.requests
+        )
+        print(f"judge: {spent} request(s) sent to {judge_model_id()}")
+    elif args.rescore:
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(
             "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
@@ -516,12 +713,15 @@ async def main(argv: Sequence[str]) -> int:
         why = await run_bet(
             asked, expected, agents, described, model, args.runs, LOG, deadline, args.requests
         )
-    text = report(bet, read_log(), args.runs)
+    verdicts = read_verdicts(JUDGE_LOG, judge_model_id())
+    text = report(bet, apply_verdicts(read_log(), verdicts), args.runs)
     REPORT.write_text(text)
     print(text)
     print(f"stopped: {why}; written to {REPORT}")
-    ALL_REPORT.write_text(report(bet, read_logs(), args.runs, every_arm=True))
+    ALL_REPORT.write_text(report(bet, judged_logs(), args.runs, every_arm=True))
     print(f"every arm: written to {ALL_REPORT}")
+    if args.judge:
+        return 0 if why == "done" else 3
     complete = all(score_log(bet, read_log(), m, args.runs).complete for m in [model])
     return 0 if complete else 3
 
