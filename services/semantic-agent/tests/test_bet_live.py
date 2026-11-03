@@ -160,3 +160,8 @@ def test_a_failed_call_is_left_out_and_a_spent_quota_ends_the_pass(tmp_path):
     # The next pass asks both cases again.
     assert run(Probe([[RIGHT], [RIGHT, DEFINED]]), log) == "done"
     assert len(bet_eval.read_log(log)) == 2
+
+
+def test_each_set_logs_an_arm_to_its_own_file(tmp_path):
+    assert bet_live.log_path("native-kc", tmp_path).name == "eval-native-kc.jsonl"
+    assert bet_live.log_path("native-kc", tmp_path, "hard").name == "eval-hard-native-kc.jsonl"

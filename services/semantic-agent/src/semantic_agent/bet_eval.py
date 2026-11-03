@@ -1,4 +1,4 @@
-"""The semantic bet's local arms on the frozen set (docs/research/semantic-bet/RULE.md).
+"""The semantic bet's local arms on its sets (docs/research/semantic-bet/RULE.md).
 
 The two arms that need no GCP, `custom-metricflow` (the semantic agent on its MetricFlow tools) and
 `baseline` (the text-to-SQL baseline), answer every case of `evals/semantic_bet.yaml` k times, each
@@ -11,6 +11,12 @@ Every finished run of a case is appended to a JSONL log as it finishes, so a spe
 wake resumes where it stopped: a run already in the log is never asked again. The report is
 rebuilt from the log alone (`--report-only`), into `docs/research/semantic-bet/eval-local.md`.
 
+`--set hard` asks the second, harder set (`evals/semantic_bet_hard.yaml`, #356) instead of the
+frozen one: its runs go to their own logs (`eval-hard-local.jsonl`, each live arm's
+`eval-hard-<arm>.jsonl`) and its local report to `eval-hard-local.md`; each set is scored on its
+own under the rule, and `eval.md` holds one section per set (#364), so the two verdicts sit side by
+side in the file the report reads.
+
 A turn the code cannot decide (unclear) goes to the blind judge (`--judge`, RULE.md § Scoring a
 run): a free model asked twice, shown the question, the expected number and the answer, never the
 arm. Each verdict is appended to `judge.jsonl` beside the arms' logs, keyed by the turn and a hash
@@ -20,7 +26,7 @@ it (other passes append to them at the same time), and every report applies the 
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
   python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300]
     [--dollars 4.00] [--label <pass>] [--arms custom-metricflow] [--log <path>]
-    [--report-only | --rescore | --judge] [case ids]
+    [--set frozen|hard] [--report-only | --rescore | --judge] [case ids]
 The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
 `--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
 On Claude (`MODEL_BACKEND=anthropic`, #361) a pass takes a `--dollars` budget instead: it stops
@@ -56,6 +62,7 @@ from google.genai import types
 from semantic_agent import evaluation, spend
 from semantic_agent.bet_rule import (
     ArmScore,
+    Interval,
     Outcome,
     answer_hash,
     arm_score,
@@ -89,7 +96,7 @@ REPORT = RESEARCH / "eval-local.md"
 # Every arm's scores side by side, from eval-local.jsonl and each live arm's eval-<arm>.jsonl.
 ALL_REPORT = RESEARCH / "eval.md"
 # The blind judge's verdicts, one line each, beside the logs (never in them: other passes append
-# to the arms' logs while the judge runs).
+# to the arms' logs while the judge runs); one cache for both sets, each row naming its set.
 JUDGE_LOG = RESEARCH / "judge.jsonl"
 # RULE.md: the judge decides twice.
 VERDICTS = 2
@@ -126,17 +133,54 @@ RUNG = {
 
 
 @dataclass(frozen=True)
+class SetFiles:
+    """One of the bet's sets (RULE.md § The set) and where its runs and scores go: the local
+    arms' log `<prefix>local.jsonl` and report `<prefix>local.md`, each live arm's
+    `<prefix><arm>.jsonl`."""
+
+    name: str
+    questions: Path
+    prefix: str
+    title: str
+
+    def local_log(self, directory: Path = RESEARCH) -> Path:
+        return directory / f"{self.prefix}local.jsonl"
+
+    def local_report(self, directory: Path = RESEARCH) -> Path:
+        return directory / f"{self.prefix}local.md"
+
+    def arm_log(self, arm: str, directory: Path = RESEARCH) -> Path:
+        return directory / f"{self.prefix}{arm}.jsonl"
+
+
+# The frozen set first: eval.md's sections and every default follow this order.
+SETS = {
+    "frozen": SetFiles("frozen", evaluation.BET_QUESTIONS, "eval-", "the frozen set"),
+    "hard": SetFiles("hard", evaluation.BET_HARD_QUESTIONS, "eval-hard-", "the hard set"),
+}
+FROZEN = "frozen"
+
+
+@dataclass(frozen=True)
 class BetSet:
-    """The frozen set: its cases, each case's groups and the hedge phrases."""
+    """One of the bet's sets: its cases, each case's groups, the hedge phrases and its name."""
 
     questions: list[Question]
     groups: dict[str, list[str]]
     hedges: list[str]
+    name: str = FROZEN
 
 
-def load_bet(path: Path = evaluation.BET_QUESTIONS, ids: Sequence[str] = ()) -> BetSet:
+def load_bet(
+    path: Path = evaluation.BET_QUESTIONS, ids: Sequence[str] = (), name: str = FROZEN
+) -> BetSet:
     spec = yaml.safe_load(path.read_text())
-    return BetSet(evaluation.load_questions(list(ids), path), spec["groups"], spec["hedges"])
+    return BetSet(evaluation.load_questions(list(ids), path), spec["groups"], spec["hedges"], name)
+
+
+def load_set(name: str = FROZEN, ids: Sequence[str] = ()) -> BetSet:
+    """A set by its name in SETS (`frozen`, `hard`)."""
+    return load_bet(SETS[name].questions, ids, name)
 
 
 def score_turn(
@@ -281,14 +325,23 @@ def read_log(path: Path = LOG) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def read_logs(directory: Path = RESEARCH) -> list[dict[str, Any]]:
-    """Every arm's runs: the local arms' log, then each `eval-<arm>.jsonl` beside it, whose rows
-    take the arm from the file name when they do not name one."""
-    entries = read_log(directory / LOG.name)
-    for path in sorted(directory.glob("eval-*.jsonl")):
-        if path.name == LOG.name:
+def read_logs(directory: Path = RESEARCH, name: str = FROZEN) -> list[dict[str, Any]]:
+    """Every arm's runs on one set: the local arms' log, then each `<prefix><arm>.jsonl` beside it,
+    whose rows take the arm from the file name when they do not name one; another set's logs
+    (`eval-hard-*` under the frozen set's `eval-*`) are never read as an arm."""
+    files = SETS[name]
+    local = files.local_log(directory)
+    # Another set whose prefix extends this one's (`eval-hard-` under `eval-`) owns those files.
+    others = [
+        s.prefix
+        for s in SETS.values()
+        if s.prefix != files.prefix and s.prefix.startswith(files.prefix)
+    ]
+    entries = read_log(local)
+    for path in sorted(directory.glob(f"{files.prefix}*.jsonl")):
+        if path.name == local.name or any(path.name.startswith(p) for p in others):
             continue
-        arm = path.stem.removeprefix("eval-")
+        arm = path.stem.removeprefix(files.prefix)
         entries += [{"arm": arm, **e} for e in read_log(path)]
     return entries
 
@@ -336,12 +389,17 @@ def undecided_turns(
     return found
 
 
-def read_verdicts(path: Path = JUDGE_LOG, judge: str | None = None) -> dict[tuple, list[Any]]:
-    """The cached verdicts, by (turn key, answer hash): each attempt's verdict (None when the judge
-    gave none), only those of this judge model when one is named."""
+def read_verdicts(
+    path: Path = JUDGE_LOG, judge: str | None = None, name: str = FROZEN
+) -> dict[tuple, list[Any]]:
+    """One set's cached verdicts, by (turn key, answer hash): each attempt's verdict (None when the
+    judge gave none), only those of this judge model when one is named. A row naming no set is the
+    frozen set's (written before the hard set existed)."""
     verdicts: dict[tuple, list[Any]] = {}
     for row in read_log(path):
         if judge is not None and row["judge"] != judge:
+            continue
+        if row.get("set", FROZEN) != name:
             continue
         key = (row["arm"], row["model"], row["case"], row["run"], row["turn"], row["answer"])
         attempts = verdicts.setdefault(key, [None] * VERDICTS)
@@ -406,7 +464,7 @@ async def judge_turns(
             continue
         digest = answer_hash(text)
         key = (arm, model, case, run, i, digest)
-        cached = read_verdicts(path, judge_model).get(key, [None] * VERDICTS)
+        cached = read_verdicts(path, judge_model, bet.name).get(key, [None] * VERDICTS)
         for n in range(1, VERDICTS + 1):
             if cached[n - 1] is not None:
                 continue
@@ -422,6 +480,7 @@ async def judge_turns(
                 continue
             verdict = parse_verdict(reply)
             row = {
+                "set": bet.name,
                 "arm": arm,
                 "model": model,
                 "case": case,
@@ -439,12 +498,12 @@ async def judge_turns(
 
 
 def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]:
-    """Every arm's runs scored on read under the current wordings (`recode`), with the current
-    judge model's verdicts applied."""
+    """Every arm's runs on `bet`'s set scored on read under the current wordings (`recode`), with
+    the current judge model's verdicts on that set applied."""
     from semantic_agent.model import judge_model_id
 
-    verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id())
-    return apply_verdicts(recode(bet, read_logs(directory)), verdicts)
+    verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id(), bet.name)
+    return apply_verdicts(recode(bet, read_logs(directory, bet.name)), verdicts)
 
 
 def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
@@ -468,8 +527,62 @@ def case_shares(
     return right, wrong, sum(len(r) for r in outcomes.values())
 
 
+@dataclass(frozen=True)
+class Paired:
+    """One arm of ours on one model against the managed best (RULE.md § The rule, 2)."""
+
+    arm: str
+    model: str
+    cases: int
+    accuracy: Interval
+    confident_wrong: Interval
+    ran: int
+    worth: bool
+
+
+def step_two(
+    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS
+) -> tuple[tuple[str, str, float] | None, list[tuple[str, str]], list[Paired]]:
+    """RULE.md § The rule, 1 and 2, on one set's logs: the managed best (arm, model, accuracy),
+    every arm of ours logged (arm, model), and each one paired against the best on the cases both
+    reached (none paired when no case is shared)."""
+    models = list(dict.fromkeys(e["model"] for e in entries))
+    managed: list[tuple[float, int, str, str]] = []
+    for model in models:
+        scored = score_log(bet, entries, model, runs)
+        for arm, score in scored.scores.items():
+            if RUNG.get(arm, 9) <= 2:
+                managed.append((score.accuracy, RUNG[arm], arm, model))
+    ours = [
+        (arm, model)
+        for model in models
+        for arm in arms_of(entries, model)
+        if RUNG.get(arm, 9) in (3, 4) and case_shares(entries, arm, model, runs)[2]
+    ]
+    if not managed:
+        return None, ours, []
+    # The best accuracy; a tie goes to the lower rung.
+    accuracy, _, best, best_model = max(managed, key=lambda m: (m[0], -m[1]))
+    best_right, best_wrong, _ = case_shares(entries, best, best_model, runs)
+    paired = []
+    for arm, model in ours:
+        right, wrong, ran = case_shares(entries, arm, model, runs)
+        cases = sorted(set(right) & set(best_right))
+        if not cases:
+            continue
+        acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
+        cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
+        worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
+        paired.append(Paired(arm, model, len(cases), acc, cw, ran, worth))
+    return (best, best_model, accuracy), ours, paired
+
+
 def managed_comparison(
-    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS, deciding: str | None = None
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    runs: int = RUNS,
+    deciding: str | None = None,
+    depth: int = 0,
 ) -> list[str]:
     """RULE.md § The rule, 1 and 2, across models (#333's option C): the managed best, on the model
     it runs with, against each arm of ours on each model it ran with, paired by case on the cases
@@ -478,29 +591,16 @@ def managed_comparison(
     from semantic_agent.model import DEFAULT_MODEL_ID
 
     deciding = deciding or DEFAULT_MODEL_ID
-    models = list(dict.fromkeys(e["model"] for e in entries))
-    managed: list[tuple[float, int, str, str]] = []
-    for model in models:
-        scored = score_log(bet, entries, model, runs)
-        for arm, score in scored.scores.items():
-            if RUNG.get(arm, 9) <= 2:
-                managed.append((score.accuracy, RUNG[arm], arm, model))
-    if not managed:
+    managed, ours, paired = step_two(bet, entries, runs)
+    if managed is None:
         return []
-    # The best accuracy; a tie goes to the lower rung.
-    accuracy, _, best, best_model = max(managed, key=lambda m: (m[0], -m[1]))
+    best, best_model, accuracy = managed
     lines = [
         "",
-        "## The rule across models",
+        "#" * (2 + depth) + " The rule across models",
         "",
         f"The managed best (RULE.md § The rule, 1): `{best}` on `{best_model}`, "
         f"accuracy {pct(accuracy)}.",
-    ]
-    ours = [
-        (arm, model)
-        for model in models
-        for arm in arms_of(entries, model)
-        if RUNG.get(arm, 9) in (3, 4) and case_shares(entries, arm, model, runs)[2]
     ]
     if not ours:
         return [*lines, "No arm of ours (rung 3 or 4) is logged on any model: nothing to compare."]
@@ -511,25 +611,22 @@ def managed_comparison(
         "ours on any other model is the check on whether a gap is the model's:",
         "",
     ]
-    best_right, best_wrong, _ = case_shares(entries, best, best_model, runs)
+    by_pair = {(p.arm, p.model): p for p in paired}
     verdicts: dict[str, dict[str, bool]] = {}
     for arm, model in ours:
-        right, wrong, ran = case_shares(entries, arm, model, runs)
-        cases = sorted(set(right) & set(best_right))
-        if not cases:
+        pair = by_pair.get((arm, model))
+        if pair is None:
             lines.append(f"- `{arm}` on `{model}`: no case both reached yet.")
             continue
-        acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
-        cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
-        worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
-        verdicts.setdefault(arm, {})[model] = worth
+        acc, cw = pair.accuracy, pair.confident_wrong
+        verdicts.setdefault(arm, {})[model] = pair.worth
         role = "decides" if model == deciding else "the check"
-        verdict = "worth building" if worth else "not worth building"
+        verdict = "worth building" if pair.worth else "not worth building"
         lines.append(
             f"- `{arm}` (rung {RUNG[arm]}) on `{model}` against `{best}` on `{best_model}`, "
-            f"{len(cases)} of {len(bet.questions)} cases: accuracy {acc.mean:+.3f} "
+            f"{pair.cases} of {len(bet.questions)} cases: accuracy {acc.mean:+.3f} "
             f"[{acc.low:+.3f}, {acc.high:+.3f}], confident-wrong {cw.mean:+.3f} "
-            f"[{cw.low:+.3f}, {cw.high:+.3f}]: {verdict} ({role}; {ran} runs finished)."
+            f"[{cw.low:+.3f}, {cw.high:+.3f}]: {verdict} ({role}; {pair.ran} runs finished)."
         )
     for arm, by_model in verdicts.items():
         if len(by_model) < 2:
@@ -543,6 +640,65 @@ def managed_comparison(
                 else "the verdict moves with the model, so the gap is at least partly the model's."
             )
         )
+    return lines
+
+
+def both_sets(
+    sets: Mapping[str, tuple[BetSet, Sequence[dict[str, Any]]]],
+    runs: int = RUNS,
+    deciding: str | None = None,
+    depth: int = 0,
+) -> list[str]:
+    """RULE.md § Changes since freezing (#356): both sets decide. Each set goes through step 2 on
+    its own; an arm of ours on a model is worth building only if step 2 holds on every set, and a
+    disagreement between the sets goes to the cheaper rung (not worth building), named as such.
+    Until an arm of ours is paired on every set, the line says what is missing."""
+    from semantic_agent.model import DEFAULT_MODEL_ID
+
+    deciding = deciding or DEFAULT_MODEL_ID
+    titles = {name: SETS[name].title for name in sets}
+    steps = {name: step_two(bet, entries, runs) for name, (bet, entries) in sets.items()}
+    lines = [
+        "",
+        "#" * (2 + depth) + " The rule on both sets",
+        "",
+        "RULE.md § Changes since freezing (#356): each set goes through the rule on its own; an "
+        "arm of ours is worth building only if step 2 holds on both sets, and where they disagree "
+        "the cheaper rung wins, as a tie does.",
+    ]
+    for name, (managed, _, _) in steps.items():
+        lines.append(
+            f"- The managed best on {titles[name]}: "
+            + (f"`{managed[0]}` on `{managed[1]}`, {pct(managed[2])}." if managed else "none yet.")
+        )
+    pairs = {name: {(p.arm, p.model): p for p in paired} for name, (_, _, paired) in steps.items()}
+    ours = list(dict.fromkeys(o for _, found, _ in steps.values() for o in found))
+    missing = [titles[n] for n, (_, found, _) in steps.items() if not found]
+    if missing:
+        lines.append(
+            f"It cannot apply yet: no arm of ours (rung 3 or 4) is logged on {' or '.join(missing)}"
+            ", so step 2 has not run on both sets; each set's own verdict above is provisional."
+        )
+    for arm, model in ours:
+        found = {n: pairs[n].get((arm, model)) for n in sets}
+        each = "; ".join(
+            f"{titles[n]}: "
+            + ("not paired yet" if p is None else "worth" if p.worth else "not worth")
+            for n, p in found.items()
+        )
+        if any(p is None for p in found.values()):
+            verdict = "undecided until it is paired on both sets"
+        elif len({p.worth for p in found.values() if p}) > 1:
+            verdict = "not worth building (the sets disagree: the cheaper rung wins)"
+        else:
+            worth = all(p.worth for p in found.values() if p)
+            verdict = "worth building" if worth else "not worth building"
+        role = "decides" if model == deciding else "the check"
+        lines.append(f"- `{arm}` on `{model}` ({role}): {each}; on both sets: {verdict}.")
+    lines.append(
+        "Step 3 (the cheapest arm with no accuracy difference from the best on both sets) is read "
+        "in the report, not computed here."
+    )
     return lines
 
 
@@ -759,24 +915,32 @@ def pct(value: float) -> str:
 
 
 def report(
-    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS, every_arm: bool = False
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    runs: int = RUNS,
+    every_arm: bool = False,
+    depth: int = 0,
 ) -> str:
-    """eval-local.md (the local pair), or with `every_arm` eval.md: every logged arm side by side,
-    the rule's comparison against the managed best, and how far each arm got."""
+    """eval-local.md (the local pair), or with `every_arm` one set's section of eval.md: every
+    logged arm side by side, the rule's comparison against the managed best, and how far each arm
+    got. `depth` pushes every heading down that many levels (a section inside eval.md)."""
     from semantic_agent.model import judge_model_id
 
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
     models = list(dict.fromkeys(e["model"] for e in entries))
     total = len(bet.questions) * runs
+    files = SETS[bet.name]
+    local = files.local_log().name
+    h1, h2 = "#" * (1 + depth), "#" * (2 + depth)
     title, source = (
         (
-            "# Every arm on the frozen set",
-            "[`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl`",
+            f"{h1} Every arm on {files.title}",
+            f"[`{local}`]({local}) and each live arm's `{files.prefix}<arm>.jsonl`",
         )
         if every_arm
         else (
-            "# The bet's local arms on the frozen set",
-            "[`eval-local.jsonl`](eval-local.jsonl), the log of every run,",
+            f"{h1} The bet's local arms on {files.title}",
+            f"[`{local}`]({local}), the log of every run,",
         )
     )
     lines = [
@@ -785,7 +949,7 @@ def report(
         f"Written {stamp} by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from "
         f"{source} under "
         "[the rule](RULE.md): "
-        f"{len(bet.questions)} cases of `services/semantic-agent/evals/semantic_bet.yaml`, "
+        f"{len(bet.questions)} cases of `services/semantic-agent/evals/{files.questions.name}`, "
         f"k = {runs} runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and "
         "`fixture_weeks.sql` in the Compose warehouse.",
         "Within a model, arms stand side by side on the cases every arm reached; the rule's "
@@ -817,7 +981,7 @@ def report(
         )
         lines += [
             "",
-            f"## `{model}`",
+            f"{h2} `{model}`",
             "",
             f"Scored on {state}; runs finished: "
             + ", ".join(f"{a} {s.finished[a]} of {total}" for a in s.finished)
@@ -866,11 +1030,40 @@ def report(
             ]
         lines += judge_lines(entries, model, bet.hedges)
     if every_arm:
-        lines += managed_comparison(bet, entries, runs)
+        lines += managed_comparison(bet, entries, runs, depth=depth)
     errors = sorted({e["error"] for e in entries if e.get("error")})
     if errors:
-        lines += ["", "## Errors", ""] + [f"- {e}" for e in errors]
+        lines += ["", f"{h2} Errors", ""] + [f"- {e}" for e in errors]
     return "\n".join(lines) + "\n"
+
+
+def every_arm_report(directory: Path = RESEARCH, runs: int = RUNS) -> str:
+    """eval.md: one section per set (RULE.md § The set), each scored on its own under the rule
+    with that set's judged turns, the frozen set first; a set with no run yet says so."""
+    lines = [
+        "# Every arm on the bet's sets",
+        "",
+        "Each set is scored on its own under [the rule](RULE.md), with its own comparison against "
+        "the managed best: "
+        + ", then ".join(
+            f"[{s.title}](#every-arm-on-{s.title.replace(' ', '-')})" for s in SETS.values()
+        )
+        + " (#356, #364).",
+    ]
+    scored = {}
+    for name in SETS:
+        bet = load_set(name)
+        scored[name] = (bet, judged_logs(bet, directory))
+        lines += ["", report(bet, scored[name][1], runs, every_arm=True, depth=1).rstrip("\n")]
+    # The last set's section ends with both sets' verdict (RULE.md § Changes since freezing).
+    lines += both_sets(scored, runs, depth=1)
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def write_every_arm(directory: Path = RESEARCH, runs: int = RUNS) -> Path:
+    path = directory / ALL_REPORT.name
+    path.write_text(every_arm_report(directory, runs))
+    return path
 
 
 async def main(argv: Sequence[str]) -> int:
@@ -896,19 +1089,28 @@ async def main(argv: Sequence[str]) -> int:
     parser.add_argument(
         "--judge", action="store_true", help="ask the blind judge about every unclear turn"
     )
+    parser.add_argument(
+        "--set",
+        dest="which",
+        default=FROZEN,
+        choices=list(SETS),
+        help="the set asked, logged and scored (default: the frozen set)",
+    )
     args = parser.parse_args(argv)
 
     from semantic_agent.model import DEFAULT_MODEL_ID, MissingKey, claude_key, judge_model_id
 
     model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     claude = os.environ.get("MODEL_BACKEND", "openrouter") == "anthropic"
-    log = args.log or LOG
-    bet = load_bet()
+    files = SETS[args.which]
+    local_log = files.local_log()
+    log = args.log or local_log
+    bet = load_set(args.which)
     why = "report"
     if args.judge:
-        logs = recode(bet, read_logs())
+        logs = recode(bet, read_logs(name=args.which))
         pending = {key[2] for key, _ in undecided_turns(logs, bet.hedges)}
-        asked = load_bet(ids=sorted(pending)) if pending else BetSet([], {}, [])
+        asked = load_set(args.which, sorted(pending)) if pending else BetSet([], {}, [], args.which)
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(
             "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
@@ -937,7 +1139,7 @@ async def main(argv: Sequence[str]) -> int:
         from semantic_agent.agent import build_agent as build_semantic
         from sql_baseline.agent import build_agent as build_baseline
 
-        asked = load_bet(ids=args.ids) if args.ids else bet
+        asked = load_set(args.which, args.ids) if args.ids else bet
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(
             "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
@@ -952,7 +1154,10 @@ async def main(argv: Sequence[str]) -> int:
         agents = {arm: builders[arm]() for arm in args.arms}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
         if claude:
-            spend.METER.start(args.label or f"{model} {','.join(args.arms)}", args.dollars)
+            name = f"{model} {','.join(args.arms)}"
+            if args.which != FROZEN:
+                name += f" {args.which}"
+            spend.METER.start(args.label or name, args.dollars)
         why = await run_bet(
             asked,
             expected,
@@ -976,16 +1181,16 @@ async def main(argv: Sequence[str]) -> int:
     if args.log is not None:
         print(f"stopped: {why}; runs logged to {log} (the scored reports are left alone)")
         return 0 if why == "done" else 3
-    verdicts = read_verdicts(JUDGE_LOG, judge_model_id())
-    text = report(bet, apply_verdicts(recode(bet, read_log()), verdicts), args.runs)
-    REPORT.write_text(text)
+    verdicts = read_verdicts(JUDGE_LOG, judge_model_id(), args.which)
+    text = report(bet, apply_verdicts(recode(bet, read_log(local_log)), verdicts), args.runs)
+    local_report = files.local_report()
+    local_report.write_text(text)
     print(text)
-    print(f"stopped: {why}; written to {REPORT}")
-    ALL_REPORT.write_text(report(bet, judged_logs(bet), args.runs, every_arm=True))
-    print(f"every arm: written to {ALL_REPORT}")
+    print(f"stopped: {why}; written to {local_report}")
+    print(f"every arm: written to {write_every_arm(runs=args.runs)}")
     if args.judge:
         return 0 if why == "done" else 3
-    complete = all(score_log(bet, read_log(), m, args.runs).complete for m in [model])
+    complete = all(score_log(bet, read_log(local_log), m, args.runs).complete for m in [model])
     return 0 if complete else 3
 
 
