@@ -33,4 +33,12 @@ def build_agent(model: BaseLlm | str | None = None, toolset: Toolset | None = No
     )
 
 
-root_agent = build_agent()
+def __getattr__(name: str) -> LlmAgent:
+    """`root_agent`, built on first use (PEP 562) and kept: `adk api_server` reads it as before,
+    while importing the package (`python -m semantic_agent.bet_eval` does) builds no model, so a
+    Claude pass without its key is skipped with that reason rather than a traceback (#365)."""
+    if name == "root_agent":
+        built = build_agent()
+        globals()["root_agent"] = built
+        return built
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

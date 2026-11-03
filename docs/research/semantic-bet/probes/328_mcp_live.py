@@ -20,6 +20,10 @@ the agents' fixture). Live: run `make gcp-cost-check` and `make gcp-usage-check`
 Run from services/semantic-agent:
   DBT_DBNAME=dbt_dev uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py \
     [--agent 330_toolbox_agent.py] [--arm <name>] [--runs 3] [--requests 300] [--minutes 35] [case id...]
+On Claude (`MODEL_BACKEND=anthropic`, #361, #365) a pass takes `--dollars` (its budget) and `--label` (its row in the
+spend ledger): it opens the pass with `spend.METER.start`, stops before a case-run that would cross the budget, and
+closes it with `spend.finish_pass`, which appends the row and the anomaly checks; without `BET_ANTHROPIC_API_KEY`
+it is skipped with that reason (exit 3).
 Exit 0: every run of every case asked is logged; 3: the pass stopped short (quota, budget, time).
 """
 
@@ -33,10 +37,10 @@ import sys
 import time
 from pathlib import Path
 
-from semantic_agent import evaluation
+from semantic_agent import evaluation, spend
 from semantic_agent.bet_eval import ALL_REPORT, RUNS, judged_logs, load_bet, report
 from semantic_agent.bet_live import converse, log_path, run_live
-from semantic_agent.model import DEFAULT_MODEL_ID
+from semantic_agent.model import DEFAULT_MODEL_ID, MissingKey, claude_key
 
 # Each agent probe's arm in RULE.md.
 ARMS = {
@@ -73,11 +77,22 @@ async def main() -> int:
     )
     parser.add_argument("--minutes", type=float, help="stop asking after this long")
     parser.add_argument(
+        "--dollars", type=float, help="a Claude pass's budget in USD (spend.py)"
+    )
+    parser.add_argument("--label", help="the pass's name in the spend ledger")
+    parser.add_argument(
         "ids", nargs="*", help="only these cases (default: the whole set)"
     )
     args = parser.parse_args()
 
     arm = args.arm or ARMS[args.agent]
+    claude = os.environ.get("MODEL_BACKEND", "openrouter") == "anthropic"
+    if claude:
+        try:
+            claude_key()
+        except MissingKey as missing:
+            print(f"skipped: {missing}")
+            return 3
     log = args.out or log_path(arm)
     bet = load_bet(ids=args.ids)
     database = os.environ.get("DBT_DBNAME", "dbt_dev")
@@ -101,6 +116,8 @@ async def main() -> int:
     # A data-agent probe answers through its own chat API; an ADK probe through bet_live.converse.
     ask = agent.asker(arm) if hasattr(agent, "asker") else converse_fresh
 
+    if claude:
+        spend.METER.start(args.label or f"{model} {arm}", args.dollars)
     why = await run_live(
         bet,
         expected,
@@ -114,6 +131,14 @@ async def main() -> int:
         args.requests,
     )
     print(f"stopped: {why}; logged to {log}", flush=True)
+    if claude:
+        found = spend.finish_pass(note=f"stopped: {why}")
+        usage = spend.total(u for _, u in spend.METER.pass_calls)
+        print("ANOMALIES: " + ("; ".join(found) if found else "none"))
+        print(
+            f"spend: {usage.calls} calls, {usage.tokens} tokens, ${usage.dollars:.4f} "
+            f"of the pass's budget {args.dollars}; ledger row in {spend.LEDGER}"
+        )
     # Scored at the rule's k whatever this pass asked, as `make agent-eval ARM=bet` writes it.
     every = load_bet()
     ALL_REPORT.write_text(report(every, judged_logs(every), RUNS, every_arm=True))
