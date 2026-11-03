@@ -1,6 +1,7 @@
 # The frozen set on Claude: Haiku on both local arms, Sonnet on `custom-metricflow` (#365)
 
 Issue [#365](../../../../../../issues/365), part of [Map #324](../../../../../../issues/324), on the budget plan of [#361](../../../../../../issues/361) ([the runner's finding](2026-11-03-361-claude-in-the-runner.md#the-plan-by-question-set-revised-by-the-probe)).
+The hard set's Claude passes are [their own finding](2026-11-03-364-claude-hard.md).
 
 ## The question
 
