@@ -17,6 +17,10 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 
 - 2026-11-03T12:41Z to 13:14Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 12:38Z and 12:41Z (both ok and unchanged again at 13:14Z): the second pass, the same command with `--requests 200 --minutes 35`, on a fresh session's Compose warehouse (`make services-up`, then `DB=dbt_dev tests/e2e/agent-fixture.sh` for the expected numbers); it finished runs 2 and 3 (176 runs, 188 chats) and stopped `done`.
 
+- 2026-11-03T13:38Z to 13:51Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 13:38Z on a fresh session's Compose warehouse (`make services-up`, `DB=dbt_dev tests/e2e/agent-fixture.sh`): `native-shaped`'s first pass, `328_mcp_live.py --agent 354_data_agent.py --arm native-shaped --runs 3 --requests 200 --minutes 33` into [`eval-native-shaped.jsonl`](../eval-native-shaped.jsonl); it logged 59 runs and stopped `quota` on one chat's HTTP 429.
+- 2026-11-03T13:52Z: the project's quotas for `geminidataanalytics.googleapis.com`, read with Service Usage's `consumerQuotaMetrics` (read-only).
+- 2026-11-03T13:52Z to 14:16Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 13:52Z (both ok and unchanged again at 14:16Z): `native-shaped`'s second pass, the same command with `--minutes 24`, with the probe retrying a throttled chat (below); it logged 148 runs and stopped `time`.
+
 ## Observed
 
 - `measured` (the run above): `revenue_one_day` right ("total net revenue (excluding cancelled orders) was **€868.65**", its SQL over `silver.orders` with `LOWER(status) != 'cancelled'`); `followup_how_computed` turn 1 right (€964.19 on 1 October), turn 2 wrong under the rule (it explained its own SQL, "Sum of all order amounts in `pplk8s-lab-001.silver.orders` … excluding cancelled orders", rather than quoting the metric's definition), so the run is wrong.
@@ -33,6 +37,14 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
   Runs 2 and 3 alone: 107 right, 47 declined, 14 wrong, 8 confident-wrong of 176, so run 1's 64.6% held (the agent is stable across runs; pass^3 is 5 points under accuracy).
   `make gcp-usage-check`'s `Data agents tokens` line read 0 tokens before and after both passes, so its Monitoring source does not show these chats yet (a lag or a metric the chats don't write); cost stayed $0.000010.
 
+- `measured` (the first pass above): the 429 that ended it read `{"error": {"code": 429, "message": "Request throttled at the client by AdaptiveThrottler.", "status": "RESOURCE_EXHAUSTED"}}` on `bet_cancellation_rate_period`, run 1, at 13:51Z, about 6 chats a minute; the probe called every 429 `daily_quota`, which ends a pass.
+- `measured` (the quota read above): the Chat API allows 160 requests a minute per project and per user, the API 600 a minute per user and 1,800 per project, A2A 600 a minute per agent; there is no daily request cap, and every `Paid Input/Output Tokens` daily limit reads `-1` (unlimited).
+  So that 429 was Google shedding load, not a spent quota: the probe now calls a 429 `rate_limit`, retries the chat after 15, 30 and 60 s (each attempt one request against `--requests`), and leaves a still-throttled run for a later pass instead of ending the pass.
+  The second pass met no 429 (every run's chats equal its turns).
+- `measured` (both passes, [eval.md](../eval.md)): `native-shaped` on runs 1 and 2 of all 96 cases and 15 of run 3, 207 runs and 219 chats: 132 right, 40 declined, 15 wrong, 12 confident-wrong, 8 unclear (awaiting the blind judge, wrong for now).
+  On the two runs both arms finished, `native-shaped` against `native-kc`: accuracy 61.5% and 64.1%, confident-wrong 5.7% and 4.2%, pass^2 59.4% and 62.5%; `conversation` 28.6% and 57.1%, `covered` 66.4% and 70.9%, `trap` 54.5% and 59.1%, `uncovered` 50.0% and 48.3%, `distractor` 83.3% both, `planted` 100% both.
+  The verified queries answer much of `native-shaped` (`matched_query` in its calls), and one of them misleads: `revenue_total` run 1 matched "revenue, returns and net revenue by day between a start date and an end date" and answered per day ("€981.69 … for October 1, 2026 … €868.65 … for October 2"), not the total, confident-wrong.
+
 ## What it means for the verdict
 
 - A data agent's whole run of the set fits in about 16 minutes, so k = 3 on the three built data-agent arms takes about two and a half hours of passes, well before 2026-12-24.
@@ -40,7 +52,7 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 
 ## Still unknown
 
-- `native-shaped` and `native-graph` on the whole set (`native-kc` is done).
+- `native-shaped`'s run 3 (81 of 96 cases left) and `native-graph` on the whole set (`native-kc` is done).
 - How the rule compares a managed arm (Google's model) with ours (a free OpenRouter model).
 
 ## Sources
