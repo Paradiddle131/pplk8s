@@ -9,7 +9,7 @@ stateless multi-turn mode takes it. The agents are the ones each arm's probe bui
 and `bet-governed` by `--copy` below), chatted as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
 answers, free until 2026-12-31, so no OpenRouter quota is spent.
 A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` (ends the pass), anything
-else asked again on a later pass. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
+else asked again on a later pass; a failed connection (reset, timeout) is retried like a 429, then left the same way. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
 (160 a project, no daily cap), and Google sheds load with 429 `Request throttled at the client by
 AdaptiveThrottler`, so a throttled chat is retried after BACKOFF_S before it fails; each attempt is one request.
 
@@ -145,15 +145,23 @@ def chat_throttled(
     backoff: Sequence[float] = BACKOFF_S,
     wait: Callable[[float], None] = time.sleep,
 ) -> tuple[int, object, int]:
-    """chat() retried after each of `backoff`'s waits while it answers 429: its last status and payload,
-    and how many requests it sent."""
-    status, payload = chat()
+    """chat() retried after each of `backoff`'s waits while it answers 429 or the connection fails
+    (status 0: a reset or a timeout, #364, which ended a whole pass before): its last status and payload,
+    and how many requests it sent. A chat is stateless, so asking it again is safe."""
+
+    def attempt() -> tuple[int, object]:
+        try:
+            return chat()
+        except OSError as error:  # ConnectionResetError, URLError, TimeoutError
+            return 0, {"error": {"message": f"{type(error).__name__}: {error}"}}
+
+    status, payload = attempt()
     attempts = 1
     for seconds in backoff:
-        if status != 429:
+        if status not in (0, 429):
             break
         wait(seconds)
-        status, payload = chat()
+        status, payload = attempt()
         attempts += 1
     return status, payload, attempts
 
