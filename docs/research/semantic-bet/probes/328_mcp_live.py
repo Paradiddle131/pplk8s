@@ -7,7 +7,7 @@ expected numbers from the Compose warehouse's dbt_dev, as the eval takes them).
 Writes one JSON line per case and run to the file named by `--out`; a case already in it is skipped.
 
 Env: probes/328_mcp_agent.py's (`GCP_PROJECT`, the endpoints, `BET_MCP_TOKEN`), the model's, and the expected
-numbers' warehouse (`WAREHOUSE_SQL_URL`, `DBT_DBNAME=dbt_dev`, needs `make services-up` and the agents'
+numbers' warehouse (`WAREHOUSE_OWNER_URL`, `DBT_DBNAME=dbt_dev`, needs `make services-up` and the agents'
 fixture). Live: run `make gcp-cost-check` and `make gcp-usage-check` before and after.
 Run from services/semantic-agent:
   DBT_DBNAME=dbt_dev uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py \
@@ -47,9 +47,10 @@ async def main() -> None:
 
     bet = load_bet(ids=args.ids)
     database = os.environ.get("DBT_DBNAME", "dbt_dev")
+    # The eval's owner role, as bet_eval takes the expected numbers (expected_sql reads silver too).
     url = os.environ.get(
-        "WAREHOUSE_SQL_URL",
-        f"postgresql://agent_sql:agent_sql@localhost:5433/{database}",
+        "WAREHOUSE_OWNER_URL",
+        f"postgresql://warehouse:warehouse@localhost:5433/{database}",
     )
     expected = evaluation.expected_numbers(bet.questions, url)
     done = set()
