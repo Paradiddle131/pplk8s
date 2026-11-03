@@ -94,5 +94,8 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Every log is scored on read under the current wordings, the live arms' included, without rewriting a line (`bet_eval.recode`); the local log is rescored (`--rescore`).
 - 2026-11-03 ([#368](../../../../../issues/368)): the code reads typographic apostrophes (’ and ‘) as `'` before it matches a decline, a listed hedge or a hedge-like phrase (`bet_rule.fold`), so "can’t" reads as "can't"; every log is scored on read again, and no turn moved.
 - 2026-11-03 ([#356](../../../../../issues/356), before the hard set is first scored): both sets decide.
-  The frozen set and the hard set each go through § The rule on their own; the verdict holds where the two agree, and where they disagree the report says so and names the groups that drive it.
+  The frozen set and the hard set each go through § The rule on their own; the verdict holds where the two agree.
+  Where they disagree, the cheaper rung wins, as a tie does (§ The cost ladder): an arm of ours is worth building only if step 2 holds on both sets, and the arm the verdict adopts in step 3 must show no accuracy difference from the best arm on both; the report names the disagreement and the groups that drive it.
+  Why: the hard set detects about 15 points at k = 3 against the frozen set's 10 (findings/2026-11-03-356-hard-set.md), so its most likely disagreement is a difference it is too small to see; reading that as a tie keeps the two sets from cancelling into no verdict.
+  Written 2026-11-03T22:15Z, before any comparison on the hard set was computed or read.
   The owner's answer, 2026-11-03, in a session: "#356: which question set does the verdict rest on? we can go both as you recommended".
