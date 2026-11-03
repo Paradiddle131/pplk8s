@@ -76,6 +76,7 @@ Then keep working on whatever the blocker doesn't touch.
 
 - The $0 guard refuses every `gcloud dataplex` call, `--help` included, and this session's gcloud (570.0.0) is older than the dbt import needs (586.0.0): read the import's flags from its docs page, never from the CLI; seen 2026-11-03.
 - MetricFlow's `CLIConfiguration.setup` (the `mf` CLI, `dbt/scripts/build_catalog.py`) runs dbt's connection test, `select 1`, and the proxy's injected Google credential carries it to BigQuery even on the compile-only `bigquery` target (refused: no project `pplk8s-lab`; `BigQuery adapter:` in the copy's `logs/dbt.log` tells it): never point that target at the lab project; [#339](../../../../issues/339) removes the test; seen 2026-11-03.
+- A day's data-agent passes can spend the project's daily query fence (`QueryUsagePerDay`, 31,457 MiB a day, never raised; it resets at 00:00 Pacific): every query is then refused, not billed, the cost check's own billing-export query too (`gcp-cost-check: UNKNOWN: the billing export query failed`, exit 3), so GCP work ends until the reset; `make gcp-usage-check` stays ok because it measures the month; run one lane and at most two data-agent arms a day, about 1 GiB kept for the cost check; seen 2026-11-03T22:03Z.
 
 ## Never
 
