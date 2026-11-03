@@ -14,6 +14,7 @@ Standing permission (owner, 2026-11-02): everything `autopilot.md` allows, plus 
 
 `train claude/semantic-bet` with `AUTOPILOT_BASE=main`: `export AUTOPILOT_TRAIN=claude/semantic-bet AUTOPILOT_BASE=main` before the scripts.
 The train is stacked on PR #310 (`claude/bold-ritchie-5qpzgk`, the data-agent tooling): while #310 is open, after `train_sync.sh` also `git merge --no-edit origin/claude/bold-ritchie-5qpzgk` and push; a conflict there is an upkeep-only wake, commented on the train PR.
+A conflict between #310 and `main` (owner, 2026-11-03: "no need to ask while I'm away"): merge `origin/main` into `claude/bold-ritchie-5qpzgk` with the resolution the train already holds, run `make lint` and `make agent-test`, push that branch, and say so in the train's handoff; the routine prompt's "push only `claude/semantic-bet`" is stricter until the owner changes it, so until then a wake files the reconcile as the digest's top line instead.
 The train PR targets `main`; its first line says #310 merges first.
 
 ## Digest
