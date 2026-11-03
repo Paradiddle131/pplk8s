@@ -9,7 +9,9 @@ stateless multi-turn mode takes it. The agents are the ones each arm's probe bui
 and `bet-governed` by `--copy` below), chatted as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
 answers, free until 2026-12-31, so no OpenRouter quota is spent.
 A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` (ends the pass), anything
-else asked again on a later pass; a failed connection (reset, timeout) is retried like a 429, then left the same way. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
+else asked again on a later pass; a failed connection (reset, timeout) is retried like a 429, then left the same way;
+an answer that is the project's daily BigQuery query quota refusing the agent's query (QUOTA_ANSWER) is `daily_quota`
+and ends the pass, so a spent quota is never scored as the arm's answer. A 429 is `rate_limit`, never `daily_quota`: the Chat API's quotas are per minute
 (160 a project, no daily cap), and Google sheds load with 429 `Request throttled at the client by
 AdaptiveThrottler`, so a throttled chat is retried after BACKOFF_S before it fails; each attempt is one request.
 
@@ -30,6 +32,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import sys
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -68,6 +71,24 @@ def failure(status: int, payload: object) -> dict[str, Any] | None:
     kind = {401: "auth", 403: "auth", 429: "rate_limit"}.get(status, "error")
     message = f"HTTP {status}: {json.dumps(payload, default=str)[:300]}"
     return {"kind": kind, "message": message, "retry_after_s": None}
+
+
+# The data agent's answer when the project's daily BigQuery query quota (`QueryUsagePerDay`, platform/gcp/infra/
+# bigquery.tf's hard stop, never raised) refused its query: the lab's limit, not the arm's answer (#364, 2026-11-03,
+# 129 runs from 22:03Z); matched in every wording the agent used then, and in no logged answer before it.
+QUOTA_ANSWER = re.compile(
+    r"QueryUsagePer\w*Day|daily[\w' ]{0,30}custom[\w ]{0,30}quota|custom[\w ]{0,30}quota[\w ()`]{0,40}exceeded",
+    re.IGNORECASE,
+)
+
+
+def quota_failure(answer: str) -> dict[str, Any] | None:
+    """A turn answered with the daily query quota's refusal, as the runner's `daily_quota` failure: no later chat can
+    query until the quota's day resets, so it ends the pass and the run is asked again on a later one."""
+    if not QUOTA_ANSWER.search(answer):
+        return None
+    message = f"BigQuery QueryUsagePerDay: {answer[:300]}"
+    return {"kind": "daily_quota", "message": message, "retry_after_s": None}
 
 
 def turn_of(question: str, summary: dict[str, Any]) -> dict[str, Any]:
@@ -123,9 +144,14 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
             history += [
                 m for m in streamed if isinstance(m, dict) and "systemMessage" in m
             ]
-            turns.append(
-                {**turn_of(question, shaped.summarise(stream)), "model_calls": attempts}
-            )
+            turn = {
+                **turn_of(question, shaped.summarise(stream)),
+                "model_calls": attempts,
+            }
+            if failed := quota_failure(turn["answer"]):
+                turns.append({**turn, "failure": failed})
+                break
+            turns.append(turn)
         return turns
 
     async def ask(questions: Sequence[str]) -> list[dict[str, Any]]:
