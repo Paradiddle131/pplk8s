@@ -447,7 +447,7 @@ gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the seman
 	$(call gcp_publish,$(AGENT_IMAGE),semantic-agent-gcp,--build-context dbt=dbt services/semantic-agent)
 	platform/gcp/cost-check.sh
 
-gcp-cost-check: ## Live, read-only: exit 1 on any cost this month on the lab project's billing export, 3 when not yet provable (GCP_PROJECT; #233)
+gcp-cost-check: ## Live, read-only: exit 1 when this month's cost on the lab project's billing export reaches GCP_COST_TOLERANCE_USD (default 1.00; smaller costs pass and are listed), 3 when not yet provable (GCP_PROJECT; #233, #338)
 	platform/gcp/cost-check.sh
 
 # The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
