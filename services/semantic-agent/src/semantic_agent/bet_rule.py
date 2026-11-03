@@ -43,7 +43,8 @@ def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
 NOT_IN_DATA = re.compile(
     r"cannot be (?:determined|computed|calculated|derived|answered)|"
     r"(?:does not|doesn't|do not|don't) (?:provide|separately|record|store|track|split)|"
-    r"not (?:separately|possible to (?:determine|compute|calculate))",
+    r"not (?:separately|possible to (?:determine|compute|calculate))|"
+    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)",
     re.IGNORECASE,
 )
 

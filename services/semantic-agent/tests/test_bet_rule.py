@@ -145,7 +145,17 @@ def test_numbers_the_question_holds_are_not_stated_by_the_answer():
     assert turn_outcome(text, False, HEDGES, question) is Outcome.DECLINED
 
 
-@pytest.mark.parametrize("question, text", [NOT_SEPARATE, NOT_PROVIDED])
+# The custom-toolbox arm's answer, verbatim from a live run with the model's reasoning kept apart.
+CANNOT_PROVIDE = (
+    "How many distinct customers bought from us in September 2026?",
+    "I cannot provide the total number of distinct customers for September 2026 because daily "
+    "distinct customer counts are not additive across days (customers may purchase on multiple "
+    "days), and no tool returns a period-level distinct customer total. Daily distinct customers "
+    "ranged from 3 to 4 throughout",
+)
+
+
+@pytest.mark.parametrize("question, text", [NOT_SEPARATE, NOT_PROVIDED, CANNOT_PROVIDE])
 def test_another_figure_beside_not_in_the_data_is_hedged(question, text):
     assert turn_outcome(text, False, HEDGES, question) is Outcome.WRONG
 

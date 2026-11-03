@@ -182,6 +182,7 @@ async def ask(question: str) -> dict[str, Any]:
         str, dict[str, Any]
     ] = {}  # by function-call id: parallel calls answer out of order
     answer = ""
+    thought = ""
     message = types.Content(role="user", parts=[types.Part(text=question)])
     async for event in runner.run_async(
         user_id="bet", session_id=session.id, new_message=message
@@ -196,6 +197,9 @@ async def ask(question: str) -> dict[str, Any]:
                 calls[part.function_response.id]["result"] = json.dumps(
                     part.function_response.response, default=str
                 )[:400]
+            elif part.text and part.thought:
+                # The model's reasoning, which ADK marks as a thought part: kept apart, never scored.
+                thought += part.text
             elif part.text and event.is_final_response():
                 answer += part.text
     await runner.close()
@@ -203,6 +207,7 @@ async def ask(question: str) -> dict[str, Any]:
         "question": question,
         "calls": list(calls.values()),
         "answer": answer.strip(),
+        "thought": thought.strip(),
     }
 
 
