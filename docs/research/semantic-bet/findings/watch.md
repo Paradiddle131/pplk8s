@@ -1,6 +1,7 @@
 # The watch (#335)
 
 One dated line per daily check of the sources in #335: no change, or what changed and its link.
+Each check also runs `python3 -I docs/research/semantic-bet/probes/349_kc_compile.py` (read-only) and notes whether the catalog MCP server's `compile_query` and `execute_query` still fail ([#349](2026-11-03-349-kc-compile.md)); the day one answers, it goes first in that day's line.
 
 - 2026-11-02: baseline taken in [the starting point](2026-11-02-324-starting-point.md).
 - 2026-11-03 (`stated`, read 2026-11-03T01:56Z): two moves at Google, none at dbt.
