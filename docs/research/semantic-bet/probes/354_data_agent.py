@@ -1,0 +1,137 @@
+"""The data-agent arms as #352's runner asks them: a Conversational Analytics data agent, one conversation per run (#354, Q8).
+
+What it measures: per turn, what the data agent did (its generated SQL and any matched verified query, as
+`calls`) and its final answer, every turn of a frozen case in one stateless conversation: each `:chat` request
+carries the conversation so far (the user's messages and every message the agent streamed back), as the API's
+stateless multi-turn mode takes it. The agents are the ones each arm's probe built and published
+(`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py), chatted
+as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
+answers, free until 2026-12-31, so no OpenRouter quota is spent.
+A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` and 429 `daily_quota`
+(each ends the pass), anything else `error` (asked again on a later pass).
+
+Run through the runner, live, after `make gcp-cost-check` and `make gcp-usage-check` (from services/semantic-agent):
+  GCP_PROJECT=pplk8s-lab-001 DBT_DBNAME=dbt_dev uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py \
+    --agent 354_data_agent.py --arm native-kc [--runs 3] [--requests 100] [--minutes 35] [case id...]
+Env: GCP_PROJECT (required); the credential as platform/gcp/data-agent/publish.py picks it (on cloud the proxy
+injects it).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import sys
+import time
+from collections.abc import Awaitable, Callable, Sequence
+from pathlib import Path
+from typing import Any
+
+import anyio
+
+HERE = Path(__file__).resolve().parent
+# Each built data-agent arm's agent, in RULE.md's rung order; native-context and native-governed have none yet.
+AGENTS = {
+    "native-kc": "bet-kc",
+    "native-shaped": "bet-shaped",
+    "native-graph": "bet-graph",
+}
+
+
+def _shaped():
+    """329_shaped_agent.py: its chat transport, chat() and summarise()."""
+    spec = importlib.util.spec_from_file_location(
+        "bet_shaped_probe", HERE / "329_shaped_agent.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
+def failure(status: int, payload: object) -> dict[str, Any] | None:
+    """A refused chat in the runner's failure shape (semantic_agent.model.ModelFailure's fields)."""
+    if status == 200:
+        return None
+    kind = {401: "auth", 403: "auth", 429: "daily_quota"}.get(status, "error")
+    message = f"HTTP {status}: {json.dumps(payload, default=str)[:300]}"
+    return {"kind": kind, "message": message, "retry_after_s": None}
+
+
+def turn_of(question: str, summary: dict[str, Any]) -> dict[str, Any]:
+    """One turn in the runner's shape, from 329_shaped_agent.summarise()'s reading of the stream."""
+    calls = [
+        {"tool": "generated_sql", "args": {"sql": sql}}
+        for sql in summary["generated_sql"]
+    ]
+    calls += [
+        {"tool": "matched_query", "args": {"query": q}}
+        for q in summary["matched_query"]
+    ]
+    return {
+        "question": question,
+        "calls": calls,
+        "answer": "\n".join(summary["final_response"]).strip(),
+        "thought": "\n".join(t for t in summary["texts"] if t.startswith("THOUGHT")),
+        "model_calls": 1,
+    }
+
+
+def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]:
+    """The runner's `ask` for this arm: every question of a case in one stateless conversation."""
+    agent_id = AGENTS.get(arm) or sys.exit(
+        f"354_data_agent: no data agent for {arm}: {sorted(AGENTS)}"
+    )
+    project = os.environ.get("GCP_PROJECT") or sys.exit("GCP_PROJECT is required")
+    shaped = _shaped()
+    shaped.AGENT_ID = agent_id  # chat() addresses the module's agent
+    publish = shaped.load_publish()
+    send = shaped.chat_transport(publish.access_token(dict(os.environ)), project)
+
+    def conversation(questions: Sequence[str]) -> list[dict[str, Any]]:
+        history: list[dict[str, Any]] = []
+        turns = []
+        for question in questions:
+            history.append({"userMessage": {"text": question}})
+            status, stream, _ = chat_with(shaped, send, project, history)
+            if failed := failure(status, stream):
+                turns.append(
+                    {
+                        "question": question,
+                        "calls": [],
+                        "answer": "",
+                        "model_calls": 1,
+                        "failure": failed,
+                    }
+                )
+                break
+            streamed = stream if isinstance(stream, list) else [stream]
+            history += [
+                m for m in streamed if isinstance(m, dict) and "systemMessage" in m
+            ]
+            turns.append(turn_of(question, shaped.summarise(stream)))
+        return turns
+
+    async def ask(questions: Sequence[str]) -> list[dict[str, Any]]:
+        return await anyio.to_thread.run_sync(conversation, questions)
+
+    return ask
+
+
+def chat_with(
+    shaped, send, project: str, messages: list[dict[str, Any]]
+) -> tuple[int, object, float]:
+    """329_shaped_agent.chat() with the conversation so far instead of one question."""
+    parent = f"projects/{project}/locations/{shaped.LOCATION}"
+    body = {
+        "parent": parent,
+        "messages": messages,
+        "dataAgentContext": {"dataAgent": f"{parent}/dataAgents/{shaped.AGENT_ID}"},
+    }
+    started = time.monotonic()
+    status, payload = send(
+        "POST",
+        f"https://geminidataanalytics.{shaped.LOCATION}.rep.googleapis.com/v1/{parent}:chat",
+        body,
+    )
+    return status, payload, round(time.monotonic() - started, 1)

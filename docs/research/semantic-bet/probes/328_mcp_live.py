@@ -1,5 +1,6 @@
 """A probe arm live on the frozen set: probes/328_mcp_agent.py on Google's MCP servers (`native-mcp`, #328, Q3),
-or with `--agent 330_toolbox_agent.py` the generated Toolbox tools (`custom-toolbox`, #330).
+with `--agent 330_toolbox_agent.py` the generated Toolbox tools (`custom-toolbox`, #330), or with
+`--agent 354_data_agent.py --arm <arm>` a data-agent arm (#354).
 
 What it measures: per case and run, every turn of the conversation in one session (semantic_agent.bet_live),
 each turn's tool calls on the arm's MCP servers (does it search the dbt metrics, read their definitions, try
@@ -37,7 +38,11 @@ from semantic_agent.bet_live import converse, log_path, run_live
 from semantic_agent.model import DEFAULT_MODEL_ID
 
 # Each agent probe's arm in RULE.md.
-ARMS = {"328_mcp_agent.py": "native-mcp", "330_toolbox_agent.py": "custom-toolbox"}
+ARMS = {
+    "328_mcp_agent.py": "native-mcp",
+    "330_toolbox_agent.py": "custom-toolbox",
+    "354_data_agent.py": "native-kc",  # or --arm native-shaped / native-graph
+}
 
 
 def _agent_module(name: str):
@@ -85,8 +90,11 @@ async def main() -> int:
     model = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
     deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
 
-    async def ask(questions):
+    async def converse_fresh(questions):
         return await converse(agent.build_agent(), questions)
+
+    # A data-agent probe answers through its own chat API; an ADK probe through bet_live.converse.
+    ask = agent.asker(arm) if hasattr(agent, "asker") else converse_fresh
 
     why = await run_live(
         bet,
@@ -101,7 +109,8 @@ async def main() -> int:
         args.requests,
     )
     print(f"stopped: {why}; logged to {log}", flush=True)
-    ALL_REPORT.write_text(report(load_bet(), read_logs(), args.runs, every_arm=True))
+    # Scored at the rule's k whatever this pass asked, as `make agent-eval ARM=bet` writes it.
+    ALL_REPORT.write_text(report(load_bet(), read_logs(), RUNS, every_arm=True))
     print(f"every arm: written to {ALL_REPORT}")
     return 0 if why == "done" else 3
 
