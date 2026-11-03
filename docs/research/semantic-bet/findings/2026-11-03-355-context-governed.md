@@ -50,6 +50,7 @@ How do the two frozen data-agent arms #354 left unrun, `native-context` (the dat
 
 - `measured` (RULE.md's paired bootstrap, 10,000 resamples, seed 325, each arm minus `native-context`; descriptive, since all five are managed): accuracy `native-governed` −0.142 [−0.219, −0.073], `native-kc` −0.229 [−0.326, −0.135], `native-shaped` −0.253 [−0.351, −0.160], `native-graph` −0.253 [−0.351, −0.160], each a difference; confident-wrong `native-governed` −0.035 [−0.076, +0.000], `native-kc` −0.010 [−0.066, +0.042], `native-shaped` +0.003, `native-graph` +0.017, each no difference.
 - So at k = 3 the managed best among all five data-agent arms (RULE.md § The rule, 1) is `native-context`, 87.2% right, ahead of every other data-agent arm by an interval that excludes zero; run 1's picture held over runs 2 and 3.
+  #357's later arms, scored after this, put `native-context-bare` (89.6%) on top with no accuracy difference from `native-context` ([its finding](2026-11-03-357-equal-reach.md)); eval.md now shows all seven.
 
 ## What it means for the verdict
 
