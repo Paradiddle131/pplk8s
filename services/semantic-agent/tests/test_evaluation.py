@@ -505,3 +505,32 @@ def test_the_bets_frozen_set_keeps_its_shape_and_groups():
     known = set(tools.catalog().metrics)
     assert all(set(q.metrics) <= known for q in questions)
     assert spec["frozen"] == "2026-11-03" and spec["hedges"]
+
+
+def test_the_bets_hard_set_keeps_the_frozen_shape_and_its_kinds():
+    # RULE.md § The set, #356: the first set's keys, its hedges, at least 40 cases, at least 30% no
+    # metric covers, every case in a group and a hard kind, each trap with its naive SQL, each case
+    # written blind or named as written after reading the layer.
+    first = yaml.safe_load(evaluation.BET_QUESTIONS.read_text())
+    spec = yaml.safe_load(evaluation.BET_HARD_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_HARD_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert len(ids) >= 40 and len(set(ids)) == len(ids)
+    assert set(first) <= set(spec) and spec["hedges"] == first["hedges"]
+    assert spec["frozen"] == "2026-11-03"
+    assert set(spec["groups"]) == set(spec["kinds"]) == set(ids)
+    assert not set(ids) & {q.id for q in load_questions(path=evaluation.BET_QUESTIONS)}
+    groups = spec["groups"]
+    uncovered = [i for i in ids if "uncovered" in groups[i]]
+    assert len(uncovered) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in uncovered)
+    assert all("covered" in groups[i] for i in ids if i not in uncovered)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]}
+    assert set(spec["legacy_sql"]) == {i for i in ids if "distractor" in groups[i]}
+    assert all("covered" in groups[i] for i in [*spec["naive_sql"], *spec["legacy_sql"]])
+    assert set(tools.catalog().metrics) >= {m for q in questions for m in q.metrics}
+    kinds = {"jargon", "period", "multi_metric", "segment", "multi_step", "implicit"}
+    kinds.add("ambiguous_followup")
+    assert {k for case in spec["kinds"].values() for k in case} == kinds
+    assert set(spec["blind"]) | set(spec["post"]) == set(ids)
+    assert not set(spec["blind"]) & set(spec["post"])

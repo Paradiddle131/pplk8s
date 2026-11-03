@@ -1,0 +1,515 @@
+# The semantic bet's second, harder eval set (docs/research/semantic-bet/RULE.md § The set, #356): frozen 2026-11-03,
+# before any arm runs on it, never edited after. It sits beside semantic_bet.yaml, is scored under the same rule, and
+# adds the questions business users find hard: jargon, relative and fiscal periods, several metrics or a metric of a
+# metric, segment comparisons and rankings, multi-step questions, implicit definitions, ambiguous terms and follow-ups.
+# Cases keep questions.yaml's shape (its header says how a case is scored) and run on the same fixture
+# (dbt/dev/fixture.sql and fixture_weeks.sql, built as tests/e2e/agent-fixture.sh builds dbt_dev).
+# The questions were drafted blind from #325's business description before reading the semantic layer
+# (docs/research/semantic-bet/findings/2026-11-03-356-hard-set.md); `blind` names each one's draft question and what
+# moved onto the fixture's days, `post` the four written after reading it; expected_sql by hand afterwards.
+# groups: as semantic_bet.yaml's (covered, uncovered, trap with its naive_sql, distractor with its legacy_sql,
+# conversation, planted); kinds: the hard kinds each case belongs to (a case may sit in several).
+# hedges: semantic_bet.yaml's list, unchanged.
+frozen: '2026-11-03'
+hedges:
+- approximately
+- roughly
+- an estimate
+- estimated
+- not certain
+- uncertain
+- may be incomplete
+- partial
+- assuming
+- i assumed
+- not a governed
+- not a defined metric
+- no governed definition
+- could not verify
+- unverified
+- caveat
+groups:
+  hard_aov_last_month: [covered, trap]
+  hard_basket_size_week: [covered, trap]
+  hard_cpa_search_september: [covered, trap]
+  hard_mqls_social_september: [covered]
+  hard_win_rate_search: [covered]
+  hard_ad_burn_last_two_weeks: [covered]
+  hard_orders_last_fiscal_quarter: [covered, trap]
+  hard_fiscal_ytd_net_revenue: [covered]
+  hard_same_weekday_growth: [covered]
+  hard_revenue_so_far_this_month: [covered]
+  hard_top_channel_bookings: [covered]
+  hard_turkish_vs_dutch_per_order: [covered, trap]
+  hard_runner_up_channel_leads: [covered]
+  hard_happiest_call_topic: [covered]
+  hard_best_week: [covered]
+  hard_customer_base_turkey: [covered]
+  hard_ambiguous_q3: [conversation, covered]
+  hard_real_revenue: [conversation, covered]
+  hard_active_customers_week: [conversation, covered]
+  hard_sales_germany_this_month: [conversation, covered]
+  hard_last_seven_days: [conversation, covered]
+  hard_followup_spend_turkey: [conversation, covered]
+  hard_followup_cheapest_leads: [conversation, covered, trap]
+  hard_followup_cancelling_country: [conversation, covered]
+  hard_gmv_september: [uncovered]
+  hard_repeat_rate_october: [uncovered]
+  hard_cart_abandonment: [uncovered]
+  hard_refund_rate_by_value: [uncovered]
+  hard_budget_pacing: [uncovered]
+  hard_ad_spend_wow: [uncovered]
+  hard_revenue_per_buyer_country: [uncovered]
+  hard_cost_per_booking_rise: [uncovered]
+  hard_average_order_rise: [uncovered]
+  hard_revenue_per_session: [uncovered]
+  hard_august_signups_bought: [uncovered]
+  hard_replies_within_12_hours: [uncovered]
+  hard_candidates_still_in_running: [uncovered]
+  hard_best_customer_september: [uncovered]
+  hard_first_time_vs_returning: [uncovered]
+  hard_roas_september: [uncovered]
+  hard_social_vs_search_lead_gap: [uncovered]
+  hard_leads_per_100_social: [uncovered]
+  hard_weekend_vs_weekday: [uncovered]
+kinds:
+  hard_aov_last_month: [jargon, period]
+  hard_basket_size_week: [jargon, period]
+  hard_cpa_search_september: [jargon]
+  hard_mqls_social_september: [jargon]
+  hard_win_rate_search: [jargon]
+  hard_ad_burn_last_two_weeks: [jargon, period]
+  hard_orders_last_fiscal_quarter: [period]
+  hard_fiscal_ytd_net_revenue: [period]
+  hard_same_weekday_growth: [period, multi_metric]
+  hard_revenue_so_far_this_month: [period]
+  hard_top_channel_bookings: [segment]
+  hard_turkish_vs_dutch_per_order: [segment]
+  hard_runner_up_channel_leads: [segment]
+  hard_happiest_call_topic: [segment, implicit]
+  hard_best_week: [implicit, period]
+  hard_customer_base_turkey: [implicit]
+  hard_ambiguous_q3: [ambiguous_followup, period]
+  hard_real_revenue: [ambiguous_followup, implicit]
+  hard_active_customers_week: [ambiguous_followup, implicit]
+  hard_sales_germany_this_month: [ambiguous_followup, period]
+  hard_last_seven_days: [ambiguous_followup, period]
+  hard_followup_spend_turkey: [ambiguous_followup, segment]
+  hard_followup_cheapest_leads: [ambiguous_followup, segment]
+  hard_followup_cancelling_country: [ambiguous_followup, segment]
+  hard_gmv_september: [jargon]
+  hard_repeat_rate_october: [jargon, multi_step]
+  hard_cart_abandonment: [jargon, multi_step]
+  hard_refund_rate_by_value: [jargon, multi_metric]
+  hard_budget_pacing: [jargon, multi_metric]
+  hard_ad_spend_wow: [period, multi_metric]
+  hard_revenue_per_buyer_country: [multi_metric, segment]
+  hard_cost_per_booking_rise: [multi_metric, segment, period]
+  hard_average_order_rise: [multi_metric, period]
+  hard_revenue_per_session: [multi_metric]
+  hard_august_signups_bought: [multi_step]
+  hard_replies_within_12_hours: [multi_step]
+  hard_candidates_still_in_running: [multi_step, implicit]
+  hard_best_customer_september: [implicit, segment]
+  hard_first_time_vs_returning: [segment, multi_step]
+  hard_roas_september: [jargon, multi_metric]
+  hard_social_vs_search_lead_gap: [segment, multi_metric]
+  hard_leads_per_100_social: [multi_metric]
+  hard_weekend_vs_weekday: [segment, multi_metric]
+naive_sql:
+  hard_aov_last_month: select avg(amount) from silver.orders where order_date between '2026-09-01' and '2026-09-30'
+  hard_basket_size_week: select avg(amount) from silver.orders where order_date between '2026-09-21' and '2026-09-27'
+  hard_cpa_search_september: >-
+    select avg(cost_per_booking_eur) from exposed.channel_performance_daily where channel = 'search' and activity_date
+    between '2026-09-01' and '2026-09-30'
+  hard_orders_last_fiscal_quarter: >-
+    select sum(orders_total) from gold.daily_sales where order_date between '2026-07-01' and '2026-09-30'
+  hard_turkish_vs_dutch_per_order: >-
+    select max(a) from (select c.country, avg(o.amount) as a from silver.orders o join silver.customers c using
+    (customer_id) where c.country in ('TR', 'NL') and o.order_date between '2026-09-01' and '2026-09-30' group by 1) x
+  hard_followup_cheapest_leads: >-
+    select min(c) from (select channel, avg(cost_per_lead_eur) as c from exposed.channel_performance_daily where
+    activity_date between '2026-09-01' and '2026-09-30' group by 1) x
+legacy_sql: {}
+blind:
+  hard_aov_last_month: J1 (last month anchored to 5 October 2026)
+  hard_basket_size_week: J2 (October to the week of 21 September; October has two days of orders)
+  hard_cpa_search_september: J4
+  hard_mqls_social_september: J8 (October to September; October has two days of leads)
+  hard_win_rate_search: J9 (narrowed to search)
+  hard_ad_burn_last_two_weeks: J12 (September to the last two full weeks before 1 October)
+  hard_orders_last_fiscal_quarter: R1 (revenue to orders, cancelled included; the frozen set asks fiscal Q3's revenue)
+  hard_fiscal_ytd_net_revenue: R2 (end of September to 6 October, so returns fall inside it; net instead of gross)
+  hard_same_weekday_growth: R3 (the week before to the same weekday a week earlier; the fixture has no year-ago data)
+  hard_revenue_so_far_this_month: R5 (mid-October to 8 October; orders stop on 10 October)
+  hard_top_channel_bookings: S3
+  hard_turkish_vs_dutch_per_order: S4 (October to September)
+  hard_runner_up_channel_leads: S7 (September to the second half of August; September's runner-up is the MQL case's answer)
+  hard_happiest_call_topic: S6 (objections to positive calls; the frozen set asks the objection share per topic)
+  hard_best_week: I2 (good weeks to the best week; a count of good weeks is a small integer an answer carries by chance)
+  hard_customer_base_turkey: A1 (dated 30 September)
+  hard_ambiguous_q3: the draft's own "Q3" (J5, S1, I2, I5, M5), asked on its own
+  hard_real_revenue: I4 (September to 1 to 10 October; no return is dated in September, so both readings agree there)
+  hard_active_customers_week: I3 (September to the week up to 3 October, the only days with site and CRM actions)
+  hard_sales_germany_this_month: A2 (last month to this month as of 12 October; no return is dated in September)
+  hard_last_seven_days: R6 (end of September to 1 October)
+  hard_followup_spend_turkey: A4 (revenue to what customers spent; October to its first ten days)
+  hard_followup_cheapest_leads: A5 (the follow-up to the dearest channel; August's cheapest is September's again)
+  hard_followup_cancelling_country: A6 and S2 (merged; September's share is the same in every country)
+  hard_gmv_september: J3
+  hard_repeat_rate_october: J5 (Q3 to 1 to 10 October; every buyer in August and September bought more than once)
+  hard_cart_abandonment: J6 (September to the actions' days, 20 September to 3 October)
+  hard_refund_rate_by_value: J7 (September's orders to 1 and 2 October's; September's share is 0.3%, under the tolerance)
+  hard_budget_pacing: J13
+  hard_ad_spend_wow: R7 (the week of 21 September to that of 14 September; spend fell in the week of 21 September)
+  hard_revenue_per_buyer_country: M1
+  hard_cost_per_booking_rise: M2 (dated to the weeks of 14 and 21 September)
+  hard_average_order_rise: M4
+  hard_revenue_per_session: M3 (September to the actions' days)
+  hard_august_signups_bought: X2 (September's signups within 7 days, none, to August's by 10 October)
+  hard_replies_within_12_hours: X3 (September to 1 to 3 October; 3 days to 12 hours, since every reply came within a day)
+  hard_candidates_still_in_running: X6 (reached an interview and hired to still in the running; the stage history is per snapshot)
+  hard_best_customer_september: I1 (dated to September)
+  hard_first_time_vs_returning: S1 (Q3 to 1 to 10 October, when first-time buyers order; the frozen set asks it by signup year)
+post:
+  hard_roas_september: written after reading the semantic layer
+  hard_social_vs_search_lead_gap: written after reading the semantic layer
+  hard_leads_per_100_social: written after reading the semantic layer
+  hard_weekend_vs_weekday: written after reading the semantic layer
+questions:
+- id: hard_aov_last_month
+  question: It's 5 October 2026. What was our AOV last month?
+  expected_sql: >-
+    select sum(revenue_eur) / (sum(orders_total) - sum(orders_cancelled)) from gold.daily_sales where order_date between
+    '2026-09-01' and '2026-09-30'
+  metrics:
+  - average_order_value_eur
+- id: hard_basket_size_week
+  question: What was our average basket size, in euros, in the week starting Monday 21 September 2026?
+  expected_sql: >-
+    select sum(revenue_eur) / (sum(orders_total) - sum(orders_cancelled)) from gold.daily_sales where order_date between
+    '2026-09-21' and '2026-09-27'
+  metrics:
+  - average_order_value_eur
+- id: hard_cpa_search_september
+  question: What was our CPA on search in September 2026?
+  expected_sql: >-
+    select sum(ad_spend_eur) / sum(bookings) from exposed.channel_performance_daily where channel = 'search' and
+    activity_date between '2026-09-01' and '2026-09-30'
+  metrics:
+  - cost_per_booking_eur
+- id: hard_mqls_social_september
+  question: How many MQLs did paid social bring in during September 2026?
+  expected_sql: >-
+    select sum(leads) from exposed.channel_performance_daily where channel = 'social' and activity_date between
+    '2026-09-01' and '2026-09-30'
+  metrics:
+  - leads
+- id: hard_win_rate_search
+  question: What was our win rate on the search leads that came in during September 2026?
+  expected_sql: >-
+    select count(b.lead_id)::numeric / count(*) from silver.leads l join silver.campaigns c using (campaign_id) left join
+    silver.bookings b on b.lead_id = l.lead_id where c.channel = 'search' and l.created_date between '2026-09-01' and
+    '2026-09-30'
+  metrics:
+  - lead_to_booking_rate
+- id: hard_ad_burn_last_two_weeks
+  question: It's Thursday 1 October 2026. What was our ad burn over the last two full weeks?
+  expected_sql: >-
+    select sum(ad_spend_eur) from exposed.channel_performance_daily where activity_date between '2026-09-14' and
+    '2026-09-27'
+  metrics:
+  - ad_spend_eur
+- id: hard_orders_last_fiscal_quarter
+  question: It's 10 November 2026. How many orders did we get last fiscal quarter, cancelled ones included?
+  expected_sql: select sum(orders_total) from gold.daily_sales where order_date between '2026-08-01' and '2026-10-31'
+  metrics:
+  - orders_total
+- id: hard_fiscal_ytd_net_revenue
+  question: What is our net revenue for the fiscal year to date, as of the end of 6 October 2026?
+  expected_sql: >-
+    select sum(net_revenue_eur) from exposed.net_sales_daily where order_date between '2026-02-01' and '2026-10-06'
+  metrics:
+  - net_revenue_eur
+- id: hard_same_weekday_growth
+  question: By what percentage was revenue on Thursday 24 September 2026 up on the same weekday a week earlier?
+  expected_sql: >-
+    select (d.revenue_eur - p.revenue_eur) / p.revenue_eur from gold.daily_sales d join gold.daily_sales p on
+    p.order_date = d.order_date - 7 where d.order_date = '2026-09-24'
+  metrics:
+  - revenue_eur_wow_growth
+- id: hard_revenue_so_far_this_month
+  question: It's the evening of 8 October 2026 and the day's orders are in. How much revenue have we made so far this month?
+  expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-10-01' and '2026-10-08'
+  metrics:
+  - revenue_eur_mtd
+- id: hard_top_channel_bookings
+  question: Which channel brought us the most bookings in September 2026, and how many?
+  expected_sql: >-
+    select max(b) from (select channel, sum(bookings) as b from exposed.channel_performance_daily where activity_date
+    between '2026-09-01' and '2026-09-30' group by 1) x
+  metrics:
+  - bookings
+- id: hard_turkish_vs_dutch_per_order
+  question: Who spent more per order in September 2026, our Turkish or our Dutch customers, and what was their average?
+  expected_sql: >-
+    select max(a) from (select c.country, avg(o.amount) as a from silver.orders o join silver.customers c using
+    (customer_id) where c.country in ('TR', 'NL') and o.status <> 'cancelled' and o.order_date between '2026-09-01' and
+    '2026-09-30' group by 1) x
+  metrics:
+  - average_order_value_eur
+- id: hard_runner_up_channel_leads
+  question: Which channel came second for leads between 17 and 31 August 2026, and how many did it bring?
+  expected_sql: >-
+    select l from (select channel, sum(leads) as l from exposed.channel_performance_daily where activity_date between
+    '2026-08-17' and '2026-08-31' group by 1 order by 2 desc offset 1 limit 1) x
+  metrics:
+  - leads
+- id: hard_happiest_call_topic
+  question: Which kind of customer call left people happiest in September 2026, and in what share of those calls?
+  expected_sql: >-
+    select max(s) from (select topic, sum(positive_calls)::numeric / sum(calls_labelled) as s from gold.call_signals_daily
+    where call_date between '2026-09-01' and '2026-09-30' group by 1) x
+  metrics:
+  - positive_sentiment_share
+- id: hard_best_week
+  question: What was our best week between Monday 17 August and Sunday 27 September 2026, and what did it bring in?
+  expected_sql: >-
+    select max(r) from (select date_trunc('week', order_date) as w, sum(revenue_eur) as r from gold.daily_sales where
+    order_date between '2026-08-17' and '2026-09-27' group by 1) x
+  metrics:
+  - revenue_eur
+- id: hard_customer_base_turkey
+  question: How big was our customer base in Turkey at the end of September 2026?
+  expected_sql: select count(*) from silver.customers where country = 'TR' and signup_date <= '2026-09-30'
+  metrics:
+  - customers_to_date
+- id: hard_ambiguous_q3
+  question: What was our revenue in Q3 2026?
+  expected_sql: >-
+    select (select sum(revenue_eur) from gold.daily_sales where order_date between '2026-07-01' and '2026-09-30'),
+    (select sum(revenue_eur) from gold.daily_sales where order_date between '2026-08-01' and '2026-10-31')
+  ambiguous:
+  - revenue_eur
+- id: hard_real_revenue
+  question: What was our real revenue in the first ten days of October 2026?
+  expected_sql: >-
+    select sum(revenue_eur), sum(net_revenue_eur) from exposed.net_sales_daily where order_date between '2026-10-01'
+    and '2026-10-10'
+  ambiguous:
+  - revenue_eur
+  - net_revenue_eur
+- id: hard_active_customers_week
+  question: How many active customers did we have in the week up to 3 October 2026?
+  expected_sql: |-
+    select (select count(distinct customer_id) from silver.orders
+            where status <> 'cancelled' and order_date between '2026-09-27' and '2026-10-03'),
+      (select count(distinct customer_id) from silver.customer_actions where event_date between '2026-09-27' and '2026-10-03')
+  ambiguous:
+  - customers_distinct
+  - engaged_customers_7d
+- id: hard_sales_germany_this_month
+  question: It's 12 October 2026. What are our sales in Germany so far this month?
+  expected_sql: |-
+    select (select sum(o.amount) from silver.orders o join silver.customers c using (customer_id)
+            where c.country = 'DE' and o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-12'),
+      (select sum(o.amount) from silver.orders o join silver.customers c using (customer_id)
+       where c.country = 'DE' and o.status <> 'cancelled' and o.order_date between '2026-10-01' and '2026-10-12')
+      - (select sum(r.amount) from silver.returns r join silver.customers c using (customer_id)
+         where c.country = 'DE' and r.return_date between '2026-10-01' and '2026-10-12')
+  ambiguous:
+  - revenue_eur
+  - net_revenue_eur
+- id: hard_last_seven_days
+  question: Today is 1 October 2026. How much revenue did we make over the last 7 days?
+  expected_sql: >-
+    select (select sum(revenue_eur) from gold.daily_sales where order_date between '2026-09-24' and '2026-09-30'),
+    (select sum(revenue_eur) from gold.daily_sales where order_date between '2026-09-25' and '2026-10-01')
+  ambiguous:
+  - revenue_eur
+- id: hard_followup_spend_turkey
+  turns:
+  - question: How much did customers spend with us in September 2026, cancelled orders left out?
+    expected_sql: select sum(revenue_eur) from gold.daily_sales where order_date between '2026-09-01' and '2026-09-30'
+    metrics:
+    - revenue_eur
+  - question: And our Turkish customers alone?
+    expected_sql: >-
+      select sum(revenue_eur) from exposed.sales_by_country_daily where country = 'TR' and order_date between
+      '2026-09-01' and '2026-09-30'
+    metrics:
+    - revenue_eur
+  - question: Same question for the first ten days of October.
+    expected_sql: >-
+      select sum(revenue_eur) from exposed.sales_by_country_daily where country = 'TR' and order_date between
+      '2026-10-01' and '2026-10-10'
+    metrics:
+    - revenue_eur
+- id: hard_followup_cheapest_leads
+  turns:
+  - question: Which channel got us leads most cheaply in September 2026, and what did each lead cost?
+    expected_sql: >-
+      select min(c) from (select channel, sum(ad_spend_eur) / sum(leads) as c from exposed.channel_performance_daily
+      where activity_date between '2026-09-01' and '2026-09-30' group by 1) x
+    metrics:
+    - cost_per_lead_eur
+  - question: And which channel's leads were the most expensive, at what price?
+    expected_sql: >-
+      select max(c) from (select channel, sum(ad_spend_eur) / sum(leads) as c from exposed.channel_performance_daily
+      where activity_date between '2026-09-01' and '2026-09-30' group by 1) x
+    metrics:
+    - cost_per_lead_eur
+- id: hard_followup_cancelling_country
+  turns:
+  - question: >-
+      Which customer country cancelled the biggest share of its orders between 17 August and 30 September 2026, and
+      what share?
+    expected_sql: >-
+      select max(r) from (select c.country, count(*) filter (where o.status = 'cancelled')::numeric / count(*) as r from
+      silver.orders o join silver.customers c using (customer_id) where o.order_date between '2026-08-17' and
+      '2026-09-30' group by 1) x
+    metrics:
+    - cancellation_rate
+  - question: And which country cancelled the smallest share?
+    expected_sql: >-
+      select min(r) from (select c.country, count(*) filter (where o.status = 'cancelled')::numeric / count(*) as r from
+      silver.orders o join silver.customers c using (customer_id) where o.order_date between '2026-08-17' and
+      '2026-09-30' group by 1) x
+    metrics:
+    - cancellation_rate
+- id: hard_gmv_september
+  question: What was our GMV in September 2026, counting every order placed, cancelled ones included?
+  expected_sql: select sum(amount) from silver.orders where order_date between '2026-09-01' and '2026-09-30'
+  metrics: []
+- id: hard_repeat_rate_october
+  question: >-
+    What was our repeat purchase rate from 1 to 10 October 2026: of the customers who bought in that time, what share
+    bought more than once?
+  expected_sql: >-
+    select count(*) filter (where n > 1)::numeric / count(*) from (select customer_id, count(*) as n from silver.orders
+    where status <> 'cancelled' and order_date between '2026-10-01' and '2026-10-10' group by 1) x
+  metrics: []
+- id: hard_cart_abandonment
+  question: What was our cart abandonment rate between 20 September and 3 October 2026?
+  expected_sql: >-
+    select count(*) filter (where not checked_out)::numeric / count(*) from (select session_id, bool_or(action_type =
+    'checkout') as checked_out from silver.customer_actions where event_date between '2026-09-20' and '2026-10-03'
+    group by 1 having bool_or(action_type = 'add_to_cart')) x
+  metrics: []
+- id: hard_refund_rate_by_value
+  question: What was our refund rate by value on the orders placed on 1 and 2 October 2026?
+  expected_sql: >-
+    select (select sum(amount) from silver.returns where order_date between '2026-10-01' and '2026-10-02') / (select
+    sum(revenue_eur) from gold.daily_sales where order_date between '2026-10-01' and '2026-10-02')
+  metrics: []
+- id: hard_budget_pacing
+  question: How far through September 2026's ad budget did we get by the end of the month, as a share of the budget?
+  expected_sql: >-
+    select (select sum(spend) from silver.ad_spend where spend_date between '2026-09-01' and '2026-09-30') / (select
+    sum(budget_eur) from silver.campaign_budgets where snapshot_date = '2026-09-30')
+  metrics: []
+- id: hard_ad_spend_wow
+  question: By what percentage did our ad spend grow in the week of 14 September 2026 over the week before?
+  expected_sql: >-
+    select sum(ad_spend_eur) filter (where activity_date >= '2026-09-14') / sum(ad_spend_eur) filter (where
+    activity_date < '2026-09-14') - 1 from exposed.channel_performance_daily where activity_date between '2026-09-07'
+    and '2026-09-20'
+  metrics: []
+- id: hard_revenue_per_buyer_country
+  question: >-
+    Which customer country brought in the most revenue per buying customer in September 2026, and how much per
+    customer?
+  expected_sql: >-
+    select max(r) from (select c.country, sum(o.amount) / count(distinct o.customer_id) as r from silver.orders o join
+    silver.customers c using (customer_id) where o.status <> 'cancelled' and o.order_date between '2026-09-01' and
+    '2026-09-30' group by 1) x
+  metrics: []
+- id: hard_cost_per_booking_rise
+  question: >-
+    Which channel's cost per booking rose the most from the week of 14 September 2026 to the week of 21 September, and
+    by how many euros?
+  expected_sql: >-
+    select max(b.c - a.c) from (select channel, sum(ad_spend_eur) / nullif(sum(bookings), 0) as c from
+    exposed.channel_performance_daily where activity_date between '2026-09-14' and '2026-09-20' group by 1) a join
+    (select channel, sum(ad_spend_eur) / nullif(sum(bookings), 0) as c from exposed.channel_performance_daily where
+    activity_date between '2026-09-21' and '2026-09-27' group by 1) b using (channel)
+  metrics: []
+- id: hard_average_order_rise
+  question: By how many euros did our average order grow from August to September 2026?
+  expected_sql: >-
+    select (select sum(revenue_eur) / (sum(orders_total) - sum(orders_cancelled)) from gold.daily_sales where order_date
+    between '2026-09-01' and '2026-09-30') - (select sum(revenue_eur) / (sum(orders_total) - sum(orders_cancelled)) from
+    gold.daily_sales where order_date between '2026-08-01' and '2026-08-31')
+  metrics: []
+- id: hard_revenue_per_session
+  question: How much revenue did we make per site session between 20 September and 3 October 2026?
+  expected_sql: >-
+    select (select sum(revenue_eur) from gold.daily_sales where order_date between '2026-09-20' and '2026-10-03') /
+    (select count(distinct session_id) from silver.customer_actions where channel = 'site' and event_date between
+    '2026-09-20' and '2026-10-03')
+  metrics: []
+- id: hard_august_signups_bought
+  question: Of the customers who signed up in August 2026, what share had bought from us by 10 October 2026?
+  expected_sql: >-
+    select count(*) filter (where exists (select 1 from silver.orders o where o.customer_id = c.customer_id and o.status
+    <> 'cancelled' and o.order_date <= '2026-10-10'))::numeric / count(*) from silver.customers c where c.signup_date
+    between '2026-08-01' and '2026-08-31'
+  metrics: []
+- id: hard_replies_within_12_hours
+  question: >-
+    Of the partner outreach messages we sent from 1 to 3 October 2026, what share got an answer within 12 hours?
+  expected_sql: >-
+    select count(*) filter (where first_replied_ts <= sent_ts + interval '12 hours')::numeric / count(*) from
+    silver.outreach_messages where sent_date between '2026-10-01' and '2026-10-03'
+  metrics: []
+- id: hard_candidates_still_in_running
+  question: >-
+    Of the people who applied to work here between 25 September and 2 October 2026, what share were still in the
+    running at the end of 4 October?
+  expected_sql: >-
+    select count(*) filter (where current_stage not in ('hired', 'rejected'))::numeric / count(*) from silver.applications
+    where applied_date between '2026-09-25' and '2026-10-02'
+  metrics: []
+- id: hard_best_customer_september
+  question: Who was our best customer in September 2026, and how much did they spend?
+  expected_sql: >-
+    select max(s) from (select customer_id, sum(amount) as s from silver.orders where status <> 'cancelled' and
+    order_date between '2026-09-01' and '2026-09-30' group by 1) x
+  metrics: []
+- id: hard_first_time_vs_returning
+  question: >-
+    Between 1 and 10 October 2026, how many euros less did a first-time buyer's order come to, on average, than a
+    returning customer's?
+  expected_sql: >-
+    select avg(amount) filter (where not first_order) - avg(amount) filter (where first_order) from (select o.amount,
+    not exists (select 1 from silver.orders p where p.customer_id = o.customer_id and p.status <> 'cancelled' and
+    p.order_ts < o.order_ts) as first_order from silver.orders o where o.status <> 'cancelled' and o.order_date between
+    '2026-10-01' and '2026-10-10') x
+  metrics: []
+- id: hard_roas_september
+  question: What was our ROAS in September 2026, counting the value of bookings against ad spend?
+  expected_sql: >-
+    select sum(booking_value_eur) / sum(ad_spend_eur) from gold.marketing_daily where activity_date between '2026-09-01'
+    and '2026-09-30'
+  metrics: []
+- id: hard_social_vs_search_lead_gap
+  question: How many euros more did a social lead cost us than a search lead in September 2026?
+  expected_sql: >-
+    select sum(ad_spend_eur) filter (where channel = 'social') / sum(leads) filter (where channel = 'social') -
+    sum(ad_spend_eur) filter (where channel = 'search') / sum(leads) filter (where channel = 'search') from
+    exposed.channel_performance_daily where activity_date between '2026-09-01' and '2026-09-30'
+  metrics: []
+- id: hard_leads_per_100_social
+  question: How many leads did every 100 euros of social ad spend get us in September 2026?
+  expected_sql: >-
+    select 100 * sum(leads) / sum(ad_spend_eur) from exposed.channel_performance_daily where channel = 'social' and
+    activity_date between '2026-09-01' and '2026-09-30'
+  metrics: []
+- id: hard_weekend_vs_weekday
+  question: >-
+    Do we sell more at weekends? Between Monday 17 August and Sunday 27 September 2026, what was our average daily
+    revenue on Saturdays and Sundays, and on the other days?
+  expected_sql: >-
+    select avg(revenue_eur) filter (where extract(isodow from order_date) in (6, 7)), avg(revenue_eur) filter (where
+    extract(isodow from order_date) < 6) from gold.daily_sales where order_date between '2026-08-17' and '2026-09-27'
+  metrics: []

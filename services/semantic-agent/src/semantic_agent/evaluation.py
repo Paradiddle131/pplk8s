@@ -85,6 +85,8 @@ QUESTIONS = ROOT / "evals" / "questions.yaml"
 # The semantic bet's frozen set (docs/research/semantic-bet/RULE.md): questions.yaml's shape, plus
 # its groups.
 BET_QUESTIONS = ROOT / "evals" / "semantic_bet.yaml"
+# The second, harder set (#356), frozen beside the first and scored under the same rule.
+BET_HARD_QUESTIONS = ROOT / "evals" / "semantic_bet_hard.yaml"
 # The metrics and their code: also what `adk eval ... --config_file_path` takes.
 EVAL_CONFIG = EvalConfig.model_validate_json((ROOT / "evals" / "eval_config.json").read_text())
 REPORT = ROOT.parents[1] / "docs" / "research" / "semantic-agent-eval.md"
