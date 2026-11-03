@@ -4,7 +4,8 @@ What it measures: per turn, what the data agent did (its generated SQL and any m
 `calls`) and its final answer, every turn of a frozen case in one stateless conversation: each `:chat` request
 carries the conversation so far (the user's messages and every message the agent streamed back), as the API's
 stateless multi-turn mode takes it. The agents are the ones each arm's probe built and published
-(`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py; `bet-context`
+(`bet-kc` by 327_kc_agent.py, `bet-shaped` by 329_shaped_agent.py, `bet-graph` by 331_graph_agent.py, `bet-kc-max` by
+360_kc_max.py; `bet-context`
 and `bet-governed` by `--copy` below), chatted as they stand, never republished here. Each chat is one request against the `--requests` budget; Google's model
 answers, free until 2026-12-31, so no OpenRouter quota is spent.
 A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `auth` (ends the pass), anything
@@ -46,6 +47,7 @@ AGENTS = {
     "native-kc": "bet-kc",
     "native-shaped": "bet-shaped",
     "native-graph": "bet-graph",
+    "native-kc-max": "bet-kc-max",  # 360_kc_max.py --publish
 }
 
 
