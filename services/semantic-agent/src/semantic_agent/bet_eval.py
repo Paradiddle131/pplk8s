@@ -53,6 +53,7 @@ from semantic_agent.bet_rule import (
     answer_hash,
     arm_score,
     declines,
+    hedge_verdicts,
     judge_prompt,
     number_right,
     paired_interval,
@@ -61,6 +62,7 @@ from semantic_agent.bet_rule import (
     stated,
     turn_outcome,
     two_verdicts,
+    unlisted_hedges,
 )
 from semantic_agent.evaluation import (
     ANSWER_CORRECT,
@@ -242,12 +244,18 @@ def model_judge() -> Judge:
     return ask
 
 
-def unclear_turns(entries: Sequence[dict[str, Any]]) -> list[tuple[TurnKey, str]]:
-    """Every turn the code left unclear, with its answer's text, in log order."""
+def undecided_turns(
+    entries: Sequence[dict[str, Any]], hedges: Sequence[str]
+) -> list[tuple[TurnKey, str]]:
+    """Every turn the judge decides, with its answer's text, in log order: the turns the code left
+    unclear, and the confident-wrong turns holding a hedge-like phrase outside `hedges` (#366)."""
     found = []
     for e in entries:
         for i, turn in enumerate(e.get("turns") or []):
-            if turn["outcome"] == Outcome.UNCLEAR.value:
+            outcome = turn["outcome"]
+            if outcome == Outcome.UNCLEAR.value or (
+                outcome == Outcome.CONFIDENT_WRONG.value and unlisted_hedges(turn["text"], hedges)
+            ):
                 found.append(((e["arm"], e["model"], e["case"], e["run"], i), turn["text"]))
     return found
 
@@ -268,24 +276,34 @@ def read_verdicts(path: Path = JUDGE_LOG, judge: str | None = None) -> dict[tupl
 def apply_verdicts(
     entries: Sequence[dict[str, Any]], verdicts: Mapping[tuple, list[Any]]
 ) -> list[dict[str, Any]]:
-    """The logs' runs with each unclear turn's two verdicts applied: equal verdicts stand, different
-    ones leave it unclear; the turn keeps its verdicts (`judged`) and the run is scored again."""
+    """The logs' runs with each judged turn's two verdicts applied (an unclear turn's by
+    `two_verdicts`, a confident-wrong one's by `hedge_verdicts`); the turn keeps its verdicts
+    (`judged`) and the code's outcome (`coded`), and the run is scored again."""
+    judgeable = (Outcome.UNCLEAR.value, Outcome.CONFIDENT_WRONG.value)
     out = []
     for e in entries:
         turns = e.get("turns") or []
-        if not any(t["outcome"] == Outcome.UNCLEAR.value for t in turns):
+        if not any(t["outcome"] in judgeable for t in turns):
             out.append(e)
             continue
         judged = []
         for i, turn in enumerate(turns):
             key = (e["arm"], e["model"], e["case"], e["run"], i, answer_hash(turn["text"]))
             attempts = verdicts.get(key)
-            if turn["outcome"] != Outcome.UNCLEAR.value or not attempts or None in attempts:
+            if turn["outcome"] not in judgeable or not attempts or None in attempts:
                 judged.append(turn)
                 continue
             first, second = (Outcome(v) if v else None for v in attempts)
-            outcome = two_verdicts(first, second)
-            judged.append({**turn, "outcome": outcome.value, "judged": list(attempts)})
+            combine = two_verdicts if turn["outcome"] == Outcome.UNCLEAR.value else hedge_verdicts
+            outcome = combine(first, second)
+            judged.append(
+                {
+                    **turn,
+                    "outcome": outcome.value,
+                    "judged": list(attempts),
+                    "coded": turn["outcome"],
+                }
+            )
         out.append(
             {**e, "turns": judged, "outcome": run_outcome([Outcome(t["outcome"]) for t in judged])}
         )
@@ -307,7 +325,7 @@ async def judge_turns(
 
     questions = {q.id: q for q in bet.questions}
     spent = 0
-    for (arm, model, case, run, i), text in unclear_turns(entries):
+    for (arm, model, case, run, i), text in undecided_turns(entries, bet.hedges):
         if case not in questions:
             continue
         digest = answer_hash(text)
@@ -574,29 +592,63 @@ def score_log(bet: BetSet, entries: Sequence[dict[str, Any]], model: str, runs: 
     return Scored(model, used, cases, rounds == runs, scores, requests, count)
 
 
-def judge_lines(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
-    """The judged turns on this model, and every turn still unclear after judging."""
+def judge_lines(
+    entries: Sequence[dict[str, Any]], model: str, hedges: Sequence[str] = ()
+) -> list[str]:
+    """The judged turns on this model, the confident-wrong turns the judge moved, and every turn
+    still unclear or still awaiting the judge."""
     rows = [e for e in entries if e["model"] == model]
-    judged = [t for e in rows for t in e.get("turns") or [] if "judged" in t]
-    unclear = [
+    turns = [(e, i, t) for e in rows for i, t in enumerate(e.get("turns") or [])]
+    judged = [t for _, _, t in turns if "judged" in t]
+    hedged = [t for t in judged if t["coded"] == Outcome.CONFIDENT_WRONG.value]
+    unclear = [(e, i, t) for e, i, t in turns if t["outcome"] == Outcome.UNCLEAR.value]
+    waiting = [
         (e, i, t)
-        for e in rows
-        for i, t in enumerate(e.get("turns") or [])
-        if t["outcome"] == Outcome.UNCLEAR.value
+        for e, i, t in turns
+        if t["outcome"] == Outcome.CONFIDENT_WRONG.value
+        and "judged" not in t
+        and unlisted_hedges(t["text"], hedges)
     ]
     lines = []
     if judged:
         stood = sum(t["outcome"] != Outcome.UNCLEAR.value for t in judged)
-        lines += ["", f"Turns judged: {len(judged)}; verdicts that stood: {stood}."]
-    if unclear:
-        lines += ["", "Turns still unclear after judging (counted as wrong):", ""]
-        for e, i, t in sorted(unclear, key=lambda x: (x[0]["arm"], x[0]["case"], x[0]["run"])):
+        lines += [
+            "",
+            f"Turns judged: {len(judged)} ({len(judged) - len(hedged)} the code left unclear, "
+            f"{len(hedged)} confident-wrong with a hedge outside the list); verdicts that stood: "
+            f"{stood}.",
+        ]
+    if hedged:
+        moved = {
+            o: sum(t["outcome"] == o.value for t in hedged)
+            for o in (Outcome.WRONG, Outcome.UNCLEAR)
+        }
+        total = moved[Outcome.WRONG] + moved[Outcome.UNCLEAR]
+        lines.append(
+            f"Confident-wrong turns the judge moved: {total} of {len(hedged)} "
+            f"({moved[Outcome.WRONG]} to wrong, hedged; {moved[Outcome.UNCLEAR]} to unclear)."
+        )
+
+    def listed(items: list[tuple[dict[str, Any], int, dict[str, Any]]]) -> list[str]:
+        out = []
+        for e, i, t in sorted(items, key=lambda x: (x[0]["arm"], x[0]["case"], x[0]["run"])):
             verdicts = (
                 " / ".join(v or "no verdict" for v in t["judged"])
                 if "judged" in t
                 else "not judged yet"
             )
-            lines.append(f"- `{e['arm']}` `{e['case']}` run {e['run']} turn {i + 1}: {verdicts}")
+            out.append(f"- `{e['arm']}` `{e['case']}` run {e['run']} turn {i + 1}: {verdicts}")
+        return out
+
+    if unclear:
+        lines += ["", "Turns still unclear after judging (counted as wrong):", "", *listed(unclear)]
+    if waiting:
+        lines += [
+            "",
+            "Confident-wrong turns with a hedge outside the list, awaiting the judge:",
+            "",
+            *listed(waiting),
+        ]
     return lines
 
 
@@ -703,7 +755,7 @@ def report(
                 "Both local arms are on rung 3 or 4 and none is the managed best, so this pair is "
                 "descriptive (RULE.md § The rule, 5) until the native arms are scored.",
             ]
-        lines += judge_lines(entries, model)
+        lines += judge_lines(entries, model, bet.hedges)
     if every_arm:
         lines += managed_comparison(bet, entries, runs)
     errors = sorted({e["error"] for e in entries if e.get("error")})
@@ -735,7 +787,7 @@ async def main(argv: Sequence[str]) -> int:
     bet = load_bet()
     why = "report"
     if args.judge:
-        pending = {key[2] for key, _ in unclear_turns(read_logs())}
+        pending = {key[2] for key, _ in undecided_turns(read_logs(), bet.hedges)}
         asked = load_bet(ids=sorted(pending)) if pending else BetSet([], {}, [])
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(
