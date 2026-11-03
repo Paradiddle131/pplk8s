@@ -29,7 +29,7 @@ The live part (dry-running the statement, the graph beside the tables in a `bet-
 
 ## What it means for the verdict
 
-- A graph carries the definitions of the metrics that live on one table, about half of ours (30 to 35 of 57), the same half Lightdash keeps (36 of 56, [its finding](2026-11-03-334-lightdash.md)) and the OSI export keeps whole.
+- A graph carries the definitions of the metrics that live on one table, about half of ours (30 to 35 of 57), close to the set Lightdash keeps (36 of 56, [its finding](2026-11-03-334-lightdash.md)).
 - What every native or open path drops is the same set: cumulative, conversion, offsets, cross-table ratios and derived metrics, percentiles, semi-additive and metric-filtered metrics; that set is where a gap-filling layer, or MetricFlow itself at query time, still earns its place.
 - Whether a data agent aggregates through `AGG(measure)` when it also has the tables is the live question, and the docs only say agents "can take advantage of" measures.
 
