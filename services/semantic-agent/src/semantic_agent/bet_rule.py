@@ -41,18 +41,34 @@ def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
 
 
 # Sentences that say the data cannot give the figure, beyond the eval's DECLINE: the bet's code
-# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers.
+# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers. The last two
+# lines (#367, RULE.md § Changes since freezing) are declines the judge found the code missing:
+# "is not tracked or available in the governed tables" and "there is no allocated budget column or
+# budget table present in the schema to compute the remaining budget".
 NOT_IN_DATA = re.compile(
     r"cannot be (?:determined|computed|calculated|derived|answered)|"
     r"(?:does not|doesn't|do not|don't) (?:provide|separately|record|store|track|split)|"
     r"not (?:separately|possible to (?:determine|compute|calculate))|"
-    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)",
+    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)|"
+    r"\bnot tracked\b|"
+    r"\bno\b[^.]{0,40}?\b(?:column|table|field)s?\b[^.]{0,80}?\bto (?:compute|calculate|determine)",
     re.IGNORECASE,
 )
 
 
+# Typographic apostrophes, folded to ASCII before any wording is matched (#368, RULE.md § Changes
+# since freezing): the patterns spell "can't", and models write "can’t" as often.
+APOSTROPHES = str.maketrans({"\u2019": "'", "\u2018": "'"})
+
+
+def fold(text: str) -> str:
+    """The answer as the wording patterns read it: ’ and ‘ as '."""
+    return text.translate(APOSTROPHES)
+
+
 def declines(text: str) -> bool:
     """The answer says it cannot answer, or that the data does not hold the figure."""
+    text = fold(text)
     return bool(DECLINE.search(text) or NOT_IN_DATA.search(text))
 
 
@@ -68,7 +84,7 @@ def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = 
     if right:
         return Outcome.RIGHT
     if stated(text, question):
-        lowered = text.lower()
+        lowered = fold(text).lower()
         # A decline beside the number says it is not from governed definitions: a hedge too.
         hedged = any(h.lower() in lowered for h in hedges) or declines(text)
         return Outcome.WRONG if hedged else Outcome.CONFIDENT_WRONG
@@ -153,15 +169,18 @@ HEDGE_LIKE = re.compile(
     r"perhaps|probably|appears?|seems?|assum\w*|not sure|uncertain\w*|unclear|partial\w*|"
     r"incomplete|caveats?|note that|please note|for reference|based on|treated as|taken as|"
     r"interpret\w*|proxy|depending|if you|not (?:tracked|available|recorded|stored|present)|"
-    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?))\b",
+    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?)|"
+    # Scope caveats (#367): the figure is for a wider scope than asked, which the answer says.
+    r"(?:cannot|can't|unable to) (?:split|filter|isolate|break)|covers? all|"
+    r"not broken (?:down|out))\b",
     re.IGNORECASE,
 )
 
 
 def unlisted_hedges(text: str, hedges: Sequence[str]) -> list[str]:
     """The hedge-like phrases an answer holds that the set's `hedges` list does not."""
-    listed = [h.lower() for h in hedges]
-    found = [m.group(0) for m in HEDGE_LIKE.finditer(text)]
+    listed = [fold(h).lower() for h in hedges]
+    found = [m.group(0) for m in HEDGE_LIKE.finditer(fold(text))]
     return [f for f in found if not any(f.lower() in h or h in f.lower() for h in listed)]
 
 
@@ -230,6 +249,10 @@ class Interval:
         return self.low > 0 or self.high < 0
 
 
+# The decimals a bootstrap mean is kept to: far below any share of a case's runs.
+DIGITS = 12
+
+
 def paired_interval(
     a: Mapping[str, float], b: Mapping[str, float], resamples: int = RESAMPLES, seed: int = SEED
 ) -> Interval:
@@ -240,9 +263,11 @@ def paired_interval(
     diffs = [b[c] - a[c] for c in cases]
     n = len(diffs)
     rng = random.Random(seed)
-    means = sorted(sum(rng.choices(diffs, k=n)) / n for _ in range(resamples))
+    # Rounded so float noise never decides: shares in thirds summed in another order leave a
+    # bound of 6e-19 where the exact one is 0, which would read as "excludes zero" (#357).
+    means = sorted(round(sum(rng.choices(diffs, k=n)) / n, DIGITS) for _ in range(resamples))
     return Interval(
-        mean=sum(diffs) / n,
+        mean=round(sum(diffs) / n, DIGITS),
         low=means[int(0.025 * resamples)],
         high=means[int(0.975 * resamples) - 1],
     )

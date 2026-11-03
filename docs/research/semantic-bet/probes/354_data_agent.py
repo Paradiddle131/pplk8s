@@ -22,13 +22,15 @@ Run through the runner, live, after `make gcp-cost-check` and `make gcp-usage-ch
 plus the `legacy` tables, which RULE.md puts in reach of every SQL arm; everything else in the context is kept.
 `--copy <arm>...` (the same way): create or update `bet-context` from `pplk8s-semantic`'s published context (our
 generated context, PR #310's publish.py) and `bet-governed` from `pplk8s-governed`'s, each with the legacy tables;
-the source agents are only read.
+and #357's equal-reach arms: `bet-kc-reach` (bet-kc's context on bet-context's tables) and `bet-context-bare`
+(bet-context's without its verified queries); the source agents are only read.
 Env: GCP_PROJECT (required); the credential as platform/gcp/data-agent/publish.py picks it (on cloud the proxy
 injects it).
 """
 
 from __future__ import annotations
 
+import http.client
 import importlib.util
 import json
 import os
@@ -51,6 +53,9 @@ AGENTS = {
     "native-shaped": "bet-shaped",
     "native-graph": "bet-graph",
     "native-kc-max": "bet-kc-max",  # 360_kc_max.py --publish
+    # #357's equal-reach arms, published by `--copy`.
+    "native-kc-reach": "bet-kc-reach",
+    "native-context-bare": "bet-context-bare",
 }
 
 
@@ -162,6 +167,8 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
     return ask
 
 
+# The status a chat that failed on the network (no HTTP answer) is given: an `error` failure.
+NETWORK = 599
 # Seconds to wait before each retry of a throttled (429) chat.
 BACKOFF_S = (15, 30, 60)
 
@@ -203,11 +210,16 @@ def chat_with(
         "dataAgentContext": {"dataAgent": f"{parent}/dataAgents/{shaped.AGENT_ID}"},
     }
     started = time.monotonic()
-    status, payload = send(
-        "POST",
-        f"https://geminidataanalytics.{shaped.LOCATION}.rep.googleapis.com/v1/{parent}:chat",
-        body,
-    )
+    try:
+        status, payload = send(
+            "POST",
+            f"https://geminidataanalytics.{shaped.LOCATION}.rep.googleapis.com/v1/{parent}:chat",
+            body,
+        )
+    except (OSError, http.client.HTTPException) as error:
+        # A dropped stream (measured 2026-11-03T20:25Z: `ConnectionResetError` mid-chunk ended a pass): a failed
+        # chat the runner asks again on a later pass, never the end of the pass.
+        status, payload = NETWORK, {"error": f"{type(error).__name__}: {error}"}
     return status, payload, round(time.monotonic() - started, 1)
 
 
@@ -237,6 +249,14 @@ SOURCES = {
     "native-context": "pplk8s-semantic",
     "native-governed": "pplk8s-governed",
 }
+# #357's arms, each derived from bet agents' published contexts (read, never written), so it differs from its
+# source arm in one thing only: `bet-kc-reach` is bet-kc's context (its one-line instruction, no authored context)
+# on bet-context's tables (the legacy ones included); `bet-context-bare` is bet-context's without its verified
+# queries (its glossary terms and system instruction kept).
+DERIVED = {
+    "native-kc-reach": ("bet-kc", "bet-context"),
+    "native-context-bare": ("bet-context",),
+}
 
 
 def published_tables(agent: dict[str, Any]) -> list[str]:
@@ -248,27 +268,55 @@ def published_tables(agent: dict[str, Any]) -> list[str]:
     return [f"{r['datasetId']}.{r['tableId']}" for r in refs]
 
 
+def derived_context(arm: str, published: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """A #357 arm's context from its sources' published contexts (by agent id)."""
+    if arm == "native-context-bare":
+        context = json.loads(json.dumps(published["bet-context"]))
+        context.pop("exampleQueries", None)
+        return context
+    if arm == "native-kc-reach":
+        context = json.loads(json.dumps(published["bet-kc"]))
+        context["datasourceReferences"] = json.loads(
+            json.dumps(published["bet-context"]["datasourceReferences"])
+        )
+        return context
+    raise SystemExit(f"354_data_agent: no derived context for {arm}")
+
+
 def copy_agent(arm: str) -> int:
-    """Publish the arm's bet agent from its source agent's published context plus the legacy tables."""
-    source = SOURCES.get(arm) or sys.exit(
-        f"354_data_agent: --copy takes {sorted(SOURCES)}, not {arm}"
-    )
+    """Publish the arm's bet agent: from its source agent's published context plus the legacy tables, or (#357's
+    arms) from the bet agents it is derived from."""
+    if arm not in SOURCES and arm not in DERIVED:
+        sys.exit(
+            f"354_data_agent: --copy takes {sorted([*SOURCES, *DERIVED])}, not {arm}"
+        )
     project = os.environ.get("GCP_PROJECT") or sys.exit("GCP_PROJECT is required")
     shaped = _shaped()
     publish = shaped.load_publish()
     send = publish.http_transport(publish.access_token(dict(os.environ)), project)
     base = f"{publish.endpoint(shaped.LOCATION)}/v1/projects/{project}/locations/{shaped.LOCATION}/dataAgents"
-    reader = publish.Publisher(send, project, shaped.LOCATION, source)
-    current = reader.call("GET", f"{base}/{source}")
-    published = (current.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
-    if not published:
-        print(f"354_data_agent: {source} has no published context")
-        return 2
+    sources = DERIVED.get(arm) or (SOURCES[arm],)
+    published = {}
+    for source in sources:
+        reader = publish.Publisher(send, project, shaped.LOCATION, source)
+        current = reader.call("GET", f"{base}/{source}")
+        published[source] = (current.get("dataAnalyticsAgent") or {}).get(
+            "publishedContext"
+        ) or {}
+        if not published[source]:
+            print(f"354_data_agent: {source} has no published context")
+            return 2
+    if arm in DERIVED:
+        context = derived_context(arm, published)
+        what = f"derived from {' and '.join(sources)} (#357)"
+    else:
+        context = with_legacy(published[sources[0]], project)
+        what = f"{sources[0]}'s published context plus the legacy tables"
     agent = publish.desired(
-        with_legacy(published, project),
+        context,
         None,
         display_name=f"bet {arm}",
-        description=f"The semantic bet's {arm} arm: {source}'s published context plus the legacy tables.",
+        description=f"The semantic bet's {arm} arm: {what}.",
     )
     publisher = publish.Publisher(send, project, shaped.LOCATION, AGENTS[arm])
     try:
@@ -277,9 +325,13 @@ def copy_agent(arm: str) -> int:
         print(f"354_data_agent: {AGENTS[arm]} publish refused: {error}")
         return 2
     again = publisher.call("GET", f"{base}/{AGENTS[arm]}")
+    kept = (again.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
     print(
-        f"354_data_agent: {AGENTS[arm]} from {source}: writes {writes}; "
-        f"published tables {published_tables(again)}"
+        f"354_data_agent: {AGENTS[arm]} {what}: writes {writes}; "
+        f"published tables {published_tables(again)}; "
+        f"verified queries {len(kept.get('exampleQueries') or [])}, "
+        f"glossary terms {len(kept.get('glossaryTerms') or [])}, "
+        f"system instruction {len(kept.get('systemInstruction') or '')} characters"
     )
     return 0
 
@@ -327,7 +379,7 @@ def give_legacy(arm: str) -> int:
 
 if __name__ == "__main__":
     # python3 -I 354_data_agent.py --legacy <arm>...: give each arm's agent the legacy tables (RULE.md);
-    # --copy <arm>...: publish bet-context / bet-governed from the main track's agents.
+    # --copy <arm>...: publish bet-context / bet-governed from the main track's agents, or #357's arms.
     actions = {"--legacy": give_legacy, "--copy": copy_agent}
     if sys.argv[1:2] not in ([a] for a in actions) or not sys.argv[2:]:
         sys.exit("usage: 354_data_agent.py --legacy|--copy <arm>...")

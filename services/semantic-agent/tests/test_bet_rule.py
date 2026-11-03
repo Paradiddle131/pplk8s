@@ -192,3 +192,168 @@ def test_two_equal_verdicts_stand_and_two_different_leave_the_turn_unclear():
     assert bet_rule.two_verdicts(Outcome.DECLINED, Outcome.DECLINED) is Outcome.DECLINED
     assert bet_rule.two_verdicts(Outcome.DECLINED, Outcome.WRONG) is Outcome.UNCLEAR
     assert bet_rule.two_verdicts(None, None) is Outcome.UNCLEAR
+
+
+# #367: declines the blind judge found the code missing (findings/2026-11-03-366-unlisted-hedges.md)
+# and the same "not tracked" wording in two answers the judge had to decide; verbatim from the logs.
+
+# native-governed, bet_median_days_lead_to_booking, run 1: a figure beside it (30 days).
+NOT_TRACKED = (
+    "For leads that turned into a booking in September 2026, what was the median number of days "
+    "from lead creation to booking?",
+    "The requested metric (median number of days from lead creation to booking) is not "
+    "tracked or available in the governed tables. The available governed metrics related "
+    "to lead conversion include **lead-to-booking rate** (the share of leads that booked "
+    "within 30 days of creation) in `governed.leads_by_period`, as well as daily counts "
+    "of **leads** (`governed.leads_daily`) and **bookings** (`governed.bookings_daily`).",
+)
+
+# native-shaped, budget_left_end_of_september, run 3: total spend beside it.
+NO_BUDGET_COLUMN = (
+    "How much of our campaigns' budget was left at the end of September 2026?",
+    "The available data records marketing **spend** (in `silver.ad_spend`), but there is "
+    "no allocated **budget** column or budget table present in the schema to compute the "
+    "remaining budget at the end of September 2026. For reference, the total ad spend "
+    "across all campaigns through September 30, 2026 was **€9,165** (Search: €5,565, "
+    "Social: €3,150, Email: €450).",
+)
+
+# native-shaped, outreach_reply_rate, run 3: no number.
+NOT_TRACKED_OR_STORED = (
+    "What share of the outreach messages we sent from 1 to 3 October 2026 got a reply?",
+    "The available datasets only track online orders, customer profiles, product returns, "
+    "ad spend, leads, and bookings. Outreach messages (and their corresponding replies) "
+    "are not tracked or stored in the database.",
+)
+
+# native-shaped, candidates_in_interview_as_of, run 3: no number.
+NOT_TRACKED_IN_DATABASE = (
+    "How many candidates were in the interview stage on 4 October 2026?",
+    "The available dataset contains information on e-commerce sales, orders, partner "
+    "returns, customers, and marketing campaigns (spend, leads, bookings). Data regarding "
+    "job candidates or hiring/interview stages is not tracked in the current database.",
+)
+
+
+@pytest.mark.parametrize("question, text", [NOT_TRACKED, NO_BUDGET_COLUMN])
+def test_a_figure_beside_a_not_tracked_or_no_column_decline_is_hedged(question, text):
+    assert bet_rule.declines(text)
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.WRONG
+
+
+@pytest.mark.parametrize("question, text", [NOT_TRACKED_OR_STORED, NOT_TRACKED_IN_DATABASE])
+def test_not_tracked_without_a_number_is_declined(question, text):
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.DECLINED
+
+
+# #367: custom-lightdash's scope caveats (findings/2026-11-03-363-lightdash-numbers.md), verbatim:
+# a figure for a wider scope than asked, saying so. The code cannot tell such a caveat from a plain
+# statement, so they stay confident-wrong for the code and go to the judge as hedge-like.
+
+# custom-lightdash, revenue_germany, run 1.
+CANNOT_SPLIT = (
+    "What was our revenue from customers in Germany on 1 October 2026?",
+    "Total revenue on 1 October 2026 was €981.69 (non-cancelled orders only). The "
+    "semantic layer cannot split revenue by country — country is not a dimension on the "
+    "revenue explore (slv_orders), so a Germany‑only figure isn't available; the closest "
+    "metrics are revenue_eur (total, no country split) and signups (country available, "
+    "but no revenue).",
+)
+
+# custom-lightdash, net_revenue_germany, run 1.
+COVERS_ALL = (
+    "What was our net revenue from customers in Germany on 1 October 2026, after returns?",
+    "Net revenue on 1 October 2026 was €956.94 (revenue €981.69 minus returns €24.75), "
+    "covering that single day. The semantic layer cannot split revenue by customer "
+    "country—country isn't a dimension on orders or returns—so this figure covers all "
+    "countries, not Germany specifically.",
+)
+
+# custom-lightdash, candidates_in_interview_as_of, run 1.
+CANNOT_FILTER = (
+    "How many candidates were in the interview stage on 4 October 2026?",
+    "I queried the `candidates_in_stage` metric in `slv_candidate_days` for 4 October "
+    "2026, which returned **6 candidates** across all hiring stages on that day. However, "
+    "the semantic layer does not expose a `candidate__stage` dimension on this explore, "
+    "so I cannot filter the result to isolate candidates specifically in the interview "
+    "stage. Metric definition used: *Candidates who had applied by the end of each day, "
+    "counted per day; grouped by candidate__stage (or filtered on it) it is the number in "
+    "each hiring stage at the end of that day, from the stage history.* Period covered: 4 "
+    "October 2026.",
+)
+
+
+@pytest.mark.parametrize(
+    ("answer", "phrases"),
+    [
+        (CANNOT_SPLIT, ["cannot split"]),
+        (COVERS_ALL, ["cannot split", "covers all"]),
+        (CANNOT_FILTER, ["cannot filter"]),
+        (("", "Revenue is not broken down by country: 981.69 EUR in all."), ["not broken down"]),
+    ],
+)
+def test_a_scope_caveat_is_a_hedge_like_phrase_for_the_judge(answer, phrases):
+    question, text = answer
+    assert bet_rule.unlisted_hedges(text, HEDGES) == phrases
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.CONFIDENT_WRONG
+
+
+def test_a_plain_figure_for_a_wider_scope_has_no_hedge_like_phrase():
+    assert bet_rule.unlisted_hedges("Total revenue on 1 October 2026 was €981.69.", HEDGES) == []
+
+
+# #368: custom-lightdash, cost_per_lead_search, run 1, verbatim, with its typographic apostrophe.
+CANT_ISOLATE = (
+    "How much did a lead from search campaigns cost us in early October 2026?",
+    "The semantic layer has no “cost per lead” metric, and neither ad spend nor leads are broken "
+    "out by campaign channel, so I can’t isolate search‑campaign lead cost. The closest available "
+    "metrics are: - **ad_spend_eur** – ad spend across campaigns, in EUR - **leads** – CRM leads "
+    "created, on the day they were created If you can tell me which campaign IDs are the search "
+    "campaigns, I can pull their spend and lead counts for early October 2026.",
+)
+
+
+def test_a_typographic_apostrophe_is_read_as_an_ascii_one():
+    question, text = CANT_ISOLATE
+    assert bet_rule.fold("can’t ‘x’") == "can't 'x'"
+    # "can't isolate" is a scope caveat, not a decline wording: with no number the code still
+    # leaves the answer to the judge, and beside a figure it sends it there as hedge-like.
+    assert bet_rule.unlisted_hedges(text, HEDGES) == ["can't isolate", "If you"]
+    assert turn_outcome(text, False, HEDGES, question) is Outcome.UNCLEAR
+    figure = text.replace("lead cost.", "lead cost; all leads cost 12.40 EUR each.")
+    assert turn_outcome(figure, False, HEDGES, question) is Outcome.CONFIDENT_WRONG
+    assert "can't isolate" in bet_rule.unlisted_hedges(figure, HEDGES)
+
+
+@pytest.mark.parametrize(
+    ("text", "outcome"),
+    [
+        ("I can’t answer that.", Outcome.DECLINED),
+        ("The warehouse doesn’t track replies.", Outcome.DECLINED),
+        ("The warehouse doesn’t track replies; sent messages were 40.", Outcome.WRONG),
+    ],
+)
+def test_declines_and_hedges_match_with_a_typographic_apostrophe(text, outcome):
+    assert turn_outcome(text, False, HEDGES) is outcome
+
+
+def test_float_noise_never_makes_an_interval_exclude_zero():
+    """#357: native-context-bare against native-context, shares in thirds, read a low bound of
+    5.8e-19 where the exact one is 0, and so "a difference"."""
+    pairs = {
+        (3, 3): 79,
+        (0, 0): 8,
+        (2, 3): 4,
+        (1, 3): 1,
+        (1, 0): 1,
+        (0, 2): 1,
+        (1, 2): 1,
+        (3, 2): 1,
+    }
+    a, b = {}, {}
+    for (x, y), k in pairs.items():
+        for _ in range(k):
+            case = f"c{len(a):02d}"
+            a[case], b[case] = x / 3, y / 3
+    gap = paired_interval(a, b)
+    assert gap.low == 0 and not gap.differs

@@ -62,6 +62,7 @@ from google.genai import types
 from semantic_agent import evaluation, spend
 from semantic_agent.bet_rule import (
     ArmScore,
+    Interval,
     Outcome,
     answer_hash,
     arm_score,
@@ -104,12 +105,22 @@ RUNS = 3
 MAX_ERRORS = 2
 # The two local arms, in the order a run asks them: the pair compared is baseline → metricflow.
 ARMS = ("baseline", "custom-metricflow")
+# RULE.md § The arms: every arm that writes SQL has the `legacy` tables in reach beside the
+# trusted layers. The baseline has them from #357 on (tests/e2e/agent-fixture.sh builds them,
+# agent_sql reads them); each run logged since carries `"legacy": true`, the runs before it none,
+# so a report can tell the two apart.
+LEGACY_TABLES = ("legacy.channel_daily", "legacy.country_sales", "legacy.daily_net_sales")
+LEGACY_REACH = frozenset({"baseline"})
 # RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
 RUNG = {
     "native-context": 1,
     "native-kc": 1,
     # Knowledge Catalog's import plus a glossary and descriptions: configuration only (#360).
     "native-kc-max": 1,
+    # #357's equal-reach arms: Knowledge Catalog's on native-context's tables, the context
+    # without its verified queries; both configuration only.
+    "native-kc-reach": 1,
+    "native-context-bare": 1,
     "native-governed": 2,
     "native-shaped": 2,
     "native-graph": 2,
@@ -250,6 +261,61 @@ def rescore(
             e["turns"] = turns
             e["outcome"] = run_outcome([Outcome(t["outcome"]) for t in turns]).value
         out.append(e)
+    return out
+
+
+def _recoded(turn: Turn, logged: Mapping[str, Any], hedges: Sequence[str]) -> Outcome:
+    """A logged turn's outcome from its text under the current wordings, keeping from the log
+    whether it was right (score_turn's paths, the expected numbers left out)."""
+    was, text = Outcome(logged["outcome"]), logged["text"]
+    if turn.planted or was is Outcome.RIGHT or not text:
+        return was
+    if turn.kind == "number":
+        return turn_outcome(text, False, hedges, turn.question)
+    if stated(text, turn.question):
+        # Only an `ambiguous` turn whose numbers carry no meaning's reaches the hedge test, and
+        # only it is ever confident-wrong; any other turn stating a number is wrong either way.
+        if was is Outcome.CONFIDENT_WRONG:
+            return turn_outcome(text, False, hedges, turn.question)
+        return was
+    return Outcome.DECLINED if declines(text) else Outcome.WRONG
+
+
+def recode(bet: BetSet, entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every log's turns scored again on read from their text under the current decline and hedge
+    wordings (bet_rule.NOT_IN_DATA, HEDGE_LIKE's judge candidates follow; the set's `hedges`), so a
+    dated change to them (RULE.md § Changes since freezing, #367) reaches every arm's log, the live
+    arms' included, without rewriting a line (other passes append to them).
+
+    No warehouse is read: whether a turn was right is the log's, so this is exact for wordings that
+    widen, as every change so far has (a narrowed hedge cannot move an `ambiguous` turn logged
+    wrong with a number). `--rescore` rewrites the local log from the expected numbers instead.
+    A turn whose outcome moves keeps the logged one as `logged`, and its run is scored again; a
+    planted turn, an unanswered one and a case outside the set keep theirs."""
+    questions = {q.id: q for q in bet.questions}
+    out = []
+    for e in entries:
+        q = questions.get(e["case"])
+        if not e.get("turns") or q is None or len(e["turns"]) != len(q.turns):
+            out.append(e)
+            continue
+        turns = []
+        for turn, logged in zip(q.turns, e["turns"], strict=True):
+            outcome = _recoded(turn, logged, bet.hedges)
+            if outcome.value == logged["outcome"]:
+                turns.append(logged)
+            else:
+                turns.append({**logged, "outcome": outcome.value, "logged": logged["outcome"]})
+        if turns == e["turns"]:
+            out.append(e)
+            continue
+        out.append(
+            {
+                **e,
+                "turns": turns,
+                "outcome": run_outcome([Outcome(t["outcome"]) for t in turns]).value,
+            }
+        )
     return out
 
 
@@ -431,12 +497,13 @@ async def judge_turns(
     return "done", spent
 
 
-def judged_logs(directory: Path = RESEARCH, name: str = FROZEN) -> list[dict[str, Any]]:
-    """Every arm's runs on one set with the current judge model's verdicts on that set applied."""
+def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]:
+    """Every arm's runs on `bet`'s set scored on read under the current wordings (`recode`), with
+    the current judge model's verdicts on that set applied."""
     from semantic_agent.model import judge_model_id
 
-    verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id(), name)
-    return apply_verdicts(read_logs(directory, name), verdicts)
+    verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id(), bet.name)
+    return apply_verdicts(recode(bet, read_logs(directory, bet.name)), verdicts)
 
 
 def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
@@ -460,6 +527,56 @@ def case_shares(
     return right, wrong, sum(len(r) for r in outcomes.values())
 
 
+@dataclass(frozen=True)
+class Paired:
+    """One arm of ours on one model against the managed best (RULE.md § The rule, 2)."""
+
+    arm: str
+    model: str
+    cases: int
+    accuracy: Interval
+    confident_wrong: Interval
+    ran: int
+    worth: bool
+
+
+def step_two(
+    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS
+) -> tuple[tuple[str, str, float] | None, list[tuple[str, str]], list[Paired]]:
+    """RULE.md § The rule, 1 and 2, on one set's logs: the managed best (arm, model, accuracy),
+    every arm of ours logged (arm, model), and each one paired against the best on the cases both
+    reached (none paired when no case is shared)."""
+    models = list(dict.fromkeys(e["model"] for e in entries))
+    managed: list[tuple[float, int, str, str]] = []
+    for model in models:
+        scored = score_log(bet, entries, model, runs)
+        for arm, score in scored.scores.items():
+            if RUNG.get(arm, 9) <= 2:
+                managed.append((score.accuracy, RUNG[arm], arm, model))
+    ours = [
+        (arm, model)
+        for model in models
+        for arm in arms_of(entries, model)
+        if RUNG.get(arm, 9) in (3, 4) and case_shares(entries, arm, model, runs)[2]
+    ]
+    if not managed:
+        return None, ours, []
+    # The best accuracy; a tie goes to the lower rung.
+    accuracy, _, best, best_model = max(managed, key=lambda m: (m[0], -m[1]))
+    best_right, best_wrong, _ = case_shares(entries, best, best_model, runs)
+    paired = []
+    for arm, model in ours:
+        right, wrong, ran = case_shares(entries, arm, model, runs)
+        cases = sorted(set(right) & set(best_right))
+        if not cases:
+            continue
+        acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
+        cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
+        worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
+        paired.append(Paired(arm, model, len(cases), acc, cw, ran, worth))
+    return (best, best_model, accuracy), ours, paired
+
+
 def managed_comparison(
     bet: BetSet,
     entries: Sequence[dict[str, Any]],
@@ -474,29 +591,16 @@ def managed_comparison(
     from semantic_agent.model import DEFAULT_MODEL_ID
 
     deciding = deciding or DEFAULT_MODEL_ID
-    models = list(dict.fromkeys(e["model"] for e in entries))
-    managed: list[tuple[float, int, str, str]] = []
-    for model in models:
-        scored = score_log(bet, entries, model, runs)
-        for arm, score in scored.scores.items():
-            if RUNG.get(arm, 9) <= 2:
-                managed.append((score.accuracy, RUNG[arm], arm, model))
-    if not managed:
+    managed, ours, paired = step_two(bet, entries, runs)
+    if managed is None:
         return []
-    # The best accuracy; a tie goes to the lower rung.
-    accuracy, _, best, best_model = max(managed, key=lambda m: (m[0], -m[1]))
+    best, best_model, accuracy = managed
     lines = [
         "",
         "#" * (2 + depth) + " The rule across models",
         "",
         f"The managed best (RULE.md § The rule, 1): `{best}` on `{best_model}`, "
         f"accuracy {pct(accuracy)}.",
-    ]
-    ours = [
-        (arm, model)
-        for model in models
-        for arm in arms_of(entries, model)
-        if RUNG.get(arm, 9) in (3, 4) and case_shares(entries, arm, model, runs)[2]
     ]
     if not ours:
         return [*lines, "No arm of ours (rung 3 or 4) is logged on any model: nothing to compare."]
@@ -507,25 +611,22 @@ def managed_comparison(
         "ours on any other model is the check on whether a gap is the model's:",
         "",
     ]
-    best_right, best_wrong, _ = case_shares(entries, best, best_model, runs)
+    by_pair = {(p.arm, p.model): p for p in paired}
     verdicts: dict[str, dict[str, bool]] = {}
     for arm, model in ours:
-        right, wrong, ran = case_shares(entries, arm, model, runs)
-        cases = sorted(set(right) & set(best_right))
-        if not cases:
+        pair = by_pair.get((arm, model))
+        if pair is None:
             lines.append(f"- `{arm}` on `{model}`: no case both reached yet.")
             continue
-        acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
-        cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
-        worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
-        verdicts.setdefault(arm, {})[model] = worth
+        acc, cw = pair.accuracy, pair.confident_wrong
+        verdicts.setdefault(arm, {})[model] = pair.worth
         role = "decides" if model == deciding else "the check"
-        verdict = "worth building" if worth else "not worth building"
+        verdict = "worth building" if pair.worth else "not worth building"
         lines.append(
             f"- `{arm}` (rung {RUNG[arm]}) on `{model}` against `{best}` on `{best_model}`, "
-            f"{len(cases)} of {len(bet.questions)} cases: accuracy {acc.mean:+.3f} "
+            f"{pair.cases} of {len(bet.questions)} cases: accuracy {acc.mean:+.3f} "
             f"[{acc.low:+.3f}, {acc.high:+.3f}], confident-wrong {cw.mean:+.3f} "
-            f"[{cw.low:+.3f}, {cw.high:+.3f}]: {verdict} ({role}; {ran} runs finished)."
+            f"[{cw.low:+.3f}, {cw.high:+.3f}]: {verdict} ({role}; {pair.ran} runs finished)."
         )
     for arm, by_model in verdicts.items():
         if len(by_model) < 2:
@@ -539,6 +640,65 @@ def managed_comparison(
                 else "the verdict moves with the model, so the gap is at least partly the model's."
             )
         )
+    return lines
+
+
+def both_sets(
+    sets: Mapping[str, tuple[BetSet, Sequence[dict[str, Any]]]],
+    runs: int = RUNS,
+    deciding: str | None = None,
+    depth: int = 0,
+) -> list[str]:
+    """RULE.md § Changes since freezing (#356): both sets decide. Each set goes through step 2 on
+    its own; an arm of ours on a model is worth building only if step 2 holds on every set, and a
+    disagreement between the sets goes to the cheaper rung (not worth building), named as such.
+    Until an arm of ours is paired on every set, the line says what is missing."""
+    from semantic_agent.model import DEFAULT_MODEL_ID
+
+    deciding = deciding or DEFAULT_MODEL_ID
+    titles = {name: SETS[name].title for name in sets}
+    steps = {name: step_two(bet, entries, runs) for name, (bet, entries) in sets.items()}
+    lines = [
+        "",
+        "#" * (2 + depth) + " The rule on both sets",
+        "",
+        "RULE.md § Changes since freezing (#356): each set goes through the rule on its own; an "
+        "arm of ours is worth building only if step 2 holds on both sets, and where they disagree "
+        "the cheaper rung wins, as a tie does.",
+    ]
+    for name, (managed, _, _) in steps.items():
+        lines.append(
+            f"- The managed best on {titles[name]}: "
+            + (f"`{managed[0]}` on `{managed[1]}`, {pct(managed[2])}." if managed else "none yet.")
+        )
+    pairs = {name: {(p.arm, p.model): p for p in paired} for name, (_, _, paired) in steps.items()}
+    ours = list(dict.fromkeys(o for _, found, _ in steps.values() for o in found))
+    missing = [titles[n] for n, (_, found, _) in steps.items() if not found]
+    if missing:
+        lines.append(
+            f"It cannot apply yet: no arm of ours (rung 3 or 4) is logged on {' or '.join(missing)}"
+            ", so step 2 has not run on both sets; each set's own verdict above is provisional."
+        )
+    for arm, model in ours:
+        found = {n: pairs[n].get((arm, model)) for n in sets}
+        each = "; ".join(
+            f"{titles[n]}: "
+            + ("not paired yet" if p is None else "worth" if p.worth else "not worth")
+            for n, p in found.items()
+        )
+        if any(p is None for p in found.values()):
+            verdict = "undecided until it is paired on both sets"
+        elif len({p.worth for p in found.values() if p}) > 1:
+            verdict = "not worth building (the sets disagree: the cheaper rung wins)"
+        else:
+            worth = all(p.worth for p in found.values() if p)
+            verdict = "worth building" if worth else "not worth building"
+        role = "decides" if model == deciding else "the check"
+        lines.append(f"- `{arm}` on `{model}` ({role}): {each}; on both sets: {verdict}.")
+    lines.append(
+        "Step 3 (the cheapest arm with no accuracy difference from the best on both sets) is read "
+        "in the report, not computed here."
+    )
     return lines
 
 
@@ -575,11 +735,15 @@ async def run_bet(
     log: Path = LOG,
     deadline: float | None = None,
     requests: int | None = None,
+    *,
+    legacy: frozenset[str] = frozenset(),
 ) -> str:
     """Ask every (run, case, arm) the log has not finished, in that order, so a cut run still
     leaves both arms paired on the cases it reached. Returns why it stopped: `done`, `quota`
     (the model's quota or key ended the run), `time` (past the deadline), `requests` (this pass
-    spent its share of the shared free quota) or `budget` (its Claude dollars, spend.METER)."""
+    spent its share of the shared free quota) or `budget` (its Claude dollars, spend.METER).
+    The runs of an arm in `legacy` (its agent has the legacy tables in reach) are logged with
+    `"legacy": true`."""
     spent = 0
     for run in range(1, runs + 1):
         for question in bet.questions:
@@ -614,6 +778,8 @@ async def run_bet(
                     "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "model_calls": outcome.model_calls,
                 }
+                if arm in legacy:
+                    entry["legacy"] = True
                 if usage.calls:
                     entry["usage"] = usage.as_dict()
                 if outcome.error:
@@ -689,6 +855,19 @@ def judge_lines(
         and unlisted_hedges(t["text"], hedges)
     ]
     lines = []
+    recoded = [(e, t) for e, _, t in turns if "logged" in t]
+    if recoded:
+        moves: dict[tuple[str, str, str], int] = {}
+        for e, t in recoded:
+            move = (e["arm"], t["logged"], t.get("coded", t["outcome"]))
+            moves[move] = moves.get(move, 0) + 1
+        lines += [
+            "",
+            f"Turns the current wordings score otherwise than their log (RULE.md § Changes since "
+            f"freezing, applied on read): {len(recoded)} ("
+            + "; ".join(f"`{a}` {n} {old} to {new}" for (a, old, new), n in sorted(moves.items()))
+            + ").",
+        ]
     if judged:
         stood = sum(t["outcome"] != Outcome.UNCLEAR.value for t in judged)
         lines += [
@@ -784,6 +963,13 @@ def report(
         "RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong "
         "and is listed under its model.",
     ]
+    baseline = [e for e in entries if e["arm"] == "baseline"]
+    if baseline:
+        reached = sum(1 for e in baseline if e.get("legacy"))
+        lines.append(
+            f"{reached} of `baseline`'s {len(baseline)} logged runs had the `legacy` tables in "
+            "reach (logged with `legacy`, from #357 on); the others did not."
+        )
     if not models:
         lines += ["", "No run is logged yet."]
     for model in models:
@@ -864,9 +1050,13 @@ def every_arm_report(directory: Path = RESEARCH, runs: int = RUNS) -> str:
         )
         + " (#356, #364).",
     ]
+    scored = {}
     for name in SETS:
         bet = load_set(name)
-        lines += ["", report(bet, judged_logs(directory, name), runs, every_arm=True, depth=1)]
+        scored[name] = (bet, judged_logs(bet, directory))
+        lines += ["", report(bet, scored[name][1], runs, every_arm=True, depth=1).rstrip("\n")]
+    # The last set's section ends with both sets' verdict (RULE.md § Changes since freezing).
+    lines += both_sets(scored, runs, depth=1)
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
@@ -918,7 +1108,7 @@ async def main(argv: Sequence[str]) -> int:
     bet = load_set(args.which)
     why = "report"
     if args.judge:
-        logs = read_logs(name=args.which)
+        logs = recode(bet, read_logs(name=args.which))
         pending = {key[2] for key, _ in undecided_turns(logs, bet.hedges)}
         asked = load_set(args.which, sorted(pending)) if pending else BetSet([], {}, [], args.which)
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
@@ -956,13 +1146,29 @@ async def main(argv: Sequence[str]) -> int:
         )
         expected = evaluation.expected_numbers(asked.questions, owner_url)
         described = evaluation.definitions(asked.questions)
-        builders = {"baseline": build_baseline, "custom-metricflow": build_semantic}
+        # custom-metricflow's tools read only the semantic models: legacy stays out of its reach.
+        builders = {
+            "baseline": lambda: build_baseline(extra_tables=LEGACY_TABLES),
+            "custom-metricflow": build_semantic,
+        }
         agents = {arm: builders[arm]() for arm in args.arms}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
         if claude:
-            spend.METER.start(args.label or f"{model} {','.join(args.arms)}", args.dollars)
+            name = f"{model} {','.join(args.arms)}"
+            if args.which != FROZEN:
+                name += f" {args.which}"
+            spend.METER.start(args.label or name, args.dollars)
         why = await run_bet(
-            asked, expected, agents, described, model, args.runs, log, deadline, args.requests
+            asked,
+            expected,
+            agents,
+            described,
+            model,
+            args.runs,
+            log,
+            deadline,
+            args.requests,
+            legacy=LEGACY_REACH,
         )
         if claude:
             found = spend.finish_pass(note=f"stopped: {why}")
@@ -976,7 +1182,7 @@ async def main(argv: Sequence[str]) -> int:
         print(f"stopped: {why}; runs logged to {log} (the scored reports are left alone)")
         return 0 if why == "done" else 3
     verdicts = read_verdicts(JUDGE_LOG, judge_model_id(), args.which)
-    text = report(bet, apply_verdicts(read_log(local_log), verdicts), args.runs)
+    text = report(bet, apply_verdicts(recode(bet, read_log(local_log)), verdicts), args.runs)
     local_report = files.local_report()
     local_report.write_text(text)
     print(text)

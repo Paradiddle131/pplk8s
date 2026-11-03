@@ -6,6 +6,8 @@ pass stops before its dollar budget would be crossed."""
 import asyncio
 import json
 import os
+import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -172,6 +174,23 @@ def test_a_missing_key_skips_the_claude_pass_with_that_reason(monkeypatch, capsy
     log = tmp_path / "probe.jsonl"
     assert asyncio.run(bet_eval.main(["--log", str(log), "revenue_one_day"])) == 3
     assert "skipped: BET_ANTHROPIC_API_KEY is unset" in capsys.readouterr().out
+    assert not log.exists()
+
+
+def test_the_command_line_skips_a_claude_pass_without_its_key(tmp_path):
+    """`python -m semantic_agent.bet_eval` imports the package first, which must build no model,
+    so the pass is skipped with its reason (exit 3), not a traceback (#365)."""
+    env = {k: v for k, v in os.environ.items() if k != "BET_ANTHROPIC_API_KEY"}
+    env |= {"MODEL_BACKEND": "anthropic", "MODEL_ID": "claude-haiku-5-5"}
+    log = tmp_path / "probe.jsonl"
+    out = subprocess.run(
+        [sys.executable, "-m", "semantic_agent.bet_eval", "--log", str(log), "revenue_one_day"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert out.returncode == 3, out.stderr[-2000:]
+    assert "skipped: BET_ANTHROPIC_API_KEY is unset" in out.stdout
     assert not log.exists()
 
 

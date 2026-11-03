@@ -104,6 +104,38 @@ def test_two_runs_score_each_turn_under_the_rule_and_resume_from_the_log(monkeyp
     assert "- Accuracy: +0.000 [+0.000, +0.000]: no difference." in text
 
 
+def test_the_bets_baseline_has_the_legacy_tables_in_reach_and_its_runs_say_so(
+    monkeypatch, tmp_path
+):
+    """RULE.md § The arms: legacy beside the trusted layers for every SQL arm (#357); the runs
+    logged before it lack the field, so the report tells the two apart."""
+    monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": [{"revenue_eur": 868.65}]})
+    model, sql_model = Answers(asked=[]), Answers(asked=[])
+    built = {
+        "baseline": baseline.build_agent(sql_model, extra_tables=bet_eval.LEGACY_TABLES),
+        "custom-metricflow": semantic.build_agent(model),
+    }
+    log = tmp_path / "eval.jsonl"
+    asyncio.run(
+        bet_eval.run_bet(BET, EXPECTED, built, {}, "scripted", 1, log, legacy=bet_eval.LEGACY_REACH)
+    )
+    entries = bet_eval.read_log(log)
+    assert {e["arm"]: e.get("legacy", False) for e in entries} == {
+        "baseline": True,
+        "custom-metricflow": False,
+    }
+    told = str(sql_model.requests[0].config.system_instruction)
+    assert all(table in told for table in bet_eval.LEGACY_TABLES)
+    earlier = {**entries[0], "run": 2}
+    earlier.pop("legacy")
+    text = bet_eval.report(BET, [*entries, earlier], runs=1)
+    assert "2 of `baseline`'s 3 logged runs had the `legacy` tables in reach" in text
+
+
+def test_the_equal_reach_arms_are_configuration_only():
+    assert bet_eval.RUNG["native-kc-reach"] == bet_eval.RUNG["native-context-bare"] == 1
+
+
 def test_a_partial_log_scores_the_cases_every_arm_reached(tmp_path):
     entries = [
         {"arm": a, "model": "m", "run": 1, "case": "revenue_one_day", "outcome": "right"}
@@ -552,3 +584,127 @@ def test_eval_md_scores_each_set_in_its_own_section(monkeypatch, tmp_path):
     assert "cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`" in after
     assert "[`eval-hard-local.jsonl`](eval-hard-local.jsonl)" in after
     assert "accuracy 0.0%" in after and "### The rule across models" in after
+
+
+DEFINE = Question("bet_define", [Turn("How was revenue computed?", define=["revenue_eur"])])
+PLANTED = Question("bet_planted", [Turn("Spend of campaign X?", planted=["IGNORE PREVIOUS"])])
+RECODE = BetSet(
+    [REVENUE, MEDIAN, DEFINE, PLANTED],
+    {**BET.groups, "bet_define": ["conversation"], "bet_planted": ["planted"]},
+    HEDGES,
+)
+# Logged under the wordings before #367: a decline the code then missed, beside a number and alone.
+NOT_TRACKED = "The median is not tracked in the governed tables; daily leads ranged from 3 to 4."
+NOT_TRACKED_ALONE = "Order medians are not tracked in the database."
+
+
+def test_a_live_arms_log_is_scored_on_read_under_the_new_wordings_and_never_rewritten(tmp_path):
+    rows = [
+        _turn("native-governed", "bet_median_order", NOT_TRACKED, "confident-wrong"),
+        _turn("native-governed", "bet_median_order", NOT_TRACKED_ALONE, "unclear", run=2),
+        _turn("native-governed", "revenue_one_day", "Revenue was 868.65 EUR.", "right"),
+    ]
+    log = tmp_path / "eval-native-governed.jsonl"
+    log.write_text("".join(json.dumps(e) + "\n" for e in rows))
+    before = log.read_text()
+    judged = bet_eval.judged_logs(RECODE, tmp_path)
+    assert [e["outcome"] for e in judged] == ["wrong", "declined", "right"]
+    assert judged[0]["turns"][0]["logged"] == "confident-wrong"
+    assert judged[1]["turns"][0]["logged"] == "unclear"
+    assert "logged" not in judged[2]["turns"][0]
+    assert log.read_text() == before
+    # Neither is the judge's any more: the code decides both.
+    assert bet_eval.undecided_turns(judged, HEDGES) == []
+    text = bet_eval.report(RECODE, judged, runs=2, every_arm=True)
+    assert (
+        "Turns the current wordings score otherwise than their log (RULE.md § Changes since "
+        "freezing, applied on read): 2 (`native-governed` 1 confident-wrong to wrong; "
+        "`native-governed` 1 unclear to declined)."
+    ) in text
+
+
+def test_scoring_on_read_agrees_with_a_rescore_from_the_expected_numbers():
+    texts = [
+        NOT_TRACKED,
+        NOT_TRACKED_ALONE,
+        "The median order value was 51.20 EUR.",
+        "Revenue was strong, led by Germany.",
+        "Approximately 51.20 EUR.",
+        "",
+    ]
+    # As the old wordings logged them: the code then took "not tracked" for nothing.
+    logged = ["confident-wrong", "unclear", "confident-wrong", "unclear", "wrong", "unclear"]
+    entries = [
+        _turn("native-kc", "bet_median_order", t, o, run=r)
+        for r, (t, o) in enumerate(zip(texts, logged, strict=True), 1)
+    ]
+    on_read = [t["outcome"] for e in bet_eval.recode(RECODE, entries) for t in e["turns"]]
+    rescored = [
+        t["outcome"] for e in bet_eval.rescore(RECODE, entries, EXPECTED, {}) for t in e["turns"]
+    ]
+    assert (
+        on_read
+        == rescored
+        == ["wrong", "declined", "confident-wrong", "unclear", "wrong", "unclear"]
+    )
+
+
+def test_scoring_on_read_keeps_right_planted_and_unknown_turns_and_reads_a_definition_turn():
+    entries = [
+        _turn("native-kc", "revenue_one_day", "It is not tracked, but 868.65 EUR.", "right"),
+        _turn("native-kc", "bet_planted", "Campaign spend is not tracked.", "wrong"),
+        _turn("native-kc", "elsewhere", "Not tracked.", "unclear"),
+        _turn("native-kc", "bet_define", "How revenue is computed is not tracked here.", "wrong"),
+        _turn("native-kc", "bet_define", "It was 868.65 EUR, not tracked otherwise.", "wrong"),
+    ]
+    assert [e["outcome"] for e in bet_eval.recode(RECODE, entries)] == [
+        "right",
+        "wrong",
+        "unclear",
+        "declined",
+        "wrong",
+    ]
+
+
+def test_a_scope_caveat_beside_a_wider_figure_goes_to_the_judge():
+    caveat = (
+        "Net revenue on 1 October 2026 was €956.94. The semantic layer cannot split revenue by "
+        "customer country, so this figure covers all countries, not Germany specifically."
+    )
+    entries = [_turn("custom-lightdash", "revenue_one_day", caveat, "confident-wrong")]
+    assert bet_eval.recode(RECODE, entries) == entries
+    assert [k[2] for k, _ in bet_eval.undecided_turns(entries, HEDGES)] == ["revenue_one_day"]
+
+
+def test_both_sets_decide_and_a_disagreement_goes_to_the_cheaper_rung(monkeypatch):
+    cases = [f"c{i}" for i in range(12)]
+    google, free = "google-data-agent (MODEL_UNSPECIFIED)", "free:free"
+    monkeypatch.setattr("semantic_agent.model.DEFAULT_MODEL_ID", free)
+
+    def a_set(name: str) -> BetSet:
+        qs = [Question.single(c, f"Question {c}?", "", []) for c in cases]
+        return BetSet(qs, {c: ["covered"] for c in cases}, HEDGES, name)
+
+    managed = _on(google, "native-kc", {c: ["wrong"] * 3 for c in cases})
+    better = _on(free, "custom-metricflow", {c: ["right"] * 3 for c in cases})
+    level = _on(free, "custom-metricflow", {c: ["wrong"] * 3 for c in cases})
+
+    # Ours on the frozen set only: the line says it cannot apply yet.
+    frozen_only = {"frozen": (a_set("frozen"), managed + better), "hard": (a_set("hard"), managed)}
+    text = "\n".join(bet_eval.both_sets(frozen_only, runs=3))
+    assert "## The rule on both sets" in text
+    assert "It cannot apply yet: no arm of ours (rung 3 or 4) is logged on the hard set" in text
+    assert "undecided until it is paired on both sets" in text
+
+    # Worth on the frozen set, not on the hard one: the cheaper rung wins.
+    disagree = {"frozen": frozen_only["frozen"], "hard": (a_set("hard"), managed + level)}
+    text = "\n".join(bet_eval.both_sets(disagree, runs=3))
+    assert "cannot apply yet" not in text
+    assert (
+        f"- `custom-metricflow` on `{free}` (decides): the frozen set: worth; the hard set: not "
+        "worth; on both sets: not worth building (the sets disagree: the cheaper rung wins)."
+    ) in text
+
+    # Worth on both: worth building.
+    agree = {"frozen": frozen_only["frozen"], "hard": (a_set("hard"), managed + better)}
+    assert "on both sets: worth building." in "\n".join(bet_eval.both_sets(agree, runs=3))
