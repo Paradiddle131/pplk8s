@@ -41,7 +41,7 @@ from semantic_agent.model import DEFAULT_MODEL_ID
 ARMS = {
     "328_mcp_agent.py": "native-mcp",
     "330_toolbox_agent.py": "custom-toolbox",
-    "354_data_agent.py": "native-kc",  # or --arm native-shaped / native-graph
+    "354_data_agent.py": "native-kc",  # or --arm <any of its AGENTS>
 }
 
 

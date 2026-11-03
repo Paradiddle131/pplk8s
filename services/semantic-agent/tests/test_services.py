@@ -52,6 +52,21 @@ def test_the_baseline_is_read_only_and_scoped_by_its_role(warehouse, sql, refusa
     assert refusal in execute_sql(sql)["error"]
 
 
+def test_the_bets_baseline_reads_the_legacy_tables_the_fixture_built(monkeypatch):
+    """RULE.md: the legacy tables in reach of every SQL arm (#357); tests/e2e/agent-fixture.sh
+    builds them in dbt_dev and agent_sql may read them there."""
+    monkeypatch.setenv("DBT_DBNAME", "dbt_dev")
+    try:
+        with psycopg.connect(_url(), connect_timeout=3) as conn:
+            built = conn.execute("select to_regnamespace('legacy') is not null").fetchone()
+    except psycopg.Error as e:
+        service_unreachable("dbt_dev as agent_sql", e)
+    if not (built and built[0]):
+        pytest.skip("dbt_dev has no legacy schema: run tests/e2e/agent-fixture.sh")
+    for table in ("channel_daily", "country_sales", "daily_net_sales"):
+        assert execute_sql(f"select count(*) as n from legacy.{table}")["rows"][0]["n"] > 0
+
+
 def test_sessions_survive_a_new_session_service_on_postgres():
     async def go():
         user = f"u-{uuid.uuid4().hex[:8]}"

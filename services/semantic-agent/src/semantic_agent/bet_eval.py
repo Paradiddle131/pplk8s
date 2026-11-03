@@ -72,10 +72,20 @@ RUNS = 3
 MAX_ERRORS = 2
 # The two local arms, in the order a run asks them: the pair compared is baseline → metricflow.
 ARMS = ("baseline", "custom-metricflow")
+# RULE.md § The arms: every arm that writes SQL has the `legacy` tables in reach beside the
+# trusted layers. The baseline has them from #357 on (tests/e2e/agent-fixture.sh builds them,
+# agent_sql reads them); each run logged since carries `"legacy": true`, the runs before it none,
+# so a report can tell the two apart.
+LEGACY_TABLES = ("legacy.channel_daily", "legacy.country_sales", "legacy.daily_net_sales")
+LEGACY_REACH = frozenset({"baseline"})
 # RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
 RUNG = {
     "native-context": 1,
     "native-kc": 1,
+    # #357's equal-reach arms: Knowledge Catalog's on native-context's tables, the context
+    # without its verified queries; both configuration only.
+    "native-kc-reach": 1,
+    "native-context-bare": 1,
     "native-governed": 2,
     "native-shaped": 2,
     "native-graph": 2,
@@ -275,11 +285,14 @@ async def run_bet(
     log: Path = LOG,
     deadline: float | None = None,
     requests: int | None = None,
+    *,
+    legacy: frozenset[str] = frozenset(),
 ) -> str:
     """Ask every (run, case, arm) the log has not finished, in that order, so a cut run still
     leaves both arms paired on the cases it reached. Returns why it stopped: `done`, `quota`
     (the model's quota or key ended the run), `time` (past the deadline) or `requests` (this pass
-    spent its share of the shared free quota)."""
+    spent its share of the shared free quota). The runs of an arm in `legacy` (its agent has the
+    legacy tables in reach) are logged with `"legacy": true`."""
     spent = 0
     for run in range(1, runs + 1):
         for question in bet.questions:
@@ -310,6 +323,8 @@ async def run_bet(
                     "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "model_calls": outcome.model_calls,
                 }
+                if arm in legacy:
+                    entry["legacy"] = True
                 if outcome.error:
                     entry["error"] = " ".join(outcome.error.split())[:300]
                     append_log(entry, log)
@@ -404,6 +419,13 @@ def report(
         "Unclear turns (no number parses and no decline) await the blind judge and count as "
         "wrong here.",
     ]
+    baseline = [e for e in entries if e["arm"] == "baseline"]
+    if baseline:
+        reached = sum(1 for e in baseline if e.get("legacy"))
+        lines.append(
+            f"{reached} of `baseline`'s {len(baseline)} logged runs had the `legacy` tables in "
+            "reach (logged with `legacy`, from #357 on); the others did not."
+        )
     if not models:
         lines += ["", "No run is logged yet."]
     for model in models:
@@ -511,10 +533,23 @@ async def main(argv: Sequence[str]) -> int:
         )
         expected = evaluation.expected_numbers(asked.questions, owner_url)
         described = evaluation.definitions(asked.questions)
-        agents = {"baseline": build_baseline(), "custom-metricflow": build_semantic()}
+        # custom-metricflow's tools read only the semantic models: legacy stays out of its reach.
+        agents = {
+            "baseline": build_baseline(extra_tables=LEGACY_TABLES),
+            "custom-metricflow": build_semantic(),
+        }
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
         why = await run_bet(
-            asked, expected, agents, described, model, args.runs, LOG, deadline, args.requests
+            asked,
+            expected,
+            agents,
+            described,
+            model,
+            args.runs,
+            LOG,
+            deadline,
+            args.requests,
+            legacy=LEGACY_REACH,
         )
     text = report(bet, read_log(), args.runs)
     REPORT.write_text(text)

@@ -102,6 +102,38 @@ def test_two_runs_score_each_turn_under_the_rule_and_resume_from_the_log(monkeyp
     assert "- Accuracy: +0.000 [+0.000, +0.000]: no difference." in text
 
 
+def test_the_bets_baseline_has_the_legacy_tables_in_reach_and_its_runs_say_so(
+    monkeypatch, tmp_path
+):
+    """RULE.md § The arms: legacy beside the trusted layers for every SQL arm (#357); the runs
+    logged before it lack the field, so the report tells the two apart."""
+    monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": [{"revenue_eur": 868.65}]})
+    model, sql_model = Answers(asked=[]), Answers(asked=[])
+    built = {
+        "baseline": baseline.build_agent(sql_model, extra_tables=bet_eval.LEGACY_TABLES),
+        "custom-metricflow": semantic.build_agent(model),
+    }
+    log = tmp_path / "eval.jsonl"
+    asyncio.run(
+        bet_eval.run_bet(BET, EXPECTED, built, {}, "scripted", 1, log, legacy=bet_eval.LEGACY_REACH)
+    )
+    entries = bet_eval.read_log(log)
+    assert {e["arm"]: e.get("legacy", False) for e in entries} == {
+        "baseline": True,
+        "custom-metricflow": False,
+    }
+    told = str(sql_model.requests[0].config.system_instruction)
+    assert all(table in told for table in bet_eval.LEGACY_TABLES)
+    earlier = {**entries[0], "run": 2}
+    earlier.pop("legacy")
+    text = bet_eval.report(BET, [*entries, earlier], runs=1)
+    assert "2 of `baseline`'s 3 logged runs had the `legacy` tables in reach" in text
+
+
+def test_the_equal_reach_arms_are_configuration_only():
+    assert bet_eval.RUNG["native-kc-reach"] == bet_eval.RUNG["native-context-bare"] == 1
+
+
 def test_a_partial_log_scores_the_cases_every_arm_reached(tmp_path):
     entries = [
         {"arm": a, "model": "m", "run": 1, "case": "revenue_one_day", "outcome": "right"}
