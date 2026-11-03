@@ -1,7 +1,7 @@
 # Generated Toolbox tools over the seven table functions, and how much of the frozen set fits their shapes (#344)
 
 Question (Q5, offline part): how far can generated MCP Toolbox tools over the `native-shaped` arm's table functions go, and what falls outside their shapes?
-The live part (Toolbox against the lab project, an ADK agent on it, its answers) stays [#330](../../../../../issues/330)'s, after [#329](../../../../../issues/329)'s live part and the cost check ([#338](../../../../../issues/338)).
+The live part (Toolbox against the lab project, an ADK agent on it, its answers) stays [#330](../../../../../../issues/330)'s, after [#329](../../../../../../issues/329)'s live part and the cost check ([#338](../../../../../../issues/338)).
 
 ## What was run
 

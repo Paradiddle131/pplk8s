@@ -1,0 +1,5 @@
+## 2026-11-03 — Semantic track — the rule compares a managed arm with ours across models (#359)
+
+- Done: RULE.md § The rule, 2 pairs arms by case across models, each arm's model named (a dated line quotes the owner's option C on #333 and #362's drop of the Gemini check); `bet_eval.managed_comparison` takes the managed best on its model and pairs every arm of ours on every model it ran with, ours on the free model deciding and on Claude the check; `eval.md` shows the pair in "The rule across models".
+- Evidence: on the 47 cases ours reached, `custom-metricflow` on `nvidia/nemotron-3.5-super-vl:free` against `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`: accuracy +0.011 [-0.053, +0.064], confident-wrong +0.000: not worth building on this, partial (`docs/research/semantic-bet/findings/2026-11-03-359-cross-model.md`); `make agent-test` (330 passed) and `make lint` pass.
+- Open: ours on the other 49 cases and runs 2 and 3; the Claude check (#361); `native-mcp` and `custom-toolbox` logs (#353).

@@ -1,15 +1,17 @@
 """The semantic bet's scoring rule (docs/research/semantic-bet/RULE.md), as pure functions.
 
 A turn's outcome is right, declined, confident-wrong or wrong; the code leaves to a blind judge
-the answers it cannot decide (unclear, counted as wrong until judged). A run of a case is right when
-every turn is, confident-wrong when any turn is. An arm's accuracy and confident-wrong rate are
-means over cases of the share of its k runs with that outcome; two arms compare by the paired
-percentile bootstrap of their per-case differences. Nothing here calls a model or a warehouse,
-and nothing changes how evals/questions.yaml's eval is scored.
+the answers it cannot decide (unclear, counted as wrong until judged). The judge's prompt and how
+its two verdicts combine are here too; asking the judge (a model) is bet_eval.py's. A run of a
+case is right when every turn is, confident-wrong when any turn is. An arm's accuracy and
+confident-wrong rate are means over cases of the share of its k runs with that outcome; two arms
+compare by the paired percentile bootstrap of their per-case differences. Nothing here calls a
+model or a warehouse, and nothing changes how evals/questions.yaml's eval is scored.
 """
 
 from __future__ import annotations
 
+import hashlib
 import random
 import re
 from collections.abc import Mapping, Sequence
@@ -39,18 +41,34 @@ def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
 
 
 # Sentences that say the data cannot give the figure, beyond the eval's DECLINE: the bet's code
-# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers.
+# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers. The last two
+# lines (#367, RULE.md § Changes since freezing) are declines the judge found the code missing:
+# "is not tracked or available in the governed tables" and "there is no allocated budget column or
+# budget table present in the schema to compute the remaining budget".
 NOT_IN_DATA = re.compile(
     r"cannot be (?:determined|computed|calculated|derived|answered)|"
     r"(?:does not|doesn't|do not|don't) (?:provide|separately|record|store|track|split)|"
     r"not (?:separately|possible to (?:determine|compute|calculate))|"
-    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)",
+    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)|"
+    r"\bnot tracked\b|"
+    r"\bno\b[^.]{0,40}?\b(?:column|table|field)s?\b[^.]{0,80}?\bto (?:compute|calculate|determine)",
     re.IGNORECASE,
 )
 
 
+# Typographic apostrophes, folded to ASCII before any wording is matched (#368, RULE.md § Changes
+# since freezing): the patterns spell "can't", and models write "can’t" as often.
+APOSTROPHES = str.maketrans({"\u2019": "'", "\u2018": "'"})
+
+
+def fold(text: str) -> str:
+    """The answer as the wording patterns read it: ’ and ‘ as '."""
+    return text.translate(APOSTROPHES)
+
+
 def declines(text: str) -> bool:
     """The answer says it cannot answer, or that the data does not hold the figure."""
+    text = fold(text)
     return bool(DECLINE.search(text) or NOT_IN_DATA.search(text))
 
 
@@ -66,7 +84,7 @@ def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = 
     if right:
         return Outcome.RIGHT
     if stated(text, question):
-        lowered = text.lower()
+        lowered = fold(text).lower()
         # A decline beside the number says it is not from governed definitions: a hedge too.
         hedged = any(h.lower() in lowered for h in hedges) or declines(text)
         return Outcome.WRONG if hedged else Outcome.CONFIDENT_WRONG
@@ -86,6 +104,99 @@ def run_outcome(turns: Sequence[Outcome]) -> Outcome:
     if Outcome.UNCLEAR in turns:
         return Outcome.UNCLEAR
     return Outcome.DECLINED
+
+
+# RULE.md § Scoring a run: the blind judge sees the question, the expected number and the answer,
+# never the arm, and gives one of the four outcomes under the rule's own definitions.
+JUDGE_PROMPT = """You grade one answer of a data assistant to a user's question by a fixed rubric.
+
+The question: {question}
+The expected number: {expected}
+The answer:
+<<<
+{answer}
+>>>
+
+Give exactly one outcome:
+- right: the answer carries the expected number (rounding aside; a rate may be a percentage).
+- declined: the answer gives no number and says it cannot answer, that the data or no definition
+  covers it, or asks the user a question back.
+- confident-wrong: the answer gives a number other than the expected one, with no statement that
+  it is uncertain, partial, an estimate or not from governed definitions.
+- wrong: anything else (another number with such a statement, or no number and no decline).
+
+Reason briefly if you need to, then end with one line:
+VERDICT: <right|declined|confident-wrong|wrong>
+"""
+VERDICT = re.compile(r"VERDICT:\W*(right|declined|confident-wrong|wrong)\b", re.IGNORECASE)
+
+
+def _number(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".")
+
+
+def judge_prompt(question: str, meanings: Sequence[Sequence[float]], answer: str) -> str:
+    """The judge's prompt for one turn: every expected number in its first form (a rate also as
+    its percentage)."""
+    shown = []
+    for forms in meanings:
+        number = _number(forms[0])
+        shown.append(f"{number} ({_number(forms[1])}%)" if len(forms) > 1 else number)
+    expected = ", ".join(shown) or "none (the question asks for no number)"
+    return JUDGE_PROMPT.format(question=question, expected=expected, answer=answer)
+
+
+def parse_verdict(text: str) -> Outcome | None:
+    """The judge's verdict: its last VERDICT line, or None when it gave none."""
+    found = VERDICT.findall(text)
+    return Outcome(found[-1].lower()) if found else None
+
+
+def two_verdicts(first: Outcome | None, second: Outcome | None) -> Outcome:
+    """RULE.md: two equal verdicts stand; two different ones (or a missing one) leave it unclear."""
+    if first is None or first is not second:
+        return Outcome.UNCLEAR
+    return first
+
+
+# RULE.md's second judge case (#366): a hedge phrased outside the set's `hedges` list. The code
+# cannot tell such a hedge from a confident wrong number, so every confident-wrong turn holding one
+# of these hedge-like phrases goes to the judge. The list is broad on purpose (a false match costs
+# two judge requests, a missed one leaves a hedged answer confident-wrong): uncertainty words,
+# assumptions, scope notes and "the data does not hold it" phrasings, read from the logs' answers.
+HEDGE_LIKE = re.compile(
+    r"\b(?:approx(?:imately|\.)?|roughly|around|estimat\w*|may|might|could|likely|possibly|"
+    r"perhaps|probably|appears?|seems?|assum\w*|not sure|uncertain\w*|unclear|partial\w*|"
+    r"incomplete|caveats?|note that|please note|for reference|based on|treated as|taken as|"
+    r"interpret\w*|proxy|depending|if you|not (?:tracked|available|recorded|stored|present)|"
+    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?)|"
+    # Scope caveats (#367): the figure is for a wider scope than asked, which the answer says.
+    r"(?:cannot|can't|unable to) (?:split|filter|isolate|break)|covers? all|"
+    r"not broken (?:down|out))\b",
+    re.IGNORECASE,
+)
+
+
+def unlisted_hedges(text: str, hedges: Sequence[str]) -> list[str]:
+    """The hedge-like phrases an answer holds that the set's `hedges` list does not."""
+    listed = [fold(h).lower() for h in hedges]
+    found = [m.group(0) for m in HEDGE_LIKE.finditer(fold(text))]
+    return [f for f in found if not any(f.lower() in h or h in f.lower() for h in listed)]
+
+
+def hedge_verdicts(first: Outcome | None, second: Outcome | None) -> Outcome:
+    """Two verdicts on a confident-wrong turn with an unlisted hedge: the code already found its
+    number outside tolerance, so the judge decides only whether it is hedged. Equal verdicts of
+    wrong or confident-wrong stand; declined is a decline beside the number, so hedged: wrong;
+    right contradicts the parsed number, and different verdicts disagree: both unclear."""
+    if first is None or first is not second or first is Outcome.RIGHT:
+        return Outcome.UNCLEAR
+    return Outcome.WRONG if first is Outcome.DECLINED else first
+
+
+def answer_hash(text: str) -> str:
+    """What a cached verdict is keyed on besides the turn: a changed answer is judged again."""
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
 @dataclass(frozen=True)
