@@ -210,6 +210,61 @@ def rescore(
     return out
 
 
+def _recoded(turn: Turn, logged: Mapping[str, Any], hedges: Sequence[str]) -> Outcome:
+    """A logged turn's outcome from its text under the current wordings, keeping from the log
+    whether it was right (score_turn's paths, the expected numbers left out)."""
+    was, text = Outcome(logged["outcome"]), logged["text"]
+    if turn.planted or was is Outcome.RIGHT or not text:
+        return was
+    if turn.kind == "number":
+        return turn_outcome(text, False, hedges, turn.question)
+    if stated(text, turn.question):
+        # Only an `ambiguous` turn whose numbers carry no meaning's reaches the hedge test, and
+        # only it is ever confident-wrong; any other turn stating a number is wrong either way.
+        if was is Outcome.CONFIDENT_WRONG:
+            return turn_outcome(text, False, hedges, turn.question)
+        return was
+    return Outcome.DECLINED if declines(text) else Outcome.WRONG
+
+
+def recode(bet: BetSet, entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every log's turns scored again on read from their text under the current decline and hedge
+    wordings (bet_rule.NOT_IN_DATA, HEDGE_LIKE's judge candidates follow; the set's `hedges`), so a
+    dated change to them (RULE.md § Changes since freezing, #367) reaches every arm's log, the live
+    arms' included, without rewriting a line (other passes append to them).
+
+    No warehouse is read: whether a turn was right is the log's, so this is exact for wordings that
+    widen, as every change so far has (a narrowed hedge cannot move an `ambiguous` turn logged
+    wrong with a number). `--rescore` rewrites the local log from the expected numbers instead.
+    A turn whose outcome moves keeps the logged one as `logged`, and its run is scored again; a
+    planted turn, an unanswered one and a case outside the set keep theirs."""
+    questions = {q.id: q for q in bet.questions}
+    out = []
+    for e in entries:
+        q = questions.get(e["case"])
+        if not e.get("turns") or q is None or len(e["turns"]) != len(q.turns):
+            out.append(e)
+            continue
+        turns = []
+        for turn, logged in zip(q.turns, e["turns"], strict=True):
+            outcome = _recoded(turn, logged, bet.hedges)
+            if outcome.value == logged["outcome"]:
+                turns.append(logged)
+            else:
+                turns.append({**logged, "outcome": outcome.value, "logged": logged["outcome"]})
+        if turns == e["turns"]:
+            out.append(e)
+            continue
+        out.append(
+            {
+                **e,
+                "turns": turns,
+                "outcome": run_outcome([Outcome(t["outcome"]) for t in turns]).value,
+            }
+        )
+    return out
+
+
 def read_log(path: Path = LOG) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -373,12 +428,13 @@ async def judge_turns(
     return "done", spent
 
 
-def judged_logs(directory: Path = RESEARCH) -> list[dict[str, Any]]:
-    """Every arm's runs with the current judge model's verdicts applied."""
+def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]:
+    """Every arm's runs scored on read under the current wordings (`recode`), with the current
+    judge model's verdicts applied."""
     from semantic_agent.model import judge_model_id
 
     verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id())
-    return apply_verdicts(read_logs(directory), verdicts)
+    return apply_verdicts(recode(bet, read_logs(directory)), verdicts)
 
 
 def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
@@ -627,6 +683,19 @@ def judge_lines(
         and unlisted_hedges(t["text"], hedges)
     ]
     lines = []
+    recoded = [(e, t) for e, _, t in turns if "logged" in t]
+    if recoded:
+        moves: dict[tuple[str, str, str], int] = {}
+        for e, t in recoded:
+            move = (e["arm"], t["logged"], t.get("coded", t["outcome"]))
+            moves[move] = moves.get(move, 0) + 1
+        lines += [
+            "",
+            f"Turns the current wordings score otherwise than their log (RULE.md § Changes since "
+            f"freezing, applied on read): {len(recoded)} ("
+            + "; ".join(f"`{a}` {n} {old} to {new}" for (a, old, new), n in sorted(moves.items()))
+            + ").",
+        ]
     if judged:
         stood = sum(t["outcome"] != Outcome.UNCLEAR.value for t in judged)
         lines += [
@@ -814,7 +883,8 @@ async def main(argv: Sequence[str]) -> int:
     bet = load_bet()
     why = "report"
     if args.judge:
-        pending = {key[2] for key, _ in undecided_turns(read_logs(), bet.hedges)}
+        logs = recode(bet, read_logs())
+        pending = {key[2] for key, _ in undecided_turns(logs, bet.hedges)}
         asked = load_bet(ids=sorted(pending)) if pending else BetSet([], {}, [])
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(
@@ -822,7 +892,7 @@ async def main(argv: Sequence[str]) -> int:
         )
         expected = evaluation.expected_numbers(asked.questions, owner_url) if pending else {}
         why, spent = await judge_turns(
-            asked, read_logs(), expected, model_judge(), judge_model_id(), JUDGE_LOG, args.requests
+            asked, logs, expected, model_judge(), judge_model_id(), JUDGE_LOG, args.requests
         )
         print(f"judge: {spent} request(s) sent to {judge_model_id()}")
     elif args.rescore:
@@ -871,11 +941,11 @@ async def main(argv: Sequence[str]) -> int:
         print(f"stopped: {why}; runs logged to {log} (the scored reports are left alone)")
         return 0 if why == "done" else 3
     verdicts = read_verdicts(JUDGE_LOG, judge_model_id())
-    text = report(bet, apply_verdicts(read_log(), verdicts), args.runs)
+    text = report(bet, apply_verdicts(recode(bet, read_log()), verdicts), args.runs)
     REPORT.write_text(text)
     print(text)
     print(f"stopped: {why}; written to {REPORT}")
-    ALL_REPORT.write_text(report(bet, judged_logs(), args.runs, every_arm=True))
+    ALL_REPORT.write_text(report(bet, judged_logs(bet), args.runs, every_arm=True))
     print(f"every arm: written to {ALL_REPORT}")
     if args.judge:
         return 0 if why == "done" else 3

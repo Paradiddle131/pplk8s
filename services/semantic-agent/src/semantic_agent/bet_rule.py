@@ -41,12 +41,17 @@ def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
 
 
 # Sentences that say the data cannot give the figure, beyond the eval's DECLINE: the bet's code
-# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers.
+# only (the eval's answer_correct keeps DECLINE), read from the first pass's answers. The last two
+# lines (#367, RULE.md § Changes since freezing) are declines the judge found the code missing:
+# "is not tracked or available in the governed tables" and "there is no allocated budget column or
+# budget table present in the schema to compute the remaining budget".
 NOT_IN_DATA = re.compile(
     r"cannot be (?:determined|computed|calculated|derived|answered)|"
     r"(?:does not|doesn't|do not|don't) (?:provide|separately|record|store|track|split)|"
     r"not (?:separately|possible to (?:determine|compute|calculate))|"
-    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)",
+    r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)|"
+    r"\bnot tracked\b|"
+    r"\bno\b[^.]{0,40}?\b(?:column|table|field)s?\b[^.]{0,80}?\bto (?:compute|calculate|determine)",
     re.IGNORECASE,
 )
 
@@ -153,7 +158,10 @@ HEDGE_LIKE = re.compile(
     r"perhaps|probably|appears?|seems?|assum\w*|not sure|uncertain\w*|unclear|partial\w*|"
     r"incomplete|caveats?|note that|please note|for reference|based on|treated as|taken as|"
     r"interpret\w*|proxy|depending|if you|not (?:tracked|available|recorded|stored|present)|"
-    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?))\b",
+    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?)|"
+    # Scope caveats (#367): the figure is for a wider scope than asked, which the answer says.
+    r"(?:cannot|can't|unable to) (?:split|filter|isolate|break)|covers? all|"
+    r"not broken (?:down|out))\b",
     re.IGNORECASE,
 )
 

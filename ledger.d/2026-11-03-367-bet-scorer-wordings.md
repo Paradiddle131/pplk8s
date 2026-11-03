@@ -1,0 +1,5 @@
+## 2026-11-03 — Semantic track — the scorer learns the decline and scope-caveat wordings the logs show (#367)
+
+- Done: a dated RULE.md change adds "not tracked" and "no … column … to compute" to `bet_rule.NOT_IN_DATA` and the scope caveats ("cannot split", "cannot filter", "covers all", "not broken down") to the judge's `HEDGE_LIKE`, the set's `hedges` untouched; `bet_eval.recode` scores every log on read under the current wordings, the live arms' without rewriting a line; the local log rescored; `328_mcp_live.py` writes `eval.md` with the judge's verdicts.
+- Evidence: 4 data-agent turns now decided by the code as the judge had; 10 judge requests (20:52Z–20:53Z) moved 3 `custom-lightdash` turns from confident-wrong to wrong, its confident-wrong rate 17.1% → 9.8%, still a difference from the managed best (`docs/research/semantic-bet/findings/2026-11-03-367-scorer-wordings.md`); `make agent-test` and `make lint` pass.
+- Open: curly-apostrophe declines ("can’t") escape `DECLINE` and `NOT_IN_DATA`.

@@ -34,7 +34,7 @@ import time
 from pathlib import Path
 
 from semantic_agent import evaluation
-from semantic_agent.bet_eval import ALL_REPORT, RUNS, load_bet, read_logs, report
+from semantic_agent.bet_eval import ALL_REPORT, RUNS, judged_logs, load_bet, report
 from semantic_agent.bet_live import converse, log_path, run_live
 from semantic_agent.model import DEFAULT_MODEL_ID
 
@@ -115,7 +115,8 @@ async def main() -> int:
     )
     print(f"stopped: {why}; logged to {log}", flush=True)
     # Scored at the rule's k whatever this pass asked, as `make agent-eval ARM=bet` writes it.
-    ALL_REPORT.write_text(report(load_bet(), read_logs(), RUNS, every_arm=True))
+    every = load_bet()
+    ALL_REPORT.write_text(report(every, judged_logs(every), RUNS, every_arm=True))
     print(f"every arm: written to {ALL_REPORT}")
     return 0 if why == "done" else 3
 
