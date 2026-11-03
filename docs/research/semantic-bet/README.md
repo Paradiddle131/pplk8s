@@ -19,7 +19,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 | Q2 | Does a BigQuery data agent use the imported metric definitions, compared with no context and with our generated context? | #327 | open | |
 | Q3 | Can an ADK agent built only on Google's managed MCP servers (Knowledge Catalog, BigQuery) answer through the metrics? | #328 | open | |
 | Q4 | Do governed views, table functions and parameterised verified queries make a data agent use the defined metrics; does `bqRoutines` take a table function? | #329 | measuring | [offline part](findings/2026-11-03-329-bet-shaped.md) |
-| Q5 | How far can generated MCP Toolbox tools over those table functions go, and what falls outside their shapes? | #330 | open | |
+| Q5 | How far can generated MCP Toolbox tools over those table functions go, and what falls outside their shapes? | #330, #344 | measuring | [offline part](findings/2026-11-03-344-toolbox-shapes.md) |
 | Q6 | Which metrics compile to graph measures, and does a data agent aggregate through them when it has the graph beside the tables? | #331 | measuring | [offline part](findings/2026-11-03-331-graph-measures.md) |
 | Q7 | Do row policies hold through views, table functions and authorized routines; does conversation logging keep row-scoped answers read through a view? | #332 | open | |
 | Q8 | On a frozen question set, which path gives the right number, and which fails confidently? | #325, #340, #341, #333 | measuring | [the frozen set and rule](findings/2026-11-03-325-frozen-eval.md), [RULE.md](RULE.md), [its scoring](findings/2026-11-03-340-rule-scoring.md), [the local arms](findings/2026-11-03-341-local-arms.md) ([eval-local.md](eval-local.md)) |
