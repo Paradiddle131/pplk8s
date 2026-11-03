@@ -102,11 +102,15 @@ ARMS = ("baseline", "custom-metricflow")
 RUNG = {
     "native-context": 1,
     "native-kc": 1,
+    # Knowledge Catalog's import plus a glossary and descriptions: configuration only (#360).
+    "native-kc-max": 1,
     "native-governed": 2,
     "native-shaped": 2,
     "native-graph": 2,
     "native-mcp": 3,
     "custom-toolbox": 3,
+    # A self-hosted semantic-layer server over our MetricFlow project (#363), like MetricFlow.
+    "custom-lightdash": 4,
     "custom-metricflow": 4,
 }
 

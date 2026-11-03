@@ -1,5 +1,6 @@
 """A probe arm live on the frozen set: probes/328_mcp_agent.py on Google's MCP servers (`native-mcp`, #328, Q3),
-with `--agent 330_toolbox_agent.py` the generated Toolbox tools (`custom-toolbox`, #330), or with
+with `--agent 330_toolbox_agent.py` the generated Toolbox tools (`custom-toolbox`, #330), with
+`--agent 363_lightdash_agent.py` Lightdash's free query API (`custom-lightdash`, #363), or with
 `--agent 354_data_agent.py --arm <arm>` a data-agent arm (#354).
 
 What it measures: per case and run, every turn of the conversation in one session (semantic_agent.bet_live),
@@ -41,6 +42,7 @@ from semantic_agent.model import DEFAULT_MODEL_ID
 ARMS = {
     "328_mcp_agent.py": "native-mcp",
     "330_toolbox_agent.py": "custom-toolbox",
+    "363_lightdash_agent.py": "custom-lightdash",
     "354_data_agent.py": "native-kc",  # or --arm native-shaped / native-graph
 }
 
