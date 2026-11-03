@@ -28,7 +28,7 @@ Every case keeps `questions.yaml`'s shape, so `services/semantic-agent`'s eval c
 
 The arms of [the register](README.md#the-arms), each built by its own issue: `native-context`, `native-governed`, `native-kc`, `native-shaped`, `native-graph`, `native-mcp`, `custom-metricflow`, `custom-toolbox`, and `baseline` (the reference, text-to-SQL that reads the generated docs).
 Every arm that writes SQL is given the `legacy` schema beside the trusted layers (#185), with the descriptions it already carries ("replaced by …"); an arm that cannot read it (`custom-metricflow`) says so in the report.
-An arm is scored with each model it is run with; the decision compares arms on the same model.
+An arm is scored with each model it is run with, and every comparison names each arm's model (§ The rule, 2, changed 2026-11-03 by #359).
 
 ## Scoring a run
 
@@ -71,8 +71,16 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
 
 ## The rule
 
-1. Take the best arm on rung 1 or 2 by accuracy (the **managed best**).
-2. An arm on rung 3 or 4 is worth building only if, against the managed best, its accuracy difference excludes zero above it, or its accuracy shows no difference and its confident-wrong rate's difference excludes zero below it.
+1. Take the best arm on rung 1 or 2 by accuracy, on the model it runs with (the **managed best**).
+2. Pair arms by case across models, each arm's model named: the managed best on its model (a data agent answers only with Google's) against each arm of ours on each model it ran with, on the cases both reached, each case's share over that arm's finished runs.
+   An arm on rung 3 or 4 is worth building only if, against the managed best, its accuracy difference excludes zero above it, or its accuracy shows no difference and its confident-wrong rate's difference excludes zero below it.
+   The pair with ours on the lab's own model (the free OpenRouter model the lab runs it on) decides; the same arm of ours on Claude is the check: a verdict that moves with the model says the gap is at least partly the model's, and the report says so beside the verdict.
 3. Otherwise the verdict adopts the cheapest arm that shows no accuracy difference from the best arm overall, and names what the others would add.
 4. The groups explain the verdict (where an arm wins or loses), and never overturn it: a win on `trap` alone is a reason the report names, not a rule.
 5. Every comparison the report shows besides these is descriptive.
+
+## Changes since freezing
+
+- 2026-11-03 (#359, before the cross-model comparison was first scored): § The arms and § The rule, 1 and 2, compare a managed arm on Google's model with ours on its model, each arm's model named, instead of arms on the same model only, since no data agent can run on our model.
+  The owner's answer, on [#333](../../../../../issues/333) (option C), 2026-11-03T19:02Z, in a session: "for #333 I can provide both Google AI Studio key of mine as well as Anthropic key with your help. option C makes sense".
+  The Gemini same-model check was later dropped ([#362](../../../../../issues/362), owner, 2026-11-03): Claude stands in as the second-model check.
