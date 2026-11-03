@@ -159,3 +159,14 @@ def test_the_log_is_one_json_object_per_line(tmp_path):
 def test_the_frozen_set_loads_with_its_groups_and_hedges():
     bet = bet_eval.load_bet()
     assert len(bet.questions) == len(bet.groups) and bet.hedges
+
+
+def test_a_pass_stops_once_it_spent_its_requests(monkeypatch, tmp_path):
+    monkeypatch.setattr(tools, "run", lambda query, catalog: {"rows": [{"revenue_eur": 868.65}]})
+    model = Answers(asked=[])
+    log = tmp_path / "eval.jsonl"
+    stopped = asyncio.run(
+        bet_eval.run_bet(BET, EXPECTED, agents(model), {}, "scripted", 2, log, requests=2)
+    )
+    assert stopped == "requests"
+    assert len(bet_eval.read_log(log)) == 2  # one answer each, then the budget is spent

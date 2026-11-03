@@ -24,7 +24,8 @@ case "${ARM:-metricflow}" in
   metricflow) ;;
   # ARM=bet (#341): the bet's two local arms (custom-metricflow, baseline) on the frozen set
   # (evals/semantic_bet.yaml), RUNS times each, resuming from docs/research/semantic-bet/eval-local.jsonl;
-  # writes eval-local.md beside it. MINUTES=<n> stops asking after that long (a wake's budget).
+  # writes eval-local.md beside it. MINUTES=<n> stops asking after that long, REQUESTS=<n> once the pass
+  # spent that many model responses (a wake's share of the shared free quota).
   bet) ;;
   data_agent | data_agent_governed)
     # data_agent_governed (semantic/PLAN.md SL-24): the second data agent, over the governed tables only
@@ -61,6 +62,7 @@ cd "$REPO/services/semantic-agent"
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics
 export MODEL_RETRIES=${MODEL_RETRIES:-4}
 if [ "${ARM:-}" = bet ]; then
-  exec uv run --quiet python -m semantic_agent.bet_eval --runs "${RUNS:-3}" ${MINUTES:+--minutes "$MINUTES"} "$@"
+  exec uv run --quiet python -m semantic_agent.bet_eval --runs "${RUNS:-3}" ${MINUTES:+--minutes "$MINUTES"} \
+    ${REQUESTS:+--requests "$REQUESTS"} "$@"
 fi
 uv run --quiet python -m semantic_agent.evaluation "$@"

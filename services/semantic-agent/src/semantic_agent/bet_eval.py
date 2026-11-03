@@ -12,9 +12,12 @@ wake resumes where it stopped: a run already in the log is never asked again. Th
 rebuilt from the log alone (`--report-only`), into `docs/research/semantic-bet/eval-local.md`.
 
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
-  python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--report-only] [case ids]
-Exit 0: the report holds every run; 3: incomplete (the quota, the time budget or the ids given cut
-it), the report written from what the log holds.
+  python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300] [--report-only]
+    [case ids]
+The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
+`--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
+Exit 0: the report holds every run; 3: incomplete (the quota, a budget or the ids given cut it),
+the report written from what the log holds.
 """
 
 from __future__ import annotations
@@ -172,10 +175,13 @@ async def run_bet(
     runs: int = RUNS,
     log: Path = LOG,
     deadline: float | None = None,
+    requests: int | None = None,
 ) -> str:
     """Ask every (run, case, arm) the log has not finished, in that order, so a cut run still
     leaves both arms paired on the cases it reached. Returns why it stopped: `done`, `quota`
-    (the model's quota or key ended the run) or `time`."""
+    (the model's quota or key ended the run), `time` (past the deadline) or `requests` (this pass
+    spent its share of the shared free quota)."""
+    spent = 0
     for run in range(1, runs + 1):
         for question in bet.questions:
             for arm in ARMS:
@@ -185,6 +191,8 @@ async def run_bet(
                     continue
                 if deadline is not None and time.monotonic() > deadline:
                     return "time"
+                if requests is not None and spent >= requests:
+                    return "requests"
                 semantic = arm == "custom-metricflow"
                 cases = evaluation.eval_cases(
                     [question], dict(expected), agents[arm].name, semantic, dict(described)
@@ -192,6 +200,7 @@ async def run_bet(
                 outcome = (await evaluation.evaluate(agents[arm], cases, [ANSWER_CORRECT]))[
                     question.id
                 ]
+                spent += outcome.model_calls
                 if outcome.skipped or outcome.ends_run:
                     return "quota"
                 entry: dict[str, Any] = {
@@ -352,6 +361,9 @@ async def main(argv: Sequence[str]) -> int:
     parser.add_argument("ids", nargs="*", help="only these cases (the report still covers all)")
     parser.add_argument("--runs", type=int, default=RUNS)
     parser.add_argument("--minutes", type=float, default=None, help="stop asking after this long")
+    parser.add_argument(
+        "--requests", type=int, default=None, help="stop once this pass spent this many requests"
+    )
     parser.add_argument("--report-only", action="store_true", help="rewrite the report, ask none")
     args = parser.parse_args(argv)
 
@@ -373,7 +385,9 @@ async def main(argv: Sequence[str]) -> int:
         described = evaluation.definitions(asked.questions)
         agents = {"baseline": build_baseline(), "custom-metricflow": build_semantic()}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
-        why = await run_bet(asked, expected, agents, described, model, args.runs, deadline=deadline)
+        why = await run_bet(
+            asked, expected, agents, described, model, args.runs, LOG, deadline, args.requests
+        )
     text = report(bet, read_log(), args.runs)
     REPORT.write_text(text)
     print(text)
