@@ -8,6 +8,9 @@ carrying its dimensions and its compiling metrics as measures, and one edge per 
 model is a node. The translation is this probe's, not MetricFlow's: a metric's filters become a CASE inside its
 aggregate, and only filters on the metric's own model's dimensions translate.
 Run (from the repo root): python3 -I docs/research/semantic-bet/probes/331_graph_measures.py <manifest.json> [out.sql]
+  [--only <model>,<model>,... --graph <name>]
+`--only` keeps those semantic models' node tables and the edges between them, in `bet_graph.<name>` (default
+`metrics`, every model): GRAPH_EXPAND refuses a graph of more than 10 node tables (measured 2026-11-03).
 <manifest.json> is target/manifest.json of a copy of dbt/ parsed on the `bigquery` target (as
 tests/e2e/governed-models.sh makes one). Offline: reads one file, writes one file (default bet_graph.sql).
 """
@@ -24,12 +27,61 @@ AGGS = {
     "average": "AVG({})",
 }
 AGGS |= {"min": "MIN({})", "max": "MAX({})", "sum_boolean": "SUM(CAST({} AS INT64))"}
+# Words in a measure expression that are SQL, not columns: what's left are the columns a measure reads, which the
+# node table must declare as properties (measured 2026-11-03: BigQuery refuses a measure over an undeclared column,
+# "Columns are not supported in graph measure property expressions"; its dry run of the script doesn't).
+SQL_WORDS = {
+    "agg",
+    "and",
+    "as",
+    "avg",
+    "case",
+    "cast",
+    "count",
+    "distinct",
+    "else",
+    "end",
+    "false",
+    "in",
+    "int64",
+    "is",
+    "max",
+    "min",
+    "not",
+    "null",
+    "nullif",
+    "or",
+    "safe_divide",
+    "sum",
+    "then",
+    "true",
+    "when",
+}
+IDENTIFIER = re.compile(r"\b[A-Za-z_]\w*\b")
+STRING = re.compile(r"'[^']*'")
+
+
+def columns_read(expr: str, measure_names: set[str]) -> set[str]:
+    """The column names a measure expression reads: its identifiers minus SQL words, measures and string literals."""
+    words = set(IDENTIFIER.findall(STRING.sub("", expr)))
+    return {w for w in words if w.lower() not in SQL_WORDS and w not in measure_names}
+
+
 DIMENSION = re.compile(r"\{\{\s*Dimension\('(\w+)__(\w+)'\)\s*\}\}")
 
 
 def main() -> int:
-    manifest = json.loads(Path(sys.argv[1]).read_text())
-    out = Path(sys.argv[2] if len(sys.argv) > 2 else "bet_graph.sql")
+    args, flags = [], {}
+    rest = iter(sys.argv[1:])
+    for arg in rest:
+        if arg.startswith("--"):
+            flags[arg[2:]] = next(rest)
+        else:
+            args.append(arg)
+    manifest = json.loads(Path(args[0]).read_text())
+    out = Path(args[1] if len(args) > 1 else "bet_graph.sql")
+    graph = flags.get("graph", "metrics")
+    only = set(flags["only"].split(",")) if "only" in flags else None
     models = {sm["name"]: sm for sm in manifest["semantic_models"].values()}
     metrics = {m["name"]: m for m in manifest["metrics"].values()}
     measures: dict[
@@ -145,6 +197,8 @@ def main() -> int:
                     )
                     del measures[name]
             continue
+        if only is not None and model["name"] not in only:
+            continue  # after the check above, so the counts stay the whole project's
         key = primary[0].get("expr") or primary[0]["name"]
         props = sorted(
             {
@@ -153,11 +207,24 @@ def main() -> int:
                 if (d.get("expr") or d["name"]).isidentifier()
             }
         )
+        # A measure must aggregate a property (measured 2026-11-03: `MEASURE(COUNT(1))` is refused), so a count of
+        # rows counts the node's key, which is never null.
+        for n, (home, expr) in list(measures.items()):
+            if home == model["name"] and "COUNT(1)" in expr:
+                measures[n] = (home, expr.replace("COUNT(1)", f"COUNT({key})"))
         mine = [
             f"MEASURE({expr}) AS {n}"
             for n, (home, expr) in sorted(measures.items())
             if home == model["name"]
         ]
+        read = set().union(
+            *(
+                columns_read(expr, set(measures))
+                for home, expr in measures.values()
+                if home == model["name"]
+            )
+        )
+        props = sorted((set(props) | read) - {key})
         nodes.append(
             f"    {table} AS {model['name']}\n      KEY ({key})\n      PROPERTIES ({', '.join([key, *props, *mine])})"
         )
@@ -165,9 +232,11 @@ def main() -> int:
         e["name"]: (sm["name"], e.get("expr") or e["name"])
         for sm in models.values()
         for e in sm["entities"]
-        if e["type"] == "primary"
+        if e["type"] == "primary" and (only is None or sm["name"] in only)
     }
     for model in sorted(models.values(), key=lambda m: m["name"]):
+        if only is not None and model["name"] not in only:
+            continue
         primary = [e for e in model["entities"] if e["type"] == "primary"]
         rel = model["node_relation"]
         for e in model["entities"]:
@@ -185,12 +254,12 @@ def main() -> int:
                     f"      SOURCE KEY ({source_key}) REFERENCES {model['name']} ({source_key})\n"
                     f"      DESTINATION KEY ({e.get('expr') or e['name']}) REFERENCES {target} ({target_key})"
                 )
-    statement = "CREATE OR REPLACE PROPERTY GRAPH bet_graph.metrics\n  NODE TABLES (\n"
+    statement = f"CREATE OR REPLACE PROPERTY GRAPH bet_graph.{graph}\n  NODE TABLES (\n"
     statement += ",\n".join(nodes) + "\n  )"
     if edges:
         statement += "\n  EDGE TABLES (\n" + ",\n".join(edges) + "\n  )"
     out.write_text(
-        "-- Written by probes/331_graph_measures.py from the project's manifest; not run yet.\n"
+        "-- Written by probes/331_graph_measures.py from the project's manifest.\n"
         "CREATE SCHEMA IF NOT EXISTS bet_graph OPTIONS (location = 'US');\n\n"
         + statement
         + ";\n"

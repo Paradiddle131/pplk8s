@@ -1,0 +1,5 @@
+## 2026-11-03 — Semantic track — the native-graph arm live: graph measures on BigQuery and a data agent that ignores them (#331)
+
+- Done: dataset `bet_graph` (US) with `metrics` (12 node tables) and `sales` (orders, customers, returns) on `pplk8s-lab-001`; `probes/331_graph_measures.py` declares the columns its measures read, counts keys instead of `COUNT(1)` and takes `--only`/`--graph`; `probes/331_bet_graph_sales.sql`; the data agent `bet-graph` (us) and `probes/331_graph_agent.py`; the finding's part 2 and its rows; the register's Q6 row.
+- Evidence: the dry run passed a graph statement BigQuery then refused twice; `GRAPH_EXPAND` refuses a graph of more than 10 node tables; `AGG(orders_revenue_eur)` by country equals the table function's numbers; `bet-graph` retrieved "3 tables and 1 graph" in 8 chats and used the graph in none (5 of 8 right, all by its own SQL); cost and usage checks ok before and after.
+- Open: a graph-only context or an instruction naming `GRAPH_EXPAND` untried; rates are #333's.
