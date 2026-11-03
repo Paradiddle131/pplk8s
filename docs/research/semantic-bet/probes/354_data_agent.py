@@ -13,6 +13,8 @@ A refused chat is a failure the runner leaves out of the log: HTTP 401 or 403 `a
 Run through the runner, live, after `make gcp-cost-check` and `make gcp-usage-check` (from services/semantic-agent):
   GCP_PROJECT=pplk8s-lab-001 DBT_DBNAME=dbt_dev uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py \
     --agent 354_data_agent.py --arm native-kc [--runs 3] [--requests 100] [--minutes 35] [case id...]
+`--legacy <arm>...` (run from the repo root as `python3 -I`): republish each arm's agent with its published context
+plus the `legacy` tables, which RULE.md puts in reach of every SQL arm; everything else in the context is kept.
 Env: GCP_PROJECT (required); the credential as platform/gcp/data-agent/publish.py picks it (on cloud the proxy
 injects it).
 """
@@ -27,8 +29,6 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 from typing import Any
-
-import anyio
 
 HERE = Path(__file__).resolve().parent
 # Each built data-agent arm's agent, in RULE.md's rung order; native-context and native-governed have none yet.
@@ -113,6 +113,8 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
         return turns
 
     async def ask(questions: Sequence[str]) -> list[dict[str, Any]]:
+        import anyio  # the runner's venv has it; --legacy runs on the system Python
+
         return await anyio.to_thread.run_sync(conversation, questions)
 
     return ask
@@ -135,3 +137,72 @@ def chat_with(
         body,
     )
     return status, payload, round(time.monotonic() - started, 1)
+
+
+# RULE.md: every arm that writes SQL is given the `legacy` schema beside the trusted layers.
+LEGACY = ["channel_daily", "country_sales", "daily_net_sales"]
+
+
+def with_legacy(context: dict[str, Any], project: str) -> dict[str, Any]:
+    """The context with the legacy tables added to its BigQuery table references (kept once)."""
+    context = json.loads(json.dumps(context))
+    refs = (
+        context.setdefault("datasourceReferences", {})
+        .setdefault("bq", {})
+        .setdefault("tableReferences", [])
+    )
+    have = {(r.get("datasetId"), r.get("tableId")) for r in refs}
+    refs += [
+        {"projectId": project, "datasetId": "legacy", "tableId": t}
+        for t in LEGACY
+        if ("legacy", t) not in have
+    ]
+    return context
+
+
+def give_legacy(arm: str) -> int:
+    """Republish the arm's agent with its published context plus the legacy tables; everything else kept."""
+    project = os.environ.get("GCP_PROJECT") or sys.exit("GCP_PROJECT is required")
+    shaped = _shaped()
+    publish = shaped.load_publish()
+    send = publish.http_transport(publish.access_token(dict(os.environ)), project)
+    publisher = publish.Publisher(send, project, shaped.LOCATION, AGENTS[arm])
+    current = publisher.call(
+        "GET", f"{publish.endpoint(shaped.LOCATION)}/v1/{publisher.name}"
+    )
+    published = (current.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
+    context = with_legacy(published, project)
+    if context == published:
+        print(f"354_data_agent: {AGENTS[arm]} already has the legacy tables")
+        return 0
+    agent = publish.desired(
+        context,
+        None,
+        display_name=current["displayName"],
+        description=current["description"],
+    )
+    try:
+        writes = publisher.publish(agent)
+    except publish.PublishError as error:
+        print(f"354_data_agent: {AGENTS[arm]} publish refused: {error}")
+        return 2
+    again = publisher.call(
+        "GET", f"{publish.endpoint(shaped.LOCATION)}/v1/{publisher.name}"
+    )
+    kept = (again.get("dataAnalyticsAgent") or {}).get("publishedContext") or {}
+    tables = [
+        f"{r['datasetId']}.{r['tableId']}"
+        for r in ((kept.get("datasourceReferences") or {}).get("bq") or {}).get(
+            "tableReferences"
+        )
+        or []
+    ]
+    print(f"354_data_agent: {AGENTS[arm]} writes {writes}; published tables {tables}")
+    return 0
+
+
+if __name__ == "__main__":
+    # python3 -I 354_data_agent.py --legacy <arm>...: give each arm's agent the legacy tables (RULE.md).
+    if sys.argv[1:2] != ["--legacy"] or not sys.argv[2:]:
+        sys.exit("usage: 354_data_agent.py --legacy <arm>...")
+    raise SystemExit(max(give_legacy(arm) for arm in sys.argv[2:]))
