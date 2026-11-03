@@ -6,7 +6,7 @@ import json
 import pytest
 
 from semantic_agent import agent as semantic
-from semantic_agent import bet_eval, tools
+from semantic_agent import bet_eval, bet_rule, tools
 from semantic_agent.bet_eval import BetSet, score_turn
 from semantic_agent.bet_rule import Outcome
 from semantic_agent.evaluation import Question, Turn, as_expected
@@ -322,7 +322,8 @@ def test_the_judge_decides_unclear_turns_twice_and_a_rescore_spends_nothing(tmp_
     )
 
     text = bet_eval.report(BET, bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache)))
-    assert "Turns judged: 2; verdicts that stood: 1." in text
+    assert "Turns judged: 2 (2 the code left unclear, 0 confident-wrong with a hedge" in text
+    assert "verdicts that stood: 1." in text
     assert "- `native-shaped` `revenue_one_day` run 1 turn 1: wrong / right" in text
     assert "`bet_median_order` run 1" not in text
 
@@ -413,3 +414,60 @@ def test_a_managed_arm_on_its_model_is_paired_with_ours_on_another(monkeypatch):
     # eval.md shows the pair in its own section after the models'.
     report = bet_eval.report(bet, entries, runs=3, every_arm=True)
     assert report.index("## The rule across models") > report.index(f"## `{claude}`")
+
+
+def _turn(arm: str, case: str, text: str, outcome: str, run: int = 1) -> dict:
+    turn = {"text": text, "outcome": outcome}
+    return {"arm": arm, "model": "m", "run": run, "case": case, "turns": [turn], "outcome": outcome}
+
+
+def test_a_confident_wrong_turn_hedged_outside_the_list_goes_to_the_judge(tmp_path):
+    hedged = "Based on first orders as the signup date, 0 customers signed up."
+    kept = "The median order value was 51.20 EUR, based on 15 orders."
+    plain = "The median order value was 51.20 EUR."
+    entries = [
+        _turn("baseline", "revenue_one_day", hedged, "confident-wrong"),
+        _turn("baseline", "bet_median_order", kept, "confident-wrong"),
+        _turn("baseline", "bet_median_order", plain, "confident-wrong", run=2),
+    ]
+    # Only the turns with a hedge-like phrase outside the list are the judge's; "approximately" is
+    # on the list, so a turn holding only it is never confident-wrong to begin with.
+    assert [k[3] for k, _ in bet_eval.undecided_turns(entries, HEDGES)] == [1, 1]
+    assert bet_rule.unlisted_hedges("Approximately 5.", HEDGES) == []
+    waiting = bet_eval.report(BET, entries, runs=2, every_arm=True)
+    assert "Confident-wrong turns with a hedge outside the list, awaiting the judge:" in waiting
+
+    cache = tmp_path / "judge.jsonl"
+    judge = StubJudge({hedged: ["wrong", "wrong"], kept: ["confident-wrong", "confident-wrong"]})
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, judge, "j:free", cache)) == (
+        "done",
+        4,
+    )
+    judged = bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache))
+    assert [e["outcome"] for e in judged] == ["wrong", "confident-wrong", "confident-wrong"]
+    assert judged[0]["turns"][0]["coded"] == "confident-wrong"
+    text = bet_eval.report(BET, judged, runs=2, every_arm=True)
+    assert "Confident-wrong turns the judge moved: 1 of 2 (1 to wrong, hedged; 0 to unclear)." in (
+        text
+    )
+    assert "awaiting the judge" not in text
+
+
+@pytest.mark.parametrize(
+    ("verdicts", "outcome"),
+    [
+        (["wrong", "wrong"], "wrong"),
+        (["confident-wrong", "confident-wrong"], "confident-wrong"),
+        (["declined", "declined"], "wrong"),  # a decline beside the number is a hedge
+        (["right", "right"], "unclear"),  # the parsed number is outside tolerance
+        (["wrong", "confident-wrong"], "unclear"),
+    ],
+)
+def test_two_verdicts_on_a_hedged_number(tmp_path, verdicts, outcome):
+    text = "It may be 51.20 EUR."
+    entries = [_turn("baseline", "bet_median_order", text, "confident-wrong")]
+    cache = tmp_path / "judge.jsonl"
+    asyncio.run(
+        bet_eval.judge_turns(BET, entries, EXPECTED, StubJudge({text: verdicts}), "j", cache)
+    )
+    assert bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache))[0]["outcome"] == outcome

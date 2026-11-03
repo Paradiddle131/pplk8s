@@ -143,6 +143,38 @@ def two_verdicts(first: Outcome | None, second: Outcome | None) -> Outcome:
     return first
 
 
+# RULE.md's second judge case (#366): a hedge phrased outside the set's `hedges` list. The code
+# cannot tell such a hedge from a confident wrong number, so every confident-wrong turn holding one
+# of these hedge-like phrases goes to the judge. The list is broad on purpose (a false match costs
+# two judge requests, a missed one leaves a hedged answer confident-wrong): uncertainty words,
+# assumptions, scope notes and "the data does not hold it" phrasings, read from the logs' answers.
+HEDGE_LIKE = re.compile(
+    r"\b(?:approx(?:imately|\.)?|roughly|around|estimat\w*|may|might|could|likely|possibly|"
+    r"perhaps|probably|appears?|seems?|assum\w*|not sure|uncertain\w*|unclear|partial\w*|"
+    r"incomplete|caveats?|note that|please note|for reference|based on|treated as|taken as|"
+    r"interpret\w*|proxy|depending|if you|not (?:tracked|available|recorded|stored|present)|"
+    r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?))\b",
+    re.IGNORECASE,
+)
+
+
+def unlisted_hedges(text: str, hedges: Sequence[str]) -> list[str]:
+    """The hedge-like phrases an answer holds that the set's `hedges` list does not."""
+    listed = [h.lower() for h in hedges]
+    found = [m.group(0) for m in HEDGE_LIKE.finditer(text)]
+    return [f for f in found if not any(f.lower() in h or h in f.lower() for h in listed)]
+
+
+def hedge_verdicts(first: Outcome | None, second: Outcome | None) -> Outcome:
+    """Two verdicts on a confident-wrong turn with an unlisted hedge: the code already found its
+    number outside tolerance, so the judge decides only whether it is hedged. Equal verdicts of
+    wrong or confident-wrong stand; declined is a decline beside the number, so hedged: wrong;
+    right contradicts the parsed number, and different verdicts disagree: both unclear."""
+    if first is None or first is not second or first is Outcome.RIGHT:
+        return Outcome.UNCLEAR
+    return Outcome.WRONG if first is Outcome.DECLINED else first
+
+
 def answer_hash(text: str) -> str:
     """What a cached verdict is keyed on besides the turn: a changed answer is judged again."""
     return hashlib.sha256(text.encode()).hexdigest()[:16]
