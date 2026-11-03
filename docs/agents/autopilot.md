@@ -22,7 +22,13 @@ An issue labelled `at-work` runs only at work (paid services the free lab never 
 
 ## Merge policy
 
-Wakes never merge.
+Wakes merge one kind of PR themselves (owner, 2026-11-03: "merge things like 347 yourself"), with a merge commit, when all of these hold:
+- it carries out a decision the owner made in words (an answer on its issue or decision packet, or a request in a session), quoted in its body;
+- it is small and self-contained: not the train, not a PR another PR stacks on, no scope the decision didn't name;
+- the profile's `cloud` gates passed on its head in that session, with their counts in its body;
+- GitHub reports it mergeable, with no conflict.
+The wake says so in the issue's handoff and removes the digest line; every other PR waits for the owner.
+A routine prompt that says "never merge" is stricter and wins, as it does over `Mode`.
 The train PR is marked ready and labelled `needs-local-verify` once its gates pass (no `local` gates, so cloud's counts are the verification); the owner, or a session the owner asks, merges it with a merge commit, so each issue's commits stay findable.
 
 ## Queue
