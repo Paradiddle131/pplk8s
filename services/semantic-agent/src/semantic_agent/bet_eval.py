@@ -358,40 +358,95 @@ def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
     return [a for a in ARMS if a in seen] + [a for a in seen if a not in ARMS]
 
 
-def managed_comparison(scores: Mapping[str, ArmScore]) -> list[str]:
-    """RULE.md § The rule, 1 and 2: the managed best, and whether each arm of ours beats it."""
-    managed = [a for a in scores if RUNG.get(a, 9) <= 2]
+def case_shares(
+    entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int = RUNS
+) -> tuple[dict[str, float], dict[str, float], int]:
+    """One arm on one model, per case it finished: the share of its finished runs (up to `runs`)
+    that are right and that are confident-wrong; and how many runs that is in all."""
+    done = finished(entries, model)
+    outcomes: dict[str, list[Outcome]] = {}
+    for (a, run, case), outcome in done.items():
+        if a == arm and run <= runs:
+            outcomes.setdefault(case, []).append(Outcome(outcome))
+    right = {c: sum(o is Outcome.RIGHT for o in r) / len(r) for c, r in outcomes.items()}
+    wrong = {c: sum(o is Outcome.CONFIDENT_WRONG for o in r) / len(r) for c, r in outcomes.items()}
+    return right, wrong, sum(len(r) for r in outcomes.values())
+
+
+def managed_comparison(
+    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS, deciding: str | None = None
+) -> list[str]:
+    """RULE.md § The rule, 1 and 2, across models (#333's option C): the managed best, on the model
+    it runs with, against each arm of ours on each model it ran with, paired by case on the cases
+    both reached. The pair with ours on `deciding` (the lab's own model) decides; ours on any other
+    model is the check on whether a gap is the model's."""
+    from semantic_agent.model import DEFAULT_MODEL_ID
+
+    deciding = deciding or DEFAULT_MODEL_ID
+    models = list(dict.fromkeys(e["model"] for e in entries))
+    managed: list[tuple[float, int, str, str]] = []
+    for model in models:
+        scored = score_log(bet, entries, model, runs)
+        for arm, score in scored.scores.items():
+            if RUNG.get(arm, 9) <= 2:
+                managed.append((score.accuracy, RUNG[arm], arm, model))
     if not managed:
         return []
-    best = max(managed, key=lambda a: (scores[a].accuracy, -RUNG[a]))
+    # The best accuracy; a tie goes to the lower rung.
+    accuracy, _, best, best_model = max(managed, key=lambda m: (m[0], -m[1]))
     lines = [
         "",
-        f"The managed best (RULE.md § The rule, 1): `{best}`, "
-        f"accuracy {pct(scores[best].accuracy)}.",
+        "## The rule across models",
+        "",
+        f"The managed best (RULE.md § The rule, 1): `{best}` on `{best_model}`, "
+        f"accuracy {pct(accuracy)}.",
     ]
-    ours = [a for a in scores if RUNG.get(a, 9) in (3, 4)]
+    ours = [
+        (arm, model)
+        for model in models
+        for arm in arms_of(entries, model)
+        if RUNG.get(arm, 9) in (3, 4) and case_shares(entries, arm, model, runs)[2]
+    ]
     if not ours:
-        return [
-            *lines,
-            "No arm of ours (rung 3 or 4) ran on this model: nothing to compare it with.",
-        ]
+        return [*lines, "No arm of ours (rung 3 or 4) is logged on any model: nothing to compare."]
     lines += [
-        "Paired by case against it, percentile bootstrap 95% (10,000 resamples, seed 325):",
+        "Each arm of ours on each model it ran with, paired by case against it on the cases both "
+        "reached (each case's share over its finished runs), percentile bootstrap 95% "
+        f"(10,000 resamples, seed 325); ours on `{deciding}` decides (RULE.md § The rule, 2), "
+        "ours on any other model is the check on whether a gap is the model's:",
         "",
     ]
-    for arm in ours:
-        acc = paired_interval(scores[best].right, scores[arm].right)
-        wrong = paired_interval(scores[best].wrong_confidently, scores[arm].wrong_confidently)
-        worth = (acc.differs and acc.mean > 0) or (
-            not acc.differs and wrong.differs and wrong.mean < 0
-        )
-        verdict = (
-            "worth building (RULE.md § The rule, 2)." if worth else "not worth building on this."
-        )
+    best_right, best_wrong, _ = case_shares(entries, best, best_model, runs)
+    verdicts: dict[str, dict[str, bool]] = {}
+    for arm, model in ours:
+        right, wrong, ran = case_shares(entries, arm, model, runs)
+        cases = sorted(set(right) & set(best_right))
+        if not cases:
+            lines.append(f"- `{arm}` on `{model}`: no case both reached yet.")
+            continue
+        acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
+        cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
+        worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
+        verdicts.setdefault(arm, {})[model] = worth
+        role = "decides" if model == deciding else "the check"
+        verdict = "worth building" if worth else "not worth building"
         lines.append(
-            f"- `{arm}` (rung {RUNG[arm]}): accuracy {acc.mean:+.3f} [{acc.low:+.3f}, "
-            f"{acc.high:+.3f}], confident-wrong {wrong.mean:+.3f} [{wrong.low:+.3f}, "
-            f"{wrong.high:+.3f}]: " + verdict
+            f"- `{arm}` (rung {RUNG[arm]}) on `{model}` against `{best}` on `{best_model}`, "
+            f"{len(cases)} of {len(bet.questions)} cases: accuracy {acc.mean:+.3f} "
+            f"[{acc.low:+.3f}, {acc.high:+.3f}], confident-wrong {cw.mean:+.3f} "
+            f"[{cw.low:+.3f}, {cw.high:+.3f}]: {verdict} ({role}; {ran} runs finished)."
+        )
+    for arm, by_model in verdicts.items():
+        if len(by_model) < 2:
+            continue
+        same = len(set(by_model.values())) == 1
+        lines.append(
+            f"- The check on `{arm}`: "
+            + (
+                "the same verdict on every model, so the gap is not the model's."
+                if same
+                else "the verdict moves with the model, so the gap is at least partly the model's."
+            )
         )
     return lines
 
@@ -579,7 +634,9 @@ def report(
         f"{len(bet.questions)} cases of `services/semantic-agent/evals/semantic_bet.yaml`, "
         f"k = {runs} runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and "
         "`fixture_weeks.sql` in the Compose warehouse.",
-        "Arms are compared on one model, paired on the cases every arm reached.",
+        "Within a model, arms stand side by side on the cases every arm reached; the rule's "
+        "comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, "
+        "2).",
         "`custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the "
         "`legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads "
         "the generated docs.",
@@ -646,8 +703,9 @@ def report(
                 "Both local arms are on rung 3 or 4 and none is the managed best, so this pair is "
                 "descriptive (RULE.md § The rule, 5) until the native arms are scored.",
             ]
-        lines += managed_comparison(s.scores)
         lines += judge_lines(entries, model)
+    if every_arm:
+        lines += managed_comparison(bet, entries, runs)
     errors = sorted({e["error"] for e in entries if e.get("error")})
     if errors:
         lines += ["", "## Errors", ""] + [f"- {e}" for e in errors]

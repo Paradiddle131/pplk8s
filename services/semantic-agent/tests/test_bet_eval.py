@@ -236,10 +236,13 @@ def test_an_arm_of_ours_is_judged_against_the_managed_best_under_the_rule():
     )
     text = bet_eval.report(BET, entries, runs=3, every_arm=True)
     # A tie on accuracy goes to the lower rung.
-    assert "The managed best (RULE.md § The rule, 1): `native-context`, accuracy 50.0%." in text
-    assert "- `native-mcp` (rung 3): accuracy +0.500" in text
+    assert "The managed best (RULE.md § The rule, 1): `native-context` on `m`, accuracy 50.0%." in (
+        text
+    )
+    assert "- `native-mcp` (rung 3) on `m` against `native-context` on `m`" in text
+    assert "accuracy +0.500" in text
     # Two cases cannot exclude zero: neither arm of ours is worth building on this.
-    assert text.count("not worth building on this.") == 2
+    assert text.count(": not worth building (the check;") == 2
 
 
 def test_no_managed_arm_means_no_rule_comparison():
@@ -251,9 +254,9 @@ def test_no_managed_arm_means_no_rule_comparison():
 def test_a_managed_arm_alone_on_its_model_says_there_is_nothing_to_compare():
     both = {"revenue_one_day": ["right"], "bet_median_order": ["declined"]}
     text = bet_eval.report(BET, _rows("native-kc", both), runs=1, every_arm=True)
-    assert "The managed best (RULE.md § The rule, 1): `native-kc`, accuracy 50.0%." in text
-    assert "No arm of ours (rung 3 or 4) ran on this model" in text
-    assert "Paired by case against it" not in text and not text.endswith("\n\n")
+    assert "The managed best (RULE.md § The rule, 1): `native-kc` on `m`, accuracy 50.0%." in text
+    assert "No arm of ours (rung 3 or 4) is logged on any model" in text
+    assert "paired by case against it" not in text and not text.endswith("\n\n")
 
 
 def _unclear(arm: str, case: str, text: str, run: int = 1) -> dict:
@@ -370,3 +373,43 @@ def test_the_judge_is_a_free_openrouter_model_from_the_factory(monkeypatch):
     monkeypatch.setenv("JUDGE_MODEL_ID", "some/paid-model")
     with pytest.raises(ValueError, match="must be free"):
         model.build_judge()
+
+
+def _on(model: str, arm: str, outcomes: dict[str, list[str]]) -> list[dict]:
+    return [{**e, "model": model} for e in _rows(arm, outcomes)]
+
+
+def test_a_managed_arm_on_its_model_is_paired_with_ours_on_another(monkeypatch):
+    cases = [f"c{i}" for i in range(12)]
+    bet = BetSet([Question.single(c, f"Question {c}?", "", []) for c in cases], {}, HEDGES)
+    bet.groups.update({c: ["covered"] for c in cases})
+    google, free, claude = "google-data-agent (MODEL_UNSPECIFIED)", "free:free", "claude-x"
+    monkeypatch.setattr("semantic_agent.model.DEFAULT_MODEL_ID", free)
+    entries = (
+        # The managed arms: native-kc beats native-shaped, both on Google's model only.
+        _on(google, "native-kc", {c: ["wrong"] * 3 for c in cases})
+        + _on(google, "native-shaped", {c: ["wrong"] * 3 for c in cases[:6]})
+        + _on(google, "native-shaped", {c: ["right"] * 3 for c in cases[6:]})
+        # Ours on the free model: right everywhere, but only run 1 of 10 cases so far.
+        + _on(free, "custom-metricflow", {c: ["right"] for c in cases[:10]})
+        + _on(free, "baseline", {c: ["right"] for c in cases[:10]})
+        # Ours on Claude: no better than the managed best.
+        + _on(claude, "custom-metricflow", {c: ["wrong"] * 3 for c in cases[:6]})
+        + _on(claude, "custom-metricflow", {c: ["right"] * 3 for c in cases[6:]})
+    )
+    lines = bet_eval.managed_comparison(bet, entries, runs=3)
+    text = "\n".join(lines)
+    assert f"`native-shaped` on `{google}`, accuracy 50.0%" in text
+    decides = next(line for line in lines if f"`custom-metricflow` (rung 4) on `{free}`" in line)
+    assert f"against `native-shaped` on `{google}`, 10 of 12 cases" in decides
+    assert (
+        "accuracy +0.600" in decides and ": worth building (decides; 10 runs finished)" in decides
+    )
+    check = next(line for line in lines if f"on `{claude}`" in line)
+    assert "accuracy +0.000" in check and ": not worth building (the check;" in check
+    assert "the verdict moves with the model" in text
+    # The baseline is the reference, on no rung: it is never compared under the rule.
+    assert "`baseline` (" not in text
+    # eval.md shows the pair in its own section after the models'.
+    report = bet_eval.report(bet, entries, runs=3, every_arm=True)
+    assert report.index("## The rule across models") > report.index(f"## `{claude}`")
