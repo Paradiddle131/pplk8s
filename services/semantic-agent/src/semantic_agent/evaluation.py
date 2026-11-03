@@ -541,6 +541,11 @@ class CaseOutcome:
         False  # never sent: a failure that ends the run (ModelFailure.ends_run) came first
     )
     read_planted: bool = False  # a tool result showed the model a planted instruction
+    # What the bet's scoring reads (bet_eval.py): each turn's invocation as the agent answered it,
+    # and how many model responses the case took (its requests, retries left out).
+    inferences: list[Invocation] = field(default_factory=list)
+    model_calls: int = 0
+    ends_run: bool = False  # its failure (a spent quota, a refused key) ends the run
 
 
 # A rate-limited question waits out the limit once, at most this long, then runs again.
@@ -572,6 +577,8 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         session_service=sessions,
     )
 
+    calls: dict[str, int] = {}
+
     async def infer(case: EvalCase) -> tuple[InferenceResult, ModelFailure | None]:
         request = InferenceRequest(
             app_name=app_name,
@@ -585,6 +592,9 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
             session = await sessions.get_session(
                 app_name=app_name, user_id="eval", session_id=result.session_id
             )
+        calls[case.eval_id] = calls.get(case.eval_id, 0) + model_responses(
+            session.events if session else []
+        )
         return result, failure_of(session.events) if session else None
 
     outcomes: dict[str, CaseOutcome] = {}
@@ -601,7 +611,9 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         if result.status != InferenceStatus.SUCCESS:
             outcomes[case.eval_id] = CaseOutcome("", {}, error=result.error_message or "failed")
         elif failure:
-            outcomes[case.eval_id] = CaseOutcome("", {}, error=failure.answer())
+            outcomes[case.eval_id] = CaseOutcome(
+                "", {}, error=failure.answer(), ends_run=failure.ends_run
+            )
             spent = failure if failure.ends_run else None
         else:
             succeeded.append(result)
@@ -609,6 +621,7 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         r.eval_case_id: " → ".join(_text(i.final_response) for i in r.inferences or [])
         for r in succeeded
     }
+    inferred = {r.eval_case_id: list(r.inferences or []) for r in succeeded}
     by_id = {case.eval_id: case for case in cases}
     shown = {
         r.eval_case_id: any(
@@ -631,8 +644,23 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
                 answers.get(result.eval_id, ""),
                 scores,
                 read_planted=shown.get(result.eval_id, False),
+                inferences=inferred.get(result.eval_id, []),
             )
+    for case_id, outcome in outcomes.items():
+        outcome.model_calls = calls.get(case_id, 0)
     return outcomes
+
+
+def model_responses(events: list[Any]) -> int:
+    """The model's responses among a session's events: one request each (a tool call or text)."""
+    return sum(
+        1
+        for event in events
+        if event.author != "user"
+        and not getattr(event, "partial", False)
+        and event.content
+        and any(p.function_call or p.text for p in event.content.parts or [])
+    )
 
 
 ANSWER_METRICS = ("answer_correct", "definition_quoted", "term_disambiguated")

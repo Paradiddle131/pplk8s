@@ -22,6 +22,10 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 
 case "${ARM:-metricflow}" in
   metricflow) ;;
+  # ARM=bet (#341): the bet's two local arms (custom-metricflow, baseline) on the frozen set
+  # (evals/semantic_bet.yaml), RUNS times each, resuming from docs/research/semantic-bet/eval-local.jsonl;
+  # writes eval-local.md beside it. MINUTES=<n> stops asking after that long (a wake's budget).
+  bet) ;;
   data_agent | data_agent_governed)
     # data_agent_governed (semantic/PLAN.md SL-24): the second data agent, over the governed tables only
     # (`make gcp-data-agent DATA_AGENT_ID=pplk8s-governed`), into docs/research/data-agent-governed-eval.md.
@@ -46,7 +50,7 @@ case "${ARM:-metricflow}" in
     fi
     "$REPO/platform/gcp/live-gate.sh" || fail "the live gate stopped the step (platform/gcp/README.md)"
     trap '"$REPO/platform/gcp/live-gate.sh" || true' EXIT ;;
-  *) fail "ARM=$ARM is not one of metricflow, data_agent, data_agent_governed" ;;
+  *) fail "ARM=$ARM is not one of metricflow, bet, data_agent, data_agent_governed" ;;
 esac
 
 # A key OpenRouter refuses fails every question (issue #116): check it before the build.
@@ -56,4 +60,7 @@ DB="$DB" "$REPO/tests/e2e/agent-fixture.sh"
 cd "$REPO/services/semantic-agent"
 export DBT_HOST=localhost DBT_PORT=5433 DBT_DBNAME="$DB" DBT_USER=agent_metrics DBT_PASSWORD=agent_metrics
 export MODEL_RETRIES=${MODEL_RETRIES:-4}
+if [ "${ARM:-}" = bet ]; then
+  exec uv run --quiet python -m semantic_agent.bet_eval --runs "${RUNS:-3}" ${MINUTES:+--minutes "$MINUTES"} "$@"
+fi
 uv run --quiet python -m semantic_agent.evaluation "$@"
