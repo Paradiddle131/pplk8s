@@ -15,7 +15,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 
 | # | Question | Issue | Status | Finding |
 |---|---|---|---|---|
-| Q1 | What does Knowledge Catalog store when it imports our dbt MetricFlow project, and what can an agent read back (`lookup_context`)? | #326 | open | |
+| Q1 | What does Knowledge Catalog store when it imports our dbt MetricFlow project, and what can an agent read back (`lookup_context`)? | #326 | measuring | [2026-11-03](findings/2026-11-03-326-kc-dbt-import.md) |
 | Q2 | Does a BigQuery data agent use the imported metric definitions, compared with no context and with our generated context? | #327 | open | |
 | Q3 | Can an ADK agent built only on Google's managed MCP servers (Knowledge Catalog, BigQuery) answer through the metrics? | #328 | open | |
 | Q4 | Do governed views, table functions and parameterised verified queries make a data agent use the defined metrics; does `bqRoutines` take a table function? | #329 | open | |
