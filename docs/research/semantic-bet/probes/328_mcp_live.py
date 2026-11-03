@@ -47,7 +47,7 @@ ARMS = {
     "328_mcp_agent.py": "native-mcp",
     "330_toolbox_agent.py": "custom-toolbox",
     "363_lightdash_agent.py": "custom-lightdash",
-    "354_data_agent.py": "native-kc",  # or --arm native-shaped / native-graph
+    "354_data_agent.py": "native-kc",  # or --arm <any of its AGENTS>
 }
 
 

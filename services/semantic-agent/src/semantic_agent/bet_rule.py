@@ -249,6 +249,10 @@ class Interval:
         return self.low > 0 or self.high < 0
 
 
+# The decimals a bootstrap mean is kept to: far below any share of a case's runs.
+DIGITS = 12
+
+
 def paired_interval(
     a: Mapping[str, float], b: Mapping[str, float], resamples: int = RESAMPLES, seed: int = SEED
 ) -> Interval:
@@ -259,9 +263,11 @@ def paired_interval(
     diffs = [b[c] - a[c] for c in cases]
     n = len(diffs)
     rng = random.Random(seed)
-    means = sorted(sum(rng.choices(diffs, k=n)) / n for _ in range(resamples))
+    # Rounded so float noise never decides: shares in thirds summed in another order leave a
+    # bound of 6e-19 where the exact one is 0, which would read as "excludes zero" (#357).
+    means = sorted(round(sum(rng.choices(diffs, k=n)) / n, DIGITS) for _ in range(resamples))
     return Interval(
-        mean=sum(diffs) / n,
+        mean=round(sum(diffs) / n, DIGITS),
         low=means[int(0.025 * resamples)],
         high=means[int(0.975 * resamples) - 1],
     )

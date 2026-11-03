@@ -219,6 +219,12 @@ def test_the_baseline_is_told_every_public_model_of_the_catalog():
     assert "gold.call_signals_daily" in told
 
 
+def test_the_baseline_names_extra_tables_after_the_catalogs_only_when_given():
+    assert "legacy." not in baseline.instruction()
+    told = baseline.instruction(None, extra_tables=["legacy.country_sales"])
+    assert told.index("gold.daily_sales") < told.index("legacy.country_sales")
+
+
 def test_a_question_reaches_the_baseline_with_the_catalog_tables():
     model = ScriptedLlm(steps=["No SQL needed."])
     run_turn(baseline.build_agent(model), "Which tables do you know?")
