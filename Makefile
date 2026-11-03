@@ -82,7 +82,7 @@ export AIRFLOW_DRILL_IMAGE
 DAG_DELIVERY ?= git-sync
 export DAG_DELIVERY
 
-.PHONY: help tools lint check verify image-tag-test cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check bigquery-emulator-check gcp-image-check bigquery-live-check migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check
+.PHONY: help tools lint check verify image-tag-test egress-up cluster-up cluster-down cluster-check services-up services-down services-reset build el-factory-up el-factory-down dbt-build test airflow-test phase1-check push workloads-up workloads-down dbt-job phase2-check airflow-image airflow-up airflow-down airflow-ui phase3-check phase4-check phase5-check observability-up observability-down grafana-ui prometheus-ui ci-integration keda-up keda-down airflow-drill-image phase6-check phase6-upgrade-drill db-cleanup-check metadata-restore-drill tlc-dbt-check dbt-deps ledger rules-test phase8-check el-factory-memory-drill tlc-resume-drill dbt-validate semantic-check dbt-catalog catalog-check agent-test agent-serve agent-key-check agent-deploy-check agent-eval bigquery-check governed-models bigquery-emulator-check gcp-image-check bigquery-live-check bigquery-live-load migration-check metric-query warehouse-sql agent-web agent-warehouse agent-standalone-check agent-columns-check agent-mcp agent-mcp-check source-freshness-check source-freshness-table record-call-labels demo demo-check gcp-validate gcp-plan gcp-up gcp-down gcp-images gcp-cost-check gcp-guardrails-check gcp-data-agent gcp-usage-check
 
 # `make -s print-DBT_IMAGE` prints one variable: scripts run outside make read their defaults this way.
 print-%:
@@ -177,8 +177,13 @@ warehouse-sql: ## Run one psql command on the Compose warehouse as its owner (SQ
 catalog-check: services-up ## Build the fixture's models in dbt_dev, run dbt-catalog on it, and assert every gold and exposed column is commented and every metric is in semantic.metrics (#101)
 	tests/e2e/catalog-check.sh
 
-bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104)
+bigquery-check: ## Parse, validate and compile the dbt project on the compile-only BigQuery target, offline, and write the BigQuery catalog to dbt/target/bigquery (#104); fails when dbt/models/governed/ drifted from the semantic layer
 	tests/e2e/bigquery-check.sh
+
+# The governed tables (semantic/PLAN.md SL-24): their dbt models are MetricFlow's compiled SQL on the compile-only
+# BigQuery target, generated and committed, never edited; bigquery-check fails when they drift.
+governed-models: ## Regenerate dbt/models/governed/ from the semantic layer (MetricFlow's compiled BigQuery SQL, offline; SL-24)
+	tests/e2e/governed-models.sh --write
 
 bigquery-emulator-check: services-up ## Run the semantic path on the BigQuery emulator (Compose profile bigquery): copy the fixture in, dbt build, and assert the metrics equal the hand-written gold and exposed there, the migration rehearsal reports as on Postgres, and the recruitment snapshot replayed extract by extract on a recreated emulator keeps the stage history, and the week-over-week and month-to-date metrics equal SQL by hand over six more weeks (#125, #246)
 	tests/e2e/bigquery-run-check.sh
@@ -193,6 +198,10 @@ bigquery-live-check: services-up ## Live: the bigquery-emulator-check script on 
 	platform/gcp/cost-check.sh
 	BQ_TARGET=gcp tests/e2e/bigquery-run-check.sh
 	platform/gcp/cost-check.sh
+
+# The data-agent eval's rows on the lab project (#207): dbt_dev's fixture, every semantic domain, built there.
+bigquery-live-load: services-up ## Live: load dbt_dev's fixture (every semantic domain) into the lab project (GCP_PROJECT) and build it there, so the data-agent eval asks over the eval's rows; the live gate before and after
+	tests/e2e/bigquery-live-load.sh
 
 # The use case's demo (docs/demo.md): one step per call, each printing what the presenter shows and
 # failing when it differs from the script; demo-check rehearses them all, timed, on a fresh emulator.
@@ -265,7 +274,7 @@ agent-deploy-check: agent-key-check services-up push ## Live: deploy the workloa
 record-call-labels: ## Live, opt-in: record the call-label prompt's answers for the golden set's calls from an OpenRouter free model into dbt/seeds/silver/call_label_recordings.csv (CALL_LABEL_MODEL=<id>:free; one request per unrecorded call; exit 3 keeps a partial recording on a spent quota)
 	cd dbt && uv run --no-project --quiet --with pyyaml==6.0.3 python scripts/record_call_labels.py $(if $(CALL_LABEL_MODEL),--model $(CALL_LABEL_MODEL))
 
-agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 62 free-tier model turns)
+agent-eval: services-up ## Live: score the semantic agent against the text-to-SQL baseline on dbt/dev/fixture.sql and fixture_weeks.sql; writes docs/research/semantic-agent-eval.md (spends ~2 x 62 free-tier model turns); ARM=data_agent scores it over the lab project's data agent (GCP_PROJECT) instead, into docs/research/data-agent-eval.md; ARM=data_agent_governed over the governed data agent, into docs/research/data-agent-governed-eval.md
 	tests/e2e/agent-eval.sh
 
 airflow-test: ## Lint and test the Airflow DAGs and workload seam (airflow/)
@@ -450,6 +459,13 @@ gcp-images: ## Live: build the GCP images (WAREHOUSE=bigquery: dbt and the seman
 gcp-cost-check: ## Live, read-only: exit 1 when this month's cost on the lab project's billing export reaches GCP_COST_TOLERANCE_USD (default 1.00; smaller costs pass and are listed), 3 when not yet provable (GCP_PROJECT; #233, #338)
 	platform/gcp/cost-check.sh
 
+# The immediate gate of a live step (#313): each free tier's use this month from Cloud Monitoring and REST reads,
+# minutes behind, where the billing export lags hours to days; the export stays the proof after the fact.
+USAGE_SHARE ?= 50
+gcp-usage-check: ## Live, read-only: this month's usage of each free-path service against its free tier, minutes behind; exit 1 past USAGE_SHARE percent (default 50) of one, 3 when a source is unreadable (GCP_PROJECT; #313)
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the gcp- targets act on the lab project and need its id (platform/gcp/README.md)}"
+	uv run --no-project --quiet --with pyyaml==6.0.2 python platform/gcp/usage_check.py --share $(USAGE_SHARE)
+
 # The workloads on Cloud Run (#209, platform/gcp/workloads.yaml), from the owner's signed-in shell: the GCP images
 # (gcp-images opens with the cost check), the apply that names them, the ops tables (`dbt run-operation
 # agent_warehouse`, run as an args override of the dbt-build Job), a second apply for the table grants that wait
@@ -465,3 +481,17 @@ gcp-workloads-up: ## Live, the owner's step: push the GCP images, deploy the age
 	IMAGES='{"semantic-agent": "$(call gcp_tag,$(AGENT_IMAGE))", "dbt": "$(call gcp_tag,$(DBT_IMAGE))"}' platform/gcp/tofu.sh apply
 	$(GCP_RUN_JOB) dbt-build
 	platform/gcp/cost-check.sh
+
+# The native BigQuery data agent (#207, platform/gcp/data-agent/): the BigQuery catalog's context.json, built
+# offline, published to the lab project's agent `pplk8s-semantic` (staging, then published; no write when nothing
+# changed); the live gate before and after (platform/gcp/live-gate.sh). Its tokens are free until 2026-12-31 only: #232 switches it off.
+# DATA_AGENT_ID=pplk8s-governed publishes the second agent, over the governed tables only (semantic/PLAN.md SL-24),
+# from the same catalog's data_agent_governed/context.json; the governed tables must be built first
+# (`make bigquery-live-load` builds them).
+DATA_AGENT_ID ?= pplk8s-semantic
+gcp-data-agent: ## Live: create or update the lab project's data agent (DATA_AGENT_ID=pplk8s-semantic|pplk8s-governed) from the BigQuery catalog's context, staging then published (GCP_PROJECT; #207); DATA_AGENT_ARGS=--dry-run prints the bodies and sends nothing
+	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the data agent goes to the lab project (platform/gcp/README.md)}"
+	$(MAKE) --no-print-directory bigquery-check
+	platform/gcp/live-gate.sh
+	python3 platform/gcp/data-agent/publish.py --agent-id $(DATA_AGENT_ID) $(DATA_AGENT_ARGS)
+	platform/gcp/live-gate.sh

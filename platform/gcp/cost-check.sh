@@ -33,7 +33,7 @@ if ! listing=$(bq ls --format=json --max_results=100 "$GCP_PROJECT:$dataset" 2>"
 fi
 table=$(LISTING=$listing python3 -c 'import json,os; print(next((t["tableReference"]["tableId"] for t in json.loads(os.environ["LISTING"].strip() or "[]") if t["tableReference"]["tableId"].startswith("gcp_billing_export_v1_")), ""))')
 if [ -z "$table" ]; then
-  echo "gcp-cost-check: UNKNOWN: no gcp_billing_export_v1_* table in $GCP_PROJECT:$dataset yet (the first rows take about a day after the export is set up)" >&2
+  echo "gcp-cost-check: UNKNOWN: no gcp_billing_export_v1_* table in $GCP_PROJECT:$dataset yet (a new export shows its first rows after a few hours, and its current month only after backfilling the previous one into a US or EU dataset, up to five days)" >&2
   exit 3
 fi
 
@@ -57,7 +57,7 @@ import csv, io, os, sys
 project, tolerance = sys.argv[1], float(sys.argv[2])
 rows = list(csv.DictReader(io.StringIO(os.environ["ROWS"])))
 if not rows:  # an empty export is its lag, not $0.00: nothing is proven until its first rows land
-    print(f"gcp-cost-check: UNKNOWN: no billing export rows for {project} this month yet (the first rows take about a day after the export is set up)", file=sys.stderr)
+    print(f"gcp-cost-check: UNKNOWN: no billing export rows for {project} this month yet (a new export shows its first rows after a few hours, and its current month only after backfilling the previous one into a US or EU dataset, up to five days)", file=sys.stderr)
     sys.exit(3)
 # The total from the SKUs' six decimals, not the query's month_total, which is rounded to cents.
 total = sum(float(r["net"]) for r in rows)

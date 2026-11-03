@@ -391,3 +391,95 @@ def test_the_planted_cases_read_instructions_the_fixture_plants():
     assert all(s in fixture for s in strings)
     # Each planted case is a plain number question too, so answer_correct scores both arms on it.
     assert all(len(q.turns) == 1 and q.turns[0].kind == "number" for q in planted)
+
+
+# The data-agent arm (#207): the semantic agent over a stand-in for DataAgentToolset.
+
+STATEMENT = "Freshness unknown: sales.silver has no ready interval recorded."
+
+
+class AsksTheDataAgent(ScriptedLlm):
+    """Asks the data agent the revenue question, then answers with its figure and freshness."""
+
+    async def generate_content_async(self, llm_request, stream=False):
+        question = llm_request.contents[0].parts[0].text
+        answered = any(p.function_response for c in llm_request.contents for p in c.parts or [])
+        if "Revenue" in question and not answered:
+            self.steps = [("ask_data_agent", {"data_agent_name": "a", "query": question})]
+        elif "Revenue" in question:
+            self.steps = [f"Revenue was 868.65 EUR on 2 October 2026. {STATEMENT}"]
+        else:
+            self.steps = ["The data agent has no metric for temperature."]
+        self.requests = []
+        async for response in super().generate_content_async(llm_request, stream):
+            yield response
+
+
+def test_the_data_agent_arm_is_scored_without_metric_choice_and_reported_on_its_own():
+    from google.adk.tools import FunctionTool
+
+    from semantic_agent.toolset import Toolset
+
+    def ask_data_agent(data_agent_name: str, query: str) -> dict:
+        """Asks a data agent a question."""
+        return {
+            "status": "SUCCESS",
+            "response": [
+                {"data": {"generatedSql": "SELECT SUM(amount_eur) FROM `p.silver.orders`"}},
+                {"Data Retrieved": {"headers": ["revenue_eur"], "rows": [[868.65]]}},
+            ],
+        }
+
+    toolset = Toolset(tools=[FunctionTool(ask_data_agent)], catalog_tools=(), instruction="Ask.")
+    cases = eval_cases(QUESTIONS, EXPECTED, "semantic_agent", semantic=True)
+    outcomes = asyncio.run(
+        evaluation.evaluate(
+            semantic.build_agent(AsksTheDataAgent(), toolset),
+            cases,
+            evaluation.DATA_AGENT_METRICS,
+        )
+    )
+    assert "metric_choice" not in outcomes["revenue_one_day"].scores
+    assert outcomes["revenue_one_day"].scores["freshness_quoted"] == 1.0
+    arm = evaluation.DATA_AGENT_ARM
+    text = evaluation.report(QUESTIONS, EXPECTED, outcomes, {}, "scripted", arm)
+    assert text.startswith("# Data agent eval\n")
+    assert "| | Semantic agent over the data agent | Baseline (not run: #299) |" in text
+    assert (
+        "| Questions a metric covers (1) | 1 right, 1 quoting their freshness | 0 right |" in text
+    )
+    assert "| ✓ | none | ✓ | not run |" in text
+    assert arm.path.name == "data-agent-eval.md"
+
+
+@pytest.mark.parametrize(
+    ("agent_id", "title", "report"),
+    [
+        ("pplk8s-semantic", "Data agent eval", "data-agent-eval.md"),
+        ("pplk8s-governed", "Governed data agent eval", "data-agent-governed-eval.md"),
+        ("someone-elses", "Data agent eval: someone-elses", "data-agent-someone-elses-eval.md"),
+    ],
+)
+def test_each_data_agent_has_its_own_report(agent_id, title, report):
+    """`ARM=data_agent_governed` asks pplk8s-governed (SL-24): never the other's report."""
+    arm = evaluation.data_agent_arm(f"projects/lab-project/locations/us/dataAgents/{agent_id}")
+    assert (arm.title, arm.path.name, arm.metric_choice) == (title, report, False)
+    assert "`lab-project`" in arm.on and "{project}" not in arm.on
+
+
+def test_the_governed_arm_is_chosen_by_the_data_agent_id(monkeypatch):
+    from semantic_agent.toolset_data_agent import data_agent_name
+
+    monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
+    monkeypatch.setenv("GCP_PROJECT", "lab-project")
+    monkeypatch.setenv("DATA_AGENT_ID", "pplk8s-governed")
+    arm = evaluation.data_agent_arm(data_agent_name())
+    assert arm.path.name == "data-agent-governed-eval.md"
+
+
+def test_the_data_agent_arm_refuses_without_the_lab_project(monkeypatch, capsys):
+    monkeypatch.setenv("AGENT_TOOLSET", "data_agent")
+    monkeypatch.delenv("GCP_PROJECT", raising=False)
+    monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
+    assert asyncio.run(evaluation.main([])) == 2
+    assert "needs GCP_PROJECT" in capsys.readouterr().out

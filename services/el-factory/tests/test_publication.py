@@ -4,9 +4,16 @@ from datetime import datetime
 
 import pytest
 
+from tests.conftest import FakeFileLedger
 from tests.tlc_fixtures import TlcServer, yellow_2025
 
 OCT = datetime(2025, 10, 1)
+
+
+@pytest.fixture
+def warehouse() -> FakeFileLedger:
+    # The file sources are served only on a warehouse that keeps their ledger.
+    return FakeFileLedger()
 
 
 @pytest.fixture

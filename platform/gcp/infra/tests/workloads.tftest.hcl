@@ -114,3 +114,22 @@ run "an_image_from_elsewhere_is_refused" {
 
   expect_failures = [google_cloud_run_v2_job.workload]
 }
+
+# The data agent's conversation logs (#207): their own dataset, written only by Google's service agent.
+run "agent_logs_for_the_data_agent" {
+  command = plan
+
+  assert {
+    condition     = google_bigquery_dataset.agent_logs[0].dataset_id == "agent_logs" && google_bigquery_dataset.agent_logs[0].location == "US"
+    error_message = "the data agent's logs need the agent_logs dataset in the US multi-region"
+  }
+  assert {
+    condition     = google_bigquery_dataset.agent_logs[0].default_table_expiration_ms == 5184000000
+    error_message = "the log table must expire after 60 days, so the logs stay inside the free 10 GiB"
+  }
+  assert {
+    condition     = endswith(google_bigquery_dataset_iam_member.agent_logs_writer[0].member, "@gcp-sa-geminidataanalytics.iam.gserviceaccount.com") && google_bigquery_dataset_iam_member.agent_logs_writer[0].role == "roles/bigquery.dataEditor"
+    error_message = "only the Gemini Data Analytics service agent writes agent_logs"
+  }
+}
+

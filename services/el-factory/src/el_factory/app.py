@@ -6,25 +6,25 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from flask import Flask, Response, jsonify, request
 from google.api_core import exceptions as gcs_exceptions
 from werkzeug.exceptions import HTTPException
 
-from el_factory import retention
-from el_factory.chunks import extract_file
 from el_factory.config import Config
 from el_factory.errors import ApiError, BadRequest, NotFound, Superseded, UpstreamError
 from el_factory.model import Interval, Table
-from el_factory.remote_file import NotPublished, head
-from el_factory.sources import Registry, build_registry, files, load_catalog, tlc
+from el_factory.sources import Registry, build_registry, files, load_catalog
 from el_factory.sources.base import Entity
 from el_factory.staging import object_uri, read_staged, stage_page
 from el_factory.storage import GcsStorage, Storage
-from el_factory.warehouse import FileLoad, PageLoad, Warehouse, WarehouseError
+from el_factory.warehouse import FileLedger, FileLoad, PageLoad, Warehouse, WarehouseError
 from el_factory.warehouse import warehouse as configured_warehouse
+
+if TYPE_CHECKING:
+    from el_factory.tlc.routes import FileSources
 
 RUN_ID_PATTERN = re.compile(r"[A-Za-z0-9_.:+-]+")
 CURSOR_PATTERN = re.compile(r"[0-9]+")
@@ -56,10 +56,17 @@ def create_app(
     warehouse: Warehouse,
     clock: Callable[[], float] = time.monotonic,
 ) -> Flask:
-    registry = build_registry(config.page_size, config.open_meteo_url, config.tlc_base_url)
+    file_sources = _file_sources(config, storage, warehouse, clock)
+    registry = build_registry(
+        config.page_size,
+        config.open_meteo_url,
+        file_sources.entities() if file_sources else None,
+    )
     catalog = load_catalog(config.catalog_path, registry)
     file_registry = files.FileRegistry(files.entities())
     app = Flask(__name__)
+    if file_sources:
+        app.register_blueprint(file_sources.blueprint(registry))
     landing = _landing_tables(warehouse, registry, file_registry)
     _provision_tables(app, landing)
 
@@ -108,45 +115,6 @@ def create_app(
             raise NotFound(f"unknown pipeline: {pipeline}")
         return jsonify([{"source": e.source, "entity": e.entity} for e in entries])
 
-    @app.get("/publication")
-    def publication() -> Response:
-        # Is a file source's month published yet (D34)? One HEAD, no download. S3's AccessDenied
-        # answers not_published; a CDN block or an upstream failure is a retryable 503, so a
-        # waiting sensor keeps polling instead of reading a block as "not yet".
-        entity = _file_entity(registry, request.args)
-        month = tlc.parse_month(request.args.get("month"))
-        url = entity.url(month)
-        answer = {"source": entity.source, "entity": entity.name, "month": month, "source_uri": url}
-        try:
-            remote = head(url)
-        except NotPublished:
-            return jsonify({"status": "not_published", **answer})
-        return jsonify({"status": "published", **answer, "etag": remote.etag, "size": remote.size})
-
-    @app.get("/months")
-    def months() -> Response:
-        # The months a file source holds in landing, so the caller can decide what to keep (D35).
-        entity = _file_entity(registry, request.args)
-        held = retention.held_months(entity, warehouse)  # type: ignore[arg-type]
-        return jsonify({"source": entity.source, "entity": entity.name, "months": held})
-
-    @app.post("/retire")
-    def retire() -> Response:
-        # Deletes every held month not in `keep` from landing and the chunk ledgers (D35, #87).
-        # An empty `keep` is refused: retiring everything is never what a run means.
-        body = request.get_json(silent=True)
-        if not isinstance(body, dict):
-            raise BadRequest("request body must be a JSON object")
-        entity = _file_entity(registry, body)
-        keep = body.get("keep")
-        if (
-            not isinstance(keep, list)
-            or not keep
-            or not all(isinstance(m, str) and tlc.MONTH_PATTERN.fullmatch(m) for m in keep)
-        ):
-            raise BadRequest("'keep' is required and must be a non-empty list of YYYY-MM months")
-        return jsonify(retention.retire(entity, keep, warehouse))  # type: ignore[arg-type]
-
     @app.post("/extract")
     def extract() -> Response:
         # Injected before any work so a retry drill never leaves partial state behind.
@@ -157,20 +125,9 @@ def create_app(
             raise BadRequest("request body must be a JSON object")
         parsed = _parse_extract(body, request.args.get("cursor"))
         entity = registry.get(parsed.source, parsed.entity)
-        if isinstance(entity, tlc.TlcEntity):
-            # File sources resume from the chunk ledger, not from the cursor (D34).
-            return jsonify(
-                extract_file(
-                    entity,
-                    parsed.run_id,
-                    parsed.interval,
-                    bucket=config.gcs_bucket,
-                    storage=storage,
-                    warehouse=warehouse,  # type: ignore[arg-type]
-                    max_run_time=config.max_run_time,
-                    clock=clock,
-                )
-            )
+        if file_sources and file_sources.owns(entity):
+            return jsonify(file_sources.extract(entity, parsed.run_id, parsed.interval))
+        assert isinstance(entity, Entity)
 
         # Time-boxed (D34): load pages until the budget is spent, then hand back the rest as
         # next_url. The first page always runs, so every request makes progress, and the budget
@@ -271,6 +228,22 @@ def _provision_tables(app: Flask, landing: list[tuple[Callable[[Table], None], T
             app.logger.warning("could not provision %s at startup: %s", table.name, exc)
 
 
+def _file_sources(
+    config: Config, storage: Storage, warehouse: Warehouse, clock: Callable[[], float]
+) -> FileSources | None:
+    """The file sources (el_factory.tlc), where the warehouse keeps their ledger and the build
+    carries them with pyarrow (the `files` extra); else None, and no TLC module is imported."""
+    if not isinstance(warehouse, FileLedger):
+        return None
+    try:
+        from el_factory.tlc.routes import FileSources
+    except ModuleNotFoundError as e:
+        if e.name not in ("el_factory.tlc", "pyarrow"):
+            raise
+        return None
+    return FileSources(config, storage, warehouse, clock)
+
+
 def create_app_from_env() -> Flask:
     config = Config.from_env()
     return create_app(
@@ -324,20 +297,6 @@ def _parse_extract(body: dict[str, Any], query_cursor: str | None) -> ExtractReq
         interval=Interval(start=start, end=end),
         cursor=_cursor(raw_cursor),
     )
-
-
-def _file_entity(registry: Registry, params: Any) -> tlc.TlcEntity:
-    entity = registry.get(_query(params, "source"), _query(params, "entity"))
-    if not isinstance(entity, tlc.TlcEntity):
-        raise BadRequest(f"{entity.source}/{entity.name} is not a file source")
-    return entity
-
-
-def _query(args: Any, key: str) -> str:
-    value = args.get(key)
-    if not value:
-        raise BadRequest(f"query parameter '{key}' is required")
-    return str(value)
 
 
 def _required_str(body: dict[str, Any], key: str) -> str:
