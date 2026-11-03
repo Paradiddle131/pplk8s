@@ -22,6 +22,7 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
 - 2026-11-03T13:52Z to 14:16Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 13:52Z (both ok and unchanged again at 14:16Z): `native-shaped`'s second pass, the same command with `--minutes 24`, with the probe retrying a throttled chat (below); it logged 148 runs and stopped `time`.
 
 - 2026-11-03T14:41Z to 15:12Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 14:40Z on a fresh session's Compose warehouse (`make services-up`, `DB=dbt_dev tests/e2e/agent-fixture.sh`), both ok and unchanged again at 15:12Z: two passes side by side, `native-shaped`'s third (`--runs 3 --requests 200 --minutes 20`, 14:41Z–14:56Z, stopped `done`) and `native-graph`'s first (`--runs 3 --requests 200 --minutes 30`, 14:41Z–15:11Z, stopped `time`), into [`eval-native-shaped.jsonl`](../eval-native-shaped.jsonl) and [`eval-native-graph.jsonl`](../eval-native-graph.jsonl).
+- 2026-11-03T15:40Z to 16:10Z, after an ok `make gcp-cost-check` and `make gcp-usage-check` at 15:38Z on a fresh session's Compose warehouse (`make services-up`, `DB=dbt_dev tests/e2e/agent-fixture.sh`), both ok and unchanged again at 16:13Z: `native-graph`'s second pass, `--runs 3 --requests 200 --minutes 32`, into [`eval-native-graph.jsonl`](../eval-native-graph.jsonl); it stopped `done`.
 
 ## Observed
 
@@ -52,17 +53,22 @@ Do the data-agent arms (`native-kc`, `native-shaped`, `native-graph`; `native-co
   So the verified queries and governed views of #329 do not lift a data agent above the plain Knowledge Catalog context on this set; they cost it on follow-ups and traps.
 - `measured` (the same passes): `native-graph` on run 1 of all 96 cases and 49 of run 2, 145 runs and 151 chats: 92 right, 35 declined, 6 wrong, 11 confident-wrong, 1 unclear; on run 1, accuracy 61.5% and confident-wrong 7.3%, against `native-kc`'s 64.6% and 4.2% and `native-shaped`'s 61.5% and 5.2%.
 - `measured` (the same log): in none of `native-graph`'s 145 runs does its SQL name the graph (no `GRAPH_TABLE`, `MATCH` or `bet_graph` in any call); every answer it gave came from SQL over the silver or legacy tables, so the graph's measures beside the tables changed nothing it did (Q6).
+- `measured` (the second pass above, [eval.md](../eval.md)): `native-graph` on all 3 runs of all 96 cases (143 runs, 155 chats this pass, no 429; 288 runs and 306 chats in all): accuracy 61.8%, confident-wrong 6.9%, pass^3 57.3%, against `native-kc`'s 64.2%, 4.2%, 59.4% and `native-shaped`'s 61.8%, 5.6%, 58.3%; `conversation` 42.9%, `covered` 68.7%, `trap` 63.6%, `uncovered` 46.0%, `distractor` 100%, `planted` 83.3%.
+  This pass alone: 86 right, 38 declined, 10 wrong, 9 confident-wrong.
+- `measured` (the whole log, 288 runs): still no call names the graph (`GRAPH_TABLE` and `bet_graph` appear 0 times), so Q6's live answer holds at k = 3: a data agent with a property graph beside the tables does not aggregate through it.
+- `measured`: `make gcp-usage-check`'s `Data agents tokens` still read 0 after 918 chats across the three arms today, so that line cannot show the trial's use; cost stayed $0.000010.
 
 ## What it means for the verdict
 
-- On Google's model, the plain Knowledge Catalog context (`native-kc`) is the managed best so far: shaping (views, table functions, verified queries) and a graph with measures did not beat it, and both raised confident-wrong answers.
+- On Google's model, the plain Knowledge Catalog context (`native-kc`) is the managed best, all three built arms at k = 3: shaping (views, table functions, verified queries) and a graph with measures did not beat it, and both raised confident-wrong answers.
 
 - A data agent's whole run of the set fits in about 16 minutes, so k = 3 on the three built data-agent arms takes about two and a half hours of passes, well before 2026-12-24.
 - RULE.md compares arms on the same model, and a data agent answers only with Google's model: as written, the rule pairs no data-agent arm with ours, so the managed-best comparison needs the owner's call (#333).
 
 ## Still unknown
 
-- `native-graph`'s runs 2 and 3 (47 cases of run 2 and all of run 3, about 25 minutes); `native-kc` and `native-shaped` are done.
+- `native-context` and `native-governed`: not run, no data agent was built for them.
+- Whether `Data agents tokens` ever shows these chats (a Monitoring lag or a metric the Chat API doesn't write).
 - How the rule compares a managed arm (Google's model) with ours (a free OpenRouter model).
 
 ## Sources
