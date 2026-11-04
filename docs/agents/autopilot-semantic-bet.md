@@ -72,14 +72,30 @@ Then keep working on whatever the blocker doesn't touch.
 - [#336](../../../../issues/336): `docs/research/semantic-bet/REPORT.md` and an HTML version (an artifact on Map #324, and a published page when the Artifact tool exists), answering every register question with evidence or "still unknown", with the verdict.
 - When it lands, the digest says "Report ready" and the wake's final message starts with `OWNER NEEDED: report ready; read it and turn the routine off`.
 
+## The completion plan (owner, 2026-11-04)
+
+The owner, in a session, 2026-11-04: "Eventually, I would like the report to include everything that we have planned. So I don't mind spending a few days to complete the open router test results ... as well as the Claude models through Anthropic API ... If there is an anomaly, we should stop. Otherwise, we can just test them anytime"; and "you can merge PRs for the sake of completeness under this semantic-bet epic".
+Each wake runs every pass below whose resource is free, side by side (one background job per lane, each under its lock), and pushes the train after every pass; the logs resume, so a cut pass costs nothing but its last case-run.
+
+| Lane | Resource | Passes, in order (each on the frozen set, then the hard set, k = 3 unless named) |
+|---|---|---|
+| free | OpenRouter, 1,000 a day from 00:00Z, `openrouter.lock` | `native-mcp` and `custom-toolbox` at k = 1, then to k = 3; `custom-metricflow`'s frozen runs 2 and 3; `custom-lightdash` (pull the Lightdash image first, #363); `baseline`; the judge on new unclear turns after each pass |
+| gcp | data agents, free until 2026-12-31 | `native-kc-max` (#360); `native-context-bare` with `BET_DATA_AGENT_MODEL=LATEST_GA_MODEL`, then `BET_DATA_AGENT_THINKING=THINKING`, then `FAST` (the API refuses latest-GA with thinking) |
+| claude | Anthropic credits | Haiku `native-mcp`, `custom-toolbox`; Sonnet `native-mcp`, `custom-toolbox`; Opus `custom-metricflow`, then Opus `native-mcp`; each pass `--dollars` from its measured cost a case-run times its runs, plus half |
+| local | none | after the passes: #333 (RULE.md step 3 named in `eval.md`), then #336 (the report, every arm and model the passes reached) |
+
+- Stop a lane on an anomaly, first in the handoff: GCP, `make gcp-cost-check` exit 1 or 3, any month cost above the $0.000010 known on 2026-11-04 or a new SKU, or `make gcp-usage-check` failing; Claude, a billing or credit error, a refused key, an unexpected 429, a pass over its budget, a case-run over 10x its arm's median dollars, or total spend past $90.00 (the Console read $85.37 left of $100.00 at 2026-11-04T17:27Z, so the ledger plus $3.0704 unlogged is the total); OpenRouter, a spent free quota is no anomaly: the lane waits for 00:00Z.
+- Merge (owner, 2026-11-04): once #336's report is on the train and `make check` passes on its head, merge #310, then the train #337, each with a merge commit; then the digest says "Report ready".
+- The daily query fence is 204,800 MiB (`QueryUsagePerDay`, raised by the owner, read 2026-11-04T17:31Z): it no longer limits a day's lanes; the month's free 1 TiB does, through `make gcp-usage-check`.
+
 ## Known conditions
 
 - The $0 guard refuses every `gcloud dataplex` call, `--help` included, and this session's gcloud (570.0.0) is older than the dbt import needs (586.0.0): read the import's flags from its docs page, never from the CLI; seen 2026-11-03.
 - MetricFlow's `CLIConfiguration.setup` (the `mf` CLI, `dbt/scripts/build_catalog.py`) runs dbt's connection test, `select 1`, and the proxy's injected Google credential carries it to BigQuery even on the compile-only `bigquery` target (refused: no project `pplk8s-lab`; `BigQuery adapter:` in the copy's `logs/dbt.log` tells it): never point that target at the lab project; [#339](../../../../issues/339) removes the test; seen 2026-11-03.
-- A day's data-agent passes can spend the project's daily query fence (`QueryUsagePerDay`, 31,457 MiB a day, never raised; it resets at 00:00 Pacific): every query is then refused, not billed, the cost check's own billing-export query too (`gcp-cost-check: UNKNOWN: the billing export query failed`, exit 3), so GCP work ends until the reset; `make gcp-usage-check` stays ok because it measures the month; run one lane and at most two data-agent arms a day, about 1 GiB kept for the cost check; seen 2026-11-03T22:03Z.
+- A day's data-agent passes can spend the project's daily query fence (`QueryUsagePerDay`, 31,457 MiB a day, never raised; it resets at 00:00 Pacific): every query is then refused, not billed, the cost check's own billing-export query too (`gcp-cost-check: UNKNOWN: the billing export query failed`, exit 3), so GCP work ends until the reset; `make gcp-usage-check` stays ok because it measures the month; seen 2026-11-03T22:03Z, before the owner raised the fence to 204,800 MiB (§ The completion plan).
 
 ## Never
 
-- Merge; push any branch but `claude/semantic-bet`.
+- Merge, except § The completion plan's two merges; push any branch but `claude/semantic-bet` (and `claude/wip/*` snapshots, cloud's `save-work.sh`).
 - Spend: paid GCP, paid OpenRouter models, Claude beyond the owner's budget.
 - Work on Looker; employer data (`CLAUDE.md`'s clean-room rule).
