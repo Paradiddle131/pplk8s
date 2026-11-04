@@ -69,6 +69,7 @@ Then keep working on whatever the blocker doesn't touch.
 
 ## The final report
 
+- The brief is #336's artifact "Brief - the report the owner asked for" (`gh api repos/<o>/<r>/issues/336/artifacts`): the owner's questions, form and data rules; a new owner hint or a hint from the work is added to it with a `PATCH`, never as a new artifact or a comment; the report reads its numbers only from `results.json` (written with every `eval.md`).
 - [#336](../../../../issues/336): `docs/research/semantic-bet/REPORT.md` and an HTML version (an artifact on Map #324, and a published page when the Artifact tool exists), answering every register question with evidence or "still unknown", with the verdict.
 - When it lands, the digest says "Report ready" and the wake's final message starts with `OWNER NEEDED: report ready; read it and turn the routine off`.
 
