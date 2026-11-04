@@ -67,3 +67,29 @@ The first pass put about 12 cases in one subagent session, where every API run s
 
 - Runs 2 and 3 of the fresh subagents, and the frozen set fresh per case.
 - Which of the remaining harness causes (system prompt, shell tools, the rules as a task message) weighs most.
+
+## The frozen set, fresh per case (owner's go for Haiku and Sonnet, and about 20 Opus runs a setup, 2026-11-04T23:13Z)
+
+- 2026-11-04, 23:11Z to 23:48Z: one fresh subagent per frozen case, run 1: Haiku on all 96, Sonnet on all 96, Opus on 20 cases sampled across the groups in proportion (2 `trap`, 9 `covered`, 6 `uncovered`, 1 `distractor`, 1 `conversation`, 1 `planted`: case numbers 1, 2, 6, 11, 16, 21, 27, 29, 31, 34, 40, 45, 50, 57, 63, 72, 77, 82, 87, 92); one test case per model read before the rest (both right).
+- Prompts rendered per case by `374_cc_agent.py --batches frozen 1 1 DIR fresh-<model>` then `--render DIR ANSWERS fresh-<model>` (new in this pass); the subagent is handed one line: read the rendered prompt and follow it, using only Read and Bash.
+- About 68k to 83k subagent tokens a case on the subscription, no API credits; the token count fell by about 5k from Haiku's case 46 on, when the session's deny rules (below) shrank the subagents' tool list.
+- Isolation by instruction leaked tool calls outside the task: Haiku made a remote-session listing call (case 25), an `interrupt_session` on "self" (case 33, refused, no effect) and read-only documentation and session lookups (cases 38, 55, 57, 64, 66, 96); from case 35 the one-line brief names the two allowed tools, and the session denies the remote-session tools by permission rule, so Sonnet's and Opus's cases made no such call. None touched an answer; a tool-restricted agent type (Bash and Read only) is the cleaner harness for the next pass.
+- A container restart at about 23:30Z cut a Sonnet wave; the answers already written were kept, and the two cases it missed (16, 17) were asked again in a fresh subagent.
+- Scorer fix: the subagent scorer took a case's recorded answers in run order, so an answer already logged as run 1 would have been scored again as run 2; a logged (case, run) now stays out of the queue.
+
+| Frozen set, run 1, Claude Code subagent fresh per case (`measured`, results.json at this commit) | Right | Confident-wrong | `covered` right | `uncovered` right |
+|---|---|---|---|---|
+| Haiku (96 cases) | 72.9% [63.5, 81.2] | 3.1% [0.0, 7.3] | 97% | 17% |
+| Sonnet (96 cases) | 74.0% [64.6, 82.3] | 3.1% [0.0, 7.3] | 99% | 17% |
+| Opus (20 of 96 cases) | 70.0% [50.0, 90.0] | 0.0% | 100% (14) | 0% (6) |
+| (Haiku, shared session per batch) | 66.7% [56.2, 76.0] | 5.2% | | 7% |
+| (Haiku, ADK on the API, k = 3) | 81.2% [73.3, 88.5] | 2.4% | | 44% |
+| (Sonnet, ADK on the API, k = 3) | 74.7% [66.0, 82.6] | 1.4% | | 18% |
+
+- On the frozen set the fresh subagents answer nearly every covered question right (97 to 100%) and decline most uncovered ones (0 to 17% right), the same shape as the hard set; the three models tie within their intervals.
+- Sonnet as a fresh subagent ties Sonnet through ADK on both columns (74.0% against 74.7%; 17% against 18% on `uncovered`); Haiku as a fresh subagent stays below Haiku through ADK on `uncovered` (17% against 44%), so the harness gap is Haiku's, not every model's.
+- Fresh sessions bring Haiku's frozen confident-wrong from 5.2% (batched) to 3.1%, as they did on the hard set.
+
+### Still unknown
+
+- Runs 2 and 3 of the fresh subagents on both sets; Opus on the other 76 frozen cases (the owner's go is needed past about 20 Opus runs a setup).
