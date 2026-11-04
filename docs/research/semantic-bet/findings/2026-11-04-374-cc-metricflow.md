@@ -34,9 +34,9 @@ The first pass put about 12 cases in one subagent session, where every API run s
 - What remains is the harness: the subagent declines far more of the questions no metric covers (16% against 56% right), so its accuracy stays lower, with intervals that now overlap the API's.
 - Still different even per case: Claude Code's own system prompt and shell-called tools against ADK's function calling, the rules as a task message rather than a system instruction, isolation by instruction (one fresh subagent tried an unrelated `create_session` call, refused by the session's classifier, nothing created).
 
-## Sonnet and Opus, fresh per case (owner's go, 2026-11-04T20:25Z)
+## Sonnet and Opus, fresh per case (owner's go, 2026-11-04, about 20:15Z)
 
-- 2026-11-04, 20:16Z to 20:52Z: one fresh subagent per hard case for Sonnet (43, `model: sonnet`) and Opus (43, `model: opus`), at most 20 at once, each told by `probes/374_cc_prompt.md` rendered per case (`BET_CC_MODEL=fresh-<model>`, `BET_CC_SESSION=fresh-<model>-hard-run1-NN`) and handed a one-line pointer to that rendered file, where Haiku's fresh run had the rendered prompt as its message; one test case per model was read before the rest (both right, matching Haiku's answer to `hard_aov_last_month`).
+- 2026-11-04, 20:16Z to 20:39Z: one fresh subagent per hard case for Sonnet (43, `model: sonnet`) and Opus (43, `model: opus`), at most 20 at once, each told by `probes/374_cc_prompt.md` rendered per case (`BET_CC_MODEL=fresh-<model>`, `BET_CC_SESSION=fresh-<model>-hard-run1-NN`) and handed a one-line pointer to that rendered file, where Haiku's fresh run had the rendered prompt as its message; one test case per model was read before the rest (both right, matching Haiku's answer to `hard_aov_last_month`).
 - About 77k to 83k subagent tokens a case (Claude Code's own prompt and `list_metrics` dominate): about 3.4M for each model on the subscription, no API credits.
 - Several subagents reported their own slips: hand-computed differences (Sonnet, `hard_social_vs_search_lead_gap`), an extra `cat` or `python3` pipe beside the tool, a `calls` list that missed one call; scored as given, since an agent's slips are part of what it answers.
 
