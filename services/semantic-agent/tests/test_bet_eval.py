@@ -788,3 +788,9 @@ def test_an_arm_still_under_way_is_never_the_managed_best():
     started = _on(early, "native-context-bare", {c: ["right"] * 3 for c in cases[:2]})
     managed, _, _ = bet_eval.step_two(bet, whole + started, runs=3)
     assert managed is not None and managed[:2] == ("native-context", google)
+
+
+def test_a_pass_does_not_start_when_the_audit_database_is_unreachable(monkeypatch):
+    monkeypatch.setenv("AUDIT_URL", "postgresql://agent_audit:agent_audit@127.0.0.1:1/none")
+    problem = bet_eval.warehouse_unreachable()
+    assert problem is not None and problem.startswith("the audit database is unreachable")

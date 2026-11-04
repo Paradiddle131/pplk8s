@@ -104,13 +104,15 @@ RUNS = 3
 # A run that errors (not a spent quota) is asked again once on a later pass; twice is scored wrong.
 MAX_ERRORS = 2
 # The two local arms, in the order a run asks them: the pair compared is baseline → metricflow.
-ARMS = ("baseline", "custom-metricflow")
+ARMS = ("baseline", "custom-metricflow", "custom-hybrid")
+# What a pass asks when --arms is not given: the pair the local log has always held.
+DEFAULT_ARMS = ("baseline", "custom-metricflow")
 # RULE.md § The arms: every arm that writes SQL has the `legacy` tables in reach beside the
 # trusted layers. The baseline has them from #357 on (tests/e2e/agent-fixture.sh builds them,
 # agent_sql reads them); each run logged since carries `"legacy": true`, the runs before it none,
 # so a report can tell the two apart.
 LEGACY_TABLES = ("legacy.channel_daily", "legacy.country_sales", "legacy.daily_net_sales")
-LEGACY_REACH = frozenset({"baseline"})
+LEGACY_REACH = frozenset({"baseline", "custom-hybrid"})
 # RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
 RUNG = {
     "native-context": 1,
@@ -131,6 +133,8 @@ RUNG = {
     # A self-hosted semantic-layer server over our MetricFlow project (#363), like MetricFlow.
     "custom-lightdash": 4,
     "custom-metricflow": 4,
+    # MetricFlow first, a read-only SQL fallback for what no metric covers (#373).
+    "custom-hybrid": 4,
 }
 
 
@@ -1087,7 +1091,7 @@ def report(
                 + " | ".join(pct(s.scores[a].groups[name]) for a in arms)
                 + " |"
             )
-        if set(ARMS) <= set(arms):
+        if set(DEFAULT_ARMS) <= set(arms):
             a, b = s.scores["baseline"], s.scores["custom-metricflow"]
             acc = paired_interval(a.right, b.right)
             wrong = paired_interval(a.wrong_confidently, b.wrong_confidently)
@@ -1142,6 +1146,23 @@ def write_every_arm(directory: Path = RESEARCH, runs: int = RUNS) -> Path:
     return path
 
 
+def warehouse_unreachable() -> str | None:
+    """Why a pass cannot start: the metric or audit login the agents use does not connect (one
+    `select 1` each, 5 s), so no run is logged whose answer is an infrastructure failure."""
+    import psycopg
+
+    from semantic_agent.warehouse_postgres import audit_url, read_url
+
+    for name, url in (("audit", audit_url()), ("metrics", read_url())):
+        try:
+            with psycopg.connect(url, connect_timeout=5) as conn:
+                conn.execute("select 1")
+        except psycopg.Error as error:
+            first = (str(error).strip().splitlines() or [type(error).__name__])[0]
+            return f"the {name} database is unreachable ({first}): no run asked"
+    return None
+
+
 async def main(argv: Sequence[str]) -> int:
     parser = argparse.ArgumentParser(prog="python -m semantic_agent.bet_eval")
     parser.add_argument("ids", nargs="*", help="only these cases (the report still covers all)")
@@ -1154,7 +1175,7 @@ async def main(argv: Sequence[str]) -> int:
         "--dollars", type=float, default=None, help="a Claude pass's budget in USD (spend.py)"
     )
     parser.add_argument("--label", default=None, help="the pass's name in the spend ledger")
-    parser.add_argument("--arms", nargs="*", default=list(ARMS), choices=ARMS)
+    parser.add_argument("--arms", nargs="*", default=list(DEFAULT_ARMS), choices=ARMS)
     parser.add_argument(
         "--log", type=Path, default=None, help="log the runs here, not to eval-local.jsonl"
     )
@@ -1206,6 +1227,15 @@ async def main(argv: Sequence[str]) -> int:
         log.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries))
         why = "rescored"
     elif not args.report_only:
+        # The agents reach the Compose warehouse from the host by its published port, as the owner
+        # URL below does; without these the metric and audit connections default to the in-cluster
+        # `warehouse:5432`, and every metric query is withheld for its unwritten audit row (an Opus
+        # pass, 2026-11-04: 219 of 288 runs answered "the audit record could not be written").
+        os.environ.setdefault("DBT_HOST", "localhost")
+        os.environ.setdefault("DBT_PORT", "5433")
+        if problem := warehouse_unreachable():
+            print(f"stopped: {problem}")
+            return 2
         if claude:
             try:
                 claude_key()
@@ -1213,6 +1243,7 @@ async def main(argv: Sequence[str]) -> int:
                 print(f"skipped: {missing}")
                 return 3
         from semantic_agent.agent import build_agent as build_semantic
+        from semantic_agent.hybrid import build_agent as build_hybrid
         from sql_baseline.agent import build_agent as build_baseline
 
         asked = load_set(args.which, args.ids) if args.ids else bet
@@ -1226,6 +1257,7 @@ async def main(argv: Sequence[str]) -> int:
         builders = {
             "baseline": lambda: build_baseline(extra_tables=LEGACY_TABLES),
             "custom-metricflow": build_semantic,
+            "custom-hybrid": lambda: build_hybrid(extra_tables=LEGACY_TABLES),
         }
         agents = {arm: builders[arm]() for arm in args.arms}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None
