@@ -812,8 +812,17 @@ def finished(entries: Sequence[dict[str, Any]], model: str) -> dict[tuple[str, i
 CANARY_TRIES = 2
 
 
+# Each set's canary: the single-turn case every arm on every model answered right in every run
+# logged by 2026-11-04T19:20Z (about 20 arm-model pairs a set, the bare data agent included); the
+# first covered case is not enough: the bare agent missed the hard set's first one honestly.
+CANARIES = {"frozen": "orders_one_day", "hard": "hard_top_channel_bookings"}
+
+
 def canary_case(bet: BetSet) -> Question | None:
-    """The set's first single-turn case in the `covered` group: one metric, nothing to decline."""
+    """The set's canary (CANARIES), else its first single-turn case in the `covered` group."""
+    by_id = {q.id: q for q in bet.questions}
+    if (named := CANARIES.get(bet.name)) in by_id:
+        return by_id[named]
     return next(
         (q for q in bet.questions if len(q.turns) == 1 and "covered" in bet.groups.get(q.id, [])),
         None,
