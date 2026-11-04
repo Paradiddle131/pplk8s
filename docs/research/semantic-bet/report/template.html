@@ -1,0 +1,793 @@
+<title>Semantic bet memo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
+  --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
+  --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
+  --s2: #E2E9EC; --s3: #CBD9E1; --s4: #AEC4D3; --s5: #8FAEC4;
+  --o-right: #24384A; --o-decl: #7D8A94; --o-wrong: #D28A97; --o-cw: #C0213F; --o-none: #9AA5AD;
+  --band: rgba(22, 32, 42, .07); --sel: #CBD9E1; --tip: #FFFFFF; --tip-shadow: 0 6px 18px rgba(22,32,42,.16);
+  --serif: "STIX Two Text", "STIX Two", Cambria, "Times New Roman", serif;
+  --label: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --code: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+    --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+    --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
+    --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+    --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #56626C;
+    --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+  --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+  --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
+  --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+  --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #56626C;
+  --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--rule) var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.58; font-variant-numeric: lining-nums; }
+::selection { background: var(--sel); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; border-radius: 2px; }
+code, .id { font-family: var(--code); font-size: .8em; letter-spacing: -.01em; color: var(--ink); }
+[data-setup] { cursor: help; }
+span[data-setup] { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+
+.page { max-width: 1180px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)); }
+.col { max-width: 41rem; }
+header.memo { border-bottom: 1px solid var(--ink); padding-bottom: 18px; margin-bottom: 22px; }
+h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
+.byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
+.byline b { font-weight: 600; color: var(--ink); }
+.abstract { margin: 0 0 26px; max-width: 46rem; }
+.runin { font-weight: 700; }
+h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
+p { margin: 0 0 1em; }
+
+/* winners band */
+.winners { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 6px; }
+.pillar { border-top: 2px solid var(--ink); padding-top: 10px; }
+.pillar h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; }
+.pillar .why { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
+.pset { border-top: 1px solid var(--rule); padding: 8px 0 8px; font-family: var(--label); font-size: 14px; line-height: 1.4; }
+.pset .sl { color: var(--ink-3); font-size: 13px; }
+.pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
+.pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+.pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
+.pset .who { font-size: 14.5px; color: var(--ink); }
+.pset .who .id { font-size: 12.5px; }
+.pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
+.winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
+
+figure { margin: 22px 0 8px; }
+.figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 54rem; text-wrap: pretty; }
+.figtitle .fignum { font-weight: 700; margin-right: .35em; }
+.figtitle .take { font-weight: 500; }
+figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); max-width: 46rem; margin-top: 10px; }
+.figtools { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; align-items: center; margin: 4px 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 14px; color: var(--ink-2); align-items: center; }
+.legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { overflow: visible; }
+.seg { display: inline-flex; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; font-family: var(--label); font-size: 14px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 4px 11px; cursor: pointer; min-height: 32px; }
+.seg button + button { border-left: 1px solid var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 4px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; }
+
+.plot { width: 100%; position: relative; }
+.plot svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--label); }
+.plot text { fill: var(--ink-2); font-size: 12.5px; }
+.plot .t-ink { fill: var(--ink); }
+.plot .t-strong { fill: var(--ink); font-weight: 600; }
+.plot .t-mute { fill: var(--ink-3); }
+.plot .t-id { font-family: var(--code); font-size: 11.5px; fill: var(--ink); }
+.plot .hit { fill: transparent; }
+.plot [data-tip]:focus, .plot [data-setup]:focus { outline: none; }
+.plot [data-tip]:focus .hit, .plot [data-tip]:hover .hit { fill: var(--band); }
+.plot text[data-setup]:focus { text-decoration: underline; }
+.plot .frame { fill: none; stroke: var(--rule); }
+.mk { transition: opacity .12s ease-out; }
+figure.focusing .mk:not(.on) { opacity: .14; }
+.stack + .stack { margin-top: 20px; }
+
+/* decision map */
+.mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
+table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
+table.map thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); background: var(--paper); }
+table.map thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+table.map th.num, table.map td.num { text-align: right; }
+table.map td.g { text-align: center; padding: 3px 4px; white-space: nowrap; }
+table.map th.g { text-align: center; }
+.ch { display: inline-block; width: 34px; border-radius: 2px; padding: 3px 0; color: var(--ink); text-align: center; }
+.ch + .ch { margin-left: 3px; }
+.ch.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
+.ch.none { color: var(--ink-3); }
+.b1 { background: transparent; } .b2 { background: var(--s2); } .b3 { background: var(--s3); } .b4 { background: var(--s4); } .b5 { background: var(--s5); }
+table.map tr.rung th { background: var(--paper-2); font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 6px 8px; border-bottom: 1px solid var(--grid-major); }
+table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 190px; z-index: 1; }
+table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1; }
+table.map tbody tr.main:hover td, table.map tbody tr.sub:hover td { background: var(--row-band); }
+table.map td.setup .id { display: inline-block; font-size: 12.5px; }
+table.map td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+table.map td.what { color: var(--ink-2); max-width: 270px; min-width: 200px; font-size: 13.5px; }
+table.map tr.sub td.setup { padding-left: 22px; }
+table.map tr.sub[hidden] { display: none; }
+.tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
+.flag.pend { border-style: dashed; border-color: var(--ink-3); }
+.flag.mb { border-color: var(--ink-2); }
+.ivl { white-space: nowrap; line-height: 1.45; }
+.ivl small { color: var(--ink-3); font-size: 12.5px; }
+.ivl .sk { color: var(--ink-3); font-size: 11.5px; margin-right: 4px; }
+.cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
+
+/* unit plate */
+.plate { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; }
+.plate-head { position: sticky; top: 0; z-index: 3; background: var(--paper); overflow: hidden; border-bottom: 1px solid var(--ink-2); }
+.plate-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.prow { display: flex; align-items: stretch; border-bottom: 1px solid var(--grid-major); }
+.prow:nth-child(even of .prow.r) { background: var(--row-band); }
+.prow.r:hover { background: var(--band); }
+.prow > div { border-left: 1px solid var(--grid-major); flex: none; }
+.prow > div:first-child { border-left: 0; }
+.prow .pl { position: sticky; left: 0; z-index: 2; background: inherit; background-color: var(--paper); padding: 4px 8px; font-family: var(--label); font-size: 13px; line-height: 1.25; }
+.prow.r:nth-child(even of .prow.r) .pl { background-color: var(--row-band); }
+.prow .pl .id { font-size: 12px; display: block; white-space: nowrap; }
+.prow .pl .m { white-space: nowrap; }
+.prow .pl .m { color: var(--ink-2); }
+.prow .pu { padding: 4px 8px; display: flex; align-items: center; }
+.prow .pu canvas { display: block; }
+.prow .pc { display: flex; align-items: center; }
+.pnote { font-family: var(--label); font-size: 12.5px; padding-left: 8px; color: var(--ink-2); }
+.prow.step { background: var(--paper-2); font-family: var(--label); font-weight: 600; font-size: 13.5px; }
+.prow.step > div { border-left: 0; padding: 5px 8px; position: sticky; left: 0; }
+.prow.step.future > div { font-weight: 400; font-style: italic; font-family: var(--serif); color: var(--ink-3); font-size: 14.5px; }
+.prow.head > div { font-family: var(--label); font-size: 13px; color: var(--ink); font-weight: 600; padding: 6px 8px; position: relative; }
+.prow.head small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12px; }
+.bh { position: absolute; white-space: nowrap; font-weight: 600; font-size: 12.5px; }
+.prow.head .bh small { display: inline; margin-left: 4px; }
+
+.tip { position: fixed; z-index: 20; max-width: min(340px, calc(100vw - 16px)); background: var(--tip); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 9px 11px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; pointer-events: none; opacity: 0; transition: opacity .12s ease-out; left: 0; top: 0; }
+.tip.on { opacity: 1; }
+.tip h4 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+.tip h4 .id { font-size: 12.5px; }
+.tip dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--ink-3); } .tip dd { margin: 0; }
+.tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; margin-top: 6px; quotes: none; }
+.tip .src { font-size: 12px; color: var(--ink-3); }
+.tip p { margin: 2px 0 0; color: var(--ink-2); }
+
+.notes { font-size: 15.5px; }
+dl.gloss { display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: 6px 22px; margin: 8px 0 0; font-size: 15.5px; }
+dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 760px) {
+  .winners { grid-template-columns: 1fr; gap: 18px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 16.5px; }
+  .page { padding-top: 24px; }
+  dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
+  table.map td.setup { min-width: 158px; }
+}
+@media (prefers-reduced-motion: reduce) { .tip, .mk { transition: none; } }
+</style>
+
+<div class="page">
+  <header class="memo">
+    <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
+    <p class="byline" id="byline"></p>
+  </header>
+
+  <section class="abstract"><p><span class="runin">Abstract.</span> <span id="abstract"></span></p></section>
+
+  <section aria-labelledby="w-h">
+    <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
+    <div class="winners" id="winners"></div>
+    <p class="winners-note">Each setup enters on the model that decides for it; a setup with runs on Claude only waits, tagged pending in the tables.</p>
+  </section>
+
+  <figure id="fig1">
+    <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
+    <div class="figtools"><div class="legend" id="leg1"></div><button type="button" class="btn" id="toggleall" aria-expanded="false">Show every model</button></div>
+    <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
+    <figcaption>Each cell holds the frozen set first and the hard set second; a boxed number is the best in its column for that set.</figcaption>
+  </figure>
+
+  <h2>Where the ADK agent on MetricFlow stands</h2>
+  <figure id="fig2">
+    <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
+    <div class="figtools"><div class="legend" id="leg2"></div></div>
+    <div class="plot" id="forest"></div>
+    <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals are partial passes.</figcaption>
+  </figure>
+  <figure id="fig3">
+    <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
+    <div class="figtools"><div class="legend" id="leg3"></div><div class="seg" role="group" aria-label="Question set for Figure 3" data-view="scatter"></div></div>
+    <div class="plot" id="scatter"></div>
+    <figcaption>Up and to the right is better; the lines through each mark are its 95% intervals on both axes.</figcaption>
+  </figure>
+
+  <h2>Why: covered questions against uncovered ones</h2>
+  <figure id="fig4">
+    <p class="figtitle"><span class="fignum">Figure 4.</span><span class="take" id="t4"></span></p>
+    <div class="figtools"><div class="legend" id="leg4"></div></div>
+    <div class="plot" id="strip"></div>
+    <figcaption>Each mark is one setup on one model; question groups under ten questions are drawn faint, since one answer moves them by many points.</figcaption>
+  </figure>
+  <figure id="fig5">
+    <p class="figtitle"><span class="fignum">Figure 5.</span><span class="take" id="t5"></span></p>
+    <div class="figtools"><div class="legend" id="leg5"></div><div class="seg" role="group" aria-label="Question set for Figure 5" data-view="slopes"></div></div>
+    <div class="plot" id="slopes"></div>
+    <figcaption>Hover a line or a label to follow one setup.</figcaption>
+  </figure>
+
+  <h2>Every run, from the cheapest setup to the most custom</h2>
+  <figure id="fig6">
+    <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
+    <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
+    <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
+    <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
+  </figure>
+
+  <h2>Method, briefly</h2>
+  <div class="col notes">
+    <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code subagents run in another harness, one fresh subagent per question, so they are shown for comparison and never decide. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
+    <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
+  </div>
+
+  <h2>Glossary</h2>
+  <dl class="gloss col">
+    <dt>Setup</dt><dd>One way of answering: an agent, the tools and context it is given, and the tables in its reach.</dd>
+    <dt>Hidden-rule question</dt><dd>A question whose obvious SQL gives another number, because a business rule (cancelled orders, a semi-additive balance) is not visible in the table.</dd>
+    <dt>Covered, uncovered</dt><dd>Covered: a metric of the semantic layer answers it. Uncovered: no metric does, though SQL over the tables can.</dd>
+    <dt>Confident-wrong</dt><dd>A wrong number stated with no hedge, the failure a business user feels. A lower rate counts only when accuracy ties.</dd>
+    <dt>Decides, check</dt><dd>Our setups run on a free model, which decides; Claude Haiku, Sonnet and Opus repeat them as a check on whether a gap is the model's.</dd>
+    <dt>Pending</dt><dd>A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists.</dd>
+    <dt>95% interval</dt><dd>A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these.</dd>
+    <dt>Partial pass</dt><dd>A pass with fewer questions than the set or fewer than three runs per question, tagged on its row.</dd>
+    <dt>Managed best</dt><dd>The most accurate of Google's managed setups, the bar each of ours is paired against.</dd>
+    <dt>The floor</dt><dd>Google's data agent over the tables alone, with no context: every gain is read against it.</dd>
+  </dl>
+</div>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+const D = /*__DATA__*/null;
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const P = (x) => Math.round(x * 100);
+  const sg = (x) => { const v = Math.round(x * 100); return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v); };
+  const SETS = D.setOrder;
+  const FAMS = ["da", "gt", "mf", "ref", "other"];
+  const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
+  const ROLE = { decides: "free model, decides", check: "Claude through the API, the check", gemini: "Gemini in Google's agent", cc: "Claude Code subagent, comparison only", other: "model not yet classified" };
+  const ALL = {}; SETS.forEach((s) => D.sets[s].rows.forEach((r) => (ALL[r.id] = r)));
+  const byId = (id) => ALL[id];
+  const S = (s) => D.sets[s];
+  const rowOf = (s, key) => S(s) && S(s).rows.find((r) => r.key === key);
+  const ladderIdx = {}; D.ladder.forEach((l, i) => l.arms.forEach((a) => (ladderIdx[a] = i)));
+  const descOf = (arm) => D.desc[arm] || D.undescribed;
+  const sKey = (s) => (s === "frozen" ? "F" : s === "hard" ? "H" : s.slice(0, 1).toUpperCase());
+  const short = (s) => S(s).label.replace(" set", "").toLowerCase();
+  const view = { scatter: SETS[0], slopes: SETS[0], plate: SETS[0] };
+  try { const v = JSON.parse(localStorage.getItem("semantic-bet-views") || "{}"); Object.keys(view).forEach((k) => { if (SETS.includes(v[k])) view[k] = v[k]; }); } catch (e) {}
+  let showAll = false;
+
+  /* ---------- marks ---------- */
+  function shape(role, x, y, color, r, hollow) {
+    r = r || 4.5;
+    const fillSolid = hollow ? "var(--paper)" : color;
+    if (role === "decides") return `<circle cx="${x}" cy="${y}" r="${r + 0.5}" fill="${fillSolid}" stroke="${hollow ? color : "var(--paper)"}" stroke-width="${hollow ? 1.75 : 2}"/>`;
+    if (role === "check") return `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`;
+    if (role === "gemini") return `<rect x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}" fill="${fillSolid}" stroke="${hollow ? color : "var(--paper)"}" stroke-width="${hollow ? 1.75 : 2}"/>`;
+    if (role === "cc") { const d = r + 1; return `<path d="M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`; }
+    return `<path d="M${x} ${y - r - 1}L${x + r + 1} ${y + r}L${x - r - 1} ${y + r}Z" fill="${fillSolid}" stroke="var(--paper)" stroke-width="1.5"/>`;
+  }
+  const shapeKey = (role, color) => `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`;
+  const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+  const legendRoles = () => [["decides", "free model (decides)"], ["check", "Claude API (check)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code subagent"]].map(([r, l]) => `<span class="k">${shapeKey(r)}${l}</span>`).join("");
+  const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
+  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
+  const label = (r) => `${r.arm} on ${r.modelLabel}`;
+  const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
+
+  /* ---------- one tooltip, delegated ---------- */
+  const tip = $("#tip"); let tipEl = null, tipByFocus = false;
+  function setupTip(arm) { return `<h4><span class="id">${esc(arm)}</span></h4><p>${esc(descOf(arm))}</p>`; }
+  function rowTip(r, g) {
+    if (!r) return "";
+    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
+    const out = order.filter((k) => o[k]).map((k) => `${o[k]} ${k}`).join(", ");
+    const ex = r.example ? `<q>${esc(r.example.text)}</q><div class="src">Example: question <span class="id">${esc(r.example.case)}</span>, scored ${esc(r.example.outcome)}${r.example.tools && r.example.tools.length ? "; tools called: " + esc(r.example.tools.join(", ")) : ""}</div>` : "";
+    let gl = "";
+    if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = `<dt>${esc(gg ? gg.label : g)}</dt><dd>${P(r.groups[g][0])}% right over ${r.groups[g][1]} questions</dd>`; }
+    let s2 = "";
+    if (r.step2) { const a = r.step2.accuracy; s2 = `<dt>vs managed best</dt><dd>${sg(a[0])} points [${sg(a[1])}, ${sg(a[2])}], paired</dd>`; }
+    const vf = r.vsFloor && r.vsFloor.acc ? `<dt>vs the floor</dt><dd>${sg(r.vsFloor.acc[0])} points [${sg(r.vsFloor.acc[1])}, ${sg(r.vsFloor.acc[2])}], paired</dd>` : "";
+    return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}, ${esc(S(r.set).label.toLowerCase())}</h4>
+      <p>${esc(r.desc)}</p>
+      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% [${P(r.acc[1])}, ${P(r.acc[2])}]</dd>
+      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% [${P(r.cw[1])}, ${P(r.cw[2])}]</dd>${s2}${vf}
+      <dt>Ran</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${r.expected} runs${r.status === "pending" ? "; pending: deciding run" : ""}</dd>
+      <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
+  }
+  function htmlFor(el) {
+    if (el.dataset.setup != null) return setupTip(el.dataset.setup);
+    if (el.dataset.tip) return rowTip(byId(el.dataset.tip), el.dataset.g);
+    return "";
+  }
+  function place(x, y) {
+    const w = tip.offsetWidth, h = tip.offsetHeight, vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    let left = x + 14, top = y + 16;
+    if (left + w > vw - 8) left = Math.max(8, Math.min(vw - w - 8, x - w - 14));
+    if (left < 8) left = 8;
+    if (top + h > vh - 8) top = Math.max(8, y - h - 12);
+    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+  }
+  function showTipHTML(html, x, y) { if (!html) return hideTip(); tip.innerHTML = html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
+  function hideTip() { tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); tipEl = null; tipByFocus = false; }
+  const TIPSEL = "[data-setup],[data-tip]";
+  document.addEventListener("pointerover", (e) => {
+    const el = e.target.closest && e.target.closest(TIPSEL);
+    if (!el) { if (tipEl && !tipEl.contains(e.target)) hideTip(); return; }
+    if (el !== tipEl) { tipEl = el; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
+  });
+  document.addEventListener("pointermove", (e) => { if (tipEl && tipEl.contains(e.target)) place(e.clientX, e.clientY); });
+  document.addEventListener("pointerout", (e) => { if (tipEl && (!e.relatedTarget || !tipEl.contains(e.relatedTarget))) { const nx = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(TIPSEL); if (!nx) hideTip(); } });
+  document.addEventListener("focusin", (e) => { const el = e.target.closest && e.target.closest(TIPSEL); if (el && el === e.target) { tipEl = el; tipByFocus = true; const b = el.getBoundingClientRect(); showTipHTML(htmlFor(el), b.left, b.bottom - 8); } });
+  document.addEventListener("focusout", () => hideTip());
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+  window.addEventListener("scroll", () => {
+    if (tipByFocus && tipEl) { const b = tipEl.getBoundingClientRect(); place(b.left, b.bottom - 8); return; }
+    if (!tipEl || tipEl.tagName !== "CANVAS") hideTip();
+  }, { passive: true });
+
+  /* ---------- hover to focus ---------- */
+  const FSEL = "[data-key],[data-arm],[data-fam]";
+  function applyFocus(fig, el) {
+    const mks = fig.querySelectorAll(".mk");
+    if (!el) { fig.classList.remove("focusing"); mks.forEach((m) => m.classList.remove("on")); return; }
+    let pred;
+    if (el.dataset.key) pred = (m) => m.dataset.key === el.dataset.key;
+    else if (el.dataset.arm) pred = (m) => m.dataset.arm === el.dataset.arm;
+    else pred = (m) => m.dataset.fam === el.dataset.fam;
+    fig.classList.add("focusing"); mks.forEach((m) => m.classList.toggle("on", pred(m)));
+  }
+  function wireFocus(fig) {
+    fig.addEventListener("pointerover", (e) => applyFocus(fig, e.target.closest(FSEL)));
+    fig.addEventListener("pointerleave", () => applyFocus(fig, null));
+    fig.addEventListener("focusin", (e) => applyFocus(fig, e.target.closest(FSEL)));
+    fig.addEventListener("focusout", (e) => { if (!fig.contains(e.relatedTarget)) applyFocus(fig, null); });
+  }
+  ["#fig2", "#fig3", "#fig4", "#fig5"].forEach((s) => wireFocus($(s)));
+
+  /* ---------- per-view set switches ---------- */
+  function renderSwitches() {
+    document.querySelectorAll(".seg[data-view]").forEach((seg) => {
+      const v = seg.dataset.view;
+      if (SETS.length < 2) { seg.hidden = true; return; }
+      seg.innerHTML = SETS.map((s) => `<button type="button" data-set="${s}" aria-pressed="${view[v] === s}">${esc(S(s).label)}, ${S(s).nCases} questions</button>`).join("");
+      seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        view[v] = b.dataset.set; try { localStorage.setItem("semantic-bet-views", JSON.stringify(view)); } catch (e) {}
+        renderSwitches(); hideTip(); ({ scatter: renderScatter, slopes: renderSlopes, plate: renderPlate })[v]();
+      }));
+    });
+  }
+
+  /* ---------- text, winners ---------- */
+  function renderText() {
+    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${esc(S(s).label.toLowerCase())} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
+    $("#abstract").textContent = D.sentences.abstract || "";
+    $("#t1").textContent = D.sentences.map || "";
+    $("#t2").textContent = D.sentences.forest || "";
+    $("#t4").textContent = D.sentences.strip || "";
+  }
+  function renderWinners() {
+    const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
+    $("#winners").innerHTML = titles.map((t) => {
+      let why = "";
+      const blocks = SETS.map((s) => {
+        const p = S(s).pillars.find((x) => x.title === t);
+        if (!p) return `<div class="pset"><div class="sl">${esc(S(s).label)}: no setup has a deciding run here yet</div></div>`;
+        why = p.why;
+        const L = p.lead, iv = L.iv;
+        const tied = p.tied.length ? `Tied within the interval: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} (${P(x.v)}%)`).join(", ")}.` : "No setup ties it within the interval.";
+        const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, ${P(p.contrast[1])}%.</div>` : "";
+        return `<div class="pset"><div class="sl">${esc(S(s).label)}, ${p.n} questions</div>
+          <div class="lead"><span class="num">${P(iv[0])}%<small>[${P(iv[1])}, ${P(iv[2])}]</small></span><span class="who"><span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag">${esc(L.partial)}</span>` : ""}</span></div>
+          <div class="tied">${tied}</div>${ctr}</div>`;
+      }).join("");
+      return `<div class="pillar"><h3>${esc(t)}</h3><p class="why">${esc(why)}</p>${blocks}</div>`;
+    }).join("");
+  }
+
+  /* ---------- Figure 1: decision map, both sets ---------- */
+  function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
+  function unionKeys() {
+    const keys = new Map();
+    SETS.forEach((s) => S(s).rows.filter((r) => r.plotted).forEach((r) => { if (!keys.has(r.key)) keys.set(r.key, { key: r.key, arm: r.arm, any: r }); }));
+    return [...keys.values()];
+  }
+  function primaryKey(arm) {
+    for (const s of SETS) { const r = S(s).rows.find((x) => x.arm === arm && x.deciding); if (r) return r.key; }
+    for (const s of SETS) { const r = S(s).rows.find((x) => x.arm === arm && x.primary); if (r) return r.key; }
+    return null;
+  }
+  function renderMap() {
+    const U = unionKeys();
+    const best = {};
+    SETS.forEach((s) => { best[s] = {}; D.groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0]); best[s][g.key] = v.length ? Math.max(...v) : null; }); });
+    const setsSub = SETS.map((s) => short(s)).join(", then ");
+    let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
+    D.groups.forEach((g) => (h += `<th scope="col" class="g">${g.label}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
+    h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">Confident-wrong<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
+    const ncol = 4 + D.groups.length;
+    D.ladder.forEach((L) => {
+      const arms = L.arms.filter((a) => U.some((u) => u.arm === a));
+      if (L.key === "L8") { h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">Rung 8. ${esc(L.label)}</th></tr>`; return; }
+      if (!arms.length) return;
+      h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</th></tr>`;
+      arms.forEach((a) => {
+        const pk = primaryKey(a);
+        const list = U.filter((u) => u.arm === a).sort((x, y) => (y.key === pk) - (x.key === pk));
+        list.forEach((u) => {
+          const sub = u.key !== pk; const others = list.length - 1;
+          const rs = SETS.map((s) => rowOf(s, u.key));
+          const any = rs.find(Boolean);
+          const tags = [];
+          rs.forEach((r, i) => { if (r && r.partial) tags.push(`<span class="flag">${SETS.length > 1 ? short(SETS[i]) + ": " : ""}${esc(r.partial)}</span>`); });
+          if (any.status === "pending") tags.push(`<span class="flag pend">pending: deciding run</span>`);
+          if (any.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
+          rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
+          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : ""}>`;
+          h += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(a)}" tabindex="0">${esc(a)}</span>`}<span class="mdl">${shapeKey(any.role, famC(any.family))}${esc(any.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
+          h += `<td class="what">${sub ? "" : esc(descOf(a))}</td>`;
+          D.groups.forEach((g) => {
+            h += `<td class="g">` + rs.map((r, i) => {
+              const v = r && r.groups[g.key];
+              if (!v) return `<span class="ch none" title="${r ? "no question of this group in the pass" : "not run on the " + esc(short(SETS[i])) + " set"}">–</span>`;
+              const isBest = r.primary && r.family !== "ref" && v[0] === best[SETS[i]][g.key];
+              return `<span class="ch b${bin(v[0])}${isBest ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g.key}">${P(v[0])}</span>`;
+            }).join("") + `</td>`;
+          });
+          ["acc", "cw"].forEach((k) => {
+            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>[${P(r[k][1])}, ${P(r[k][2])}]</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
+          });
+          h += `</tr>`;
+        });
+      });
+    });
+    h += `</tbody>`;
+    const t = $("#map"); t.innerHTML = h;
+    t.querySelectorAll("button.more").forEach((b) => b.addEventListener("click", () => {
+      const a = b.dataset.arm; const open = b.getAttribute("aria-expanded") !== "true";
+      const subs = t.querySelectorAll(`tr.sub[data-arm-row="${CSS.escape(a)}"]`);
+      subs.forEach((tr) => (tr.hidden = !open));
+      b.setAttribute("aria-expanded", String(open)); b.textContent = open ? "hide" : "+" + subs.length + (subs.length > 1 ? " models" : " model");
+    }));
+    $("#leg1").innerHTML = legendRoles() + `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span>` + (SETS.length > 1 ? `<span class="k">F frozen set, H hard set</span>` : "");
+  }
+
+  /* ---------- helpers ---------- */
+  const lin = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
+  function vgrid(x, a, b, minor, major, top, bottom) {
+    let g = "";
+    for (let v = a; v <= b + 1e-9; v += minor) { const maj = Math.abs(v / major - Math.round(v / major)) < 1e-6; g += `<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${bottom}" stroke="${maj ? "var(--grid-major)" : "var(--grid)"}"/>`; }
+    return g;
+  }
+  const famRows = (rows) => famsPresent(rows).map((f) => ({ f, rows: rows.filter((r) => r.family === f) }));
+
+  /* ---------- Figure 2: forest, both sets, two framed panels ---------- */
+  function renderForest() {
+    const el = $("#forest"); const W = Math.max(320, el.clientWidth); const narrow = W < 700;
+    const U = unionKeys();
+    const repr = (u) => SETS.map((s) => rowOf(s, u.key)).filter((r) => r && r.plotted);
+    const groups = famRows(U.map((u) => u.any)).map((g) => ({ f: g.f, keys: U.filter((u) => u.any.family === g.f).sort((a, b) => { const ra = repr(a)[0], rb = repr(b)[0]; return rb.acc[0] - ra.acc[0]; }) }));
+    const cwMax = Math.min(1, Math.ceil(Math.max(...Object.values(ALL).filter((r) => r.plotted).map((r) => r.cw[2])) * 10 + 0.5) / 10);
+    const panels = [{ k: "acc", title: "Right, % of runs", axis: "% of runs right, mean and 95% interval", max: 1, minor: 0.02, major: 0.1, ticks: narrow ? [0, .5, 1] : [0, .2, .4, .6, .8, 1] },
+                    { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, ticks: [] }];
+    for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : 0.05) panels[1].ticks.push(+v.toFixed(2));
+    const rh = narrow ? 36 : 30, gh = 28, top = narrow ? 62 : 46;
+    function build(list, x0all, wall) {
+      // list: panels to draw side by side
+      const L = narrow ? 132 : 330, gap = 40;
+      const pw = (wall - L - gap * (list.length - 1) - 10) / list.length;
+      let y = top; const pos = [];
+      groups.forEach((g) => { pos.push({ head: g.f, y: y + 18 }); y += gh; g.keys.forEach((u) => { pos.push({ u, y: y + rh / 2 }); y += rh; }); });
+      const H = y + 44;
+      let o = `<svg viewBox="0 0 ${wall} ${H}" role="img" aria-label="${list.map((p) => p.title).join(" and ")} per setup and model, both question sets">`;
+      list.forEach((p, i) => {
+        const px0 = L + i * (pw + gap) + 8, px1 = px0 + pw - 16;
+        p.x = lin(0, p.max, px0, px1);
+        o += `<rect class="frame" x="${px0 - 8}" y="${top - (narrow ? 46 : 30)}" width="${pw}" height="${H - top + (narrow ? 18 : 2)}" rx="2"/>`;
+        o += `<text x="${px0}" y="${top - (narrow ? 30 : 13)}" class="t-strong">${esc(p.title)}</text>`;
+        o += vgrid(p.x, 0, p.max, p.minor, p.major, top - 4, H - 40);
+        p.ticks.forEach((v) => (o += `<text x="${p.x(v)}" y="${H - 24}" text-anchor="middle" class="t-mute">${P(v)}</text>`));
+        o += `<text x="${px0}" y="${H - 8}" class="t-mute" style="font-size:11.5px">${esc(narrow ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis)}</text>`;
+        if (p.k === "acc") {
+          const lines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
+          lines.forEach((m) => (o += `<line x1="${p.x(m.v)}" x2="${p.x(m.v)}" y1="${top - 4}" y2="${H - 40}" stroke="${m.si ? "var(--ink-3)" : "var(--ink-2)"}" stroke-width="1"${m.si ? ' stroke-dasharray="1 3"' : ""}/>`));
+          if (lines.length) o += `<text x="${narrow ? px0 : px1}" y="${top - 13}" text-anchor="${narrow ? "start" : "end"}" class="t-mute" style="font-size:11.5px">managed best: ${lines.map((m) => `${short(m.s)} ${P(m.v)}`).join(", ")}</text>`;
+        }
+      });
+      pos.forEach((q) => {
+        if (q.head) {
+          o += `<g data-fam="${q.head}"><line x1="0" x2="16" y1="${q.y - 4}" y2="${q.y - 4}" stroke="${famC(q.head)}" stroke-width="2.5" stroke-linecap="round"/><text x="22" y="${q.y}" class="t-strong">${esc(D.familyLabel[q.head] || q.head)}</text></g>`;
+          return;
+        }
+        const u = q.u; const rs = SETS.map((s) => rowOf(s, u.key)); const any = u.any; const c = famC(any.family);
+        o += `<g class="mk" data-key="${esc(u.key)}" data-arm="${esc(u.arm)}" data-fam="${any.family}">`;
+        const tg = [rs.some((r) => r && r.partial) ? "partial" : null, any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
+        if (narrow) o += `<text x="0" y="${q.y - 3}" class="t-id" data-setup="${esc(u.arm)}" data-arm="${esc(u.arm)}" tabindex="0">${esc(u.arm)}</text><text x="0" y="${q.y + 11}" style="font-size:11.5px">${esc(any.modelLabel)}${tg ? `<tspan class="t-mute">, ${esc(tg.replace("pending: deciding run", "pending"))}</tspan>` : ""}</text>`;
+        else o += `<text x="0" y="${q.y + 4}" class="t-id" data-setup="${esc(u.arm)}" data-arm="${esc(u.arm)}" tabindex="0">${esc(u.arm)}</text><text x="150" y="${q.y + 4}">${esc(any.modelLabel)}${tg ? `<tspan class="t-mute">, ${esc(tg)}</tspan>` : ""}</text>`;
+        rs.forEach((r, si) => {
+          if (!r || !r.plotted) return;
+          const yy = q.y + (SETS.length > 1 ? (si ? 6 : -6) : 0);
+          o += `<g data-tip="${esc(r.id)}" tabindex="0" aria-label="${esc(label(r) + ", " + S(r.set).label + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong")}">`;
+          o += `<rect class="hit" x="${L - 4}" y="${yy - 6}" width="${wall - L + 4}" height="12"/>`;
+          list.forEach((p) => {
+            const v = r[p.k]; const dash = r.major ? ' stroke-dasharray="3 3"' : "";
+            o += `<line x1="${p.x(v[1])}" x2="${p.x(Math.min(p.max, v[2]))}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="${si ? 1.5 : 2}" stroke-linecap="round"${dash}/>`;
+            o += shape(r.role, p.x(v[0]), yy, c, si ? 3.5 : 4.2, si > 0);
+          });
+          o += `</g>`;
+        });
+        o += `</g>`;
+      });
+      return o + `</svg>`;
+    }
+    el.innerHTML = narrow ? `<div class="stack">${build([panels[0]], 0, W)}</div><div class="stack">${build([panels[1]], 0, W)}</div>` : build(panels, 0, W);
+    $("#leg2").innerHTML = legendFams(Object.values(ALL)) + legendRoles() + (SETS.length > 1 ? `<span class="k">each row: upper mark frozen set, lower mark (hollow) hard set</span>` : "");
+  }
+
+  /* ---------- Figure 3: scatter (one set) ---------- */
+  function renderScatter() {
+    const s = view.scatter; const el = $("#scatter"); const W = Math.max(320, el.clientWidth);
+    const rows = S(s).rows.filter((r) => r.plotted);
+    const H = Math.round(W < 640 ? W * 1.0 : Math.min(560, W * 0.48));
+    const m = { t: 14, r: 16, b: 46, l: 54 };
+    const xmin = Math.max(0, Math.floor(Math.min(...rows.map((r) => r.acc[1])) * 10) / 10);
+    const ymax = Math.max(0.1, Math.ceil(Math.max(...rows.map((r) => r.cw[2])) * 20) / 20);
+    const x = lin(xmin, 1, m.l, W - m.r), y = lin(0, ymax, m.t, H - m.b);
+    $("#t3").textContent = (D.sentences.scatter || {})[s] || "Accuracy against confident-wrong per setup and model.";
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accuracy against confident-wrong, ${esc(S(s).label)}">`;
+    o += vgrid(x, xmin, 1, 0.02, 0.1, m.t, H - m.b);
+    for (let v = 0; v <= ymax + 1e-9; v += 0.01) { const maj = Math.round(v * 100) % 5 === 0; o += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="${maj ? "var(--grid-major)" : "var(--grid)"}"/>`; }
+    for (let v = Math.ceil(xmin * 10) / 10; v <= 1 + 1e-9; v += W < 640 ? 0.2 : 0.1) o += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle" class="t-mute">${P(v)}</text>`;
+    for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.25 ? 0.1 : 0.05) o += `<text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="t-mute">${P(v)}</text>`;
+    o += `<text x="${W - m.r}" y="${H - 6}" text-anchor="end" class="t-ink">Right, % of runs</text>`;
+    o += `<text transform="translate(14,${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle" class="t-ink">Confident-wrong, % of runs (lower is safer)</text>`;
+    const mb = byId(S(s).managedBest);
+    if (mb) o += `<line x1="${x(mb.acc[0])}" x2="${x(mb.acc[0])}" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink-3)" stroke-dasharray="1 3"/>`;
+    const order = rows.slice().sort((a, b) => (b.primary - a.primary));
+    order.reverse().forEach((r) => {
+      const c = famC(r.family), dash = r.major ? ' stroke-dasharray="3 3"' : "";
+      o += `<g class="mk" data-key="${esc(r.key)}" data-arm="${esc(r.arm)}" data-fam="${r.family}"><g data-tip="${esc(r.id)}" tabindex="0" aria-label="${esc(label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong")}">`;
+      o += `<line x1="${x(r.acc[1])}" x2="${x(r.acc[2])}" y1="${y(r.cw[0])}" y2="${y(r.cw[0])}" stroke="${c}" stroke-width="1.4"${dash}/>`;
+      o += `<line x1="${x(r.acc[0])}" x2="${x(r.acc[0])}" y1="${y(r.cw[1])}" y2="${y(r.cw[2])}" stroke="${c}" stroke-width="1.4"${dash}/>`;
+      o += `<circle class="hit" cx="${x(r.acc[0])}" cy="${y(r.cw[0])}" r="12"/>` + shape(r.role, x(r.acc[0]), y(r.cw[0]), c, 5);
+      o += `</g></g>`;
+    });
+    const mf = byId(S(s).mf); const labs = [];
+    [[mb, "managed best"], [mf, "decides"]].forEach(([r, why]) => { if (!r) return; labs.push({ r, txt: `${r.arm}, ${r.modelLabel}`, why }); });
+    let prev = null;
+    labs.forEach((L) => {
+      const px = x(L.r.acc[0]), py = y(L.r.cw[0]); const right = px < W * 0.62;
+      let ly = py + (L.why === "decides" ? 20 : -12);
+      if (prev && Math.abs(prev - ly) < 16) ly = prev + 16; prev = ly;
+      o += `<g class="mk" data-key="${esc(L.r.key)}" data-arm="${esc(L.r.arm)}" data-fam="${L.r.family}"><text x="${px + (right ? 10 : -10)}" y="${ly}" text-anchor="${right ? "start" : "end"}" class="t-strong" style="font-size:12px;paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round" data-setup="${esc(L.r.arm)}" data-arm="${esc(L.r.arm)}" tabindex="0">${esc(L.txt)}</text></g>`;
+    });
+    o += `</svg>`; el.innerHTML = o;
+    $("#leg3").innerHTML = legendFams(rows) + legendRoles();
+  }
+
+  /* ---------- Figure 4: strip plot by question group, both sets ---------- */
+  function renderStrip() {
+    const el = $("#strip"); const W = Math.max(320, el.clientWidth); const narrow = W < 640;
+    const Lw = narrow ? 104 : 150, lane = 11, m = { r: 14 };
+    const x = lin(0, 1, Lw + 10, W - m.r - 6);
+    let y = 22; const blocks = [];
+    D.groupsAll.forEach((g) => {
+      const subs = SETS.filter((s) => S(s).rows.some((r) => r.plotted && r.groups[g.key]));
+      if (!subs.length) return;
+      const b = { g, y0: y, subs: [] }; y += 18;
+      subs.forEach((s) => { const fams = famsPresent(S(s).rows.filter((r) => r.plotted && r.groups[g.key])); b.subs.push({ s, y0: y, fams }); y += fams.length * lane + 10; });
+      b.y1 = y; y += 10; blocks.push(b);
+    });
+    const H = y + 34;
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share right by question group, both question sets">`;
+    o += vgrid(x, 0, 1, 0.05, 0.25, 14, H - 34);
+    [0, .25, .5, .75, 1].forEach((v) => { o += `<text x="${x(v)}" y="${H - 18}" text-anchor="middle" class="t-mute">${P(v)}</text><text x="${x(v)}" y="10" text-anchor="middle" class="t-mute">${P(v)}</text>`; });
+    o += `<text x="${W - m.r}" y="${H - 2}" text-anchor="end" class="t-ink">Share of runs right, %</text>`;
+    blocks.forEach((b) => {
+      o += `<line x1="0" x2="${W}" y1="${b.y0 - 4}" y2="${b.y0 - 4}" stroke="var(--rule)"/>`;
+      o += `<text x="0" y="${b.y0 + 10}" class="t-strong">${esc(b.g.label)}</text>`;
+      b.subs.forEach((sb) => {
+        const n = S(sb.s).groupCases[b.g.key] || 0; const thin = n < 10;
+        o += `<text x="0" y="${sb.y0 + (sb.fams.length * lane) / 2 + 4}" class="t-mute" style="font-size:12px">${esc(short(sb.s))}, ${n} q</text>`;
+        sb.fams.forEach((f, fi) => {
+          const ly = sb.y0 + fi * lane + lane / 2;
+          o += `<line x1="${x(0)}" x2="${x(1)}" y1="${ly}" y2="${ly}" stroke="var(--grid)"/>`;
+          S(sb.s).rows.filter((r) => r.plotted && r.family === f && r.groups[b.g.key]).sort((a, c) => a.primary - c.primary).forEach((r) => {
+            const px = x(r.groups[b.g.key][0]);
+            o += `<g class="mk" data-key="${esc(r.key)}" data-arm="${esc(r.arm)}" data-fam="${f}"><g data-tip="${esc(r.id)}" data-g="${b.g.key}" tabindex="0" aria-label="${esc(label(r) + ", " + b.g.label + ": " + P(r.groups[b.g.key][0]) + "%")}" opacity="${thin ? 0.5 : 1}"><circle class="hit" cx="${px}" cy="${ly}" r="7"/>${shape(r.role, px, ly, famC(f), 3.6)}</g></g>`;
+          });
+        });
+      });
+    });
+    o += `</svg>`; el.innerHTML = o;
+    $("#leg4").innerHTML = legendFams(Object.values(ALL)) + legendRoles();
+  }
+
+  /* ---------- Figure 5: slopes (one set), larger ---------- */
+  const shortArm = (a) => a.replace("native-", "").replace("custom-", "");
+  const shortModel = (r) => r.modelLabel.replace("Nemotron free", "free").replace("Claude Code ", "CC ").replace("Gemini ", "").replace(", fresh sessions", " fresh");
+  function renderSlopes() {
+    const s = view.slopes; const el = $("#slopes"); const W = Math.max(320, el.clientWidth);
+    const cols = W >= 760 ? 2 : 1; const gapX = 36, gapY = 40;
+    const pw = (W - gapX * (cols - 1)) / cols, ph = cols === 2 ? 360 : 330;
+    const keys = ["covered", "trap", "uncovered"], names = ["Covered", "Hidden-rule", "Uncovered"];
+    const rows = S(s).rows.filter((r) => r.plotted && keys.every((k) => r.groups[k]));
+    const mb = byId(S(s).managedBest);
+    const panels = famRows(rows);
+    const nR = Math.ceil(panels.length / cols), H = nR * (ph + gapY);
+    $("#t5").textContent = (D.sentences.slope || {})[s] || "Share right on covered, hidden-rule and uncovered questions.";
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share right on covered, hidden-rule and uncovered questions, ${esc(S(s).label)}">`;
+    panels.forEach((p, i) => {
+      const cx = (i % cols) * (pw + gapX), cy = Math.floor(i / cols) * (ph + gapY);
+      const lw = Math.min(200, pw * 0.4); const x0 = cx + 34, x1 = cx + pw - lw - 10, t = cy + 44, b = cy + ph - 36;
+      const xs = keys.map((_, j) => x0 + (j * (x1 - x0)) / 2); const y = lin(0, 1, b, t);
+      o += `<g data-fam="${p.f}"><text x="${cx}" y="${cy + 14}" class="t-strong">${esc(D.familyLabel[p.f] || p.f)}</text></g><text x="${cx}" y="${cy + 30}" class="t-mute" style="font-size:11.5px">% of runs right</text>`;
+      for (let v = 0; v <= 1.0001; v += 0.05) { const maj = Math.round(v * 100) % 25 === 0; o += `<line x1="${x0}" x2="${x1}" y1="${y(v)}" y2="${y(v)}" stroke="${maj ? "var(--grid-major)" : "var(--grid)"}"/>`; }
+      [0, .25, .5, .75, 1].forEach((v) => (o += `<text x="${x0 - 7}" y="${y(v) + 4}" text-anchor="end" class="t-mute">${P(v)}</text>`));
+      xs.forEach((xx, j) => { o += `<line x1="${xx}" x2="${xx}" y1="${t - 4}" y2="${b}" stroke="var(--ink-3)"/><text x="${xx}" y="${b + (j === 1 ? 30 : 16)}" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}" dx="${j === 0 ? -8 : j === 2 ? 8 : 0}" class="t-ink">${names[j]}</text>`; });
+      const lab = p.rows.map((r) => ({ r, y: y(r.groups.uncovered[0]) }));
+      if (mb && p.f !== mb.family && mb.groups.uncovered) { lab.push({ ghost: true, y: y(mb.groups.uncovered[0]) }); o += `<polyline points="${keys.map((k, j) => `${xs[j]},${y(mb.groups[k][0])}`).join(" ")}" fill="none" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/>`; }
+      lab.sort((a, c) => c.y - a.y);
+      for (let k = 1; k < lab.length; k++) if (lab[k - 1].y - lab[k].y < 13) lab[k].y = lab[k - 1].y - 13;
+      const over = lab.length ? Math.min(0, lab[lab.length - 1].y - (t - 6)) : 0; if (over < 0) lab.forEach((l) => (l.y -= over));
+      const gl = lab.find((l) => l.ghost); if (gl) o += `<text x="${xs[2] + 10}" y="${gl.y + 4}" class="t-mute" style="font-size:11.5px">managed best ${P(mb.groups.uncovered[0])}</text>`;
+      p.rows.slice().sort((a, c) => a.primary - c.primary).forEach((r) => {
+        const c = famC(r.family); const pts = keys.map((k, j) => `${xs[j]},${y(r.groups[k][0])}`).join(" ");
+        o += `<g class="mk" data-key="${esc(r.key)}" data-arm="${esc(r.arm)}" data-fam="${r.family}">`;
+        o += `<g data-tip="${esc(r.id)}" tabindex="0" aria-label="${esc(label(r) + ": covered " + P(r.groups.covered[0]) + "%, hidden-rule " + P(r.groups.trap[0]) + "%, uncovered " + P(r.groups.uncovered[0]) + "%")}"><polyline points="${pts}" fill="none" stroke="transparent" stroke-width="12" style="pointer-events:stroke"/>`;
+        o += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${r.primary ? 2.25 : 1.5}" stroke-linejoin="round"${r.major ? ' stroke-dasharray="3 3"' : ""}/>`;
+        keys.forEach((k, j) => (o += shape(r.role, xs[j], y(r.groups[k][0]), c, r.primary ? 4 : 3)));
+        o += `</g>`;
+        const l = lab.find((q) => q.r === r);
+        o += `<text x="${xs[2] + 10}" y="${l.y + 4}" style="font-size:11.5px" class="${r.primary ? "t-ink" : "t-mute"}" data-setup="${esc(r.arm)}" data-key="${esc(r.key)}" tabindex="0">${esc(shortArm(r.arm))} ${esc(shortModel(r))} ${P(r.groups.uncovered[0])}${r.status === "pending" ? " (pending)" : ""}</text></g>`;
+      });
+    });
+    o += `</svg>`; el.innerHTML = o;
+    $("#leg5").innerHTML = legendRoles() + `<span class="k"><svg width="22" height="6" aria-hidden="true"><line x1="1" y1="3" x2="21" y2="3" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/></svg>managed best</span><span class="k">labels: setup, model, % right on uncovered</span>`;
+  }
+
+  /* ---------- Figure 6: unit plate in ladder order (one set) ---------- */
+  const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  let C = {}; let plateState = null;
+  function readColors() { const cs = getComputedStyle(document.documentElement); ["o-right", "o-decl", "o-wrong", "o-cw", "o-none", "band", "paper"].forEach((k) => (C[k] = cs.getPropertyValue("--" + k).trim())); }
+  function glyph(ctx, x, y, s, ch) {
+    if (ch === ".") { ctx.fillStyle = C["o-none"]; ctx.fillRect(x + s / 2 - 1, y + s / 2 - 1, 2, 2); return; }
+    const o = +ch;
+    if (o === 0) { ctx.fillStyle = C["o-right"]; ctx.fillRect(x, y, s, s); }
+    else if (o === 1) { ctx.strokeStyle = C["o-decl"]; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, s - 1, s - 1); }
+    else if (o === 2) { ctx.fillStyle = C["o-wrong"]; ctx.fillRect(x, y + s / 2, s, s / 2); ctx.strokeStyle = C["o-wrong"]; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, s - 1, s - 1); }
+    else if (o === 3) { ctx.strokeStyle = C["o-decl"]; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, s - 1, s - 1); ctx.fillStyle = C["o-decl"]; ctx.fillRect(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5); }
+    else { ctx.fillStyle = C["o-cw"]; ctx.fillRect(x - .5, y - .5, s + 1, s + 1); }
+  }
+  function swatch(ch) { return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`}</svg>`; }
+  function setupCanvas(cv, w, h) { const dpr = Math.max(1, window.devicePixelRatio || 1); cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + "px"; cv.style.height = h + "px"; const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h); return ctx; }
+  function plateGeom(s, avail) {
+    const cases = S(s).cases; const narrow = avail < 700;
+    const floor = byId(S(s).floor);
+    const score = (ci) => { if (!floor) return 0; const u = floor.units.slice(ci * 3, ci * 3 + 3); let v = 0; for (const ch of u) { if (ch === "0") v += 100; else if (ch === "1") v += 1; else if (ch === "4") v -= 1; } return v; };
+    const bOrder = D.buckets.map((b) => b.key);
+    const order = cases.map((c, i) => i).sort((a, b) => bOrder.indexOf(cases[a].b) - bOrder.indexOf(cases[b].b) || score(a) - score(b) || a - b);
+    const LW = narrow ? 156 : 232, IW = narrow ? 120 : 168, CWW = narrow ? 110 : 150, gap = narrow ? 5 : 7;
+    const nb = new Set(cases.map((c) => c.b)).size;
+    let pitch = Math.floor((avail - LW - IW - CWW - 16 - nb * gap) / Math.max(1, cases.length));
+    pitch = Math.max(5, Math.min(9, pitch));
+    const xs = new Map(); const bands = []; let x = 0, prev = null;
+    order.forEach((ci) => { const b = cases[ci].b; if (prev !== null && b !== prev) x += gap; if (b !== prev) bands.push({ b, x, n: 0 }); bands[bands.length - 1].n++; xs.set(ci, x); x += pitch; prev = b; });
+    bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
+    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
+  }
+  function drawUnits(cv, r, G, hover) {
+    const ctx = setupCanvas(cv, G.UW, G.h); const s = G.pitch - 1;
+    if (hover != null && G.xs.has(hover)) { ctx.fillStyle = C.band; ctx.fillRect(G.xs.get(hover) - 1, 0, G.pitch + 1, G.h); }
+    G.order.forEach((ci) => { const x = G.xs.get(ci); for (let k = 0; k < 3; k++) glyph(ctx, x, G.h - (k + 1) * G.pitch + 1, s, r.units[ci * 3 + k] || "."); });
+  }
+  function miniIv(v, w, h, dom, kind, partial) {
+    const pr = w - 46; const x = lin(dom[0], dom[1], 8, pr);
+    let o = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true" style="display:block;overflow:visible">`;
+    if (kind === "inc") o += `<line x1="${x(0)}" x2="${x(0)}" y1="2" y2="${h - 2}" stroke="var(--ink-3)"/>`;
+    else o += `<line x1="${x(0)}" x2="${x(0)}" y1="2" y2="${h - 2}" stroke="var(--grid-major)"/>`;
+    if (!v) return o + `<text x="${w - 6}" y="${h / 2 + 4}" text-anchor="end" fill="var(--ink-3)" font-size="12">–</text></svg>`;
+    const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const y = h / 2; const cl = (q) => Math.max(dom[0], Math.min(dom[1], q));
+    o += `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`;
+    o += `<circle cx="${x(cl(v[0]))}" cy="${y}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`;
+    o += `<text x="${w - 6}" y="${y + 4}" text-anchor="end" fill="var(--ink)" font-size="12.5" font-family="var(--label)">${kind === "inc" ? sg(v[0]) : P(v[0]) + "%"}</text>`;
+    return o + `</svg>`;
+  }
+  function renderPlate() {
+    readColors();
+    const s = view.plate; const body = $("#plate-body"), head = $("#plate-head");
+    const G = plateGeom(s, body.clientWidth || 1100);
+    const rowsAll = S(s).rows;
+    const floor = byId(S(s).floor);
+    const incs = rowsAll.filter((r) => r.plotted && r.vsFloor && r.vsFloor.acc).flatMap((r) => [r.vsFloor.acc[1], r.vsFloor.acc[2]]);
+    const D1 = incs.length ? Math.min(1, Math.ceil(Math.max(...incs.map(Math.abs)) * 10) / 10) : 0.5;
+    const cwMax = Math.min(1, Math.ceil(Math.max(0.1, ...rowsAll.filter((r) => r.plotted).map((r) => r.cw[2])) * 10) / 10);
+    let total = G.LW + G.UW + 16 + G.IW + G.CWW;
+    const availW = body.clientWidth || total; if (total < availW) { G.CWW += availW - total; total = availW; }
+    $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
+    const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
+    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:44px">`;
+    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${esc(bk.label)}<small>${b.n} q</small></span>`; });
+    hh += `</div><div style="width:${G.IW}px">Over the floor<small>points right, paired</small></div><div style="width:${G.CWW}px">Confident-wrong<small>% of runs, 95%</small></div></div>`;
+    head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
+    let bh = "";
+    D.ladder.forEach((L) => {
+      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div>Rung 8. ${esc(L.label)}</div></div>`; return; }
+      const rs = rowsAll.filter((r) => L.arms.includes(r.arm)).sort((a, b) => L.arms.indexOf(a.arm) - L.arms.indexOf(b.arm) || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs);
+      if (!rs.length) return;
+      bh += `<div class="prow step" style="width:${total}px"><div>${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
+      rs.forEach((r) => {
+        const tg = tagText(r);
+        bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}">${esc(tg)}</span>` : ""}</div>`;
+        bh += `<div class="pu" style="width:${G.UW + 16}px"><canvas data-row="${esc(r.id)}" tabindex="0" role="img" aria-label="${esc(label(r))}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs"></canvas></div>`;
+        bh += `<div class="pc" style="width:${G.IW}px" data-tip="${esc(r.id)}">${r === floor ? `<span class="pnote">floor, ${P(r.acc[0])}% right</span>` : !r.plotted ? `<span class="pnote">too few questions</span>` : miniIv(r.vsFloor && r.vsFloor.acc, G.IW, G.h + 8, [-D1, D1], "inc", r.major)}</div>`;
+        bh += `<div class="pc" style="width:${G.CWW}px" data-tip="${esc(r.id)}">${r.plotted ? miniIv(r.cw, G.CWW, G.h + 8, [0, cwMax], "cw", r.major) : `<span class="pnote">too few questions</span>`}</div></div>`;
+      });
+    });
+    body.innerHTML = `<div style="width:${total}px">${bh}</div>`;
+    plateState = { G, s, hover: null, cvs: [...body.querySelectorAll("canvas[data-row]")] };
+    plateState.cvs.forEach((cv) => drawUnits(cv, byId(cv.dataset.row), G, null));
+    body.onscroll = () => { head.scrollLeft = body.scrollLeft; };
+    head.scrollLeft = body.scrollLeft;
+    plateState.cvs.forEach((cv) => {
+      const r = byId(cv.dataset.row);
+      const at = (ci, k, cx, cy) => {
+        const c = S(s).cases[ci]; const u = r.units.slice(ci * 3, ci * 3 + 3); const ch = u[k] || ".";
+        const right = [...u].filter((q) => q === "0").length, ran = [...u].filter((q) => q !== ".").length;
+        const bk = D.buckets.find((x) => x.key === c.b);
+        if (plateState.hover !== ci) { plateState.hover = ci; plateState.cvs.forEach((o) => drawUnits(o, byId(o.dataset.row), G, ci)); }
+        tipEl = cv; showTipHTML(`<h4><span class="id">${esc(c.id)}</span>, ${esc(bk ? bk.label.toLowerCase() : c.b)}</h4><p>${esc(c.q || "")}</p><dl><dt>This run</dt><dd>${ch === "." ? "not run yet" : esc(OUTN[+ch])}</dd><dt>This question</dt><dd>${right} of ${ran} runs right</dd><dt>Setup</dt><dd>${esc(label(r))}</dd></dl>`, cx, cy);
+      };
+      const hit = (ev) => { const b = cv.getBoundingClientRect(); const x = ev.clientX - b.left, y = ev.clientY - b.top; let ci = null; for (const [k, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) { ci = k; break; } const k = Math.max(0, Math.min(2, Math.floor((G.h - y) / G.pitch))); return { ci, k }; };
+      cv.onpointermove = (ev) => { const h = hit(ev); if (h.ci == null) return; at(h.ci, h.k, ev.clientX, ev.clientY); };
+      cv.onpointerleave = () => { plateState.hover = null; plateState.cvs.forEach((o) => drawUnits(o, byId(o.dataset.row), G, null)); hideTip(); };
+      cv.onkeydown = (ev) => {
+        if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return; ev.preventDefault();
+        const i = plateState.hover == null ? 0 : G.order.indexOf(plateState.hover) + (ev.key === "ArrowRight" ? 1 : -1);
+        const ci = G.order[Math.max(0, Math.min(G.order.length - 1, i))]; const b = cv.getBoundingClientRect();
+        at(ci, 0, b.left + G.xs.get(ci), b.bottom);
+      };
+    });
+    $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
+  }
+
+  function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  $("#toggleall").addEventListener("click", (e) => { showAll = !showAll; e.currentTarget.setAttribute("aria-expanded", String(showAll)); e.currentTarget.textContent = showAll ? "Show one model per setup" : "Show every model"; renderMap(); });
+  let rt, lastW = window.innerWidth;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderPlate()); } catch (e) {}
+  renderSwitches(); renderAll();
+})();
+</script>
