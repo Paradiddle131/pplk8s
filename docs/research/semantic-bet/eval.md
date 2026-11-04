@@ -4,7 +4,7 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-03T23:37Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T00:09Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -161,24 +161,24 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set
 
-Written 2026-11-03T23:37Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 43 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T00:09Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 43 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 2 run(s) of 43 of 43 cases; runs finished: native-context 129 of 129, native-governed 129 of 129, native-graph 128 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-context 142, native-governed 141, native-graph 140, native-kc 141, native-shaped 141.
+Scored on all 3 runs of every case; runs finished: native-context-bare 129 of 129, native-context 129 of 129, native-governed 129 of 129, native-graph 129 of 129, native-kc-reach 129 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-context-bare 141, native-context 142, native-governed 141, native-graph 141, native-kc-reach 141, native-kc 141, native-shaped 141.
 
-| | `native-context` | `native-governed` | `native-graph` | `native-kc` | `native-shaped` |
-|---|---|---|---|---|---|
-| Accuracy | 91.9% | 70.9% | 53.5% | 62.8% | 58.1% |
-| Confident-wrong | 0.0% | 1.2% | 16.3% | 12.8% | 15.1% |
-| pass^2 | 90.7% | 65.1% | 48.8% | 58.1% | 55.8% |
-| `conversation` (8) accuracy | 56.2% | 68.8% | 43.8% | 50.0% | 37.5% |
-| `covered` (24) accuracy | 85.4% | 87.5% | 58.3% | 66.7% | 52.1% |
-| `trap` (6) accuracy | 100.0% | 100.0% | 33.3% | 50.0% | 41.7% |
-| `uncovered` (19) accuracy | 100.0% | 50.0% | 47.4% | 57.9% | 65.8% |
+| | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-reach` | `native-kc` | `native-shaped` |
+|---|---|---|---|---|---|---|---|
+| Accuracy | 93.0% | 92.2% | 69.8% | 55.0% | 86.8% | 63.6% | 60.5% |
+| Confident-wrong | 0.0% | 0.0% | 1.6% | 17.8% | 6.2% | 13.2% | 14.0% |
+| pass^3 | 90.7% | 90.7% | 62.8% | 48.8% | 81.4% | 55.8% | 55.8% |
+| `conversation` (8) accuracy | 62.5% | 58.3% | 66.7% | 45.8% | 62.5% | 54.2% | 37.5% |
+| `covered` (24) accuracy | 87.5% | 86.1% | 86.1% | 61.1% | 83.3% | 66.7% | 54.2% |
+| `trap` (6) accuracy | 100.0% | 100.0% | 100.0% | 38.9% | 83.3% | 50.0% | 38.9% |
+| `uncovered` (19) accuracy | 100.0% | 100.0% | 49.1% | 47.4% | 91.2% | 59.6% | 68.4% |
 
 Turns still unclear after judging (counted as wrong):
 
@@ -200,14 +200,14 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 ### The rule across models
 
-The managed best (RULE.md § The rule, 1): `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, accuracy 91.9%.
+The managed best (RULE.md § The rule, 1): `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, accuracy 93.0%.
 No arm of ours (rung 3 or 4) is logged on any model: nothing to compare.
 
 ### The rule on both sets
 
 RULE.md § Changes since freezing (#356): each set goes through the rule on its own; an arm of ours is worth building only if step 2 holds on both sets, and where they disagree the cheaper rung wins, as a tie does.
 - The managed best on the frozen set: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 89.6%.
-- The managed best on the hard set: `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, 91.9%.
+- The managed best on the hard set: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 93.0%.
 It cannot apply yet: no arm of ours (rung 3 or 4) is logged on the hard set, so step 2 has not run on both sets; each set's own verdict above is provisional.
 - `custom-metricflow` on `nvidia/nemotron-3.5-super-vl:free` (decides): the frozen set: not worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
 - `custom-lightdash` on `nvidia/nemotron-3.5-super-vl:free` (decides): the frozen set: not worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
