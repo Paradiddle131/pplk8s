@@ -284,11 +284,12 @@ def test_the_anomaly_checks_fire_on_each_owner_condition():
     meter.start("p", budget=0.01, log=None)
     meter.record("claude-opus-5-5", Usage(input=10_000, output=1_000, calls=1))
     meter.failure("claude-opus-5-5", classify(RuntimeError("Your credit balance is too low")))
-    found = spend.anomalies(meter, 0.01, 81.0, {"claude-opus-5-5": 2_000})
+    found = spend.anomalies(meter, 0.01, 87.0, {"claude-opus-5-5": 2_000})
     assert any(f.startswith("over budget") for f in found)
     assert any("over 3 x the probe's per-case median" in f for f in found)
     assert any(f.startswith("billing error") for f in found)
-    assert any("past $80.00" in f for f in found)
+    assert any(f"past ${spend.ALARM:.2f}" in f for f in found)  # $90.00 less the unlogged spend
+    assert not any("past" in f for f in spend.anomalies(meter, 0.0, 86.0, {}))
 
 
 def test_a_pass_appends_its_row_to_the_ledger(tmp_path):
