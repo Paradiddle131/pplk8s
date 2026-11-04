@@ -42,7 +42,7 @@
 .sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--label); font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.3; }
 .sxb .sxb-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sxb .sxb-legend svg { flex: none; }
-.sxb .sxb-panel { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
+.sxb .sxb-panel { display: grid; align-content: start; align-items: start; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
 .sxb .sxb-panel h3 { font-family: var(--label); font-size: 14px; font-weight: 600; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
 .sxb .sxb-panel p { font-size: 15px; line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
 .sxb .sxb-panel .sxb-cap { font-family: var(--label); font-size: 13px; color: var(--ink-2); line-height: 1.4; margin: 6px 0 0; }
@@ -53,7 +53,7 @@
 .sxb .sxb-diff li.gone { color: var(--ink-3); }
 .sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
 .sxb .sxb-q { font-family: var(--serif); font-style: italic; }
-.sxb .sxb-seq svg { display: block; width: 100%; max-width: 460px; height: auto; }
+.sxb .sxb-seq svg { display: block; width: 100%; max-width: 390px; height: auto; }
 .sxb .sxb-fade { animation: sxb-in .32s ease-out; }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
 
@@ -132,7 +132,7 @@ window.reportReady(() => {
   const P = (k, title, lines, o) => Object.assign({ k, title, lines: lines || [] }, o || {});
   const M = (s) => ({ m: s });
   const AG = {
-    da: P("da", "Google's data agent", ["Conversational Analytics, managed by Google"]),
+    da: P("da", "Google's data agent", ["Conversational Analytics"]),
     adk: (role) => P("adk", "Our ADK agent", [role], { logo: "adk" }),
     cc: P("cc", "Claude Code subagent", ["another agent harness"]),
   };
@@ -279,24 +279,24 @@ window.reportReady(() => {
   function cardBox(p, w, opt) {
     opt = opt || {};
     const padR = p.logo ? 30 : 10; const inner = w - 10 - padR;
-    const tl = wrap(p.title, inner, p.mono ? "m" : "t");
+    const tl = wrap((opt.gone ? "dropped: " : "") + p.title, inner, p.mono ? "m" : "t");
     const ls = []; (p.lines || []).forEach((ln) => { const mono = typeof ln === "object"; wrap(mono ? ln.m : ln, w - 20, mono ? "m" : "l").forEach((t) => ls.push({ t, c: mono ? "m" : "l" })); });
-    let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 24 + (opt.model.extra ? 14 : 0) : 0) + 8;
+    const ml = opt.model ? wrap(opt.model.t, w - 32, "t").map((t) => ({ t, c: "t" })).concat(opt.model.extra ? wrap(opt.model.extra, w - 32, "l").map((t) => ({ t, c: "l" })) : []) : [];
+    let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 10 + ml.length * 14 : 0) + 8;
     h = Math.max(h, opt.min || 0);
-    return { tl, ls, h: Math.ceil(h / 2) * 2 };
+    return { tl, ls, ml, h: Math.ceil(h / 2) * 2 };
   }
   function cardNode(key, p, x, y, w, opt) {
     opt = opt || {};
     const b = cardBox(p, w, opt);
     let s = `<rect class="s-c${opt.add ? " add" : ""}${opt.gone ? " gone" : ""}" x=".5" y=".5" width="${w - 1}" height="${b.h - 1}" rx="2"/>`;
     let yy = 8;
-    b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m" : "s-t"}" x="10" y="${yy - 4}"${p.mono ? ' style="font-weight:600;font-size:12px"' : ""}>${esc(opt.gone && i === 0 ? "dropped: " + t : t)}</text>`; });
+    b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m" : "s-t"}" x="10" y="${yy - 4}"${p.mono ? ' style="font-weight:600;font-size:12px"' : ""}>${esc(t)}</text>`; });
     b.ls.forEach((l) => { yy += LH.l; s += `<text class="s-${l.c}" x="10" y="${yy - 3}">${esc(l.t)}</text>`; });
     if (opt.model) {
-      const my = yy + 8; const mh = 24 + (opt.model.extra ? 14 : 0);
+      const my = yy + 8; const mh = 10 + b.ml.length * 14;
       s += `<rect class="s-hb" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/><rect class="s-c${opt.modelAdd ? " add" : ""}" style="fill:none" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/>`;
-      s += `<text class="s-t s-halo" x="16" y="${my + 16}" style="font-size:12px">${esc(opt.model.t)}</text>`;
-      if (opt.model.extra) s += `<text class="s-l s-halo" x="16" y="${my + 30}">${esc(opt.model.extra)}</text>`;
+      b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 16 + i * 14}"${l.c === "t" ? ' style="font-size:12px"' : ""}>${esc(l.t)}</text>`; });
     }
     if (p.logo && LOGOS[p.logo]) s += `<svg x="${w - 22}" y="${8 + LH.t / 2 - 9}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[p.logo]}</svg>`;
     return { key, kind: "g", x, y, w, h: b.h, html: s, cls: opt.gone ? "s-gone" : "" };
@@ -305,10 +305,11 @@ window.reportReady(() => {
     opt = opt || {};
     const tx = 10 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
     let s = `<rect class="s-f${opt.screen ? " scr" : ""}${opt.ph ? " ph" : ""}" data-r="1" x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="2"/>`;
-    s += `<rect class="s-k" x="6" y="-8" width="${tx + ttw + nw - 2}" height="16"/>`;
-    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="10" y="-7" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
-    s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="4">${esc(title)}</text>`;
-    if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="4">${esc(opt.note)}</text>`;
+    const by = opt.bottom ? h : 0;
+    s += `<rect class="s-k" x="6" y="${by - 8}" width="${tx + ttw + nw - 2}" height="16"/>`;
+    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="10" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
+    s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="${by + 4}">${esc(title)}</text>`;
+    if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="${by + 4}">${esc(opt.note)}</text>`;
     return { key, kind: "f", x, y, w, h, html: s };
   }
   function edgeNode(key, pts, opt) {
@@ -328,7 +329,7 @@ window.reportReady(() => {
   /* ---------- the sheet's layout: wide (left to right) and narrow (top to bottom) ---------- */
   function build(S, wide) {
     const df = diffOf(S); const isAdd = (slot, p) => !!(df && df.added.has(slot + ":" + p.k));
-    const gone = (slot) => (df ? df.removed.filter((x) => x.slot === slot).map((x) => x.p) : []);
+    const gone = (slot) => (df && df.removed.length <= 2 ? df.removed.filter((x) => x.slot === slot).map((x) => x.p) : []);
     const N = []; const E = []; const F = [];
     const W = wide ? 840 : 360;
     const sideName = { g: "Google Cloud", o: "Our side" };
@@ -352,14 +353,6 @@ window.reportReady(() => {
       const Y = 108, EY = Y + 20;
       const ag = cardNode(pkey("agent", S.agent, model), S.agent, C.agent.x, Y, C.agent.w, { add: isAdd("agent", S.agent), model, modelAdd: isAdd("model", S.model) });
       N.push(ag); bounds.agent = ag;
-      let cb = ag.y + ag.h;
-      if (ctxList.length) {
-        const fy = ag.y + ag.h + 24; let y = fy + 16; const cards = [];
-        ctxList.forEach((c) => { const n = cardNode(pkey("ctx", c.p, c.gone ? "g" : ""), c.p, C.agent.x + 8, y, C.agent.w - 16, { add: c.add, gone: c.gone }); cards.push(n); y += n.h + 8; });
-        F.push(frameNode("ctxf", C.agent.x, fy, C.agent.w, y - fy + 2, "Given to it", { screen: S.side.agent === "g" || S.side.agent === "o" }));
-        N.push(...cards); E.push(edgeNode("e-ctx", [[C.agent.x + C.agent.w / 2, fy], [C.agent.x + C.agent.w / 2, ag.y + ag.h]], { reads: true }));
-        cb = y + 2;
-      }
       let tb = Y; let tcards = [];
       if (toolList.length) {
         let y = Y;
@@ -374,6 +367,18 @@ window.reportReady(() => {
         E.push(edgeNode("e-fb", [[C.tools.x + C.tools.w, fy + 20], [C.wh.x, fy + 20]], { add: isAdd("sql", SQL.fb) }));
       }
       N.push(...tcards);
+      let cb = ag.y + ag.h;
+      if (ctxList.length) {
+        const fy = ag.y + ag.h + 24;
+        const span = !fb && (!toolList.length || (S.side.tools || S.side.agent) === S.side.agent) && tb < fy - 16 && (!sv || (S.side.server || S.side.agent) !== S.side.agent || true);
+        const fw = span ? C.tools.x + C.tools.w - C.agent.x : C.agent.w; const ncol = span ? 2 : 1; const cw = (fw - 16 - (ncol - 1) * 10) / ncol;
+        let y = fy + 16; const cards = []; let col = 0, rowH = 0;
+        ctxList.forEach((c) => { const n = cardNode(pkey("ctx", c.p, c.gone ? "g" : ""), c.p, C.agent.x + 8 + col * (cw + 10), y, cw, { add: c.add, gone: c.gone }); cards.push(n); rowH = Math.max(rowH, n.h); col++; if (col === ncol) { y += rowH + 8; col = 0; rowH = 0; } });
+        if (col) y += rowH + 8;
+        F.push(frameNode("ctxf", C.agent.x, fy, fw, y - fy + 2, "Given to it", { screen: true }));
+        N.push(...cards); E.push(edgeNode("e-ctx", [[C.agent.x + C.agent.w / 2, fy], [C.agent.x + C.agent.w / 2, ag.y + ag.h]], { reads: true }));
+        cb = y + 2;
+      }
       // the main path
       const stops = [["agent", C.agent.x + C.agent.w]]; if (bounds.tools) stops.push(["tools", C.tools.x, C.tools.x + C.tools.w]); if (sv) stops.push(["server", C.server.x, C.server.x + C.server.w]);
       if (S.wh) stops.push(["wh", C.wh.x]);
@@ -387,17 +392,18 @@ window.reportReady(() => {
       // the warehouse
       let wb = Y;
       if (S.wh) {
-        const fx = C.wh.x, fy = Y - 8; let y = fy + 22; const items = [];
+        const fx = C.wh.x, fy = Y; let y = fy + 22; const items = [];
+        if (S.wh === "pg") { items.push(textNode("whnote", fx + 12, y, wrap("stands in for BigQuery", C.wh.w - 24, "note"), "s-note")); y += 18; }
         sqlLines.forEach((s, i) => { const ls = wrap(s.p.title, C.wh.w - 24, "sql"); items.push(Object.assign(textNode("sql:" + s.p.k, fx + 12, y, ls, "s-sql" + (s.add ? " add" : "")), {})); y += ls.length * 14 + 4; });
         y += 6;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, fx + 12, y, C.wh.w - 24, { add: c.add, gone: c.gone }); items.push(n); y += n.h + 8; });
         if (fb) y = Math.max(y, tb + 16);
         const whTitle = S.wh === "bq" ? "BigQuery" : "PostgreSQL";
-        F.push(frameNode("wh:" + S.wh, fx, fy, C.wh.w, y - fy + 4, whTitle, { screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }), note: S.wh === "pg" ? "for BigQuery" : "" }));
+        F.push(frameNode("wh:" + S.wh, fx, fy, C.wh.w, y - fy + 4, whTitle, { screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }) }));
         N.push(...items); wb = y + 4;
       }
       // Q and A
-      E.push(edgeNode("e-q", [[58, qab[0]], [58, Y]]));
+      E.push(edgeNode("e-q", [[98, qab[0]], [98, Y]]));
       E.push(edgeNode("e-a", [[162, Y], [162, qab[1]]]));
       // location frames
       const cols = [["agent", S.side.agent || "o", C.agent.x, C.agent.x + C.agent.w], ["tools", S.side.tools || S.side.agent, C.tools.x, C.tools.x + C.tools.w],
@@ -435,20 +441,22 @@ window.reportReady(() => {
         }
       } else if (slot === "tools") {
         let yy = y; const main = toolList.filter((c) => c.p.k !== "fb");
-        main.forEach((c) => { const n = cardNode(pkey("tools", c.p, c.gone ? "g" : ""), c.p, 12, yy, mainW, { add: c.add, gone: c.gone }); N.push(n); yy += n.h + 10; });
+        main.filter((c) => !c.gone).forEach((c) => { const n = cardNode(pkey("tools", c.p), c.p, 12, yy, mainW, { add: c.add }); N.push(n); yy += n.h + 10; });
         mainBottom = bottom = yy - 10;
+        main.filter((c) => c.gone).forEach((c) => { const n = cardNode(pkey("tools", c.p, "g"), c.p, 44, yy, mainW - 32, { gone: true }); N.push(n); yy += n.h + 10; bottom = yy - 10; });
         if (fb) { const n = cardNode(pkey("tools", fb), fb, 12 + mainW + 16, y, fbW, { add: isAdd("tools", fb) }); N.push(n); bottom = Math.max(bottom, n.y + n.h); rowsV.fbCard = n; }
       } else if (slot === "server") {
         const n = cardNode(pkey("server", S.server), S.server, 12, y, mainW, { add: isAdd("server", S.server) }); N.push(n); mainBottom = bottom = n.y + n.h;
       } else {
-        const fy = y; let yy = fy + 22; const items = [];
+        const fy = y; let yy = fy + 20; const items = [];
+        if (S.wh === "pg") { items.push(textNode("whnote", 24, yy, ["stands in for BigQuery"], "s-note")); yy += 18; }
         sqlLines.forEach((s) => { const ls = wrap(s.p.title, CW - 24, "sql"); items.push(textNode("sql:" + s.p.k, 24, yy, ls, "s-sql" + (s.add ? " add" : ""))); yy += ls.length * 14 + 4; });
         yy += 6; const cw2 = (CW - 24 - 10) / 2; let col = 0; let rowH = 0; const rowY = () => yy;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, 24 + col * (cw2 + 10), rowY(), cw2, { add: c.add, gone: c.gone }); items.push(n); rowH = Math.max(rowH, n.h); col++; if (col === 2) { yy += rowH + 8; col = 0; rowH = 0; } });
         if (col) yy += rowH + 8;
         // equal heights in a pair: grow the shorter card's box (keeps the grid tidy)
-        F.push(frameNode("wh:" + S.wh, 12, fy, CW, yy - fy + 4, S.wh === "bq" ? "BigQuery" : "PostgreSQL", { screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }), note: S.wh === "pg" ? "for BigQuery" : "" }));
-        N.push(...items); mainBottom = bottom = yy + 4;
+        F.push(frameNode("wh:" + S.wh + ":b", 12, fy, CW, yy - fy + 4, S.wh === "bq" ? "BigQuery" : "PostgreSQL", { bottom: true, screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }) }));
+        N.push(...items); mainBottom = yy + 4; bottom = yy + 10;
       }
       rowsV.push({ slot, side, top, mainTop, mainBottom, bottom });
       prevSide = side; prevBottom = bottom;
@@ -461,7 +469,7 @@ window.reportReady(() => {
       const whRow = rowsV.find((r) => r.slot === "wh"); const x = rowsV.fbCard.x + rowsV.fbCard.w / 2;
       if (whRow) E.push(edgeNode("e-fb", [[x, rowsV.fbCard.y + rowsV.fbCard.h], [x, whRow.mainTop]], { add: isAdd("sql", SQL.fb) }));
     }
-    E.push(edgeNode("e-q", [[90, qab[0]], [90, 108]]));
+    E.push(edgeNode("e-q", [[140, qab[0]], [140, 108]]));
     E.push(edgeNode("e-a", [[270, 108], [270, qab[1]]]));
     marks.forEach((m, j) => {
       const endRow = j + 1 < marks.length ? marks[j + 1].i - 1 : rowsV.length - 1;
@@ -564,7 +572,7 @@ window.reportReady(() => {
     const q = S.seq; if (!q) return null;
     const holds = q.holds;
     if (q.kind === "da") return { lanes: ["Data agent", "What it holds", "BigQuery"], steps: [
-      { a: 1, b: 0, t: "reads " + holds, ret: true },
+      { a: 1, b: 0, t: "reads " + holds, ret: true, num: true },
       { a: 0, b: 0, t: "writes its own SQL" + (q.how ? ", " + q.how : "") + "; the rule that cancelled orders are left out must come from what it holds" },
       { a: 0, b: 2, t: "runs its SQL" }, { a: 2, b: 0, t: "rows", ret: true },
       { a: 0, b: 0, t: "answers with the figure", end: true }],
@@ -621,7 +629,7 @@ window.reportReady(() => {
       const self = s.a === s.b; const l = Math.min(xs[s.a], xs[s.b]); const r = Math.max(xs[s.a], xs[s.b]);
       const lx = self ? xs[s.a] + 10 : l + 8; const lw = self ? W - lx - 4 : Math.max(r - l - 12, 150);
       const ls = wrap(s.t, Math.min(lw, W - lx - 4), s.m ? "m" : "l");
-      const num = !s.ret; if (num) k++;
+      const num = !s.ret || s.num; if (num) k++;
       y += 6;
       ls.forEach((t, j) => { body += `<text class="s-sl${s.m ? " m" : ""}${s.ret ? " r" : ""} s-halo" x="${lx}" y="${y + 10 + j * 14}">${esc(t)}</text>`; });
       if (num) body += `<circle class="s-n" cx="12" cy="${y + 6}" r="8"/><text class="s-nt" x="12" y="${y + 10}" text-anchor="middle">${k}</text>`;
@@ -644,11 +652,12 @@ window.reportReady(() => {
   const head = root.querySelector(".sxb-head"); const change = root.querySelector(".sxb-change"); const seqEl = root.querySelector(".sxb-seq");
   const fig = root.querySelector(".sxb-fig"); const panel = root.querySelector(".sxb-panel");
   const rungLabel = (a) => (rungs[rungOf[a]] || {}).label || "";
+  const rungShort = (a) => { const r = rungs[rungOf[a]] || {}; const m = /^L(\d+)$/.exec(r.key || ""); return m ? "rung " + m[1] + ": " + r.label : r.label || ""; };
   function headHTML(a) {
     const f = famOf(a); const i = order.indexOf(a);
     const prev = order[i - 1], next = order[i + 1];
     return `<div><p class="sxb-name"><span data-setup="${esc(a)}" tabindex="0">${esc(a)}</span></p>
-      <p class="sxb-meta"><i style="background:var(--${f})"></i>${esc(famLabel(f))}<span aria-hidden="true">/</span>${esc(rungLabel(a))}</p></div>
+      <p class="sxb-meta"><i style="background:var(--${f})"></i><span>${esc(famLabel(f))}</span><span><span aria-hidden="true">/ </span>${esc(rungShort(a))}</span></p></div>
       <div class="sxb-steps"><button type="button" data-go="${esc(prev || "")}" ${prev ? `aria-label="Previous setup: ${esc(prev)}"` : "disabled aria-label=\"No previous setup\""}>←</button><button type="button" data-go="${esc(next || "")}" ${next ? `aria-label="Next setup: ${esc(next)}"` : "disabled aria-label=\"No next setup\""}>→</button></div>
       <p class="sxb-desc">${esc(descOf(a))}</p>`;
   }
@@ -689,8 +698,8 @@ window.reportReady(() => {
     root.appendChild(probe);
     let hh = 0, ph = 0;
     order.forEach((a) => { const S = setupOf(a); probe.firstChild.innerHTML = headHTML(a); probe.children[1].children[0].innerHTML = changeHTML(S); probe.children[1].children[1].innerHTML = seqHTML(S);
-      hh = Math.max(hh, probe.firstChild.offsetHeight); ph = Math.max(ph, probe.children[1].offsetHeight); });
-    probe.remove(); head.style.minHeight = hh + "px"; panel.style.minHeight = ph + "px";
+      hh = Math.max(hh, probe.firstChild.getBoundingClientRect().height); ph = Math.max(ph, probe.children[1].getBoundingClientRect().height); });
+    probe.remove(); head.style.minHeight = Math.ceil(hh) + "px"; panel.style.minHeight = Math.ceil(ph) + "px";
   }
   function legend(S) {
     const sw = (inner) => `<svg width="26" height="14" viewBox="0 0 26 14">${inner}</svg>`;
