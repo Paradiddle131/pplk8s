@@ -14,7 +14,8 @@ used() { curl -sS https://openrouter.ai/api/v1/key -H "Authorization: Bearer x" 
 log() { echo "$(date -u +%FT%H:%MZ) $*"; }
 push() {
   cd "$REPO" && git add -A docs/research/semantic-bet &&
-    git commit -q -m "feat(semantic-bet): free model, $1 (#333)" && git push -q origin claude/semantic-bet
+    git commit -q -m "feat(semantic-bet): free model, $1 (#333)" &&
+    git pull -q --rebase --autostash origin claude/semantic-bet && git push -q origin claude/semantic-bet
   log "pushed: $1 ($(git -C "$REPO" log -1 --format=%h))"
 }
 judge() {
