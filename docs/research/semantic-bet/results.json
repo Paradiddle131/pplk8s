@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T19:39Z",
+ "written": "2026-11-04T19:42Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -693,6 +693,41 @@
     "unclear": 6
    },
    "model_calls": 102
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "harness": "claude-code-subagent",
+   "rung": 4,
+   "cases": 12,
+   "of_cases": 96,
+   "runs": 12,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     12
+    ],
+    "trap": [
+     1.0,
+     1
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 12
+   },
+   "model_calls": 12
   },
   {
    "set": "frozen",
@@ -1775,16 +1810,16 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 74,
+   "runs": 89,
    "accuracy": [
-    0.639534883721,
-    0.5,
+    0.647286821705,
+    0.507751937984,
     0.779069767442
    ],
    "confident_wrong": [
-    0.279069767442,
-    0.162790697674,
-    0.406976744186
+    0.271317829457,
+    0.15503875969,
+    0.391472868217
    ],
    "groups": {
     "conversation": [
@@ -1792,25 +1827,25 @@
      8
     ],
     "covered": [
-     0.6458333333333334,
+     0.638888888888889,
      24
     ],
     "trap": [
-     0.5833333333333334,
+     0.5555555555555556,
      6
     ],
     "uncovered": [
-     0.631578947368421,
+     0.6578947368421053,
      19
     ]
    },
    "pass_all": 0.6046511627906976,
    "outcomes": {
-    "confident-wrong": 20,
-    "right": 48,
-    "wrong": 6
+    "confident-wrong": 25,
+    "right": 57,
+    "wrong": 7
    },
-   "model_calls": 82
+   "model_calls": 97
   },
   {
    "set": "hard",
@@ -2416,6 +2451,24 @@
     0.003472222222,
     -0.055555555556,
     0.065972222222
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "cases": 12,
+   "runs": 12,
+   "accuracy": [
+    0.083333333333,
+    0.0,
+    0.25
+   ],
+   "confident_wrong": [
+    -0.083333333333,
+    -0.25,
+    0.0
    ],
    "worth": false
   },

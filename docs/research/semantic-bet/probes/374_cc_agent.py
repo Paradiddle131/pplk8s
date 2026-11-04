@@ -80,7 +80,10 @@ def batches(name: str, run: int, size: int, out: Path, model: str) -> int:
 def recorded() -> dict[str, list[dict[str, Any]]]:
     """Every recorded answer by case, its runs in order."""
     by_case: dict[str, list[dict[str, Any]]] = {}
-    for path in sorted(Path(os.environ["BET_CC_ANSWERS"]).glob("*.jsonl")):
+    # Only this model's files (<model>-<set>-run<n>-<k>.jsonl): another model's answers never score as its own.
+    for path in sorted(
+        Path(os.environ["BET_CC_ANSWERS"]).glob(f"{os.environ['BET_CC_MODEL']}-*.jsonl")
+    ):
         for line in path.read_text().splitlines():
             if line.strip():
                 row = json.loads(line)
