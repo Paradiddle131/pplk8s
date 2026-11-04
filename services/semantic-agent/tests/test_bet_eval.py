@@ -747,3 +747,44 @@ def test_both_sets_decide_and_a_disagreement_goes_to_the_cheaper_rung(monkeypatc
     # Worth on both: worth building.
     agree = {"frozen": frozen_only["frozen"], "hard": (a_set("hard"), managed + better)}
     assert "on both sets: worth building." in "\n".join(bet_eval.both_sets(agree, runs=3))
+
+
+def test_step_three_names_the_cheapest_rung_that_ties_the_best_on_both_sets():
+    cases = [f"c{i}" for i in range(12)]
+    google, free = "google-data-agent (MODEL_UNSPECIFIED)", "free:free"
+
+    def a_set(name: str) -> BetSet:
+        qs = [Question.single(c, f"Question {c}?", "", []) for c in cases]
+        return BetSet(qs, {c: ["covered"] for c in cases}, HEDGES, name)
+
+    best = _on(google, "native-governed", {c: ["right"] * 3 for c in cases})
+    # Rung 1, level with the rung-2 best on every case: it ties on both sets and is cheaper.
+    cheap = _on(google, "native-context", {c: ["right"] * 3 for c in cases})
+    # Rung 4, level too: it ties but is on a dearer rung.
+    ours = _on(free, "custom-metricflow", {c: ["right"] * 3 for c in cases})
+    # Rung 1, right on the frozen set only: it ties there, not on the hard set.
+    half = _on(google, "native-kc", {c: ["right"] * 3 for c in cases})
+    missed = _on(google, "native-kc", {c: ["wrong"] * 3 for c in cases})
+    sets = {
+        "frozen": (a_set("frozen"), best + cheap + ours + half),
+        "hard": (a_set("hard"), best + cheap + ours + missed),
+    }
+    text = "\n".join(bet_eval.step_three(sets, runs=3))
+    assert "`native-context` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1)" in text
+    assert "`custom-metricflow` on `free:free` (rung 4)" in text
+    assert "`native-kc`" not in text
+    assert "The cheapest rung among them is 1: `native-context` on" in text
+    assert "Step 3 cannot apply yet: no managed best on the hard set" in "\n".join(
+        bet_eval.step_three({"frozen": sets["frozen"], "hard": (a_set("hard"), ours)}, runs=3)
+    )
+
+
+def test_an_arm_still_under_way_is_never_the_managed_best():
+    cases = [f"c{i}" for i in range(12)]
+    google, early = "google-data-agent (MODEL_UNSPECIFIED)", "google-data-agent (LATEST_GA_MODEL)"
+    qs = [Question.single(c, f"Question {c}?", "", []) for c in cases]
+    bet = BetSet(qs, {c: ["covered"] for c in cases}, HEDGES, "frozen")
+    whole = _on(google, "native-context", {c: ["right", "right", "wrong"] for c in cases})
+    started = _on(early, "native-context-bare", {c: ["right"] * 3 for c in cases[:2]})
+    managed, _, _ = bet_eval.step_two(bet, whole + started, runs=3)
+    assert managed is not None and managed[:2] == ("native-context", google)

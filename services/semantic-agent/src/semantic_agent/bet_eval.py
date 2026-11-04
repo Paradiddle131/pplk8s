@@ -561,12 +561,23 @@ def step_two(
     every arm of ours logged (arm, model), and each one paired against the best on the cases both
     reached (none paired when no case is shared)."""
     models = list(dict.fromkeys(e["model"] for e in entries))
+    every = {q.id for q in bet.questions}
     managed: list[tuple[float, int, str, str]] = []
+    partial: list[tuple[float, int, str, str]] = []
     for model in models:
-        scored = score_log(bet, entries, model, runs)
-        for arm, score in scored.scores.items():
-            if RUNG.get(arm, 9) <= 2:
-                managed.append((score.accuracy, RUNG[arm], arm, model))
+        for arm in arms_of(entries, model):
+            if RUNG.get(arm, 9) > 2:
+                continue
+            # Ranked by its own accuracy over every case it finished (the shares step 2 pairs),
+            # not over the cases every arm on its model reached; and only an arm that answered
+            # every case can be the best: a pass under way scores on a handful (2026-11-04).
+            right = case_shares(entries, arm, model, runs)[0]
+            if not right:
+                continue
+            accuracy = sum(right.values()) / len(right)
+            whole = every <= set(right)
+            (managed if whole else partial).append((accuracy, RUNG[arm], arm, model))
+    managed = managed or partial
     ours = [
         (arm, model)
         for model in models
@@ -709,11 +720,60 @@ def both_sets(
             verdict = "worth building" if worth else "not worth building"
         role = "decides" if model == deciding else "the check"
         lines.append(f"- `{arm}` on `{model}` ({role}): {each}; on both sets: {verdict}.")
-    lines.append(
-        "Step 3 (the cheapest arm with no accuracy difference from the best on both sets) is read "
-        "in the report, not computed here."
-    )
+    lines += step_three(sets, runs)
     return lines
+
+
+def ties_with_best(
+    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS
+) -> dict[tuple[str, str], Interval] | None:
+    """Every arm on every model it ran with whose accuracy shows no difference from the managed
+    best on the cases both reached (the best itself included), with its paired interval; None
+    while there is no managed best."""
+    managed, _, _ = step_two(bet, entries, runs)
+    if managed is None:
+        return None
+    best, best_model, _ = managed
+    best_right, _, _ = case_shares(entries, best, best_model, runs)
+    tied: dict[tuple[str, str], Interval] = {}
+    for model in dict.fromkeys(e["model"] for e in entries):
+        for arm in arms_of(entries, model):
+            if arm not in RUNG:
+                continue
+            right, _, _ = case_shares(entries, arm, model, runs)
+            cases = sorted(set(right) & set(best_right))
+            if not cases:
+                continue
+            acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
+            if (arm, model) == (best, best_model) or not acc.differs:
+                tied[(arm, model)] = acc
+    return tied
+
+
+def step_three(
+    sets: Mapping[str, tuple[BetSet, Sequence[dict[str, Any]]]], runs: int = RUNS
+) -> list[str]:
+    """RULE.md § The rule, 3, on both sets (#356): the arms with no accuracy difference from each
+    set's managed best on every set, and the cheapest rung among them; a tie within that rung goes
+    to the arm with fewer moving parts named in its finding, which the report names."""
+    titles = {name: SETS[name].title for name in sets}
+    ties = {name: ties_with_best(bet, entries, runs) for name, (bet, entries) in sets.items()}
+    if any(t is None for t in ties.values()):
+        missing = " or ".join(titles[n] for n, t in ties.items() if t is None)
+        return [f"- Step 3 cannot apply yet: no managed best on {missing}."]
+    found = [t for t in ties.values() if t is not None]
+    common = [key for key in found[0] if all(key in t for t in found[1:])]
+    if not common:
+        return ["- Step 3: no arm shows no accuracy difference from the managed best on both sets."]
+    listed = ", ".join(f"`{a}` on `{m}` (rung {RUNG[a]})" for a, m in common)
+    rung = min(RUNG[a] for a, _ in common)
+    cheapest = ", ".join(f"`{a}` on `{m}`" for a, m in common if RUNG[a] == rung)
+    return [
+        "- Step 3 (RULE.md § The rule, 3; it applies when no arm of ours is worth building): the "
+        f"arms with no accuracy difference from the managed best on both sets: {listed}.",
+        f"  The cheapest rung among them is {rung}: {cheapest}; within a rung the arm with fewer "
+        "moving parts named in its finding wins (§ The cost ladder), which the report names.",
+    ]
 
 
 def append_log(entry: dict[str, Any], path: Path = LOG) -> None:
