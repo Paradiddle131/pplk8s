@@ -10,11 +10,14 @@ Question: does the model behind the agent answer differently when it is a Claude
 
 ## What was observed (`measured`, results.json at 2026-11-04T19:39Z; the subagent at k = 1, the API at k = 3)
 
-| Haiku on the MetricFlow tools | Frozen: right | Frozen: confident-wrong | Frozen `uncovered` right | Hard: right | Hard: confident-wrong |
+| On the MetricFlow tools (first two rows Haiku) | Frozen: right | Frozen: confident-wrong | Frozen `uncovered` right | Hard: right | Hard: confident-wrong |
 |---|---|---|---|---|---|
 | ADK, Anthropic API (`custom-metricflow`) | 81.2% [73.3, 88.5] | 2.4% | 44% | 73.6% [61.2, 85.3] | 9.3% |
 | Claude Code subagent (`cc-metricflow`) | 66.7% [56.2, 76.0] | 5.2% | 7% | 44.2% [30.2, 58.1] | 18.6% |
+| Sonnet: ADK, Anthropic API | 74.7% [66.0, 82.6] | 1.4% | 18% | 57.4% [41.9, 72.1] | 5.4% |
+| Sonnet: Claude Code subagent | 70.8% [61.5, 79.2] | 1.0% | 3% | 51.2% [37.2, 65.1] | 30.2% |
 
+- Sonnet (12 subagents, 19:3xZ to 19:47Z, about 100k tokens a batch): on the frozen set the two harnesses tie within their intervals (accuracy and confident-wrong both), while on the hard set the subagent is confidently wrong in 30.2% of cases against 5.4% through the API; so the harness effect is not one direction for every model, but on the hard set both models' subagents are more often confidently wrong.
 - The harness changes the result: lower accuracy on both sets (intervals apart on the hard set), mostly where no metric covers the question (frozen `uncovered` 7% against 44%) and through more confident-wrong numbers on the hard set.
 
 ## Likely causes (`stated` by the subagents' own reports, not yet measured one by one)

@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T19:42Z",
+ "written": "2026-11-04T19:47Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -700,34 +700,54 @@
    "model": "claude-code (sonnet)",
    "harness": "claude-code-subagent",
    "rung": 4,
-   "cases": 12,
+   "cases": 96,
    "of_cases": 96,
-   "runs": 12,
+   "runs": 96,
    "accuracy": [
-    1.0,
-    1.0,
-    1.0
+    0.708333333333,
+    0.614583333333,
+    0.791666666667
    ],
    "confident_wrong": [
+    0.010416666667,
     0.0,
-    0.0,
-    0.0
+    0.03125
    ],
    "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
     "covered": [
      1.0,
-     12
+     67
+    ],
+    "distractor": [
+     1.0,
+     3
+    ],
+    "planted": [
+     1.0,
+     4
     ],
     "trap": [
      1.0,
-     1
+     11
+    ],
+    "uncovered": [
+     0.034482758620689655,
+     29
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.7083333333333334,
    "outcomes": {
-    "right": 12
+    "right": 68,
+    "unclear": 1,
+    "declined": 20,
+    "wrong": 6,
+    "confident-wrong": 1
    },
-   "model_calls": 12
+   "model_calls": 102
   },
   {
    "set": "frozen",
@@ -1804,30 +1824,77 @@
   },
   {
    "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "harness": "claude-code-subagent",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 43,
+   "accuracy": [
+    0.511627906977,
+    0.372093023256,
+    0.651162790698
+   ],
+   "confident_wrong": [
+    0.302325581395,
+    0.162790697674,
+    0.441860465116
+   ],
+   "groups": {
+    "conversation": [
+     0.75,
+     8
+    ],
+    "covered": [
+     0.9166666666666666,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     19
+    ]
+   },
+   "pass_all": 0.5116279069767442,
+   "outcomes": {
+    "right": 22,
+    "wrong": 6,
+    "confident-wrong": 13,
+    "declined": 1,
+    "unclear": 1
+   },
+   "model_calls": 47
+  },
+  {
+   "set": "hard",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "harness": "google-data-agent",
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 89,
+   "runs": 109,
    "accuracy": [
-    0.647286821705,
-    0.507751937984,
-    0.779069767442
+    0.65503875969,
+    0.519379844961,
+    0.786821705426
    ],
    "confident_wrong": [
-    0.271317829457,
+    0.267441860465,
     0.15503875969,
-    0.391472868217
+    0.387596899225
    ],
    "groups": {
     "conversation": [
-     0.5625,
+     0.5416666666666666,
      8
     ],
     "covered": [
-     0.638888888888889,
+     0.6527777777777778,
      24
     ],
     "trap": [
@@ -1841,11 +1908,11 @@
    },
    "pass_all": 0.6046511627906976,
    "outcomes": {
-    "confident-wrong": 25,
-    "right": 57,
-    "wrong": 7
+    "confident-wrong": 29,
+    "right": 71,
+    "wrong": 9
    },
-   "model_calls": 97
+   "model_calls": 120
   },
   {
    "set": "hard",
@@ -2458,17 +2525,17 @@
    "set": "frozen",
    "arm": "cc-metricflow",
    "model": "claude-code (sonnet)",
-   "cases": 12,
-   "runs": 12,
+   "cases": 96,
+   "runs": 96,
    "accuracy": [
-    0.083333333333,
-    0.0,
-    0.25
+    -0.208333333333,
+    -0.315972222222,
+    -0.100694444444
    ],
    "confident_wrong": [
+    -0.038194444444,
     -0.083333333333,
-    -0.25,
-    0.0
+    0.003472222222
    ],
    "worth": false
   },
@@ -2631,6 +2698,24 @@
     0.178294573643,
     0.06976744186,
     0.302325581395
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.426356589147,
+    -0.573643410853,
+    -0.286821705426
+   ],
+   "confident_wrong": [
+    0.294573643411,
+    0.15503875969,
+    0.441860465116
    ],
    "worth": false
   }
