@@ -852,3 +852,9 @@ def test_each_row_names_the_harness_that_ran_its_model():
     assert bet_eval.harness("claude-haiku-5-5") == "adk-anthropic-api"
     assert bet_eval.harness("google-data-agent (LATEST_GA_MODEL)") == "google-data-agent"
     assert bet_eval.harness("nvidia/nemotron-3.5-super-vl:free") == "adk-openrouter"
+
+
+def test_each_row_says_how_many_questions_shared_a_session():
+    assert bet_eval.session_kind("claude-code (haiku)") == "shared per batch"
+    assert bet_eval.session_kind("claude-code (fresh-haiku)") == "fresh per case"
+    assert bet_eval.session_kind("claude-haiku-5-5") == "fresh per run"

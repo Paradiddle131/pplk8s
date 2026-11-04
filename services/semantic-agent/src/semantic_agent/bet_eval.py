@@ -1230,6 +1230,17 @@ def harness(model: str) -> str:
     return "adk-openrouter"
 
 
+def session_kind(model: str) -> str:
+    """How many questions shared a session: one run per fresh session (RULE.md, every harness but
+    the batched subagents), or one batch of about 12 cases per Claude Code subagent (#374's first
+    pass, 2026-11-04), or one case per fresh subagent (`fresh-<model>`, the matched rerun)."""
+    if model.startswith("claude-code (fresh-"):
+        return "fresh per case"
+    if model.startswith("claude-code"):
+        return "shared per batch"
+    return "fresh per run"
+
+
 def arm_result(
     bet: BetSet, entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int
 ) -> dict[str, Any]:
@@ -1257,6 +1268,7 @@ def arm_result(
         "arm": arm,
         "model": model,
         "harness": harness(model),
+        "session": session_kind(model),
         "rung": RUNG.get(arm),
         "cases": len(right),
         "of_cases": len(bet.questions),
