@@ -108,7 +108,8 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .lead { margin: 0 0 12px; }
 .abwrap { overflow-x: auto; margin: 4px 0 0; }
 table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
-table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; }
+table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; white-space: nowrap; }
+table.ab tr.grp th, table.ab tr.diff th { white-space: normal; }
 table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
 table.ab tr.grp td { padding-top: 10px; }
 table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
@@ -222,6 +223,10 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   .winners { grid-template-columns: 1fr; gap: 18px; }
 }
 @media (max-width: 640px) {
+  table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
+  table.ab tbody th { padding-left: 6px; white-space: normal; }
+  table.ab .id { font-size: 10.5px; }
+  table.ab .sub { font-size: 11.5px; }
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
   dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
@@ -525,14 +530,15 @@ window.REPORT = D;
     $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
     const ab = A.rows;
     const lines = [
-      [`The ${term("managed-best", "managed best")}`, (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`, "grp"],
+      [`The ${term("managed-best", "managed best")}`, null, "grp"],
+      ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
       ["Right", (r) => num(r.mbAcc)], [term("confident-wrong"), (r) => num(r.mbCw)],
-      [`MetricFlow on the free model (${term("decides", "decides")})`, () => "", "grp"],
+      [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
       ["Right", (r) => num(r.mfAcc)], [term("confident-wrong"), (r) => num(r.mfCw)],
       [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
     ];
     $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
-      lines.map(([lab, f, cls]) => `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>`).join("") +
+      lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
       `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets; each column is one question set.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};

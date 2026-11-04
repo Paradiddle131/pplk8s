@@ -108,7 +108,8 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .lead { margin: 0 0 12px; }
 .abwrap { overflow-x: auto; margin: 4px 0 0; }
 table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
-table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; }
+table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; white-space: nowrap; }
+table.ab tr.grp th, table.ab tr.diff th { white-space: normal; }
 table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
 table.ab tr.grp td { padding-top: 10px; }
 table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
@@ -222,6 +223,10 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   .winners { grid-template-columns: 1fr; gap: 18px; }
 }
 @media (max-width: 640px) {
+  table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
+  table.ab tbody th { padding-left: 6px; white-space: normal; }
+  table.ab .id { font-size: 10.5px; }
+  table.ab .sub { font-size: 11.5px; }
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
   dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
@@ -311,13 +316,532 @@ window.REPORT = D;
     <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
   </figure>
 
-<section class="zzc" id="zz-check">
-<style>.zzc .box{border:1px solid var(--rule);padding:8px;font-family:var(--label);color:var(--ink)}</style>
-<h2>Stub section</h2>
-<p class="box">Setup <span id="zz-setup" data-setup="custom-metricflow" tabindex="0">custom-metricflow</span>, term <span id="zz-term" data-term="managed-best" tabindex="0">managed best</span>.</p>
-<div class="focusable" id="zz-focus"><svg width="200" height="30"><g class="mk" data-arm="native-bare"><rect id="zz-a" x="0" y="0" width="60" height="30" fill="var(--da)"/></g><g class="mk" data-arm="custom-metricflow"><rect x="80" y="0" width="60" height="30" fill="var(--mf)"/></g></svg></div>
-<p id="zz-ready"></p>
-<script>(function(){ window.reportReady(function(){ var el=document.getElementById('zz-ready'); el.textContent='ready: '+(window.REPORT && window.REPORT.setOrder.join(','))+' theme '+window.reportTheme(); document.addEventListener('report-theme', function(e){ el.dataset.theme = e.detail; }); }); })();</script>
+<section class="sm" id="setup-map" aria-labelledby="sm-h">
+<style>
+.sm { --hl: var(--ink); }
+.sm .sm-lede { max-width: 46rem; margin: 0 0 14px; }
+.sm .sm-lede b { font-weight: 600; }
+.sm .sm-take { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 12px; max-width: 54rem; font-weight: 500; }
+
+/* the rung lists */
+.sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0 0 14px; padding: 0; list-style: none; }
+.sm .sm-rung { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 0; transition: opacity .12s ease-out; }
+.sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--label); font-size: 14px; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
+.sm .sm-rhd small { display: block; font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-rhd:hover, .sm .sm-rhd[aria-pressed="true"] { background: var(--paper-2); }
+.sm .sm-rung ul { list-style: none; margin: 2px 0 0; padding: 0; }
+.sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--label); font-size: 13.5px; line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
+.sm .sm-s::before { content: ""; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 3px; border-radius: 1px; background: var(--f, var(--other)); }
+.sm .sm-s .id { font-size: 12.5px; display: inline-block; }
+.sm .sm-s .sm-d { display: block; color: var(--ink-2); font-size: 13px; }
+.sm .sm-s:hover, .sm .sm-s[aria-pressed="true"] { background: var(--paper-2); }
+.sm .sm-s[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--ink-2); }
+.sm .sm-none { font-family: var(--label); font-size: 13px; color: var(--ink-3); padding: 2px 0 0; }
+.sm .sm-rungs.focusing .sm-s:not(.on) { opacity: .38; }
+.sm .sm-rungs.focusing .sm-rung:not(.on) .sm-rhd { opacity: .55; }
+
+/* the readout */
+.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font-family: var(--label); font-size: 14px; line-height: 1.38; color: var(--ink-2); min-height: 9.6em; }
+.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: 14.5px; }
+.sm .sm-read .sm-rt .id { font-size: 13px; }
+.sm .sm-read .sm-rt .sm-fam { color: var(--ink-3); }
+.sm .sm-read p { margin: 0 0 4px; }
+.sm .sm-read b { color: var(--ink); font-weight: 600; }
+.sm .sm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; margin: 0; }
+.sm .sm-grid div { min-width: 0; }
+.sm .sm-grid dt { font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-grid dd { margin: 0; color: var(--ink); }
+.sm .sm-grid dd.sm-sql { font-weight: 600; }
+.sm .sm-hint { color: var(--ink-3); font-size: 13px; }
+
+/* the sheet */
+.sm .sm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 2px; }
+.sm .sm-scroll:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sm svg.sm-sheet { display: block; width: 100%; min-width: 1080px; height: auto; font-family: var(--label); overflow: visible; }
+.sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; }
+.sm .sm-sheet .t-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.sm .sm-sheet .t-mono { font-family: var(--code); font-size: 11px; fill: var(--ink); }
+.sm .sm-sheet .t-mtitle { font-family: var(--code); font-size: 12px; font-weight: 600; fill: var(--ink); }
+.sm .sm-sheet .t-hdr { fill: var(--ink-3); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.sm .sm-sheet .t-frame { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
+.sm .sm-sheet .t-note { fill: var(--ink-3); font-size: 11.5px; }
+.sm .sm-sheet .halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+.sm .sm-frame { fill: none; stroke: var(--rule); stroke-width: 1; }
+.sm .sm-frame.band { fill: url(#sm-dots); }
+.sm .sm-knock { fill: var(--paper); }
+.sm .sm-dotbg { fill: var(--paper); }
+.sm .sm-dot { fill: var(--rule); }
+.sm .sm-card { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
+.sm .sm-hatch { fill: url(#sm-hatch); stroke: none; }
+.sm .sm-hline { stroke: var(--grid-major); stroke-width: 1.2; }
+.sm .sm-row rect.sm-band { fill: transparent; }
+.sm .sm-row rect.sm-bar { fill: transparent; }
+.sm .sm-e { fill: none; stroke: var(--ink-2); stroke-width: 1.2; }
+.sm .sm-e.r { stroke-dasharray: 4 3; }
+.sm .sm-ah { fill: var(--ink-2); stroke: none; }
+.sm .sm-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: pointer; }
+.sm .sm-sheet [data-c] { cursor: pointer; }
+.sm .sm-ring { fill: none; stroke: none; }
+.sm .sm-sheet g[tabindex]:focus { outline: none; }
+.sm .sm-sheet g[tabindex]:focus-visible .sm-ring { stroke: var(--mf); stroke-width: 2; }
+.sm .sm-x { transition: opacity .12s ease-out; }
+
+/* focus: the path stays, the rest dims; nothing is hidden */
+.sm svg.focusing .sm-x:not(.on) { opacity: .17; }
+.sm svg.focusing .sm-e.on, .sm svg.focusing g.on > .sm-e { stroke: var(--hl); stroke-width: 2.4; }
+.sm svg.focusing g.on > .sm-ah { fill: var(--hl); }
+.sm svg.focusing g.on.part { opacity: .6; }
+.sm svg.focusing g.on.part > .sm-e { stroke-width: 1.6; }
+.sm svg.focusing .sm-cardg.on > .sm-card { stroke: var(--hl); stroke-width: 2; }
+.sm svg.focusing .sm-cardg.on.part > .sm-card { stroke-width: 1.4; stroke-dasharray: 5 3; }
+.sm svg.focusing .sm-row.on rect.sm-band { fill: color-mix(in srgb, var(--hl) 16%, var(--paper)); }
+.sm svg.focusing .sm-row.on rect.sm-bar { fill: var(--hl); }
+.sm svg.focusing .sm-row.on.part rect.sm-band { fill: color-mix(in srgb, var(--hl) 7%, var(--paper)); }
+.sm svg.focusing .sm-row.on text { fill: var(--ink); }
+.sm svg.focusing .sm-row.on .t-sql { font-weight: 600; }
+.sm svg.focusing .sm-cardg:not(.on) .sm-row, .sm svg.focusing .sm-cardg.on .sm-row:not(.on) { opacity: .45; }
+.sm svg.focusing .sm-cardg:not(.on) .sm-row { opacity: 1; }
+.sm svg.focusing .sm-fr.on .sm-frame { stroke: var(--hl); stroke-width: 1.6; }
+
+/* legend */
+.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); align-items: center; margin: 10px 0 0; }
+.sm .sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sm .sm-legend svg { overflow: visible; flex: none; }
+.sm .sm-swipe { display: none; font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 0 0 6px; }
+
+@media (max-width: 760px) {
+  .sm .sm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm .sm-read { min-height: 15.5em; }
+  .sm .sm-swipe { display: block; }
+}
+@media (max-width: 460px) {
+  .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sm .sm-x, .sm .sm-s, .sm .sm-rung { transition: none; }
+}
+</style>
+
+  <h2 id="sm-h">What each setup is</h2>
+  <p class="sm-lede">Every setup on one map. Each part is drawn once, where it runs; a setup is a path through the parts it uses: who asks, on which model, through which tools, with what context, over which tables. <b>Google's data agents write their own SQL</b> from whatever context they hold. <b>Our agent on MetricFlow never writes SQL</b>: it lists the metrics, reads one metric's definition and dimensions, and asks MetricFlow to compute; MetricFlow writes the SQL.</p>
+  <p class="sm-take">Hover or tap a setup, a rung, or any part of the map; tap again to let go.</p>
+  <ul class="sm-rungs" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
+  <div class="sm-read" id="sm-read" aria-live="polite"></div>
+  <p class="sm-swipe">The map scrolls sideways.</p>
+  <div class="sm-scroll" tabindex="0" role="group" aria-label="Map of every setup; scrolls sideways on small screens"><svg class="sm-sheet" id="sm-svg" viewBox="0 0 1200 840" role="img" aria-labelledby="sm-svg-t"><title id="sm-svg-t">Map of every setup. In Google Cloud: the BigQuery data agent on Gemini, the context it is given, Knowledge Catalog, Google's MCP servers and BigQuery with its silver, governed, legacy, table-function and graph objects. On our machine: our ADK agent and a Claude Code subagent, MCP Toolbox, the Lightdash tool and server, a read-only SQL tool, the three MetricFlow tools and MetricFlow, and the warehouse stand-in. Model APIs: a free model and Claude.</title></svg></div>
+  <div class="sm-legend" id="sm-legend"></div>
+
+<script>
+(() => {
+  "use strict";
+  window.reportReady(() => {
+    /* ---------- static facts the data lacks, keyed by setup ----------
+       asks: da (Google's data agent), adk (our ADK agent), cc (a Claude Code subagent).
+       p: the parts of the map the setup uses (cards, rows, arrows); models come from the data. */
+    const DA = ["da", "da.sql", "e-da-bq", "bq"];
+    const KC = ["e-da-kc", "kc", "kc.import"];
+    const CTX = ["e-da-ctx", "ctx", "ctx.gen"];
+    const MFT = ["mft", "mft.1", "mft.2", "mft.3", "e-mft-1", "e-mft-2", "e-mft-3", "mf", "mf.def", "mf.sql", "e-mf-lw", "lw", "lw.silver"];
+    const SQL = ["e-adk-sql", "sql", "sql.w", "e-sql-lw", "lw"];
+    const BQ_ALL = ["bq.s", "bq.s.t", "bq.s.desc", "bq.s.bare", "bq.tf", "bq.gov", "bq.legacy", "bq.graph"];
+    const SETUPS = {
+      "baseline": { asks: "adk", delta: "plain SQL over the stand-in's tables",
+        p: ["adk", ...SQL, "lw.gold", "lw.exposed"],
+        tools: "one read-only execute_sql tool", ctx: "the table list and the generated docs",
+        reach: "the stand-in's gold and exposed tables", sql: "The agent writes it, from the docs." },
+      "native-bare": { asks: "da", delta: "the tables alone",
+        p: [...DA, "bq.s", "bq.s.bare", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "nothing: no descriptions, catalog, glossary or examples",
+        reach: "copies of the silver tables with no descriptions; the legacy tables", sql: "The data agent writes it, from the tables alone." },
+      "native-kc": { asks: "da", delta: "Knowledge Catalog's import of the dbt metrics",
+        p: [...DA, ...KC, "bq.s", "bq.s.t", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "Knowledge Catalog's import of the dbt metrics, and a one-line instruction",
+        reach: "the silver tables the imported metrics link to; the legacy tables", sql: "The data agent writes it, from the catalog's context." },
+      "native-kc-max": { asks: "da", delta: "the import, plus column descriptions and a linked glossary",
+        p: [...DA, ...KC, "kc.gloss", "bq.s", "bq.s.desc", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "the import, plus BigQuery column descriptions and a catalog glossary linked to the columns",
+        reach: "copies of the silver tables carrying the descriptions; the legacy tables", sql: "The data agent writes it, from the catalog's context." },
+      "native-kc-reach": { asks: "da", delta: "the import, over the context setups' tables",
+        p: [...DA, ...KC, "bq.s", "bq.s.t", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "Knowledge Catalog's import of the dbt metrics, as native-kc",
+        reach: "every silver table the context setups reach; the legacy tables", sql: "The data agent writes it, from the catalog's context." },
+      "native-context-bare": { asks: "da", delta: "an instruction and glossary generated from MetricFlow",
+        p: [...DA, ...CTX, "bq.s", "bq.s.t", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "an instruction and glossary we generate from MetricFlow; no example queries",
+        reach: "the silver tables; the legacy tables", sql: "The data agent writes it, from the generated context." },
+      "native-context": { asks: "da", delta: "the same, plus verified example queries",
+        p: [...DA, ...CTX, "ctx.vq", "bq.s", "bq.s.t", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "the generated instruction and glossary, plus verified example queries",
+        reach: "the silver tables; the legacy tables", sql: "The data agent writes it, or reuses a verified query." },
+      "native-governed": { asks: "da", delta: "governed tables built from the metrics",
+        p: [...DA, ...CTX, "ctx.vq", "bq.gov", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "a generated instruction, glossary and verified queries, written for the governed tables",
+        reach: "governed tables computed from the metrics; the legacy tables", sql: "The data agent writes it, over tables that already hold the metrics." },
+      "native-shaped": { asks: "da", delta: "table functions, with verified queries calling them",
+        p: [...DA, "e-da-ctx", "ctx", "ctx.tf", "bq.s", "bq.s.t", "bq.tf", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "a short instruction and verified queries with date parameters, each calling a table function",
+        reach: "the silver tables, one table function per saved query; the legacy tables", sql: "The data agent writes it, or calls a table function." },
+      "native-graph": { asks: "da", delta: "a property graph with measures beside the tables",
+        p: [...DA, "bq.s", "bq.s.t", "bq.graph", "bq.legacy"],
+        tools: "none: it queries BigQuery itself", ctx: "a one-line instruction naming the graph",
+        reach: "the orders, customers and returns tables, a property graph with measures over them; the legacy tables", sql: "The data agent writes it, through the graph or around it." },
+      "native-mcp": { asks: "adk", delta: "Google's Knowledge Catalog and BigQuery MCP servers",
+        p: ["adk", "e-adk-mcp", "mcp", "mcp.sql", "e-mcp-kc", "kc", "kc.import", "e-mcp-bq", "bq", ...BQ_ALL],
+        tools: "Google's managed MCP servers, their read-only tools only: search the catalog, look up context, run SQL",
+        ctx: "what the catalog returns: the imported dbt metrics and table metadata",
+        reach: "anything in the lab project; our one guard dry-runs each query and caps its size", sql: "Our agent writes it and runs it through BigQuery's MCP server." },
+      "custom-toolbox": { asks: "adk", delta: "generated MCP Toolbox tools over the table functions",
+        p: ["adk", "e-adk-tbx", "tbx", "tbx.sql", "e-tbx-bq", "bq", "bq.tf"],
+        tools: "MCP Toolbox tools generated one per table function, each taking two dates", ctx: "the tools' descriptions",
+        reach: "the table functions only", sql: "Nobody at question time: each tool's SQL is fixed; the agent picks the dates." },
+      "custom-metricflow": { asks: "adk", delta: "the three MetricFlow tools",
+        p: ["adk", "e-adk-mft", ...MFT],
+        tools: "list_metrics, then describe_metric, then query_metrics", ctx: "the semantic layer itself: each metric's definition and dimensions, the glossary, saved queries",
+        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; the agent never writes SQL." },
+      "custom-lightdash": { asks: "adk", delta: "one tool on Lightdash's free metric query API",
+        p: ["adk", "e-adk-ldt", "ldt", "e-ldt-ld", "ld", "ld.sql", "e-ld-lw", "lw"],
+        tools: "one tool that sends a metric query, never SQL, to Lightdash's free API", ctx: "the explores and metrics Lightdash serves, with their descriptions",
+        reach: "the metrics Lightdash translated from MetricFlow; no legacy tables", sql: "Lightdash compiles it; the agent never writes SQL." },
+      "custom-hybrid": { asks: "adk", delta: "MetricFlow first, then read-only SQL that says so",
+        p: ["adk", "e-adk-mft", ...MFT, ...SQL, "lw.gold", "lw.exposed", "lw.legacy"],
+        tools: "the three MetricFlow tools first, then one read-only execute_sql tool", ctx: "the semantic layer; a fallback answer opens with “Not a governed metric”",
+        reach: "the semantic models, then gold, exposed and the legacy tables through SQL", sql: "MetricFlow writes it; for the fallback, the agent, and its answer says so." },
+      "cc-metricflow": { asks: "cc", delta: "the same three tools in another harness",
+        p: ["cc", "e-cc-mft", ...MFT],
+        tools: "the same three MetricFlow tools, called as a command", ctx: "the semantic layer, as custom-metricflow",
+        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; the subagent is told not to write SQL." },
+    };
+    const ASKS = { da: "Google's managed BigQuery data agent", adk: "Our ADK agent", cc: "A Claude Code subagent, told to use only the tool command" };
+    const ROLE_PARTS = { gemini: ["gem", "e-da-gem"], decides: ["free", "e-adk-free"], check: ["claude", "e-adk-claude"], cc: ["ccm", "e-cc-ccm"] };
+    const ROLE_DEFAULT = { da: "gemini", adk: "decides", cc: "cc" };
+    const ROLE_WORD = { decides: "decides", check: "the check" };
+    const RUNG_KEY = (k) => (/^L\d+$/.test(k) ? "Rung " + k.slice(1) : k === "ref" ? "Reference" : k === "cc" ? "Another harness" : "Not yet placed");
+    const LOGOS = {"adk":"<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> </defs></g>","googlebigquery":"<g fill=\"rgb(102, 157, 246)\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>","dbt":"<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"rgb(255, 105, 74)\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>","postgresql":"<g fill=\"currentColor\" transform=\"matrix(0.0652 0 0 0.0652 3.6486 3.3861)\"><path d=\"M255.008 158.086c-1.535-4.649-5.556-7.887-10.756-8.664c-2.452-.366-5.26-.21-8.583.475c-5.792 1.195-10.089 1.65-13.225 1.738c11.837-19.985 21.462-42.775 27.003-64.228c8.96-34.689 4.172-50.492-1.423-57.64C233.217 10.847 211.614.683 185.552.372c-13.903-.17-26.108 2.575-32.475 4.549c-5.928-1.046-12.302-1.63-18.99-1.738c-12.537-.2-23.614 2.533-33.079 8.15c-5.24-1.772-13.65-4.27-23.362-5.864c-22.842-3.75-41.252-.828-54.718 8.685C6.622 25.672-.937 45.684.461 73.634c.444 8.874 5.408 35.874 13.224 61.48c4.492 14.718 9.282 26.94 14.237 36.33c7.027 13.315 14.546 21.156 22.987 23.972c4.731 1.576 13.327 2.68 22.368-4.85c1.146 1.388 2.675 2.767 4.704 4.048c2.577 1.625 5.728 2.953 8.875 3.74c11.341 2.835 21.964 2.126 31.027-1.848c.056 1.612.099 3.152.135 4.482c.06 2.157.12 4.272.199 6.25c.537 13.374 1.447 23.773 4.143 31.049c.148.4.347 1.01.557 1.657c1.345 4.118 3.594 11.012 9.316 16.411c5.925 5.593 13.092 7.308 19.656 7.308c3.292 0 6.433-.432 9.188-1.022c9.82-2.105 20.973-5.311 29.041-16.799c7.628-10.86 11.336-27.217 12.007-52.99q.13-1.094.244-2.088l.16-1.362l1.797.158l.463.031c10.002.456 22.232-1.665 29.743-5.154c5.935-2.754 24.954-12.795 20.476-26.351\"/><path fill=\"rgb(51, 103, 145)\" d=\"M237.906 160.722c-29.74 6.135-31.785-3.934-31.785-3.934c31.4-46.593 44.527-105.736 33.2-120.211c-30.904-39.485-84.399-20.811-85.292-20.327l-.287.052c-5.876-1.22-12.451-1.946-19.842-2.067c-13.456-.22-23.664 3.528-31.41 9.402c0 0-95.43-39.314-90.991 49.444c.944 18.882 27.064 142.873 58.218 105.422c11.387-13.695 22.39-25.274 22.39-25.274c5.464 3.63 12.006 5.482 18.864 4.817l.533-.452c-.166 1.7-.09 3.363.213 5.332c-8.026 8.967-5.667 10.541-21.711 13.844c-16.235 3.346-6.698 9.302-.471 10.86c7.549 1.887 25.013 4.561 36.813-11.958l-.47 1.885c3.144 2.519 5.352 16.383 4.982 28.952c-.37 12.568-.617 21.197 1.86 27.937c2.479 6.74 4.948 21.905 26.04 17.386c17.623-3.777 26.756-13.564 28.027-29.89c.901-11.606 2.942-9.89 3.07-20.267l1.637-4.912c1.887-15.733.3-20.809 11.157-18.448l2.64.232c7.99.363 18.45-1.286 24.589-4.139c13.218-6.134 21.058-16.377 8.024-13.686z\"/><path fill=\"rgb(255, 255, 255)\" d=\"M108.076 81.525c-2.68-.373-5.107-.028-6.335.902c-.69.523-.904 1.129-.962 1.546c-.154 1.105.62 2.327 1.096 2.957c1.346 1.784 3.312 3.01 5.258 3.28q.423.059.842.058c3.245 0 6.196-2.527 6.456-4.392c.325-2.336-3.066-3.893-6.355-4.35m88.784.073c-.256-1.831-3.514-2.353-6.606-1.923c-3.088.43-6.082 1.824-5.832 3.659c.2 1.427 2.777 3.863 5.827 3.863q.387 0 .78-.054c2.036-.282 3.53-1.575 4.24-2.32c1.08-1.136 1.706-2.402 1.591-3.225\"/><path fill=\"rgb(255, 255, 255)\" d=\"M247.802 160.025c-1.134-3.429-4.784-4.532-10.848-3.28c-18.005 3.716-24.453 1.142-26.57-.417c13.995-21.32 25.508-47.092 31.719-71.137c2.942-11.39 4.567-21.968 4.7-30.59c.147-9.463-1.465-16.417-4.789-20.665c-13.402-17.125-33.072-26.311-56.882-26.563c-16.369-.184-30.199 4.005-32.88 5.183c-5.646-1.404-11.801-2.266-18.502-2.376c-12.288-.199-22.91 2.743-31.704 8.74c-3.82-1.422-13.692-4.811-25.765-6.756c-20.872-3.36-37.458-.814-49.294 7.571c-14.123 10.006-20.643 27.892-19.38 53.16c.425 8.501 5.269 34.653 12.913 59.698c10.062 32.964 21 51.625 32.508 55.464c1.347.449 2.9.763 4.613.763c4.198 0 9.345-1.892 14.7-8.33a530 530 0 0 1 20.261-22.926c4.524 2.428 9.494 3.784 14.577 3.92q.016.2.035.398a118 118 0 0 0-2.57 3.175c-3.522 4.471-4.255 5.402-15.592 7.736c-3.225.666-11.79 2.431-11.916 8.435c-.136 6.56 10.125 9.315 11.294 9.607c4.074 1.02 7.999 1.523 11.742 1.523c9.103 0 17.114-2.992 23.516-8.781c-.197 23.386.778 46.43 3.586 53.451c2.3 5.748 7.918 19.795 25.664 19.794c2.604 0 5.47-.303 8.623-.979c18.521-3.97 26.564-12.156 29.675-30.203c1.665-9.645 4.522-32.676 5.866-45.03c2.836.885 6.487 1.29 10.434 1.289c8.232 0 17.731-1.749 23.688-4.514c6.692-3.108 18.768-10.734 16.578-17.36m-44.106-83.48c-.061 3.647-.563 6.958-1.095 10.414c-.573 3.717-1.165 7.56-1.314 12.225c-.147 4.54.42 9.26.968 13.825c1.108 9.22 2.245 18.712-2.156 28.078a37 37 0 0 1-1.95-4.009c-.547-1.326-1.735-3.456-3.38-6.404c-6.399-11.476-21.384-38.35-13.713-49.316c2.285-3.264 8.084-6.62 22.64-4.813m-17.644-61.787c21.334.471 38.21 8.452 50.158 23.72c9.164 11.711-.927 64.998-30.14 110.969a171 171 0 0 0-.886-1.117l-.37-.462c7.549-12.467 6.073-24.802 4.759-35.738c-.54-4.488-1.05-8.727-.92-12.709c.134-4.22.692-7.84 1.232-11.34c.663-4.313 1.338-8.776 1.152-14.037c.139-.552.195-1.204.122-1.978c-.475-5.045-6.235-20.144-17.975-33.81c-6.422-7.475-15.787-15.84-28.574-21.482c5.5-1.14 13.021-2.203 21.442-2.016M66.674 175.778c-5.9 7.094-9.974 5.734-11.314 5.288c-8.73-2.912-18.86-21.364-27.791-50.624c-7.728-25.318-12.244-50.777-12.602-57.916c-1.128-22.578 4.345-38.313 16.268-46.769c19.404-13.76 51.306-5.524 64.125-1.347c-.184.182-.376.352-.558.537c-21.036 21.244-20.537 57.54-20.485 59.759c-.002.856.07 2.068.168 3.735c.362 6.105 1.036 17.467-.764 30.334c-1.672 11.957 2.014 23.66 10.111 32.109a36 36 0 0 0 2.617 2.468c-3.604 3.86-11.437 12.396-19.775 22.426m22.479-29.993c-6.526-6.81-9.49-16.282-8.133-25.99c1.9-13.592 1.199-25.43.822-31.79c-.053-.89-.1-1.67-.127-2.285c3.073-2.725 17.314-10.355 27.47-8.028c4.634 1.061 7.458 4.217 8.632 9.645c6.076 28.103.804 39.816-3.432 49.229c-.873 1.939-1.698 3.772-2.402 5.668l-.546 1.466c-1.382 3.706-2.668 7.152-3.465 10.424c-6.938-.02-13.687-2.984-18.819-8.34m1.065 37.9c-2.026-.506-3.848-1.385-4.917-2.114c.893-.42 2.482-.992 5.238-1.56c13.337-2.745 15.397-4.683 19.895-10.394c1.031-1.31 2.2-2.794 3.819-4.602l.002-.002c2.411-2.7 3.514-2.242 5.514-1.412c1.621.67 3.2 2.702 3.84 4.938c.303 1.056.643 3.06-.47 4.62c-9.396 13.156-23.088 12.987-32.921 10.526m69.799 64.952c-16.316 3.496-22.093-4.829-25.9-14.346c-2.457-6.144-3.665-33.85-2.808-64.447c.011-.407-.047-.8-.159-1.17a15.4 15.4 0 0 0-.456-2.162c-1.274-4.452-4.379-8.176-8.104-9.72c-1.48-.613-4.196-1.738-7.46-.903c.696-2.868 1.903-6.107 3.212-9.614l.549-1.475c.618-1.663 1.394-3.386 2.214-5.21c4.433-9.848 10.504-23.337 3.915-53.81c-2.468-11.414-10.71-16.988-23.204-15.693c-7.49.775-14.343 3.797-17.761 5.53c-.735.372-1.407.732-2.035 1.082c.954-11.5 4.558-32.992 18.04-46.59c8.489-8.56 19.794-12.788 33.568-12.56c27.14.444 44.544 14.372 54.366 25.979c8.464 10.001 13.047 20.076 14.876 25.51c-13.755-1.399-23.11 1.316-27.852 8.096c-10.317 14.748 5.644 43.372 13.315 57.129c1.407 2.521 2.621 4.7 3.003 5.626c2.498 6.054 5.732 10.096 8.093 13.046c.724.904 1.426 1.781 1.96 2.547c-4.166 1.201-11.649 3.976-10.967 17.847c-.55 6.96-4.461 39.546-6.448 51.059c-2.623 15.21-8.22 20.875-23.957 24.25m68.104-77.936c-4.26 1.977-11.389 3.46-18.161 3.779c-7.48.35-11.288-.838-12.184-1.569c-.42-8.644 2.797-9.547 6.202-10.503c.535-.15 1.057-.297 1.561-.473q.469.383 1.032.756c6.012 3.968 16.735 4.396 31.874 1.271l.166-.033c-2.042 1.909-5.536 4.471-10.49 6.772\"/></g>"};
+
+    const R = window.REPORT || {};
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const FAMS = ["da", "gt", "mf", "ref", "other"];
+    const ladder = (R.ladder || []).map((l) => ({ key: l.key, label: l.label, arms: (l.arms || []).slice() }));
+    const rows = [];
+    (R.setOrder || Object.keys(R.sets || {})).forEach((s) => ((R.sets && R.sets[s] && R.sets[s].rows) || []).forEach((r) => rows.push(r)));
+    const famOf = (arm) => { const r = rows.find((x) => x.arm === arm); const f = r ? r.family : "other"; return FAMS.includes(f) ? f : "other"; };
+    const descOf = (arm) => (R.desc && R.desc[arm]) || R.undescribed || "";
+    const famLabel = (f) => (R.familyLabel && R.familyLabel[f]) || "";
+    const specOf = (arm) => SETUPS[arm] || null;
+    function rolesOf(arm) {
+      const sp = specOf(arm); const set = new Set(rows.filter((r) => r.arm === arm).map((r) => r.role).filter((r) => ROLE_PARTS[r]));
+      if (!set.size && sp) set.add(ROLE_DEFAULT[sp.asks]);
+      return set;
+    }
+    function modelText(arm) {
+      const by = {};
+      rows.filter((r) => r.arm === arm).forEach((r) => { (by[r.role] = by[r.role] || []); if (!by[r.role].includes(r.modelLabel)) by[r.role].push(r.modelLabel); });
+      const order = ["decides", "check", "gemini", "cc", "other"];
+      const parts = order.filter((k) => by[k]).map((k) => by[k].join(", ") + (ROLE_WORD[k] ? " (" + ROLE_WORD[k] + ")" : ""));
+      if (parts.length) return parts.join("; ");
+      const sp = specOf(arm);
+      return sp ? ({ da: "Gemini, inside Google's agent", adk: "the lab's free model", cc: "Claude" })[sp.asks] : "not recorded";
+    }
+    const PATH = {};
+    function pathOf(arm) {
+      if (PATH[arm]) return PATH[arm];
+      const sp = specOf(arm); const s = new Set(sp ? sp.p : []);
+      if (sp) rolesOf(arm).forEach((r) => ROLE_PARTS[r].forEach((id) => {
+        if ((r === "gemini") === (sp.asks === "da") && (r === "cc") === (sp.asks === "cc")) s.add(id);
+      }));
+      return (PATH[arm] = s);
+    }
+    const allArms = []; ladder.forEach((l) => l.arms.forEach((a) => { if (!allArms.includes(a)) allArms.push(a); }));
+
+    /* ---------- the sheet ---------- */
+    const svg = document.getElementById("sm-svg");
+    const NAME = {}, PARENT = {}, G = {};
+    const out = { frames: [], edges: [], cards: [], knocks: [] };
+    const T = (x, y, s, cls, extra) => `<text x="${x}" y="${y}"${cls ? ` class="${cls}"` : ""}${extra || ""}>${esc(s)}</text>`;
+    const logoSvg = (id, x, y) => (LOGOS && LOGOS[id] ? `<svg x="${x}" y="${y}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[id]}</svg>` : "");
+    function frame(o) {
+      G[o.id] = o; if (o.name) NAME[o.id] = o.name;
+      const tx = o.x + 12 + (o.logo ? 20 : 0);
+      out.frames.push(`<g class="sm-fr${o.c ? " sm-x" : ""}"${o.c ? ` data-c="${o.id}"` : ""}><rect class="sm-frame${o.band ? " band" : ""}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/></g>`);
+      out.knocks.push(`<g class="sm-knockg"${o.c ? ` data-c="${o.id}"` : ""} data-kx="${o.x + 6}" data-ky="${o.y}"><rect class="sm-knock" x="${o.x + 6}" y="${o.y - 8}" width="10" height="16"/>${o.logo ? logoSvg(o.logo, o.x + 12, o.y - 7) : ""}${T(tx, o.y + 4.5, o.title, "t-frame")}${o.note ? T(0, o.y + 4.5, o.note, "t-note", ' data-note="1"') : ""}</g>`);
+    }
+    function card(o) {
+      let y = o.y + 19; const body = [];
+      const titleCls = o.mono ? "t-mtitle" : "t-title";
+      body.push(T(o.x + 10, y, o.title, titleCls + (o.hatch ? " halo" : "")));
+      if (o.logo) body.push(logoSvg(o.logo, o.x + o.w - 8 - 14, y - 11));
+      (o.lines || []).forEach((ln, i) => {
+        y += i === 0 ? 16 : 15;
+        const mono = typeof ln === "object";
+        body.push(T(o.x + 10, y, mono ? ln.mono : ln, (mono ? "t-mono" : "") + (o.hatch ? " halo" : "")));
+      });
+      let rt = o.rowTop != null ? o.rowTop : y + 7;
+      const rowsOut = [];
+      (o.rows || []).forEach((r) => {
+        NAME[r.id] = r.name || r.text; PARENT[r.id] = o.id;
+        G[r.id] = { cy: rt + 9.5, top: rt };
+        rowsOut.push(`<g class="sm-row sm-x" data-c="${r.id}"><rect class="sm-band" x="${o.x + 4}" y="${rt}" width="${o.w - 8}" height="19" rx="1"/><rect class="sm-bar" x="${o.x + 4}" y="${rt + 2}" width="2.5" height="15"/>${T(o.x + 12, rt + 13.5, r.text, (r.mono ? "t-mono" : "") + (r.sql ? " t-sql" : ""))}</g>`);
+        rt += 19;
+      });
+      const end = (o.rows && o.rows.length) ? rt + 6 : y + 10;
+      const h = Math.max(o.minH || 0, end - o.y);
+      G[o.id] = { x: o.x, y: o.y, w: o.w, h, r: o.x + o.w, b: o.y + h };
+      NAME[o.id] = o.name || o.title;
+      const hatch = o.hatch ? `<rect class="sm-hatch" x="${o.x + 0.5}" y="${o.y + 0.5}" width="${o.w - 1}" height="${h - 1}"/>` : "";
+      out.cards.push(`<g class="sm-cardg sm-x" data-c="${o.id}" tabindex="0" role="button" aria-label="${esc(NAME[o.id])}: show the setups that use it"><rect class="sm-ring" x="${o.x - 3}" y="${o.y - 3}" width="${o.w + 6}" height="${h + 6}" rx="3"/><rect class="sm-card" x="${o.x}" y="${o.y}" width="${o.w}" height="${h}"/>${hatch}${body.join("")}${rowsOut.join("")}</g>`);
+      return G[o.id];
+    }
+    function edge(id, pts, reads) {
+      const d = pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join("");
+      const [a, b] = [pts[pts.length - 2], pts[pts.length - 1]];
+      const dx = Math.sign(b[0] - a[0]), dy = Math.sign(b[1] - a[1]);
+      const L = 7, W = 3.5;
+      const bx = b[0] - dx * L, by = b[1] - dy * L;
+      const ah = `M${b[0]} ${b[1]}L${bx - dy * W} ${by + dx * W}L${bx + dy * W} ${by - dx * W}Z`;
+      const dd = pts.map((p, i) => { const q = i === pts.length - 1 ? [bx + dx * 1, by + dy * 1] : p; return (i ? "L" : "M") + q[0] + " " + q[1]; }).join("");
+      out.edges.push(`<g class="sm-x" data-c="${id}"><path class="sm-e${reads ? " r" : ""}" d="${dd}"/><path class="sm-ah" d="${ah}"/><path class="sm-hit" d="${d}"/></g>`);
+    }
+
+    // column heads
+    const heads = [[24, "Model"], [192, "Who asks"], [384, "Tools"], [620, "Context, semantic layer"], [864, "Tables in reach"]];
+    // --- Google Cloud ---
+    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini, inside Google's data agent" });
+    const ctx = card({ id: "ctx", x: 620, y: 72, w: 212, title: "Context we give the agent", name: "the context we give the data agent", rows: [
+      { id: "ctx.gen", text: "instruction, glossary from MetricFlow", name: "an instruction and glossary generated from MetricFlow" },
+      { id: "ctx.vq", text: "verified example queries", name: "verified example queries" },
+      { id: "ctx.tf", text: "verified queries on table functions", name: "verified queries calling table functions" }] });
+    const sqlLane = ctx.b + 8 + 9.5, kcY = sqlLane + 18, kcIn = kcY + 22;
+    const da = card({ id: "da", x: 192, y: 72, w: 160, title: "BigQuery data agent", lines: ["Google's managed agent", "Conversational Analytics"], name: "Google's BigQuery data agent",
+      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "SQL the data agent writes" }] });
+    const kc = card({ id: "kc", x: 620, y: kcY, w: 212, title: "Knowledge Catalog", name: "Knowledge Catalog", rows: [
+      { id: "kc.import", text: "dbt metrics, imported", name: "the dbt metrics Knowledge Catalog imported" },
+      { id: "kc.gloss", text: "glossary linked to columns", name: "a catalog glossary linked to the columns" }] });
+    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries, lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
+      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "SQL our agent writes through BigQuery's MCP server" }] });
+    const mcpIn = mcp.y + 56;
+    const gTop = 40, gBot = mcp.b + 16;
+    // BigQuery objects
+    const bqs = card({ id: "bq.s", x: 872, y: 88, w: 160, title: "silver", mono: true, name: "silver, in BigQuery", rows: [
+      { id: "bq.s.t", text: "the tables", name: "the silver tables" },
+      { id: "bq.s.desc", text: "copies with descriptions", name: "copies of the silver tables with column descriptions" },
+      { id: "bq.s.bare", text: "copies, no descriptions", name: "copies of the silver tables with no descriptions" }] });
+    const tf = card({ id: "bq.tf", x: 872, y: bqs.b + 16, w: 160, title: "Table functions", lines: ["one per saved query"], name: "table functions" });
+    const gov = card({ id: "bq.gov", x: 1048, y: 88, w: 120, title: "Governed tables", lines: ["built from metrics"], name: "governed tables" });
+    const leg = card({ id: "bq.legacy", x: 1048, y: gov.b + 16, w: 120, title: "legacy", mono: true, lines: ["older, replaced"], name: "the legacy tables" });
+    const gr = card({ id: "bq.graph", x: 1048, y: leg.b + 16, w: 120, title: "Property graph", lines: ["with measures"], name: "a property graph with measures" });
+    const bqTop = 64, bqBot = gBot - 16;
+    frame({ id: "g", x: 8, y: gTop, w: 1184, h: gBot - gTop, title: "Google Cloud, the lab project" });
+    frame({ id: "bq", x: 856, y: bqTop, w: 328, h: bqBot - bqTop, title: "BigQuery", logo: "googlebigquery", band: true, c: true, name: "BigQuery" });
+    // Google-side arrows
+    edge("e-da-gem", [[da.x, gem.y + 26], [gem.r, gem.y + 26]]);
+    edge("e-da-ctx", [[da.r, ctx.y + 26], [ctx.x, ctx.y + 26]], true);
+    edge("e-da-bq", [[da.r, sqlLane], [856, sqlLane]]);
+    edge("e-da-kc", [[da.r, kcIn], [kc.x, kcIn]], true);
+    edge("e-mcp-kc", [[mcp.r, mcp.y + 14], [kc.x, mcp.y + 14]], true);
+    edge("e-mcp-bq", [[mcp.r, G["mcp.sql"].cy], [856, G["mcp.sql"].cy]]);
+
+    // --- our machine ---
+    const oTop = gBot + 24;
+    const y0 = oTop + 32;
+    const free = card({ id: "free", x: 24, y: y0, w: 120, title: "Free model", lines: ["OpenRouter"], hatch: true, name: "the lab's free model" });
+    const cla = card({ id: "claude", x: 24, y: free.b + 16, w: 120, title: "Claude", lines: ["Anthropic API"], hatch: true, name: "Claude, through the API" });
+    const tbx = card({ id: "tbx", x: 384, y: y0, w: 204, title: "MCP Toolbox", lines: ["tools generated, one per", "table function"], name: "MCP Toolbox",
+      rows: [{ id: "tbx.sql", text: "fixed SQL; the agent picks dates", sql: true, name: "the fixed SQL inside each Toolbox tool" }] });
+    const ldt = card({ id: "ldt", x: 384, y: tbx.b + 20, w: 204, title: "Lightdash tool", lines: ["one metric-query tool, ours"], name: "our Lightdash tool" });
+    const ld = card({ id: "ld", x: 620, y: ldt.y, w: 212, title: "Lightdash", lines: ["self-hosted, free API"], name: "Lightdash",
+      rows: [{ id: "ld.sql", text: "compiles the SQL", sql: true, name: "the SQL Lightdash compiles" }] });
+    const sq = card({ id: "sql", x: 384, y: Math.max(ldt.b, ld.b) + 20, w: 204, title: "execute_sql", mono: true, lines: ["one read-only statement"], name: "the read-only execute_sql tool",
+      rows: [{ id: "sql.w", text: "the agent writes the SQL", sql: true, name: "SQL the agent writes" }] });
+    const mft = card({ id: "mft", x: 384, y: sq.b + 24, w: 204, title: "MetricFlow tools", name: "the three MetricFlow tools", rows: [
+      { id: "mft.1", text: "1  list_metrics", mono: true, name: "list_metrics" },
+      { id: "mft.2", text: "2  describe_metric", mono: true, name: "describe_metric" },
+      { id: "mft.3", text: "3  query_metrics", mono: true, name: "query_metrics" }] });
+    const mf = card({ id: "mf", x: 620, y: mft.y, w: 212, title: "MetricFlow", logo: "dbt", lines: ["dbt's semantic layer"], name: "MetricFlow",
+      rows: [{ id: "mf.def", text: "metrics, dimensions, glossary", name: "the metric definitions" }, { id: "mf.sql", text: "writes the SQL", sql: true, name: "the SQL MetricFlow writes" }] });
+    // align the tool rows' arrows on MetricFlow
+    const adk = card({ id: "adk", x: 192, y: y0, w: 160, title: "Our ADK agent", logo: "adk", lines: ["Agent Development Kit", "model through an API"], name: "our ADK agent", minH: mft.y + 16 + 14 - y0 });
+    const cc = card({ id: "cc", x: 192, y: Math.max(adk.b, mft.b - 40) + 24, w: 160, title: "Claude Code subagent", lines: ["same tools, by command"], name: "a Claude Code subagent" });
+    const ccm = card({ id: "ccm", x: 24, y: cc.y, w: 120, title: "Claude", lines: ["subscription"], hatch: true, name: "Claude on a Claude Code subscription" });
+    // the warehouse stand-in
+    const lwTop = ld.y + 8;
+    const lws = card({ id: "lw.silver", x: 872, y: lwTop + 24, w: 296, title: "silver", mono: true, lines: ["what MetricFlow's semantic models read"], name: "the stand-in's silver tables" });
+    const lwg = card({ id: "lw.gold", x: 872, y: lws.b + 16, w: 140, title: "gold", mono: true, name: "the stand-in's gold tables" });
+    const lwe = card({ id: "lw.exposed", x: 1028, y: lws.b + 16, w: 140, title: "exposed", mono: true, name: "the stand-in's exposed tables" });
+    const lwl = card({ id: "lw.legacy", x: 872, y: lwg.b + 16, w: 296, title: "legacy", mono: true, lines: ["older, replaced"], name: "the stand-in's legacy tables" });
+    const lwBot = Math.max(lwl.b + 16, G["mf.sql"].cy + 16);
+    const oBot = Math.max(cc.b, ccm.b, lwBot) + 16;
+    frame({ id: "o", x: 176, y: oTop, w: 1016, h: oBot - oTop, title: "Our machine, the local lab" });
+    frame({ id: "m", x: 8, y: oTop, w: 152, h: oBot - oTop, title: "Model APIs" });
+    frame({ id: "lw", x: 856, y: lwTop, w: 328, h: lwBot - lwTop, title: "Warehouse stand-in", note: "Postgres", logo: "postgresql", band: true, c: true, name: "the warehouse stand-in" });
+    // our arrows
+    edge("e-adk-free", [[adk.x, free.y + 26], [free.r, free.y + 26]]);
+    edge("e-adk-claude", [[adk.x, cla.y + 26], [cla.r, cla.y + 26]]);
+    edge("e-adk-mcp", [[336, adk.y], [336, mcpIn], [mcp.x, mcpIn]]);
+    edge("e-adk-tbx", [[adk.r, tbx.y + 16], [tbx.x, tbx.y + 16]]);
+    edge("e-tbx-bq", [[tbx.r, tbx.y + 16], [952, tbx.y + 16], [952, tf.b]]);
+    edge("e-adk-ldt", [[adk.r, ldt.y + 26], [ldt.x, ldt.y + 26]]);
+    edge("e-ldt-ld", [[ldt.r, ldt.y + 26], [ld.x, ldt.y + 26]]);
+    edge("e-ld-lw", [[ld.r, G["ld.sql"].cy], [856, G["ld.sql"].cy]]);
+    edge("e-adk-sql", [[adk.r, sq.y + 26], [sq.x, sq.y + 26]]);
+    edge("e-sql-lw", [[sq.r, G["sql.w"].cy], [856, G["sql.w"].cy]]);
+    edge("e-adk-mft", [[adk.r, mft.y + 16], [mft.x, mft.y + 16]]);
+    edge("e-mft-1", [[mft.r, G["mft.1"].cy], [mf.x, G["mft.1"].cy]], true);
+    edge("e-mft-2", [[mft.r, G["mft.2"].cy], [mf.x, G["mft.2"].cy]], true);
+    edge("e-mft-3", [[mft.r, G["mft.3"].cy], [mf.x, G["mft.3"].cy]]);
+    edge("e-mf-lw", [[mf.r, G["mf.sql"].cy], [856, G["mf.sql"].cy]]);
+    edge("e-cc-mft", [[cc.r, cc.y + 26], [368, cc.y + 26], [368, mft.b - 10], [mft.x, mft.b - 10]]);
+    edge("e-cc-ccm", [[cc.x, cc.y + 26], [ccm.r, cc.y + 26]]);
+
+    const H = oBot + 8;
+    svg.setAttribute("viewBox", `0 0 1200 ${H}`);
+    const defs = `<defs><pattern id="sm-dots" width="6" height="6" patternUnits="userSpaceOnUse"><rect class="sm-dotbg" width="6" height="6"/><circle class="sm-dot" cx="1.5" cy="1.5" r=".75"/></pattern><pattern id="sm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="sm-hline" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>`;
+    const headsSvg = heads.map(([x, s]) => T(x, 20, s, "t-hdr")).join("");
+    const title = svg.querySelector("title").outerHTML;
+    svg.innerHTML = title + defs + headsSvg + out.frames.join("") + out.edges.join("") + out.cards.join("") + out.knocks.join("");
+
+    // knock-outs: size each title's paper behind its text
+    function fitKnocks() {
+      svg.querySelectorAll(".sm-knockg").forEach((g) => {
+        const t = g.querySelector(".t-frame"), n = g.querySelector("[data-note]"), r = g.querySelector(".sm-knock");
+        let x1 = t.getBBox().x + t.getBBox().width;
+        if (n) { n.setAttribute("x", x1 + 8); x1 = x1 + 8 + n.getBBox().width; }
+        const x0 = +g.dataset.kx;
+        r.setAttribute("width", Math.ceil(x1 - x0 + 6));
+      });
+    }
+    fitKnocks();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitKnocks);
+
+    /* ---------- who uses what ---------- */
+    const USERS = {};
+    allArms.forEach((a) => pathOf(a).forEach((id) => { (USERS[id] = USERS[id] || []).push(a); }));
+    // a card or frame is used by whoever uses one of its rows or cards inside it
+    Object.keys(PARENT).forEach((rid) => (USERS[rid] || []).forEach((a) => { const p = PARENT[rid]; USERS[p] = USERS[p] || []; if (!USERS[p].includes(a)) USERS[p].push(a); }));
+
+    /* ---------- the rung lists ---------- */
+    const listEl = document.getElementById("sm-rungs");
+    listEl.innerHTML = ladder.map((l) => {
+      const items = l.arms.map((a) => `<li><button type="button" class="sm-s" data-arm="${esc(a)}" aria-pressed="false" style="--f:var(--${famOf(a)})"><span class="id" data-setup="${esc(a)}">${esc(a)}</span><span class="sm-d">${esc(specOf(a) ? specOf(a).delta : "not yet drawn on the map")}</span></button></li>`).join("");
+      const head = l.arms.length
+        ? `<button type="button" class="sm-rhd" data-rung="${esc(l.key)}" aria-pressed="false"><small>${esc(RUNG_KEY(l.key))}</small>${esc(l.label)}</button>`
+        : `<div class="sm-rhd" style="cursor:default"><small>${esc(RUNG_KEY(l.key))}</small>${esc(l.label)}</div>`;
+      return `<li class="sm-rung" data-rung="${esc(l.key)}">${head}${items ? `<ul>${items}</ul>` : `<p class="sm-none">No setup can be built here yet.</p>`}</li>`;
+    }).join("");
+
+    /* ---------- the legend ---------- */
+    document.getElementById("sm-legend").innerHTML = [
+      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="var(--paper)" stroke="var(--ink)"/></svg>a part, drawn once</span>`,
+      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-hatch)" stroke="var(--ink)"/></svg>a model</span>`,
+      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-dots)" stroke="var(--rule)"/></svg>a warehouse</span>`,
+      `<span><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>calls or writes</span>`,
+      `<span><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>reads</span>`,
+      `<span><svg width="44" height="10" aria-hidden="true"><path d="M1 5H13" stroke="var(--da)" stroke-width="2.4"/><path d="M16 5H28" stroke="var(--gt)" stroke-width="2.4"/><path d="M31 5H43" stroke="var(--mf)" stroke-width="2.4"/></svg>a highlighted path, in its family's colour: Google's data agent, ours on Google's tools, ours on a semantic layer</span>`,
+    ].join("");
+
+    /* ---------- focus ---------- */
+    const read = document.getElementById("sm-read");
+    let preview = null, pinned = null;
+    const same = (a, b) => a && b && a.k === b.k && a.id === b.id;
+    function armsFor(t) {
+      if (!t) return [];
+      if (t.k === "s") return [t.id];
+      if (t.k === "r") { const l = ladder.find((x) => x.key === t.id); return l ? l.arms.slice() : []; }
+      return (USERS[t.id] || []).slice();
+    }
+    const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
+    function restText() {
+      return `<p class="sm-rt">Two shapes run through the map.</p>
+        <p><b>Google's data agents</b> (the first five rungs) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
+        <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>
+        <p class="sm-hint">Hover or tap a setup, a rung or a part of the map; Escape lets go.</p>`;
+    }
+    function setupText(a) {
+      const sp = specOf(a); const f = famOf(a);
+      const head = `<p class="sm-rt"><span class="id">${esc(a)}</span> <span class="sm-fam">${esc(famLabel(f))}</span>. ${esc(descOf(a))}</p>`;
+      if (!sp) return head + `<p>Not yet drawn on the map; its parts are not recorded here.</p>`;
+      const cell = (k, v, cls) => `<div><dt>${k}</dt><dd${cls ? ` class="${cls}"` : ""}>${esc(v)}</dd></div>`;
+      return head + `<dl class="sm-grid">${cell("Who asks", ASKS[sp.asks])}${cell("Model", modelText(a))}${cell("Tools", sp.tools)}${cell("Context", sp.ctx)}${cell("Tables in reach", sp.reach)}${cell("Who writes the SQL", sp.sql, "sm-sql")}</dl>`;
+    }
+    function listParts(ids, all) {
+      const set = new Set(all || ids);
+      return ids.filter((id) => NAME[id] && !id.startsWith("e-") && !Object.keys(PARENT).some((r) => PARENT[r] === id && set.has(r)));
+    }
+    function rungText(key) {
+      const l = ladder.find((x) => x.key === key); if (!l) return "";
+      const arms = l.arms;
+      const head = `<p class="sm-rt"><b>${esc(RUNG_KEY(key))}.</b> ${esc(l.label)}: ${nameList(arms)}.</p>`;
+      if (arms.length < 2) return head + (arms[0] ? setupText(arms[0]).replace(/^<p class="sm-rt">[\s\S]*?<\/p>/, "") : "");
+      const count = {}; arms.forEach((a) => pathOf(a).forEach((id) => (count[id] = (count[id] || 0) + 1)));
+      const ids = Object.keys(count);
+      const shared = listParts(ids.filter((id) => count[id] === arms.length), ids);
+      const varies = listParts(ids.filter((id) => count[id] < arms.length), ids);
+      const vtxt = varies.map((id) => `${esc(NAME[id])} (${nameList(arms.filter((a) => pathOf(a).has(id)))})`).join("; ");
+      return head + `<p><b>The shape they share:</b> ${esc(shared.map((id) => NAME[id]).join(", "))}.</p>` +
+        (vtxt ? `<p><b>Where they differ:</b> ${vtxt}.</p>` : `<p>They draw the same path; what differs is said in each one's line above.</p>`) +
+        `<p class="sm-hint">Solid: every setup in the rung uses it; faint: only some do.</p>`;
+    }
+    function partText(id) {
+      const users = USERS[id] || [];
+      return `<p class="sm-rt"><b>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</b></p>` +
+        (users.length ? `<p>Used by ${nameList(users)}.</p>` : `<p>No setup on the map uses it.</p>`);
+    }
+    function apply() {
+      const t = preview || pinned;
+      const arms = armsFor(t);
+      const on = arms.length > 0;
+      const cnt = {};
+      arms.forEach((a) => pathOf(a).forEach((id) => (cnt[id] = (cnt[id] || 0) + 1)));
+      Object.keys(PARENT).forEach((r) => { if (cnt[r]) { const p = PARENT[r]; cnt[p] = Math.max(cnt[p] || 0, cnt[r]); } });
+      svg.classList.toggle("focusing", on);
+      const fams = [...new Set(arms.map(famOf))];
+      svg.style.setProperty("--hl", fams.length === 1 ? `var(--${fams[0]})` : "var(--ink)");
+      svg.querySelectorAll("[data-c]").forEach((el) => {
+        const c = cnt[el.dataset.c] || 0;
+        el.classList.toggle("on", c > 0);
+        el.classList.toggle("part", !!t && t.k === "r" && c > 0 && c < arms.length);
+      });
+      listEl.classList.toggle("focusing", on);
+      listEl.querySelectorAll(".sm-s").forEach((b) => {
+        b.classList.toggle("on", arms.includes(b.dataset.arm));
+        b.setAttribute("aria-pressed", String(!!pinned && ((pinned.k === "s" && pinned.id === b.dataset.arm))));
+      });
+      listEl.querySelectorAll(".sm-rung").forEach((r) => r.classList.toggle("on", ladder.some((l) => l.key === r.dataset.rung && l.arms.some((a) => arms.includes(a)))));
+      listEl.querySelectorAll("button.sm-rhd").forEach((b) => b.setAttribute("aria-pressed", String(!!pinned && pinned.k === "r" && pinned.id === b.dataset.rung)));
+      svg.querySelectorAll(".sm-cardg").forEach((g) => g.setAttribute("aria-pressed", String(!!pinned && pinned.k === "c" && pinned.id === g.dataset.c)));
+      read.innerHTML = !t ? restText() : t.k === "s" ? setupText(t.id) : t.k === "r" ? rungText(t.id) : partText(t.id);
+    }
+    const targetOf = (el) => {
+      if (!el || !el.closest) return null;
+      const s = el.closest(".sm-s"); if (s) return { k: "s", id: s.dataset.arm };
+      const r = el.closest("button.sm-rhd"); if (r) return { k: "r", id: r.dataset.rung };
+      const c = el.closest("[data-c]"); if (c && svg.contains(c)) return { k: "c", id: c.dataset.c };
+      return null;
+    };
+    const setPreview = (t) => { if (!same(t, preview) && !(t === null && preview === null)) { preview = t; apply(); } };
+    [listEl, svg].forEach((host) => {
+      host.addEventListener("pointerover", (e) => { const t = targetOf(e.target); if (t || host === svg) setPreview(t); });
+      host.addEventListener("pointerleave", () => setPreview(null));
+      host.addEventListener("focusin", (e) => setPreview(targetOf(e.target)));
+      host.addEventListener("focusout", (e) => { if (!host.contains(e.relatedTarget)) setPreview(null); });
+      host.addEventListener("click", (e) => {
+        const t = targetOf(e.target);
+        pinned = t && !same(t, pinned) ? t : null;
+        if (!t) preview = null;
+        apply();
+      });
+    });
+    svg.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".sm-cardg")) {
+        e.preventDefault(); const t = targetOf(e.target); pinned = same(t, pinned) ? null : t; apply();
+      }
+    });
+    const section = document.getElementById("setup-map");
+    section.addEventListener("keydown", (e) => { if (e.key === "Escape" && pinned) { pinned = null; apply(); } });
+    document.addEventListener("click", (e) => { if (pinned && !listEl.contains(e.target) && !svg.contains(e.target) && !(e.target.closest && e.target.closest(".tip"))) { pinned = null; preview = null; apply(); } });
+    apply();
+  });
+})();
+</script>
 </section>
 
 
@@ -533,14 +1057,15 @@ window.REPORT = D;
     $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
     const ab = A.rows;
     const lines = [
-      [`The ${term("managed-best", "managed best")}`, (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`, "grp"],
+      [`The ${term("managed-best", "managed best")}`, null, "grp"],
+      ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
       ["Right", (r) => num(r.mbAcc)], [term("confident-wrong"), (r) => num(r.mbCw)],
-      [`MetricFlow on the free model (${term("decides", "decides")})`, () => "", "grp"],
+      [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
       ["Right", (r) => num(r.mfAcc)], [term("confident-wrong"), (r) => num(r.mfCw)],
       [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
     ];
     $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
-      lines.map(([lab, f, cls]) => `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>`).join("") +
+      lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
       `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets; each column is one question set.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};

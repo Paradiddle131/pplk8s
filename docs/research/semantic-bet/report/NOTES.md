@@ -1,42 +1,41 @@
-# Variant A, revision 1: the research memo, with B's scatter and strip and C's unit plate
+# Report notes: revision 2
 
-Direction kept: a research memo in a scientific-paper register (STIX Two Text, Barlow Semi Condensed labels, graph-paper plots, blue-black ink), now with every cost, issue number, file name, provenance line, owner-condition note and shade legend removed.
+Direction kept: a research memo in a scientific-paper register (STIX Two Text, Barlow Semi Condensed labels, graph-paper plots, blue-black ink), with B's scatter and strip plot and C's unit plate.
+Build: `python3 build.py ../results.json`.
 
-## What changed
+## What changed in revision 2
 
-- New, near the top: the winners band with three pillars (covered questions, uncovered questions, least often confidently wrong), each with both sets. The leader, its number and its interval are computed from the logs. A setup ties the leader when its paired interval (setup minus leader, over the questions both reached) includes zero, and every tied setup is named.
-- The deciding-run rule, data-driven: a setup enters the pillars and every headline only through a row on the model that decides for it. For our setups that is the free model; for Google's agents it is Gemini, the only model they run on. `native-mcp`, `custom-toolbox` and `custom-hybrid` (Claude only) keep their numbers, tagged "pending: deciding run". A free-model row in a new results.json promotes them with no code change (tested, see below). `cc-metricflow` and `baseline` never enter.
-- Figure 1 (decision map): both sets in every cell (frozen first, hard second). Cost column and shade legend removed; best-in-column boxes kept.
-- Figure 2 (forest): two framed panels, each with its own title and axis title. On a phone they stack into two charts. Both sets sit on one row: the frozen set as the upper mark, the hard set as the lower, hollow mark.
-- Figure 3 is B's scatter (accuracy against confident-wrong with crosshair intervals), full width. Figure 4 is B's strip plot by question group, both sets as labelled sub-rows. Figure 5 is the covered-to-uncovered slopes, larger (two panels per row, 360 px tall).
-- Figure 6 is C's unit plate, once, in ladder order, replacing my old Figure 4 ladder. The decision map stays the first screen, and the plate carries the ladder job: increments now come from C's "over the floor" column, a paired interval per question. Beside it is a confident-wrong column (rate and interval). Rows and columns have rules and alternating bands, the header is sticky (its horizontal scroll is synced on a phone), there is one square per run and a faint dot per unrun run, and hovering a square shows its question and outcome. No answers are embedded; the page is 184 KB.
-- The setup tooltip is one delegated component. Every setup name (pillars, map, forest labels, scatter and slope labels, plate labels) shows that setup's "What this setup is" sentence on hover or keyboard focus, and the tooltip is clamped to the viewport.
-- Hover-to-focus on Figures 2 to 5: hovering a mark, line, label or family legend entry keeps that setup, model or family at full strength and dims the rest.
-- Captions cut to one how-to-read sentence; the figure title carries the takeaway.
+- Tooltips, click to pin: hover works as before. A click, a tap, or Enter/Space on a focused element pins the tooltip in place. Pinned text can be selected and copied (pointer events on, user-select text) and has a drawn close mark. While a tooltip is pinned, hovering shows nothing else. A click on another tooltip-bearing element moves the pin; a click anywhere else unpins, and so does Escape, which also returns focus to the element.
+- Term tooltips: the fifteen glossary terms are one list in `build.py` (`TERMS`). The glossary and every term tooltip read that list. Terms are marked like setup names (dotted underline) in headings, column headers, legends, tags, pillars, set labels and SVG axis labels.
+- Theme switch at the top right: drawn sun and moon, `aria-pressed`, `data-theme` on the root, kept in `localStorage`. The first visit follows the system. A change fires `report-theme` and re-renders every view, the plate's canvases included.
+- Contrast: a token check found faint marks below 3:1. The wrong-outcome pink (light) and the not-run dot (both themes) were darkened. Every text token now passes 4.5:1 on every ground, and every data mark 3:1, in both themes. Hairline rules and separators are decoration, so they were left out of the check.
+- Figure 2's threshold glider: each panel has a draggable threshold with handles at the top and bottom of the axis. The hit area is 28 px wide over the full panel. The value moves in one-point steps, by pointer or by arrow keys (Shift for five), and stays clamped to the axis. Its home is the managed best: dragging within two points snaps it there, and the line thickens as it catches. Double-click or Home also returns it home. At home nothing is dimmed. Away from home, the rows beyond the threshold dim within 120 ms (no animation under reduced motion), and a live line gives the count per set. Updates are batched per animation frame and touch only the gliders and the marks' classes.
+- Removed the "Show every model" button; each setup's "+N models" toggle remains. The unit plate opens on the hard set. Pending setups stay tagged and are never greyed.
+- Sections contract, at the top of `build.py`'s docstring:
+  - Every `sections/<name>/section.html` is inserted at `<!--SECTIONS-->`, before "Method, briefly".
+  - An early script defines `window.REPORT`, `window.reportReady(fn)` and `window.reportTheme()` before any section script runs.
+  - The tooltip and hover-to-focus handlers (`data-setup`, `data-term`, `.focusable` with `.mk[data-arm|data-key|data-fam]`) are delegated on `document`, so markup added later works.
 
-## Both sets: which views take them
+## Number-heavy prose: what I chose and why
 
-- Both sets side by side: the winners band, the abstract, Figure 1 (twin chips per cell), Figure 2 (paired marks per row) and Figure 4 (a sub-row per set).
-- A per-view switch: Figure 3 (the scatter), Figure 5 (the slopes) and Figure 6 (the plate).
-  - The scatter with both sets would be about 50 crosshairs in one field.
-  - The slopes would double the lines and their end labels in every panel.
-  - The plate's two sets have different questions, so their columns cannot share an x position.
-
-## Builds that survive new data
-
-`python3 build.py results.json [LOG_DIR] [SETS_DIR]`; LOG_DIR and SETS_DIR default to the repo layout.
-An unseen setup gets "Not yet described.", a neutral grey and a "Not yet placed on the ladder" group. An unseen `:free` model counts as the deciding lane. Missing groups, step-two pairs, managed best or set files fall back instead of failing.
-Stress test: a results.json with an unseen setup on an unseen free model, a setup with no groups, a free-model `native-mcp` row on the hard set, no step-two pairs and no hard managed best. It built, and the page rendered with no console errors and no overlaps; the new free row was promoted.
+- Takeaway first: the abstract opens with one bold lead sentence. It is a template over the paired intervals and states only the direction, so the eye gets the claim before the numbers.
+- Sets as columns, measures as rows: the abstract's numbers sit in a small table with one column per question set and the same row order. A number on the frozen set and its twin on the hard set sit side by side on one line, and the layout fits 400 px with no sideways scroll.
+- Means bold, with the interval set smaller and lighter, in tabular figures, right-aligned. This is the convention of good statistical tables: the estimate reads first and the uncertainty stays beside it.
+- Two-set figure titles (Figures 1 and 4) are a single lead sentence over a compact twin table of the per-set facts, instead of one long sentence that alternates sets.
+- Pillar sentences keep their words, with numbers set bold and tabular.
 
 ## How I checked
 
-- Playwright at 1280 and 400 px, light and dark, each with both sets selected in every switch: no horizontal page scroll and no console errors.
-- An overlap script collects every visible SVG text and HTML text-node rect in the winners band and all six figures, clipped to their scroll containers, and flags any two that intersect by more than 2 px. Across the 16 renders it checked 6,102 text boxes; the one hit (the phone forest's managed-best label) was fixed, and it now reports 0 overlaps.
-- Tooltips: hovered setup names in the map, forest, plate and winners at 400 px; each showed its own sentence inside the viewport (left 8, right 348 of 400). Keyboard focus on a map name shows it too.
-- Hover-to-focus: Figures 2 to 5 enter focus on hover and clear on leave; `hover.png` shows the scatter focused on MetricFlow with its row tooltip.
+- Playwright at 1280 and 400 px, light and dark, with each set selected: no console errors and no horizontal page scroll. The overlap script checked 7,578 text boxes in the abstract, winners and all figures, and found no overlaps.
+- Pinning: I pinned a tooltip, selected its text programmatically (user-select text, pointer events auto), hovered elsewhere (the pin held), clicked another name (the pin moved), clicked empty page (it closed), pressed Enter on a focused name (it pinned) and Escape (it unpinned, focus returned). Tap to pin and tap elsewhere to unpin also passed on a 400 px touch device; the tooltip stayed between 8 and 348 px of the 400 px width.
+- Gliders:
+  - Pointer drag 40 px left on the right-panel handle: the value went to 83% and 37 marks dimmed.
+  - Dragging back to within two points snapped it home, with no dimming.
+  - Keys +1 then Shift +5 on confident-wrong: the value went to 7% and 15 marks dimmed; Home and double-click returned both home.
+- Theme switch: it flips `data-theme`, `aria-pressed`, the body ground, `localStorage` and the event.
+- A stub `sections/zz-check/section.html` used `data-setup`, `data-term`, `.focusable` and `reportReady`. Its setup tooltip, term tooltip and hover-to-focus all worked, `reportReady` saw `REPORT` and it received `report-theme`. The stub was then deleted.
+- Another designer's `sections/a-setup-map/section.html` already exists and was included by this build.
 
-## Questions for the owner and one weakness
+## Open questions
 
-- Should the plate default to the hard set, where the ladder's lift is largest?
-- Should pending setups also be greyed in the charts, not only tagged?
-- Weakness: per-group shares in the map and strip still carry no interval on the page (the pillars do), so small groups can look more decisive than they are.
+- Should the glider count unique setups rather than setup-and-model rows?
