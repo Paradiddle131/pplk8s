@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T18:54Z",
+ "written": "2026-11-04T18:57Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -580,11 +580,11 @@
    "rung": 4,
    "cases": 96,
    "of_cases": 96,
-   "runs": 193,
+   "runs": 221,
    "accuracy": [
-    0.744791666667,
+    0.746527777778,
     0.65625,
-    0.828125
+    0.829861111111
    ],
    "confident_wrong": [
     0.026041666667,
@@ -597,7 +597,7 @@
      7
     ],
     "covered": [
-     0.9925373134328358,
+     0.9950248756218906,
      67
     ],
     "distractor": [
@@ -619,13 +619,13 @@
    },
    "pass_all": 0.7291666666666666,
    "outcomes": {
-    "right": 144,
-    "declined": 21,
+    "right": 171,
+    "declined": 22,
     "wrong": 20,
     "confident-wrong": 5,
     "unclear": 3
    },
-   "model_calls": 626
+   "model_calls": 715
   },
   {
    "set": "frozen",
@@ -634,7 +634,7 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 159,
+   "runs": 179,
    "accuracy": [
     0.8125,
     0.734375,
@@ -674,11 +674,11 @@
    "pass_all": 0.78125,
    "outcomes": {
     "confident-wrong": 28,
-    "right": 124,
-    "declined": 3,
+    "right": 143,
+    "declined": 4,
     "wrong": 4
    },
-   "model_calls": 171
+   "model_calls": 191
   },
   {
    "set": "frozen",
@@ -1322,13 +1322,13 @@
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
    "rung": 4,
-   "cases": 1,
+   "cases": 31,
    "of_cases": 43,
-   "runs": 1,
+   "runs": 31,
    "accuracy": [
-    1.0,
-    1.0,
-    1.0
+    0.870967741935,
+    0.741935483871,
+    0.967741935484
    ],
    "confident_wrong": [
     0.0,
@@ -1336,20 +1336,29 @@
     0.0
    ],
    "groups": {
+    "conversation": [
+     0.625,
+     8
+    ],
     "covered": [
-     1.0,
-     1
+     0.875,
+     24
     ],
     "trap": [
      1.0,
-     1
+     6
+    ],
+    "uncovered": [
+     0.8571428571428571,
+     7
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.8709677419354839,
    "outcomes": {
-    "right": 1
+    "right": 27,
+    "wrong": 4
    },
-   "model_calls": 3
+   "model_calls": 117
   },
   {
    "set": "hard",
@@ -1404,16 +1413,16 @@
    "rung": 3,
    "cases": 43,
    "of_cases": 43,
-   "runs": 117,
+   "runs": 129,
    "accuracy": [
-    0.798449612403,
-    0.686046511628,
-    0.899224806202
+    0.813953488372,
+    0.705426356589,
+    0.906976744186
    ],
    "confident_wrong": [
-    0.085271317829,
-    0.023255813953,
-    0.162790697674
+    0.06976744186,
+    0.015503875969,
+    0.139534883721
    ],
    "groups": {
     "conversation": [
@@ -1429,17 +1438,17 @@
      6
     ],
     "uncovered": [
-     0.8421052631578947,
+     0.8771929824561404,
      19
     ]
    },
    "pass_all": 0.7209302325581395,
    "outcomes": {
-    "right": 93,
+    "right": 105,
     "wrong": 15,
     "confident-wrong": 9
    },
-   "model_calls": 597
+   "model_calls": 662
   },
   {
    "set": "hard",
@@ -1761,16 +1770,16 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 111,
+   "runs": 126,
    "accuracy": [
-    0.87984496124,
-    0.779069767442,
-    0.961240310078
+    0.883720930233,
+    0.782945736434,
+    0.968992248062
    ],
    "confident_wrong": [
-    0.011627906977,
+    0.007751937984,
     0.0,
-    0.03488372093
+    0.023255813953
    ],
    "groups": {
     "conversation": [
@@ -1786,17 +1795,17 @@
      6
     ],
     "uncovered": [
-     0.9736842105263158,
+     0.9824561403508772,
      19
     ]
    },
    "pass_all": 0.8604651162790697,
    "outcomes": {
-    "right": 96,
+    "right": 111,
     "wrong": 14,
     "confident-wrong": 1
    },
-   "model_calls": 121
+   "model_calls": 136
   },
   {
    "set": "hard",
@@ -1939,7 +1948,7 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 59,
+   "runs": 71,
    "accuracy": [
     0.93023255814,
     0.837209302326,
@@ -1970,11 +1979,11 @@
    },
    "pass_all": 0.9302325581395349,
    "outcomes": {
-    "right": 56,
-    "wrong": 2,
+    "right": 66,
+    "wrong": 4,
     "confident-wrong": 1
    },
-   "model_calls": 63
+   "model_calls": 79
   }
  ],
  "step_two": [
@@ -2145,11 +2154,11 @@
    "arm": "custom-metricflow",
    "model": "claude-opus-5-5",
    "cases": 96,
-   "runs": 193,
+   "runs": 221,
    "accuracy": [
-    -0.171875,
-    -0.277777777778,
-    -0.071180555556
+    -0.170138888889,
+    -0.274305555556,
+    -0.069444444444
    ],
    "confident_wrong": [
     -0.022569444444,
@@ -2180,12 +2189,12 @@
    "set": "hard",
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
-   "cases": 1,
-   "runs": 1,
+   "cases": 31,
+   "runs": 31,
    "accuracy": [
-    0.0,
-    0.0,
-    0.0
+    -0.032258064516,
+    -0.139784946237,
+    0.064516129032
    ],
    "confident_wrong": [
     0.0,
@@ -2217,16 +2226,16 @@
    "arm": "native-mcp",
    "model": "claude-haiku-5-5",
    "cases": 43,
-   "runs": 117,
+   "runs": 129,
    "accuracy": [
-    -0.131782945736,
-    -0.232558139535,
-    -0.046511627907
+    -0.116279069767,
+    -0.209302325581,
+    -0.038759689922
    ],
    "confident_wrong": [
-    0.085271317829,
-    0.023255813953,
-    0.162790697674
+    0.06976744186,
+    0.015503875969,
+    0.139534883721
    ],
    "worth": false
   },
@@ -2400,7 +2409,7 @@
   },
   "#365 hard haiku native-mcp": {
    "model": "claude-haiku-5-5",
-   "usd": 0.719465
+   "usd": 0.793851
   },
   "#373 frozen haiku custom-hybrid": {
    "model": "claude-haiku-5-5",
@@ -2408,11 +2417,11 @@
   },
   "#365 frozen opus custom-metricflow (rerun)": {
    "model": "claude-opus-5-5",
-   "usd": 10.778382
+   "usd": 12.235332
   },
   "#373 hard haiku custom-hybrid": {
    "model": "claude-haiku-5-5",
-   "usd": 0.002893
+   "usd": 0.064444
   }
  }
 }

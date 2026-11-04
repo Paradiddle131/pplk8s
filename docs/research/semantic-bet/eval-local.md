@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-04T18:54Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T18:57Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -102,19 +102,19 @@ Turns judged: 8 (8 the code left unclear, 0 confident-wrong with a hedge outside
 
 ## `claude-opus-5-5`
 
-Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: custom-metricflow 191 of 288; model responses spent: custom-metricflow 620.
+Scored on partial: 2 run(s) of 96 of 96 cases; runs finished: custom-metricflow 220 of 288; model responses spent: custom-metricflow 712.
 
 | | `custom-metricflow` |
 |---|---|
-| Accuracy | 76.0% |
-| Confident-wrong | 2.1% |
-| pass^1 | 76.0% |
+| Accuracy | 74.5% |
+| Confident-wrong | 2.6% |
+| pass^2 | 72.9% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (67) accuracy | 100.0% |
+| `covered` (67) accuracy | 99.3% |
 | `distractor` (3) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (11) accuracy | 100.0% |
-| `uncovered` (29) accuracy | 20.7% |
+| `uncovered` (29) accuracy | 17.2% |
 
 Turns still unclear after judging (counted as wrong):
 
