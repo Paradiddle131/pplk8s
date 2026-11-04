@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-04T18:31Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T18:41Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -32,22 +32,24 @@ Confident-wrong turns the judge moved: 0 of 2 (0 to wrong, hedged; 0 to unclear)
 
 ## `claude-haiku-5-5`
 
-Scored on partial: 1 run(s) of 42 of 96 cases; runs finished: baseline 288 of 288, custom-metricflow 288 of 288, custom-hybrid 42 of 288; model responses spent: baseline 1038, custom-metricflow 962, custom-hybrid 139.
+Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: baseline 288 of 288, custom-metricflow 288 of 288, custom-hybrid 147 of 288; model responses spent: baseline 1038, custom-metricflow 962, custom-hybrid 526.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
-| Accuracy | 64.3% | 95.2% | 81.0% |
-| Confident-wrong | 9.5% | 0.0% | 4.8% |
-| pass^1 | 64.3% | 95.2% | 81.0% |
-| `covered` (40) accuracy | 65.0% | 100.0% | 82.5% |
-| `distractor` (2) accuracy | 100.0% | 100.0% | 100.0% |
-| `trap` (8) accuracy | 62.5% | 100.0% | 100.0% |
-| `uncovered` (2) accuracy | 50.0% | 0.0% | 50.0% |
+| Accuracy | 62.5% | 79.2% | 77.1% |
+| Confident-wrong | 7.3% | 3.1% | 3.1% |
+| pass^1 | 62.5% | 79.2% | 77.1% |
+| `conversation` (7) accuracy | 57.1% | 85.7% | 100.0% |
+| `covered` (67) accuracy | 73.1% | 95.5% | 88.1% |
+| `distractor` (3) accuracy | 100.0% | 100.0% | 100.0% |
+| `planted` (4) accuracy | 100.0% | 100.0% | 100.0% |
+| `trap` (11) accuracy | 72.7% | 90.9% | 100.0% |
+| `uncovered` (29) accuracy | 37.9% | 41.4% | 51.7% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
-- Accuracy: +0.310 [+0.167, +0.452]: a difference.
-- Confident-wrong: -0.095 [-0.190, -0.024]: a difference.
+- Accuracy: +0.167 [+0.062, +0.271]: a difference.
+- Confident-wrong: -0.042 [-0.104, +0.021]: no difference.
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
@@ -59,10 +61,20 @@ Turns still unclear after judging (counted as wrong):
 - `baseline` `damaged_returns` run 3 turn 1: wrong / declined
 - `baseline` `shipped_orders` run 3 turn 1: declined / wrong
 - `custom-hybrid` `active_customers` run 1 turn 1: not judged yet
+- `custom-hybrid` `bet_customers_over_three_orders` run 1 turn 1: not judged yet
 - `custom-hybrid` `cancelled_total` run 1 turn 1: not judged yet
+- `custom-hybrid` `cancelled_total` run 2 turn 1: not judged yet
 - `custom-hybrid` `candidates_in_interview_as_of` run 1 turn 1: not judged yet
+- `custom-hybrid` `candidates_in_interview_as_of` run 2 turn 1: not judged yet
 - `custom-hybrid` `engaged_customers_week` run 1 turn 1: not judged yet
+- `custom-hybrid` `engaged_customers_week` run 2 turn 1: not judged yet
+- `custom-hybrid` `orders_over_100` run 2 turn 1: not judged yet
 - `custom-hybrid` `partners_engaged_one_day` run 1 turn 1: not judged yet
+- `custom-hybrid` `partners_engaged_one_day` run 2 turn 1: not judged yet
+
+Confident-wrong turns with a hedge outside the list, awaiting the judge:
+
+- `custom-hybrid` `signups_september` run 2 turn 1: not judged yet
 
 ## `claude-sonnet-5-5`
 
@@ -84,12 +96,20 @@ Turns judged: 8 (8 the code left unclear, 0 confident-wrong with a hedge outside
 
 ## `claude-opus-5-5`
 
-Scored on partial: 1 run(s) of 23 of 96 cases; runs finished: custom-metricflow 23 of 288; model responses spent: custom-metricflow 75.
+Scored on partial: 1 run(s) of 90 of 96 cases; runs finished: custom-metricflow 90 of 288; model responses spent: custom-metricflow 293.
 
 | | `custom-metricflow` |
 |---|---|
-| Accuracy | 100.0% |
-| Confident-wrong | 0.0% |
-| pass^1 | 100.0% |
-| `covered` (23) accuracy | 100.0% |
-| `trap` (1) accuracy | 100.0% |
+| Accuracy | 78.9% |
+| Confident-wrong | 2.2% |
+| pass^1 | 78.9% |
+| `conversation` (7) accuracy | 100.0% |
+| `covered` (67) accuracy | 100.0% |
+| `distractor` (3) accuracy | 100.0% |
+| `planted` (4) accuracy | 100.0% |
+| `trap` (11) accuracy | 100.0% |
+| `uncovered` (23) accuracy | 17.4% |
+
+Turns still unclear after judging (counted as wrong):
+
+- `custom-metricflow` `bet_istanbul_warmer` run 1 turn 1: not judged yet

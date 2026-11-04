@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T18:31Z",
+ "written": "2026-11-04T18:41Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -256,45 +256,54 @@
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
    "rung": 4,
-   "cases": 44,
+   "cases": 96,
    "of_cases": 96,
-   "runs": 44,
+   "runs": 148,
    "accuracy": [
-    0.795454545455,
-    0.681818181818,
-    0.909090909091
+    0.765625,
+    0.677083333333,
+    0.84375
    ],
    "confident_wrong": [
-    0.068181818182,
-    0.0,
-    0.159090909091
+    0.036458333333,
+    0.010416666667,
+    0.072916666667
    ],
    "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
     "covered": [
-     0.8095238095238095,
-     42
+     0.8731343283582089,
+     67
     ],
     "distractor": [
      1.0,
-     2
+     3
+    ],
+    "planted": [
+     1.0,
+     4
     ],
     "trap": [
      1.0,
-     8
+     11
     ],
     "uncovered": [
-     0.5,
-     2
+     0.5172413793103449,
+     29
     ]
    },
-   "pass_all": 0.7954545454545454,
+   "pass_all": 0.7604166666666666,
    "outcomes": {
-    "right": 35,
-    "unclear": 5,
-    "confident-wrong": 3,
-    "wrong": 1
+    "right": 116,
+    "unclear": 11,
+    "confident-wrong": 7,
+    "wrong": 5,
+    "declined": 9
    },
-   "model_calls": 146
+   "model_calls": 531
   },
   {
    "set": "frozen",
@@ -517,16 +526,16 @@
    "rung": 3,
    "cases": 96,
    "of_cases": 96,
-   "runs": 224,
+   "runs": 267,
    "accuracy": [
-    0.958333333333,
-    0.916666666667,
-    0.989583333333
+    0.953125,
+    0.914930555556,
+    0.986111111111
    ],
    "confident_wrong": [
-    0.005208333333,
+    0.008680555556,
     0.0,
-    0.015625
+    0.022569444444
    ],
    "groups": {
     "conversation": [
@@ -534,7 +543,7 @@
      7
     ],
     "covered": [
-     0.9626865671641791,
+     0.9552238805970149,
      67
     ],
     "distractor": [
@@ -542,7 +551,7 @@
      3
     ],
     "planted": [
-     0.875,
+     0.8333333333333334,
      4
     ],
     "trap": [
@@ -554,92 +563,122 @@
      29
     ]
    },
-   "pass_all": 0.9479166666666666,
+   "pass_all": 0.9270833333333334,
    "outcomes": {
-    "right": 216,
-    "wrong": 5,
+    "right": 254,
+    "wrong": 8,
     "declined": 2,
-    "confident-wrong": 1
+    "confident-wrong": 2,
+    "unclear": 1
    },
-   "model_calls": 1002
+   "model_calls": 1192
   },
   {
    "set": "frozen",
    "arm": "custom-metricflow",
    "model": "claude-opus-5-5",
    "rung": 4,
-   "cases": 24,
+   "cases": 90,
    "of_cases": 96,
-   "runs": 24,
+   "runs": 90,
    "accuracy": [
-    1.0,
-    1.0,
-    1.0
+    0.788888888889,
+    0.7,
+    0.866666666667
    ],
    "confident_wrong": [
+    0.022222222222,
     0.0,
-    0.0,
-    0.0
+    0.055555555556
    ],
    "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
     "covered": [
      1.0,
-     24
+     67
+    ],
+    "distractor": [
+     1.0,
+     3
+    ],
+    "planted": [
+     1.0,
+     4
     ],
     "trap": [
      1.0,
-     2
+     11
+    ],
+    "uncovered": [
+     0.17391304347826086,
+     23
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.7888888888888889,
    "outcomes": {
-    "right": 24
+    "right": 71,
+    "declined": 8,
+    "wrong": 8,
+    "confident-wrong": 2,
+    "unclear": 1
    },
-   "model_calls": 78
+   "model_calls": 293
   },
   {
    "set": "frozen",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "rung": 1,
-   "cases": 48,
+   "cases": 92,
    "of_cases": 96,
-   "runs": 48,
+   "runs": 92,
    "accuracy": [
-    0.75,
-    0.625,
-    0.875
+    0.79347826087,
+    0.70652173913,
+    0.869565217391
    ],
    "confident_wrong": [
-    0.229166666667,
-    0.125,
-    0.354166666667
+    0.163043478261,
+    0.086956521739,
+    0.239130434783
    ],
    "groups": {
+    "conversation": [
+     0.2857142857142857,
+     7
+    ],
     "covered": [
-     0.782608695652174,
-     46
+     0.7575757575757576,
+     66
     ],
     "distractor": [
      1.0,
-     2
+     3
+    ],
+    "planted": [
+     0.75,
+     4
     ],
     "trap": [
-     0.5,
-     8
+     0.6,
+     10
     ],
     "uncovered": [
-     0.0,
-     2
+     0.8846153846153846,
+     26
     ]
    },
-   "pass_all": 0.75,
+   "pass_all": 0.7934782608695652,
    "outcomes": {
-    "confident-wrong": 11,
-    "right": 36,
-    "declined": 1
+    "confident-wrong": 15,
+    "right": 73,
+    "declined": 2,
+    "wrong": 2
    },
-   "model_calls": 48
+   "model_calls": 98
   },
   {
    "set": "frozen",
@@ -1072,16 +1111,16 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 248,
+   "runs": 288,
    "accuracy": [
-    0.901041666667,
-    0.838541666667,
-    0.953125
+    0.902777777778,
+    0.84375,
+    0.954861111111
    ],
    "confident_wrong": [
-    0.057291666667,
-    0.020833333333,
-    0.104166666667
+    0.052083333333,
+    0.017361111111,
+    0.09375
    ],
    "groups": {
     "conversation": [
@@ -1105,18 +1144,18 @@
      11
     ],
     "uncovered": [
-     0.7413793103448276,
+     0.7471264367816093,
      29
     ]
    },
    "pass_all": 0.8854166666666666,
    "outcomes": {
-    "right": 226,
-    "declined": 5,
-    "wrong": 6,
-    "confident-wrong": 11
+    "right": 260,
+    "declined": 6,
+    "wrong": 7,
+    "confident-wrong": 15
    },
-   "model_calls": 266
+   "model_calls": 306
   },
   {
    "set": "frozen",
@@ -1329,39 +1368,44 @@
    "arm": "native-mcp",
    "model": "claude-haiku-5-5",
    "rung": 3,
-   "cases": 20,
+   "cases": 43,
    "of_cases": 43,
-   "runs": 20,
+   "runs": 60,
    "accuracy": [
-    0.8,
-    0.6,
-    0.95
+    0.825581395349,
+    0.709302325581,
+    0.93023255814
    ],
    "confident_wrong": [
+    0.058139534884,
     0.0,
-    0.0,
-    0.0
+    0.127906976744
    ],
    "groups": {
     "conversation": [
-     0.25,
-     4
+     0.5,
+     8
     ],
     "covered": [
-     0.8,
-     20
+     0.7708333333333334,
+     24
     ],
     "trap": [
-     1.0,
-     5
+     0.9166666666666666,
+     6
+    ],
+    "uncovered": [
+     0.8947368421052632,
+     19
     ]
    },
-   "pass_all": 0.8,
+   "pass_all": 0.813953488372093,
    "outcomes": {
-    "right": 16,
-    "wrong": 4
+    "right": 50,
+    "wrong": 7,
+    "confident-wrong": 3
    },
-   "model_calls": 93
+   "model_calls": 299
   },
   {
    "set": "hard",
@@ -1416,16 +1460,16 @@
    "rung": 3,
    "cases": 43,
    "of_cases": 43,
-   "runs": 45,
+   "runs": 129,
    "accuracy": [
-    0.488372093023,
-    0.348837209302,
+    0.480620155039,
+    0.325581395349,
     0.627906976744
    ],
    "confident_wrong": [
-    0.06976744186,
-    0.0,
-    0.162790697674
+    0.093023255814,
+    0.023255813953,
+    0.186046511628
    ],
    "groups": {
     "conversation": [
@@ -1433,7 +1477,7 @@
      8
     ],
     "covered": [
-     0.625,
+     0.611111111111111,
      24
     ],
     "trap": [
@@ -1445,14 +1489,15 @@
      19
     ]
    },
-   "pass_all": 0.4883720930232558,
+   "pass_all": 0.46511627906976744,
    "outcomes": {
-    "right": 23,
-    "wrong": 7,
-    "confident-wrong": 3,
-    "declined": 12
+    "right": 62,
+    "wrong": 19,
+    "confident-wrong": 12,
+    "declined": 35,
+    "unclear": 1
    },
-   "model_calls": 90
+   "model_calls": 257
   },
   {
    "set": "hard",
@@ -1680,34 +1725,44 @@
    "arm": "native-kc-max",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "rung": 1,
-   "cases": 14,
+   "cases": 43,
    "of_cases": 43,
-   "runs": 14,
+   "runs": 53,
    "accuracy": [
-    1.0,
-    1.0,
-    1.0
+    0.860465116279,
+    0.744186046512,
+    0.953488372093
    ],
    "confident_wrong": [
+    0.023255813953,
     0.0,
-    0.0,
-    0.0
+    0.06976744186
    ],
    "groups": {
+    "conversation": [
+     0.375,
+     8
+    ],
     "covered": [
-     1.0,
-     14
+     0.7916666666666666,
+     24
     ],
     "trap": [
      1.0,
-     5
+     6
+    ],
+    "uncovered": [
+     0.9473684210526315,
+     19
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.8604651162790697,
    "outcomes": {
-    "right": 14
+    "right": 47,
+    "wrong": 5,
+    "confident-wrong": 1
    },
-   "model_calls": 14
+   "model_calls": 57
   },
   {
    "set": "hard",
@@ -1842,6 +1897,40 @@
     "declined": 15
    },
    "model_calls": 141
+  },
+  {
+   "set": "hard",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (LATEST_GA_MODEL)",
+   "rung": 1,
+   "cases": 2,
+   "of_cases": 43,
+   "runs": 2,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     2
+    ],
+    "trap": [
+     1.0,
+     2
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 2
+   },
+   "model_calls": 2
   }
  ],
  "step_two": [
@@ -1903,17 +1992,17 @@
    "set": "frozen",
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
-   "cases": 44,
-   "runs": 44,
+   "cases": 96,
+   "runs": 148,
    "accuracy": [
-    -0.121212121212,
-    -0.272727272727,
-    0.030303030303
+    -0.151041666667,
+    -0.258680555556,
+    -0.045138888889
    ],
    "confident_wrong": [
-    0.007575757576,
-    -0.098484848485,
-    0.113636363636
+    -0.012152777778,
+    -0.065972222222,
+    0.039930555556
    ],
    "worth": false
   },
@@ -1994,16 +2083,16 @@
    "arm": "native-mcp",
    "model": "claude-sonnet-5-5",
    "cases": 96,
-   "runs": 224,
+   "runs": 267,
    "accuracy": [
-    0.041666666667,
-    -0.008680555556,
-    0.097222222222
+    0.036458333333,
+    -0.013888888889,
+    0.092013888889
    ],
    "confident_wrong": [
-    -0.043402777778,
-    -0.086805555556,
-    -0.006944444444
+    -0.039930555556,
+    -0.085069444444,
+    -0.001736111111
    ],
    "worth": true
   },
@@ -2011,17 +2100,17 @@
    "set": "frozen",
    "arm": "custom-metricflow",
    "model": "claude-opus-5-5",
-   "cases": 24,
-   "runs": 24,
+   "cases": 90,
+   "runs": 90,
    "accuracy": [
-    0.083333333333,
-    0.0,
-    0.208333333333
+    -0.122222222222,
+    -0.222222222222,
+    -0.022222222222
    ],
    "confident_wrong": [
-    -0.083333333333,
-    -0.208333333333,
-    0.0
+    -0.02962962963,
+    -0.085185185185,
+    0.022222222222
    ],
    "worth": false
   },
@@ -2065,17 +2154,17 @@
    "set": "hard",
    "arm": "native-mcp",
    "model": "claude-haiku-5-5",
-   "cases": 20,
-   "runs": 20,
+   "cases": 43,
+   "runs": 60,
    "accuracy": [
-    -0.1,
-    -0.266666666667,
-    0.05
+    -0.104651162791,
+    -0.209302325581,
+    -0.011627906977
    ],
    "confident_wrong": [
+    0.058139534884,
     0.0,
-    0.0,
-    0.0
+    0.127906976744
    ],
    "worth": false
   },
@@ -2102,16 +2191,16 @@
    "arm": "custom-toolbox",
    "model": "claude-sonnet-5-5",
    "cases": 43,
-   "runs": 45,
+   "runs": 129,
    "accuracy": [
-    -0.441860465116,
-    -0.596899224806,
-    -0.294573643411
+    -0.449612403101,
+    -0.604651162791,
+    -0.302325581395
    ],
    "confident_wrong": [
-    0.06976744186,
-    0.0,
-    0.162790697674
+    0.093023255814,
+    0.023255813953,
+    0.186046511628
    ],
    "worth": false
   },
@@ -2220,7 +2309,7 @@
   },
   "#365 frozen sonnet native-mcp": {
    "model": "claude-sonnet-5-5",
-   "usd": 20.237864
+   "usd": 23.58276
   },
   "#365 frozen opus custom-metricflow": {
    "model": "claude-opus-5-5",
@@ -2244,19 +2333,19 @@
   },
   "#365 hard sonnet custom-toolbox": {
    "model": "claude-sonnet-5-5",
-   "usd": 0.462006
+   "usd": 1.048625
   },
   "#365 hard haiku native-mcp": {
    "model": "claude-haiku-5-5",
-   "usd": 0.116059
+   "usd": 0.36692
   },
   "#373 frozen haiku custom-hybrid": {
    "model": "claude-haiku-5-5",
-   "usd": 0.06812
+   "usd": 0.24798
   },
   "#365 frozen opus custom-metricflow (rerun)": {
    "model": "claude-opus-5-5",
-   "usd": 1.325697
+   "usd": 5.096936
   }
  }
 }
