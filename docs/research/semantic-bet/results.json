@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T18:57Z",
+ "written": "2026-11-04T19:02Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -580,7 +580,7 @@
    "rung": 4,
    "cases": 96,
    "of_cases": 96,
-   "runs": 221,
+   "runs": 253,
    "accuracy": [
     0.746527777778,
     0.65625,
@@ -619,13 +619,13 @@
    },
    "pass_all": 0.7291666666666666,
    "outcomes": {
-    "right": 171,
-    "declined": 22,
+    "right": 202,
+    "declined": 23,
     "wrong": 20,
     "confident-wrong": 5,
     "unclear": 3
    },
-   "model_calls": 715
+   "model_calls": 828
   },
   {
    "set": "frozen",
@@ -634,16 +634,16 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 179,
+   "runs": 202,
    "accuracy": [
-    0.8125,
-    0.734375,
-    0.885416666667
+    0.809027777778,
+    0.730902777778,
+    0.880208333333
    ],
    "confident_wrong": [
-    0.145833333333,
-    0.083333333333,
-    0.213541666667
+    0.149305555556,
+    0.086805555556,
+    0.21875
    ],
    "groups": {
     "conversation": [
@@ -651,7 +651,7 @@
      7
     ],
     "covered": [
-     0.7761194029850746,
+     0.7711442786069651,
      67
     ],
     "distractor": [
@@ -671,14 +671,14 @@
      29
     ]
    },
-   "pass_all": 0.78125,
+   "pass_all": 0.7708333333333334,
    "outcomes": {
-    "confident-wrong": 28,
-    "right": 143,
+    "confident-wrong": 32,
+    "right": 162,
     "declined": 4,
     "wrong": 4
    },
-   "model_calls": 191
+   "model_calls": 214
   },
   {
    "set": "frozen",
@@ -1322,18 +1322,18 @@
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
    "rung": 4,
-   "cases": 31,
+   "cases": 43,
    "of_cases": 43,
-   "runs": 31,
+   "runs": 77,
    "accuracy": [
-    0.870967741935,
-    0.741935483871,
-    0.967741935484
+    0.825581395349,
+    0.709302325581,
+    0.93023255814
    ],
    "confident_wrong": [
+    0.023255813953,
     0.0,
-    0.0,
-    0.0
+    0.06976744186
    ],
    "groups": {
     "conversation": [
@@ -1349,16 +1349,18 @@
      6
     ],
     "uncovered": [
-     0.8571428571428571,
-     7
+     0.7631578947368421,
+     19
     ]
    },
-   "pass_all": 0.8709677419354839,
+   "pass_all": 0.813953488372093,
    "outcomes": {
-    "right": 27,
-    "wrong": 4
+    "right": 65,
+    "wrong": 10,
+    "confident-wrong": 1,
+    "declined": 1
    },
-   "model_calls": 117
+   "model_calls": 287
   },
   {
    "set": "hard",
@@ -1541,6 +1543,40 @@
     "unclear": 1
    },
    "model_calls": 257
+  },
+  {
+   "set": "hard",
+   "arm": "native-mcp",
+   "model": "claude-sonnet-5-5",
+   "rung": 3,
+   "cases": 1,
+   "of_cases": 43,
+   "runs": 1,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     1
+    ],
+    "trap": [
+     1.0,
+     1
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 1
+   },
+   "model_calls": 4
   },
   {
    "set": "hard",
@@ -1770,7 +1806,7 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 126,
+   "runs": 128,
    "accuracy": [
     0.883720930233,
     0.782945736434,
@@ -1801,11 +1837,11 @@
    },
    "pass_all": 0.8604651162790697,
    "outcomes": {
-    "right": 111,
+    "right": 113,
     "wrong": 14,
     "confident-wrong": 1
    },
-   "model_calls": 136
+   "model_calls": 138
   },
   {
    "set": "hard",
@@ -1948,16 +1984,16 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 71,
+   "runs": 92,
    "accuracy": [
-    0.93023255814,
-    0.837209302326,
+    0.941860465116,
+    0.872093023256,
     1.0
    ],
    "confident_wrong": [
-    0.023255813953,
+    0.011627906977,
     0.0,
-    0.06976744186
+    0.03488372093
    ],
    "groups": {
     "conversation": [
@@ -1973,17 +2009,17 @@
      6
     ],
     "uncovered": [
-     0.9473684210526315,
+     0.9736842105263158,
      19
     ]
    },
    "pass_all": 0.9302325581395349,
    "outcomes": {
-    "right": 66,
+    "right": 87,
     "wrong": 4,
     "confident-wrong": 1
    },
-   "model_calls": 79
+   "model_calls": 100
   }
  ],
  "step_two": [
@@ -2154,7 +2190,7 @@
    "arm": "custom-metricflow",
    "model": "claude-opus-5-5",
    "cases": 96,
-   "runs": 221,
+   "runs": 253,
    "accuracy": [
     -0.170138888889,
     -0.274305555556,
@@ -2174,14 +2210,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.193798449612,
+    -0.205426356589,
     -0.317829457364,
-    -0.077519379845
+    -0.104651162791
    ],
    "confident_wrong": [
-    0.093023255814,
-    0.023255813953,
-    0.178294573643
+    0.081395348837,
+    0.019379844961,
+    0.158914728682
    ],
    "worth": false
   },
@@ -2189,17 +2225,17 @@
    "set": "hard",
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
-   "cases": 31,
-   "runs": 31,
+   "cases": 43,
+   "runs": 77,
    "accuracy": [
-    -0.032258064516,
-    -0.139784946237,
-    0.064516129032
+    -0.116279069767,
+    -0.209302325581,
+    -0.03488372093
    ],
    "confident_wrong": [
+    0.011627906977,
     0.0,
-    0.0,
-    0.0
+    0.03488372093
    ],
    "worth": false
   },
@@ -2210,14 +2246,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.480620155039,
-    -0.627906976744,
-    -0.341085271318
+    -0.492248062016,
+    -0.639534883721,
+    -0.348837209302
    ],
    "confident_wrong": [
-    0.06976744186,
-    0.007751937984,
-    0.147286821705
+    0.058139534884,
+    -0.007751937984,
+    0.139534883721
    ],
    "worth": false
   },
@@ -2228,14 +2264,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.116279069767,
-    -0.209302325581,
-    -0.038759689922
+    -0.127906976744,
+    -0.217054263566,
+    -0.050387596899
    ],
    "confident_wrong": [
-    0.06976744186,
+    0.058139534884,
     0.015503875969,
-    0.139534883721
+    0.116279069767
    ],
    "worth": false
   },
@@ -2246,14 +2282,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.356589147287,
-    -0.503875968992,
-    -0.217054263566
+    -0.368217054264,
+    -0.515503875969,
+    -0.232558139535
    ],
    "confident_wrong": [
-    0.054263565891,
-    0.0,
-    0.124031007752
+    0.042635658915,
+    -0.015503875969,
+    0.12015503876
    ],
    "worth": false
   },
@@ -2264,14 +2300,32 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.449612403101,
-    -0.604651162791,
-    -0.302325581395
+    -0.461240310078,
+    -0.608527131783,
+    -0.321705426357
    ],
    "confident_wrong": [
-    0.093023255814,
-    0.023255813953,
-    0.186046511628
+    0.081395348837,
+    0.003875968992,
+    0.174418604651
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "native-mcp",
+   "model": "claude-sonnet-5-5",
+   "cases": 1,
+   "runs": 1,
+   "accuracy": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
    ],
    "worth": false
   },
@@ -2282,14 +2336,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.193798449612,
-    -0.31007751938,
-    -0.085271317829
+    -0.205426356589,
+    -0.317829457364,
+    -0.104651162791
    ],
    "confident_wrong": [
-    0.06976744186,
-    0.023255813953,
-    0.124031007752
+    0.058139534884,
+    0.015503875969,
+    0.112403100775
    ],
    "worth": false
   }
@@ -2307,6 +2361,7 @@
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
+   "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)",
    "native-kc-reach on google-data-agent (MODEL_UNSPECIFIED)"
   ]
  },
@@ -2318,8 +2373,8 @@
   ],
   "hard": [
    "native-context-bare",
-   "google-data-agent (MODEL_UNSPECIFIED)",
-   0.9302325581395349
+   "google-data-agent (LATEST_GA_MODEL)",
+   0.9418604651162791
   ]
  },
  "claude_spend_by_pass": {
@@ -2417,11 +2472,19 @@
   },
   "#365 frozen opus custom-metricflow (rerun)": {
    "model": "claude-opus-5-5",
-   "usd": 12.235332
+   "usd": 13.964923
   },
   "#373 hard haiku custom-hybrid": {
    "model": "claude-haiku-5-5",
-   "usd": 0.064444
+   "usd": 0.124205
+  },
+  "#364 hard sonnet native-mcp": {
+   "model": "claude-sonnet-5-5",
+   "usd": 0.237348
+  },
+  "#365 frozen opus custom-metricflow (rerun, rest)": {
+   "model": "claude-opus-5-5",
+   "usd": 0.122069
   }
  }
 }
