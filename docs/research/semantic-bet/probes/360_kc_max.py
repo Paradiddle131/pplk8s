@@ -44,6 +44,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,6 +55,9 @@ SOURCE = "silver"
 COPY = "bet_kcmax"
 LOCATION = "us"
 GLOSSARY = "bet-kc-max"
+# BigQuery: five table metadata updates per 10 s per table (quotas page, "Maximum rate of table metadata update operations").
+UPDATE_GAP_S = 2.1
+UPDATE_RETRIES = 6
 AGENT_ID = "bet-kc-max"
 # native-kc's instruction (327_kc_agent.py), unchanged: the arm adds catalog context, not authored context.
 INSTRUCTION = "You answer questions about the shop's orders, partner returns and marketing. Amounts are in EUR."
@@ -605,7 +609,15 @@ def describe(proj: Project, project: str) -> int:
             return 2
     ran = 0
     for sql in statements:
-        status, out = query(send, project, sql, cap, dry=False)
+        # BigQuery allows five metadata updates per table every 10 seconds: pace them, and wait
+        # out a "table update operations" refusal (seen 2026-11-04, the 13th statement on one table).
+        time.sleep(UPDATE_GAP_S)
+        for attempt in range(1, UPDATE_RETRIES + 1):
+            status, out = query(send, project, sql, cap, dry=False)
+            if status == 400 and "exceeded rate limits" in json.dumps(out):
+                time.sleep(10 * attempt)
+                continue
+            break
         if status != 200 or out.get("errors"):
             print(
                 f"360_kc_max: DDL failed ({status}): {sql[:120]} {json.dumps(out)[:300]}"
