@@ -1,0 +1,1 @@
+{"case": "revenue_germany", "run": 1, "turns": [{"question": "What was our revenue from customers in Germany on 1 October 2026?", "answer": "Revenue from customers in Germany (DE) on 1 October 2026 was 379.75 EUR. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}
