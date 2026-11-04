@@ -1216,6 +1216,20 @@ RESULTS = RESEARCH / "results.json"
 CALLS = RESEARCH / "findings" / "2026-11-03-361-claude-calls.jsonl"
 
 
+def harness(model: str) -> str:
+    """What ran the model (owner, 2026-11-04: kept as metadata and a sanity check, so a difference
+    between the same model behind the API and behind a Claude Code subagent is visible in the data):
+    Google's data-agent service, a Claude Code subagent on the subscription (#374), ADK on the
+    Anthropic API, or ADK on OpenRouter."""
+    if model.startswith("google-data-agent"):
+        return "google-data-agent"
+    if model.startswith("claude-code"):
+        return "claude-code-subagent"
+    if model.startswith("claude-"):
+        return "adk-anthropic-api"
+    return "adk-openrouter"
+
+
 def arm_result(
     bet: BetSet, entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int
 ) -> dict[str, Any]:
@@ -1242,6 +1256,7 @@ def arm_result(
         "set": bet.name,
         "arm": arm,
         "model": model,
+        "harness": harness(model),
         "rung": RUNG.get(arm),
         "cases": len(right),
         "of_cases": len(bet.questions),

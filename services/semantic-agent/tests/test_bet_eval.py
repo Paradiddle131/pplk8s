@@ -845,3 +845,10 @@ def test_a_local_pass_stops_at_the_canary_and_logs_nothing(monkeypatch, tmp_path
         == "done"
     )
     assert len(bet_eval.read_log(log)) == 4  # the canaries are never logged
+
+
+def test_each_row_names_the_harness_that_ran_its_model():
+    assert bet_eval.harness("claude-code (haiku)") == "claude-code-subagent"
+    assert bet_eval.harness("claude-haiku-5-5") == "adk-anthropic-api"
+    assert bet_eval.harness("google-data-agent (LATEST_GA_MODEL)") == "google-data-agent"
+    assert bet_eval.harness("nvidia/nemotron-3.5-super-vl:free") == "adk-openrouter"
