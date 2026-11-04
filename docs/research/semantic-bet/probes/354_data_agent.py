@@ -44,7 +44,21 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 # The model a data agent answers with: Google's, chosen by the service (`options.model: MODEL_UNSPECIFIED`), never
 # the runner's MODEL_ID; logged as the rows' `model`, so the report never pairs these arms with an OpenRouter one.
-MODEL = "google-data-agent (MODEL_UNSPECIFIED)"
+# The chat request takes two Gemini switches (v1 discovery, read 2026-11-04): `model` (MODEL_UNSPECIFIED, "either
+# preview or non preview model can be used", or LATEST_GA_MODEL, "the most up-to-date non-preview model") and
+# `thinkingMode` (THINKING_MODE_UNSPECIFIED, FAST or THINKING). BET_DATA_AGENT_MODEL and BET_DATA_AGENT_THINKING
+# set them per pass; a pass with either set logs its own model name, so its runs score as a separate model.
+CHAT_MODEL = os.environ.get("BET_DATA_AGENT_MODEL", "MODEL_UNSPECIFIED")
+THINKING = os.environ.get("BET_DATA_AGENT_THINKING", "")
+if CHAT_MODEL not in ("MODEL_UNSPECIFIED", "LATEST_GA_MODEL") or THINKING not in (
+    "",
+    "FAST",
+    "THINKING",
+):
+    sys.exit(
+        f"354_data_agent: unknown BET_DATA_AGENT_MODEL {CHAT_MODEL!r} or BET_DATA_AGENT_THINKING {THINKING!r}"
+    )
+MODEL = f"google-data-agent ({CHAT_MODEL}{', ' + THINKING if THINKING else ''})"
 # Each data-agent arm's agent, in RULE.md's rung order.
 AGENTS = {
     "native-context": "bet-context",
@@ -209,6 +223,10 @@ def chat_with(
         "messages": messages,
         "dataAgentContext": {"dataAgent": f"{parent}/dataAgents/{shaped.AGENT_ID}"},
     }
+    if CHAT_MODEL != "MODEL_UNSPECIFIED":
+        body["model"] = CHAT_MODEL
+    if THINKING:
+        body["thinkingMode"] = THINKING
     started = time.monotonic()
     try:
         status, payload = send(
