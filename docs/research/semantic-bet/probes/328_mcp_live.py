@@ -50,6 +50,7 @@ ARMS = {
     "330_toolbox_agent.py": "custom-toolbox",
     "363_lightdash_agent.py": "custom-lightdash",
     "354_data_agent.py": "native-kc",  # or --arm <any of its AGENTS>
+    "374_cc_agent.py": "cc-metricflow",  # recorded Claude Code subagent answers (#374)
 }
 
 
@@ -93,6 +94,11 @@ async def main() -> int:
         "--dollars", type=float, help="a Claude pass's budget in USD (spend.py)"
     )
     parser.add_argument("--label", help="the pass's name in the spend ledger")
+    parser.add_argument(
+        "--no-canary",
+        action="store_true",
+        help="skip the canary (recorded answers: 374_cc_agent.py)",
+    )
     parser.add_argument(
         "ids", nargs="*", help="only these cases (default: the whole set)"
     )
@@ -146,7 +152,7 @@ async def main() -> int:
         log,
         deadline,
         args.requests,
-        canary=True,
+        canary=not args.no_canary,
     )
     print(f"stopped: {why}; logged to {log}", flush=True)
     if claude:

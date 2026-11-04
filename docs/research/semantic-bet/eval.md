@@ -4,7 +4,7 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-04T19:21Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T19:32Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 96 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -151,6 +151,18 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 - `custom-metricflow` `bet_peak_checkout_hour` run 2 turn 1: not judged yet
 
+### `claude-code (haiku)`
+
+Scored on partial: 1 run(s) of 12 of 96 cases; runs finished: cc-metricflow 12 of 288; model responses spent: cc-metricflow 12.
+
+| | `cc-metricflow` |
+|---|---|
+| Accuracy | 100.0% |
+| Confident-wrong | 0.0% |
+| pass^1 | 100.0% |
+| `covered` (12) accuracy | 100.0% |
+| `trap` (1) accuracy | 100.0% |
+
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
 Scored on partial: 1 run(s) of 95 of 96 cases; runs finished: native-bare 287 of 288, native-context-bare 288 of 288, native-context 288 of 288, native-governed 288 of 288, native-graph 288 of 288, native-kc-max 288 of 288, native-kc-reach 288 of 288, native-kc 288 of 288, native-shaped 288 of 288; model responses spent: native-bare 305, native-context-bare 306, native-context 306, native-governed 306, native-graph 306, native-kc-max 306, native-kc-reach 306, native-kc 306, native-shaped 306.
@@ -231,13 +243,14 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 - `custom-toolbox` (rung 3) on `claude-sonnet-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.500 [-0.604, -0.392], confident-wrong -0.017 [-0.069, +0.035]: not worth building (the check; 288 runs finished).
 - `native-mcp` (rung 3) on `claude-sonnet-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy +0.038 [-0.010, +0.094], confident-wrong -0.042 [-0.087, -0.003]: worth building (the check; 288 runs finished).
 - `custom-metricflow` (rung 4) on `claude-opus-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.174 [-0.278, -0.073], confident-wrong -0.028 [-0.076, +0.017]: not worth building (the check; 288 runs finished).
+- `cc-metricflow` (rung 4) on `claude-code (haiku)` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 12 of 96 cases: accuracy +0.083 [+0.000, +0.250], confident-wrong -0.083 [-0.250, +0.000]: not worth building (the check; 12 runs finished).
 - The check on `custom-metricflow`: the same verdict on every model, so the gap is not the model's.
 - The check on `custom-toolbox`: the same verdict on every model, so the gap is not the model's.
 - The check on `native-mcp`: the verdict moves with the model, so the gap is at least partly the model's.
 
 ## Every arm on the hard set
 
-Written 2026-11-04T19:21Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 43 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-04T19:32Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 43 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -281,17 +294,17 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 ### `claude-sonnet-5-5`
 
-Scored on partial: 1 run(s) of 43 of 43 cases; runs finished: custom-metricflow 129 of 129, custom-toolbox 129 of 129, native-mcp 71 of 129; model responses spent: custom-metricflow 445, custom-toolbox 257, native-mcp 327.
+Scored on partial: 2 run(s) of 43 of 43 cases; runs finished: custom-metricflow 129 of 129, custom-toolbox 129 of 129, native-mcp 87 of 129; model responses spent: custom-metricflow 445, custom-toolbox 257, native-mcp 403.
 
 | | `custom-metricflow` | `custom-toolbox` | `native-mcp` |
 |---|---|---|---|
-| Accuracy | 55.8% | 48.8% | 90.7% |
-| Confident-wrong | 7.0% | 7.0% | 0.0% |
-| pass^1 | 55.8% | 48.8% | 90.7% |
+| Accuracy | 57.0% | 47.7% | 89.5% |
+| Confident-wrong | 5.8% | 8.1% | 0.0% |
+| pass^2 | 55.8% | 46.5% | 88.4% |
 | `conversation` (8) accuracy | 62.5% | 37.5% | 50.0% |
-| `covered` (24) accuracy | 83.3% | 62.5% | 83.3% |
+| `covered` (24) accuracy | 83.3% | 60.4% | 81.2% |
 | `trap` (6) accuracy | 100.0% | 66.7% | 100.0% |
-| `uncovered` (19) accuracy | 21.1% | 31.6% | 100.0% |
+| `uncovered` (19) accuracy | 23.7% | 31.6% | 100.0% |
 
 Turns judged: 3 (1 the code left unclear, 2 confident-wrong with a hedge outside the list); verdicts that stood: 2.
 Confident-wrong turns the judge moved: 2 of 2 (1 to wrong, hedged; 1 to unclear).
@@ -328,17 +341,17 @@ Turns judged: 1 (1 the code left unclear, 0 confident-wrong with a hedge outside
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 1 run(s) of 43 of 43 cases; runs finished: native-context-bare 129 of 129, native-context 129 of 129, native-governed 129 of 129, native-graph 129 of 129, native-kc-max 128 of 129, native-kc-reach 129 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-context-bare 141, native-context 142, native-governed 141, native-graph 141, native-kc-max 138, native-kc-reach 141, native-kc 141, native-shaped 141.
+Scored on partial: 1 run(s) of 43 of 43 cases; runs finished: native-bare 43 of 129, native-context-bare 129 of 129, native-context 129 of 129, native-governed 129 of 129, native-graph 129 of 129, native-kc-max 128 of 129, native-kc-reach 129 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-bare 47, native-context-bare 141, native-context 142, native-governed 141, native-graph 141, native-kc-max 138, native-kc-reach 141, native-kc 141, native-shaped 141.
 
-| | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
-|---|---|---|---|---|---|---|---|---|
-| Accuracy | 90.7% | 90.7% | 72.1% | 55.8% | 86.0% | 83.7% | 62.8% | 60.5% |
-| Confident-wrong | 0.0% | 0.0% | 0.0% | 18.6% | 2.3% | 9.3% | 14.0% | 14.0% |
-| pass^1 | 90.7% | 90.7% | 72.1% | 55.8% | 86.0% | 83.7% | 62.8% | 60.5% |
-| `conversation` (8) accuracy | 50.0% | 50.0% | 62.5% | 50.0% | 37.5% | 62.5% | 50.0% | 37.5% |
-| `covered` (24) accuracy | 83.3% | 83.3% | 87.5% | 62.5% | 79.2% | 83.3% | 66.7% | 54.2% |
-| `trap` (6) accuracy | 100.0% | 100.0% | 100.0% | 33.3% | 100.0% | 83.3% | 50.0% | 50.0% |
-| `uncovered` (19) accuracy | 100.0% | 100.0% | 52.6% | 47.4% | 94.7% | 84.2% | 57.9% | 68.4% |
+| | `native-bare` | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
+|---|---|---|---|---|---|---|---|---|---|
+| Accuracy | 62.8% | 90.7% | 90.7% | 72.1% | 55.8% | 86.0% | 83.7% | 62.8% | 60.5% |
+| Confident-wrong | 32.6% | 0.0% | 0.0% | 0.0% | 18.6% | 2.3% | 9.3% | 14.0% | 14.0% |
+| pass^1 | 62.8% | 90.7% | 90.7% | 72.1% | 55.8% | 86.0% | 83.7% | 62.8% | 60.5% |
+| `conversation` (8) accuracy | 62.5% | 50.0% | 50.0% | 62.5% | 50.0% | 37.5% | 62.5% | 50.0% | 37.5% |
+| `covered` (24) accuracy | 62.5% | 83.3% | 83.3% | 87.5% | 62.5% | 79.2% | 83.3% | 66.7% | 54.2% |
+| `trap` (6) accuracy | 50.0% | 100.0% | 100.0% | 100.0% | 33.3% | 100.0% | 83.3% | 50.0% | 50.0% |
+| `uncovered` (19) accuracy | 63.2% | 100.0% | 100.0% | 52.6% | 47.4% | 94.7% | 84.2% | 57.9% | 68.4% |
 
 Turns judged: 12 (7 the code left unclear, 5 confident-wrong with a hedge outside the list); verdicts that stood: 12.
 Confident-wrong turns the judge moved: 1 of 5 (1 to wrong, hedged; 0 to unclear).
@@ -372,7 +385,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 - `native-mcp` (rung 3) on `claude-haiku-5-5` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.124 [-0.217, -0.047], confident-wrong +0.062 [+0.016, +0.124]: not worth building (the check; 129 runs finished).
 - `custom-metricflow` (rung 4) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.364 [-0.512, -0.233], confident-wrong +0.047 [-0.008, +0.124]: not worth building (the check; 129 runs finished).
 - `custom-toolbox` (rung 3) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.457 [-0.605, -0.310], confident-wrong +0.085 [+0.008, +0.178]: not worth building (the check; 129 runs finished).
-- `native-mcp` (rung 3) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.043 [-0.109, +0.008], confident-wrong -0.008 [-0.023, +0.000]: not worth building (the check; 71 runs finished).
+- `native-mcp` (rung 3) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.043 [-0.109, +0.008], confident-wrong -0.008 [-0.023, +0.000]: not worth building (the check; 87 runs finished).
 - `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`, 43 of 43 cases: accuracy -0.202 [-0.318, -0.101], confident-wrong +0.062 [+0.016, +0.116]: not worth building (decides; 129 runs finished).
 - The check on `custom-metricflow`: the same verdict on every model, so the gap is not the model's.
 - The check on `custom-toolbox`: the same verdict on every model, so the gap is not the model's.
@@ -393,5 +406,6 @@ RULE.md § Changes since freezing (#356): each set goes through the rule on its 
 - `custom-toolbox` on `claude-sonnet-5-5` (the check): the frozen set: not worth; the hard set: not worth; on both sets: not worth building.
 - `native-mcp` on `claude-sonnet-5-5` (the check): the frozen set: worth; the hard set: not worth; on both sets: not worth building (the sets disagree: the cheaper rung wins).
 - `custom-metricflow` on `claude-opus-5-5` (the check): the frozen set: not worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
+- `cc-metricflow` on `claude-code (haiku)` (the check): the frozen set: not worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
 - Step 3 (RULE.md § The rule, 3; it applies when no arm of ours is worth building): the arms with no accuracy difference from the managed best on both sets: `native-mcp` on `claude-sonnet-5-5` (rung 3), `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-context` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)` (rung 1).
   The cheapest rung among them is 1: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`; within a rung the arm with fewer moving parts named in its finding wins (§ The cost ladder), which the report names.

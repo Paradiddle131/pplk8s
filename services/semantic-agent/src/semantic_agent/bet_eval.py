@@ -135,6 +135,9 @@ RUNG = {
     "custom-metricflow": 4,
     # MetricFlow first, a read-only SQL fallback for what no metric covers (#373).
     "custom-hybrid": 4,
+    # The same MetricFlow tools through a Claude Code subagent on the subscription (#374): another
+    # agent harness, not the rule's arm; the report names it apart.
+    "cc-metricflow": 4,
 }
 
 
