@@ -1,0 +1,683 @@
+<title>Semantic bet console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  color-scheme: light;
+  --ground:#e9edf1; --panel:#fbfcfd; --panel-2:#f3f6f9;
+  --rail:#1f3a52; --rail-ink:#eef4fa; --rail-2:#b4c6d6; --rail-line:#35536d; --rail-on:#eef4fa;
+  --ink:#15212c; --ink-2:#465462; --muted:#62707d; --hair:#d5dce3; --axis:#b6c0ca; --grid:#e6eaee;
+  --sel:#1f3a52; --sel-wash:#e1eaf3; --focus:#2a78d6;
+  --s-managed:#2a78d6; --s-tools:#eb6834; --s-semantic:#1baf7a; --s-reference:#8a9099;
+  --heat:#3f86dc;
+  --o-right:#2a78d6; --o-declined:#aab3bc; --o-wrong:#ec835a; --o-cw:#d03b3b; --o-unclear:#d9dee3;
+  --good:#006300; --bad:#b42f2f;
+  --font: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --ground:#11181f; --panel:#18212a; --panel-2:#1d2731;
+  --rail:#0e2a40; --rail-ink:#e3edf6; --rail-2:#93abc0; --rail-line:#24445e; --rail-on:#e3edf6;
+  --ink:#e4eaf0; --ink-2:#b3bfcb; --muted:#8e9ba8; --hair:#2b3743; --axis:#3d4a57; --grid:#222d38;
+  --sel:#a9cbee; --sel-wash:#1f3346; --focus:#6aa8ee;
+  --s-managed:#3987e5; --s-tools:#d95926; --s-semantic:#199e70; --s-reference:#8f949b;
+  --heat:#3987e5;
+  --o-right:#3987e5; --o-declined:#5d6874; --o-wrong:#ec835a; --o-cw:#e05252; --o-unclear:#3a4550;
+  --good:#3ccf3c; --bad:#ff8a8a;
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#11181f; --panel:#18212a; --panel-2:#1d2731;
+  --rail:#0e2a40; --rail-ink:#e3edf6; --rail-2:#93abc0; --rail-line:#24445e; --rail-on:#e3edf6;
+  --ink:#e4eaf0; --ink-2:#b3bfcb; --muted:#8e9ba8; --hair:#2b3743; --axis:#3d4a57; --grid:#222d38;
+  --sel:#a9cbee; --sel-wash:#1f3346; --focus:#6aa8ee;
+  --s-managed:#3987e5; --s-tools:#d95926; --s-semantic:#199e70; --s-reference:#8f949b;
+  --heat:#3987e5;
+  --o-right:#3987e5; --o-declined:#5d6874; --o-wrong:#ec835a; --o-cw:#e05252; --o-unclear:#3a4550;
+  --good:#3ccf3c; --bad:#ff8a8a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+html{scroll-padding-top:72px}
+body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.4;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+::selection{background:var(--sel-wash);color:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-0.005em;text-wrap:balance}
+
+/* shell */
+.rail{background:var(--rail);color:var(--rail-ink);position:sticky;top:0;z-index:5;border-bottom:1px solid var(--rail-line)}
+.rail-in{max-width:1480px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding-top:10px;padding-bottom:10px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.brand h1{font-size:17px;font-stretch:112%;font-weight:700}
+.brand .asof{color:var(--rail-2);font-size:12.5px;font-stretch:92%}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl>.lab{font-size:12px;color:var(--rail-2);font-stretch:92%}
+.seg{display:inline-flex;border:1px solid var(--rail-line);border-radius:6px;overflow:hidden}
+.seg input,.chips input{position:absolute;opacity:0;width:1px;height:1px}
+.seg label{padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--rail-2);font-stretch:95%}
+.seg label+label{border-left:1px solid var(--rail-line)}
+.seg input:checked+label{background:var(--rail-on);color:var(--rail);font-weight:650}
+.seg input:focus-visible+label,.chips input:focus-visible+label{outline:2px solid var(--focus);outline-offset:1px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips label{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 7px;border:1px solid var(--rail-line);
+  border-radius:999px;font-size:12.5px;cursor:pointer;color:var(--rail-2);font-stretch:95%;user-select:none}
+.chips label svg{flex:none}
+.chips label svg path{fill:none;stroke:currentColor;stroke-width:1.5}
+.chips input:checked+label{color:var(--rail-ink);border-color:var(--rail-2);background:rgba(255,255,255,.07)}
+.chips input:checked+label svg path{fill:currentColor}
+.chips label .r{font-size:11px;opacity:.8}
+select{font:inherit;font-size:12.5px;background:var(--rail);color:var(--rail-ink);border:1px solid var(--rail-line);
+  border-radius:6px;padding:3px 6px;font-stretch:95%}
+
+main{max-width:1480px;margin:0 auto;padding-top:16px;padding-bottom:40px}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:4px;padding:14px 16px 16px;min-width:0}
+.ph{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.ph h2{font-size:15.5px;font-stretch:104%;line-height:1.3;max-width:80ch}
+.ph .sub{color:var(--ink-2);font-size:12.5px;max-width:95ch}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-2);margin:4px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend .ttl{color:var(--muted)}
+
+/* decision map */
+.readings{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:4px 28px;margin:2px 0 12px}
+.readings ul{margin:0;padding-left:16px;font-size:12.8px;color:var(--ink-2)}
+.readings li{margin:2px 0}
+.readings h3{font-size:12.5px;font-weight:650;color:var(--ink);margin-bottom:2px;font-stretch:96%}
+.tablewrap{overflow-x:auto;border-top:1px solid var(--hair);margin:0 -16px;padding:0 16px}
+table.map{border-collapse:collapse;width:100%;min-width:1060px;font-stretch:86%;font-size:12.8px}
+.map th{font-weight:600;color:var(--ink-2);text-align:left;font-size:11.8px;padding:6px 5px 5px;border-bottom:1px solid var(--axis);vertical-align:bottom;white-space:nowrap}
+.map th.num,.map td.num{text-align:right}
+.map th .u{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.map th.num.grp{white-space:normal;width:46px;line-height:1.15;hyphens:manual}
+.map td.mc{white-space:normal;width:200px;min-width:180px}
+.map td.mc .chip{margin-left:16px}
+.map td.vc{width:108px}
+.verdict{white-space:nowrap}
+.map td{padding:3px 5px;border-bottom:1px solid var(--grid);vertical-align:middle;white-space:nowrap}
+.map tr.step td{background:var(--panel-2);color:var(--ink);font-weight:600;font-size:12px;padding:5px 6px;border-bottom:1px solid var(--hair)}
+.map tr.step td .rt{color:var(--muted);font-weight:400;margin-left:8px}
+.map tr.row{cursor:pointer}
+.map tr.row:hover td{background:color-mix(in oklab,var(--sel-wash) 55%,transparent)}
+.map tr.row.sel td{background:var(--sel-wash)}
+.map tr.row.sel td.mc{box-shadow:inset 3px 0 0 var(--sel)}
+.map td.what{white-space:normal;color:var(--ink-2);font-size:12px;line-height:1.3;width:220px;min-width:200px;vertical-align:top;padding-top:5px;background:var(--panel)!important}
+.map td.setup{font-weight:650;vertical-align:top;padding-top:5px;background:var(--panel)!important;font-stretch:96%}
+.map td.setup .wi{display:none;font-weight:400;color:var(--ink-2);font-size:11.5px;line-height:1.3;margin-top:3px}
+.map td.setup .rung{display:inline-block;min-width:16px;text-align:center;font-size:10.5px;font-weight:600;border:1px solid var(--axis);border-radius:3px;margin-right:5px;color:var(--ink-2);padding:0 2px}
+.map td.g{text-align:right;width:46px;background:color-mix(in oklab,var(--heat) calc(var(--p) * 0.62),var(--panel));}
+.map td.g.na{background:transparent;color:var(--muted)}
+.map td.g.hot{box-shadow:inset 1px 0 0 var(--ink-2),inset -1px 0 0 var(--ink-2)}
+.map th.hot{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
+.map td.g.thin{color:var(--muted);background:color-mix(in oklab,var(--heat) calc(var(--p) * 0.22),var(--panel))}
+.mdl{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.mdl svg{flex:none}
+.badge{display:inline-block;font-size:10.5px;line-height:15px;padding:0 6px;border-radius:999px;border:1px solid var(--ink-2);color:var(--ink-2);font-weight:600;font-stretch:92%}
+.badge.decides{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.badge.descriptive,.badge.reference{border-style:dashed;color:var(--muted);border-color:var(--muted)}
+.chip{display:inline-block;font-size:11px;padding:0 6px;line-height:16px;border-radius:3px;color:var(--ink-2);border:1px solid var(--hair)}
+.chip.partial{border:1px dashed var(--o-wrong);color:var(--ink)}
+.iv{display:inline-flex;align-items:center;gap:6px}
+.iv .n{min-width:24px;text-align:right;font-weight:600}
+.iv .b{color:var(--muted);font-size:11px;min-width:36px}
+.verdict{font-size:11.5px;font-weight:600}
+.verdict.tie{color:var(--ink-2)}
+.verdict.below{color:var(--bad)}
+.verdict.above,.verdict.best{color:var(--good)}
+.verdict .d{font-weight:400;color:var(--muted);margin-left:4px}
+
+/* grid of linked views */
+.views{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr) minmax(0,4fr);grid-template-areas:"sc gr dt" "ld ld dt";gap:16px;margin-top:16px;align-items:start}
+#v-scatter{grid-area:sc} #v-groups{grid-area:gr} #v-ladder{grid-area:ld} #v-detail{grid-area:dt;position:sticky;top:64px;max-height:calc(100vh - 80px);overflow:auto}
+svg text{font-family:var(--font);font-stretch:92%}
+.axis text{fill:var(--muted);font-size:11px}
+.axis path,.axis line{stroke:var(--axis)}
+.gridl line{stroke:var(--grid)}
+.axlab{fill:var(--ink-2);font-size:11.5px}
+.mk{cursor:pointer}
+.mk .hit{fill:transparent}
+.mk:focus{outline:none}
+.mk.on .sym{stroke:var(--ink)!important;stroke-width:2.4px!important}
+.mk.on .ci{stroke-width:2.6px!important}
+.mk.on text{font-weight:700;fill:var(--ink)!important}
+.dl{pointer-events:none;paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+.mk:focus-visible .sym{stroke:var(--focus);stroke-width:3}
+.dim{opacity:.22}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--axis);
+  border-radius:4px;padding:7px 9px;font-size:12px;max-width:300px;box-shadow:0 4px 14px rgba(10,20,30,.16);display:none;font-stretch:94%}
+.tip b{font-weight:650}
+.tip .m{color:var(--muted)}
+
+/* detail */
+.dt-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.dt-h h2{font-size:16px;font-stretch:104%}
+.dt-what{color:var(--ink-2);font-size:12.8px;margin:4px 0 10px}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 12px;font-size:12.5px}
+dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.big .k{font-size:11.5px;color:var(--muted)}
+.big .v{font-size:22px;font-weight:650;font-stretch:96%;line-height:1.1}
+.big .ci{font-size:11.5px;color:var(--ink-2)}
+.obar{display:flex;height:12px;gap:2px;margin:4px 0 4px}
+.obar i{display:block;height:100%;border-radius:1px}
+.okey{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;color:var(--ink-2)}
+.okey span{display:inline-flex;align-items:center;gap:4px}
+.okey i{width:9px;height:9px;border-radius:1px;display:inline-block}
+.sec{border-top:1px solid var(--grid);padding-top:9px;margin-top:11px}
+.sec h3{font-size:12.5px;margin-bottom:5px;font-stretch:96%}
+.sec p{margin:3px 0;font-size:12.5px;color:var(--ink-2)}
+.ex{border:1px solid var(--hair);border-radius:3px;padding:8px 9px;margin-top:7px;background:var(--panel-2)}
+.ex .q{font-size:12.3px;font-weight:600;color:var(--ink)}
+.ex .meta{font-size:11px;color:var(--muted);margin:2px 0 5px}
+.ex blockquote{margin:0;font-size:12.5px;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+.ex pre{font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-word;margin:6px 0 0;color:var(--ink-2);max-height:130px;overflow:auto;border-top:1px dashed var(--hair);padding-top:5px}
+.oc{font-size:10.5px;font-weight:650;padding:0 5px;border-radius:3px;line-height:15px;display:inline-block}
+.oc.right{background:var(--o-right);color:#fff} .oc.confident-wrong{background:var(--o-cw);color:#fff}
+.oc.wrong{background:var(--o-wrong);color:#14202b} .oc.declined{background:var(--o-declined);color:#14202b} .oc.unclear{background:var(--o-unclear);color:var(--ink)}
+.tb{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center;font-size:12px}
+.tb .bar{height:8px;background:var(--grid);border-radius:1px;position:relative}
+.tb .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink-2);border-radius:1px}
+
+footer{margin-top:16px;color:var(--muted);font-size:12px}
+footer p{margin:3px 0;max-width:120ch}
+footer b{color:var(--ink-2);font-weight:600}
+
+@media (max-width:1100px){
+  .views{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"dt dt" "sc gr" "ld ld"}
+  #v-detail{position:static;max-height:none}
+}
+@media (max-width:760px){
+  .rail{position:static}
+  .views{grid-template-columns:minmax(0,1fr);grid-template-areas:"dt" "sc" "gr" "ld"}
+  .readings{grid-template-columns:minmax(0,1fr)}
+  .brand{width:100%;flex-direction:column;gap:2px}
+  .map td.setup{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 var(--hair)}
+  .map td.what,.map th.whath{display:none}
+  .map td.setup{min-width:150px;max-width:150px;white-space:normal}
+  .map td.setup .wi{display:block}
+}
+@media (prefers-reduced-motion: no-preference){
+  .mk .sym{transition:opacity .18s ease-out}
+  .map tr.row td{transition:background-color .15s ease-out}
+}
+</style>
+
+<header class="rail">
+  <div class="rail-in gut">
+    <div class="brand"><h1>Semantic bet console</h1><span class="asof" id="asof"></span></div>
+    <div class="ctl" role="radiogroup" aria-label="Question set"><span class="lab">Set</span><div class="seg" id="c-set"></div></div>
+    <div class="ctl"><span class="lab" id="fam-lab">Models</span><div class="chips" id="c-fam" role="group" aria-labelledby="fam-lab"></div></div>
+    <div class="ctl"><label class="lab" for="c-group">Question group</label><select id="c-group"></select></div>
+  </div>
+</header>
+
+<main class="gut">
+  <section class="panel" id="v-map" aria-labelledby="map-h">
+    <div class="ph"><h2 id="map-h"></h2><div class="sub" id="map-sub"></div></div>
+    <div class="readings" id="readings"></div>
+    <div class="legend" id="map-legend"></div>
+    <div class="tablewrap"><table class="map" id="map"></table></div>
+  </section>
+
+  <div class="views">
+    <section class="panel" id="v-scatter" aria-labelledby="sc-h">
+      <div class="ph"><h2 id="sc-h"></h2><div class="sub" id="sc-sub"></div></div>
+      <div class="legend" id="sc-legend"></div>
+      <div id="sc"></div>
+    </section>
+    <section class="panel" id="v-groups" aria-labelledby="gr-h">
+      <div class="ph"><h2 id="gr-h"></h2><div class="sub" id="gr-sub"></div></div>
+      <div class="legend" id="gr-legend"></div>
+      <div id="gr"></div>
+    </section>
+    <section class="panel" id="v-ladder" aria-labelledby="ld-h">
+      <div class="ph"><h2 id="ld-h"></h2><div class="sub" id="ld-sub"></div></div>
+      <div class="legend" id="ld-legend"></div>
+      <div id="ld"></div>
+    </section>
+    <aside class="panel" id="v-detail" aria-live="polite" aria-label="Selected setup"></aside>
+  </div>
+  <footer id="foot"></footer>
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const FAM = [
+  {key:"free", label:"Free model", role:"decides", sym:"diamond"},
+  {key:"claude", label:"Claude", role:"check", sym:"circle"},
+  {key:"gemini", label:"Gemini in Google's agent", role:"", sym:"square"},
+  {key:"cc", label:"Claude Code", role:"descriptive", sym:"triangle"},
+];
+const KIND = [
+  {key:"managed", label:"Google's managed data agent"},
+  {key:"tools", label:"Our agent on Google's or generated tools"},
+  {key:"semantic", label:"Our agent on a semantic layer"},
+  {key:"reference", label:"Reference text-to-SQL"},
+];
+const SYM = {diamond:d3.symbolDiamond, circle:d3.symbolCircle, square:d3.symbolSquare, triangle:d3.symbolTriangle};
+const famOf = k => FAM.find(f => f.key === k);
+const symPath = (fam, size) => d3.symbol(SYM[famOf(fam).sym], size)();
+const kindVar = k => `var(--s-${k})`;
+const OUTC = ["right","declined","wrong","confident-wrong","unclear"];
+const OUTC_LABEL = {"right":"right","declined":"declined","wrong":"wrong","confident-wrong":"confident-wrong","unclear":"unclear"};
+const OUTC_VAR = {"right":"--o-right","declined":"--o-declined","wrong":"--o-wrong","confident-wrong":"--o-cw","unclear":"--o-unclear"};
+
+const pct = (x, dp=0) => (x*100).toFixed(dp);
+const pp = (x, dp=1) => (x>0?"+":x<0?"−":"±") + Math.abs(x*100).toFixed(dp);
+const usd = x => "$" + (x >= 10 ? x.toFixed(1) : x.toFixed(2));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const listText = a => a.length <= 1 ? a.join("") : a.slice(0,-1).join(", ") + " and " + a[a.length-1];
+const glabel = g => DATA.group_label[g] || g;
+const name = r => `${r.arm} on ${r.model_short}`;
+const roleWord = r => r.role === "decides" ? "decides" : r.role === "check" ? "check" : r.role === "descriptive" ? "descriptive" : r.role === "reference" ? "reference" : "";
+
+/* ---------- state ---------- */
+const sets = Object.keys(DATA.sets).sort((a,b)=> a==="frozen"?-1:b==="frozen"?1:a.localeCompare(b));
+const state = {set: sets[0], fams: new Set(FAM.map(f=>f.key)), group: "all", sel: {}};
+function rowsAll(){ return DATA.rows.filter(r => r.set === state.set); }
+function rows(){ return rowsAll().filter(r => state.fams.has(r.family)); }
+function stepOf(arm){ const i = DATA.ladder.findIndex(s => s.arms.includes(arm)); return i < 0 ? DATA.ladder.length : i; }
+function ordered(rs){
+  const famRank = {gemini:0, free:1, claude:2, cc:3};
+  const mRank = r => (r.model.includes("UNSPECIFIED)") ? 0 : 1) + (r.cases < r.of_cases ? 5 : 0);
+  return rs.slice().sort((a,b)=> stepOf(a.arm)-stepOf(b.arm) || a.arm.localeCompare(b.arm) ||
+    famRank[a.family]-famRank[b.family] || mRank(a)-mRank(b) || a.model.localeCompare(b.model));
+}
+function groupsInSet(){ const all = rowsAll(); return DATA.groups.filter(g => all.some(r => r.groups[g])); }
+function best(){ const mb = DATA.managed_best[state.set]; if(!mb) return null;
+  return rowsAll().find(r => r.arm === mb[0] && r.model === mb[1]) || null; }
+function floorRow(){ return rowsAll().filter(r => r.arm === "native-bare").sort((a,b)=>b.cases-a.cases)[0] || null; }
+function tiesSet(){ return new Set((DATA.step_three[state.set]||[])); }
+function tieKey(r){ return `${r.arm} on ${r.model}`; }
+function verdict(r){
+  const b = best();
+  if (b && r.id === b.id) return {cls:"best", text:"managed best"};
+  if (r.vs_best){
+    const [m, lo, hi] = r.vs_best.acc;
+    const t = `accuracy ${pp(m)} points [${pp(lo)}, ${pp(hi)}] against the managed best, paired by case`;
+    if (r.vs_best.worth) return {cls:"above", text:"worth building", d: pp(m), t: t + (lo<=0 ? "; a tie on accuracy with a lower confident-wrong rate, which the rule credits" : "")};
+    if (hi < 0) return {cls:"below", text:"below", d:pp(m), t};
+    if (lo > 0) return {cls:"above", text:"above", d:pp(m), t};
+    return {cls:"tie", text:"tie", d:pp(m), t};
+  }
+  if (tiesSet().has(tieKey(r))) return {cls:"tie", text:"tie with best"};
+  return null;
+}
+function defaultSel(){
+  const rs = rows();
+  return (rs.find(r => r.arm==="custom-metricflow" && r.role==="decides") ||
+          rs.find(r => r.arm==="custom-metricflow") || rs[0] || {}).id;
+}
+function selected(){
+  let id = state.sel[state.set];
+  let r = rows().find(x => x.id === id);
+  if (!r){ id = defaultSel(); state.sel[state.set] = id; r = rows().find(x => x.id === id); }
+  return r || null;
+}
+function select(id){ state.sel[state.set] = id; renderSelection(); }
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function showTip(ev, html){
+  tip.innerHTML = html; tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = Math.max(8,x) + "px"; tip.style.top = Math.max(8,y) + "px";
+}
+function tipAt(el, html){ const b = el.getBoundingClientRect(); showTip({clientX:b.right, clientY:b.top}, html); }
+function hideTip(){ tip.style.display = "none"; }
+function rowTip(r){
+  return `<b>${esc(r.arm)}</b> <span class="m">on</span> ${esc(r.model_short)}${roleWord(r)?` <span class="m">(${roleWord(r)})</span>`:""}<br>`+
+   `Accuracy ${pct(r.acc[0],1)}% <span class="m">[${pct(r.acc[1],1)}, ${pct(r.acc[2],1)}]</span><br>`+
+   `Confident-wrong ${pct(r.cw[0],1)}% <span class="m">[${pct(r.cw[1],1)}, ${pct(r.cw[2],1)}]</span><br>`+
+   `<span class="m">${r.cases} of ${r.of_cases} cases, ${r.runs} of ${r.runs_full} runs${r.partial?", partial":""}</span>`;
+}
+
+/* ---------- small svg pieces ---------- */
+function symSvg(fam, kindKey, size=11, hollow=false){
+  const p = symPath(fam, size*size*0.62);
+  const c = kindKey ? kindVar(kindKey) : "currentColor";
+  return `<svg width="${size+2}" height="${size+2}" viewBox="${-(size+2)/2} ${-(size+2)/2} ${size+2} ${size+2}" aria-hidden="true"><path d="${p}" style="fill:${hollow?"var(--panel)":c};stroke:${c};stroke-width:1.4"/></svg>`;
+}
+function ivSvg(m, lo, hi, max, partial, w=64){
+  const x = v => 1 + Math.min(1, v/max) * (w-2);
+  return `<svg width="${w}" height="12" aria-hidden="true"><line x1="1" x2="${w-1}" y1="6" y2="6" style="stroke:var(--grid);stroke-width:1"/>`+
+   `<line x1="${x(lo)}" x2="${Math.max(x(hi), x(lo)+1)}" y1="6" y2="6" style="stroke:var(--ink-2);stroke-width:2;${partial?"stroke-dasharray:2 2":""}"/>`+
+   `<line x1="${x(m)}" x2="${x(m)}" y1="1" y2="11" style="stroke:var(--ink);stroke-width:2"/></svg>`;
+}
+
+function legendHTML(withShapes=true){
+  return `<span class="ttl">Color</span>` + KIND.map(k => `<span><svg width="10" height="10" aria-hidden="true"><rect width="10" height="10" rx="2" style="fill:${kindVar(k.key)}"/></svg>${esc(k.label)}</span>`).join("") +
+    (withShapes ? `<span class="ttl">Shape</span>` + FAM.map(f => `<span>${symSvg(f.key,null,10)}${esc(f.label)}${f.role?` (${f.role})`:""}</span>`).join("") : "") +
+    `<span class="ttl">Hollow</span><span>${symSvg("claude","managed",10,true)}partial pass</span>`;
+}
+/* ---------- controls ---------- */
+function buildControls(){
+  $("#asof").textContent = `Evidence as of ${DATA.written}, not a closing verdict`;
+  $("#c-set").innerHTML = sets.map(s => `<input type="radio" name="set" id="set-${s}" value="${s}" ${s===state.set?"checked":""}><label for="set-${s}">${s[0].toUpperCase()+s.slice(1)} <span>${DATA.sets[s]}</span></label>`).join("");
+  $("#c-set").addEventListener("change", e => { state.set = e.target.value; renderAll(); });
+  $("#c-fam").innerHTML = FAM.map(f => `<input type="checkbox" id="fam-${f.key}" value="${f.key}" checked><label for="fam-${f.key}" title="${esc(f.label)}">${symSvg(f.key,null,11)}${esc(f.label)}${f.role?` <span class="r">${f.role}</span>`:""}</label>`).join("");
+  $("#c-fam").addEventListener("change", e => { e.target.checked ? state.fams.add(e.target.value) : state.fams.delete(e.target.value);
+    if (!state.fams.size){ state.fams.add(e.target.value); e.target.checked = true; } renderAll(); });
+  const gsel = $("#c-group");
+  gsel.innerHTML = `<option value="all">All questions</option>` + DATA.groups.map(g => `<option value="${g}">${esc(glabel(g))}</option>`).join("");
+  gsel.addEventListener("change", e => { state.group = e.target.value; renderAll(); });
+}
+
+/* ---------- decision map ---------- */
+function renderMap(){
+  const b = best(), rs = ordered(rows()), all = rowsAll();
+  const ties = all.filter(r => tiesSet().has(tieKey(r)) && (!b || r.id !== b.id));
+  const ours = all.filter(r => r.vs_best);
+  const worth = ours.filter(r => r.vs_best.worth);
+  const decides = ours.filter(r => r.role === "decides");
+  const date = (DATA.written||"").slice(0,10);
+  $("#map-h").textContent = b ?
+    `As of ${date}, ${b.arm} on ${b.model_short} is the managed best on the ${state.set} set at ${pct(b.acc[0])}% right; ${ties.length} other setups tie with it, and ${worth.length ? listText(worth.map(name)) + " clears the rule's bar" : "none of ours clears the rule's bar"}.`
+    : `No managed best on the ${state.set} set yet.`;
+  $("#map-sub").textContent = `Share of runs right per question group, with each setup's accuracy and confident-wrong rate and its 95% interval. "Against the managed best" pairs by case (RULE.md, step 2): an interval that includes zero is a tie. The ${state.set} set detects about ${DATA.power[state.set]} points at k = ${DATA.k}; smaller true gaps will mostly read as ties.`;
+
+  // readings
+  const read = [];
+  decides.forEach(r => { const [m,lo,hi] = r.vs_best.acc, [cm,clo,chi] = r.vs_best.cw;
+    read.push(`<li><b>Decides:</b> ${esc(r.arm)} on the free model, ${pp(m)} points against the managed best [${pp(lo)}, ${pp(hi)}]: ${hi<0?"below it":lo>0?"above it":"a tie"}; confident-wrong ${pp(cm)} [${pp(clo)}, ${pp(chi)}]${r.partial?`, on ${r.runs} of ${r.runs_full} runs`:""}.</li>`); });
+  const chk = ours.filter(r => r.role === "check");
+  if (chk.length){ const below = chk.filter(r => r.vs_best.acc[2] < 0);
+    read.push(`<li><b>Check:</b> ${below.length} of ${chk.length} Claude pairs fall below the managed best${worth.length?`; ${listText(worth.map(r=>esc(name(r))))} clears it, on Claude only`:""}.</li>`); }
+  const mf = all.filter(r => r.arm === "custom-metricflow");
+  if (mf.length && b){ const lo = d3.min(mf, r => r.groups.uncovered?.[0] ?? 1), hi = d3.max(mf, r => r.groups.uncovered?.[0] ?? 0);
+    const cl = d3.min(mf, r => r.groups.covered?.[0] ?? 1);
+    read.push(`<li><b>Why:</b> MetricFlow is at ${pct(cl)}% or better on covered questions and ${lo===hi?pct(lo):pct(lo)+"–"+pct(hi)}% on uncovered ones, where it declines by design; the managed best answers ${pct(b.groups.uncovered?.[0]??0)}% of those with SQL.</li>`); }
+  const move = [];
+  all.filter(r => r.role === "decides" && r.partial).forEach(r =>
+    move.push(`<li>The free model's ${esc(r.arm)} pass finishing: ${r.cases} of ${r.of_cases} cases, ${r.runs} of ${r.runs_full} runs so far.</li>`));
+  const ourArms = [...new Set(all.filter(r => r.rung===3 || r.rung===4).map(r => r.arm))];
+  const noFree = ourArms.filter(a => !all.some(r => r.arm===a && r.family==="free"));
+  if (noFree.length) move.push(`<li>Not yet run on the free model that decides: ${noFree.map(esc).join(", ")}.</li>`);
+  const claudeModels = [...new Set(DATA.rows.filter(r => r.family==="claude").map(r => r.model_short))];
+  const gaps = [];
+  ourArms.filter(a => a !== "cc-metricflow").forEach(a => { const have = new Set(all.filter(r => r.arm===a && r.family==="claude").map(r => r.model_short));
+    const miss = claudeModels.filter(m => !have.has(m)); if (miss.length && have.size) gaps.push(`${a} on ${miss.join(", ")}`); });
+  if (gaps.length) move.push(`<li>Not run on the Claude check: ${esc(gaps.join("; "))}.</li>`);
+  all.filter(r => r.role==="check" && r.partial).forEach(r => move.push(`<li>${esc(name(r))} finishing: ${r.runs} of ${r.runs_full} runs.</li>`));
+  const fut = DATA.ladder.find(s => s.key === "future");
+  if (fut) move.push(`<li>${esc(fut.note)}</li>`);
+  $("#readings").innerHTML = `<div><h3>What the evidence shows</h3><ul>${read.join("")}</ul></div><div><h3>What would move this picture</h3><ul>${move.join("")}</ul></div>`;
+
+  $("#map-legend").innerHTML = `<span class="ttl">Model</span>` + FAM.map(f => `<span>${symSvg(f.key,null,10)}${esc(f.label)}${f.role?` (${f.role})`:""}</span>`).join("") +
+    `<span class="ttl">Partial pass</span><span><span class="chip partial">41/96 cases</span> hollow mark, dashed interval</span><span class="ttl">Interval</span><span>${ivSvg(.6,.45,.75,1,false,46)} mean and 95% interval</span>` +
+    `<span class="ttl">Group cells</span><span>darker is more right; grey text: under 10 cases</span>`;
+
+  // table: only the groups this set has cases in
+  const G = groupsInSet();
+  const head = `<thead><tr><th>Setup</th><th class="whath">What this setup is</th><th>Model<span class="u">dashed chip: partial pass</span></th>`+
+   `<th>Accuracy<span class="u">% of runs right, 95% interval</span></th><th>Confident-wrong<span class="u">% of runs, scale 0–50</span></th>`+
+   `<th style="white-space:normal;width:108px">Against the managed best<span class="u">accuracy, points</span></th>`+
+   G.map(g => `<th class="num grp ${state.group===g?"hot":""}" title="${esc(glabel(g))}: ${esc(DATA.group_help[g])}">${esc(glabel(g)).replace(/^(Uncov|Conver|Distrac)/, "$1&shy;")}<span class="u">% right</span></th>`).join("")+
+   `<th class="num">Claude $<span class="u">per 100 runs</span></th></tr></thead>`;
+  let body = "", lastStep = -1, i = 0;
+  while (i < rs.length){
+    const st = stepOf(rs[i].arm);
+    if (st !== lastStep){ lastStep = st; const s = DATA.ladder[st];
+      const rungs = [...new Set(rs.filter(r => stepOf(r.arm)===st).map(r => r.rung))].filter(x => x!=null);
+      body += `<tr class="step"><td colspan="${8+G.length}">${esc(s ? s.label : "Other setups")}<span class="rt">${esc(rungs.map(x => DATA.rung_text[x]).join("; ") || "outside the ladder")}</span></td></tr>`; }
+    const arm = rs[i].arm; let j = i; while (j < rs.length && rs[j].arm === arm) j++;
+    for (let k = i; k < j; k++){
+      const r = rs[k], v = verdict(r);
+      body += `<tr class="row" data-id="${r.id}" tabindex="0" aria-label="${esc(name(r))}">`;
+      if (k === i) body += `<td class="setup" rowspan="${j-i}"><span class="rung" title="${esc(DATA.rung_text[r.rung]||"reference, outside the ladder")}">${r.rung ?? "R"}</span>${esc(arm)}<span class="wi">${esc(DATA.describe[arm] || "")}</span></td><td class="what" rowspan="${j-i}">${esc(DATA.describe[arm] || "")}</td>`;
+      body += `<td class="mc"><span class="mdl">${symSvg(r.family, r.kind, 10, r.partial)}${esc(r.model_short)}${r.role!=="managed"?` <span class="badge ${r.role}">${roleWord(r)}</span>`:""}${r.partial ? ` <span class="chip partial" title="partial pass: ${r.cases} of ${r.of_cases} cases, ${r.runs} of ${r.runs_full} runs">${r.cases<r.of_cases?`${r.cases}/${r.of_cases} cases`:`${r.runs}/${r.runs_full} runs`}</span>` : ""}</span></td>`;
+      body += `<td><span class="iv">${ivSvg(r.acc[0],r.acc[1],r.acc[2],1,r.partial,46)}<span class="n">${pct(r.acc[0])}</span><span class="b">${pct(r.acc[1])}–${pct(r.acc[2])}</span></span></td>`;
+      body += `<td><span class="iv">${ivSvg(r.cw[0],r.cw[1],r.cw[2],.5,r.partial,34)}<span class="n">${pct(r.cw[0])}</span><span class="b">${pct(r.cw[1])}–${pct(r.cw[2])}</span></span></td>`;
+      body += `<td class="vc">${v ? `<span class="verdict ${v.cls}" ${v.t?`title="${esc(v.t)}"`:""}>${v.text}${v.d?`<span class="d">${v.d}</span>`:""}</span>` : `<span class="verdict" style="color:var(--muted)" title="not in the rule's paired comparison">\u2013</span>`}</td>`;
+      G.forEach(g => { const c = r.groups[g];
+        body += c ? `<td class="g num ${state.group===g?"hot":""} ${c[1]<10?"thin":""}" style="--p:${(c[0]*100).toFixed(0)}%" title="${esc(glabel(g))}: ${pct(c[0],1)}% right over ${c[1]} cases">${pct(c[0])}</td>` : `<td class="g num na ${state.group===g?"hot":""}" title="no ${esc(glabel(g))} cases reached">–</td>`; });
+      const cost = costCell(r);
+      body += `<td class="num" title="${esc(cost.t)}">${cost.v}</td></tr>`;
+    }
+    i = j;
+  }
+  $("#map").innerHTML = head + `<tbody>${body}</tbody>`;
+  $("#map").querySelectorAll("tr.row").forEach(tr => {
+    tr.addEventListener("click", () => select(tr.dataset.id));
+    tr.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); select(tr.dataset.id);} });
+  });
+}
+function costCell(r){
+  if (r.family === "free") return {v:"$0 free", t:"Free OpenRouter model: no dollars, requests count against the free quota"};
+  if (r.family === "gemini") return {v:"$0 trial", t:`Gemini inside Google's data agent: $0.00 on the free trial, until ${DATA.free_trial_until}`};
+  if (r.family === "cc") return {v:"plan", t:"Claude Code subagents on the owner's subscription: not metered in dollars"};
+  if (r.spend) return {v:usd(r.spend.usd / r.runs * 100), t:`${usd(r.spend.usd)} over ${r.spend.passes.length} pass(es), reruns included: ${r.spend.passes.join("; ")}`};
+  return {v:"–", t:"no spend recorded for this pass"};
+}
+
+/* ---------- scatter: accuracy against confident-wrong ---------- */
+function renderScatter(){
+  const rs = rows(), el = $("#sc");
+  const W = Math.max(300, el.clientWidth), H = Math.round(Math.min(420, Math.max(300, W*0.78)));
+  const m = {t:12, r:14, b:40, l:46};
+  const x = d3.scaleLinear().domain([Math.min(.3, Math.floor(d3.min(rowsAll(), r=>r.acc[1])*10)/10), 1]).range([m.l, W-m.r]);
+  const ymax = Math.max(.1, Math.ceil(d3.max(rowsAll(), r=>r.cw[2])*20)/20);
+  const y = d3.scaleLinear().domain([0, ymax]).range([m.t, H-m.b]);
+  const focus = rs.find(r => r.arm==="custom-metricflow" && r.role==="decides") || rs.find(r => r.arm==="custom-metricflow");
+  const b = best();
+  $("#sc-h").textContent = focus && b ?
+    `${focus.arm} on ${focus.model_short} gets ${pct(focus.acc[0])}% right with ${pct(focus.cw[0],1)}% confident-wrong; the managed best gets ${pct(b.acc[0])}% right with ${pct(b.cw[0],1)}%.`
+    : "Accuracy against confident-wrong, per setup and model.";
+  $("#sc-sub").textContent = `All questions. The best corner is top right. Lines through each mark are its 95% intervals on both axes. The rule credits a lower confident-wrong rate only when accuracy ties.`;
+  $("#sc-legend").innerHTML = legendHTML();
+  const svg = d3.select(el).html("").append("svg").attr("width", W).attr("height", H).attr("role","img")
+    .attr("aria-label","Scatter of accuracy against confident-wrong rate with 95% intervals");
+  svg.append("g").attr("class","gridl").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(6).tickSize(-(H-m.t-m.b)).tickFormat("")).select(".domain").remove();
+  svg.append("g").attr("class","gridl").attr("transform",`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W-m.l-m.r)).tickFormat("")).select(".domain").remove();
+  svg.append("g").attr("class","axis").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d=>pct(d)));
+  svg.append("g").attr("class","axis").attr("transform",`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d=>pct(d)));
+  svg.append("text").attr("class","axlab").attr("x", W-m.r).attr("y", H-6).attr("text-anchor","end").text("Accuracy, % of runs right");
+  svg.append("text").attr("class","axlab").attr("transform",`translate(12,${(m.t+H-m.b)/2})rotate(-90)`).attr("text-anchor","middle").text("Confident-wrong, % of runs (lower is safer)");
+  if (b){ // managed best reference lines
+    svg.append("line").attr("x1",x(b.acc[0])).attr("x2",x(b.acc[0])).attr("y1",m.t).attr("y2",H-m.b).style("stroke","var(--axis)").style("stroke-dasharray","3 3");
+    svg.append("text").attr("x",x(b.acc[0])-4).attr("y",H-m.b-6).attr("text-anchor","end").attr("class","axlab").style("font-size","10.5px").text("managed best");
+  }
+  const g = svg.append("g");
+  const mk = g.selectAll("g.mk").data(rs, d=>d.id).join("g").attr("class","mk").attr("data-id", d=>d.id)
+    .attr("tabindex",0).attr("role","button").attr("aria-label", d=>`${name(d)}: accuracy ${pct(d.acc[0])}%, confident-wrong ${pct(d.cw[0],1)}%`);
+  mk.append("line").attr("class","ci").attr("x1",d=>x(d.acc[1])).attr("x2",d=>x(d.acc[2])).attr("y1",d=>y(d.cw[0])).attr("y2",d=>y(d.cw[0]))
+    .style("stroke",d=>kindVar(d.kind)).style("stroke-width",1.2).style("stroke-dasharray",d=>d.partial?"3 2":null);
+  mk.append("line").attr("class","ci").attr("x1",d=>x(d.acc[0])).attr("x2",d=>x(d.acc[0])).attr("y1",d=>y(d.cw[1])).attr("y2",d=>y(d.cw[2]))
+    .style("stroke",d=>kindVar(d.kind)).style("stroke-width",1.2).style("stroke-dasharray",d=>d.partial?"3 2":null);
+  mk.append("path").attr("class","sym").attr("transform",d=>`translate(${x(d.acc[0])},${y(d.cw[0])})`).attr("d",d=>symPath(d.family, 64))
+    .style("fill",d=>d.partial?"var(--panel)":kindVar(d.kind)).style("stroke",d=>d.partial?kindVar(d.kind):"var(--panel)").style("stroke-width",d=>d.partial?1.6:1.5);
+  mk.append("circle").attr("class","hit").attr("r",11).attr("cx",d=>x(d.acc[0])).attr("cy",d=>y(d.cw[0]));
+  mk.on("mousemove", (e,d)=>showTip(e,rowTip(d))).on("mouseleave",hideTip).on("click",(e,d)=>select(d.id))
+    .on("keydown",(e,d)=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();select(d.id);} })
+    .on("focus",(e,d)=>tipAt(e.currentTarget,rowTip(d))).on("blur",hideTip);
+  // selective direct labels: managed best and the deciding MetricFlow pair
+  const lab = rs.filter(r => (b && r.id===b.id) || (focus && r.id===focus.id));
+  g.selectAll("text.dl").data(lab).join("text").attr("class","dl axlab").style("font-size","11px").style("fill","var(--ink)")
+    .attr("x",d=>x(d.acc[0])+(x(d.acc[0])>W*.6?-9:9)).attr("y",d=>y(d.cw[0])+(d.id===focus?.id?16:-8)).attr("text-anchor",d=>x(d.acc[0])>W*.6?"end":"start")
+    .text(d=>`${d.arm}, ${d.model_short}`);
+  g.append("g").attr("class","selring");
+  svg.node().__scales = {x,y};
+}
+
+/* ---------- groups: the covered / uncovered split ---------- */
+function renderGroups(){
+  const rs = rows(), el = $("#gr"), G = groupsInSet();
+  const W = Math.max(280, el.clientWidth);
+  const lane = 9, laneGap = 0, rowH = KIND.length*lane + 18, m = {t:6, r:12, b:34, l:104};
+  const H = m.t + G.length*rowH + m.b;
+  const x = d3.scaleLinear().domain([0,1]).range([m.l, W-m.r]);
+  const b = best();
+  const mf = rs.filter(r => r.arm === "custom-metricflow");
+  const rng = g => { const v = mf.map(r => r.groups[g]?.[0]).filter(v => v!=null); if(!v.length) return null;
+    const lo = d3.min(v), hi = d3.max(v); return lo===hi ? pct(lo) : `${pct(lo)}–${pct(hi)}`; };
+  $("#gr-h").textContent = mf.length ?
+    `MetricFlow answers ${rng("covered")}% of covered and ${rng("trap")}% of hidden-rule questions, but ${rng("uncovered")}% of uncovered ones${b?`, where the managed best answers ${pct(b.groups.uncovered?.[0]??0)}%`:""}.`
+    : "Share right by question group, per setup and model.";
+  $("#gr-sub").textContent = `Each mark is one setup on one model, on its lane by kind. The data holds no interval per group; groups under 10 cases are faded and noisy.`;
+  $("#gr-legend").innerHTML = legendHTML();
+  const svg = d3.select(el).html("").append("svg").attr("width",W).attr("height",H).attr("role","img").attr("aria-label","Share right by question group");
+  svg.append("g").attr("class","gridl").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(5).tickSize(-(H-m.t-m.b)).tickFormat("")).select(".domain").remove();
+  svg.append("g").attr("class","axis").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(d=>pct(d)));
+  svg.append("text").attr("class","axlab").attr("x",W-m.r).attr("y",H-4).attr("text-anchor","end").text("Share of runs right, %");
+  G.forEach((g, gi) => {
+    const y0 = m.t + gi*rowH;
+    const n = d3.max(rs, r => r.groups[g]?.[1] ?? 0) || 0;
+    const thin = n < 10, hot = state.group === g;
+    if (hot) svg.append("rect").attr("x",0).attr("y",y0+2).attr("width",W).attr("height",rowH-4).style("fill","var(--sel-wash)");
+    svg.append("text").attr("x",0).attr("y",y0+rowH/2-1).style("font-size","12px").style("font-weight",650).style("fill",thin?"var(--muted)":"var(--ink)").text(glabel(g));
+    svg.append("text").attr("x",0).attr("y",y0+rowH/2+12).style("font-size","10.5px").style("fill","var(--muted)").text(`${n} cases`);
+    svg.append("line").attr("x1",m.l).attr("x2",W-m.r).attr("y1",y0+rowH-1).attr("y2",y0+rowH-1).style("stroke","var(--grid)");
+    const pts = rs.filter(r => r.groups[g]);
+    const mk = svg.append("g").selectAll("g.mk").data(pts, d=>d.id).join("g").attr("class","mk").attr("data-id",d=>d.id);
+    const ky = d => y0 + 9 + KIND.findIndex(k=>k.key===d.kind)*lane + lane/2;
+    mk.append("path").attr("class","sym").attr("transform",d=>`translate(${x(d.groups[g][0])},${ky(d)})`).attr("d",d=>symPath(d.family,40))
+      .style("fill",d=>d.partial?"var(--panel)":kindVar(d.kind)).style("stroke",d=>d.partial?kindVar(d.kind):"var(--panel)").style("stroke-width",1.2)
+      .style("opacity", thin ? .55 : 1);
+    mk.append("circle").attr("class","hit").attr("r",7).attr("cx",d=>x(d.groups[g][0])).attr("cy",ky);
+    mk.on("mousemove",(e,d)=>showTip(e,`<b>${esc(d.arm)}</b> on ${esc(d.model_short)}<br>${esc(glabel(g))}: ${pct(d.groups[g][0],1)}% right over ${d.groups[g][1]} cases<br><span class="m">${esc(DATA.group_help[g])}</span>`))
+      .on("mouseleave",hideTip).on("click",(e,d)=>select(d.id));
+  });
+}
+
+/* ---------- cost ladder: increments over the floor ---------- */
+function renderLadder(){
+  const el = $("#ld"), fl = floorRow(), grp = state.group;
+  const val = r => grp==="all" ? r.acc[0] : r.groups[grp]?.[0];
+  const rs = ordered(rows()).filter(r => val(r) != null);
+  const W = Math.max(300, el.clientWidth);
+  const lineH = 17, stepH = 22, m = {t:6, r:56, b:36};
+  const labW = Math.min(250, Math.max(150, W*0.36));
+  const steps = []; let cur = null;
+  DATA.ladder.forEach((s, si) => { const items = rs.filter(r => stepOf(r.arm)===si);
+    if (items.length || s.key==="future") steps.push({s, items}); });
+  const H = m.t + steps.reduce((a,st)=> a + stepH + Math.max(1, st.items.length)*lineH, 0) + m.b;
+  if (!fl){ el.innerHTML = "<p>No floor on this set yet.</p>"; return; }
+  const f0 = val(fl) ?? fl.acc[0];
+  const inc = rs.map(r => val(r) - f0);
+  const lo = Math.min(-.1, d3.min(rs, r => (grp==="all"? r.acc[1] : val(r)) - f0)), hi = Math.max(.1, d3.max(rs, r => (grp==="all"? r.acc[2] : val(r)) - f0));
+  const x = d3.scaleLinear().domain([Math.floor(lo*10)/10, Math.ceil(hi*10)/10]).range([labW, W-m.r]);
+  const mgd = rs.filter(r => r.kind==="managed" && r.arm!=="native-bare");
+  const top = mgd.length ? mgd.reduce((a,b)=> val(b)>val(a)?b:a) : null;
+  const mfr = rs.find(r => r.arm==="custom-metricflow" && r.role==="decides") || rs.find(r => r.arm==="custom-metricflow");
+  const what = grp==="all" ? "" : ` on ${glabel(grp).toLowerCase()} questions`;
+  $("#ld-h").textContent = top ?
+    `Over the bare agent's ${pct(f0)}%${what}, the best managed context adds ${pp(val(top)-f0,0)} points (${top.arm}); ${mfr ? `our MetricFlow agent on ${mfr.model_short} adds ${pp(val(mfr)-f0,0)}` : "our MetricFlow agent is not in this view"}.`
+    : "Each rung's score as an increment over the floor.";
+  $("#ld-sub").textContent = grp==="all" ?
+    `Cheapest to most custom, top to bottom. Points over native-bare on Gemini default (${pct(fl.acc[0],1)}% [${pct(fl.acc[1],1)}, ${pct(fl.acc[2],1)}]). Bars are each setup's own 95% interval shifted by the floor's mean; the grey band is the floor's own interval. Not a paired test.`
+    : `Cheapest to most custom. ${glabel(grp)} questions only: share right minus the floor's share; the data holds no interval per group.`;
+  $("#ld-legend").innerHTML = legendHTML() + `<span class="ttl">Right column</span><span>Claude $ per 100 runs, or the model's free lane</span>`;
+  const svg = d3.select(el).html("").append("svg").attr("width",W).attr("height",H).attr("role","img").attr("aria-label","Cost ladder: increments over the floor");
+  if (grp==="all") svg.append("rect").attr("x",x(fl.acc[1]-f0)).attr("width",Math.max(1,x(fl.acc[2]-f0)-x(fl.acc[1]-f0))).attr("y",m.t).attr("height",H-m.t-m.b).style("fill","var(--grid)");
+  svg.append("g").attr("class","gridl").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(6).tickSize(-(H-m.t-m.b)).tickFormat("")).select(".domain").remove();
+  svg.append("line").attr("x1",x(0)).attr("x2",x(0)).attr("y1",m.t).attr("y2",H-m.b).style("stroke","var(--ink-2)").style("stroke-width",1);
+  svg.append("g").attr("class","axis").attr("transform",`translate(0,${H-m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d=>d===0?"floor":pp(d,0)));
+  svg.append("text").attr("class","axlab").attr("x",W-m.r).attr("y",H-4).attr("text-anchor","end").text("Points of accuracy over the floor");
+  svg.append("text").attr("class","axlab").attr("x",W).attr("y",m.t+11).attr("text-anchor","end").style("font-size","10.5px").text("$/100");
+  let yy = m.t;
+  steps.forEach(({s, items}) => {
+    svg.append("text").attr("x",0).attr("y",yy+15).style("font-size","11.5px").style("font-weight",650).style("fill","var(--ink)").text(s.label.length > 58 && W < 520 ? s.label.slice(0,56)+"…" : s.label)
+      .append("title").text(s.label);
+    yy += stepH;
+    if (!items.length){
+      svg.append("line").attr("x1",labW).attr("x2",W-m.r).attr("y1",yy+lineH/2-3).attr("y2",yy+lineH/2-3).style("stroke","var(--axis)").style("stroke-dasharray","2 4");
+      svg.append("text").attr("x",8).attr("y",yy+lineH/2+1).style("font-size","11px").style("fill","var(--muted)").text("not measurable yet: fails in Google's backend").append("title").text(s.note||"");
+      yy += lineH; return;
+    }
+    items.forEach(r => {
+      const cy = yy + lineH/2 - 3, v = val(r) - f0;
+      const gg = svg.append("g").attr("class","mk").attr("data-id",r.id).datum(r);
+      gg.append("text").attr("x",8).attr("y",cy+4).style("font-size","11px").style("fill","var(--ink-2)").text(`${r.arm}, ${r.model_short}`);
+      if (grp==="all") gg.append("line").attr("x1",x(r.acc[1]-f0)).attr("x2",x(r.acc[2]-f0)).attr("y1",cy).attr("y2",cy)
+        .style("stroke",kindVar(r.kind)).style("stroke-width",2).style("stroke-dasharray",r.partial?"3 2":null);
+      gg.append("path").attr("class","sym").attr("transform",`translate(${x(v)},${cy})`).attr("d",symPath(r.family,46))
+        .style("fill",r.partial?"var(--panel)":kindVar(r.kind)).style("stroke",r.partial?kindVar(r.kind):"var(--panel)").style("stroke-width",1.3);
+      const c = costCell(r);
+      gg.append("text").attr("x",W).attr("y",cy+4).attr("text-anchor","end").style("font-size","10.5px").style("fill","var(--muted)").text(c.v);
+      gg.append("rect").attr("class","hit").attr("x",0).attr("y",yy-2).attr("width",W).attr("height",lineH).style("fill","transparent");
+      gg.on("mousemove",e=>showTip(e, rowTip(r) + `<br>Over the floor: ${pp(v)} points${grp==="all"?"":` on ${esc(glabel(grp))}`}<br><span class="m">Cost: ${esc(c.t)}</span>`))
+        .on("mouseleave",hideTip).on("click",()=>select(r.id));
+      yy += lineH;
+    });
+  });
+}
+
+/* ---------- detail pane ---------- */
+function renderDetail(){
+  const r = selected(), el = $("#v-detail");
+  if (!r){ el.innerHTML = `<p>No setup matches the model filter. Turn a model family back on above.</p>`; return; }
+  const v = verdict(r), c = costCell(r);
+  const tot = d3.sum(OUTC, o => r.outcomes[o]||0);
+  const obar = OUTC.filter(o => r.outcomes[o]).map(o => `<i style="flex:${r.outcomes[o]};background:var(${OUTC_VAR[o]})" title="${OUTC_LABEL[o]}: ${r.outcomes[o]} of ${tot} runs"></i>`).join("");
+  const okey = OUTC.filter(o => r.outcomes[o]).map(o => `<span><i style="background:var(${OUTC_VAR[o]})"></i>${OUTC_LABEL[o]} ${r.outcomes[o]}</span>`).join("");
+  let vs = "";
+  if (r.vs_best){ const [m,lo,hi] = r.vs_best.acc, [cm,clo,chi] = r.vs_best.cw; const b = best();
+    vs = `<div class="sec"><h3>Against the managed best${b?`, ${esc(b.arm)} on ${esc(b.model_short)}`:""}</h3>`+
+      `<p>Accuracy ${pp(m)} points [${pp(lo)}, ${pp(hi)}]: ${hi<0?"a difference, below":lo>0?"a difference, above":"no difference"}. Confident-wrong ${pp(cm)} [${pp(clo)}, ${pp(chi)}]: ${chi<0?"a difference, lower":clo>0?"a difference, higher":"no difference"}.</p>`+
+      `<p>Paired on ${r.vs_best.cases} cases over ${r.vs_best.runs} runs. Worth building by the rule: <b>${r.vs_best.worth?"yes":"no"}</b>${r.role==="decides"?" (this pair decides)":r.role==="check"?" (Claude is the check, not the decision)":r.role==="descriptive"?" (descriptive, outside the decision)":""}.</p></div>`;
+  } else if (v) vs = `<div class="sec"><h3>Against the managed best</h3><p>${v.cls==="best"?"This is the managed best: the best rung-1 or rung-2 setup by accuracy.":"Among the setups with no accuracy difference from the managed best (step 3 of the rule)."}</p></div>`;
+  const cost = r.spend ? `<p>${usd(r.spend.usd)} on Claude over ${r.spend.passes.length} pass(es), reruns included: ${usd(r.spend.usd/r.runs*100)} per 100 runs, ${usd(r.spend.usd/Math.max(1,r.outcomes.right||0))} per right answer.</p><p style="color:var(--muted)">${esc(r.spend.passes.join("; "))}</p>` : `<p>${esc(c.t)}.</p>`;
+  let tools = "";
+  if (r.tools){ const t = r.tools, N = t.logged;
+    if (!t.with_calls) tools = `<p>This log holds no tool calls for the setup (${N} logged runs), so tool use can't be shown.</p>`;
+    else { const top = Object.entries(t.names).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${esc(k)} ${v}`).join(", ");
+      tools = `<div class="tb"><span>Consulted catalog, metrics or generated tools</span><span class="bar"><i style="width:${t.semantic/N*100}%"></i></span><span>${t.semantic} of ${N}</span>`+
+        `<span>Wrote its own SQL</span><span class="bar"><i style="width:${t.sql/N*100}%"></i></span><span>${t.sql} of ${N}</span></div><p style="color:var(--muted)">Most called: ${top}.</p>`; }
+  } else tools = `<p>No per-run log was read for this build.</p>`;
+  const ex = (r.examples||[]).map(e => `<div class="ex"><div class="q">${esc(e.question || e.case)}</div>`+
+    `<div class="meta"><span class="oc ${e.outcome}">${esc(e.outcome)}</span> ${esc(e.case)}, run ${e.run}${e.groups.length?`, ${esc(e.groups.map(glabel).join(", "))}`:""}${e.turns>1?`, ${e.turns} turns, first shown`:""}</div>`+
+    `<blockquote>${esc(e.text)}</blockquote>${e.call?`<pre>${esc(e.call.tool)}: ${esc(e.call.body)}</pre>`:""}</div>`).join("");
+  el.innerHTML = `<div class="dt-h">${symSvg(r.family,r.kind,13,r.partial)}<h2>${esc(r.arm)}</h2>${r.role!=="managed"?`<span class="badge ${r.role}">${roleWord(r)}</span>`:""}${r.partial?`<span class="chip partial">partial</span>`:""}</div>`+
+   `<div class="dt-what">${esc(DATA.describe[r.arm]||"")}</div>`+
+   `<div class="big"><div><div class="k">Accuracy</div><div class="v">${pct(r.acc[0],1)}%</div><div class="ci">95% [${pct(r.acc[1],1)}, ${pct(r.acc[2],1)}]</div></div>`+
+   `<div><div class="k">Confident-wrong</div><div class="v">${pct(r.cw[0],1)}%</div><div class="ci">95% [${pct(r.cw[1],1)}, ${pct(r.cw[2],1)}]</div></div></div>`+
+   `<dl class="facts"><dt>Model</dt><dd>${esc(r.model)}</dd><dt>Harness</dt><dd>${esc(r.harness)}, session ${esc(r.session)}</dd>`+
+   `<dt>Rung</dt><dd>${esc(DATA.rung_text[r.rung] || "reference, outside the ladder")}</dd>`+
+   `<dt>Finished</dt><dd>${r.cases} of ${r.of_cases} cases, ${r.runs} of ${r.runs_full} runs</dd>`+
+   `<dt>pass^k</dt><dd>${r.pass_all!=null?pct(r.pass_all,1)+"% of cases right on every run":"–"}</dd><dt>Model calls</dt><dd>${r.model_calls ?? "–"}</dd></dl>`+
+   `<div class="k" style="font-size:11.5px;color:var(--muted)">Outcomes of ${tot} runs</div><div class="obar" role="img" aria-label="${esc(okey.replace(/<[^>]+>/g," "))}">${obar}</div><div class="okey">${okey}</div>`+
+   vs + `<div class="sec"><h3>Cost</h3>${cost}</div>` + `<div class="sec"><h3>Tool use in the logs</h3>${tools}</div>` +
+   (ex ? `<div class="sec"><h3>Example answers from the log</h3>${ex}</div>` : "");
+}
+
+/* ---------- linking ---------- */
+function renderSelection(){
+  const r = selected(), id = r && r.id;
+  document.querySelectorAll("#map tr.row").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === id));
+  ["#sc", "#gr", "#ld"].forEach(sel => {
+    const root = d3.select(sel);
+    root.selectAll(".mk").each(function(){ const on = this.getAttribute("data-id") === id;
+      this.classList.toggle("on", on);
+      if (on) this.parentNode.appendChild(this);
+    });
+  });
+  // ring in the scatter
+  const s = d3.select("#sc svg"); s.selectAll(".ring").remove();
+  if (r && s.node()){ const {x,y} = s.node().__scales; if (rows().includes(r))
+    s.append("circle").attr("class","ring").attr("cx",x(r.acc[0])).attr("cy",y(r.cw[0])).attr("r",10).style("fill","none").style("stroke","var(--sel)").style("stroke-width",1.5).style("pointer-events","none"); }
+  renderDetail();
+}
+function renderFooter(){
+  const loose = DATA.spend_loose.reduce((a,b)=>a+b.usd,0), orph = DATA.spend_orphan;
+  $("#foot").innerHTML = `<p><b>Source.</b> results.json written ${esc(DATA.written)} under ${esc(DATA.rule)}; every number on this page is computed from it, and example answers and tool counts from the per-run logs (eval-*.jsonl). Accuracy and confident-wrong are means over cases with percentile-bootstrap 95% intervals; k = ${DATA.k} runs per case unless marked partial.</p>`+
+   `<p><b>Power.</b> The frozen set detects about ${DATA.power.frozen} points and the hard set about ${DATA.power.hard} at k = ${DATA.k} (${esc(DATA.power.source)}).</p>`+
+   `<p><b>Spend.</b> Claude, all passes: ${usd(DATA.spend_total)}; probes and smoke tests ${usd(loose)}${orph.length?`; passes with no scored row: ${esc(orph.map(o=>`${o.pass} ${usd(o.usd)}`).join("; "))}`:""}. Gemini in Google's data agents ran at $0.00 on the free trial until ${esc(DATA.free_trial_until)}; the free OpenRouter model costs requests, not dollars.</p>`+
+   `<p><b>Kept out of the scores.</b> Runs refused by the quota fence and the audit failure are quarantined in findings/ and never scored.</p>`;
+}
+function renderAll(){ renderMap(); renderScatter(); renderGroups(); renderLadder(); renderFooter(); renderSelection(); }
+
+buildControls(); renderAll();
+let rt; const ro = new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { renderScatter(); renderGroups(); renderLadder(); renderSelection(); }, 120); });
+ro.observe($("#sc")); ro.observe($("#ld"));
+})();
+</script>

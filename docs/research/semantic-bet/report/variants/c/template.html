@@ -1,0 +1,543 @@
+<title>Every answer visible</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#e9edf0; --plate:#fbfcfd; --well:#dfe5ea; --ink:#141d26; --ink-2:#4a5866; --ink-3:#6c7a88;
+  --rule:#cfd7de; --rule-2:#e3e8ec; --focus:#0b63ce; --band:#d8e3f3;
+  --right:#2b59c3; --declined:#6f7f8f; --wrong:#e0a030; --wrong-edge:#9c6a10; --cw:#d7263d;
+  --mark-ring:#fbfcfd; --hl:#14304f;
+  --sans:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#141c23; --plate:#1c2630; --well:#2a3641; --ink:#e6ecf1; --ink-2:#aab6c2; --ink-3:#8796a4;
+  --rule:#34424f; --rule-2:#26323d; --focus:#7fb0ff; --band:#263a52;
+  --right:#5f86e0; --declined:#8d9cab; --wrong:#bb8c2e; --wrong-edge:#e0b860; --cw:#d43650;
+  --mark-ring:#1c2630; --hl:#cfe0ff; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#141c23; --plate:#1c2630; --well:#2a3641; --ink:#e6ecf1; --ink-2:#aab6c2; --ink-3:#8796a4;
+  --rule:#34424f; --rule-2:#26323d; --focus:#7fb0ff; --band:#263a52;
+  --right:#5f86e0; --declined:#8d9cab; --wrong:#bb8c2e; --wrong-edge:#e0b860; --cw:#d43650;
+  --mark-ring:#1c2630; --hl:#cfe0ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;
+  font-variant-numeric:tabular-nums;font-stretch:100%}
+::selection{background:var(--right);color:#fff}
+a{color:var(--right);text-underline-offset:3px}
+code{font-family:var(--mono);font-size:.86em}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1320px;margin:0 auto;padding:28px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px))}
+header.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 32px;align-items:end;margin-bottom:22px}
+h1{font-stretch:118%;font-weight:760;font-size:clamp(28px,4.2vw,50px);line-height:1.02;letter-spacing:-0.025em;margin:0;max-width:22ch;text-wrap:balance}
+.lede{grid-column:1/-1;max-width:78ch;color:var(--ink-2);margin:4px 0 0;font-size:16px}
+.lede b{color:var(--ink);font-weight:600}
+.controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--plate)}
+.seg button{font:inherit;font-size:14px;font-stretch:92%;border:0;background:transparent;color:var(--ink-2);padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--plate);font-weight:600}
+.seg button:focus-visible{outline-offset:-3px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13.5px;color:var(--ink-2);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.legend canvas{width:12px;height:12px}
+section.plate{background:var(--plate);border:1px solid var(--rule);border-radius:3px;padding:20px 20px 18px;margin:0 0 28px}
+h2{font-stretch:108%;font-weight:700;font-size:clamp(19px,2.1vw,25px);line-height:1.18;letter-spacing:-0.012em;margin:0 0 6px;max-width:60ch;text-wrap:balance}
+.how{color:var(--ink-2);font-size:14px;max-width:96ch;margin:0 0 14px}
+.scroller{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-color:var(--rule) transparent;scrollbar-width:thin}
+.grid{display:grid;align-items:center;column-gap:0;min-width:max-content}
+.cell-label{position:sticky;left:0;z-index:2;background:var(--plate);padding:3px 12px 3px 0;min-width:0}
+.rowbtn{all:unset;cursor:pointer;display:block;width:100%;border-radius:2px}
+.rowbtn:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.rname{font-size:13.5px;font-stretch:88%;font-weight:600;line-height:1.15;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmodel{font-size:12.5px;font-stretch:85%;color:var(--ink-3);line-height:1.2;display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+.role{font-size:11.5px;padding:0 5px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-2);line-height:16px}
+.role.decides{border-color:var(--ink);color:var(--ink);font-weight:600}
+.partial{font-size:11.5px;color:var(--cw);font-weight:600}
+.is-mf .rname{color:var(--right)}
+.tier{grid-column:1/-1;font-size:12.5px;font-stretch:90%;font-weight:600;color:var(--ink-2);border-top:1px solid var(--rule);padding:10px 0 4px;margin-top:6px;position:sticky;left:0}
+.tier:first-of-type{border-top:0}
+.colhead{font-size:12.5px;font-stretch:88%;color:var(--ink-2);line-height:1.2;align-self:end;padding-bottom:6px;position:relative;height:70px}
+.colhead span{position:absolute;bottom:6px;white-space:nowrap}
+.colhead span.up{border-left:1px solid var(--rule);padding-left:4px;margin-left:-5px}
+.colhead b{display:block;color:var(--ink);font-weight:600;font-size:13px}
+.cost{font-size:12.5px;font-stretch:88%;text-align:right;color:var(--ink-2);padding-left:10px;white-space:nowrap}
+.cost b{color:var(--ink);font-weight:600}
+canvas.units,canvas.strip{display:block;cursor:crosshair}
+canvas.units:focus-visible,canvas.strip:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.below{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px 36px;margin-top:18px;border-top:1px solid var(--rule);padding-top:14px}
+.below h3{font-size:14px;font-stretch:96%;font-weight:700;margin:0 0 4px}
+.below ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
+.below li{margin:3px 0}
+.below li b{color:var(--ink);font-weight:600}
+.caption{min-height:46px;font-size:14px;color:var(--ink-2);margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--rule);max-width:110ch}
+.caption b{color:var(--ink)}
+.stephead{grid-column:1/-1;font-size:13px;font-weight:700;font-stretch:96%;padding:10px 0 3px;border-top:1px solid var(--rule-2);position:sticky;left:0}
+.stephead.future{color:var(--ink-3);font-weight:600}
+.stephead.future em{font-style:normal;font-weight:400}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--plate);font-size:13px;line-height:1.35;padding:7px 9px;border-radius:4px;max-width:330px;opacity:0;transition:opacity .08s}
+#tip.on{opacity:1}
+#tip .k{opacity:.75}
+aside#drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--plate);border-left:1px solid var(--rule);z-index:30;
+  transform:translateX(102%);transition:transform .22s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(10,20,30,.16)}
+aside#drawer:not(.open){visibility:hidden;box-shadow:none;transition:transform .22s cubic-bezier(.16,1,.3,1),visibility 0s .22s}
+aside#drawer.open{transform:none}
+.dhead{padding:16px 18px 10px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr auto;gap:6px}
+.dhead h3{margin:0;font-size:17px;font-stretch:100%;line-height:1.25}
+.dhead p{margin:0;color:var(--ink-2);font-size:13.5px;grid-column:1/-1}
+.close{font:inherit;font-size:14px;border:1px solid var(--rule);background:transparent;color:var(--ink);border-radius:4px;padding:4px 10px;cursor:pointer;align-self:start}
+.dbody{overflow:auto;padding:14px 18px 40px;font-size:14.5px}
+.dbody h4{font-size:13px;font-weight:700;margin:16px 0 4px;color:var(--ink-2);font-stretch:94%}
+.q{font-size:15.5px;font-weight:600;margin:0 0 4px}
+.ans{white-space:pre-wrap;margin:0;padding:8px 10px;background:var(--ground);border-radius:3px}
+.call{margin:6px 0 0}
+.call code{font-family:var(--mono);font-size:12.5px;font-weight:500}
+.call pre{font-family:var(--mono);font-size:12px;margin:3px 0 0;padding:8px 10px;background:var(--ground);border-radius:3px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto}
+.oc{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:14px;margin:6px 0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0}
+.foot{font-size:13px;color:var(--ink-3);max-width:100ch}
+@media (max-width:720px){
+  header.top{grid-template-columns:1fr}
+  section.plate{padding:14px 12px;margin-left:calc(-1 * max(4px, env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(4px, env(safe-area-inset-right,0px)))}
+  .rname{max-width:136px}
+  .rmodel{flex-wrap:wrap;white-space:normal;row-gap:0}
+  .cell-label{overflow:hidden}
+}
+@media (prefers-reduced-motion: reduce){ aside#drawer,#tip{transition:none} }
+@media (forced-colors: active){ .seg button[aria-pressed="true"]{outline:2px solid CanvasText} }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>Which setup gives the right number, and which gives a confident wrong one</h1>
+  <div class="controls" role="group" aria-label="Question set">
+    <div class="seg" id="setseg"></div>
+  </div>
+  <p class="lede" id="lede"></p>
+  <ul class="legend" id="legend" aria-label="Legend: what each square means"></ul>
+</header>
+
+<section class="plate" aria-labelledby="map-t">
+  <h2 id="map-t"></h2>
+  <p class="how" id="map-how"></p>
+  <div class="scroller"><div class="grid" id="map"></div></div>
+  <div class="below" id="moves"></div>
+</section>
+
+<section class="plate" aria-labelledby="lad-t">
+  <h2 id="lad-t"></h2>
+  <p class="how" id="lad-how"></p>
+  <p class="caption" id="lad-cap" aria-live="polite"></p>
+  <div class="scroller"><div class="grid" id="ladder"></div></div>
+</section>
+
+<p class="foot" id="foot"></p>
+</div>
+
+<div id="tip" role="tooltip"></div>
+<aside id="drawer" aria-label="Run details" aria-hidden="true">
+  <div class="dhead"><h3 id="d-title"></h3><button class="close" id="d-close" type="button">Close</button><p id="d-sub"></p></div>
+  <div class="dbody" id="d-body" tabindex="-1"></div>
+</aside>
+
+<script>
+const D=/*__DATA__*/null;
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const OUT=D.outcodes; // right, declined, wrong, unclear, confident-wrong
+const OUTNAME={right:"right",declined:"declined","wrong":"wrong (hedged or no number)",unclear:"unclear (judges split; counts as wrong)","confident-wrong":"confident-wrong"};
+const DRAWORDER=[0,1,2,3,4]; // bottom → top inside a question's column
+const BK=D.buckets.map(b=>b[0]);
+const BKNAME=Object.fromEntries(D.buckets.map(b=>[b[0],b[1]]));
+const BKWHAT=Object.fromEntries(D.buckets.map(b=>[b[0],b[2]]));
+const GROUPWORD={covered:"covered",trap:"hidden-rule",uncovered:"uncovered",conversation:"conversation",planted:"planted",distractor:"distractor"};
+let SET="frozen";
+const css=()=>{const s=getComputedStyle(document.documentElement);const g=k=>s.getPropertyValue(k).trim();
+  return {plate:g("--plate"),well:g("--well"),ink:g("--ink"),ink2:g("--ink-2"),ink3:g("--ink-3"),rule:g("--rule"),rule2:g("--rule-2"),band:g("--band"),
+  right:g("--right"),declined:g("--declined"),wrong:g("--wrong"),wedge:g("--wrong-edge"),cw:g("--cw"),focus:g("--focus"),hl:g("--hl")}};
+let C=css();
+const pct=v=>v==null?"–":Math.round(v*100);
+const pts=v=>{const n=Math.round(v*100);return n===0?"0":(n>0?"+":"−")+Math.abs(n)};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtN=n=>n.toLocaleString("en-GB");
+const k3=r=>r.of*3;
+const isStub=r=>r.runs<10;
+const isPartial=r=>r.runs<r.of*3;
+const rowsOf=s=>D.rows.filter(r=>r.set===s);
+const caseList=s=>D.cases[s];
+const managed=s=>{const m=D.managed_best[s];return m?D.rows.find(r=>r.set===s&&r.arm===m[0]&&r.model===m[1]):null};
+const floorRow=s=>D.rows.find(r=>r.set===s&&r.arm==="native-bare");
+const mfFree=s=>D.rows.find(r=>r.set===s&&r.arm==="custom-metricflow"&&r.role==="decides");
+
+/* ---------- unit glyphs: shape carries the outcome as well as colour ---------- */
+function glyph(ctx,x,y,s,code,ghost){
+  if(ghost){ctx.fillStyle=C.ink3;ctx.globalAlpha=.55;ctx.fillRect(x+s/2-1,y+s/2-1,2,2);ctx.globalAlpha=1;return}
+  const o=OUT[code];
+  if(o==="right"){ctx.fillStyle=C.right;ctx.fillRect(x,y,s,s)}
+  else if(o==="declined"){ctx.strokeStyle=C.declined;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,s-1,s-1)}
+  else if(o==="wrong"){ctx.fillStyle=C.wrong;ctx.fillRect(x,y+s/2,s,s/2);ctx.strokeStyle=C.wedge;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,s-1,s-1)}
+  else if(o==="unclear"){ctx.strokeStyle=C.wedge;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,s-1,s-1);ctx.fillStyle=C.wedge;ctx.fillRect(x+s/2-.75,y+s/2-.75,1.5,1.5)}
+  else {ctx.fillStyle=C.cw;ctx.fillRect(x-.5,y-.5,s+1,s+1)}
+}
+function setupCanvas(cv,w,h){const dpr=Math.max(1,window.devicePixelRatio||1);cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+"px";cv.style.height=h+"px";const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return ctx}
+
+/* ---------- per row: runs grouped by question ---------- */
+function perCase(r){
+  if(r._pc) return r._pc;
+  const m=new Map();
+  for(const [ci,oc,di] of r.units){if(!m.has(ci))m.set(ci,[]);m.get(ci).push([oc,di])}
+  for(const v of m.values()) v.sort((a,b)=>DRAWORDER.indexOf(a[0])-DRAWORDER.indexOf(b[0]));
+  r._pc=m;return m;
+}
+function score(list){if(!list)return -1;let s=0;for(const [o] of list){if(o===0)s+=1000;else if(o===1)s+=10;else if(o===4)s-=1}return s/list.length}
+
+/* ---------- tooltip ---------- */
+const tip=$("#tip");
+function showTip(html,ev){tip.innerHTML=html;tip.classList.add("on");const w=tip.offsetWidth,h=tip.offsetHeight;let x=ev.clientX+14,y=ev.clientY+14;
+  if(x+w>innerWidth-8)x=ev.clientX-w-14; if(y+h>innerHeight-8)y=ev.clientY-h-14; tip.style.left=Math.max(8,x)+"px";tip.style.top=Math.max(8,y)+"px"}
+function hideTip(){tip.classList.remove("on")}
+function swatch(code,size){const c=document.createElement("canvas");const ctx=setupCanvas(c,size,size);glyph(ctx,2,2,size-4,code,false);return c}
+function swatchHTML(code){return `<canvas data-sw="${code}" width="12" height="12" style="width:12px;height:12px;vertical-align:-1px"></canvas>`}
+function paintSwatches(root){root.querySelectorAll("canvas[data-sw]").forEach(c=>{const ctx=setupCanvas(c,12,12);glyph(ctx,2,2,8,+c.dataset.sw,false)})}
+
+/* ---------- header ---------- */
+function header(){
+  const seg=$("#setseg");seg.innerHTML="";
+  for(const s of ["frozen","hard"]){const b=document.createElement("button");b.type="button";b.textContent=`${s==="frozen"?"Frozen set":"Hard set"} · ${caseList(s).length} questions`;
+    b.setAttribute("aria-pressed",String(s===SET));b.onclick=()=>{SET=s;render()};seg.appendChild(b)}
+  const n=D.rows.filter(r=>r.set===SET).reduce((a,r)=>a+r.units.length,0);
+  const setups=rowsOf(SET).length;
+  $("#lede").innerHTML=`Evidence as of <b>${esc(D.written)}</b>, read from <code>results.json</code> and the per-run logs. On this set, <b>${fmtN(n)} answers</b> from ${setups} setup × model pairs are drawn below, one square each, so every percentage can be counted. Nothing here closes the question: each finding says what would move it.`;
+  const L=$("#legend");L.innerHTML="";
+  const items=[[0,"right"],[1,"declined (no number, says so)"],[2,"wrong (number hedged, or no number)"],[3,"unclear (judges split; counts as wrong)"],[4,"confident-wrong (a wrong number, unhedged)"]];
+  for(const [c,t] of items){const li=document.createElement("li");li.appendChild(swatch(c,12));li.append(t);L.appendChild(li)}
+  const li=document.createElement("li");const g=document.createElement("canvas");const ctx=setupCanvas(g,12,12);glyph(ctx,2,2,8,0,true);li.appendChild(g);li.append("not run yet");L.appendChild(li);
+}
+
+/* ---------- geometry ---------- */
+function mapGeom(s,avail0){
+  const cases=caseList(s); const counts=BK.map(b=>cases.filter(c=>c.b===b).length);
+  const narrow=innerWidth<720; const statW=narrow?24:26, gap=6;
+  const labelW=narrow?150:220, stripsW=narrow?2*92:2*112, costW=narrow?60:74;
+  const avail=avail0-labelW-stripsW-costW-22;
+  let pitch=Math.floor((avail-counts.filter(n=>n).length*(statW+gap))/cases.length);
+  pitch=Math.max(narrow?4:5,Math.min(9,pitch));
+  const cols=[];let x=0;
+  BK.forEach((b,i)=>{if(!counts[i])return;cols.push({b,x,n:counts[i],w:counts[i]*pitch});x+=counts[i]*pitch+statW+gap});
+  return {pitch,cols,width:x-gap,statW,labelW,stripW:stripsW/2,costW,h:pitch*3+5};
+}
+
+function placeHeads(h,items){
+  let lvl=0;
+  items.forEach((it,i)=>{const sp=document.createElement("span");sp.style.left=it.x+"px";sp.title=BKWHAT[it.b];
+    const need=BKNAME[it.b].length*7.4+6; const tight=need>it.w;
+    lvl=tight?(lvl+1)%2:0; if(!tight&&i>0&&items[i-1]._lvl===1)lvl=0; it._lvl=lvl;
+    sp.style.bottom=(6+lvl*30)+"px"; if(lvl) sp.classList.add("up");
+    sp.innerHTML=`<b>${esc(BKNAME[it.b])}</b>${it.n} q`;h.appendChild(sp)});
+}
+/* ---------- the decision map ---------- */
+function drawRowUnits(cv,r,G,focus){
+  const ctx=setupCanvas(cv,G.width,G.h); const pc=perCase(r); const cases=caseList(r.set); const s=G.pitch-1;
+  cv._layout=[];
+  for(const col of G.cols){
+    const idx=cases.map((c,i)=>i).filter(i=>cases[i].b===col.b);
+    idx.sort((a,b)=>score(pc.get(b))-score(pc.get(a))||a-b);
+    idx.forEach((ci,j)=>{
+      const list=pc.get(ci)||[]; const slots=Math.max(3,list.length); const x=col.x+j*G.pitch;
+      for(let k=0;k<Math.min(slots,3);k++){
+        const y=G.h-2-(k+1)*G.pitch+1; const u=list[k];
+        glyph(ctx,x,y,s,u?u[0]:0,!u);
+      }
+      cv._layout.push({x0:x,x1:x+G.pitch,ci,list,col:col.b});
+    });
+    const st=r.cols[col.b]; const tx=col.x+col.w+G.statW-3;
+    ctx.fillStyle=st&&st.cases?C.ink2:C.ink3; ctx.font=`500 ${innerWidth<720?11:12}px Archivo, sans-serif`; ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillText(st&&st.cases?pct(st.acc[0]):"–",tx,G.h/2);
+  }
+  if(focus){const L=cv._layout[focus.i];if(L){const y=G.h-2-(focus.k+1)*G.pitch+1;ctx.strokeStyle=C.focus;ctx.lineWidth=1.5;ctx.strokeRect(L.x0-1.5,y-1.5,G.pitch+2,G.pitch+2)}}
+}
+function hitUnits(cv,G,ev){
+  const rect=cv.getBoundingClientRect(); const x=ev.clientX-rect.left, y=ev.clientY-rect.top;
+  for(let i=0;i<cv._layout.length;i++){const L=cv._layout[i];if(x>=L.x0-1&&x<L.x1+1){const k=Math.floor((G.h-2-y)/G.pitch);return {i,L,k:Math.max(0,Math.min(2,k))}}}
+  for(const col of G.cols){if(x>=col.x+col.w&&x<col.x+col.w+G.statW)return {stat:col.b}}
+  return null;
+}
+function unitTip(r,L,k){
+  const c=caseList(r.set)[L.ci]; const u=L.list[k];
+  const counts=[0,0,0,0,0];L.list.forEach(([o])=>counts[o]++);
+  const q=(c.q||[]).join(" → ");
+  return `<b>${esc(c.id)}</b> · ${esc(BKNAME[c.b])}<br>${esc(q.length>160?q.slice(0,159)+"…":q)}<br>`+
+   (u?`<span class="k">This run:</span> ${esc(OUTNAME[OUT[u[0]]])}`:`<span class="k">This run:</span> not run yet`)+
+   `<br><span class="k">This question's runs:</span> ${counts[0]} right of ${L.list.length}${counts[4]?`, ${counts[4]} confident-wrong`:""}${u?"<br><span class=k>Click for the answer and tool calls</span>":""}`;
+}
+function colTip(r,b){
+  const st=r.cols[b]; if(!st||!st.cases) return `${esc(BKNAME[b])}: no runs`;
+  const g=r.groups; const extra=b==="plain"&&g.covered?`<br><span class="k">results.json's covered group (all covered questions, hidden-rule and the rest included):</span> ${pct(g.covered[0])}% of ${g.covered[1]}`:"";
+  return `<b>${esc(BKNAME[b])}</b>, ${esc(r.name)} · ${esc(r.ml)}<br>${pct(st.acc[0])}% right, 95% interval ${pct(st.acc[1])} to ${pct(st.acc[2])}<br>${pct(st.cw[0])}% confident-wrong [${pct(st.cw[1])} to ${pct(st.cw[2])}]<br>${st.cases} questions, ${st.runs} runs${extra}<br><span class="k">Interval computed by this page: bootstrap over questions.</span>`;
+}
+function drawStrip(cv,r,G,kind,mb){
+  const w=G.stripW-10, h=G.h; const ctx=setupCanvas(cv,w,h); const max=kind==="acc"?1:0.4; const x=v=>4+(w-8)*Math.min(v,max)/max;
+  ctx.strokeStyle=C.rule2;ctx.lineWidth=1; for(const t of (kind==="acc"?[0,.5,1]:[0,.2,.4])){ctx.beginPath();ctx.moveTo(Math.round(x(t))+.5,1);ctx.lineTo(Math.round(x(t))+.5,h-1);ctx.stroke()}
+  if(kind==="acc"&&mb){ctx.strokeStyle=C.ink3;ctx.beginPath();ctx.moveTo(Math.round(x(mb.acc[0]))+.5,0);ctx.lineTo(Math.round(x(mb.acc[0]))+.5,h);ctx.stroke()}
+  const v=r[kind]; const col=kind==="acc"?C.right:C.cw; const y=h/2;
+  ctx.strokeStyle=col;ctx.lineWidth=2;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(x(v[1]),y);ctx.lineTo(x(v[2]),y);ctx.stroke();
+  ctx.beginPath();ctx.arc(x(v[0]),y,4,0,7);
+  if(isPartial(r)){ctx.fillStyle=C.plate;ctx.fill();ctx.lineWidth=1.5;ctx.stroke()} else {ctx.fillStyle=col;ctx.fill();ctx.strokeStyle=C.plate;ctx.lineWidth=1.5;ctx.stroke()}
+  if(kind==="cw"&&v[2]>max){ctx.fillStyle=C.cw;ctx.beginPath();ctx.moveTo(w-1,y);ctx.lineTo(w-6,y-4);ctx.lineTo(w-6,y+4);ctx.fill()}
+}
+function stripTip(r,kind){
+  const v=r[kind]; const name=kind==="acc"?"Accuracy":"Confident-wrong";
+  return `<b>${name}</b>, ${esc(r.name)} · ${esc(r.ml)}<br>${pct(v[0])}%, 95% interval ${pct(v[1])} to ${pct(v[2])} (results.json, bootstrap over questions)<br>${r.cases} of ${r.of} questions, ${r.runs} of ${k3(r)} runs${isPartial(r)?" · <b>partial pass</b>":""}`;
+}
+function costText(r){
+  if(r.sub) return `<span title="Claude Code subagents on the owner's subscription; no per-run dollars">subscription</span>`;
+  if(r.model.startsWith("google-data-agent")) return `<b>$0.00</b> <span title="${esc(D.facts.trial)}">trial</span>`;
+  if(r.model.endsWith(":free")) return `<b>$0.00</b> free`;
+  if(r.usd!=null) return `<b>$${(r.usd/r.runs*100).toFixed(2)}</b>`;
+  return `–`;
+}
+function rowLabel(r){
+  const d=document.createElement("div");d.className="cell-label"+(r.arm==="custom-metricflow"?" is-mf":"");
+  const b=document.createElement("button");b.type="button";b.className="rowbtn";b.setAttribute("aria-label",`${r.name}, ${r.ml}: details`);
+  const part=!isPartial(r)?"":`<span class="partial" title="${r.cases} of ${r.of} questions, ${r.runs} of ${k3(r)} runs (k = 3 is complete)">${r.cases<r.of?`partial: ${r.cases}/${r.of} q`:(r.runs===r.cases?"k = 1 only":`${r.runs}/${k3(r)} runs`)}</span>`;
+  b.innerHTML=`<span class="rname" title="${esc(r.what)}">${esc(r.name)}</span><span class="rmodel">${esc(r.ml)} <span class="role ${r.role==="decides"?"decides":""}">${esc(r.role)}</span>${part}</span>`;
+  b.onclick=()=>openRow(r);d.appendChild(b);return d;
+}
+let mapFocus=null;
+function renderMap(){
+  const s=SET, grid=$("#map"), G=mapGeom(s,grid.parentElement.clientWidth); grid.innerHTML="";
+  grid.style.gridTemplateColumns=`${G.labelW}px ${G.width}px ${G.stripW}px ${G.stripW}px ${G.costW}px`;
+  // headers
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead cell-label",innerHTML:`<span><b>Setup</b>model · role</span>`}));
+  const h=document.createElement("div");h.className="colhead";h.style.width=G.width+"px";
+  placeHeads(h,G.cols.map(c=>({x:c.x,w:c.w+G.statW,b:c.b,n:c.n})));
+  grid.appendChild(h);
+  const mb=managed(s);
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead",innerHTML:`<span style="left:4px"><b>Accuracy</b>0 – 100 %</span>`}));
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead",innerHTML:`<span style="left:4px"><b>Confident-wrong</b>0 – 40 %</span>`}));
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead",innerHTML:`<span style="right:0;text-align:right"><b>Cost</b>$ / 100 runs</span>`}));
+  for(const [tk,th] of D.tiers){
+    const rows=rowsOf(s).filter(r=>r.tier===tk); if(!rows.length) continue;
+    grid.appendChild(Object.assign(document.createElement("div"),{className:"tier",textContent:th}));
+    for(const r of rows){
+      grid.appendChild(rowLabel(r));
+      const cv=document.createElement("canvas");cv.className="units";cv.tabIndex=0;
+      cv.setAttribute("role","img");cv.setAttribute("aria-label",`${r.name}, ${r.ml}: ${r.outcomes.right||0} right, ${r.outcomes.declined||0} declined, ${r.outcomes.wrong||0} wrong, ${r.outcomes["confident-wrong"]||0} confident-wrong of ${r.runs} runs. Arrow keys move between runs, Enter opens one.`);
+      drawRowUnits(cv,r,G,null);
+      cv.onmousemove=ev=>{const hit=hitUnits(cv,G,ev);if(!hit){hideTip();return}
+        if(hit.stat){showTip(colTip(r,hit.stat),ev);return}
+        showTip(unitTip(r,hit.L,hit.k),ev)};
+      cv.onmouseleave=hideTip;
+      cv.onclick=ev=>{const hit=hitUnits(cv,G,ev);if(hit&&hit.L&&hit.L.list[hit.k])openRun(r,hit.L.ci,hit.L.list[hit.k][1]);else if(hit&&hit.stat)openRow(r)};
+      cv.onkeydown=ev=>keyUnits(ev,cv,r,G,drawRowUnits);
+      cv.onblur=()=>{drawRowUnits(cv,r,G,null)};
+      const wrap=document.createElement("div");wrap.appendChild(cv);grid.appendChild(wrap);
+      for(const kind of ["acc","cw"]){const sc=document.createElement("canvas");sc.className="strip";drawStrip(sc,r,G,kind,mb);
+        sc.onmousemove=ev=>showTip(stripTip(r,kind),ev);sc.onmouseleave=hideTip;sc.onclick=()=>openRow(r);
+        const w=document.createElement("div");w.style.paddingLeft="6px";w.appendChild(sc);grid.appendChild(w)}
+      grid.appendChild(Object.assign(document.createElement("div"),{className:"cost",innerHTML:costText(r)}));
+    }
+  }
+}
+function keyUnits(ev,cv,r,G,draw){
+  const L=cv._layout; if(!L||!L.length) return;
+  let f=cv._f||{i:0,k:0};
+  const keys={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
+  if(keys[ev.key]){ev.preventDefault();f={i:Math.max(0,Math.min(L.length-1,f.i+keys[ev.key][0])),k:Math.max(0,Math.min(2,f.k+keys[ev.key][1]))}}
+  else if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();const u=L[f.i].list[f.k];if(u)openRun(r,L[f.i].ci,u[1]);return}
+  else return;
+  cv._f=f;draw(cv,r,G,f);
+  const rect=cv.getBoundingClientRect();const c=caseList(r.set)[L[f.i].ci];const u=L[f.i].list[f.k];
+  $("#lad-cap") && cv.dataset.ladder && setCaption(L[f.i].ci);
+  showTip(unitTip(r,L[f.i],f.k),{clientX:rect.left+L[f.i].x0,clientY:rect.top+G.h});
+}
+
+/* ---------- what would move this ---------- */
+function renderMoves(){
+  const s=SET, el=$("#moves"); const rows=rowsOf(s); const mb=managed(s);
+  const partial=rows.filter(r=>isPartial(r)&&!isStub(r)); const stubs=rows.filter(isStub);
+  const st2=(D.step_two||[]).filter(p=>p.set===s);
+  const worth=st2.filter(p=>p.worth);
+  const other=s==="frozen"?"hard":"frozen";
+  const li=[];
+  li.push(`<li>The managed best here is <b>${esc(rowName(mb))}</b> at ${pct(mb.acc[0])}% [${pct(mb.acc[1])}–${pct(mb.acc[2])}]; the rule reads every setup of ours against it, pair by question. Setups it cannot tell apart from it: ${esc((D.step_three[s]||[]).length)} (the rule's step 3).</li>`);
+  li.push(`<li>This set detects about <b>${D.facts.power[s]} points</b> of accuracy difference at k = 3; a smaller true gap reads as a tie, so a tie here is a tie, not a proof of equality.</li>`);
+  for(const p of worth){const o=(D.step_two||[]).find(q=>q.set===other&&q.arm===p.arm&&q.model===p.model);
+    li.push(`<li><b>${esc(nameOf(p.arm))} on ${esc(labelOf(p.model))}</b> passes the rule's step 2 here: accuracy ${pts(p.accuracy[0])} points [${pts(p.accuracy[1])}, ${pts(p.accuracy[2])}], no difference; confident-wrong ${pts(p.confident_wrong[0])} [${pts(p.confident_wrong[1])}, ${pts(p.confident_wrong[2])}]. ${o?`On the ${other} set it does not (${o.runs} runs${o.runs<o.cases*3?", partial":""}), and the rule needs both.`:""}</li>`)}
+  const moves=[];
+  for(const r of partial) moves.push(`<li><b>${esc(r.name)} · ${esc(r.ml)}</b>: ${r.runs} of ${k3(r)} runs, ${r.cases} of ${r.of} questions. ${r.role==="decides"?"Its interval narrows as the free quota refills.":(r.runs===r.cases?"Run once per question; k = 3 would narrow it.":"A finishing pass would narrow it.")}</li>`);
+  if(stubs.length) moves.push(`<li>Stub passes, drawn but not readable yet: ${stubs.map(r=>`${esc(r.ml)} (${r.runs} run${r.runs>1?"s":""})`).join(", ")}.</li>`);
+  moves.push(`<li>Knowledge Catalog's <code>compile_query</code> would let a native agent answer through the metrics; it fails in Google's backend today (${esc(D.facts.compile_query)}), so that rung is unmeasured.</li>`);
+  el.innerHTML=`<div><h3>Where the evidence stands</h3><ul>${li.join("")}</ul></div><div><h3>What would move it</h3><ul>${moves.join("")}</ul></div>`;
+}
+const rowName=r=>r?`${r.name} · ${r.ml}`:"–";
+const nameOf=a=>(D.rows.find(r=>r.arm===a)||{name:a}).name;
+const labelOf=m=>(D.rows.find(r=>r.model===m)||{ml:m}).ml;
+
+/* ---------- titles from the data ---------- */
+function mapTitle(){
+  const s=SET, mf=mfFree(s), mb=managed(s);
+  if(!mf||!mb) return "Each setup's runs by question type";
+  const verdict=b=>{const v=mf.cols[b]&&mf.cols[b].vsbest; if(!v||v[0]==null) return null; return v[1]<=0&&v[2]>=0?"tie":(v[2]<0?"behind":"ahead")};
+  const part=b=>`${BKNAME[b].toLowerCase()} questions (${pct(mf.cols[b].acc[0])}% against ${pct(mb.cols[b].acc[0])}%)`;
+  const have=["plain","trap","uncovered"].filter(b=>mf.cols[b]&&mf.cols[b].cases);
+  const ties=have.filter(b=>verdict(b)==="tie"), behind=have.filter(b=>verdict(b)==="behind");
+  let t=`ADK on MetricFlow, on the free model that decides,`;
+  const bits=[];
+  if(ties.length) bits.push(`ties the managed best on ${ties.map(part).join(" and ")}`);
+  if(behind.length) bits.push(`${ties.length?"":""}falls behind on ${behind.map(part).join(" and ")}`);
+  t+=" "+bits.join("; it ")+(behind.includes("uncovered")?", where it declines by design":"");
+  return t+(isPartial(mf)?` (a partial pass: ${mf.runs} of ${k3(mf)} runs)`:"");
+}
+function ladderRows(s){
+  const out=[];
+  for(const [step,arms] of D.ladder){const rs=rowsOf(s).filter(r=>arms.includes(r.arm)&&!isStub(r));out.push([step,rs])}
+  return out;
+}
+function ladderTitle(){
+  const s=SET, f=floorRow(s); if(!f) return "The cost ladder";
+  const natives=rowsOf(s).filter(r=>(r.tier==="r1"||r.tier==="r2")&&!isStub(r)&&r.vsfloor);
+  const best=natives.slice().sort((a,b)=>b.vsfloor.acc[0]-a.vsfloor.acc[0])[0];
+  const fpc=perCase(f), bpc=perCase(best);
+  let n=0,m=0; for(const [ci,list] of fpc){if(list.some(([o])=>o===4)){n++;const bl=bpc.get(ci);if(bl&&bl.length&&bl.every(([o])=>o===0))m++}}
+  const v=best.vsfloor.acc;
+  return `Context the data agent can read lifts it from ${pct(f.acc[0])}% to ${pct(best.acc[0])}% right (${best.name}, ${pts(v[0])} points, 95% interval ${pts(v[1])} to ${pts(v[2])}); of the ${n} questions the bare agent got confidently wrong at least once, ${m} are right in every run with it`;
+}
+
+/* ---------- the cost ladder: questions aligned across rungs ---------- */
+let hoverCase=null, ladderCanvases=[];
+function ladderGeom(s,avail0){
+  const cases=caseList(s); const f=floorRow(s); const fpc=f?perCase(f):new Map();
+  const order=cases.map((c,i)=>i).sort((a,b)=>BK.indexOf(cases[a].b)-BK.indexOf(cases[b].b)||score(fpc.get(a))-score(fpc.get(b))||a-b);
+  const narrow=innerWidth<720; const labelW=narrow?150:230, incW=narrow?130:190, gap=narrow?5:8;
+  const nb=new Set(cases.map(c=>c.b)).size;
+  const avail=avail0-labelW-incW-12;
+  let pitch=Math.floor((avail-nb*gap)/cases.length); pitch=Math.max(narrow?4:5,Math.min(12,pitch));
+  const xs=new Map();let x=0,prev=null;const bands=[];
+  for(const ci of order){const b=cases[ci].b;if(prev!==null&&b!==prev)x+=gap;if(b!==prev)bands.push({b,x});xs.set(ci,x);x+=pitch;prev=b}
+  bands.forEach((bd,i)=>bd.x1=(i+1<bands.length?bands[i+1].x-gap:x));
+  return {pitch,xs,order,width:x,labelW,incW,h:pitch*3+5,bands};
+}
+function drawLadderRow(cv,r,G,focus){
+  const ctx=setupCanvas(cv,G.width,G.h); const pc=perCase(r); const s=G.pitch-1;
+  if(hoverCase!=null&&G.xs.has(hoverCase)){ctx.fillStyle=C.band;ctx.fillRect(G.xs.get(hoverCase)-1,0,G.pitch+1,G.h)}
+  cv._layout=[];
+  for(const ci of G.order){const x=G.xs.get(ci);const list=pc.get(ci)||[];
+    for(let k=0;k<3;k++){const y=G.h-2-(k+1)*G.pitch+1;const u=list[k];glyph(ctx,x,y,s,u?u[0]:0,!u)}
+    cv._layout.push({x0:x,x1:x+G.pitch,ci,list});
+  }
+  if(focus){const L=cv._layout[focus.i];if(L){const y=G.h-2-(focus.k+1)*G.pitch+1;ctx.strokeStyle=C.focus;ctx.lineWidth=1.5;ctx.strokeRect(L.x0-1.5,y-1.5,G.pitch+2,G.pitch+2)}}
+}
+function drawInc(cv,r,G){
+  const w=G.incW-12,h=G.h;const ctx=setupCanvas(cv,w,h);const span=0.6;const x=v=>w/2+(w/2-6)*Math.max(-span,Math.min(span,v))/span;
+  ctx.strokeStyle=C.rule2;ctx.lineWidth=1;for(const t of [-0.5,0.5]){ctx.beginPath();ctx.moveTo(Math.round(x(t))+.5,2);ctx.lineTo(Math.round(x(t))+.5,h-2);ctx.stroke()}
+  ctx.strokeStyle=C.ink3;ctx.beginPath();ctx.moveTo(Math.round(x(0))+.5,0);ctx.lineTo(Math.round(x(0))+.5,h);ctx.stroke();
+  if(r.arm==="native-bare"){ctx.fillStyle=C.ink2;ctx.font="600 12px Archivo, sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(` floor ${pct(r.acc[0])}%`,x(0)+3,h/2);return}
+  const v=r.vsfloor.acc;const y=h/2;const col=v[1]>0?C.right:(v[2]<0?C.cw:C.ink2);
+  ctx.strokeStyle=col;ctx.lineWidth=2;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(x(v[1]),y);ctx.lineTo(x(v[2]),y);ctx.stroke();
+  ctx.beginPath();ctx.arc(x(v[0]),y,4,0,7);if(isPartial(r)){ctx.fillStyle=C.plate;ctx.fill();ctx.lineWidth=1.5;ctx.stroke()}else{ctx.fillStyle=col;ctx.fill()}
+  ctx.fillStyle=C.ink2;ctx.font="500 11.5px Archivo, sans-serif";ctx.textBaseline="middle";const lab=pts(v[0]);
+  if(v[0]>=0){ctx.textAlign="right";ctx.fillText(lab,Math.max(28,x(v[1])-5),y)}else{ctx.textAlign="left";ctx.fillText(lab,Math.min(w-24,x(v[2])+5),y)}
+}
+function setCaption(ci){
+  const c=caseList(SET)[ci]; if(!c){$("#lad-cap").innerHTML="Point at any column to follow one question up the ladder.";return}
+  const counts=ladderCanvases.map(({r})=>{const l=perCase(r).get(ci)||[];return `${esc(r.name.replace("Data agent","DA").replace("ADK on ",""))}${r.role==="decides"?" (free)":""}: ${l.map(([o])=>["✓","∅","✗","?","!"][o]).join("")||"–"}`});
+  $("#lad-cap").innerHTML=`<b>${esc(c.id)}</b> · ${esc(BKNAME[c.b])}: ${esc((c.q||[]).join(" → "))}`;
+}
+function renderLadder(){
+  const s=SET,grid=$("#ladder"),G=ladderGeom(s,grid.parentElement.clientWidth);grid.innerHTML="";ladderCanvases=[];
+  grid.style.gridTemplateColumns=`${G.labelW}px ${G.width}px ${G.incW}px`;
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead cell-label",innerHTML:`<span><b>Rung</b>setup · model</span>`}));
+  const h=document.createElement("div");h.className="colhead";h.style.width=G.width+"px";
+  placeHeads(h,G.bands.map(b=>({x:b.x,w:b.x1-b.x+8,b:b.b,n:caseList(s).filter(c=>c.b===b.b).length})));
+  grid.appendChild(h);
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"colhead",innerHTML:`<span style="left:6px"><b>Over the floor</b>accuracy, points ±60</span>`}));
+  for(const [step,rows] of ladderRows(s)){
+    grid.appendChild(Object.assign(document.createElement("div"),{className:"stephead",textContent:step}));
+    if(!rows.length){grid.appendChild(Object.assign(document.createElement("div"),{className:"how",style:"grid-column:1/-1;margin:0",textContent:"Not run on this set."}));continue}
+    for(const r of rows){
+      grid.appendChild(rowLabel(r));
+      const cv=document.createElement("canvas");cv.className="units";cv.tabIndex=0;cv.dataset.ladder="1";cv.setAttribute("role","img");
+      cv.setAttribute("aria-label",`${r.name}, ${r.ml}: questions in the same order as every other rung. Arrow keys move, Enter opens a run.`);
+      drawLadderRow(cv,r,G,null);ladderCanvases.push({cv,r});
+      cv.onmousemove=ev=>{const rect=cv.getBoundingClientRect();const x=ev.clientX-rect.left;const L=cv._layout.find(L=>x>=L.x0-1&&x<L.x1+1);
+        if(!L){hideTip();return}const k=Math.max(0,Math.min(2,Math.floor((G.h-2-(ev.clientY-rect.top))/G.pitch)));
+        if(hoverCase!==L.ci){hoverCase=L.ci;ladderCanvases.forEach(o=>drawLadderRow(o.cv,o.r,G,null));setCaption(L.ci)}
+        showTip(unitTip(r,L,k),ev)};
+      cv.onmouseleave=()=>{hideTip()};
+      cv.onclick=ev=>{const rect=cv.getBoundingClientRect();const x=ev.clientX-rect.left;const L=cv._layout.find(L=>x>=L.x0-1&&x<L.x1+1);if(!L)return;
+        const k=Math.max(0,Math.min(2,Math.floor((G.h-2-(ev.clientY-rect.top))/G.pitch)));if(L.list[k])openRun(r,L.ci,L.list[k][1])};
+      cv.onkeydown=ev=>{keyUnits(ev,cv,r,G,drawLadderRow);const f=cv._f;if(f){hoverCase=cv._layout[f.i].ci;ladderCanvases.forEach(o=>o.cv!==cv&&drawLadderRow(o.cv,o.r,G,null));setCaption(hoverCase)}};
+      const w=document.createElement("div");w.appendChild(cv);grid.appendChild(w);
+      const ic=document.createElement("canvas");ic.className="strip";drawInc(ic,r,G);
+      ic.onmousemove=ev=>{const v=r.vsfloor&&r.vsfloor.acc;showTip(r.arm==="native-bare"?`The floor: ${pct(r.acc[0])}% right, ${pct(r.cw[0])}% confident-wrong`:
+        `<b>${esc(r.name)} · ${esc(r.ml)}</b> minus the floor, paired by question<br>accuracy ${pts(v[0])} points [${pts(v[1])}, ${pts(v[2])}]<br>confident-wrong ${pts(r.vsfloor.cw[0])} [${pts(r.vsfloor.cw[1])}, ${pts(r.vsfloor.cw[2])}]<br>${r.vsfloor.cases} questions both reached<br><span class="k">Computed by this page: bootstrap over questions, 4,000 resamples.</span>`,ev)};
+      ic.onmouseleave=hideTip;
+      const iw=document.createElement("div");iw.style.paddingLeft="10px";iw.appendChild(ic);grid.appendChild(iw);
+    }
+  }
+  grid.appendChild(Object.assign(document.createElement("div"),{className:"stephead future",innerHTML:`Future rung: a native agent through <code>compile_query</code> <em>(fails in Google's backend today, ${esc(D.facts.compile_query)}; nothing to draw)</em>`}));
+  setCaption(hoverCase);
+}
+
+/* ---------- drawer ---------- */
+const drawer=$("#drawer");let lastFocus=null;
+function openDrawer(title,sub,body){lastFocus=document.activeElement;$("#d-title").innerHTML=title;$("#d-sub").innerHTML=sub;$("#d-body").innerHTML=body;paintSwatches($("#d-body"));paintSwatches($("#d-sub"));
+  drawer.classList.add("open");drawer.setAttribute("aria-hidden","false");hideTip();$("#d-close").focus()}
+function closeDrawer(){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","true");if(lastFocus)lastFocus.focus()}
+$("#d-close").onclick=closeDrawer;addEventListener("keydown",e=>{if(e.key==="Escape"&&drawer.classList.contains("open"))closeDrawer()});
+function openRun(r,ci,di){
+  const run=D.runs[di]; const c=caseList(r.set)[ci]; const [runNo,at,oc,calls,turns]=run;
+  let body=`<dl class="kv"><dt>Question type</dt><dd>${esc(BKNAME[c.b])} <span style="color:var(--ink-3)">(${c.g.map(g=>GROUPWORD[g]||g).join(", ")})</span></dd><dt>Run</dt><dd>${runNo} · ${esc(at)} · ${calls??"–"} model calls</dd><dt>Setup</dt><dd>${esc(r.what)}</dd></dl>`;
+  turns.forEach((t,i)=>{const [text,toc,tcalls,coded,judged]=t;const q=(c.q||[])[i]||"";
+    body+=`<h4>${turns.length>1?`Turn ${i+1} · `:""}Asked</h4><p class="q">${esc(q)}</p>`;
+    body+=`<h4>Answered <span class="oc">${swatchHTML(toc)} ${esc(OUTNAME[OUT[toc]])}</span></h4><p class="ans">${esc(text)}</p>`;
+    if(coded) body+=`<p class="how" style="margin:4px 0 0">The code scored it ${esc(coded)}; the blind judge's two verdicts (${judged.map(esc).join(", ")}) decided it.</p>`;
+    if(tcalls&&tcalls.length){body+=`<h4>Tool calls (${tcalls.length})</h4>`+tcalls.map(([tool,args])=>`<div class="call"><code>${esc(tool)}</code><pre>${esc(args)}</pre></div>`).join("")}
+    else body+=`<h4>Tool calls</h4><p class="how" style="margin:0">None logged for this turn${r.harness==="google-data-agent"?"":" (this harness logs only the answer)"}.</p>`;
+  });
+  openDrawer(esc(c.id),`${swatchHTML(oc)} ${esc(OUTNAME[OUT[oc]])} · ${esc(r.name)} · ${esc(r.ml)} (${esc(r.role)}) · ${esc(r.set)} set`,body);
+}
+function openRow(r){
+  const o=r.outcomes; const tally=OUT.map((k,i)=>o[k]?`${swatchHTML(i)} ${o[k]} ${k}`:"").filter(Boolean).join(" &nbsp; ");
+  const p=(D.step_two||[]).find(q=>q.set===r.set&&q.arm===r.arm&&q.model===r.model); const mb=managed(r.set);
+  let body=`<p>${esc(r.what)}</p><dl class="kv">
+   <dt>Model</dt><dd>${esc(r.model)} — ${esc(r.role)}</dd><dt>Harness</dt><dd>${esc(r.harness)}, ${esc(r.session)}</dd>
+   <dt>Reached</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${k3(r)} runs${isPartial(r)?" · <b>partial pass</b>":""}</dd>
+   <dt>Accuracy</dt><dd>${pct(r.acc[0])}% [${pct(r.acc[1])}–${pct(r.acc[2])}]</dd><dt>Confident-wrong</dt><dd>${pct(r.cw[0])}% [${pct(r.cw[1])}–${pct(r.cw[2])}]</dd>
+   <dt>Right in every run</dt><dd>${pct(r.pass_all)}% of questions</dd><dt>Model calls</dt><dd>${fmtN(r.calls||0)}</dd>
+   <dt>Cost</dt><dd>${r.usd!=null?`$${r.usd.toFixed(2)} for this pass, $${(r.usd/r.runs*100).toFixed(2)} per 100 runs`:costText(r)}</dd></dl>
+   <h4>Runs by outcome</h4><p>${tally}</p>`;
+  if(r.moved) body+=`<p class="how">${r.moved} of these runs are drawn with another outcome than results.json counts: the eval re-reads decline wordings this page does not replay.</p>`;
+  if(r.extra) body+=`<p class="how">The log holds ${r.extra} more runs than results.json scored; the page draws the first ${r.runs}.</p>`;
+  if(r.vsfloor&&r.arm!=="native-bare") body+=`<h4>Against the floor (this page's paired bootstrap)</h4><p>Accuracy ${pts(r.vsfloor.acc[0])} points [${pts(r.vsfloor.acc[1])}, ${pts(r.vsfloor.acc[2])}], confident-wrong ${pts(r.vsfloor.cw[0])} [${pts(r.vsfloor.cw[1])}, ${pts(r.vsfloor.cw[2])}]</p>`;
+  if(p) body+=`<h4>The rule's step 2, against ${esc(rowName(mb))}</h4><p>Accuracy ${pts(p.accuracy[0])} points [${pts(p.accuracy[1])}, ${pts(p.accuracy[2])}], confident-wrong ${pts(p.confident_wrong[0])} [${pts(p.confident_wrong[1])}, ${pts(p.confident_wrong[2])}], on ${p.cases} questions: ${p.worth?"<b>worth building by the rule on this set</b>":"not worth building by the rule on this set"}.</p>`;
+  openDrawer(esc(r.name),`${esc(r.ml)} · ${esc(r.set)} set`,body);
+}
+
+/* ---------- page ---------- */
+function render(){
+  C=css();header();
+  $("#map-t").textContent=mapTitle();
+  $("#map-how").innerHTML=`Each row is one setup on one model. Each little column of three squares is one question, one square per run (k = 3), with right at the base; in every cell the questions are sorted best first, so the blue mass reads like a bar you can count. The number after a cell is its share right; point at it for the 95% interval. Blank dots are runs not made yet. The two strips are results.json's overall accuracy and confident-wrong with their 95% intervals; a hollow dot marks a partial pass; the grey tick is the managed best.`;
+  renderMap();renderMoves();
+  $("#lad-t").textContent=ladderTitle();
+  $("#lad-how").innerHTML=`Cheapest rung first. Here every row keeps the questions in the same place, ordered within each type by how the bare agent did, worst first, so you can watch a question's squares change colour as context is added. The strip on the right is each setup's accuracy minus the floor, paired by question, with a 95% interval this page computes. The deciding pairs are on the free model; Claude rows are the check.`;
+  renderLadder();
+  const moved=D.rows.reduce((a,r)=>a+r.moved,0);
+  $("#foot").innerHTML=`Built from <code>results.json</code> written ${esc(D.written)} and ${fmtN(D.nlogged)} logged runs across both sets. Runs are scored as the eval scores them on read, the blind judge's verdicts applied; ${moved} drawn run${moved===1?"":"s"} differ${moved===1?"s":""} from results.json's tallies (dated decline wordings this page does not replay). Claude spend not attributed to a setup (probes, smoke runs): $${D.unattributed.toFixed(2)}. Answers and tool arguments are trimmed for length; the logs hold them in full.`;
+}
+render();
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(Math.abs((window._w||0)-innerWidth)>30){window._w=innerWidth;render()}},150)});window._w=innerWidth;
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+})();
+</script>
