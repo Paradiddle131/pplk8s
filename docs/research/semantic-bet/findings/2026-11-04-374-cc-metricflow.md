@@ -20,6 +20,20 @@ Question: does the model behind the agent answer differently when it is a Claude
 - Sonnet (12 subagents, 19:3xZ to 19:47Z, about 100k tokens a batch): on the frozen set the two harnesses tie within their intervals (accuracy and confident-wrong both), while on the hard set the subagent is confidently wrong in 30.2% of cases against 5.4% through the API; so the harness effect is not one direction for every model, but on the hard set both models' subagents are more often confidently wrong.
 - The harness changes the result: lower accuracy on both sets (intervals apart on the hard set), mostly where no metric covers the question (frozen `uncovered` 7% against 44%) and through more confident-wrong numbers on the hard set.
 
+## The session effect, measured (owner, 2026-11-04: "it sounds like you did a bad job trying to give both cases the same environment")
+
+The first pass put about 12 cases in one subagent session, where every API run starts fresh; so Haiku's hard set was rerun with one fresh subagent per case (43 subagents, about 90k tokens each, mostly Claude Code's own prompt and `list_metrics`), logged as `claude-code (fresh-haiku)` with `"session": "fresh per case"`:
+
+| Haiku, hard set, run 1 | Right | Confident-wrong | `covered` right | `uncovered` right |
+|---|---|---|---|---|
+| ADK, Anthropic API (fresh per run, k = 3) | 73.6% [61.2, 85.3] | 9.3% | 88% | 56% |
+| Claude Code subagent, shared per batch | 44.2% [30.2, 58.1] | 18.6% | 79% | 0% |
+| Claude Code subagent, fresh per case | 58.1% [44.2, 72.1] | 4.7% [0.0, 11.6] | 92% | 16% |
+
+- The shared session caused most of the confident-wrong gap: fresh subagents are confidently wrong less often than the API agent; the batched pass's numbers are kept and labelled, never used as the harness comparison.
+- What remains is the harness: the subagent declines far more of the questions no metric covers (16% against 56% right), so its accuracy stays lower, with intervals that now overlap the API's.
+- Still different even per case: Claude Code's own system prompt and shell-called tools against ADK's function calling, the rules as a task message rather than a system instruction, isolation by instruction (one fresh subagent tried an unrelated `create_session` call, refused by the session's classifier, nothing created).
+
 ## Likely causes (`stated` by the subagents' own reports, not yet measured one by one)
 
 - One session per batch: the subagents ran `list_metrics` once and carried it across 10 to 12 cases, where RULE.md and the API runs use a fresh session per run.
