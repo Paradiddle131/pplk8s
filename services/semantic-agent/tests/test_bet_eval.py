@@ -391,6 +391,45 @@ def test_a_spent_quota_stops_the_judge(tmp_path):
     assert not cache.exists()
 
 
+def test_a_judge_failing_upstream_stops_the_pass_and_says_so(tmp_path, capsys):
+    entries = [
+        _unclear("native-kc", "bet_median_order", "Nothing on medians here."),
+        _unclear("native-kc", "revenue_one_day", "Revenue was strong, led by Germany."),
+    ]
+
+    async def down(prompt: str) -> str:
+        raise RuntimeError("litellm.APIError: OpenrouterException - upstream request failed")
+
+    cache = tmp_path / "judge.jsonl"
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, down, "j:free", cache)) == (
+        "unavailable",
+        bet_eval.JUDGE_FAILURES,
+    )
+    assert "judge unavailable: litellm.APIError" in capsys.readouterr().out
+    assert not cache.exists()
+
+
+def test_one_failed_judge_request_is_skipped_and_the_pass_goes_on(tmp_path):
+    text = "Nothing on medians here."
+    entries = [_unclear("native-kc", "bet_median_order", text)]
+    judge = StubJudge({text: ["declined", "declined"]})
+    calls = 0
+
+    async def flaky(prompt: str) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("upstream request failed")
+        return await judge(prompt)
+
+    cache = tmp_path / "judge.jsonl"
+    assert asyncio.run(bet_eval.judge_turns(BET, entries, EXPECTED, flaky, "j:free", cache)) == (
+        "done",
+        2,
+    )
+    assert len(cache.read_text().splitlines()) == 1  # the failed verdict is asked on a later pass
+
+
 def test_an_unjudged_turn_is_listed_as_not_judged_yet():
     entries = [_unclear("native-kc", "bet_median_order", "Nothing on medians here.")]
     text = bet_eval.report(BET, entries, runs=1, every_arm=True)

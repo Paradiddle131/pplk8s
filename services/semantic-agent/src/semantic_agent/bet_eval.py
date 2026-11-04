@@ -444,6 +444,11 @@ def apply_verdicts(
     return out
 
 
+# Failed judge requests in a row, none a spent quota, after which a pass stops (#371): three
+# rules out one dropped request; the model is then down upstream and every later request fails too.
+JUDGE_FAILURES = 3
+
+
 async def judge_turns(
     bet: BetSet,
     entries: Sequence[dict[str, Any]],
@@ -454,11 +459,14 @@ async def judge_turns(
     requests: int | None = None,
 ) -> tuple[str, int]:
     """Ask the judge each verdict the cache lacks for an unclear turn, appending each to `path` as
-    it comes; returns why it stopped (`done`, `requests` or `quota`) and the requests sent."""
+    it comes; returns why it stopped (`done`, `requests`, `quota` or `unavailable`) and the
+    requests sent. `JUDGE_FAILURES` failed requests in a row that are not a spent quota (the judge
+    model down upstream, #371) stop the pass with "judge unavailable: <error>" printed."""
     from semantic_agent.model import classify
 
     questions = {q.id: q for q in bet.questions}
     spent = 0
+    failures = 0
     for (arm, model, case, run, i), text in undecided_turns(entries, bet.hedges):
         if case not in questions:
             continue
@@ -475,9 +483,15 @@ async def judge_turns(
             try:
                 reply = await judge(prompt)
             except Exception as error:  # a failed request: asked again on a later pass
-                if classify(error).ends_run:
+                failure = classify(error)
+                if failure.ends_run:
                     return "quota", spent
+                failures += 1
+                if failures >= JUDGE_FAILURES:
+                    print(f"judge unavailable: {failure.message}")
+                    return "unavailable", spent
                 continue
+            failures = 0
             verdict = parse_verdict(reply)
             row = {
                 "set": bet.name,
