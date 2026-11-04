@@ -287,19 +287,19 @@
     // column heads
     const heads = [[24, "Model"], [192, "Who asks"], [384, "Tools"], [620, "Context, semantic layer"], [864, "Tables in reach"]];
     // --- Google Cloud ---
-    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini, inside Google's data agent" });
+    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini" });
     const ctx = card({ id: "ctx", x: 620, y: 72, w: 212, title: "Context we give the agent", name: "the context we give the data agent", rows: [
       { id: "ctx.gen", text: "instruction, glossary from MetricFlow", name: "an instruction and glossary generated from MetricFlow" },
       { id: "ctx.vq", text: "verified example queries", name: "verified example queries" },
       { id: "ctx.tf", text: "verified queries on table functions", name: "verified queries calling table functions" }] });
     const sqlLane = ctx.b + 8 + 9.5, kcY = sqlLane + 18, kcIn = kcY + 22;
     const da = card({ id: "da", x: 192, y: 72, w: 160, title: "BigQuery data agent", lines: ["Google's managed agent", "Conversational Analytics"], name: "Google's BigQuery data agent",
-      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "SQL the data agent writes" }] });
+      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "Google's data agent, writing its own SQL" }] });
     const kc = card({ id: "kc", x: 620, y: kcY, w: 212, title: "Knowledge Catalog", name: "Knowledge Catalog", rows: [
       { id: "kc.import", text: "dbt metrics, imported", name: "the dbt metrics Knowledge Catalog imported" },
       { id: "kc.gloss", text: "glossary linked to columns", name: "a catalog glossary linked to the columns" }] });
-    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries, lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
-      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "SQL our agent writes through BigQuery's MCP server" }] });
+    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries" }, { mono: "lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
+      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "Google's MCP servers, our agent writing the SQL" }] });
     const mcpIn = mcp.y + 56;
     const gTop = 40, gBot = mcp.b + 16;
     // BigQuery objects
@@ -433,7 +433,7 @@
     const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
     function restText() {
       return `<p class="sm-rt">Two shapes run through the map.</p>
-        <p><b>Google's data agents</b> (the first five rungs) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
+        <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
         <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>
         <p class="sm-hint">Hover or tap a setup, a rung or a part of the map; Escape lets go.</p>`;
     }
@@ -446,7 +446,9 @@
     }
     function listParts(ids, all) {
       const set = new Set(all || ids);
-      return ids.filter((id) => NAME[id] && !id.startsWith("e-") && !Object.keys(PARENT).some((r) => PARENT[r] === id && set.has(r)));
+      const pos = (id) => { const g = G[PARENT[id] || id] || {}; return [g.x || 0, (G[id] && (G[id].top || G[id].y)) || 0]; };
+      return ids.filter((id) => NAME[id] && !id.startsWith("e-") && !Object.keys(PARENT).some((r) => PARENT[r] === id && set.has(r)))
+        .sort((p, q) => { const [a, b] = [pos(p), pos(q)]; return a[0] - b[0] || a[1] - b[1]; });
     }
     function rungText(key) {
       const l = ladder.find((x) => x.key === key); if (!l) return "";
@@ -458,7 +460,7 @@
       const shared = listParts(ids.filter((id) => count[id] === arms.length), ids);
       const varies = listParts(ids.filter((id) => count[id] < arms.length), ids);
       const vtxt = varies.map((id) => `${esc(NAME[id])} (${nameList(arms.filter((a) => pathOf(a).has(id)))})`).join("; ");
-      return head + `<p><b>The shape they share:</b> ${esc(shared.map((id) => NAME[id]).join(", "))}.</p>` +
+      return head + `<p><b>The shape they share:</b> ${esc(shared.map((id) => NAME[id]).join("; "))}.</p>` +
         (vtxt ? `<p><b>Where they differ:</b> ${vtxt}.</p>` : `<p>They draw the same path; what differs is said in each one's line above.</p>`) +
         `<p class="sm-hint">Solid: every setup in the rung uses it; faint: only some do.</p>`;
     }

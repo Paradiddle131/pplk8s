@@ -605,19 +605,19 @@ window.REPORT = D;
     // column heads
     const heads = [[24, "Model"], [192, "Who asks"], [384, "Tools"], [620, "Context, semantic layer"], [864, "Tables in reach"]];
     // --- Google Cloud ---
-    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini, inside Google's data agent" });
+    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini" });
     const ctx = card({ id: "ctx", x: 620, y: 72, w: 212, title: "Context we give the agent", name: "the context we give the data agent", rows: [
       { id: "ctx.gen", text: "instruction, glossary from MetricFlow", name: "an instruction and glossary generated from MetricFlow" },
       { id: "ctx.vq", text: "verified example queries", name: "verified example queries" },
       { id: "ctx.tf", text: "verified queries on table functions", name: "verified queries calling table functions" }] });
     const sqlLane = ctx.b + 8 + 9.5, kcY = sqlLane + 18, kcIn = kcY + 22;
     const da = card({ id: "da", x: 192, y: 72, w: 160, title: "BigQuery data agent", lines: ["Google's managed agent", "Conversational Analytics"], name: "Google's BigQuery data agent",
-      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "SQL the data agent writes" }] });
+      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "Google's data agent, writing its own SQL" }] });
     const kc = card({ id: "kc", x: 620, y: kcY, w: 212, title: "Knowledge Catalog", name: "Knowledge Catalog", rows: [
       { id: "kc.import", text: "dbt metrics, imported", name: "the dbt metrics Knowledge Catalog imported" },
       { id: "kc.gloss", text: "glossary linked to columns", name: "a catalog glossary linked to the columns" }] });
-    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries, lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
-      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "SQL our agent writes through BigQuery's MCP server" }] });
+    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries" }, { mono: "lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
+      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "Google's MCP servers, our agent writing the SQL" }] });
     const mcpIn = mcp.y + 56;
     const gTop = 40, gBot = mcp.b + 16;
     // BigQuery objects
@@ -751,7 +751,7 @@ window.REPORT = D;
     const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
     function restText() {
       return `<p class="sm-rt">Two shapes run through the map.</p>
-        <p><b>Google's data agents</b> (the first five rungs) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
+        <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
         <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>
         <p class="sm-hint">Hover or tap a setup, a rung or a part of the map; Escape lets go.</p>`;
     }
@@ -764,7 +764,9 @@ window.REPORT = D;
     }
     function listParts(ids, all) {
       const set = new Set(all || ids);
-      return ids.filter((id) => NAME[id] && !id.startsWith("e-") && !Object.keys(PARENT).some((r) => PARENT[r] === id && set.has(r)));
+      const pos = (id) => { const g = G[PARENT[id] || id] || {}; return [g.x || 0, (G[id] && (G[id].top || G[id].y)) || 0]; };
+      return ids.filter((id) => NAME[id] && !id.startsWith("e-") && !Object.keys(PARENT).some((r) => PARENT[r] === id && set.has(r)))
+        .sort((p, q) => { const [a, b] = [pos(p), pos(q)]; return a[0] - b[0] || a[1] - b[1]; });
     }
     function rungText(key) {
       const l = ladder.find((x) => x.key === key); if (!l) return "";
@@ -776,7 +778,7 @@ window.REPORT = D;
       const shared = listParts(ids.filter((id) => count[id] === arms.length), ids);
       const varies = listParts(ids.filter((id) => count[id] < arms.length), ids);
       const vtxt = varies.map((id) => `${esc(NAME[id])} (${nameList(arms.filter((a) => pathOf(a).has(id)))})`).join("; ");
-      return head + `<p><b>The shape they share:</b> ${esc(shared.map((id) => NAME[id]).join(", "))}.</p>` +
+      return head + `<p><b>The shape they share:</b> ${esc(shared.map((id) => NAME[id]).join("; "))}.</p>` +
         (vtxt ? `<p><b>Where they differ:</b> ${vtxt}.</p>` : `<p>They draw the same path; what differs is said in each one's line above.</p>`) +
         `<p class="sm-hint">Solid: every setup in the rung uses it; faint: only some do.</p>`;
     }
@@ -841,6 +843,772 @@ window.REPORT = D;
     apply();
   });
 })();
+</script>
+</section>
+
+<section class="sxb" id="setups-b" aria-labelledby="sxb-h">
+<style>
+.sxb { --sxb-pencil: var(--mf); margin-top: 60px; }
+.sxb h2 { margin-top: 0; }
+.sxb .sxb-lede { max-width: 46rem; font-size: 16px; color: var(--ink-2); margin: 0 0 18px; }
+.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; border-top: 1px solid var(--ink); padding-top: 16px; }
+.sxb .sxb-pick { font-family: var(--label); position: relative; }
+.sxb .sxb-pick-h { font-size: 13px; color: var(--ink-3); margin: 0 0 8px; line-height: 1.35; }
+.sxb .sxb-rungs { position: relative; padding-left: 16px; }
+.sxb .sxb-rungs::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 0; border-left: 1px solid var(--grid-major); }
+.sxb .sxb-rung { position: relative; padding: 0 0 9px; }
+.sxb .sxb-rung::before { content: ""; position: absolute; left: -16px; top: 7px; width: 9px; height: 0; border-top: 1px solid var(--rule); }
+.sxb .sxb-rung.on::before { border-top: 2px solid var(--ink); top: 6px; width: 11px; }
+.sxb .sxb-rl { font-size: 12.5px; line-height: 1.3; color: var(--ink-2); margin: 0 0 4px; }
+.sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 600; }
+.sxb .sxb-rung.empty .sxb-rl { color: var(--ink-3); font-style: italic; font-family: var(--serif); font-size: 13px; }
+.sxb .sxb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: 12px; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
+.sxb .sxb-chip:hover { border-color: var(--ink-2); }
+.sxb .sxb-chip i { flex: none; width: 3px; align-self: stretch; min-height: 14px; border-radius: 1px; background: var(--other); }
+.sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.sxb .sxb-chip:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.sxb .sxb-fams span { display: inline-flex; align-items: center; gap: 5px; }
+.sxb .sxb-fams i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
+.sxb .sxb-keys { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; line-height: 1.35; }
+
+.sxb .sxb-stage { min-width: 0; }
+.sxb .sxb-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; }
+.sxb .sxb-name { font-family: var(--code); font-size: 19px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.sxb .sxb-name span[data-setup] { text-decoration: none; }
+.sxb .sxb-meta { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sxb .sxb-meta i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
+.sxb .sxb-desc { grid-column: 1 / -1; font-size: 16px; line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
+.sxb .sxb-steps { display: flex; gap: 4px; }
+.sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 13.5px; min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
+.sxb .sxb-steps button:disabled { color: var(--ink-3); border-color: var(--rule); cursor: default; }
+.sxb .sxb-steps button:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sxb .sxb-fig { margin: 12px 0 0; }
+.sxb .sxb-fig svg { display: block; width: 100%; height: auto; }
+.sxb .sxb-fig.narrow svg { max-width: 420px; }
+.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--label); font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.3; }
+.sxb .sxb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sxb .sxb-legend svg { flex: none; }
+.sxb .sxb-panel { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
+.sxb .sxb-panel h3 { font-family: var(--label); font-size: 14px; font-weight: 600; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
+.sxb .sxb-panel p { font-size: 15px; line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
+.sxb .sxb-panel .sxb-cap { font-family: var(--label); font-size: 13px; color: var(--ink-2); line-height: 1.4; margin: 6px 0 0; }
+.sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--label); font-size: 13.5px; line-height: 1.35; }
+.sxb .sxb-diff li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px; padding: 2px 0; }
+.sxb .sxb-diff b { font-weight: 600; text-align: center; }
+.sxb .sxb-diff li.add b { color: var(--sxb-pencil); }
+.sxb .sxb-diff li.gone { color: var(--ink-3); }
+.sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
+.sxb .sxb-q { font-family: var(--serif); font-style: italic; }
+.sxb .sxb-seq svg { display: block; width: 100%; max-width: 460px; height: auto; }
+.sxb .sxb-fade { animation: sxb-in .32s ease-out; }
+@keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
+
+/* the sheet */
+.sxb svg text { font-family: var(--label); }
+.sxb .s-c { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
+.sxb .s-c.add { stroke: var(--sxb-pencil); stroke-width: 2; }
+.sxb .s-c.gone { fill: none; stroke: var(--rule); stroke-dasharray: 3 3; }
+.sxb .s-t { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.sxb .s-l { font-size: 12px; fill: var(--ink-2); }
+.sxb .s-m { font-family: var(--code) !important; font-size: 11px; fill: var(--ink); }
+.sxb .s-gone text { fill: var(--ink-3); text-decoration: line-through; }
+.sxb .s-hb { fill: url(#sxb-hatch); stroke: var(--ink-2); stroke-width: 1; }
+.sxb .s-hl { stroke: var(--grid-major); stroke-width: 1.2; }
+.sxb .s-halo { paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.sxb .s-f { fill: none; stroke: var(--rule); stroke-width: 1; }
+.sxb .s-f.scr { fill: url(#sxb-screen); }
+.sxb .s-f.ph { stroke: var(--ink-2); stroke-dasharray: 14 3 2 3; }
+.sxb .s-sb { fill: var(--paper); }
+.sxb .s-sd { fill: var(--grid-major); }
+.sxb .s-k { fill: var(--paper); }
+.sxb .s-ft { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.sxb .s-fn { font-size: 11.5px; fill: var(--ink-3); }
+.sxb .s-e { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.sxb .s-e.rd { stroke-dasharray: 4 3; stroke: var(--ink-2); }
+.sxb .s-e.add { stroke: var(--sxb-pencil); stroke-width: 2; }
+.sxb .s-ah { fill: var(--ink); }
+.sxb .s-ah.rd { fill: var(--ink-2); }
+.sxb .s-ah.add { fill: var(--sxb-pencil); }
+.sxb .s-note { font-size: 11.5px; fill: var(--ink-3); font-style: italic; }
+.sxb .s-sql { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.sxb .s-sql.add { fill: var(--sxb-pencil); }
+.sxb .s-ll { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+.sxb .s-lh { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.sxb .s-n { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1; }
+.sxb .s-nt { font-size: 11px; font-weight: 600; fill: var(--ink); }
+.sxb .s-sl { font-size: 12px; fill: var(--ink); }
+.sxb .s-sl.m { font-family: var(--code) !important; font-size: 11px; }
+.sxb .s-sl.r { fill: var(--ink-2); }
+
+@media (max-width: 860px) {
+  .sxb .sxb-wrap { grid-template-columns: 1fr; gap: 18px; }
+  .sxb .sxb-panel { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .sxb .sxb-fade { animation: none; } }
+</style>
+
+<h2 id="sxb-h">What each setup is, one at a time</h2>
+<p class="sxb-lede">Pick a setup on the ladder: the sheet shows where each part runs, which agent asks, through which tools, with what context, and which tables it can reach. Step through a rung to see what each setup adds to the one before it.</p>
+<div class="sxb-wrap">
+  <div class="sxb-pick">
+    <p class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</p>
+    <div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
+    <div class="sxb-fams"></div>
+    <p class="sxb-keys">Arrow keys move between setups; up and down jump a rung.</p>
+  </div>
+  <div class="sxb-stage">
+    <div class="sxb-head" aria-live="polite"></div>
+    <div class="sxb-fig"><svg role="img" aria-label=""></svg></div>
+    <div class="sxb-legend" aria-hidden="true"></div>
+    <div class="sxb-panel"><div class="sxb-change"></div><div class="sxb-seq"></div></div>
+  </div>
+</div>
+
+<script>
+window.reportReady(() => {
+  "use strict";
+  const root = document.querySelector("section.sxb");
+  if (!root || !window.REPORT) return;
+  const D = window.REPORT;
+  const LOGOS = {"adk":"<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> </defs></g>","googlebigquery":"<g fill=\"rgb(102, 157, 246)\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>","dbt":"<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"rgb(255, 105, 74)\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>","postgresql":"<g fill=\"currentColor\" transform=\"matrix(0.0652 0 0 0.0652 3.6486 3.3861)\"><path d=\"M255.008 158.086c-1.535-4.649-5.556-7.887-10.756-8.664c-2.452-.366-5.26-.21-8.583.475c-5.792 1.195-10.089 1.65-13.225 1.738c11.837-19.985 21.462-42.775 27.003-64.228c8.96-34.689 4.172-50.492-1.423-57.64C233.217 10.847 211.614.683 185.552.372c-13.903-.17-26.108 2.575-32.475 4.549c-5.928-1.046-12.302-1.63-18.99-1.738c-12.537-.2-23.614 2.533-33.079 8.15c-5.24-1.772-13.65-4.27-23.362-5.864c-22.842-3.75-41.252-.828-54.718 8.685C6.622 25.672-.937 45.684.461 73.634c.444 8.874 5.408 35.874 13.224 61.48c4.492 14.718 9.282 26.94 14.237 36.33c7.027 13.315 14.546 21.156 22.987 23.972c4.731 1.576 13.327 2.68 22.368-4.85c1.146 1.388 2.675 2.767 4.704 4.048c2.577 1.625 5.728 2.953 8.875 3.74c11.341 2.835 21.964 2.126 31.027-1.848c.056 1.612.099 3.152.135 4.482c.06 2.157.12 4.272.199 6.25c.537 13.374 1.447 23.773 4.143 31.049c.148.4.347 1.01.557 1.657c1.345 4.118 3.594 11.012 9.316 16.411c5.925 5.593 13.092 7.308 19.656 7.308c3.292 0 6.433-.432 9.188-1.022c9.82-2.105 20.973-5.311 29.041-16.799c7.628-10.86 11.336-27.217 12.007-52.99q.13-1.094.244-2.088l.16-1.362l1.797.158l.463.031c10.002.456 22.232-1.665 29.743-5.154c5.935-2.754 24.954-12.795 20.476-26.351\"/><path fill=\"rgb(51, 103, 145)\" d=\"M237.906 160.722c-29.74 6.135-31.785-3.934-31.785-3.934c31.4-46.593 44.527-105.736 33.2-120.211c-30.904-39.485-84.399-20.811-85.292-20.327l-.287.052c-5.876-1.22-12.451-1.946-19.842-2.067c-13.456-.22-23.664 3.528-31.41 9.402c0 0-95.43-39.314-90.991 49.444c.944 18.882 27.064 142.873 58.218 105.422c11.387-13.695 22.39-25.274 22.39-25.274c5.464 3.63 12.006 5.482 18.864 4.817l.533-.452c-.166 1.7-.09 3.363.213 5.332c-8.026 8.967-5.667 10.541-21.711 13.844c-16.235 3.346-6.698 9.302-.471 10.86c7.549 1.887 25.013 4.561 36.813-11.958l-.47 1.885c3.144 2.519 5.352 16.383 4.982 28.952c-.37 12.568-.617 21.197 1.86 27.937c2.479 6.74 4.948 21.905 26.04 17.386c17.623-3.777 26.756-13.564 28.027-29.89c.901-11.606 2.942-9.89 3.07-20.267l1.637-4.912c1.887-15.733.3-20.809 11.157-18.448l2.64.232c7.99.363 18.45-1.286 24.589-4.139c13.218-6.134 21.058-16.377 8.024-13.686z\"/><path fill=\"rgb(255, 255, 255)\" d=\"M108.076 81.525c-2.68-.373-5.107-.028-6.335.902c-.69.523-.904 1.129-.962 1.546c-.154 1.105.62 2.327 1.096 2.957c1.346 1.784 3.312 3.01 5.258 3.28q.423.059.842.058c3.245 0 6.196-2.527 6.456-4.392c.325-2.336-3.066-3.893-6.355-4.35m88.784.073c-.256-1.831-3.514-2.353-6.606-1.923c-3.088.43-6.082 1.824-5.832 3.659c.2 1.427 2.777 3.863 5.827 3.863q.387 0 .78-.054c2.036-.282 3.53-1.575 4.24-2.32c1.08-1.136 1.706-2.402 1.591-3.225\"/><path fill=\"rgb(255, 255, 255)\" d=\"M247.802 160.025c-1.134-3.429-4.784-4.532-10.848-3.28c-18.005 3.716-24.453 1.142-26.57-.417c13.995-21.32 25.508-47.092 31.719-71.137c2.942-11.39 4.567-21.968 4.7-30.59c.147-9.463-1.465-16.417-4.789-20.665c-13.402-17.125-33.072-26.311-56.882-26.563c-16.369-.184-30.199 4.005-32.88 5.183c-5.646-1.404-11.801-2.266-18.502-2.376c-12.288-.199-22.91 2.743-31.704 8.74c-3.82-1.422-13.692-4.811-25.765-6.756c-20.872-3.36-37.458-.814-49.294 7.571c-14.123 10.006-20.643 27.892-19.38 53.16c.425 8.501 5.269 34.653 12.913 59.698c10.062 32.964 21 51.625 32.508 55.464c1.347.449 2.9.763 4.613.763c4.198 0 9.345-1.892 14.7-8.33a530 530 0 0 1 20.261-22.926c4.524 2.428 9.494 3.784 14.577 3.92q.016.2.035.398a118 118 0 0 0-2.57 3.175c-3.522 4.471-4.255 5.402-15.592 7.736c-3.225.666-11.79 2.431-11.916 8.435c-.136 6.56 10.125 9.315 11.294 9.607c4.074 1.02 7.999 1.523 11.742 1.523c9.103 0 17.114-2.992 23.516-8.781c-.197 23.386.778 46.43 3.586 53.451c2.3 5.748 7.918 19.795 25.664 19.794c2.604 0 5.47-.303 8.623-.979c18.521-3.97 26.564-12.156 29.675-30.203c1.665-9.645 4.522-32.676 5.866-45.03c2.836.885 6.487 1.29 10.434 1.289c8.232 0 17.731-1.749 23.688-4.514c6.692-3.108 18.768-10.734 16.578-17.36m-44.106-83.48c-.061 3.647-.563 6.958-1.095 10.414c-.573 3.717-1.165 7.56-1.314 12.225c-.147 4.54.42 9.26.968 13.825c1.108 9.22 2.245 18.712-2.156 28.078a37 37 0 0 1-1.95-4.009c-.547-1.326-1.735-3.456-3.38-6.404c-6.399-11.476-21.384-38.35-13.713-49.316c2.285-3.264 8.084-6.62 22.64-4.813m-17.644-61.787c21.334.471 38.21 8.452 50.158 23.72c9.164 11.711-.927 64.998-30.14 110.969a171 171 0 0 0-.886-1.117l-.37-.462c7.549-12.467 6.073-24.802 4.759-35.738c-.54-4.488-1.05-8.727-.92-12.709c.134-4.22.692-7.84 1.232-11.34c.663-4.313 1.338-8.776 1.152-14.037c.139-.552.195-1.204.122-1.978c-.475-5.045-6.235-20.144-17.975-33.81c-6.422-7.475-15.787-15.84-28.574-21.482c5.5-1.14 13.021-2.203 21.442-2.016M66.674 175.778c-5.9 7.094-9.974 5.734-11.314 5.288c-8.73-2.912-18.86-21.364-27.791-50.624c-7.728-25.318-12.244-50.777-12.602-57.916c-1.128-22.578 4.345-38.313 16.268-46.769c19.404-13.76 51.306-5.524 64.125-1.347c-.184.182-.376.352-.558.537c-21.036 21.244-20.537 57.54-20.485 59.759c-.002.856.07 2.068.168 3.735c.362 6.105 1.036 17.467-.764 30.334c-1.672 11.957 2.014 23.66 10.111 32.109a36 36 0 0 0 2.617 2.468c-3.604 3.86-11.437 12.396-19.775 22.426m22.479-29.993c-6.526-6.81-9.49-16.282-8.133-25.99c1.9-13.592 1.199-25.43.822-31.79c-.053-.89-.1-1.67-.127-2.285c3.073-2.725 17.314-10.355 27.47-8.028c4.634 1.061 7.458 4.217 8.632 9.645c6.076 28.103.804 39.816-3.432 49.229c-.873 1.939-1.698 3.772-2.402 5.668l-.546 1.466c-1.382 3.706-2.668 7.152-3.465 10.424c-6.938-.02-13.687-2.984-18.819-8.34m1.065 37.9c-2.026-.506-3.848-1.385-4.917-2.114c.893-.42 2.482-.992 5.238-1.56c13.337-2.745 15.397-4.683 19.895-10.394c1.031-1.31 2.2-2.794 3.819-4.602l.002-.002c2.411-2.7 3.514-2.242 5.514-1.412c1.621.67 3.2 2.702 3.84 4.938c.303 1.056.643 3.06-.47 4.62c-9.396 13.156-23.088 12.987-32.921 10.526m69.799 64.952c-16.316 3.496-22.093-4.829-25.9-14.346c-2.457-6.144-3.665-33.85-2.808-64.447c.011-.407-.047-.8-.159-1.17a15.4 15.4 0 0 0-.456-2.162c-1.274-4.452-4.379-8.176-8.104-9.72c-1.48-.613-4.196-1.738-7.46-.903c.696-2.868 1.903-6.107 3.212-9.614l.549-1.475c.618-1.663 1.394-3.386 2.214-5.21c4.433-9.848 10.504-23.337 3.915-53.81c-2.468-11.414-10.71-16.988-23.204-15.693c-7.49.775-14.343 3.797-17.761 5.53c-.735.372-1.407.732-2.035 1.082c.954-11.5 4.558-32.992 18.04-46.59c8.489-8.56 19.794-12.788 33.568-12.56c27.14.444 44.544 14.372 54.366 25.979c8.464 10.001 13.047 20.076 14.876 25.51c-13.755-1.399-23.11 1.316-27.852 8.096c-10.317 14.748 5.644 43.372 13.315 57.129c1.407 2.521 2.621 4.7 3.003 5.626c2.498 6.054 5.732 10.096 8.093 13.046c.724.904 1.426 1.781 1.96 2.547c-4.166 1.201-11.649 3.976-10.967 17.847c-.55 6.96-4.461 39.546-6.448 51.059c-2.623 15.21-8.22 20.875-23.957 24.25m68.104-77.936c-4.26 1.977-11.389 3.46-18.161 3.779c-7.48.35-11.288-.838-12.184-1.569c-.42-8.644 2.797-9.547 6.202-10.503c.535-.15 1.057-.297 1.561-.473q.469.383 1.032.756c6.012 3.968 16.735 4.396 31.874 1.271l.166-.033c-2.042 1.909-5.536 4.471-10.49 6.772\"/></g>"};
+  const EXQ = "What was our average order value on 1 October 2026?";
+  const EXM = "average_order_value_eur";
+
+  /* ---------- static facts the data lacks, keyed by setup ---------- */
+  const P = (k, title, lines, o) => Object.assign({ k, title, lines: lines || [] }, o || {});
+  const M = (s) => ({ m: s });
+  const AG = {
+    da: P("da", "Google's data agent", ["Conversational Analytics, managed by Google"]),
+    adk: (role) => P("adk", "Our ADK agent", [role], { logo: "adk" }),
+    cc: P("cc", "Claude Code subagent", ["another agent harness"]),
+  };
+  const CX = {
+    instr: P("instr", "A one-line instruction", []),
+    kc: P("kc", "Knowledge Catalog's import", ["of the dbt metrics, linked to its tables"], { logo: "dbt" }),
+    desc: P("desc", "Column descriptions", ["BigQuery table and column descriptions"]),
+    gloss: P("gloss", "A linked glossary", ["one term per metric, linked to the columns it reads"]),
+    gen: P("gen", "Context generated from MetricFlow", ["tables, fields and how each aggregates, glossary terms, instruction"], { logo: "dbt" }),
+    vq: P("vq", "Verified example queries", ["MetricFlow's SQL, one per metric"]),
+  };
+  const RE = {
+    silver: P("silver", "silver", ["the cleaned tables"], { mono: true }),
+    cal: P("cal", "calendar table", ["fiscal periods"]),
+    legacy: P("legacy", "legacy", ["older tables, replaced"], { mono: true }),
+    governed: P("governed", "governed", ["tables computed from the metrics"], { mono: true }),
+    tf: P("tf", "table functions", ["one per saved query, two dates each"]),
+    graph: P("graph", "property graph", ["sales, with the metrics as measures"]),
+    gold: P("gold", "gold, exposed", ["the reporting tables"], { mono: true }),
+  };
+  const MFT = (title, extra) => P("mft", title || "MetricFlow's tools", [M("list_metrics"), M("describe_metric"), M("query_metrics")].concat(extra || []));
+  const MFS = P("metricflow", "MetricFlow", ["dbt's semantic layer: holds the metric definitions, writes the SQL"], { logo: "dbt" });
+  const SQL = { agent: P("sql-agent", "SQL written by the agent"), mf: P("sql-mf", "SQL written by MetricFlow"), ld: P("sql-ld", "SQL compiled by Lightdash"),
+    fixed: P("sql-fixed", "Fixed SQL, one statement per tool"), fb: P("sql-fb", "Fallback SQL written by the agent") };
+  const DA = (o) => Object.assign({ kind: "da", side: { agent: "g", tools: "g", server: "g" }, agent: AG.da, tools: [], server: null, wh: "bq", sql: [SQL.agent] }, o);
+  const OURS = (o) => Object.assign({ side: { agent: "o", tools: "o", server: "o" }, wh: "pg", ctx: [] }, o);
+  const daSeq = (holds, how) => ({ kind: "da", holds, how });
+  const FACTS = {
+    "native-bare": DA({ ctx: [Object.assign({}, CX.instr, { lines: ["and nothing else"] })], reach: [Object.assign({}, RE.silver, { lines: ["copies, no descriptions"] }), RE.cal, RE.legacy],
+      first: "The floor: Google's data agent with the tables and nothing else. Every data agent above it adds to this shape.", seq: daSeq("the tables' names and columns only") }),
+    "native-kc": DA({ before: "native-bare", ctx: [CX.instr, CX.kc], reach: [RE.silver, RE.legacy],
+      why: "Knowledge Catalog's import of the dbt metrics now grounds the agent; it is given fewer tables.", seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
+    "native-kc-max": DA({ before: "native-kc", ctx: [CX.instr, CX.kc, CX.desc, CX.gloss], reach: [Object.assign({}, RE.silver, { lines: ["copies, described"] }), RE.cal, RE.legacy],
+      why: "Every free piece of catalog context added: column descriptions and a glossary linked to the columns.", seq: daSeq("descriptions, linked glossary terms, the catalog import") }),
+    "native-kc-reach": DA({ before: "native-kc", ctx: [CX.instr, CX.kc], reach: [RE.silver, RE.cal, RE.legacy],
+      why: "The same catalog agent, given the wider set of tables the generated-context setups read.", seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
+    "native-context-bare": DA({ before: "native-kc-reach", ctx: [CX.gen], reach: [RE.silver, RE.cal, RE.legacy],
+      why: "Same tables; the catalog import is swapped for written context generated from MetricFlow.", seq: daSeq("generated context: fields, how each aggregates, glossary") }),
+    "native-context": DA({ before: "native-context-bare", ctx: [CX.gen, CX.vq], reach: [RE.silver, RE.cal, RE.legacy],
+      why: "Verified example queries are added: MetricFlow's compiled SQL for each metric.", seq: daSeq("generated context and verified queries", "or reuses a verified query that matches") }),
+    "native-governed": DA({ before: "native-context", ctx: [CX.gen, Object.assign({}, CX.vq, { lines: ["one per metric, over the governed tables"] })], reach: [RE.governed, RE.cal, RE.legacy],
+      why: "The cleaned tables are swapped for governed tables computed from the metrics.", seq: daSeq("generated context and verified queries", "over tables the metrics already computed") }),
+    "native-shaped": DA({ before: "native-governed", ctx: [Object.assign({}, CX.instr, { title: "A one-paragraph instruction" }), Object.assign({}, CX.vq, { lines: ["with date parameters, each calling a table function"] })], reach: [RE.silver, RE.tf, RE.legacy],
+      why: "Warehouse objects of another shape: table functions over the cleaned tables, and verified queries that call them.", seq: daSeq("verified queries that call the table functions", "or calls a table function or a verified query") }),
+    "native-graph": DA({ before: "native-shaped", ctx: [Object.assign({}, CX.instr, { lines: ["naming the graph"] })], reach: [Object.assign({}, RE.silver, { lines: ["orders, customers, returns"] }), RE.graph, RE.legacy],
+      why: "The table functions and verified queries give way to a property graph whose measures hold the metrics.", seq: daSeq("a one-line instruction naming the graph", "or aggregates through the graph's measures") }),
+    "native-mcp": OURS({ kind: "gt", before: "native-kc", side: { agent: "o", tools: "o", server: "g" }, wh: "bq", agent: AG.adk("built on Google's servers only"),
+      tools: [P("gmcp-tools", "Google's MCP tools", [M("search_entries, lookup_context"), M("get_table_info"), M("execute_sql_readonly"), "read-only ones only"])],
+      server: P("gmcp", "Google's MCP servers", ["Knowledge Catalog and BigQuery; the catalog holds the import of the dbt metrics"], { logo: "dbt" }),
+      reach: [Object.assign({}, RE.silver, { lines: ["the only dataset it may query"] })], sql: [SQL.agent],
+      why: "Our agent replaces Google's: it reads the same catalog import through Google's MCP servers and writes SQL over the cleaned tables.", seq: { kind: "mcp" } }),
+    "custom-toolbox": OURS({ kind: "gt", before: "native-shaped", wh: "bq", agent: AG.adk("calls only the generated tools"),
+      tools: [P("tb-tools", "Generated tools", [M("daily_sales(start, end)"), "one per table function, dates only"])],
+      server: P("toolbox", "MCP Toolbox", ["Google's open-source tool server: runs each tool's fixed statement"]),
+      reach: [RE.tf], sql: [SQL.fixed],
+      why: "The table functions become our agent's only tools; it picks one and passes two dates.", seq: { kind: "toolbox" } }),
+    "custom-metricflow": OURS({ kind: "mf", before: "baseline", agent: AG.adk("answers through metrics only"),
+      ctx: [P("i-mf", "Instruction", ["use only the metrics; never write SQL"])], tools: [MFT()], server: MFS,
+      reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
+      why: "The one SQL tool is swapped for MetricFlow's three tools: from here the agent asks for metrics and never writes SQL.", seq: { kind: "mf" } }),
+    "custom-lightdash": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.adk("one tool over Lightdash"),
+      ctx: [P("i-ld", "Instruction", ["lists every explore and its metrics"])], tools: [P("ld-tool", "One tool", [M("query_metrics"), "builds a Lightdash metric query, never SQL"])],
+      server: P("lightdash", "Lightdash", ["open source, self-hosted: holds the dbt metrics its CLI translated, compiles each query"]),
+      reach: [P("ldm", "dbt models", ["the ones Lightdash serves"])], sql: [SQL.ld],
+      why: "Another semantic-layer server: Lightdash's free metric query API takes MetricFlow's place.", seq: { kind: "ld" } }),
+    "custom-hybrid": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.adk("metrics first, SQL fallback"),
+      ctx: [P("i-hy", "Instruction", ["metrics first; SQL only where no metric covers it, and say so"])],
+      tools: [MFT(), P("fb", "Fallback", [M("execute_sql"), "one read-only query"])], server: MFS,
+      reach: [Object.assign({}, RE.silver, { lines: ["read by MetricFlow"] }), RE.gold, RE.legacy], sql: [SQL.mf, SQL.fb],
+      why: "A read-only SQL fallback is added for what no metric covers; its answer then opens with “Not a governed metric:”.", seq: { kind: "mf", hybrid: true } }),
+    "cc-metricflow": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.cc,
+      ctx: [P("i-cc", "A prompt", ["the same rules, kept by instruction only"])], tools: [MFT("MetricFlow's tools, as a command line")], server: MFS,
+      reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
+      why: "The same three tools, called by a Claude Code subagent instead of the ADK agent.", seq: { kind: "mf", cc: true } }),
+    "baseline": OURS({ kind: "ref", agent: AG.adk("plain text-to-SQL"),
+      ctx: [P("i-sql", "Instruction", ["names the tables it may read"])], tools: [P("sql-tool", "One SQL tool", [M("execute_sql"), "one read-only statement"])], server: null,
+      reach: [RE.gold, RE.legacy], sql: [SQL.agent],
+      first: "The reference: an agent with one SQL tool and the names of the tables. It is not a rung; the ladder is read against it.", seq: { kind: "sql" } }),
+  };
+
+  /* ---------- the setups, from the data ---------- */
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const rungs = (D.ladder || []).map((l) => ({ key: l.key, label: l.label, arms: (l.arms || []).slice() }));
+  const order = []; const rungOf = {};
+  rungs.forEach((r, i) => r.arms.forEach((a) => { if (!(a in rungOf)) { order.push(a); rungOf[a] = i; } }));
+  const rows = {}; (D.setOrder || Object.keys(D.sets || {})).forEach((s) => ((D.sets[s] || {}).rows || []).forEach((r) => (rows[r.arm] = rows[r.arm] || []).push(r)));
+  const FAMS = ["da", "gt", "mf", "ref"];
+  const famOf = (a) => { const r = (rows[a] || [])[0]; const f = (r && r.family) || (FACTS[a] && FACTS[a].kind) || "other"; return FAMS.includes(f) ? f : "other"; };
+  const famLabel = (f) => (D.familyLabel || {})[f] || "Another setup";
+  const descOf = (a) => (D.desc || {})[a] || D.undescribed || "";
+
+  function modelOf(a) {
+    const rs = rows[a] || []; const by = {};
+    rs.forEach((r) => { (by[r.role] = by[r.role] || new Set()).add(String(r.modelLabel || "").replace(/, fresh sessions$/, "").replace(/^Claude Code /, "")); });
+    const claude = (set) => "Claude " + [...set].join(", ");
+    if (by.gemini) return { k: "m-gemini", title: "Model: Gemini", lines: [] };
+    if (by.cc) return { k: "m-cc", title: "Model: " + claude(by.cc), lines: [] };
+    if (by.decides && by.check) return { k: "m-free-claude", title: "Model: a free model", lines: [claude(by.check) + " as a check"] };
+    if (by.decides) return { k: "m-free", title: "Model: a free model", lines: [] };
+    if (by.check) return { k: "m-claude", title: "Model: " + claude(by.check), lines: [] };
+    if (famOf(a) === "da") return { k: "m-gemini", title: "Model: Gemini", lines: [] };
+    return { k: "m-none", title: "Model: not recorded", lines: [] };
+  }
+  function setupOf(a) {
+    const F = FACTS[a];
+    if (!F) {
+      const i = order.indexOf(a);
+      return { arm: a, kind: famOf(a), unknown: true, before: i > 0 ? order[i - 1] : null, side: { agent: "o" }, agent: P("unknown", famLabel(famOf(a)), ["not drawn yet"]),
+        model: modelOf(a), ctx: [], tools: [], server: null, reach: [], sql: [], wh: null, seq: null };
+    }
+    return Object.assign({ arm: a, ctx: [], tools: [], reach: [], sql: [] }, F, { model: modelOf(a) });
+  }
+  const pieces = (S) => {
+    const out = [];
+    const add = (slot, p) => p && out.push({ slot, k: slot + ":" + p.k, p });
+    add("agent", S.agent); add("model", S.model); (S.ctx || []).forEach((p) => add("ctx", p)); (S.tools || []).forEach((p) => add("tools", p));
+    add("server", S.server); (S.reach || []).forEach((p) => add("reach", p)); (S.sql || []).forEach((p) => add("sql", p));
+    if (S.wh) add("wh", { k: S.wh, title: S.wh === "bq" ? "BigQuery" : "PostgreSQL, standing in for BigQuery" });
+    return out;
+  };
+  function diffOf(S) {
+    if (!S.before || !(S.before in rungOf || FACTS[S.before])) return null;
+    const B = setupOf(S.before);
+    const bk = new Set(pieces(B).map((x) => x.k)); const sk = new Set(pieces(S).map((x) => x.k));
+    return { before: S.before, B, added: new Set([...sk].filter((k) => !bk.has(k))), removed: pieces(B).filter((x) => !sk.has(x.k)) };
+  }
+
+  /* ---------- text measurement ---------- */
+  const cv = document.createElement("canvas").getContext("2d");
+  const css = getComputedStyle(document.documentElement);
+  const FL = (css.getPropertyValue("--label") || "sans-serif").trim();
+  const FC = (css.getPropertyValue("--code") || "monospace").trim();
+  const fontOf = (cls) => cls === "t" ? `600 13px ${FL}` : cls === "m" ? `11px ${FC}` : cls === "ft" ? `600 12px ${FL}` : cls === "sql" ? `600 12px ${FL}` : cls === "note" ? `italic 11.5px ${FL}` : cls === "lh" ? `600 12px ${FL}` : `12px ${FL}`;
+  const tw = (s, cls) => { cv.font = fontOf(cls); return cv.measureText(s).width; };
+  function wrap(s, w, cls) {
+    const words = String(s).split(/(?<=[ ,])/); const out = []; let cur = "";
+    words.forEach((wd) => { const t = cur + wd; if (cur && tw(t.trimEnd(), cls) > w) { out.push(cur.trimEnd()); cur = wd.trimStart(); } else cur = t; });
+    if (cur.trim()) out.push(cur.trimEnd());
+    return out.length ? out : [""];
+  }
+
+  /* ---------- drawing primitives (each node: key, kind, geometry, inner markup) ---------- */
+  const LH = { t: 16, l: 14, m: 14 };
+  function cardBox(p, w, opt) {
+    opt = opt || {};
+    const padR = p.logo ? 30 : 10; const inner = w - 10 - padR;
+    const tl = wrap(p.title, inner, p.mono ? "m" : "t");
+    const ls = []; (p.lines || []).forEach((ln) => { const mono = typeof ln === "object"; wrap(mono ? ln.m : ln, w - 20, mono ? "m" : "l").forEach((t) => ls.push({ t, c: mono ? "m" : "l" })); });
+    let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 24 + (opt.model.extra ? 14 : 0) : 0) + 8;
+    h = Math.max(h, opt.min || 0);
+    return { tl, ls, h: Math.ceil(h / 2) * 2 };
+  }
+  function cardNode(key, p, x, y, w, opt) {
+    opt = opt || {};
+    const b = cardBox(p, w, opt);
+    let s = `<rect class="s-c${opt.add ? " add" : ""}${opt.gone ? " gone" : ""}" x=".5" y=".5" width="${w - 1}" height="${b.h - 1}" rx="2"/>`;
+    let yy = 8;
+    b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m" : "s-t"}" x="10" y="${yy - 4}"${p.mono ? ' style="font-weight:600;font-size:12px"' : ""}>${esc(opt.gone && i === 0 ? "dropped: " + t : t)}</text>`; });
+    b.ls.forEach((l) => { yy += LH.l; s += `<text class="s-${l.c}" x="10" y="${yy - 3}">${esc(l.t)}</text>`; });
+    if (opt.model) {
+      const my = yy + 8; const mh = 24 + (opt.model.extra ? 14 : 0);
+      s += `<rect class="s-hb" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/><rect class="s-c${opt.modelAdd ? " add" : ""}" style="fill:none" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/>`;
+      s += `<text class="s-t s-halo" x="16" y="${my + 16}" style="font-size:12px">${esc(opt.model.t)}</text>`;
+      if (opt.model.extra) s += `<text class="s-l s-halo" x="16" y="${my + 30}">${esc(opt.model.extra)}</text>`;
+    }
+    if (p.logo && LOGOS[p.logo]) s += `<svg x="${w - 22}" y="${8 + LH.t / 2 - 9}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[p.logo]}</svg>`;
+    return { key, kind: "g", x, y, w, h: b.h, html: s, cls: opt.gone ? "s-gone" : "" };
+  }
+  function frameNode(key, x, y, w, h, title, opt) {
+    opt = opt || {};
+    const tx = 10 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
+    let s = `<rect class="s-f${opt.screen ? " scr" : ""}${opt.ph ? " ph" : ""}" data-r="1" x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="2"/>`;
+    s += `<rect class="s-k" x="6" y="-8" width="${tx + ttw + nw - 2}" height="16"/>`;
+    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="10" y="-7" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
+    s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="4">${esc(title)}</text>`;
+    if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="4">${esc(opt.note)}</text>`;
+    return { key, kind: "f", x, y, w, h, html: s };
+  }
+  function edgeNode(key, pts, opt) {
+    opt = opt || {};
+    const d = "M" + pts.map((p) => p[0] + " " + p[1]).join("L");
+    const [a, b] = [pts[pts.length - 2], pts[pts.length - 1]];
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    return { key, kind: "e", pts, ang, cls: (opt.reads ? " rd" : "") + (opt.add ? " add" : ""), noEnd: opt.noEnd };
+  }
+  function textNode(key, x, y, lines, cls, anchor) {
+    const s = lines.map((t, i) => `<text class="${cls}" x="0" y="${i * 14}"${anchor ? ` text-anchor="${anchor}"` : ""}>${esc(t)}</text>`).join("");
+    return { key, kind: "g", x, y, w: 0, h: 0, html: s };
+  }
+  const H32 = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+  const pkey = (slot, p, extra) => slot + ":" + p.k + ":" + H32(JSON.stringify([p.title, p.lines, extra || ""]));
+
+  /* ---------- the sheet's layout: wide (left to right) and narrow (top to bottom) ---------- */
+  function build(S, wide) {
+    const df = diffOf(S); const isAdd = (slot, p) => !!(df && df.added.has(slot + ":" + p.k));
+    const gone = (slot) => (df ? df.removed.filter((x) => x.slot === slot).map((x) => x.p) : []);
+    const N = []; const E = []; const F = [];
+    const W = wide ? 840 : 360;
+    const sideName = { g: "Google Cloud", o: "Our side" };
+    const whSide = S.wh === "bq" ? "g" : "o";
+    const model = { t: S.model.title, extra: (S.model.lines || [])[0] };
+    const ctxList = (S.ctx || []).map((p) => ({ p, add: isAdd("ctx", p) })).concat(gone("ctx").map((p) => ({ p, gone: true })));
+    const toolList = (S.tools || []).map((p) => ({ p, add: isAdd("tools", p) })).concat(gone("tools").map((p) => ({ p, gone: true })));
+    const reachList = (S.reach || []).map((p) => ({ p, add: isAdd("reach", p) })).concat(gone("reach").map((p) => ({ p, gone: true })));
+    const sqlLines = (S.sql || []).map((p) => ({ p, add: isAdd("sql", p) }));
+    const fb = (S.tools || []).find((p) => p.k === "fb");
+    const bounds = {}; // slot -> {x,y,w,h}
+    const qa = (qx, ax, w) => {
+      const q = cardNode("q", P("q", "Question", ["in plain words"]), qx, 4, w);
+      const a = cardNode("a", P("a", "Answer", ["back to the user"]), ax, 4, w);
+      N.push(q, a); return [q.y + q.h, a.y + a.h];
+    };
+    let H = 0;
+    if (wide) {
+      const C = { agent: { x: 12, w: 196 }, tools: { x: 248, w: 168 }, server: { x: 456, w: 160 }, wh: { x: 656, w: 172 } };
+      const qab = qa(12, 116, 92);
+      const Y = 108, EY = Y + 20;
+      const ag = cardNode(pkey("agent", S.agent, model), S.agent, C.agent.x, Y, C.agent.w, { add: isAdd("agent", S.agent), model, modelAdd: isAdd("model", S.model) });
+      N.push(ag); bounds.agent = ag;
+      let cb = ag.y + ag.h;
+      if (ctxList.length) {
+        const fy = ag.y + ag.h + 24; let y = fy + 16; const cards = [];
+        ctxList.forEach((c) => { const n = cardNode(pkey("ctx", c.p, c.gone ? "g" : ""), c.p, C.agent.x + 8, y, C.agent.w - 16, { add: c.add, gone: c.gone }); cards.push(n); y += n.h + 8; });
+        F.push(frameNode("ctxf", C.agent.x, fy, C.agent.w, y - fy + 2, "Given to it", { screen: S.side.agent === "g" || S.side.agent === "o" }));
+        N.push(...cards); E.push(edgeNode("e-ctx", [[C.agent.x + C.agent.w / 2, fy], [C.agent.x + C.agent.w / 2, ag.y + ag.h]], { reads: true }));
+        cb = y + 2;
+      }
+      let tb = Y; let tcards = [];
+      if (toolList.length) {
+        let y = Y;
+        toolList.forEach((c) => { if (c.p.k === "fb") return; const n = cardNode(pkey("tools", c.p, c.gone ? "g" : ""), c.p, C.tools.x, y, C.tools.w, { add: c.add, gone: c.gone }); tcards.push(n); y += n.h + 12; });
+        bounds.tools = tcards[0]; tb = y - 12;
+      }
+      let sv = null;
+      if (S.server) { sv = cardNode(pkey("server", S.server), S.server, C.server.x, Y, C.server.w, { add: isAdd("server", S.server) }); N.push(sv); bounds.server = sv; }
+      if (fb) {
+        const fy = Math.max(tb + 12, sv ? sv.y + sv.h + 20 : 0);
+        const n = cardNode(pkey("tools", fb), fb, C.tools.x, fy, C.tools.w, { add: isAdd("tools", fb) }); tcards.push(n); tb = n.y + n.h;
+        E.push(edgeNode("e-fb", [[C.tools.x + C.tools.w, fy + 20], [C.wh.x, fy + 20]], { add: isAdd("sql", SQL.fb) }));
+      }
+      N.push(...tcards);
+      // the main path
+      const stops = [["agent", C.agent.x + C.agent.w]]; if (bounds.tools) stops.push(["tools", C.tools.x, C.tools.x + C.tools.w]); if (sv) stops.push(["server", C.server.x, C.server.x + C.server.w]);
+      if (S.wh) stops.push(["wh", C.wh.x]);
+      for (let i = 0; i + 1 < stops.length; i++) {
+        const from = stops[i][stops[i].length - 1]; const to = stops[i + 1][1];
+        const last = stops[i + 1][0] === "wh";
+        E.push(edgeNode("e-" + stops[i][0] + "-" + stops[i + 1][0], [[from, EY], [to, EY]], { add: last && sqlLines.some((x) => x.add) }));
+      }
+      if (!bounds.tools && S.wh) N.push(textNode("n-tools:" + (sv ? "s" : "n"), C.tools.x + C.tools.w / 2, EY + 22, wrap(S.kind === "da" ? "no tools of its own" : "no tools", C.tools.w - 16, "note"), "s-note", "middle"));
+      if (!sv && S.wh) N.push(textNode("n-server", C.server.x + C.server.w / 2, EY + 22, wrap("no semantic layer in between", C.server.w - 16, "note"), "s-note", "middle"));
+      // the warehouse
+      let wb = Y;
+      if (S.wh) {
+        const fx = C.wh.x, fy = Y - 8; let y = fy + 22; const items = [];
+        sqlLines.forEach((s, i) => { const ls = wrap(s.p.title, C.wh.w - 24, "sql"); items.push(Object.assign(textNode("sql:" + s.p.k, fx + 12, y, ls, "s-sql" + (s.add ? " add" : "")), {})); y += ls.length * 14 + 4; });
+        y += 6;
+        reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, fx + 12, y, C.wh.w - 24, { add: c.add, gone: c.gone }); items.push(n); y += n.h + 8; });
+        if (fb) y = Math.max(y, tb + 16);
+        const whTitle = S.wh === "bq" ? "BigQuery" : "PostgreSQL";
+        F.push(frameNode("wh:" + S.wh, fx, fy, C.wh.w, y - fy + 4, whTitle, { screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }), note: S.wh === "pg" ? "for BigQuery" : "" }));
+        N.push(...items); wb = y + 4;
+      }
+      // Q and A
+      E.push(edgeNode("e-q", [[58, qab[0]], [58, Y]]));
+      E.push(edgeNode("e-a", [[162, Y], [162, qab[1]]]));
+      // location frames
+      const cols = [["agent", S.side.agent || "o", C.agent.x, C.agent.x + C.agent.w], ["tools", S.side.tools || S.side.agent, C.tools.x, C.tools.x + C.tools.w],
+        ["server", S.side.server || S.side.agent, C.server.x, C.server.x + C.server.w]];
+      if (S.wh) cols.push(["wh", whSide, C.wh.x, C.wh.x + C.wh.w]);
+      if (!bounds.tools) cols[1][1] = cols[0][1]; if (!sv) cols[2][1] = cols[1][1];
+      const bottom = Math.max(cb, tb, sv ? sv.y + sv.h : 0, wb) + 12;
+      const groups = []; cols.forEach((c) => { const g = groups[groups.length - 1]; if (g && g.side === c[1]) g.r = c[3]; else groups.push({ side: c[1], l: c[2], r: c[3] }); });
+      groups.forEach((g) => F.unshift(frameNode("loc:" + g.side, g.l - 10, 92, g.r - g.l + 20, bottom - 92, sideName[g.side])));
+      H = bottom + 4;
+      return { N, E, F, W, H };
+    }
+    // narrow: top to bottom
+    const qab = qa(12, 192, 156);
+    const GX = 28; const CW = 336;
+    let y = 108; const rowsV = [];
+    const rowSide = (slot) => (slot === "wh" ? whSide : S.side[slot] || S.side.agent || "o");
+    const slotsV = ["agent"]; if (toolList.length) slotsV.push("tools"); if (S.server) slotsV.push("server"); if (S.wh) slotsV.push("wh");
+    let prevSide = null; let prevBottom = 0; const marks = [];
+    const fbW = fb ? 112 : 0; const mainW = fb ? CW - fbW - 16 : CW;
+    slotsV.forEach((slot, i) => {
+      const side = rowSide(slot);
+      if (i > 0) y = prevBottom + (side !== prevSide ? 52 : 34);
+      if (side !== prevSide) marks.push({ side, top: y - 16, i });
+      const top = y; let bottom = y; let mainTop = y; let mainBottom = y;
+      if (slot === "agent") {
+        const ag = cardNode(pkey("agent", S.agent, model), S.agent, 12, y, CW, { add: isAdd("agent", S.agent), model, modelAdd: isAdd("model", S.model) });
+        N.push(ag); mainBottom = bottom = ag.y + ag.h;
+        if (ctxList.length) {
+          const fy = bottom + 24; let yy = fy + 16; const cards = [];
+          ctxList.forEach((c) => { const n = cardNode(pkey("ctx", c.p, c.gone ? "g" : ""), c.p, 52, yy, CW - 48, { add: c.add, gone: c.gone }); cards.push(n); yy += n.h + 8; });
+          F.push(frameNode("ctxf", 44, fy, CW - 32, yy - fy + 2, "Given to it", { screen: true }));
+          N.push(...cards); E.push(edgeNode("e-ctx", [[200, fy], [200, ag.y + ag.h]], { reads: true }));
+          bottom = yy + 2;
+        }
+      } else if (slot === "tools") {
+        let yy = y; const main = toolList.filter((c) => c.p.k !== "fb");
+        main.forEach((c) => { const n = cardNode(pkey("tools", c.p, c.gone ? "g" : ""), c.p, 12, yy, mainW, { add: c.add, gone: c.gone }); N.push(n); yy += n.h + 10; });
+        mainBottom = bottom = yy - 10;
+        if (fb) { const n = cardNode(pkey("tools", fb), fb, 12 + mainW + 16, y, fbW, { add: isAdd("tools", fb) }); N.push(n); bottom = Math.max(bottom, n.y + n.h); rowsV.fbCard = n; }
+      } else if (slot === "server") {
+        const n = cardNode(pkey("server", S.server), S.server, 12, y, mainW, { add: isAdd("server", S.server) }); N.push(n); mainBottom = bottom = n.y + n.h;
+      } else {
+        const fy = y; let yy = fy + 22; const items = [];
+        sqlLines.forEach((s) => { const ls = wrap(s.p.title, CW - 24, "sql"); items.push(textNode("sql:" + s.p.k, 24, yy, ls, "s-sql" + (s.add ? " add" : ""))); yy += ls.length * 14 + 4; });
+        yy += 6; const cw2 = (CW - 24 - 10) / 2; let col = 0; let rowH = 0; const rowY = () => yy;
+        reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, 24 + col * (cw2 + 10), rowY(), cw2, { add: c.add, gone: c.gone }); items.push(n); rowH = Math.max(rowH, n.h); col++; if (col === 2) { yy += rowH + 8; col = 0; rowH = 0; } });
+        if (col) yy += rowH + 8;
+        // equal heights in a pair: grow the shorter card's box (keeps the grid tidy)
+        F.push(frameNode("wh:" + S.wh, 12, fy, CW, yy - fy + 4, S.wh === "bq" ? "BigQuery" : "PostgreSQL", { screen: true, ph: S.wh === "pg", logo: S.wh === "bq" ? "googlebigquery" : "postgresql", add: isAdd("wh", { k: S.wh }), note: S.wh === "pg" ? "for BigQuery" : "" }));
+        N.push(...items); mainBottom = bottom = yy + 4;
+      }
+      rowsV.push({ slot, side, top, mainTop, mainBottom, bottom });
+      prevSide = side; prevBottom = bottom;
+    });
+    for (let i = 0; i + 1 < rowsV.length; i++) {
+      const last = rowsV[i + 1].slot === "wh";
+      E.push(edgeNode("e-" + rowsV[i].slot + "-" + rowsV[i + 1].slot, [[GX, rowsV[i].mainBottom], [GX, rowsV[i + 1].mainTop]], { add: last && sqlLines.some((x) => x.add) }));
+    }
+    if (fb && rowsV.fbCard) {
+      const whRow = rowsV.find((r) => r.slot === "wh"); const x = rowsV.fbCard.x + rowsV.fbCard.w / 2;
+      if (whRow) E.push(edgeNode("e-fb", [[x, rowsV.fbCard.y + rowsV.fbCard.h], [x, whRow.mainTop]], { add: isAdd("sql", SQL.fb) }));
+    }
+    E.push(edgeNode("e-q", [[90, qab[0]], [90, 108]]));
+    E.push(edgeNode("e-a", [[270, 108], [270, qab[1]]]));
+    marks.forEach((m, j) => {
+      const endRow = j + 1 < marks.length ? marks[j + 1].i - 1 : rowsV.length - 1;
+      const top = m.top; const bottom = rowsV[endRow].bottom + 12;
+      F.unshift(frameNode("loc:" + m.side, 2, top, W - 4, bottom - top, sideName[m.side]));
+      H = Math.max(H, bottom);
+    });
+    H += 4;
+    return { N, E, F, W, H };
+  }
+
+  /* ---------- the renderer: keyed nodes, tweened between states ---------- */
+  const svg = root.querySelector(".sxb-fig svg");
+  const reduce = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  const NS = "http://www.w3.org/2000/svg";
+  svg.innerHTML = `<defs><pattern id="sxb-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line class="s-hl" x1="0" y1="0" x2="0" y2="6"/></pattern>
+    <pattern id="sxb-screen" patternUnits="userSpaceOnUse" width="6" height="6"><rect class="s-sb" width="6" height="6"/><circle class="s-sd" cx="3" cy="3" r=".75"/></pattern></defs>
+    <g class="L-f"></g><g class="L-e"></g><g class="L-n"></g>`;
+  const layers = { f: svg.querySelector(".L-f"), e: svg.querySelector(".L-e"), g: svg.querySelector(".L-n") };
+  const live = new Map(); // key -> {el, kind, cur, tgt}
+  let raf = 0;
+  const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const ahPath = (p, ang) => { const s = 6, w = 3.4; const c = Math.cos(ang), n = Math.sin(ang); const bx = p[0] - c * s, by = p[1] - n * s; return `M${p[0]} ${p[1]}L${bx - n * w} ${by + c * w}L${bx + n * w} ${by - c * w}Z`; };
+  function geomOf(nd) { return nd.kind === "e" ? nd.pts.flat() : [nd.x, nd.y, nd.w, nd.h]; }
+  function apply(rec, g, op) {
+    const el = rec.el;
+    if (rec.kind === "e") {
+      const pts = []; for (let i = 0; i < g.length; i += 2) pts.push([g[i], g[i + 1]]);
+      const line = pts.slice(); if (!rec.noEnd) { const a = line[line.length - 2], b = line[line.length - 1]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; line[line.length - 1] = [b[0] - (b[0] - a[0]) / L * 5, b[1] - (b[1] - a[1]) / L * 5]; }
+      el.firstChild.setAttribute("d", "M" + line.map((p) => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L"));
+      if (!rec.noEnd) { const a = pts[pts.length - 2], b = pts[pts.length - 1]; el.lastChild.setAttribute("d", ahPath(b, Math.atan2(b[1] - a[1], b[0] - a[0]))); }
+    } else {
+      el.setAttribute("transform", `translate(${g[0].toFixed(1)} ${g[1].toFixed(1)})`);
+      if (rec.kind === "f") { const r = el.querySelector("[data-r]"); r.setAttribute("width", Math.max(0, g[2] - 1).toFixed(1)); r.setAttribute("height", Math.max(0, g[3] - 1).toFixed(1)); }
+    }
+    if (op != null) el.style.opacity = op;
+  }
+  function create(nd) {
+    const el = document.createElementNS(NS, "g");
+    if (nd.kind === "e") el.innerHTML = `<path class="s-e${nd.cls}"/>${nd.noEnd ? "" : `<path class="s-ah${nd.cls}"/>`}`;
+    else { el.innerHTML = nd.html; if (nd.cls) el.setAttribute("class", nd.cls); }
+    return { el, kind: nd.kind, noEnd: nd.noEnd, html: nd.html };
+  }
+  function render(model, animate) {
+    svg.setAttribute("viewBox", `0 0 ${model.W} ${model.Hmax}`);
+    const want = new Map(); const order = { f: [], e: [], g: [] };
+    model.F.forEach((n) => { want.set(n.key, n); order.f.push(n.key); });
+    model.E.forEach((n) => { want.set(n.key + n.cls, Object.assign({}, n, { key: n.key + n.cls })); order.e.push(n.key + n.cls); });
+    model.N.forEach((n) => { want.set(n.key, n); order.g.push(n.key); });
+    const anim = animate && !reduce();
+    const t0 = performance.now();
+    // leaving
+    live.forEach((rec, k) => {
+      if (want.has(k)) return;
+      if (!anim) { rec.el.remove(); live.delete(k); return; }
+      rec.leave = t0; rec.from = rec.cur.slice(); rec.to = rec.cur.slice();
+    });
+    want.forEach((nd, k) => {
+      let rec = live.get(k);
+      const g = geomOf(nd);
+      if (rec && rec.leave) { rec.leave = 0; }
+      if (!rec) {
+        rec = create(nd); live.set(k, rec);
+        rec.cur = g.slice(); rec.from = g.slice(); rec.to = g; rec.enter = anim ? t0 : 0;
+        apply(rec, g, anim ? 0 : 1);
+      } else {
+        if (rec.kind === "f") { // a frame keeps its key across states: refresh its title, keep its rect tweening
+          const tmp = document.createElementNS(NS, "g"); tmp.innerHTML = nd.html;
+          const r = rec.el.querySelector("[data-r]"); const nr = tmp.querySelector("[data-r]"); r.setAttribute("class", nr.getAttribute("class"));
+          [...rec.el.children].forEach((c) => { if (c !== r) c.remove(); }); [...tmp.children].forEach((c) => { if (!c.hasAttribute("data-r")) rec.el.appendChild(c); });
+        }
+        if (rec.kind === "g" && rec.html !== nd.html) { rec.el.innerHTML = nd.html; rec.html = nd.html; }
+        if (rec.cur.length !== g.length) { rec.cur = g.slice(); }
+        rec.from = rec.cur.slice(); rec.to = g; rec.enter = 0;
+        if (!anim) { rec.cur = g.slice(); apply(rec, g, 1); }
+      }
+    });
+    ["f", "e", "g"].forEach((L) => order[L].forEach((k) => layers[L].appendChild(live.get(k).el)));
+    if (!anim) return;
+    cancelAnimationFrame(raf);
+    const step = (now) => {
+      let busy = false;
+      live.forEach((rec, k) => {
+        if (rec.leave) {
+          const t = Math.min(1, (now - rec.leave) / 160); rec.el.style.opacity = String(1 - t);
+          if (t >= 1) { rec.el.remove(); live.delete(k); } else busy = true; return;
+        }
+        const t = Math.min(1, (now - t0) / 360); const e = ease(t);
+        const g = rec.from.map((v, i) => v + (rec.to[i] - v) * e); rec.cur = g;
+        let op = null; if (rec.enter) { const u = Math.max(0, Math.min(1, (now - rec.enter - 140) / 240)); op = String(u); if (u < 1) busy = true; else rec.enter = 0; }
+        apply(rec, g, op); if (t < 1) busy = true;
+      });
+      if (busy) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  /* ---------- the sequence on one question ---------- */
+  function seqOf(S) {
+    const q = S.seq; if (!q) return null;
+    const holds = q.holds;
+    if (q.kind === "da") return { lanes: ["Data agent", "What it holds", "BigQuery"], steps: [
+      { a: 1, b: 0, t: "reads " + holds, ret: true },
+      { a: 0, b: 0, t: "writes its own SQL" + (q.how ? ", " + q.how : "") + "; the rule that cancelled orders are left out must come from what it holds" },
+      { a: 0, b: 2, t: "runs its SQL" }, { a: 2, b: 0, t: "rows", ret: true },
+      { a: 0, b: 0, t: "answers with the figure", end: true }],
+      cap: "Google's agent writes the SQL itself, on Gemini; nothing in between checks it against a metric." };
+    if (q.kind === "mf") {
+      const lane0 = q.cc ? "Claude Code subagent" : "ADK agent";
+      const st = [
+        { a: 0, b: 1, t: "list_metrics", m: true }, { a: 1, b: 0, t: "every metric and its meaning; it picks " + EXM, ret: true },
+        { a: 0, b: 1, t: "describe_metric(" + EXM + ")", m: true }, { a: 1, b: 0, t: "revenue over non-cancelled orders; its dimensions", ret: true },
+        { a: 0, b: 1, t: "query_metrics(" + EXM + ", 1 Oct 2026)", m: true },
+        { a: 1, b: 2, t: "MetricFlow writes the SQL from the definition and runs it" }, { a: 2, b: 1, t: "rows", ret: true },
+        { a: 1, b: 0, t: "rows, the SQL it ran, how fresh the data is", ret: true },
+        { a: 0, b: 0, t: "answers with the figure and its freshness; it never wrote SQL", end: true }];
+      if (q.hybrid) st.push({ a: 0, b: 2, t: "only when no metric covers a question: execute_sql, its own read-only query, the answer opening “Not a governed metric:”", m: false, add: true });
+      return { lanes: [lane0, "MetricFlow", "Warehouse"], steps: st,
+        cap: q.cc ? "The tools run as a command line; the subagent keeps to them because its prompt says so." : "The agent names a metric and a period; MetricFlow turns the definition into SQL." };
+    }
+    if (q.kind === "ld") return { lanes: ["ADK agent", "Lightdash", "Warehouse"], steps: [
+      { a: 0, b: 0, t: "finds the explore and metric in its instruction" },
+      { a: 0, b: 1, t: "query_metrics(explore, metrics, dates)", m: true },
+      { a: 1, b: 2, t: "Lightdash compiles the SQL and runs it" }, { a: 2, b: 1, t: "rows", ret: true },
+      { a: 1, b: 0, t: "rows, each metric's description, the SQL", ret: true },
+      { a: 0, b: 0, t: "answers with the figure; it never wrote SQL", end: true }],
+      cap: "The tool checks every name against what Lightdash serves, then sends a metric query, never SQL." };
+    if (q.kind === "mcp") return { lanes: ["ADK agent", "Google's MCP servers", "BigQuery"], steps: [
+      { a: 0, b: 1, t: "search_entries, lookup_context", m: true }, { a: 1, b: 0, t: "the imported dbt definition of average order value", ret: true },
+      { a: 0, b: 1, t: "get_table_info", m: true }, { a: 1, b: 0, t: "the cleaned tables' columns", ret: true },
+      { a: 0, b: 0, t: "writes its own SQL from the definition" },
+      { a: 0, b: 1, t: "execute_sql_readonly", m: true }, { a: 1, b: 2, t: "runs it" }, { a: 2, b: 0, t: "rows", ret: true },
+      { a: 0, b: 0, t: "answers with the figure", end: true }],
+      cap: "The definition comes from the catalog; the SQL is still the agent's own." };
+    if (q.kind === "toolbox") return { lanes: ["ADK agent", "MCP Toolbox", "BigQuery"], steps: [
+      { a: 0, b: 1, t: "daily_sales(2026-10-01, 2026-10-01)", m: true },
+      { a: 1, b: 2, t: "runs the tool's fixed statement, a table function" }, { a: 2, b: 1, t: "rows", ret: true },
+      { a: 1, b: 0, t: "revenue, orders and cancellations for the day", ret: true },
+      { a: 0, b: 0, t: "divides them itself, or declines when no tool fits", end: true }],
+      cap: "The agent only picks a tool and two dates; any arithmetic beyond the tool's rows is its own." };
+    if (q.kind === "sql") return { lanes: ["ADK agent", "Warehouse"], steps: [
+      { a: 0, b: 0, t: "reads the table names in its instruction" },
+      { a: 0, b: 1, t: "execute_sql: information_schema.columns", m: true }, { a: 1, b: 0, t: "the tables' columns", ret: true },
+      { a: 0, b: 0, t: "writes its own SQL; nothing tells it to leave cancelled orders out" },
+      { a: 0, b: 1, t: "execute_sql", m: true }, { a: 1, b: 0, t: "rows", ret: true },
+      { a: 0, b: 0, t: "answers with the figure", end: true }],
+      cap: "Plain text-to-SQL: whatever rule the tables do not show, the agent has to guess." };
+    return null;
+  }
+  function drawSeq(Q) {
+    const W = 360; const n = Q.lanes.length; const xs = n === 2 ? [44, 300] : [44, 178, 312];
+    let o = ""; let y = 8;
+    const heads = Q.lanes.map((l) => wrap(l, 112, "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
+    heads.forEach((ls, i) => ls.forEach((t, j) => { o += `<text class="s-lh" x="${xs[i]}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
+    y += hh + 8; const top = y; let body = ""; let k = 0;
+    Q.steps.forEach((s) => {
+      const self = s.a === s.b; const l = Math.min(xs[s.a], xs[s.b]); const r = Math.max(xs[s.a], xs[s.b]);
+      const lx = self ? xs[s.a] + 10 : l + 8; const lw = self ? W - lx - 4 : Math.max(r - l - 12, 150);
+      const ls = wrap(s.t, Math.min(lw, W - lx - 4), s.m ? "m" : "l");
+      const num = !s.ret; if (num) k++;
+      y += 6;
+      ls.forEach((t, j) => { body += `<text class="s-sl${s.m ? " m" : ""}${s.ret ? " r" : ""} s-halo" x="${lx}" y="${y + 10 + j * 14}">${esc(t)}</text>`; });
+      if (num) body += `<circle class="s-n" cx="12" cy="${y + 6}" r="8"/><text class="s-nt" x="12" y="${y + 10}" text-anchor="middle">${k}</text>`;
+      y += ls.length * 14 + 4;
+      const cls = (s.ret ? " rd" : "") + (s.add ? " add" : "");
+      if (self) {
+        if (!s.end) { body += `<path class="s-e${cls}" d="M${xs[s.a]} ${y - 2}h14v8h-9"/><path class="s-ah${cls}" d="${ahPath([xs[s.a] + 1, y + 6], Math.PI)}"/>`; y += 10; }
+        else { body += `<circle class="s-ah" cx="${xs[s.a]}" cy="${y}" r="3"/>`; y += 6; }
+      } else {
+        const x1 = xs[s.a], x2 = xs[s.b]; const dir = Math.sign(x2 - x1);
+        body += `<path class="s-e${cls}" d="M${x1} ${y}H${x2 - dir * 5}"/><path class="s-ah${cls}" d="${ahPath([x2, y], dir > 0 ? 0 : Math.PI)}"/>`; y += 6;
+      }
+    });
+    y += 6;
+    const lifelines = xs.map((x) => `<line class="s-ll" x1="${x}" y1="${top - 2}" x2="${x}" y2="${y}"/>`).join("");
+    return `<svg viewBox="0 0 ${W} ${y + 2}" role="img" aria-label="${esc(Q.steps.map((s, i) => s.t).join("; "))}">${o}${lifelines}${body}</svg>`;
+  }
+
+  /* ---------- the stage ---------- */
+  const head = root.querySelector(".sxb-head"); const change = root.querySelector(".sxb-change"); const seqEl = root.querySelector(".sxb-seq");
+  const fig = root.querySelector(".sxb-fig"); const panel = root.querySelector(".sxb-panel");
+  const rungLabel = (a) => (rungs[rungOf[a]] || {}).label || "";
+  function headHTML(a) {
+    const f = famOf(a); const i = order.indexOf(a);
+    const prev = order[i - 1], next = order[i + 1];
+    return `<div><p class="sxb-name"><span data-setup="${esc(a)}" tabindex="0">${esc(a)}</span></p>
+      <p class="sxb-meta"><i style="background:var(--${f})"></i>${esc(famLabel(f))}<span aria-hidden="true">/</span>${esc(rungLabel(a))}</p></div>
+      <div class="sxb-steps"><button type="button" data-go="${esc(prev || "")}" ${prev ? `aria-label="Previous setup: ${esc(prev)}"` : "disabled aria-label=\"No previous setup\""}>←</button><button type="button" data-go="${esc(next || "")}" ${next ? `aria-label="Next setup: ${esc(next)}"` : "disabled aria-label=\"No next setup\""}>→</button></div>
+      <p class="sxb-desc">${esc(descOf(a))}</p>`;
+  }
+  function changeHTML(S) {
+    const df = diffOf(S);
+    if (!df) return `<h3>What it starts from</h3><p>${esc(S.first || "The first setup on its rung; nothing before it to compare.").replace(/^The floor/, '<span class="term" data-term="floor" tabindex="0">The floor</span>')}</p>`;
+    const label = (x) => x.slot === "model" ? x.p.title.replace(/^Model: /, "model: ") + ((x.p.lines || [])[0] ? ", " + x.p.lines[0] : "") :
+      x.slot === "wh" ? "warehouse: " + x.p.title : (x.slot === "sql" ? "" : x.slot === "server" ? "server: " : x.slot === "agent" ? "agent: " : "") + x.p.title + (x.slot === "ctx" || x.slot === "reach" ? (x.slot === "reach" ? " (in reach)" : " (given)") : "");
+    const added = pieces(S).filter((x) => df.added.has(x.k));
+    const li = added.map((x) => `<li class="add"><b aria-label="added">+</b><span>${esc(label(x))}</span></li>`).join("") +
+      df.removed.map((x) => `<li class="gone"><b aria-label="dropped">−</b><span>${esc(label(x))}</span></li>`).join("");
+    return `<h3>What changes from <span class="id" data-setup="${esc(df.before)}" tabindex="0">${esc(df.before)}</span></h3>
+      <p>${esc(S.why || "")}</p>${li ? `<ul class="sxb-diff">${li}</ul>` : `<p class="sxb-cap">No piece drawn here changes.</p>`}`;
+  }
+  function seqHTML(S) {
+    const Q = seqOf(S);
+    if (!Q) return `<h3>On one question</h3><p class="sxb-cap">Not drawn yet for this setup.</p>`;
+    return `<h3>On one question: <span class="sxb-q">“${esc(EXQ)}”</span></h3>${drawSeq(Q)}<p class="sxb-cap">${esc(Q.cap)}</p>`;
+  }
+  function ariaOf(S) {
+    const parts = [S.arm + ": " + descOf(S.arm), "Agent: " + S.agent.title + ", " + S.model.title.replace("Model: ", "on ")];
+    if ((S.ctx || []).length) parts.push("Given: " + S.ctx.map((p) => p.title).join(", "));
+    if ((S.tools || []).length) parts.push("Tools: " + S.tools.map((p) => p.title).join(", "));
+    if (S.server) parts.push("Through: " + S.server.title);
+    if (S.wh) parts.push((S.wh === "bq" ? "BigQuery" : "PostgreSQL standing in for BigQuery") + ", reaching " + (S.reach || []).map((p) => p.title).join(", ") + "; " + (S.sql || []).map((p) => p.title).join(", "));
+    return parts.join(". ") + ".";
+  }
+
+  let wide = true; let sel = null; let Hmax = { w: 0, n: 0 };
+  const models = {};
+  function sheetOf(a, w) { const k = a + (w ? "|w" : "|n"); if (!models[k]) models[k] = build(setupOf(a), w); return models[k]; }
+  function computeHmax() { const k = wide ? "w" : "n"; Hmax[k] = Math.max(...order.map((a) => sheetOf(a, wide).H), 200); }
+  function steadyPanel() {
+    // the panel keeps the height of its tallest setup at this width, so the page never jumps
+    [head, panel].forEach((el) => (el.style.minHeight = ""));
+    const probe = root.querySelector(".sxb-stage").cloneNode(false); probe.removeAttribute("aria-live"); probe.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;width:" + root.querySelector(".sxb-stage").clientWidth + "px";
+    probe.innerHTML = `<div class="sxb-head"></div><div class="sxb-panel"><div class="sxb-change"></div><div class="sxb-seq"></div></div>`;
+    root.appendChild(probe);
+    let hh = 0, ph = 0;
+    order.forEach((a) => { const S = setupOf(a); probe.firstChild.innerHTML = headHTML(a); probe.children[1].children[0].innerHTML = changeHTML(S); probe.children[1].children[1].innerHTML = seqHTML(S);
+      hh = Math.max(hh, probe.firstChild.offsetHeight); ph = Math.max(ph, probe.children[1].offsetHeight); });
+    probe.remove(); head.style.minHeight = hh + "px"; panel.style.minHeight = ph + "px";
+  }
+  function legend(S) {
+    const sw = (inner) => `<svg width="26" height="14" viewBox="0 0 26 14">${inner}</svg>`;
+    const items = [
+      [sw(`<path class="s-e" d="M1 7H19"/><path class="s-ah" d="${ahPath([25, 7], 0)}"/>`), "asks or calls"],
+      [sw(`<path class="s-e rd" d="M1 7H19"/><path class="s-ah rd" d="${ahPath([25, 7], 0)}"/>`), "reads"],
+      [sw(`<rect class="s-hb" x="1" y="2" width="24" height="10"/>`), "the model"],
+      [sw(`<rect class="s-f scr" x="1" y="1" width="24" height="12"/>`), "a boundary inside a boundary"],
+      [sw(`<rect class="s-f ph" x="1" y="1" width="24" height="12"/>`), "a stand-in for a managed service"],
+      [sw(`<rect class="s-c add" x="2" y="2" width="22" height="10"/>`), "added since the setup before"],
+      [sw(`<rect class="s-c gone" x="2" y="2" width="22" height="10"/>`), "dropped since then"],
+    ];
+    return items.map(([s, t]) => `<span>${s}${esc(t)}</span>`).join("");
+  }
+  function show(a, animate) {
+    if (!(a in rungOf)) a = order[0];
+    const S = setupOf(a); sel = a;
+    root.style.setProperty("--sxb-pencil", `var(--${famOf(a)})`);
+    const m = sheetOf(a, wide); render(Object.assign({}, m, { Hmax: Hmax[wide ? "w" : "n"] }), animate);
+    svg.setAttribute("aria-label", ariaOf(S));
+    const fade = animate && !reduce();
+    head.innerHTML = headHTML(a); change.innerHTML = changeHTML(S); seqEl.innerHTML = seqHTML(S);
+    [head, change, seqEl].forEach((el) => { el.classList.remove("sxb-fade"); if (fade) { void el.offsetWidth; el.classList.add("sxb-fade"); } });
+    root.querySelector(".sxb-legend").innerHTML = legend(S);
+    root.querySelectorAll(".sxb-chip").forEach((c) => { const on = c.dataset.arm === a; c.setAttribute("aria-checked", on ? "true" : "false"); c.tabIndex = on ? 0 : -1; });
+    root.querySelectorAll(".sxb-rung").forEach((r) => r.classList.toggle("on", r.dataset.rung === String(rungOf[a])));
+  }
+
+  /* ---------- the selector ---------- */
+  const pick = root.querySelector(".sxb-rungs");
+  pick.innerHTML = rungs.map((r, i) => `<div class="sxb-rung${r.arms.length ? "" : " empty"}" data-rung="${i}" role="group" aria-label="${esc(r.label)}">
+      <p class="sxb-rl">${esc(r.label)}</p>${r.arms.length ? `<div class="sxb-chips">${r.arms.map((a) => `<button type="button" class="sxb-chip" role="radio" aria-checked="false" tabindex="-1" data-arm="${esc(a)}"><i style="background:var(--${famOf(a)})"></i>${esc(a)}</button>`).join("")}</div>` : ""}</div>`).join("");
+  const famsUsed = FAMS.concat(["other"]).filter((f) => order.some((a) => famOf(a) === f));
+  root.querySelector(".sxb-fams").innerHTML = famsUsed.map((f) => `<span><i style="background:var(--${f})"></i>${esc(famLabel(f))}</span>`).join("");
+  const setHash = (a) => { try { history.replaceState(null, "", "#setup-" + a); } catch (e) {} };
+  function choose(a, focus) { if (a === sel) { if (focus) focusChip(a); return; } show(a, true); setHash(a); if (focus) focusChip(a); }
+  const focusChip = (a) => { const c = root.querySelector(`.sxb-chip[data-arm="${CSS.escape(a)}"]`); if (c) c.focus(); };
+  pick.addEventListener("click", (e) => { const c = e.target.closest(".sxb-chip"); if (c) choose(c.dataset.arm, false); });
+  pick.addEventListener("keydown", (e) => {
+    const c = e.target.closest(".sxb-chip"); if (!c) return;
+    const a = c.dataset.arm; const i = order.indexOf(a); let to = null;
+    if (e.key === "ArrowRight") to = order[Math.min(order.length - 1, i + 1)];
+    else if (e.key === "ArrowLeft") to = order[Math.max(0, i - 1)];
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const d = e.key === "ArrowDown" ? 1 : -1; const ri = rungOf[a]; const pos = rungs[ri].arms.indexOf(a);
+      for (let r = ri + d; r >= 0 && r < rungs.length; r += d) if (rungs[r].arms.length) { to = rungs[r].arms[Math.min(pos, rungs[r].arms.length - 1)]; break; }
+      if (!to) to = a;
+    } else if (e.key === "Home") to = order[0]; else if (e.key === "End") to = order[order.length - 1];
+    else if (e.key === " " || e.key === "Enter") to = a;
+    if (to != null) { e.preventDefault(); choose(to, true); }
+  });
+  head.addEventListener("click", (e) => { const b = e.target.closest("button[data-go]"); if (b && b.dataset.go) { const dir = b === head.querySelector(".sxb-steps button:last-child") ? "last" : "first"; choose(b.dataset.go, false); const nb = head.querySelector(`.sxb-steps button:${dir}-child`); if (nb && !nb.disabled) nb.focus(); else { const ob = head.querySelector(".sxb-steps button:not(:disabled)"); if (ob) ob.focus(); } } });
+
+  /* ---------- start ---------- */
+  const fromHash = () => { const m = /^#setup-([A-Za-z0-9-]+)$/.exec(location.hash || ""); return m && m[1] in rungOf ? m[1] : null; };
+  const startArm = fromHash() || ("custom-metricflow" in rungOf ? "custom-metricflow" : order[0]);
+  function layoutFor() { const w = fig.clientWidth || root.clientWidth; return w >= 700; }
+  function full(animate) {
+    wide = layoutFor(); fig.classList.toggle("narrow", !wide);
+    Object.keys(models).forEach((k) => delete models[k]);
+    computeHmax(); show(sel || startArm, animate); steadyPanel();
+  }
+  if (!order.length) { root.querySelector(".sxb-stage").innerHTML = "<p>No setups in the data.</p>"; return; }
+  full(false);
+  if (fromHash()) requestAnimationFrame(() => root.scrollIntoView({ block: "start" }));
+  window.addEventListener("hashchange", () => { const a = fromHash(); if (a && a !== sel) show(a, true); });
+  let rz = 0, lastW = root.clientWidth;
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (root.clientWidth !== lastW) { lastW = root.clientWidth; full(false); } }, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => full(false));
+});
 </script>
 </section>
 
