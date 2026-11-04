@@ -1,0 +1,1 @@
+{"case": "returns_one_day", "run": 1, "turns": [{"question": "How many partner returns did we get on 1 October 2026?", "answer": "We got 2 partner returns on 1 October 2026 (Returns, counted on the day of the return). Fresh: returns.silver is ready up to 2026-10-03T00:00Z.", "calls": ["list_metrics", "query_metrics"]}]}
