@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T20:35Z",
+ "written": "2026-11-04T20:39Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1376,12 +1376,12 @@
    "harness": "google-data-agent",
    "session": "fresh per run",
    "rung": 1,
-   "cases": 52,
+   "cases": 60,
    "of_cases": 96,
-   "runs": 52,
+   "runs": 60,
    "accuracy": [
-    0.961538461538,
-    0.903846153846,
+    0.95,
+    0.883333333333,
     1.0
    ],
    "confident_wrong": [
@@ -1391,33 +1391,37 @@
    ],
    "groups": {
     "conversation": [
-     0.75,
-     4
+     0.7142857142857143,
+     7
     ],
     "covered": [
-     0.98,
-     50
+     0.9655172413793104,
+     58
     ],
     "distractor": [
      1.0,
      1
     ],
+    "planted": [
+     1.0,
+     3
+    ],
     "trap": [
      1.0,
-     7
+     9
     ],
     "uncovered": [
      0.5,
      2
     ]
    },
-   "pass_all": 0.9615384615384616,
+   "pass_all": 0.95,
    "outcomes": {
-    "right": 50,
+    "right": 57,
     "declined": 1,
-    "wrong": 1
+    "wrong": 2
    },
-   "model_calls": 56
+   "model_calls": 66
   },
   {
    "set": "frozen",
@@ -2118,6 +2122,53 @@
   },
   {
    "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 43,
+   "accuracy": [
+    0.511627906977,
+    0.372093023256,
+    0.651162790698
+   ],
+   "confident_wrong": [
+    0.093023255814,
+    0.023255813953,
+    0.186046511628
+   ],
+   "groups": {
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.10526315789473684,
+     19
+    ]
+   },
+   "pass_all": 0.5116279069767442,
+   "outcomes": {
+    "right": 22,
+    "declined": 2,
+    "wrong": 15,
+    "confident-wrong": 4
+   },
+   "model_calls": 47
+  },
+  {
+   "set": "hard",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "harness": "google-data-agent",
@@ -2587,7 +2638,7 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 44,
+   "runs": 52,
    "accuracy": [
     0.953488372093,
     0.883720930233,
@@ -2618,10 +2669,10 @@
    },
    "pass_all": 0.9534883720930233,
    "outcomes": {
-    "right": 42,
+    "right": 50,
     "wrong": 2
    },
-   "model_calls": 48
+   "model_calls": 56
   }
  ],
  "step_two": [
@@ -3090,6 +3141,24 @@
     0.116279069767,
     0.023255813953,
     0.209302325581
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.441860465116,
+    -0.581395348837,
+    -0.302325581395
+   ],
+   "confident_wrong": [
+    0.093023255814,
+    0.023255813953,
+    0.186046511628
    ],
    "worth": false
   }
