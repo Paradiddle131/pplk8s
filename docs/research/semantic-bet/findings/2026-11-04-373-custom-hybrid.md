@@ -21,7 +21,7 @@ Question: does our agent close its only gap (the `uncovered` questions, where `c
 
 ## What it means for the verdict
 
-- As built, the hybrid does not close the gap: the model keeps the metrics-first habit and declines, and the second tool adds wrong numbers where metrics existed.
+- As built, the hybrid does not close the gap: the model keeps the metrics-first habit and declines; its metric answers do no better than the metrics-only agent's (11 confident-wrong, 13 unjudged, none through the fallback).
 - The ADK agent on Google's MCP servers (`native-mcp`), which reads the catalog's definitions and writes SQL for everything, is the arm of ours that ties the managed best on the frozen set (results.json `step_three`).
 - Not tuned after this result (the arm stays as frozen); a better prompt or a router is a new arm, scored under the rule like any other.
 
