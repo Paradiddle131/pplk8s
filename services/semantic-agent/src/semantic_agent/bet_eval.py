@@ -806,6 +806,20 @@ def finished(entries: Sequence[dict[str, Any]], model: str) -> dict[tuple[str, i
     return done
 
 
+# The canary (2026-11-04: an Opus pass with no audit database answered 3 of 288 right and spent
+# $16.31 before anyone saw): before a pass, each arm answers the set's first single-turn `covered`
+# case, unlogged; two misses stop the pass. Every healthy arm measured answers such a case.
+CANARY_TRIES = 2
+
+
+def canary_case(bet: BetSet) -> Question | None:
+    """The set's first single-turn case in the `covered` group: one metric, nothing to decline."""
+    return next(
+        (q for q in bet.questions if len(q.turns) == 1 and "covered" in bet.groups.get(q.id, [])),
+        None,
+    )
+
+
 async def run_bet(
     bet: BetSet,
     expected: Mapping[str, Expected],
@@ -818,14 +832,50 @@ async def run_bet(
     requests: int | None = None,
     *,
     legacy: frozenset[str] = frozenset(),
+    canary: bool = False,
 ) -> str:
     """Ask every (run, case, arm) the log has not finished, in that order, so a cut run still
-    leaves both arms paired on the cases it reached. Returns why it stopped: `done`, `quota`
+    leaves both arms paired on the cases it reached. With `canary`, each arm first answers the
+    set's canary case (canary_case), unlogged, and a pass whose arm misses it twice stops as
+    `canary` before it spends on the rest. Returns why it stopped: `done`, `quota`
     (the model's quota or key ended the run), `time` (past the deadline), `requests` (this pass
     spent its share of the shared free quota) or `budget` (its Claude dollars, spend.METER).
     The runs of an arm in `legacy` (its agent has the legacy tables in reach) are logged with
     `"legacy": true`."""
     spent = 0
+    probe = canary_case(bet) if canary else None
+    for arm in [a for a in ARMS if a in agents] if probe else []:
+        if all(
+            (arm, run, q.id) in finished(read_log(log), model)
+            for run in range(1, runs + 1)
+            for q in bet.questions
+        ):
+            continue
+        for attempt in range(1, CANARY_TRIES + 1):
+            cases = evaluation.eval_cases(
+                [probe],
+                dict(expected),
+                agents[arm].name,
+                arm == "custom-metricflow",
+                dict(described),
+            )
+            mark = spend.METER.begin_case(model, arm=arm, run=0, case=probe.id)
+            outcome = (await evaluation.evaluate(agents[arm], cases, [ANSWER_CORRECT]))[probe.id]
+            spend.METER.end_case(mark)
+            spent += outcome.model_calls
+            if outcome.skipped or outcome.ends_run:
+                return "budget" if spend.METER.stopped else "quota"
+            turns = score_case(probe, expected[probe.id], outcome.inferences, bet.hedges, described)
+            if run_outcome([o for _, o in turns]) is Outcome.RIGHT:
+                break
+            text = " ".join((turns[-1][0] if turns else outcome.error or "").split())[:200]
+            print(f"canary: {arm} missed {probe.id} (try {attempt}): {text}")
+        else:
+            print(
+                f"stopped: canary: {arm} missed {probe.id} {CANARY_TRIES} times; check the "
+                "warehouse, the agent and the model before spending on the rest"
+            )
+            return "canary"
     for run in range(1, runs + 1):
         for question in bet.questions:
             for arm in ARMS:
@@ -1277,6 +1327,9 @@ async def main(argv: Sequence[str]) -> int:
     parser.add_argument("--label", default=None, help="the pass's name in the spend ledger")
     parser.add_argument("--arms", nargs="*", default=list(DEFAULT_ARMS), choices=ARMS)
     parser.add_argument(
+        "--no-canary", action="store_true", help="skip the canary case before a pass (CANARY_TRIES)"
+    )
+    parser.add_argument(
         "--log", type=Path, default=None, help="log the runs here, not to eval-local.jsonl"
     )
     parser.add_argument(
@@ -1377,6 +1430,7 @@ async def main(argv: Sequence[str]) -> int:
             deadline,
             args.requests,
             legacy=LEGACY_REACH,
+            canary=not args.no_canary,
         )
         if claude:
             found = spend.finish_pass(note=f"stopped: {why}")
@@ -1388,7 +1442,7 @@ async def main(argv: Sequence[str]) -> int:
             )
     if args.log is not None:
         print(f"stopped: {why}; runs logged to {log} (the scored reports are left alone)")
-        return 0 if why == "done" else 3
+        return 0 if why == "done" else 2 if why == "canary" else 3
     verdicts = read_verdicts(JUDGE_LOG, judge_model_id(), args.which)
     text = report(bet, apply_verdicts(recode(bet, read_log(local_log)), verdicts), args.runs)
     local_report = files.local_report()
@@ -1397,7 +1451,7 @@ async def main(argv: Sequence[str]) -> int:
     print(f"stopped: {why}; written to {local_report}")
     print(f"every arm: written to {write_every_arm(runs=args.runs)}")
     if args.judge:
-        return 0 if why == "done" else 3
+        return 0 if why == "done" else 2 if why == "canary" else 3
     complete = all(score_log(bet, read_log(local_log), m, args.runs).complete for m in [model])
     return 0 if complete else 3
 

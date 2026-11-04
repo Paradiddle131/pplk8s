@@ -808,3 +808,40 @@ def test_results_hold_every_arm_with_its_intervals(tmp_path, monkeypatch):
     assert abs(row["accuracy"][0] - 2 / 3) < 1e-9 and row["accuracy"][1] <= row["accuracy"][0]
     assert row["groups"]["covered"][1] == 6 and row["pass_all"] == 0
     assert row["outcomes"] == {"right": 12, "wrong": 6}
+
+
+def test_the_canary_is_the_first_single_turn_covered_case():
+    probe = bet_eval.canary_case(BET)
+    assert probe is not None and probe.id == "revenue_one_day"
+    only_uncovered = BetSet([MEDIAN], {"bet_median_order": ["uncovered"]}, HEDGES, "frozen")
+    assert bet_eval.canary_case(only_uncovered) is None
+
+
+class Withheld(Answers):
+    """Every answer is the broken warehouse's: no figure, the audit row unwritten."""
+
+    async def generate_content_async(self, llm_request, stream=False):
+        self.asked.append(llm_request.contents[0].parts[0].text)
+        self.steps = ["The audit record could not be written, so the result was withheld."]
+        self.requests = []
+        async for response in ScriptedLlm.generate_content_async(self, llm_request, stream):
+            yield response
+
+
+def test_a_local_pass_stops_at_the_canary_and_logs_nothing(monkeypatch, tmp_path):
+    monkeypatch.setattr(bet_eval.evaluation, "_wait", lambda seconds: asyncio.sleep(0))
+    log = tmp_path / "eval.jsonl"
+    broken = Withheld(asked=[])
+    why = asyncio.run(
+        bet_eval.run_bet(BET, EXPECTED, agents(broken), {}, "scripted", 2, log, canary=True)
+    )
+    assert why == "canary" and not log.exists()
+    assert len(broken.asked) == bet_eval.CANARY_TRIES  # the first arm's two tries, nothing else
+    healthy = Answers(asked=[])
+    assert (
+        asyncio.run(
+            bet_eval.run_bet(BET, EXPECTED, agents(healthy), {}, "scripted", 1, log, canary=True)
+        )
+        == "done"
+    )
+    assert len(bet_eval.read_log(log)) == 4  # the canaries are never logged

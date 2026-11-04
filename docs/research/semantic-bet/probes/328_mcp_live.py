@@ -25,7 +25,8 @@ On Claude (`MODEL_BACKEND=anthropic`, #361, #365) a pass takes `--dollars` (its 
 spend ledger): it opens the pass with `spend.METER.start`, stops before a case-run that would cross the budget, and
 closes it with `spend.finish_pass`, which appends the row and the anomaly checks; without `BET_ANTHROPIC_API_KEY`
 it is skipped with that reason (exit 3).
-Exit 0: every run of every case asked is logged; 3: the pass stopped short (quota, budget, time).
+Exit 0: every run of every case asked is logged; 3: the pass stopped short (quota, budget, time);
+2: the canary (bet_eval.canary_case, asked first, unlogged) was missed twice, so nothing else was asked.
 """
 
 from __future__ import annotations
@@ -145,6 +146,7 @@ async def main() -> int:
         log,
         deadline,
         args.requests,
+        canary=True,
     )
     print(f"stopped: {why}; logged to {log}", flush=True)
     if claude:
@@ -157,7 +159,7 @@ async def main() -> int:
         )
     # Scored at the rule's k whatever this pass asked, as `make agent-eval ARM=bet` writes it.
     print(f"every arm: written to {write_every_arm()}")
-    return 0 if why == "done" else 3
+    return 0 if why == "done" else 2 if why == "canary" else 3
 
 
 if __name__ == "__main__":

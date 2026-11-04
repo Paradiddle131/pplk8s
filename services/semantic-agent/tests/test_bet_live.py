@@ -165,3 +165,35 @@ def test_a_failed_call_is_left_out_and_a_spent_quota_ends_the_pass(tmp_path):
 def test_each_set_logs_an_arm_to_its_own_file(tmp_path):
     assert bet_live.log_path("native-kc", tmp_path).name == "eval-native-kc.jsonl"
     assert bet_live.log_path("native-kc", tmp_path, "hard").name == "eval-hard-native-kc.jsonl"
+
+
+def run_with_canary(probe: Probe, log) -> str:
+    return asyncio.run(
+        bet_live.run_live(
+            BET,
+            EXPECTED,
+            DESCRIBED,
+            "native-mcp",
+            probe,
+            "m",
+            1,
+            log,
+            say=lambda line: None,
+            canary=True,
+        )
+    )
+
+
+def test_a_canary_missed_twice_stops_the_pass_before_any_run_is_logged(tmp_path):
+    log = tmp_path / "eval-native-mcp.jsonl"
+    broken = "The audit record could not be written, so the result was withheld."
+    probe = Probe([[broken], [broken]])
+    assert run_with_canary(probe, log) == "canary"
+    assert len(probe.asked) == 2 and not log.exists()
+
+
+def test_a_canary_answered_right_lets_the_pass_run(tmp_path):
+    log = tmp_path / "eval-native-mcp.jsonl"
+    probe = Probe([[RIGHT], [RIGHT], [RIGHT, DEFINED]])
+    assert run_with_canary(probe, log) == "done"
+    assert len(bet_eval.read_log(log)) == 2  # the canary is never logged

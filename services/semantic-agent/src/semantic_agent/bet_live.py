@@ -42,7 +42,7 @@ from semantic_agent.bet_eval import (
     read_log,
     score_case,
 )
-from semantic_agent.bet_rule import run_outcome
+from semantic_agent.bet_rule import Outcome, run_outcome
 from semantic_agent.evaluation import Expected, model_responses
 from semantic_agent.model import failure_of
 
@@ -134,6 +134,7 @@ async def run_live(
     deadline: float | None = None,
     requests: int | None = None,
     say: Callable[[str], None] = print,
+    canary: bool = False,
 ) -> str:
     """Ask every (run, case) the arm's log has not finished, run 1 of every case first, so a cut
     pass leaves whole rounds behind it. Returns why it stopped: `done`, `quota` (the model's daily
@@ -141,6 +142,38 @@ async def run_live(
     (its Claude dollars)."""
     log = log or log_path(arm)
     spent = 0
+    from semantic_agent.bet_eval import CANARY_TRIES, canary_case
+
+    probe = canary_case(bet) if canary else None
+    entries = [{"arm": arm, **e} for e in read_log(log)]
+    pending = any(
+        (arm, run, q.id) not in finished(entries, model)
+        for run in range(1, runs + 1)
+        for q in bet.questions
+    )
+    for attempt in range(1, CANARY_TRIES + 1) if probe and pending else []:
+        assert probe is not None
+        mark = spend.METER.begin_case(model, arm=arm, run=0, case=probe.id)
+        turns = await ask([t.question for t in probe.turns])
+        spend.METER.end_case(mark)
+        spent += sum(t.get("model_calls", 0) for t in turns)
+        failed = next((t["failure"] for t in turns if t.get("failure")), None)
+        if failed and failed["kind"] in (*FATAL, "budget"):
+            return "budget" if failed["kind"] == "budget" else "quota"
+        scored = score_case(
+            probe, expected[probe.id], [_invocation(t) for t in turns], bet.hedges, described
+        )
+        if not failed and run_outcome([o for _, o in scored]) is Outcome.RIGHT:
+            break
+        text = " ".join((scored[-1][0] if scored else str(failed)).split())[:200]
+        say(f"canary: {arm} missed {probe.id} (try {attempt}): {text}")
+    else:
+        if probe and pending:
+            say(
+                f"stopped: canary: {arm} missed {probe.id} {CANARY_TRIES} times; check the "
+                "warehouse, the agent and the model before spending on the rest"
+            )
+            return "canary"
     for run in range(1, runs + 1):
         for question in bet.questions:
             entries = [{"arm": arm, **e} for e in read_log(log)]

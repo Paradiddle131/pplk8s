@@ -32,11 +32,13 @@ CALLS_LOG = FINDINGS / "2026-11-03-361-claude-calls.jsonl"
 LEDGER = FINDINGS / "2026-11-03-361-claude-spend.md"
 PROBE_LOG = FINDINGS / "2026-11-03-361-cost-probe.jsonl"
 CREDITS = 100.0
-# The owner's alarm line: the running total past this is an anomaly. The stop is $90.00 of real
-# spend (docs/agents/autopilot-semantic-bet.md § The completion plan, owner 2026-11-04), and this
-# log misses the $3.0704 the night's lost container billed (the Console's $85.37 left, 2026-11-04).
+# The owner's alarm line: the running total past this is an anomaly. The stop is $88.00 of real
+# spend (docs/agents/autopilot-semantic-bet.md § The completion plan; owner 2026-11-04 at 81% of the
+# month's limit: "plan accordingly no need to hit the literal 100"), and this log misses the $3.0704
+# the night's lost container billed (the Console's $85.37 left, 2026-11-04).
 UNLOGGED = 3.0704
-ALARM = 90.0 - UNLOGGED
+STOP = 88.0
+ALARM = STOP - UNLOGGED
 # A call (or case-run) whose tokens are over this many times the probe's per-case median.
 TOKEN_FACTOR = 3.0
 # Before a pass has priced a call on a model, the next call is estimated at this many uncached
