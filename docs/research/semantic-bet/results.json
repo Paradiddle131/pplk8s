@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T19:07Z",
+ "written": "2026-11-04T19:08Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -634,7 +634,7 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 227,
+   "runs": 234,
    "accuracy": [
     0.805555555556,
     0.727430555556,
@@ -673,12 +673,12 @@
    },
    "pass_all": 0.7708333333333334,
    "outcomes": {
-    "confident-wrong": 37,
-    "right": 181,
+    "confident-wrong": 38,
+    "right": 187,
     "declined": 5,
     "wrong": 4
    },
-   "model_calls": 239
+   "model_calls": 246
   },
   {
    "set": "frozen",
@@ -1324,7 +1324,7 @@
    "rung": 4,
    "cases": 43,
    "of_cases": 43,
-   "runs": 121,
+   "runs": 129,
    "accuracy": [
     0.813953488372,
     0.697674418605,
@@ -1355,12 +1355,12 @@
    },
    "pass_all": 0.7906976744186046,
    "outcomes": {
-    "right": 100,
-    "wrong": 17,
-    "confident-wrong": 3,
+    "right": 105,
+    "wrong": 19,
+    "confident-wrong": 4,
     "declined": 1
    },
-   "model_calls": 447
+   "model_calls": 480
   },
   {
    "set": "hard",
@@ -1549,13 +1549,13 @@
    "arm": "native-mcp",
    "model": "claude-sonnet-5-5",
    "rung": 3,
-   "cases": 19,
+   "cases": 23,
    "of_cases": 43,
-   "runs": 19,
+   "runs": 23,
    "accuracy": [
-    0.842105263158,
-    0.684210526316,
-    1.0
+    0.826086956522,
+    0.652173913043,
+    0.95652173913
    ],
    "confident_wrong": [
     0.0,
@@ -1564,24 +1564,24 @@
    ],
    "groups": {
     "conversation": [
-     0.0,
-     3
+     0.42857142857142855,
+     7
     ],
     "covered": [
-     0.8421052631578947,
-     19
+     0.8260869565217391,
+     23
     ],
     "trap": [
      1.0,
-     5
+     6
     ]
    },
-   "pass_all": 0.8421052631578947,
+   "pass_all": 0.8260869565217391,
    "outcomes": {
-    "right": 16,
-    "wrong": 3
+    "right": 19,
+    "wrong": 4
    },
-   "model_calls": 82
+   "model_calls": 108
   },
   {
    "set": "hard",
@@ -1989,7 +1989,7 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 111,
+   "runs": 116,
    "accuracy": [
     0.934108527132,
     0.856589147287,
@@ -2020,11 +2020,11 @@
    },
    "pass_all": 0.9069767441860465,
    "outcomes": {
-    "right": 103,
+    "right": 108,
     "wrong": 7,
     "confident-wrong": 1
    },
-   "model_calls": 123
+   "model_calls": 128
   }
  ],
  "step_two": [
@@ -2231,7 +2231,7 @@
    "arm": "custom-hybrid",
    "model": "claude-haiku-5-5",
    "cases": 43,
-   "runs": 121,
+   "runs": 129,
    "accuracy": [
     -0.12015503876,
     -0.220930232558,
@@ -2320,11 +2320,11 @@
    "set": "hard",
    "arm": "native-mcp",
    "model": "claude-sonnet-5-5",
-   "cases": 19,
-   "runs": 19,
+   "cases": 23,
+   "runs": 23,
    "accuracy": [
-    -0.087719298246,
-    -0.210526315789,
+    -0.072463768116,
+    -0.188405797101,
     0.0
    ],
    "confident_wrong": [
@@ -2481,11 +2481,11 @@
   },
   "#373 hard haiku custom-hybrid": {
    "model": "claude-haiku-5-5",
-   "usd": 0.172153
+   "usd": 0.182159
   },
   "#364 hard sonnet native-mcp": {
    "model": "claude-sonnet-5-5",
-   "usd": 2.120943
+   "usd": 2.578456
   },
   "#365 frozen opus custom-metricflow (rerun, rest)": {
    "model": "claude-opus-5-5",
