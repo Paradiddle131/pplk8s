@@ -67,6 +67,7 @@ AGENTS = {
     "native-shaped": "bet-shaped",
     "native-graph": "bet-graph",
     "native-kc-max": "bet-kc-max",  # 360_kc_max.py --publish
+    "native-bare": "bet-bare",  # 372_bare_agent.py --publish: the tables only
     # #357's equal-reach arms, published by `--copy`.
     "native-kc-reach": "bet-kc-reach",
     "native-context-bare": "bet-context-bare",

@@ -44,7 +44,9 @@ Named and frozen by #325 before any is scored; each is built by its own issue.
 | `custom-metricflow` | the semantic agent's MetricFlow tools | done |
 | `custom-toolbox` | generated MCP Toolbox tools over the table functions | #330 |
 | `baseline` | text-to-SQL that reads the generated docs (#186) | #333 |
-| `native-kc-max` | the data agent grounded by Knowledge Catalog's import, plus BigQuery descriptions and a glossary linked to its columns | #360 (prepared; waits on the owner's paste) |
+| `native-kc-max` | the data agent grounded by Knowledge Catalog's import, plus BigQuery descriptions and a glossary linked to its columns | #360 (published 2026-11-04; scoring) |
+| `native-bare` | the floor: the data agent over the same tables with nothing else (no catalog links, descriptions, glossary or verified queries) | #372 |
+| `custom-hybrid` | the semantic agent's MetricFlow tools plus a read-only SQL fallback for what no metric covers | #373 |
 | `custom-lightdash` | an ADK agent with one tool over Lightdash's free metric query API | #363 |
 
 ## Where things go

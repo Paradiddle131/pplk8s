@@ -117,6 +117,8 @@ RUNG = {
     "native-kc": 1,
     # Knowledge Catalog's import plus a glossary and descriptions: configuration only (#360).
     "native-kc-max": 1,
+    # The floor: the tables only, no catalog links, descriptions or authored context (#372).
+    "native-bare": 1,
     # #357's equal-reach arms: Knowledge Catalog's on native-context's tables, the context
     # without its verified queries; both configuration only.
     "native-kc-reach": 1,
