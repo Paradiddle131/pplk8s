@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T19:47Z",
+ "written": "2026-11-04T19:50Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -748,6 +748,42 @@
     "confident-wrong": 1
    },
    "model_calls": 102
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (opus)",
+   "harness": "claude-code-subagent",
+   "rung": 4,
+   "cases": 12,
+   "of_cases": 96,
+   "runs": 12,
+   "accuracy": [
+    0.916666666667,
+    0.75,
+    1.0
+   ],
+   "confident_wrong": [
+    0.083333333333,
+    0.0,
+    0.25
+   ],
+   "groups": {
+    "covered": [
+     0.9166666666666666,
+     12
+    ],
+    "trap": [
+     1.0,
+     1
+    ]
+   },
+   "pass_all": 0.9166666666666666,
+   "outcomes": {
+    "right": 11,
+    "confident-wrong": 1
+   },
+   "model_calls": 12
   },
   {
    "set": "frozen",
@@ -1877,16 +1913,16 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 109,
+   "runs": 125,
    "accuracy": [
     0.65503875969,
     0.519379844961,
     0.786821705426
    ],
    "confident_wrong": [
-    0.267441860465,
-    0.15503875969,
-    0.387596899225
+    0.27519379845,
+    0.158914728682,
+    0.395348837209
    ],
    "groups": {
     "conversation": [
@@ -1908,11 +1944,11 @@
    },
    "pass_all": 0.6046511627906976,
    "outcomes": {
-    "confident-wrong": 29,
-    "right": 71,
+    "confident-wrong": 35,
+    "right": 81,
     "wrong": 9
    },
-   "model_calls": 120
+   "model_calls": 137
   },
   {
    "set": "hard",
@@ -2536,6 +2572,24 @@
     -0.038194444444,
     -0.083333333333,
     0.003472222222
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (opus)",
+   "cases": 12,
+   "runs": 12,
+   "accuracy": [
+    0.0,
+    -0.25,
+    0.25
+   ],
+   "confident_wrong": [
+    0.0,
+    -0.25,
+    0.25
    ],
    "worth": false
   },
