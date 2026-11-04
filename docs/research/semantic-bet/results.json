@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T20:04Z",
+ "written": "2026-11-04T20:35Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1376,12 +1376,12 @@
    "harness": "google-data-agent",
    "session": "fresh per run",
    "rung": 1,
-   "cases": 1,
+   "cases": 52,
    "of_cases": 96,
-   "runs": 1,
+   "runs": 52,
    "accuracy": [
-    1.0,
-    1.0,
+    0.961538461538,
+    0.903846153846,
     1.0
    ],
    "confident_wrong": [
@@ -1390,20 +1390,34 @@
     0.0
    ],
    "groups": {
+    "conversation": [
+     0.75,
+     4
+    ],
     "covered": [
+     0.98,
+     50
+    ],
+    "distractor": [
      1.0,
      1
     ],
     "trap": [
      1.0,
-     1
+     7
+    ],
+    "uncovered": [
+     0.5,
+     2
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.9615384615384616,
    "outcomes": {
-    "right": 1
+    "right": 50,
+    "declined": 1,
+    "wrong": 1
    },
-   "model_calls": 1
+   "model_calls": 56
   },
   {
    "set": "frozen",
@@ -2057,6 +2071,53 @@
   },
   {
    "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-sonnet)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 43,
+   "accuracy": [
+    0.488372093023,
+    0.348837209302,
+    0.627906976744
+   ],
+   "confident_wrong": [
+    0.116279069767,
+    0.023255813953,
+    0.209302325581
+   ],
+   "groups": {
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.05263157894736842,
+     19
+    ]
+   },
+   "pass_all": 0.4883720930232558,
+   "outcomes": {
+    "right": 21,
+    "declined": 5,
+    "wrong": 12,
+    "confident-wrong": 5
+   },
+   "model_calls": 47
+  },
+  {
+   "set": "hard",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "harness": "google-data-agent",
@@ -2516,6 +2577,51 @@
     "confident-wrong": 1
    },
    "model_calls": 140
+  },
+  {
+   "set": "hard",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 44,
+   "accuracy": [
+    0.953488372093,
+    0.883720930233,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "conversation": [
+     0.75,
+     8
+    ],
+    "covered": [
+     0.9166666666666666,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     19
+    ]
+   },
+   "pass_all": 0.9534883720930233,
+   "outcomes": {
+    "right": 42,
+    "wrong": 2
+   },
+   "model_calls": 48
   }
  ],
  "step_two": [
@@ -2760,14 +2866,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.201550387597,
-    -0.317829457364,
-    -0.100775193798
+    -0.217054263566,
+    -0.333333333333,
+    -0.108527131783
    ],
    "confident_wrong": [
-    0.085271317829,
+    0.093023255814,
     0.023255813953,
-    0.162790697674
+    0.178294573643
    ],
    "worth": false
   },
@@ -2778,14 +2884,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.124031007752,
-    -0.22480620155,
-    -0.038759689922
+    -0.139534883721,
+    -0.248062015504,
+    -0.046511627907
    ],
    "confident_wrong": [
-    0.023255813953,
+    0.031007751938,
     0.0,
-    0.062015503876
+    0.085271317829
    ],
    "worth": false
   },
@@ -2796,14 +2902,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.488372093023,
-    -0.635658914729,
-    -0.341085271318
+    -0.503875968992,
+    -0.651162790698,
+    -0.356589147287
    ],
    "confident_wrong": [
-    0.062015503876,
-    0.0,
-    0.139534883721
+    0.06976744186,
+    0.007751937984,
+    0.147286821705
    ],
    "worth": false
   },
@@ -2814,14 +2920,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.124031007752,
-    -0.217054263566,
-    -0.046511627907
+    -0.139534883721,
+    -0.232558139535,
+    -0.062015503876
    ],
    "confident_wrong": [
-    0.062015503876,
+    0.06976744186,
     0.015503875969,
-    0.124031007752
+    0.139534883721
    ],
    "worth": false
   },
@@ -2832,13 +2938,13 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.364341085271,
-    -0.511627906977,
-    -0.232558139535
+    -0.37984496124,
+    -0.527131782946,
+    -0.240310077519
    ],
    "confident_wrong": [
-    0.046511627907,
-    -0.007751937984,
+    0.054263565891,
+    0.0,
     0.124031007752
    ],
    "worth": false
@@ -2850,14 +2956,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.457364341085,
-    -0.604651162791,
-    -0.31007751938
+    -0.472868217054,
+    -0.627906976744,
+    -0.325581395349
    ],
    "confident_wrong": [
-    0.085271317829,
-    0.007751937984,
-    0.178294573643
+    0.093023255814,
+    0.023255813953,
+    0.186046511628
    ],
    "worth": false
   },
@@ -2868,13 +2974,13 @@
    "cases": 43,
    "runs": 87,
    "accuracy": [
-    -0.042635658915,
-    -0.108527131783,
-    0.007751937984
+    -0.058139534884,
+    -0.127906976744,
+    0.0
    ],
    "confident_wrong": [
-    -0.007751937984,
-    -0.023255813953,
+    0.0,
+    0.0,
     0.0
    ],
    "worth": false
@@ -2886,14 +2992,14 @@
    "cases": 43,
    "runs": 129,
    "accuracy": [
-    -0.201550387597,
-    -0.317829457364,
-    -0.100775193798
+    -0.217054263566,
+    -0.325581395349,
+    -0.116279069767
    ],
    "confident_wrong": [
-    0.062015503876,
-    0.015503875969,
-    0.116279069767
+    0.06976744186,
+    0.023255813953,
+    0.124031007752
    ],
    "worth": false
   },
@@ -2904,12 +3010,12 @@
    "cases": 43,
    "runs": 43,
    "accuracy": [
-    -0.496124031008,
-    -0.643410852713,
-    -0.348837209302
+    -0.511627906977,
+    -0.651162790698,
+    -0.372093023256
    ],
    "confident_wrong": [
-    0.178294573643,
+    0.186046511628,
     0.06976744186,
     0.302325581395
    ],
@@ -2922,13 +3028,13 @@
    "cases": 43,
    "runs": 43,
    "accuracy": [
-    -0.426356589147,
-    -0.573643410853,
-    -0.286821705426
+    -0.441860465116,
+    -0.581395348837,
+    -0.302325581395
    ],
    "confident_wrong": [
-    0.294573643411,
-    0.15503875969,
+    0.302325581395,
+    0.162790697674,
     0.441860465116
    ],
    "worth": false
@@ -2940,14 +3046,14 @@
    "cases": 43,
    "runs": 43,
    "accuracy": [
-    -0.403100775194,
-    -0.550387596899,
-    -0.255813953488
+    -0.418604651163,
+    -0.558139534884,
+    -0.279069767442
    ],
    "confident_wrong": [
-    0.248062015504,
-    0.131782945736,
-    0.37984496124
+    0.255813953488,
+    0.139534883721,
+    0.395348837209
    ],
    "worth": false
   },
@@ -2958,14 +3064,32 @@
    "cases": 43,
    "runs": 43,
    "accuracy": [
-    -0.356589147287,
-    -0.503875968992,
-    -0.217054263566
+    -0.372093023256,
+    -0.511627906977,
+    -0.232558139535
    ],
    "confident_wrong": [
-    0.038759689922,
+    0.046511627907,
     0.0,
-    0.100775193798
+    0.116279069767
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-sonnet)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.46511627907,
+    -0.604651162791,
+    -0.325581395349
+   ],
+   "confident_wrong": [
+    0.116279069767,
+    0.023255813953,
+    0.209302325581
    ],
    "worth": false
   }
@@ -2983,7 +3107,7 @@
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
-   "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)",
+   "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
    "native-kc-reach on google-data-agent (MODEL_UNSPECIFIED)",
    "native-mcp on claude-sonnet-5-5"
   ]
@@ -2996,8 +3120,8 @@
   ],
   "hard": [
    "native-context-bare",
-   "google-data-agent (LATEST_GA_MODEL)",
-   0.937984496124031
+   "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   0.9534883720930233
   ]
  },
  "claude_spend_by_pass": {
