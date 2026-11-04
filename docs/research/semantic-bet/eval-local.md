@@ -102,7 +102,7 @@ Turns judged: 8 (8 the code left unclear, 0 confident-wrong with a hedge outside
 
 ## `claude-opus-5-5`
 
-Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: custom-metricflow 189 of 288; model responses spent: custom-metricflow 614.
+Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: custom-metricflow 191 of 288; model responses spent: custom-metricflow 620.
 
 | | `custom-metricflow` |
 |---|---|

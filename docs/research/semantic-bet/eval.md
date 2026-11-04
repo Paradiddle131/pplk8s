@@ -125,7 +125,7 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 ### `claude-opus-5-5`
 
-Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: custom-metricflow 190 of 288; model responses spent: custom-metricflow 617.
+Scored on partial: 1 run(s) of 96 of 96 cases; runs finished: custom-metricflow 191 of 288; model responses spent: custom-metricflow 620.
 
 | | `custom-metricflow` |
 |---|---|
@@ -151,7 +151,7 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 1 run(s) of 95 of 96 cases; runs finished: native-bare 157 of 288, native-context-bare 288 of 288, native-context 288 of 288, native-governed 288 of 288, native-graph 288 of 288, native-kc-max 288 of 288, native-kc-reach 288 of 288, native-kc 288 of 288, native-shaped 288 of 288; model responses spent: native-bare 169, native-context-bare 306, native-context 306, native-governed 306, native-graph 306, native-kc-max 306, native-kc-reach 306, native-kc 306, native-shaped 306.
+Scored on partial: 1 run(s) of 95 of 96 cases; runs finished: native-bare 159 of 288, native-context-bare 288 of 288, native-context 288 of 288, native-governed 288 of 288, native-graph 288 of 288, native-kc-max 288 of 288, native-kc-reach 288 of 288, native-kc 288 of 288, native-shaped 288 of 288; model responses spent: native-bare 171, native-context-bare 306, native-context 306, native-governed 306, native-graph 306, native-kc-max 306, native-kc-reach 306, native-kc 306, native-shaped 306.
 
 | | `native-bare` | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
 |---|---|---|---|---|---|---|---|---|---|
@@ -228,7 +228,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 - `custom-metricflow` (rung 4) on `claude-sonnet-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.170 [-0.271, -0.069], confident-wrong -0.035 [-0.080, +0.007]: not worth building (the check; 288 runs finished).
 - `custom-toolbox` (rung 3) on `claude-sonnet-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.500 [-0.604, -0.392], confident-wrong -0.017 [-0.069, +0.035]: not worth building (the check; 288 runs finished).
 - `native-mcp` (rung 3) on `claude-sonnet-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy +0.038 [-0.010, +0.094], confident-wrong -0.042 [-0.087, -0.003]: worth building (the check; 288 runs finished).
-- `custom-metricflow` (rung 4) on `claude-opus-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.172 [-0.278, -0.071], confident-wrong -0.023 [-0.073, +0.024]: not worth building (the check; 190 runs finished).
+- `custom-metricflow` (rung 4) on `claude-opus-5-5` against `native-kc-max` on `google-data-agent (MODEL_UNSPECIFIED)`, 96 of 96 cases: accuracy -0.172 [-0.278, -0.071], confident-wrong -0.023 [-0.073, +0.024]: not worth building (the check; 191 runs finished).
 - The check on `custom-metricflow`: the same verdict on every model, so the gap is not the model's.
 - The check on `custom-toolbox`: the same verdict on every model, so the gap is not the model's.
 - The check on `native-mcp`: the verdict moves with the model, so the gap is at least partly the model's.
@@ -243,7 +243,7 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ### `claude-haiku-5-5`
 
-Scored on partial: 2 run(s) of 43 of 43 cases; runs finished: baseline 129 of 129, custom-metricflow 129 of 129, custom-toolbox 129 of 129, native-mcp 115 of 129; model responses spent: baseline 510, custom-metricflow 437, custom-toolbox 259, native-mcp 587.
+Scored on partial: 2 run(s) of 43 of 43 cases; runs finished: baseline 129 of 129, custom-metricflow 129 of 129, custom-toolbox 129 of 129, native-mcp 116 of 129; model responses spent: baseline 510, custom-metricflow 437, custom-toolbox 259, native-mcp 591.
 
 | | `baseline` | `custom-metricflow` | `custom-toolbox` | `native-mcp` |
 |---|---|---|---|---|
@@ -326,7 +326,7 @@ Turns judged: 1 (1 the code left unclear, 0 confident-wrong with a hedge outside
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 1 run(s) of 43 of 43 cases; runs finished: native-context-bare 129 of 129, native-context 129 of 129, native-governed 129 of 129, native-graph 129 of 129, native-kc-max 109 of 129, native-kc-reach 129 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-context-bare 141, native-context 142, native-governed 141, native-graph 141, native-kc-max 119, native-kc-reach 141, native-kc 141, native-shaped 141.
+Scored on partial: 1 run(s) of 43 of 43 cases; runs finished: native-context-bare 129 of 129, native-context 129 of 129, native-governed 129 of 129, native-graph 129 of 129, native-kc-max 111 of 129, native-kc-reach 129 of 129, native-kc 129 of 129, native-shaped 129 of 129; model responses spent: native-context-bare 141, native-context 142, native-governed 141, native-graph 141, native-kc-max 121, native-kc-reach 141, native-kc 141, native-shaped 141.
 
 | | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
 |---|---|---|---|---|---|---|---|---|
@@ -343,7 +343,7 @@ Confident-wrong turns the judge moved: 1 of 5 (1 to wrong, hedged; 0 to unclear)
 
 ### `google-data-agent (LATEST_GA_MODEL)`
 
-Scored on partial: 1 run(s) of 42 of 43 cases; runs finished: native-context-bare 57 of 129; model responses spent: native-context-bare 61.
+Scored on partial: 1 run(s) of 42 of 43 cases; runs finished: native-context-bare 58 of 129; model responses spent: native-context-bare 62.
 
 | | `native-context-bare` |
 |---|---|
@@ -366,7 +366,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 - `custom-metricflow` (rung 4) on `claude-haiku-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.194 [-0.318, -0.078], confident-wrong +0.093 [+0.023, +0.178]: not worth building (the check; 129 runs finished).
 - `custom-toolbox` (rung 3) on `claude-haiku-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.481 [-0.628, -0.341], confident-wrong +0.070 [+0.008, +0.147]: not worth building (the check; 129 runs finished).
-- `native-mcp` (rung 3) on `claude-haiku-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.132 [-0.233, -0.047], confident-wrong +0.085 [+0.023, +0.163]: not worth building (the check; 115 runs finished).
+- `native-mcp` (rung 3) on `claude-haiku-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.132 [-0.233, -0.047], confident-wrong +0.085 [+0.023, +0.163]: not worth building (the check; 116 runs finished).
 - `custom-metricflow` (rung 4) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.357 [-0.504, -0.217], confident-wrong +0.054 [+0.000, +0.124]: not worth building (the check; 129 runs finished).
 - `custom-toolbox` (rung 3) on `claude-sonnet-5-5` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.450 [-0.605, -0.302], confident-wrong +0.093 [+0.023, +0.186]: not worth building (the check; 129 runs finished).
 - `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, 43 of 43 cases: accuracy -0.194 [-0.310, -0.085], confident-wrong +0.070 [+0.023, +0.124]: not worth building (decides; 129 runs finished).
@@ -388,5 +388,5 @@ RULE.md § Changes since freezing (#356): each set goes through the rule on its 
 - `custom-toolbox` on `claude-sonnet-5-5` (the check): the frozen set: not worth; the hard set: not worth; on both sets: not worth building.
 - `native-mcp` on `claude-sonnet-5-5` (the check): the frozen set: worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
 - `custom-metricflow` on `claude-opus-5-5` (the check): the frozen set: not worth; the hard set: not paired yet; on both sets: undecided until it is paired on both sets.
-- Step 3 (RULE.md § The rule, 3; it applies when no arm of ours is worth building): the arms with no accuracy difference from the managed best on both sets: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-context` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)` (rung 1).
-  The cheapest rung among them is 1: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-context-bare` on `google-data-agent (LATEST_GA_MODEL)`; within a rung the arm with fewer moving parts named in its finding wins (§ The cost ladder), which the report names.
+- Step 3 (RULE.md § The rule, 3; it applies when no arm of ours is worth building): the arms with no accuracy difference from the managed best on both sets: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1), `native-context` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1).
+  The cheapest rung among them is 1: `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED)`, `native-context` on `google-data-agent (MODEL_UNSPECIFIED)`; within a rung the arm with fewer moving parts named in its finding wins (§ The cost ladder), which the report names.
