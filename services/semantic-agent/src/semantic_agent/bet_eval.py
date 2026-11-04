@@ -747,9 +747,10 @@ def ties_with_best(
             if arm not in RUNG:
                 continue
             right, _, _ = case_shares(entries, arm, model, runs)
-            cases = sorted(set(right) & set(best_right))
-            if not cases:
+            # A tie needs every case: a pass under way reads "no difference" on a handful.
+            if not {q.id for q in bet.questions} <= set(right):
                 continue
+            cases = sorted(set(right) & set(best_right))
             acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
             if (arm, model) == (best, best_model) or not acc.differs:
                 tied[(arm, model)] = acc
@@ -1143,7 +1144,106 @@ def every_arm_report(directory: Path = RESEARCH, runs: int = RUNS) -> str:
 def write_every_arm(directory: Path = RESEARCH, runs: int = RUNS) -> Path:
     path = directory / ALL_REPORT.name
     path.write_text(every_arm_report(directory, runs))
+    (directory / RESULTS.name).write_text(
+        json.dumps(results(directory, runs), indent=1, ensure_ascii=False) + "\n"
+    )
     return path
+
+
+RESULTS = RESEARCH / "results.json"
+CALLS = RESEARCH / "findings" / "2026-11-03-361-claude-calls.jsonl"
+
+
+def arm_result(
+    bet: BetSet, entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int
+) -> dict[str, Any]:
+    """One arm on one model on one set, over every case it finished: the two numbers with their
+    bootstrap intervals, each group's accuracy, pass^k, the outcomes and the model responses."""
+    right, wrong, ran = case_shares(entries, arm, model, runs)
+    zero = dict.fromkeys(right, 0.0)
+    acc, cw = paired_interval(zero, right), paired_interval(zero, wrong)
+    done = finished(entries, model)
+    outcomes: dict[str, int] = {}
+    per_case: dict[str, list[str]] = {}
+    for (a, run, case), outcome in done.items():
+        if a == arm and run <= runs:
+            outcomes[outcome] = outcomes.get(outcome, 0) + 1
+            per_case.setdefault(case, []).append(outcome)
+    groups: dict[str, list[float]] = {}
+    for case, share in right.items():
+        for group in bet.groups.get(case, []):
+            groups.setdefault(group, []).append(share)
+    calls = sum(
+        int(e.get("model_calls") or 0) for e in entries if e["arm"] == arm and e["model"] == model
+    )
+    return {
+        "set": bet.name,
+        "arm": arm,
+        "model": model,
+        "rung": RUNG.get(arm),
+        "cases": len(right),
+        "of_cases": len(bet.questions),
+        "runs": ran,
+        "accuracy": [acc.mean, acc.low, acc.high],
+        "confident_wrong": [cw.mean, cw.low, cw.high],
+        "groups": {g: [sum(v) / len(v), len(v)] for g, v in sorted(groups.items())},
+        "pass_all": sum(all(o == "right" for o in r) for r in per_case.values()) / len(per_case)
+        if per_case
+        else None,
+        "outcomes": outcomes,
+        "model_calls": calls,
+    }
+
+
+def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
+    """results.json: every number eval.md shows, as data, for the report and its charts (#336):
+    each arm on each model on each set, step 2's pairs against each set's managed best, step 3's
+    ties, and the Claude spend by pass from the calls log."""
+    out: dict[str, Any] = {
+        "written": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ"),
+        "rule": "RULE.md",
+        "arms": [],
+        "step_two": [],
+        "step_three": {},
+        "managed_best": {},
+    }
+    for name in SETS:
+        bet = load_set(name)
+        entries = judged_logs(bet, directory)
+        for model in dict.fromkeys(e["model"] for e in entries):
+            for arm in arms_of(entries, model):
+                if case_shares(entries, arm, model, runs)[2]:
+                    out["arms"].append(arm_result(bet, entries, arm, model, runs))
+        managed, _, paired = step_two(bet, entries, runs)
+        out["managed_best"][name] = list(managed) if managed else None
+        for p in paired:
+            out["step_two"].append(
+                {
+                    "set": name,
+                    "arm": p.arm,
+                    "model": p.model,
+                    "cases": p.cases,
+                    "runs": p.ran,
+                    "accuracy": [p.accuracy.mean, p.accuracy.low, p.accuracy.high],
+                    "confident_wrong": [
+                        p.confident_wrong.mean,
+                        p.confident_wrong.low,
+                        p.confident_wrong.high,
+                    ],
+                    "worth": p.worth,
+                }
+            )
+        ties = ties_with_best(bet, entries, runs)
+        out["step_three"][name] = sorted(f"{a} on {m}" for a, m in ties) if ties else None
+    spend: dict[str, dict[str, Any]] = {}
+    calls_log = directory / CALLS.relative_to(RESEARCH)
+    if calls_log.exists():
+        for line in calls_log.read_text().splitlines():
+            row = json.loads(line)
+            entry = spend.setdefault(row.get("pass") or "?", {"model": row.get("model"), "usd": 0})
+            entry["usd"] = round(entry["usd"] + float(row.get("dollars") or 0), 6)
+    out["claude_spend_by_pass"] = spend
+    return out
 
 
 def warehouse_unreachable() -> str | None:

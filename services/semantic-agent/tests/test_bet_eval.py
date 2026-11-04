@@ -765,14 +765,16 @@ def test_step_three_names_the_cheapest_rung_that_ties_the_best_on_both_sets():
     # Rung 1, right on the frozen set only: it ties there, not on the hard set.
     half = _on(google, "native-kc", {c: ["right"] * 3 for c in cases})
     missed = _on(google, "native-kc", {c: ["wrong"] * 3 for c in cases})
+    # Rung 1, right on two cases only (a pass under way): never a tie, however wide its interval.
+    started = _on(google, "native-kc-reach", {c: ["right"] * 3 for c in cases[:2]})
     sets = {
-        "frozen": (a_set("frozen"), best + cheap + ours + half),
+        "frozen": (a_set("frozen"), best + cheap + ours + half + started),
         "hard": (a_set("hard"), best + cheap + ours + missed),
     }
     text = "\n".join(bet_eval.step_three(sets, runs=3))
     assert "`native-context` on `google-data-agent (MODEL_UNSPECIFIED)` (rung 1)" in text
     assert "`custom-metricflow` on `free:free` (rung 4)" in text
-    assert "`native-kc`" not in text
+    assert "`native-kc`" not in text and "`native-kc-reach`" not in text
     assert "The cheapest rung among them is 1: `native-context` on" in text
     assert "Step 3 cannot apply yet: no managed best on the hard set" in "\n".join(
         bet_eval.step_three({"frozen": sets["frozen"], "hard": (a_set("hard"), ours)}, runs=3)
@@ -794,3 +796,15 @@ def test_a_pass_does_not_start_when_the_audit_database_is_unreachable(monkeypatc
     monkeypatch.setenv("AUDIT_URL", "postgresql://agent_audit:agent_audit@127.0.0.1:1/none")
     problem = bet_eval.warehouse_unreachable()
     assert problem is not None and problem.startswith("the audit database is unreachable")
+
+
+def test_results_hold_every_arm_with_its_intervals(tmp_path, monkeypatch):
+    cases = [f"c{i}" for i in range(6)]
+    qs = [Question.single(c, f"Question {c}?", "", []) for c in cases]
+    bet = BetSet(qs, {c: ["covered"] for c in cases}, HEDGES, "frozen")
+    entries = _on("g", "native-context", {c: ["right", "right", "wrong"] for c in cases})
+    row = bet_eval.arm_result(bet, entries, "native-context", "g", runs=3)
+    assert row["runs"] == 18 and row["cases"] == 6 and row["rung"] == 1
+    assert abs(row["accuracy"][0] - 2 / 3) < 1e-9 and row["accuracy"][1] <= row["accuracy"][0]
+    assert row["groups"]["covered"][1] == 6 and row["pass_all"] == 0
+    assert row["outcomes"] == {"right": 12, "wrong": 6}
