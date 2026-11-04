@@ -9,7 +9,7 @@
   --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
   --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
   --s2: #E2E9EC; --s3: #CBD9E1; --s4: #AEC4D3; --s5: #8FAEC4;
-  --o-right: #24384A; --o-decl: #7D8A94; --o-wrong: #D28A97; --o-cw: #C0213F; --o-none: #9AA5AD;
+  --o-right: #24384A; --o-decl: #7D8A94; --o-wrong: #C46A7D; --o-cw: #C0213F; --o-none: #7E8890;
   --band: rgba(22, 32, 42, .07); --sel: #CBD9E1; --tip: #FFFFFF; --tip-shadow: 0 6px 18px rgba(22,32,42,.16);
   --serif: "STIX Two Text", "STIX Two", Cambria, "Times New Roman", serif;
   --label: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
@@ -22,7 +22,7 @@
     --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
     --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
     --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
-    --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #56626C;
+    --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #6A7680;
     --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
     color-scheme: dark;
   }
@@ -32,7 +32,7 @@
   --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
   --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
   --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
-  --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #56626C;
+  --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #6A7680;
   --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
   color-scheme: dark;
 }
@@ -99,7 +99,50 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .plot text[data-setup]:focus { text-decoration: underline; }
 .plot .frame { fill: none; stroke: var(--rule); }
 .mk { transition: opacity .12s ease-out; }
-figure.focusing .mk:not(.on) { opacity: .14; }
+.focusable.focusing .mk:not(.on) { opacity: .14; }
+.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; cursor: help; }
+.mhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.themebtn { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--ink-2); border-radius: 18px; background: transparent; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+.themebtn svg { display: block; padding: 4px; width: 26px; height: 26px; border-radius: 50%; }
+.themebtn[aria-pressed="false"] .sun, .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper); }
+.lead { margin: 0 0 12px; }
+.abwrap { overflow-x: auto; margin: 4px 0 0; }
+table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
+table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; }
+table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
+table.ab tr.grp td { padding-top: 10px; }
+table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
+table.ab tr.diff th, table.ab tr.diff td { border-top: 1px solid var(--ink-2); padding-top: 7px; }
+table.ab thead th .sub { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+.abnote { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 6px 0 0; }
+table.ab th, table.ab td { padding: 5px 10px 5px 0; text-align: left; border-bottom: 1px solid var(--grid-major); vertical-align: baseline; }
+table.ab thead th { font-weight: 600; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink-2); vertical-align: bottom; }
+table.ab thead tr.grp th { border-bottom: 1px solid var(--rule); font-weight: 600; }
+table.ab td.num, table.ab th.num { text-align: right; white-space: nowrap; }
+table.ab td .sub { display: block; color: var(--ink-3); font-size: 12.5px; }
+.n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.ivs { font-size: .82em; color: var(--ink-3); font-weight: 400; margin-left: 3px; white-space: nowrap; }
+.twin { overflow-x: auto; margin: -2px 0 10px; }
+table.tw { border-collapse: collapse; font-family: var(--label); font-size: 14px; font-variant-numeric: tabular-nums; }
+table.tw th, table.tw td { padding: 3px 18px 3px 0; text-align: left; border-bottom: 1px solid var(--grid-major); white-space: nowrap; }
+table.tw thead th { font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--ink-2); }
+table.tw td.num, table.tw th.num { text-align: right; }
+.tw .note { color: var(--ink-3); font-size: 13px; }
+.live { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 8px 0 0; min-height: 1.4em; }
+.glider { cursor: ew-resize; outline: none; touch-action: none; }
+.glider .gl { stroke: var(--ink-2); stroke-width: 1.5; transition: stroke-width .12s ease-out; }
+.glider .gh { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.glider.home .gh { fill: var(--ink); }
+.glider.caught .gl { stroke: var(--ink); stroke-width: 3; }
+.glider .gv { display: none; font-weight: 600; fill: var(--ink); }
+.glider.active .gv, .glider:focus-visible .gv { display: block; }
+.glider:focus-visible .gh { stroke: var(--mf); stroke-width: 2.5; }
+.pm { transition: opacity .12s ease-out; }
+.pm.gdim { opacity: .15; }
+.tip.pinned { pointer-events: auto; user-select: text; -webkit-user-select: text; padding-right: 30px; border-color: var(--ink-2); }
+.tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
+.tip.pinned .tipclose { display: block; }
+.tipclose:hover { background: var(--band); }
 .stack + .stack { margin-top: 20px; }
 
 /* decision map */
@@ -127,6 +170,7 @@ table.map tr.sub td.setup { padding-left: 22px; }
 table.map tr.sub[hidden] { display: none; }
 .tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
 .flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
+.flag[data-term] { cursor: help; text-decoration: underline dotted var(--ink-3); text-underline-offset: 2px; }
 .flag.pend { border-style: dashed; border-color: var(--ink-3); }
 .flag.mb { border-color: var(--ink-2); }
 .ivl { white-space: nowrap; line-height: 1.45; }
@@ -183,16 +227,37 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
   table.map td.setup { min-width: 158px; }
 }
-@media (prefers-reduced-motion: reduce) { .tip, .mk { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .glider .gl { transition: none; } }
 </style>
 
+<script>
+const D = /*__DATA__*/null;
+window.REPORT = D;
+(function () {
+  try { const t = localStorage.getItem("semantic-bet-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  const q = []; let ready = false;
+  window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
+  window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
+  window.reportTheme = function () {
+    const a = document.documentElement.getAttribute("data-theme");
+    if (a === "light" || a === "dark") return a;
+    try { return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } catch (e) { return "light"; }
+  };
+})();
+</script>
 <div class="page">
   <header class="memo">
-    <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
+    <div class="mhead">
+      <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
+      <button type="button" class="themebtn" id="themebtn" aria-label="Dark theme" aria-pressed="false">
+        <svg class="sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+        <svg class="moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6z"/></svg>
+      </button>
+    </div>
     <p class="byline" id="byline"></p>
   </header>
 
-  <section class="abstract"><p><span class="runin">Abstract.</span> <span id="abstract"></span></p></section>
+  <section class="abstract"><p class="lead"><span class="runin">Abstract.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
 
   <section aria-labelledby="w-h">
     <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
@@ -202,33 +267,36 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
 
   <figure id="fig1">
     <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
-    <div class="figtools"><div class="legend" id="leg1"></div><button type="button" class="btn" id="toggleall" aria-expanded="false">Show every model</button></div>
+    <div class="twin" id="twin1"></div>
+    <div class="figtools"><div class="legend" id="leg1"></div></div>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
     <figcaption>Each cell holds the frozen set first and the hard set second; a boxed number is the best in its column for that set.</figcaption>
   </figure>
 
   <h2>Where the ADK agent on MetricFlow stands</h2>
-  <figure id="fig2">
+  <figure id="fig2" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
     <div class="figtools"><div class="legend" id="leg2"></div></div>
     <div class="plot" id="forest"></div>
+    <p class="live" id="glide-live" aria-live="polite"></p>
     <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals are partial passes.</figcaption>
   </figure>
-  <figure id="fig3">
+  <figure id="fig3" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
     <div class="figtools"><div class="legend" id="leg3"></div><div class="seg" role="group" aria-label="Question set for Figure 3" data-view="scatter"></div></div>
     <div class="plot" id="scatter"></div>
     <figcaption>Up and to the right is better; the lines through each mark are its 95% intervals on both axes.</figcaption>
   </figure>
 
-  <h2>Why: covered questions against uncovered ones</h2>
-  <figure id="fig4">
+  <h2>Why: <span class="term" data-term="covered" tabindex="0">covered</span> questions against <span class="term" data-term="uncovered" tabindex="0">uncovered</span> ones</h2>
+  <figure id="fig4" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 4.</span><span class="take" id="t4"></span></p>
+    <div class="twin" id="twin4"></div>
     <div class="figtools"><div class="legend" id="leg4"></div></div>
     <div class="plot" id="strip"></div>
     <figcaption>Each mark is one setup on one model; question groups under ten questions are drawn faint, since one answer moves them by many points.</figcaption>
   </figure>
-  <figure id="fig5">
+  <figure id="fig5" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 5.</span><span class="take" id="t5"></span></p>
     <div class="figtools"><div class="legend" id="leg5"></div><div class="seg" role="group" aria-label="Question set for Figure 5" data-view="slopes"></div></div>
     <div class="plot" id="slopes"></div>
@@ -243,6 +311,8 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
     <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
   </figure>
 
+<!--SECTIONS-->
+
   <h2>Method, briefly</h2>
   <div class="col notes">
     <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code subagents run in another harness, one fresh subagent per question, so they are shown for comparison and never decide. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
@@ -250,23 +320,11 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   </div>
 
   <h2>Glossary</h2>
-  <dl class="gloss col">
-    <dt>Setup</dt><dd>One way of answering: an agent, the tools and context it is given, and the tables in its reach.</dd>
-    <dt>Hidden-rule question</dt><dd>A question whose obvious SQL gives another number, because a business rule (cancelled orders, a semi-additive balance) is not visible in the table.</dd>
-    <dt>Covered, uncovered</dt><dd>Covered: a metric of the semantic layer answers it. Uncovered: no metric does, though SQL over the tables can.</dd>
-    <dt>Confident-wrong</dt><dd>A wrong number stated with no hedge, the failure a business user feels. A lower rate counts only when accuracy ties.</dd>
-    <dt>Decides, check</dt><dd>Our setups run on a free model, which decides; Claude Haiku, Sonnet and Opus repeat them as a check on whether a gap is the model's.</dd>
-    <dt>Pending</dt><dd>A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists.</dd>
-    <dt>95% interval</dt><dd>A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these.</dd>
-    <dt>Partial pass</dt><dd>A pass with fewer questions than the set or fewer than three runs per question, tagged on its row.</dd>
-    <dt>Managed best</dt><dd>The most accurate of Google's managed setups, the bar each of ours is paired against.</dd>
-    <dt>The floor</dt><dd>Google's data agent over the tables alone, with no context: every gain is read against it.</dd>
-  </dl>
+  <dl class="gloss col" id="gloss"></dl>
 </div>
 <div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
 
 <script>
-const D = /*__DATA__*/null;
 (function () {
   "use strict";
   const $ = (s) => document.querySelector(s);
@@ -285,9 +343,9 @@ const D = /*__DATA__*/null;
   const descOf = (arm) => D.desc[arm] || D.undescribed;
   const sKey = (s) => (s === "frozen" ? "F" : s === "hard" ? "H" : s.slice(0, 1).toUpperCase());
   const short = (s) => S(s).label.replace(" set", "").toLowerCase();
-  const view = { scatter: SETS[0], slopes: SETS[0], plate: SETS[0] };
-  try { const v = JSON.parse(localStorage.getItem("semantic-bet-views") || "{}"); Object.keys(view).forEach((k) => { if (SETS.includes(v[k])) view[k] = v[k]; }); } catch (e) {}
-  let showAll = false;
+  const view = { scatter: SETS[0], slopes: SETS[0], plate: SETS.includes("hard") ? "hard" : SETS[0] };
+  try { const v = JSON.parse(localStorage.getItem("semantic-bet-views-2") || "{}"); ["scatter", "slopes"].forEach((k) => { if (SETS.includes(v[k])) view[k] = v[k]; }); } catch (e) {}
+  const showAll = false;
 
   /* ---------- marks ---------- */
   function shape(role, x, y, color, r, hollow) {
@@ -301,14 +359,17 @@ const D = /*__DATA__*/null;
   }
   const shapeKey = (role, color) => `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`;
   const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
-  const legendRoles = () => [["decides", "free model (decides)"], ["check", "Claude API (check)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code subagent"]].map(([r, l]) => `<span class="k">${shapeKey(r)}${l}</span>`).join("");
+  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code subagent"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
   const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
   const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
 
-  /* ---------- one tooltip, delegated ---------- */
-  const tip = $("#tip"); let tipEl = null, tipByFocus = false;
+  /* ---------- one tooltip, delegated: hover shows, click or Enter pins ---------- */
+  const tip = $("#tip"); let tipEl = null, tipByFocus = false, pinned = false, pinEl = null, quietFocus = false;
+  const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
+  const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
+  function termTip(key) { const t = TERM[key]; return t ? `<h4>${esc(t.label)}</h4><p>${esc(t.text)}</p>` : `<h4>${esc(key)}</h4><p>Not yet defined.</p>`; }
   function setupTip(arm) { return `<h4><span class="id">${esc(arm)}</span></h4><p>${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
     if (!r) return "";
@@ -328,37 +389,77 @@ const D = /*__DATA__*/null;
       <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
   }
   function htmlFor(el) {
+    if (el.dataset.term != null) return termTip(el.dataset.term);
     if (el.dataset.setup != null) return setupTip(el.dataset.setup);
     if (el.dataset.tip) return rowTip(byId(el.dataset.tip), el.dataset.g);
     return "";
   }
+  const CLOSE = `<button type="button" class="tipclose" aria-label="Close"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>`;
   function place(x, y) {
     const w = tip.offsetWidth, h = tip.offsetHeight, vw = document.documentElement.clientWidth, vh = window.innerHeight;
     let left = x + 14, top = y + 16;
     if (left + w > vw - 8) left = Math.max(8, Math.min(vw - w - 8, x - w - 14));
     if (left < 8) left = 8;
     if (top + h > vh - 8) top = Math.max(8, y - h - 12);
-    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    const sx = pinned ? window.scrollX : 0, sy = pinned ? window.scrollY : 0;
+    tip.style.transform = `translate(${Math.round(left + sx)}px, ${Math.round(top + sy)}px)`;
   }
-  function showTipHTML(html, x, y) { if (!html) return hideTip(); tip.innerHTML = html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
-  function hideTip() { tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); tipEl = null; tipByFocus = false; }
-  const TIPSEL = "[data-setup],[data-tip]";
+  function showTipHTML(html, x, y) { if (!html) return hideTip(); tip.innerHTML = CLOSE + html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
+  function hideTip() { if (pinned) return; tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); tipEl = null; tipByFocus = false; }
+  function pin(el, x, y, html) {
+    pinned = false; tip.classList.remove("pinned"); tip.style.position = "";
+    const h = html || (el.tagName === "CANVAS" ? tip.innerHTML.replace(CLOSE, "") : htmlFor(el));
+    if (!h) return;
+    pinned = true; pinEl = el; tipEl = el;
+    tip.style.position = "absolute"; tip.classList.add("pinned");
+    tip.setAttribute("role", "dialog"); tip.setAttribute("aria-label", "Pinned detail");
+    tip.innerHTML = CLOSE + h; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+  }
+  function unpin(returnFocus) {
+    if (!pinned) return;
+    const el = pinEl; pinned = false; pinEl = null;
+    tip.classList.remove("pinned"); tip.style.position = ""; tip.setAttribute("role", "tooltip"); tip.removeAttribute("aria-label");
+    hideTip();
+    if (returnFocus && el && el.focus && document.contains(el)) { quietFocus = true; el.focus({ preventScroll: true }); quietFocus = false; }
+  }
+  window.__reportUnpin = unpin;
+  const TIPSEL = "[data-term],[data-setup],[data-tip]";
+  const closestTip = (t) => (t && t.closest ? t.closest(TIPSEL) : null);
   document.addEventListener("pointerover", (e) => {
-    const el = e.target.closest && e.target.closest(TIPSEL);
+    if (pinned) return;
+    const el = closestTip(e.target);
     if (!el) { if (tipEl && !tipEl.contains(e.target)) hideTip(); return; }
-    if (el !== tipEl) { tipEl = el; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
+    if (el !== tipEl) { tipEl = el; tipByFocus = false; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
   });
-  document.addEventListener("pointermove", (e) => { if (tipEl && tipEl.contains(e.target)) place(e.clientX, e.clientY); });
-  document.addEventListener("pointerout", (e) => { if (tipEl && (!e.relatedTarget || !tipEl.contains(e.relatedTarget))) { const nx = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(TIPSEL); if (!nx) hideTip(); } });
-  document.addEventListener("focusin", (e) => { const el = e.target.closest && e.target.closest(TIPSEL); if (el && el === e.target) { tipEl = el; tipByFocus = true; const b = el.getBoundingClientRect(); showTipHTML(htmlFor(el), b.left, b.bottom - 8); } });
-  document.addEventListener("focusout", () => hideTip());
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+  document.addEventListener("pointermove", (e) => { if (!pinned && tipEl && tipEl.contains(e.target)) place(e.clientX, e.clientY); });
+  document.addEventListener("pointerout", (e) => { if (pinned) return; if (tipEl && (!e.relatedTarget || !tipEl.contains(e.relatedTarget))) { if (!closestTip(e.relatedTarget)) hideTip(); } });
+  document.addEventListener("focusin", (e) => {
+    if (pinned || quietFocus) return;
+    const el = closestTip(e.target); if (el && el === e.target) { tipEl = el; tipByFocus = true; const b = el.getBoundingClientRect(); showTipHTML(htmlFor(el), b.left, b.bottom - 8); }
+  });
+  document.addEventListener("focusout", () => { if (!pinned) hideTip(); });
+  document.addEventListener("click", (e) => {
+    if (tip.contains(e.target)) { if (e.target.closest(".tipclose")) unpin(true); return; }
+    const el = closestTip(e.target);
+    if (el) { pin(el, e.clientX, e.clientY); return; }
+    const cv = e.target.closest && e.target.closest("canvas[data-row]");
+    if (cv && tip.classList.contains("on") && tipEl === cv) { pin(cv, e.clientX, e.clientY); return; }
+    if (pinned) unpin(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { if (pinned) unpin(true); else hideTip(); return; }
+    if ((e.key === "Enter" || e.key === " ") && document.activeElement) {
+      const el = document.activeElement;
+      if (el.matches && el.matches(TIPSEL)) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
+    }
+  });
   window.addEventListener("scroll", () => {
+    if (pinned) return;
     if (tipByFocus && tipEl) { const b = tipEl.getBoundingClientRect(); place(b.left, b.bottom - 8); return; }
     if (!tipEl || tipEl.tagName !== "CANVAS") hideTip();
   }, { passive: true });
 
-  /* ---------- hover to focus ---------- */
+  /* ---------- hover to focus, delegated on any .focusable ---------- */
   const FSEL = "[data-key],[data-arm],[data-fam]";
   function applyFocus(fig, el) {
     const mks = fig.querySelectorAll(".mk");
@@ -369,13 +470,37 @@ const D = /*__DATA__*/null;
     else pred = (m) => m.dataset.fam === el.dataset.fam;
     fig.classList.add("focusing"); mks.forEach((m) => m.classList.toggle("on", pred(m)));
   }
-  function wireFocus(fig) {
-    fig.addEventListener("pointerover", (e) => applyFocus(fig, e.target.closest(FSEL)));
-    fig.addEventListener("pointerleave", () => applyFocus(fig, null));
-    fig.addEventListener("focusin", (e) => applyFocus(fig, e.target.closest(FSEL)));
-    fig.addEventListener("focusout", (e) => { if (!fig.contains(e.relatedTarget)) applyFocus(fig, null); });
+  let focusFig = null;
+  function focusAt(target) {
+    const fig = target && target.closest ? target.closest(".focusable") : null;
+    if (focusFig && focusFig !== fig) applyFocus(focusFig, null);
+    focusFig = fig;
+    if (!fig) return;
+    const el = target.closest(FSEL);
+    applyFocus(fig, el && fig.contains(el) && el !== fig ? el : null);
   }
-  ["#fig2", "#fig3", "#fig4", "#fig5"].forEach((s) => wireFocus($(s)));
+  document.addEventListener("pointerover", (e) => focusAt(e.target));
+  document.addEventListener("pointerout", (e) => { if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+  document.addEventListener("focusin", (e) => focusAt(e.target));
+  document.addEventListener("focusout", (e) => { if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+
+  /* ---------- theme switch ---------- */
+  const themeBtn = $("#themebtn");
+  function syncThemeBtn() { const dark = window.reportTheme() === "dark"; themeBtn.setAttribute("aria-pressed", String(dark)); }
+  themeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const next = window.reportTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("semantic-bet-theme", next); } catch (err) {}
+    syncThemeBtn(); document.dispatchEvent(new CustomEvent("report-theme", { detail: next }));
+  });
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      const a = document.documentElement.getAttribute("data-theme");
+      if (a !== "light" && a !== "dark") { syncThemeBtn(); document.dispatchEvent(new CustomEvent("report-theme", { detail: window.reportTheme() })); }
+    });
+  } catch (e) {}
+  document.addEventListener("report-theme", () => { unpin(false); renderAll(); });
 
   /* ---------- per-view set switches ---------- */
   function renderSwitches() {
@@ -384,36 +509,60 @@ const D = /*__DATA__*/null;
       if (SETS.length < 2) { seg.hidden = true; return; }
       seg.innerHTML = SETS.map((s) => `<button type="button" data-set="${s}" aria-pressed="${view[v] === s}">${esc(S(s).label)}, ${S(s).nCases} questions</button>`).join("");
       seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-        view[v] = b.dataset.set; try { localStorage.setItem("semantic-bet-views", JSON.stringify(view)); } catch (e) {}
+        view[v] = b.dataset.set; try { localStorage.setItem("semantic-bet-views-2", JSON.stringify(view)); } catch (e) {}
         renderSwitches(); hideTip(); ({ scatter: renderScatter, slopes: renderSlopes, plate: renderPlate })[v]();
       }));
     });
   }
 
   /* ---------- text, winners ---------- */
+  const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
+  const num = (v) => `<span class="n">${P(v[0])}%</span><span class="ivs">[${P(v[1])}, ${P(v[2])}]</span>`;
+  const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
   function renderText() {
-    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${esc(S(s).label.toLowerCase())} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
-    $("#abstract").textContent = D.sentences.abstract || "";
-    $("#t1").textContent = D.sentences.map || "";
+    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
+    const A = D.abstract || { lead: "", rows: [] };
+    $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
+    const ab = A.rows;
+    const lines = [
+      [`The ${term("managed-best", "managed best")}`, (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`, "grp"],
+      ["Right", (r) => num(r.mbAcc)], [term("confident-wrong"), (r) => num(r.mbCw)],
+      [`MetricFlow on the free model (${term("decides", "decides")})`, () => "", "grp"],
+      ["Right", (r) => num(r.mfAcc)], [term("confident-wrong"), (r) => num(r.mfCw)],
+      [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
+    ];
+    $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
+      lines.map(([lab, f, cls]) => `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>`).join("") +
+      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets; each column is one question set.</p>` : "";
+    $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
+    const tw = D.twin || {};
+    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the best managed agent</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
+      tw.map.map((r) => `<tr><td>${setTerm(r.set)}</td>${r.cells.map((c) => `<td>${esc(c).replace(/^(\d+)/, '<span class="n">$1</span>')}</td>`).join("")}</tr>`).join("") + `</tbody></table>` : "";
     $("#t2").textContent = D.sentences.forest || "";
-    $("#t4").textContent = D.sentences.strip || "";
+    $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
+    $("#twin4").innerHTML = (tw.strip || []).length ? `<table class="tw"><thead><tr><th>% of runs right</th><th class="num">MetricFlow, ${term("covered")}</th><th class="num">${term("hidden-rule")}</th><th class="num">${term("uncovered")}</th><th class="num">${term("managed-best", "Managed best")}, uncovered</th></tr></thead><tbody>` +
+      tw.strip.map((r) => `<tr><td>${setTerm(r.set)}</td><td class="num"><span class="n">${r.cov}%</span></td><td class="num"><span class="n">${r.trap == null ? "n/a" : r.trap + "%"}</span></td><td class="num"><span class="n">${r.unc}%</span></td><td class="num"><span class="n">${r.mbUnc == null ? "n/a" : r.mbUnc + "%"}</span></td></tr>`).join("") +
+      `</tbody></table>${tw.stripNote ? `<div class="note" style="font-family:var(--label);font-size:13px;color:var(--ink-3);margin-top:4px">${esc(tw.stripNote)}</div>` : ""}` : "";
+    $("#gloss").innerHTML = (D.terms || []).map((t) => `<dt id="term-${esc(t.key)}">${esc(t.label)}</dt><dd>${esc(t.text)}</dd>`).join("");
   }
+  const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
   function renderWinners() {
     const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
     $("#winners").innerHTML = titles.map((t) => {
       let why = "";
       const blocks = SETS.map((s) => {
         const p = S(s).pillars.find((x) => x.title === t);
-        if (!p) return `<div class="pset"><div class="sl">${esc(S(s).label)}: no setup has a deciding run here yet</div></div>`;
+        if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
         why = p.why;
         const L = p.lead, iv = L.iv;
-        const tied = p.tied.length ? `Tied within the interval: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} (${P(x.v)}%)`).join(", ")}.` : "No setup ties it within the interval.";
-        const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, ${P(p.contrast[1])}%.</div>` : "";
-        return `<div class="pset"><div class="sl">${esc(S(s).label)}, ${p.n} questions</div>
-          <div class="lead"><span class="num">${P(iv[0])}%<small>[${P(iv[1])}, ${P(iv[2])}]</small></span><span class="who"><span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag">${esc(L.partial)}</span>` : ""}</span></div>
+        const tied = p.tied.length ? `${term("interval", "Tied within the interval")}: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} <span class="n">${P(x.v)}%</span>`).join(", ")}.` : `No setup ties it within the ${term("interval", "interval")}.`;
+        const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, <span class="n">${P(p.contrast[1])}%</span>.</div>` : "";
+        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
+          <div class="lead"><span class="num">${P(iv[0])}%<small>[${P(iv[1])}, ${P(iv[2])}]</small></span><span class="who"><span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)}</span>` : ""}</span></div>
           <div class="tied">${tied}</div>${ctr}</div>`;
       }).join("");
-      return `<div class="pillar"><h3>${esc(t)}</h3><p class="why">${esc(why)}</p>${blocks}</div>`;
+      const pt = PILLAR_TERM[t];
+      return `<div class="pillar"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}</p>${blocks}</div>`;
     }).join("");
   }
 
@@ -435,8 +584,9 @@ const D = /*__DATA__*/null;
     SETS.forEach((s) => { best[s] = {}; D.groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0]); best[s][g.key] = v.length ? Math.max(...v) : null; }); });
     const setsSub = SETS.map((s) => short(s)).join(", then ");
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
-    D.groups.forEach((g) => (h += `<th scope="col" class="g">${g.label}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
-    h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">Confident-wrong<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
+    const GT = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" };
+    D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
+    h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">${term("confident-wrong")}<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
     const ncol = 4 + D.groups.length;
     D.ladder.forEach((L) => {
       const arms = L.arms.filter((a) => U.some((u) => u.arm === a));
@@ -451,10 +601,10 @@ const D = /*__DATA__*/null;
           const rs = SETS.map((s) => rowOf(s, u.key));
           const any = rs.find(Boolean);
           const tags = [];
-          rs.forEach((r, i) => { if (r && r.partial) tags.push(`<span class="flag">${SETS.length > 1 ? short(SETS[i]) + ": " : ""}${esc(r.partial)}</span>`); });
-          if (any.status === "pending") tags.push(`<span class="flag pend">pending: deciding run</span>`);
+          rs.forEach((r, i) => { if (r && r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${SETS.length > 1 ? short(SETS[i]) + ": " : ""}${esc(r.partial)}</span>`); });
+          if (any.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
           if (any.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
-          rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
+          rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
           h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : ""}>`;
           h += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(a)}" tabindex="0">${esc(a)}</span>`}<span class="mdl">${shapeKey(any.role, famC(any.family))}${esc(any.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
           h += `<td class="what">${sub ? "" : esc(descOf(a))}</td>`;
@@ -516,14 +666,14 @@ const D = /*__DATA__*/null;
         const px0 = L + i * (pw + gap) + 8, px1 = px0 + pw - 16;
         p.x = lin(0, p.max, px0, px1);
         o += `<rect class="frame" x="${px0 - 8}" y="${top - (narrow ? 46 : 30)}" width="${pw}" height="${H - top + (narrow ? 18 : 2)}" rx="2"/>`;
-        o += `<text x="${px0}" y="${top - (narrow ? 30 : 13)}" class="t-strong">${esc(p.title)}</text>`;
+        o += `<text x="${px0}" y="${top - (narrow ? 30 : 13)}" class="t-strong"${p.k === "cw" ? ' data-term="confident-wrong" tabindex="0"' : ""}>${esc(p.title)}</text>`;
         o += vgrid(p.x, 0, p.max, p.minor, p.major, top - 4, H - 40);
         p.ticks.forEach((v) => (o += `<text x="${p.x(v)}" y="${H - 24}" text-anchor="middle" class="t-mute">${P(v)}</text>`));
         o += `<text x="${px0}" y="${H - 8}" class="t-mute" style="font-size:11.5px">${esc(narrow ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis)}</text>`;
         if (p.k === "acc") {
           const lines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
           lines.forEach((m) => (o += `<line x1="${p.x(m.v)}" x2="${p.x(m.v)}" y1="${top - 4}" y2="${H - 40}" stroke="${m.si ? "var(--ink-3)" : "var(--ink-2)"}" stroke-width="1"${m.si ? ' stroke-dasharray="1 3"' : ""}/>`));
-          if (lines.length) o += `<text x="${narrow ? px0 : px1}" y="${top - 13}" text-anchor="${narrow ? "start" : "end"}" class="t-mute" style="font-size:11.5px">managed best: ${lines.map((m) => `${short(m.s)} ${P(m.v)}`).join(", ")}</text>`;
+          if (lines.length) o += `<text x="${narrow ? px0 : px1}" y="${top - 13}" text-anchor="${narrow ? "start" : "end"}" class="t-mute" style="font-size:11.5px" data-term="managed-best" tabindex="0">managed best: ${lines.map((m) => `${short(m.s)} ${P(m.v)}`).join(", ")}</text>`;
         }
       });
       pos.forEach((q) => {
@@ -543,17 +693,82 @@ const D = /*__DATA__*/null;
           o += `<rect class="hit" x="${L - 4}" y="${yy - 6}" width="${wall - L + 4}" height="12"/>`;
           list.forEach((p) => {
             const v = r[p.k]; const dash = r.major ? ' stroke-dasharray="3 3"' : "";
-            o += `<line x1="${p.x(v[1])}" x2="${p.x(Math.min(p.max, v[2]))}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="${si ? 1.5 : 2}" stroke-linecap="round"${dash}/>`;
-            o += shape(r.role, p.x(v[0]), yy, c, si ? 3.5 : 4.2, si > 0);
+            o += `<g class="pm" data-panel="${p.k}" data-v="${v[0]}"><line x1="${p.x(v[1])}" x2="${p.x(Math.min(p.max, v[2]))}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="${si ? 1.5 : 2}" stroke-linecap="round"${dash}/>`;
+            o += shape(r.role, p.x(v[0]), yy, c, si ? 3.5 : 4.2, si > 0) + `</g>`;
           });
           o += `</g>`;
         });
         o += `</g>`;
       });
+      list.forEach((p) => {
+        const px0 = p.x(0), px1 = p.x(p.max), home = gHome(p.k), mx = Math.round(p.max * 100);
+        if (p.k === "cw" && home != null) o += `<line x1="${p.x(home / 100)}" x2="${p.x(home / 100)}" y1="${top - 4}" y2="${H - 40}" stroke="var(--ink-2)" stroke-width="1"/>`;
+        o += `<g class="glider" data-panel="${p.k}" data-x0="${px0}" data-x1="${px1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+          <rect class="ghit" x="0" y="${top - 10}" width="28" height="${H - 40 - top + 10 + 22}" fill="transparent"/><line class="gl" x1="0" x2="0" y1="${top - 4}" y2="${H - 40}"/>
+          <rect class="gh top" x="-6" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="-6" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="9" y="${top + 6}" style="font-size:12px"></text></g>`;
+      });
       return o + `</svg>`;
     }
     el.innerHTML = narrow ? `<div class="stack">${build([panels[0]], 0, W)}</div><div class="stack">${build([panels[1]], 0, W)}</div>` : build(panels, 0, W);
+    wireGliders(el); applyGlide();
     $("#leg2").innerHTML = legendFams(Object.values(ALL)) + legendRoles() + (SETS.length > 1 ? `<span class="k">each row: upper mark frozen set, lower mark (hollow) hard set</span>` : "");
+  }
+
+
+  /* ---------- Figure 2's threshold gliders ---------- */
+  const GL = { acc: null, cw: null }; // null: at home, the managed best
+  function gHome(k) { const mb = byId(S(SETS[0]).managedBest); return mb ? Math.round(mb[k][0] * 100) : (k === "acc" ? 100 : 0); }
+  const gVal = (k) => (GL[k] == null ? gHome(k) : GL[k]);
+  let glideRaf = 0, caughtT = 0;
+  function applyGlide() {
+    const root = $("#forest");
+    ["acc", "cw"].forEach((k) => {
+      const v = gVal(k), home = GL[k] == null;
+      root.querySelectorAll(`.pm[data-panel="${k}"]`).forEach((m) => { const mv = +m.dataset.v * 100; m.classList.toggle("gdim", !home && (k === "acc" ? mv < v - 1e-9 : mv > v + 1e-9)); });
+      root.querySelectorAll(`.glider[data-panel="${k}"]`).forEach((g) => {
+        const x0 = +g.dataset.x0, x1 = +g.dataset.x1, mx = +g.dataset.max;
+        const x = x0 + (x1 - x0) * Math.max(0, Math.min(mx, v)) / mx;
+        g.setAttribute("transform", `translate(${x - 14},0)`);
+        g.querySelector(".gl").setAttribute("x1", 14); g.querySelector(".gl").setAttribute("x2", 14);
+        g.querySelectorAll(".gh").forEach((h) => h.setAttribute("x", 8));
+        const t = g.querySelector(".gv"); t.textContent = `${v}%`; t.setAttribute("x", 23);
+        g.classList.toggle("home", home); g.setAttribute("aria-valuenow", v); g.setAttribute("aria-valuetext", `${v}%${home ? ", the managed best" : ""}`);
+      });
+    });
+    const live = $("#glide-live"); if (!live) return;
+    if (GL.acc == null && GL.cw == null) { live.textContent = `Both thresholds sit at the managed best (${gVal("acc")}% right, ${gVal("cw")}% confidently wrong); drag a handle, or focus it and use the arrow keys, to dim the rows beyond it.`; return; }
+    const parts = [];
+    const count = (k, v) => SETS.map((s) => { const rs = S(s).rows.filter((r) => r.plotted); const n = rs.filter((r) => (k === "acc" ? r.acc[0] * 100 >= v - 1e-9 : r.cw[0] * 100 <= v + 1e-9)).length; return `${n} of ${rs.length} setup rows on the ${short(s)} set`; }).join(", ");
+    if (GL.acc != null) parts.push(`At or above ${GL.acc}% right: ${count("acc", GL.acc)}.`);
+    if (GL.cw != null) parts.push(`At or below ${GL.cw}% confidently wrong: ${count("cw", GL.cw)}.`);
+    live.textContent = parts.join(" ");
+  }
+  function setGlide(k, v, snap) {
+    const home = gHome(k), mx = k === "acc" ? 100 : Math.round(+($(`#forest .glider[data-panel="${k}"]`) || { dataset: { max: 100 } }).dataset.max);
+    v = Math.max(0, Math.min(mx, Math.round(v)));
+    const was = GL[k];
+    if (snap && Math.abs(v - home) <= 2) v = home;
+    GL[k] = v === home ? null : v;
+    if (snap && was != null && GL[k] == null) { document.querySelectorAll(`#forest .glider[data-panel="${k}"]`).forEach((g) => g.classList.add("caught")); clearTimeout(caughtT); caughtT = setTimeout(() => document.querySelectorAll("#forest .glider.caught").forEach((g) => g.classList.remove("caught")), 320); }
+    if (!glideRaf) glideRaf = requestAnimationFrame(() => { glideRaf = 0; applyGlide(); });
+  }
+  function wireGliders(root) {
+    root.querySelectorAll(".glider").forEach((g) => {
+      const k = g.dataset.panel; const svg = g.ownerSVGElement;
+      const valAt = (cx) => { const r = svg.getBoundingClientRect(); const vbw = svg.viewBox.baseVal.width || r.width; const x = (cx - r.left) * vbw / r.width; const x0 = +g.dataset.x0, x1 = +g.dataset.x1; return (x - x0) / (x1 - x0) * +g.dataset.max; };
+      g.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); g.classList.add("active"); g.focus({ preventScroll: true }); });
+      g.addEventListener("pointermove", (e) => { if (!g.hasPointerCapture(e.pointerId)) return; setGlide(k, valAt(e.clientX), true); });
+      const end = (e) => { if (g.hasPointerCapture && g.hasPointerCapture(e.pointerId)) g.releasePointerCapture(e.pointerId); g.classList.remove("active"); };
+      g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
+      g.addEventListener("click", (e) => e.stopPropagation());
+      g.addEventListener("dblclick", (e) => { e.preventDefault(); GL[k] = null; applyGlide(); });
+      g.addEventListener("keydown", (e) => {
+        const step = e.shiftKey ? 5 : 1;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setGlide(k, gVal(k) + step, false); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setGlide(k, gVal(k) - step, false); }
+        else if (e.key === "Home") { e.preventDefault(); GL[k] = null; applyGlide(); }
+      });
+    });
   }
 
   /* ---------- Figure 3: scatter (one set) ---------- */
@@ -617,7 +832,8 @@ const D = /*__DATA__*/null;
     o += `<text x="${W - m.r}" y="${H - 2}" text-anchor="end" class="t-ink">Share of runs right, %</text>`;
     blocks.forEach((b) => {
       o += `<line x1="0" x2="${W}" y1="${b.y0 - 4}" y2="${b.y0 - 4}" stroke="var(--rule)"/>`;
-      o += `<text x="0" y="${b.y0 + 10}" class="t-strong">${esc(b.g.label)}</text>`;
+      const gt = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" }[b.g.key];
+      o += `<text x="0" y="${b.y0 + 10}" class="t-strong"${gt ? ` data-term="${gt}" tabindex="0"` : ""}>${esc(b.g.label)}</text>`;
       b.subs.forEach((sb) => {
         const n = S(sb.s).groupCases[b.g.key] || 0; const thin = n < 10;
         o += `<text x="0" y="${sb.y0 + (sb.fams.length * lane) / 2 + 4}" class="t-mute" style="font-size:12px">${esc(short(sb.s))}, ${n} q</text>`;
@@ -656,7 +872,7 @@ const D = /*__DATA__*/null;
       o += `<g data-fam="${p.f}"><text x="${cx}" y="${cy + 14}" class="t-strong">${esc(D.familyLabel[p.f] || p.f)}</text></g><text x="${cx}" y="${cy + 30}" class="t-mute" style="font-size:11.5px">% of runs right</text>`;
       for (let v = 0; v <= 1.0001; v += 0.05) { const maj = Math.round(v * 100) % 25 === 0; o += `<line x1="${x0}" x2="${x1}" y1="${y(v)}" y2="${y(v)}" stroke="${maj ? "var(--grid-major)" : "var(--grid)"}"/>`; }
       [0, .25, .5, .75, 1].forEach((v) => (o += `<text x="${x0 - 7}" y="${y(v) + 4}" text-anchor="end" class="t-mute">${P(v)}</text>`));
-      xs.forEach((xx, j) => { o += `<line x1="${xx}" x2="${xx}" y1="${t - 4}" y2="${b}" stroke="var(--ink-3)"/><text x="${xx}" y="${b + (j === 1 ? 30 : 16)}" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}" dx="${j === 0 ? -8 : j === 2 ? 8 : 0}" class="t-ink">${names[j]}</text>`; });
+      xs.forEach((xx, j) => { o += `<line x1="${xx}" x2="${xx}" y1="${t - 4}" y2="${b}" stroke="var(--ink-3)"/><text x="${xx}" y="${b + (j === 1 ? 30 : 16)}" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}" dx="${j === 0 ? -8 : j === 2 ? 8 : 0}" class="t-ink" data-term="${["covered", "hidden-rule", "uncovered"][j]}" tabindex="0">${names[j]}</text>`; });
       const lab = p.rows.map((r) => ({ r, y: y(r.groups.uncovered[0]) }));
       if (mb && p.f !== mb.family && mb.groups.uncovered) { lab.push({ ghost: true, y: y(mb.groups.uncovered[0]) }); o += `<polyline points="${keys.map((k, j) => `${xs[j]},${y(mb.groups[k][0])}`).join(" ")}" fill="none" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/>`; }
       lab.sort((a, c) => c.y - a.y);
@@ -740,7 +956,7 @@ const D = /*__DATA__*/null;
     const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
     let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:44px">`;
     G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${esc(bk.label)}<small>${b.n} q</small></span>`; });
-    hh += `</div><div style="width:${G.IW}px">Over the floor<small>points right, paired</small></div><div style="width:${G.CWW}px">Confident-wrong<small>% of runs, 95%</small></div></div>`;
+    hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
     let bh = "";
     D.ladder.forEach((L) => {
@@ -750,9 +966,9 @@ const D = /*__DATA__*/null;
       bh += `<div class="prow step" style="width:${total}px"><div>${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
       rs.forEach((r) => {
         const tg = tagText(r);
-        bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}">${esc(tg)}</span>` : ""}</div>`;
+        bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}" data-term="${r.status === "pending" ? "pending" : "partial"}" tabindex="0">${esc(tg)}</span>` : ""}</div>`;
         bh += `<div class="pu" style="width:${G.UW + 16}px"><canvas data-row="${esc(r.id)}" tabindex="0" role="img" aria-label="${esc(label(r))}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs"></canvas></div>`;
-        bh += `<div class="pc" style="width:${G.IW}px" data-tip="${esc(r.id)}">${r === floor ? `<span class="pnote">floor, ${P(r.acc[0])}% right</span>` : !r.plotted ? `<span class="pnote">too few questions</span>` : miniIv(r.vsFloor && r.vsFloor.acc, G.IW, G.h + 8, [-D1, D1], "inc", r.major)}</div>`;
+        bh += `<div class="pc" style="width:${G.IW}px" data-tip="${esc(r.id)}">${r === floor ? `<span class="pnote"><span class="term" data-term="floor" tabindex="0">floor</span>, ${P(r.acc[0])}% right</span>` : !r.plotted ? `<span class="pnote">too few questions</span>` : miniIv(r.vsFloor && r.vsFloor.acc, G.IW, G.h + 8, [-D1, D1], "inc", r.major)}</div>`;
         bh += `<div class="pc" style="width:${G.CWW}px" data-tip="${esc(r.id)}">${r.plotted ? miniIv(r.cw, G.CWW, G.h + 8, [0, cwMax], "cw", r.major) : `<span class="pnote">too few questions</span>`}</div></div>`;
       });
     });
@@ -784,10 +1000,9 @@ const D = /*__DATA__*/null;
   }
 
   function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
-  $("#toggleall").addEventListener("click", (e) => { showAll = !showAll; e.currentTarget.setAttribute("aria-expanded", String(showAll)); e.currentTarget.textContent = showAll ? "Show one model per setup" : "Show every model"; renderMap(); });
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
-  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderPlate()); } catch (e) {}
-  renderSwitches(); renderAll();
+  syncThemeBtn(); renderSwitches(); renderAll();
+  window.__reportMarkReady();
 })();
 </script>

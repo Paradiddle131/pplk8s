@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
+Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, after Figure 6 and before "Method, briefly"; a missing directory inserts nothing.
+The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
+
 Usage: python3 build.py RESULTS_JSON [LOG_DIR] [SETS_DIR]
 
 RESULTS_JSON  docs/research/semantic-bet/results.json (or a snapshot of it): every summary number.
@@ -94,6 +97,25 @@ LADDER = [
 ]
 PILLAR_EXCLUDE = {"baseline", "cc-metricflow"}  # references outside the decision
 SET_ORDER = ["frozen", "hard"]
+# Glossary terms: one short sentence each, the glossary and every term tooltip read these.
+TERMS = [
+    ("setup", "Setup", "One way of answering: an agent, the tools and context it is given, and the tables in its reach."),
+    ("covered", "Covered", "A question a metric of the semantic layer answers."),
+    ("hidden-rule", "Hidden-rule", "A covered question whose obvious SQL gives another number, because a business rule is not visible in the table."),
+    ("uncovered", "Uncovered", "A question no metric answers, though SQL over the tables can."),
+    ("conversation", "Conversation", "A follow-up or an ambiguous term inside a multi-turn chat."),
+    ("confident-wrong", "Confident-wrong", "A wrong number stated with no hedge: the failure a business user feels. A lower rate counts only when accuracy ties."),
+    ("floor", "The floor", "Google's data agent over the tables alone, with no context; every gain is read against it."),
+    ("over-the-floor", "Over the floor", "A setup's share right minus the floor's, paired by question, in points."),
+    ("managed-best", "Managed best", "The most accurate of Google's managed setups, the bar each of ours is paired against."),
+    ("decides", "Decides", "Our setups run on a free model, which decides; Google's agents run on Gemini only."),
+    ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
+    ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
+    ("partial", "Partial pass", "A pass with fewer questions than the set, or fewer than three runs per question."),
+    ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
+    ("frozen", "Frozen set", "The first question set, fixed before any setup was scored."),
+    ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it; it detects only larger gaps."),
+]
 FREE = "nvidia/nemotron-3.5-super-vl:free"
 MIN_CASES_TO_PLOT = 5
 OUTCODE = {"right": "0", "declined": "1", "wrong": "2", "unclear": "3", "confident-wrong": "4"}
@@ -430,9 +452,15 @@ def build(results_path, log_dir, sets_dir, out_path):
             "groups": [{"key": k, "label": l} for k, l in GROUPS],
             "groupsAll": [{"key": k, "label": l, "help": GROUP_HELP[k]} for k, l in GROUPS_ALL],
             "buckets": [{"key": k, "label": l, "help": h} for k, l, h in BUCKETS],
-            "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED}
+            "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED,
+            "terms": [{"key": k, "label": l, "text": t} for k, l, t in TERMS],
+            "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     page = open(os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
+    sections = []
+    for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
+        sections.append(open(path, encoding="utf-8").read())
+    page = page.replace("<!--SECTIONS-->", "\n".join(sections))
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)
     print("wrote %s (%d bytes)" % (out_path, len(page.encode("utf-8"))))
@@ -496,6 +524,7 @@ def make_parts(st, rows, mb, floor, mf):
         P["mf"] = {"acc": mf["acc"], "cw": mf["cw"], "cov": g(mf, "covered"), "trap": g(mf, "trap"), "unc": g(mf, "uncovered")}
         if mf["step2"]:
             P["mf"]["vsBest"] = mf["step2"]["accuracy"]
+            P["mf"]["vsBestCw"] = mf["step2"].get("confident_wrong")
         rel = []
         for k in ("covered", "trap", "uncovered"):
             da = [r for r in rows if r["family"] == "da" and r["deciding"] and k in r["groups"]]
@@ -521,6 +550,75 @@ def make_parts(st, rows, mb, floor, mf):
                        "d": top["vsFloor"]["acc"], "cw": top["cw"][0],
                        "higher": any(rung_of[r["arm"]] > rung_of[top["arm"]] for r in climb)}
     return P
+
+
+def make_abstract(sets, order):
+    """A lead sentence over every set, then one parallel row per set."""
+    rows, below, tie, above, less, more = [], [], [], [], [], []
+    for s in order:
+        P = sets[s]["parts"]
+        if "mb" not in P or "mf" not in P:
+            continue
+        a = P["mf"].get("vsBest")
+        c = P["mf"].get("vsBestCw")
+        rows.append({"set": s, "label": P["label"], "n": P["n"], "mb": P["mb"]["name"], "mbArm": P["mb"]["name"].split(" on ")[0],
+                     "mbAcc": P["mb"]["acc"], "mbCw": P["mb"]["cw"], "mfAcc": P["mf"]["acc"], "mfCw": P["mf"]["cw"], "d": a, "dCw": c})
+        if a:
+            (below if a[2] < 0 else above if a[1] > 0 else tie).append(P["label"].lower())
+        if c:
+            if c[2] < 0:
+                less.append(P["label"].lower())
+            elif c[1] > 0:
+                more.append(P["label"].lower())
+    def names(xs):
+        return "both sets" if len(xs) == 2 and len(order) == 2 else " and the ".join(xs)
+    parts = []
+    if below:
+        parts.append("on %s%s the best managed setup is right more often than our ADK agent on MetricFlow on the free model that decides" % ("" if names(below) == "both sets" else "the ", names(below)))
+    if tie:
+        parts.append("on the %s the two tie" % names(tie))
+    if above:
+        parts.append("on the %s MetricFlow is right more often" % names(above))
+    lead = "; ".join(parts)
+    lead = (lead[0].upper() + lead[1:] + ".") if lead else ""
+    cw = []
+    if less:
+        cw.append("less often on the %s" % " and the ".join(less))
+    if more:
+        cw.append("more often on the %s" % " and the ".join(more))
+    if cw:
+        lead += " MetricFlow is confidently wrong " + " and ".join(cw) + "."
+    return {"lead": lead, "rows": rows}
+
+
+def make_twins(sets, order):
+    """Per-set rows for the two-set figure titles."""
+    T = {"map": [], "strip": []}
+    for s in order:
+        P = sets[s]["parts"]
+        if P.get("rel") and None not in P["rel"]:
+            T["map"].append({"set": s, "label": P["label"], "cells": P["rel"]})
+        if "mf" in P and P["mf"]["unc"] is not None and "mb" in P:
+            T["strip"].append({"set": s, "label": P["label"], "cov": P["mf"]["cov"], "trap": P["mf"]["trap"], "unc": P["mf"]["unc"], "mbUnc": P["mb"]["unc"]})
+    rows = T["map"]
+    if rows:
+        lvl = all(r["cells"][0] == "level with" and r["cells"][1] == "level with" for r in rows)
+        trap_lvl = all(r["cells"][1] == "level with" for r in rows)
+        unc_below = all("below" in r["cells"][2] for r in rows)
+        head = ("keeps level with the best managed agent on covered and hidden-rule questions" if lvl else
+                "keeps level with the best managed agent on hidden-rule questions" if trap_lvl else
+                "trails or ties the best managed agent on covered and hidden-rule questions")
+        tail = (", and falls behind on uncovered ones on every set, where it declines by design." if unc_below else
+                ", and on uncovered questions, where it declines by design, it is not behind on every set.")
+        T["mapLead"] = "On the free model, MetricFlow " + head + tail
+    st = T["strip"]
+    if st:
+        gap = all(r["unc"] < r["cov"] - 15 for r in st)
+        T["stripLead"] = ("On every set, MetricFlow on the free model answers far fewer uncovered questions than covered ones, while the managed best answers most of both." if gap and all((r["mbUnc"] or 0) >= 75 for r in st)
+                          else "MetricFlow on the free model, covered against uncovered questions, beside the managed best.")
+    chk = [sets[s]["parts"]["mfCheckUnc"] for s in order if "mfCheckUnc" in sets[s]["parts"]]
+    T["stripNote"] = ("Claude, the check, answers %d to %d%% of uncovered ones." % (min(c[0] for c in chk), max(c[1] for c in chk))) if chk else ""
+    return T
 
 
 def combine(sets, order):
