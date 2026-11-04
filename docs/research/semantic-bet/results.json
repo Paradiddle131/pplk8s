@@ -1,5 +1,5 @@
 {
- "written": "2026-11-04T23:43Z",
+ "written": "2026-11-04T23:47Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -933,6 +933,60 @@
   },
   {
    "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 20,
+   "of_cases": 96,
+   "runs": 20,
+   "accuracy": [
+    0.7,
+    0.5,
+    0.9
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     1
+    ],
+    "covered": [
+     1.0,
+     14
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     1.0,
+     1
+    ],
+    "trap": [
+     1.0,
+     3
+    ],
+    "uncovered": [
+     0.0,
+     6
+    ]
+   },
+   "pass_all": 0.7,
+   "outcomes": {
+    "right": 14,
+    "declined": 5,
+    "wrong": 1
+   },
+   "model_calls": 21
+  },
+  {
+   "set": "frozen",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "harness": "google-data-agent",
@@ -1546,7 +1600,7 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 139,
+   "runs": 150,
    "accuracy": [
     0.890625,
     0.828125,
@@ -1585,12 +1639,12 @@
    },
    "pass_all": 0.8854166666666666,
    "outcomes": {
-    "right": 127,
+    "right": 136,
     "declined": 3,
-    "wrong": 4,
+    "wrong": 6,
     "confident-wrong": 5
    },
-   "model_calls": 145
+   "model_calls": 162
   },
   {
    "set": "hard",
@@ -2816,7 +2870,7 @@
    "rung": 1,
    "cases": 43,
    "of_cases": 43,
-   "runs": 113,
+   "runs": 128,
    "accuracy": [
     0.945736434109,
     0.875968992248,
@@ -2847,10 +2901,10 @@
    },
    "pass_all": 0.9302325581395349,
    "outcomes": {
-    "right": 106,
+    "right": 121,
     "wrong": 7
    },
-   "model_calls": 125
+   "model_calls": 140
   }
  ],
  "step_two": [
@@ -3121,6 +3175,24 @@
     0.017361111111,
     -0.020833333333,
     0.059027777778
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "cases": 20,
+   "runs": 20,
+   "accuracy": [
+    -0.233333333333,
+    -0.433333333333,
+    -0.05
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
    ],
    "worth": false
   },
