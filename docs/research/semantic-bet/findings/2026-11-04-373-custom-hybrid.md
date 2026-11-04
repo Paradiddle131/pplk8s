@@ -17,7 +17,7 @@ Question: does our agent close its only gap (the `uncovered` questions, where `c
 | `custom-hybrid` | 75.7% | 4.2% | 47.1% | 88.1% |
 
 - The fallback is rarely taken: on `uncovered` cases 14 of 87 runs answered "Not a governed metric:" (12 right, 1 wrong, 1 declined); 30 runs still declined as the metrics-only agent does.
-- On the other groups, 11 of the 191 runs that used the fallback answered right too, where a metric existed; 11 runs were confident-wrong and 13 wait for the blind judge (counted wrong until judged), which is most of the drop from 97.5% to 88.1% on `covered`.
+- On the other groups (191 runs), 11 runs used the fallback where a metric existed, all of them right; 11 runs were confident-wrong and 13 wait for the blind judge (counted wrong until judged), which is most of the drop from 97.5% to 88.1% on `covered`.
 
 ## What it means for the verdict
 
