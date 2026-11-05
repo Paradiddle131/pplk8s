@@ -64,7 +64,7 @@ DESC = {
     "native-graph": "Google's data agent with a property graph and its measures beside the tables.",
     "native-mcp": "Our ADK agent calling Google's Knowledge Catalog and BigQuery MCP servers.",
     "custom-toolbox": "Our ADK agent on generated MCP Toolbox tools over table functions.",
-    "custom-metricflow": "Our ADK agent on MetricFlow tools; it declines what no metric covers.",
+    "custom-metricflow": "Our ADK agent on MetricFlow tools, told to answer only through the metrics.",
     "custom-lightdash": "Our ADK agent with one tool on Lightdash's free metric query API.",
     "custom-hybrid": "MetricFlow tools first, then a read-only SQL fallback that says so.",
     "cc-metricflow": "The same MetricFlow tools called by a Claude Code subagent; another harness, shown for comparison only.",
@@ -651,8 +651,8 @@ def make_twins(sets, order):
         head = ("keeps level with the best managed agent on covered and hidden-rule questions" if lvl else
                 "keeps level with the best managed agent on hidden-rule questions" if trap_lvl else
                 "trails or ties the best managed agent on covered and hidden-rule questions")
-        tail = (", and falls behind on uncovered ones on every set, where it declines by design." if unc_below else
-                ", and on uncovered questions, where it declines by design, it is not behind on every set.")
+        tail = (", and falls behind on uncovered ones, which no single metric answers, on every set." if unc_below else
+                ", and on uncovered questions, which no single metric answers, it is not behind on every set.")
         T["mapLead"] = "On the free model, MetricFlow " + head + tail
     st = T["strip"]
     if st:
@@ -685,7 +685,7 @@ def combine(sets, order):
         if not rel or None in rel:
             continue
         if not m:
-            m.append("On the free model, MetricFlow is %s the best managed agent on covered questions, %s it on hidden-rule ones and %s on uncovered ones, where it declines by design (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
+            m.append("On the free model, MetricFlow is %s the best managed agent on covered questions, %s it on hidden-rule ones and %s on uncovered ones, which no single metric answers (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
         else:
             m.append("on the %s: %s, %s and %s" % (P["label"].lower(), rel[0], rel[1], rel[2]))
     S["map"] = "; ".join(m) + "." if m else "Share of runs right per question type, per setup."
