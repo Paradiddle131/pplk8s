@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T00:01Z",
+ "written": "2026-11-05T00:08Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -102,6 +102,42 @@
     "wrong": 2
    },
    "model_calls": 409
+  },
+  {
+   "set": "frozen",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 26,
+   "of_cases": 96,
+   "runs": 26,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     26
+    ],
+    "trap": [
+     1.0,
+     3
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 26
+   },
+   "model_calls": 98
   },
   {
    "set": "frozen",
@@ -1600,16 +1636,16 @@
    "rung": 1,
    "cases": 96,
    "of_cases": 96,
-   "runs": 186,
+   "runs": 212,
    "accuracy": [
-    0.895833333333,
-    0.833333333333,
-    0.947916666667
+    0.901041666667,
+    0.84375,
+    0.953125
    ],
    "confident_wrong": [
-    0.052083333333,
+    0.046875,
     0.015625,
-    0.098958333333
+    0.088541666667
    ],
    "groups": {
     "conversation": [
@@ -1633,18 +1669,18 @@
      11
     ],
     "uncovered": [
-     0.7413793103448276,
+     0.7586206896551724,
      29
     ]
    },
    "pass_all": 0.875,
    "outcomes": {
-    "right": 167,
+    "right": 193,
     "declined": 4,
     "wrong": 6,
     "confident-wrong": 9
    },
-   "model_calls": 198
+   "model_calls": 224
   },
   {
    "set": "hard",
@@ -2222,16 +2258,16 @@
    "rung": 4,
    "cases": 43,
    "of_cases": 43,
-   "runs": 86,
+   "runs": 129,
    "accuracy": [
-    0.546511627907,
-    0.406976744186,
-    0.686046511628
+    0.542635658915,
+    0.403100775194,
+    0.682170542636
    ],
    "confident_wrong": [
-    0.058139534884,
-    0.011627906977,
-    0.116279069767
+    0.06976744186,
+    0.015503875969,
+    0.131782945736
    ],
    "groups": {
     "conversation": [
@@ -2239,26 +2275,26 @@
      8
     ],
     "covered": [
-     0.875,
+     0.8611111111111112,
      24
     ],
     "trap": [
-     1.0,
+     0.9444444444444445,
      6
     ],
     "uncovered": [
-     0.13157894736842105,
+     0.14035087719298245,
      19
     ]
    },
-   "pass_all": 0.5116279069767442,
+   "pass_all": 0.4883720930232558,
    "outcomes": {
-    "right": 47,
-    "wrong": 24,
-    "declined": 10,
-    "confident-wrong": 5
+    "right": 70,
+    "wrong": 35,
+    "declined": 15,
+    "confident-wrong": 9
    },
-   "model_calls": 94
+   "model_calls": 141
   },
   {
    "set": "hard",
@@ -2928,6 +2964,24 @@
   },
   {
    "set": "frozen",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 26,
+   "runs": 26,
+   "accuracy": [
+    0.012820512821,
+    0.0,
+    0.038461538462
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
    "arm": "custom-lightdash",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 41,
@@ -3399,16 +3453,16 @@
    "arm": "cc-metricflow",
    "model": "claude-code (fresh-haiku)",
    "cases": 43,
-   "runs": 86,
+   "runs": 129,
    "accuracy": [
-    -0.399224806202,
+    -0.403100775194,
     -0.542635658915,
-    -0.259689922481
+    -0.271317829457
    ],
    "confident_wrong": [
-    0.058139534884,
-    0.011627906977,
-    0.116279069767
+    0.06976744186,
+    0.015503875969,
+    0.131782945736
    ],
    "worth": false
   },
