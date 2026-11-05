@@ -49,4 +49,18 @@ gcp_gate || { log "ANOMALY: GCP gate failed before native-mcp"; exit 1; }
 pass "native-mcp frozen" 500 "${LIVE[@]}" --runs 1 --minutes 120 || exit 0
 pass "native-mcp hard" 250 "${LIVE[@]}" --runs 1 --set hard --minutes 60 || exit 0
 gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp"; exit 1; }
+# custom-toolbox (#330) next, in the profile's order: a local Toolbox over HTTP, pinned and checksum-checked by
+# probes/330_toolbox_check.sh's download step, stopped when the lane leaves.
+TB=${TOOLBOX_DIR:-$HOME/.local/toolbox}/toolbox-1.1.0
+if [[ ! -x $TB ]]; then
+  mkdir -p "$(dirname "$TB")" && curl -sSfo "$TB.part" https://storage.googleapis.com/genai-toolbox/v1.1.0/linux/amd64/toolbox &&
+    echo "17948e7538914320c4141d155bcf283c9a8c168c6abce09ae87837057899ba29  $TB.part" | sha256sum -c - >/dev/null &&
+    chmod +x "$TB.part" && mv "$TB.part" "$TB" || { log "ANOMALY: Toolbox download or checksum failed"; exit 1; }
+fi
+"$TB" --config "$REPO/docs/research/semantic-bet/probes/330_tools.yaml" --port 5000 >"$S/toolbox.log" 2>&1 &
+TB_PID=$!; trap 'kill $TB_PID 2>/dev/null' EXIT; sleep 5
+kill -0 $TB_PID 2>/dev/null || { log "ANOMALY: Toolbox did not start ($S/toolbox.log)"; exit 1; }
+pass "custom-toolbox frozen" 400 "${LIVE[@]}" --agent 330_toolbox_agent.py --runs 1 --minutes 120 || exit 0
+pass "custom-toolbox hard" 200 "${LIVE[@]}" --agent 330_toolbox_agent.py --runs 1 --set hard --minutes 60 || exit 0
+gcp_gate || { log "ANOMALY: GCP gate failed after custom-toolbox"; exit 1; }
 log "free lane: done for the day at free count $(used)"
