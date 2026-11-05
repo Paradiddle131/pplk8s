@@ -1065,6 +1065,9 @@ window.REPORT = D;
     G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${esc(bk.label)}<small>${b.n} q</small></span>`; });
     hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
+    // narrow bands: a column label that would run into the previous label on its tier moves right past it
+    const tierEnd = {};
+    head.querySelectorAll(".bh").forEach((sp) => { const t = sp.style.top, left = parseFloat(sp.style.left); if (tierEnd[t] != null && left < tierEnd[t] + 6) sp.style.left = (tierEnd[t] + 6) + "px"; tierEnd[t] = parseFloat(sp.style.left) + sp.offsetWidth; });
     let bh = ""; const minis = [];
     D.ladder.forEach((L) => {
       if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div>Rung 8. ${esc(L.label)}</div></div>`; return; }
