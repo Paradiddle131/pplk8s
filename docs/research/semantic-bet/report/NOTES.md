@@ -46,3 +46,39 @@ Build: `python3 build.py ../results.json`.
 - The owner, 2026-11-05T19:50Z: "I wanna keep both for now I loved both equally": the setup map and the setup explorer both stay, in that order, before "Method, briefly".
 - The explorer's "What changes" list: a piece swapped for another of the same title (the instruction reworded, as from `custom-metricflow` to `custom-hybrid`) no longer reads as the same line added and dropped; such a pair carries its first line, so the two read apart.
   Checked in Chromium: `custom-hybrid` shows "+ Instruction (given): metrics first; …" and "− Instruction (given): use only the metrics; …", with no console errors.
+
+## Observable Plot port
+
+- What moved to Plot: every figure's drawing.
+  - Figure 2: one Plot per panel (their x scales differ), joined into one SVG on wide screens as the page had it, stacked under 700 px.
+  - Figures 3 and 4: one Plot each. Figure 5: one Plot per family.
+  - Figure 6: one Plot per row of squares (in place of the canvases), plus the small interval charts beside each row.
+  - Plot draws the frames, grids, axes, rules, interval links, lines and role glyphs (custom Plot symbols that draw the page's own circle, square, diamond and triangle for a radius r); the y layouts that stack families, sets and lanes stay the page's own, passed to Plot as identity scales.
+- What stayed outside Plot, and why:
+  - The winners band, the decision map, the abstract and twin tables, the legends and the glossary stay HTML.
+  - The page's own tooltip, pinning, hover-to-focus, row band and glider: Plot's `tip` mark cannot pin, select or move a pin. A render transform (`tag()`) reads each element's datum from Plot's binding, and the elements are then regrouped (`collector()`): each moves, inside a shallow copy of its mark's group so it keeps that mark's styling, into per-row groups in reading order. The figures keep the hand-drawn page's DOM: `.mk[data-key|data-arm|data-fam]` around each setup, one focusable `[data-tip]` group per row and set holding its hit area and marks, and the old tab and screen-reader order. The sections contract is unchanged.
+  - The glider is hand-drawn SVG placed with Plot's x scale, with its old pointer and keyboard handlers.
+  - Figure 5's right-hand labels are placed by the page, as before.
+  - Figure 3 names its two key setups with rings and a key instead of placed text (below).
+  - Figure 6 draws its squares as one path per outcome colour (outlines as one-pixel rings) rather than one element per square, and each small interval chart is a Plot scale and zero rule with one function mark; four Plot marks per chart, or a rect per square, made the set switch three to five times slower.
+- Behaviour changes, all deliberate:
+  - Colours reach Plot as `var(--token)` strings, so a theme switch restyles every figure with no redraw; the `report-theme` event still fires and only closes a pinned tooltip.
+  - Figure 3's two key setups are ringed on the plot, above every other mark: the managed best with a solid 2 px ink ring, the deciding setup with a dashed one. A two-entry key under the plot shows each ring with the setup's name and role ("native-context-bare, Gemini default, thinking — managed best"; "custom-metricflow, Nemotron free — decides"). Hovering or focusing an entry focuses that setup on the plot and shows its tooltip, through the page's own `data-key` and `data-setup` handlers.
+    A text label still shows beside a ring, but only where it fits touching its own mark: 5 px from its glyph, covering no glyph, ring or other label, and nearer its own glyph than any other; otherwise the ring and the key carry the name, and there are no leader lines. The label is anchored on the side that touches the mark and placed once the web font has loaded (waiting at most 1.5 s); a font that lands later can only drop a label that no longer fits, never move it.
+    On the hand-drawn page the managed-best label covered the MetricFlow mark and took its hover.
+    Today the deciding setup keeps a direct label at 1280 px on both sets; the managed best, in the crowded top right, and both setups at 400 px, go by ring and key.
+  - The plate's column labels move right when one would run into the previous label on its tier (the hard set at 400 px overlapped by about 1 px before).
+  - The zero rule of the plate's small charts is drawn on the pixel grid (Plot's half-pixel offset), so it is a crisp 1 px line where the hand-drawn one spread over two.
+- Vendored: `@observablehq/plot` 0.6.17 and `d3` 7.9.0, the UMD builds from the npm tarballs (integrity checked against the registry), listed with their sha256 in `vendor/README.md`; `build.py` inlines them and refuses to build if a file's sha256 differs. The page grew from 359 kB to 866 kB.
+- Measured in Chromium at 1280 px, median of seven loads (render plus two frames), hand-drawn page against the Plot page:
+  - Figure 6's switch to the frozen set: 26 ms against 48 ms; to the hard set: 29 ms against 35 ms.
+  - A theme switch: 95 ms against 48 ms, since nothing redraws.
+  - The page's own load (DOMContentLoaded after the response): 425 ms against 571 ms, mostly parsing the two libraries.
+- Checks, old page against new:
+  - Every number the old page shows is on the new one: the visible numbers per figure, with each set selected, match one to one (2,080 at 1280 px, 2,056 at 400 px).
+  - 1280 and 400 px, light and dark, each set: no console errors, no horizontal page scroll, no overlapping text among 1,497 to 1,623 text boxes; Figure 5's label boxes that touch by 2 px are the same pairs on both pages.
+  - Every Figure 6 SVG renders at its own size (89 of 89), and its squares match the canvases pixel for pixel in both themes.
+  - The tab sequences of Figures 2 to 6 are the same stops in the same order (Figure 6 differs only in a canvas becoming an SVG), and focusing each of the 505 stops shows the same tooltip text. Closing a tooltip pinned by mouse returns focus to the mark's group in every figure.
+  - Hovering a mark lights only its own row band (and, in Figure 2, the same row in the other panel), as on the hand-drawn page.
+  - Hover, pin, select, hold, move, close, Escape, the gliders (+1 to 2% with 43 rows dimmed, Shift+5 to 7% with 13, Home, a 40 px drag to 83% with 41 rows), the plate's hover and pin, both setup sections' own focus and tooltips, and the theme switch give the old page's results.
+  - Contrast, computed from the rendered figures: text at least 5.56:1 (light) and 6.49:1 (dark); data marks at least 3.26:1 and 3.25:1. Under `prefers-reduced-motion` the transitions are 0 s and Plot adds no animation.
