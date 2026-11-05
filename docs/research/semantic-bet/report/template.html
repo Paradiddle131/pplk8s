@@ -66,8 +66,13 @@ p { margin: 0 0 1em; }
 .pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
 .pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
 .pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
-.pset .who { font-size: 14.5px; color: var(--ink); }
-.pset .who .id { font-size: 12.5px; }
+.pset .who { font-size: 14.5px; color: var(--ink); margin: 1px 0 1px; }
+.pset .who .by { color: var(--ink-3); font-size: 13px; margin-right: 2px; }
+.pset .who .id { font-size: 13px; font-weight: 600; }
+.pset .pn { color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pset .pn .few { color: var(--ink-3); }
+.pset .sl .kind { display: block; color: var(--ink-3); }
+.pillar .lchg { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: -4px 0 8px; }
 .pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
 .winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
 
@@ -350,6 +355,11 @@ window.REPORT = D;
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const P = (x) => Math.round(x * 100);
   const sg = (x) => { const v = Math.round(x * 100); return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v); };
+  // An interval as the page writes it: the bootstrap's [lo, hi]; or, when that has collapsed (every
+  // question all right, or none), the exact 95% bound over questions that build.py computed (ex),
+  // rounded outward and marked with the "exact" term.
+  const ivB = (v, ex) => (ex ? [Math.floor(ex[0] * 100 + 1e-9), Math.ceil(ex[1] * 100 - 1e-9)] : [P(v[1]), P(v[2])]);
+  const ivTxt = (v, ex) => { const b = ivB(v, ex); return `[${b[0]}, ${b[1]}]`; };
   const SETS = D.setOrder;
   const FAMS = ["da", "gt", "mf", "ref", "other"];
   const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
@@ -402,8 +412,8 @@ window.REPORT = D;
     const vf = r.vsFloor && r.vsFloor.acc ? `<dt>vs the floor</dt><dd>${sg(r.vsFloor.acc[0])} points [${sg(r.vsFloor.acc[1])}, ${sg(r.vsFloor.acc[2])}], paired</dd>` : "";
     return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}, ${esc(S(r.set).label.toLowerCase())}</h4>
       <p>${esc(r.desc)}</p>
-      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% [${P(r.acc[1])}, ${P(r.acc[2])}]</dd>
-      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% [${P(r.cw[1])}, ${P(r.cw[2])}]</dd>${s2}${vf}
+      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% ${ivTxt(r.acc, r.exact && r.exact.acc)}${r.exact && r.exact.acc ? `, exact bound over ${r.cases} questions` : ""}</dd>
+      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% ${ivTxt(r.cw, r.exact && r.exact.cw)}${r.exact && r.exact.cw ? `, exact bound over ${r.cases} questions` : ""}</dd>${s2}${vf}
       <dt>Ran</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${r.expected} runs${r.status === "pending" ? "; pending: deciding run" : ""}</dd>
       <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
   }
@@ -544,7 +554,8 @@ window.REPORT = D;
 
   /* ---------- text, winners ---------- */
   const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
-  const num = (v) => `<span class="n">${P(v[0])}%</span><span class="ivs">[${P(v[1])}, ${P(v[2])}]</span>`;
+  const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
+  const num = (v, ex) => `<span class="n">${P(v[0])}%</span><span class="ivs">${exIv(v, ex)}</span>`;
   const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
   function renderText() {
     $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
@@ -554,14 +565,14 @@ window.REPORT = D;
     const lines = [
       [`The ${term("managed-best", "managed best")}`, null, "grp"],
       ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
-      ["Right", (r) => num(r.mbAcc)], [term("confident-wrong"), (r) => num(r.mbCw)],
+      ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
       [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
-      ["Right", (r) => num(r.mfAcc)], [term("confident-wrong"), (r) => num(r.mfCw)],
+      ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
       [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
     ];
     $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
       lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
-      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets; each column is one question set.</p>` : "";
+      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
     $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the best managed agent</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
@@ -574,23 +585,44 @@ window.REPORT = D;
     $("#gloss").innerHTML = (D.terms || []).map((t) => `<dt id="term-${esc(t.key)}">${esc(t.label)}</dt><dd>${esc(t.text)}</dd>`).join("");
   }
   const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
+  // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
+  function pillarFig(p) {
+    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = `${L.q} question${L.q === 1 ? "" : "s"}`;
+    const what = p.what === "right" ? "right" : "confidently wrong";
+    let fig, nl;
+    if (L.exact) {
+      const b = ivB(iv, L.exact), all = iv[0] === 1;
+      fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
+      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}`;
+    } else {
+      fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
+      nl = `${qs}, ${runs}`;
+    }
+    if (L.few) nl += `<span class="few"> · few questions: reads only large gaps</span>`;
+    return { fig, nl };
+  }
   function renderWinners() {
     const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
     $("#winners").innerHTML = titles.map((t) => {
       let why = "";
+      const leads = new Set();
       const blocks = SETS.map((s) => {
         const p = S(s).pillars.find((x) => x.title === t);
         if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
         why = p.why;
-        const L = p.lead, iv = L.iv;
+        const L = p.lead; leads.add(L.id.split("|").slice(1).join("|"));
         const tied = p.tied.length ? `${term("interval", "Tied within the interval")}: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} <span class="n">${P(x.v)}%</span>`).join(", ")}.` : `No setup ties it within the ${term("interval", "interval")}.`;
         const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, <span class="n">${P(p.contrast[1])}%</span>.</div>` : "";
-        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
-          <div class="lead"><span class="num">${P(iv[0])}%<small>[${P(iv[1])}, ${P(iv[2])}]</small></span><span class="who"><span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)}</span>` : ""}</span></div>
+        const f = pillarFig(p);
+        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions${p.kind ? `<span class="kind">${esc(p.kind)}</span>` : ""}</div>
+          <div class="lead"><span class="num">${f.fig}</span></div>
+          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)}</span>` : ""}</div>
+          <div class="pn">${f.nl}</div>
           <div class="tied">${tied}</div>${ctr}</div>`;
       }).join("");
       const pt = PILLAR_TERM[t];
-      return `<div class="pillar"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}</p>${blocks}</div>`;
+      const differ = SETS.length > 1 && leads.size > 1 ? `<p class="lchg">A different setup leads on each set.</p>` : "";
+      return `<div class="pillar"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}</p>${differ}${blocks}</div>`;
     }).join("");
   }
 
@@ -645,7 +677,7 @@ window.REPORT = D;
             }).join("") + `</td>`;
           });
           ["acc", "cw"].forEach((k) => {
-            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>[${P(r[k][1])}, ${P(r[k][2])}]</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
+            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>${exIv(r[k], r.exact && r.exact[k])}</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
           });
           h += `</tr>`;
         });
