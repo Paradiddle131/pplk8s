@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T00:55Z",
+ "written": "2026-11-05T01:04Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -204,6 +204,42 @@
     "declined": 9
    },
    "model_calls": 77
+  },
+  {
+   "set": "frozen",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 22,
+   "of_cases": 96,
+   "runs": 22,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     22
+    ],
+    "trap": [
+     1.0,
+     1
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 22
+   },
+   "model_calls": 115
   },
   {
    "set": "frozen",
@@ -879,24 +915,24 @@
    "rung": 4,
    "cases": 96,
    "of_cases": 96,
-   "runs": 192,
+   "runs": 288,
    "accuracy": [
-    0.734375,
-    0.645833333333,
-    0.8125
+    0.725694444444,
+    0.635416666667,
+    0.805555555556
    ],
    "confident_wrong": [
-    0.036458333333,
-    0.010416666667,
-    0.067708333333
+    0.045138888889,
+    0.017361111111,
+    0.079861111111
    ],
    "groups": {
     "conversation": [
-     0.9285714285714286,
+     0.9523809523809524,
      7
     ],
     "covered": [
-     0.9776119402985075,
+     0.9651741293532339,
      67
     ],
     "distractor": [
@@ -916,14 +952,14 @@
      29
     ]
    },
-   "pass_all": 0.6979166666666666,
+   "pass_all": 0.6770833333333334,
    "outcomes": {
-    "right": 141,
-    "declined": 26,
-    "wrong": 18,
-    "confident-wrong": 7
+    "right": 209,
+    "declined": 36,
+    "wrong": 30,
+    "confident-wrong": 13
    },
-   "model_calls": 204
+   "model_calls": 306
   },
   {
    "set": "frozen",
@@ -3056,6 +3092,24 @@
   },
   {
    "set": "frozen",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 22,
+   "runs": 22,
+   "accuracy": [
+    0.015151515152,
+    0.0,
+    0.045454545455
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
    "arm": "custom-metricflow",
    "model": "claude-haiku-5-5",
    "cases": 96,
@@ -3257,16 +3311,16 @@
    "arm": "cc-metricflow",
    "model": "claude-code (fresh-haiku)",
    "cases": 96,
-   "runs": 192,
+   "runs": 288,
    "accuracy": [
-    -0.206597222222,
-    -0.296875,
-    -0.121527777778
+    -0.215277777778,
+    -0.305555555556,
+    -0.131944444444
    ],
    "confident_wrong": [
-    0.022569444444,
-    -0.013888888889,
-    0.060763888889
+    0.03125,
+    -0.006944444444,
+    0.069444444444
    ],
    "worth": false
   },
