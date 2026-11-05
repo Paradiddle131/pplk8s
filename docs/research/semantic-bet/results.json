@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T00:37Z",
+ "written": "2026-11-05T00:48Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -939,16 +939,16 @@
    "rung": 4,
    "cases": 96,
    "of_cases": 96,
-   "runs": 96,
+   "runs": 192,
    "accuracy": [
-    0.739583333333,
-    0.645833333333,
-    0.822916666667
+    0.734375,
+    0.640625,
+    0.817708333333
    ],
    "confident_wrong": [
-    0.03125,
-    0.0,
-    0.072916666667
+    0.026041666667,
+    0.005208333333,
+    0.052083333333
    ],
    "groups": {
     "conversation": [
@@ -956,7 +956,7 @@
      7
     ],
     "covered": [
-     0.9850746268656716,
+     0.9776119402985075,
      67
     ],
     "distractor": [
@@ -976,15 +976,15 @@
      29
     ]
    },
-   "pass_all": 0.7395833333333334,
+   "pass_all": 0.71875,
    "outcomes": {
-    "right": 71,
-    "declined": 16,
-    "wrong": 5,
-    "confident-wrong": 3,
-    "unclear": 1
+    "right": 141,
+    "declined": 34,
+    "wrong": 10,
+    "confident-wrong": 5,
+    "unclear": 2
    },
-   "model_calls": 102
+   "model_calls": 204
   },
   {
    "set": "frozen",
@@ -2132,13 +2132,13 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 4,
-   "cases": 9,
+   "cases": 38,
    "of_cases": 43,
-   "runs": 9,
+   "runs": 38,
    "accuracy": [
-    1.0,
-    1.0,
-    1.0
+    0.868421052632,
+    0.763157894737,
+    0.973684210526
    ],
    "confident_wrong": [
     0.0,
@@ -2146,20 +2146,29 @@
     0.0
    ],
    "groups": {
+    "conversation": [
+     0.625,
+     8
+    ],
     "covered": [
-     1.0,
-     9
+     0.875,
+     24
     ],
     "trap": [
      1.0,
-     4
+     6
+    ],
+    "uncovered": [
+     0.8571428571428571,
+     14
     ]
    },
-   "pass_all": 1.0,
+   "pass_all": 0.868421052631579,
    "outcomes": {
-    "right": 9
+    "right": 33,
+    "wrong": 5
    },
-   "model_calls": 36
+   "model_calls": 166
   },
   {
    "set": "hard",
@@ -3272,16 +3281,16 @@
    "arm": "cc-metricflow",
    "model": "claude-code (fresh-sonnet)",
    "cases": 96,
-   "runs": 96,
+   "runs": 192,
    "accuracy": [
-    -0.201388888889,
-    -0.295138888889,
-    -0.111111111111
+    -0.206597222222,
+    -0.298611111111,
+    -0.118055555556
    ],
    "confident_wrong": [
-    0.017361111111,
-    -0.020833333333,
-    0.059027777778
+    0.012152777778,
+    -0.019097222222,
+    0.041666666667
    ],
    "worth": false
   },
@@ -3451,12 +3460,12 @@
    "set": "hard",
    "arm": "custom-hybrid",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 9,
-   "runs": 9,
+   "cases": 38,
+   "runs": 38,
    "accuracy": [
-    0.0,
-    0.0,
-    0.0
+    -0.070175438596,
+    -0.175438596491,
+    0.008771929825
    ],
    "confident_wrong": [
     0.0,
