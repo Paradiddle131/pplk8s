@@ -133,6 +133,8 @@ def model_info(model):
     m = re.match(r"claude-code \((.+)\)", model)
     if m:
         name = m.group(1)
+        if name.startswith("subject-"):  # the Bash-and-Read-only bet-subject agent type, fresh per case
+            return "Claude Code " + name[len("subject-"):].capitalize() + ", Bash and Read only", "cc"
         base = name.replace("fresh-", "").capitalize()
         return "Claude Code " + base + (", fresh sessions" if name.startswith("fresh-") else ""), "cc"
     m = re.match(r"google-data-agent \((.+)\)", model)

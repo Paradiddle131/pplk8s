@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T01:15Z",
+ "written": "2026-11-05T01:28Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1070,6 +1070,62 @@
     "wrong": 1
    },
    "model_calls": 21
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (subject-haiku)",
+   "harness": "claude-code-subagent",
+   "session": "shared per batch",
+   "rung": 4,
+   "cases": 96,
+   "of_cases": 96,
+   "runs": 96,
+   "accuracy": [
+    0.697916666667,
+    0.604166666667,
+    0.791666666667
+   ],
+   "confident_wrong": [
+    0.041666666667,
+    0.010416666667,
+    0.083333333333
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9552238805970149,
+     67
+    ],
+    "distractor": [
+     1.0,
+     3
+    ],
+    "planted": [
+     1.0,
+     4
+    ],
+    "trap": [
+     1.0,
+     11
+    ],
+    "uncovered": [
+     0.10344827586206896,
+     29
+    ]
+   },
+   "pass_all": 0.6979166666666666,
+   "outcomes": {
+    "right": 67,
+    "declined": 15,
+    "confident-wrong": 4,
+    "wrong": 9,
+    "unclear": 1
+   },
+   "model_calls": 102
   },
   {
    "set": "frozen",
@@ -3358,6 +3414,24 @@
     0.0,
     0.0,
     0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code (subject-haiku)",
+   "cases": 96,
+   "runs": 96,
+   "accuracy": [
+    -0.243055555556,
+    -0.340277777778,
+    -0.149305555556
+   ],
+   "confident_wrong": [
+    0.027777777778,
+    -0.013888888889,
+    0.072916666667
    ],
    "worth": false
   },

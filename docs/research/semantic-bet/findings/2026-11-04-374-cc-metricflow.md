@@ -119,3 +119,24 @@ The first pass put about 12 cases in one subagent session, where every API run s
 
 - Opus past its sample (needs the owner's go).
 - Whether the decline habit is the harness's system prompt or its shell-tool framing (a Bash-and-Read-only agent type, `bet-subject`, now exists for that pass).
+
+## The decline habit is not the general-purpose agent's prompt (Haiku, Bash-and-Read-only agent type, 2026-11-05, 01:17Z to 01:28Z)
+
+- Question: Haiku as a fresh subagent declines most `uncovered` questions (17% right against 44% through ADK); does Claude Code's general-purpose agent prompt cause it?
+- Haiku re-ran the frozen set once, one fresh subagent per case, as a custom agent type `bet-subject` (its definition copied to `probes/374_bet_subject_agent.md`): tools Bash and Read only, a two-line system prompt in place of the general-purpose agent's, the same rendered task prompt (`probes/374_cc_prompt.md`), handed only the prompt's path; label `claude-code (subject-haiku)`, scored at k = 1 like run 1 of the others.
+- About 27k to 35k subagent tokens a case, against about 60k as a general-purpose subagent: the general-purpose prompt and tool list are about half of each case's tokens.
+- No call outside the task; one subagent read its answers file back with `python3` to check the JSON, and reported it.
+
+| Frozen set, Haiku, fresh per case (`measured`, results.json at this commit) | Right | Confident-wrong | `covered` right | `uncovered` right |
+|---|---|---|---|---|
+| Bash-and-Read-only agent type, k = 1 | 69.8% [60.4, 79.2] | 4.2% [1.0, 8.3] | 96% | 10% |
+| General-purpose agent, run 1 | 72.9% [63.5, 81.2] | 3.1% [0.0, 7.3] | 97% | 17% |
+| General-purpose agent, k = 3 | 72.6% [63.5, 80.6] | 4.5% [1.7, 8.0] | 97% | 17% |
+| (ADK on the API, k = 3) | 81.2% [73.3, 88.5] | 2.4% [0.7, 4.5] | | 44% |
+
+- The leaner agent type ties the general-purpose one (69.8% against 72.9% on the same run; 11 of 96 cases changed outcome, both ways) and declines `uncovered` questions as often or more (10% against 17%).
+- So the gap to ADK is not the general-purpose agent's system prompt or its tool list; what stays common to both subagent rows is the task prompt (`374_cc_prompt.md`: answer only through the tool, never compute a figure, say so when no metric answers) and Claude Code's base harness, so those are the next suspects.
+
+### Still unknown
+
+- Whether the task prompt's "never compute a figure" line, which the ADK agent's instruction words differently, is what turns `uncovered` questions into declines: a one-line variant of the prompt on the `uncovered` cases would test it.
