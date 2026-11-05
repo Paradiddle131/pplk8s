@@ -1515,8 +1515,13 @@ window.reportReady(() => {
     const label = (x) => x.slot === "model" ? x.p.title.replace(/^Model: /, "model: ") + ((x.p.lines || [])[0] ? ", " + x.p.lines[0] : "") :
       x.slot === "wh" ? "warehouse: " + x.p.title : (x.slot === "sql" ? "" : x.slot === "server" ? "server: " : x.slot === "agent" ? "agent: " : "") + x.p.title + (x.slot === "ctx" || x.slot === "reach" ? (x.slot === "reach" ? " (in reach)" : " (given)") : "");
     const added = pieces(S).filter((x) => df.added.has(x.k));
-    const li = added.map((x) => `<li class="add"><b aria-label="added">+</b><span>${esc(label(x))}</span></li>`).join("") +
-      df.removed.map((x) => `<li class="gone"><b aria-label="dropped">−</b><span>${esc(label(x))}</span></li>`).join("");
+    // A piece swapped for another of the same title (an instruction reworded) would read as the same line added and
+    // dropped: such pairs carry their first line, so the two read apart.
+    const dropped = new Set(df.removed.map(label));
+    const twin = new Set(added.map(label).filter((l) => dropped.has(l)));
+    const say = (x) => { const l = label(x); const first = (x.p.lines || [])[0]; return twin.has(l) && typeof first === "string" ? l + ": " + first : l; };
+    const li = added.map((x) => `<li class="add"><b aria-label="added">+</b><span>${esc(say(x))}</span></li>`).join("") +
+      df.removed.map((x) => `<li class="gone"><b aria-label="dropped">−</b><span>${esc(say(x))}</span></li>`).join("");
     return `<h3>What changes from <span class="id" data-setup="${esc(df.before)}" tabindex="0">${esc(df.before)}</span></h3>
       <p>${esc(S.why || "")}</p>${li ? `<ul class="sxb-diff">${li}</ul>` : `<p class="sxb-cap">No piece drawn here changes.</p>`}`;
   }
