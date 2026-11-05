@@ -1007,46 +1007,54 @@ window.REPORT = D;
     bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
     return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
   }
-  // One row of squares as a Plot of rects on pixel (identity) scales: three runs per question, stacked.
+  // One row of squares as a Plot on pixel (identity) scales: three runs per question, stacked.
+  // The squares are drawn as one path per outcome paint (a few paths per row instead of a rect per
+  // square), which keeps the plate's redraw fast; the shapes are the canvas plate's, pixel for pixel.
+  const sqr = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
   function unitsPlot(r, G) {
-    const s = G.pitch - 1, fills = [], strokes = [];
+    const s = G.pitch - 1, F = {}, K = {}; // fill and stroke path data per colour token
+    const add = (o, c, d) => { o[c] = (o[c] || "") + d; };
     G.order.forEach((ci) => {
       const x = G.xs.get(ci);
       for (let k = 0; k < 3; k++) {
         const y = G.h - (k + 1) * G.pitch + 1, ch = r.units[ci * 3 + k] || ".";
-        if (ch === ".") fills.push([x + s / 2 - 1, y + s / 2 - 1, 2, 2, "var(--o-none)"]);
-        else if (ch === "0") fills.push([x, y, s, s, "var(--o-right)"]);
-        else if (ch === "1") strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-decl)"]);
-        else if (ch === "2") { fills.push([x, y + s / 2, s, s / 2, "var(--o-wrong)"]); strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-wrong)"]); }
-        else if (ch === "3") { strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-decl)"]); fills.push([x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5, "var(--o-decl)"]); }
-        else fills.push([x - .5, y - .5, s + 1, s + 1, "var(--o-cw)"]);
+        if (ch === ".") add(F, "o-none", sqr(x + s / 2 - 1, y + s / 2 - 1, 2, 2));
+        else if (ch === "0") add(F, "o-right", sqr(x, y, s, s));
+        else if (ch === "1") add(K, "o-decl", sqr(x + .5, y + .5, s - 1, s - 1));
+        else if (ch === "2") { add(F, "o-wrong", sqr(x, y + s / 2, s, s / 2)); add(K, "o-wrong", sqr(x + .5, y + .5, s - 1, s - 1)); }
+        else if (ch === "3") { add(K, "o-decl", sqr(x + .5, y + .5, s - 1, s - 1)); add(F, "o-decl", sqr(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5)); }
+        else add(F, "o-cw", sqr(x - .5, y - .5, s + 1, s + 1));
       }
     });
-    const box = { x1: (d) => d[0], x2: (d) => d[0] + d[2], y1: (d) => d[1], y2: (d) => d[1] + d[3] };
+    const paths = Object.entries(F).map(([c, d]) => `<path fill="var(--${c})" d="${d}"/>`).join("") + Object.entries(K).map(([c, d]) => `<path fill="none" stroke="var(--${c})" stroke-width="1" d="${d}"/>`).join("");
     const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
-      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>`),
-      Plot.rect(fills, Object.assign({ fill: (d) => d[4] }, box)),
-      Plot.rect(strokes, Object.assign({ fill: "none", stroke: (d) => d[4], strokeWidth: 1 }, box)),
+      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
     ] });
-    svg.style.width = G.UW + "px"; svg.style.height = G.h + "px"; svg.style.overflow = "visible";
+    trueSize(svg, G.UW, G.h);
     return svg;
   }
+  // The plate's cells are 1 px narrower than their content (a left border under border-box); like the
+  // canvases before, each SVG keeps its own size and overflows by that pixel, so squares stay crisp.
+  // Each Plot carries its own <style> of class defaults; the plate sets those inline instead, which spares
+  // the browser about a hundred style sheets on a set switch.
+  function trueSize(svg, w, h) { const st = svg.querySelector(":scope > style"); if (st) st.remove(); Object.assign(svg.style, { display: "block", width: w + "px", height: h + "px", maxWidth: "none", overflow: "visible" }); }
   function bandAt(ci) { // the hovered question's column, on every row
     const G = plateState.G; const on = ci != null && G.xs.has(ci);
     plateState.svgs.forEach((sv) => { const b = sv.querySelector(".pband"); if (!b) return; b.setAttribute("visibility", on ? "visible" : "hidden"); if (on) b.setAttribute("x", G.xs.get(ci) - 1); });
   }
-  // The small interval charts beside each row, as Plots: a zero line, the interval, the mean and its value.
+  // The small interval charts beside each row: a Plot gives the x scale and the zero rule; the interval,
+  // its mean and the value are one function mark on that scale (four Plot marks per chart cost the
+  // plate's set switch about 12 ms across its 60-odd charts, one mark costs about 2).
   function miniIv(v, w, h, dom, kind, partial) {
     const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const yc = h / 2;
-    const vt = { frameAnchor: "right", dx: 40, textAnchor: "end", fontFamily: "var(--label)" };
-    const mk = [Plot.ruleX([0], { x: (q) => q, y1: 2, y2: h - 2, stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" })];
-    if (!v) mk.push(one("–", Object.assign({ fill: "var(--ink-3)", fontSize: 12 }, vt)));
-    else mk.push(
-      Plot.link([v], { x1: (q) => cl(q[1]), x2: (q) => cl(q[2]), y1: yc, y2: yc, stroke: col, strokeWidth: 2, strokeLinecap: "round", strokeDasharray: partial ? "3 2" : undefined }),
-      Plot.dot([v], { x: (q) => cl(q[0]), y: yc, r: 3.6, fill: partial ? "var(--paper)" : col, stroke: partial ? col : "var(--paper)", strokeWidth: 1.5 }),
-      one(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", Object.assign({ fill: "var(--ink)", fontSize: 12.5 }, vt)));
-    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 0, marginBottom: 0, x: { domain: dom }, y: { type: "identity" }, marks: mk });
-    svg.setAttribute("aria-hidden", "true"); svg.style.overflow = "visible"; svg.style.width = w + "px";
+    const val = (t, fill, fs) => `<text x="${w - 6}" y="${yc + 4}" text-anchor="end" fill="${fill}" font-size="${fs}" font-family="var(--label)">${t}</text>`;
+    const body = ({ x }) => !v ? val("–", "var(--ink-3)", 12)
+      : `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${yc}" y2="${yc}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`
+      + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
+      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 12.5);
+    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
+      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" }), raw(body)] });
+    svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
   function renderPlate() {
