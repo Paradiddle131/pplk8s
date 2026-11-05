@@ -98,9 +98,7 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .plot .f12, .plot .f12 text { font-size: 12px; }
 .plot .hit { fill: transparent; }
 .plot [data-tip]:focus, .plot [data-setup]:focus { outline: none; }
-.plot .hit.tiphl, .plot .hit:focus { fill: var(--band); }
-.fpanels { display: flex; align-items: flex-start; }
-.fpanels svg { flex: none; }
+.plot [data-tip]:focus .hit, .plot [data-tip]:hover .hit, .plot .hit.tiphl { fill: var(--band); }
 .plot.panels { display: grid; }
 .plot text[data-setup]:focus { text-decoration: underline; }
 .plot .frame { fill: none; stroke: var(--rule); }
@@ -1794,7 +1792,7 @@ window.reportReady(() => {
     if (id === bandId) return;
     document.querySelectorAll(".plot .hit.tiphl").forEach((h) => h.classList.remove("tiphl"));
     bandId = id;
-    if (id) document.querySelectorAll(`.plot .hit[data-tip="${CSS.escape(id)}"]`).forEach((h) => h.classList.add("tiphl"));
+    if (id) document.querySelectorAll(`.plot [data-tip="${CSS.escape(id)}"] .hit`).forEach((h) => h.classList.add("tiphl"));
   }
   const plotTip = (t) => (t && t.closest ? t.closest(".plot [data-tip]") : null);
   document.addEventListener("pointerover", (e) => { const t = plotTip(e.target); band(t ? t.dataset.tip : null); });
@@ -1993,11 +1991,23 @@ window.reportReady(() => {
     return [mi, ma];
   }
   function attrs(el, a) { for (const k in a) if (a[k] != null && a[k] !== false) el.setAttribute(k, a[k]); }
-  function wrapMk(el, key, arm, fam) { // the hover-to-focus unit: <g class="mk" data-key data-arm data-fam>
-    const g = document.createElementNS(SVGNS, "g"); g.setAttribute("class", "mk"); attrs(g, { "data-key": key, "data-arm": arm, "data-fam": fam });
-    el.replaceWith(g); g.append(el); return g;
+  // Plot draws mark by mark; the page reads setup by setup. While Plot renders, a collector keeps each
+  // tagged element under its row's key; afterwards take() moves those elements, each inside a shallow
+  // copy of its mark's group (so it keeps that mark's styling), into per-row groups built in reading
+  // order. The figures keep the hand-drawn page's DOM: tab and screen-reader order row by row, and every
+  // mark inside a focusable group that carries its tooltip, so focus can return there.
+  function collector() {
+    const m = new Map();
+    return {
+      put: (key) => (el) => { let a = m.get(key); if (!a) m.set(key, (a = [])); a.push(el); },
+      take: (key) => (m.get(key) || []).map((el) => { const sh = el.parentNode.cloneNode(false); sh.removeAttribute("aria-label"); sh.removeAttribute("aria-hidden"); sh.append(el); return sh; }),
+    };
   }
-  const wrapRow = (el, r) => wrapMk(el, r.key, r.arm, r.family);
+  function G(a, kids) { const g = document.createElementNS(SVGNS, "g"); if (a) attrs(g, a); (kids || []).forEach((k) => k && g.append(k)); return g; }
+  const mkA = (key, arm, fam) => ({ class: "mk", "data-key": key, "data-arm": arm, "data-fam": fam });
+  const mkOf = (r) => mkA(r.key, r.arm, r.family);
+  function prune(svg) { svg.querySelectorAll(":scope > g[aria-label]").forEach((g) => { if (!g.childElementCount) g.remove(); }); }
+  function settle(svg, rows) { svg.insertBefore(rows, svg.querySelector(":scope > .over-rows")); prune(svg); }
   function tag(data, fn) { // a Plot render transform: fn(element, datum) after the mark renders
     return function (index, scales, values, dims, ctx, next) {
       const g = next(index, scales, values, dims, ctx);
@@ -2028,11 +2038,6 @@ window.reportReady(() => {
     const st = (d) => glyphStyle(o.role(d), o.color(d), o.hollow ? o.hollow(d) : false);
     return Plot.dot(data, { x: o.x, y: o.y, r: o.r, symbol: (d) => SYM[o.role(d)] || SYM.other, fill: (d) => st(d).fill, stroke: (d) => st(d).stroke, strokeWidth: (d) => st(d).sw, opacity: o.opacity, sort: null, render: o.tag ? tag(data, o.tag) : undefined });
   }
-  function hits(data, o) { // transparent hit areas carrying the row tooltip; the band shows on hover and focus
-    return Plot.dot(data, { x: o.x, y: o.y, r: o.r, fill: "transparent", opacity: o.opacity, sort: null, render: tag(data, (el, d) => { const r = o.row(d); el.setAttribute("class", "hit"); attrs(el, { "data-tip": r.id, "data-g": o.g ? o.g(d) : null, tabindex: 0, "aria-label": o.aria(d) }); wrapRow(el, r); }) });
-  }
-  const tipOn = (r, g) => (el) => attrs(el, { "data-tip": r.id, "data-g": g });
-
   /* ---------- Figure 2: forest, both sets, two framed panels ---------- */
   function renderForest() {
     const el = $("#forest"); const W = Math.max(320, el.clientWidth); const narrow = W < 700;
@@ -2046,15 +2051,15 @@ window.reportReady(() => {
     const rh = narrow ? 36 : 30, gh = 28, top = narrow ? 62 : 46;
     const L = narrow ? 132 : 330, gap = 40;
     // rows on a pixel layout (Plot's identity y): a header per family, then its setups
-    let y = top; const heads = [], rows = [];
-    groups.forEach((g) => { heads.push({ f: g.f, y: y + 18 }); y += gh; g.keys.forEach((u) => { rows.push({ u, y: y + rh / 2 }); y += rh; }); });
+    let y = top; const heads = [], rows = [], seq = [];
+    groups.forEach((g) => { const h = { f: g.f, y: y + 18 }; heads.push(h); seq.push(h); y += gh; g.keys.forEach((u) => { const q = { u, y: y + rh / 2 }; rows.push(q); seq.push(q); y += rh; }); });
     const H = y + 44;
     const pts = [];
     rows.forEach((q) => SETS.forEach((s, si) => { const r = rowOf(s, q.u.key); if (r && r.plotted) pts.push({ r, u: q.u, si, y: q.y + (SETS.length > 1 ? (si ? 6 : -6) : 0) }); }));
     const tgOf = (q) => { const rs = SETS.map((s) => rowOf(s, q.u.key)); return [rs.some((r) => r && r.partial) ? "partial" : null, q.u.any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", "); };
-    const wrapU = (el, u) => wrapMk(el, u.key, u.arm, u.any.family);
-    function panel(p, width, ml, mr, labels, tabbable) {
-      const m = [];
+    // one panel as a Plot; its row elements stay in the collector until assemble() orders them
+    function panel(p, width, ml, mr, labels) {
+      const C = collector(), m = [];
       m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -(narrow ? 42 : 26), insetBottom: -12, ariaHidden: true }));
       const [mi, ma] = steps(0, p.max, p.minor, p.major);
       m.push(Plot.gridX({ ticks: mi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ma, stroke: "var(--grid-major)", strokeOpacity: 1 }));
@@ -2068,41 +2073,70 @@ window.reportReady(() => {
         if (lines.length) m.push(one(`managed best: ${lines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`, { frameAnchor: narrow ? "top-left" : "top-right", textAnchor: narrow ? "start" : "end", dy: mid(top - 13, 11.5) - (top - 4), className: "t-mute f11", render: tag([0], (t) => attrs(t, { "data-term": "managed-best", tabindex: 0 })) }));
       }
       if (labels) {
-        m.push(Plot.ruleY(heads, { y: (h) => h.y - 4, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => attrs(e, { "data-fam": h.f })) }));
-        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => attrs(e, { "data-fam": h.f })) }));
+        m.push(Plot.ruleY(heads, { y: (h) => h.y - 4, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
+        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
         m.push(txt(rows, { y: (q) => (narrow ? mid(q.y - 3, 11.5) : mid(q.y + 4, 11.5)), text: (q) => q.u.arm, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-id",
-          render: tag(rows, (e, q) => { attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); wrapU(e, q.u); }) }));
+          render: tag(rows, (e, q) => { attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); C.put("l" + q.u.key)(e); }) }));
         m.push(txt(rows, { y: (q) => (narrow ? mid(q.y + 11, 11.5) : mid(q.y + 4, 12.5)), text: (q) => q.u.any.modelLabel, frameAnchor: "left", dx: -ml + (narrow ? 0 : 150), textAnchor: "start", className: narrow ? "f11" : undefined,
-          render: tag(rows, (e, q) => { const t = tgOf(q); if (t) e.innerHTML = `${esc(q.u.any.modelLabel)}<tspan class="t-mute">, ${esc(narrow ? t.replace("pending: deciding run", "pending") : t)}</tspan>`; wrapU(e, q.u); }) }));
+          render: tag(rows, (e, q) => { const t = tgOf(q); if (t) e.innerHTML = `${esc(q.u.any.modelLabel)}<tspan class="t-mute">, ${esc(narrow ? t.replace("pending: deciding run", "pending") : t)}</tspan>`; C.put("l" + q.u.key)(e); }) }));
       }
-      // one hit band per row and set; the acc panel's band is the keyboard stop
-      m.push(Plot.rect(pts, { y1: (d) => d.y - 6, y2: (d) => d.y + 6, fill: "transparent", insetLeft: labels ? -12 : -ml, insetRight: -mr,
-        render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); attrs(e, { "data-tip": d.r.id }); if (tabbable) attrs(e, { tabindex: 0, "aria-label": label(d.r) + ", " + S(d.r.set).label + ": " + P(d.r.acc[0]) + "% right, " + P(d.r.cw[0]) + "% confident-wrong" }); wrapU(e, d.u); }) }));
-      const pm = (e, d) => { e.classList.add("pm"); attrs(e, { "data-panel": p.k, "data-v": d.r[p.k][0], "data-tip": d.r.id }); wrapU(e, d.u); };
+      // per row and set: the hit band, then each interval and its glyph
+      m.push(Plot.rect(pts, { y1: (d) => d.y - 6, y2: (d) => d.y + 6, fill: "transparent", insetLeft: labels ? -12 : -ml, insetRight: -mr, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.r.id)(e); }) }));
+      const pm = (e, d) => { e.classList.add("pm"); attrs(e, { "data-panel": p.k, "data-v": d.r[p.k][0] }); C.put("t" + d.r.id)(e); };
       [false, true].forEach((dash) => {
         const ds = pts.filter((d) => !!d.r.major === dash);
         m.push(Plot.link(ds, { x1: (d) => d.r[p.k][1], x2: (d) => Math.min(p.max, d.r[p.k][2]), y1: "y", y2: "y", stroke: (d) => famC(d.u.any.family), strokeWidth: (d) => (d.si ? 1.5 : 2), strokeLinecap: "round", strokeDasharray: dash ? "3 3" : undefined, render: tag(ds, pm) }));
       });
       m.push(glyphs(pts, { x: (d) => d.r[p.k][0], y: "y", r: (d) => (d.si ? 3.5 : 4.2), role: (d) => d.r.role, color: (d) => famC(d.u.any.family), hollow: (d) => d.si > 0, tag: pm }));
-      if (p.k === "cw" && gHome("cw") != null) m.push(Plot.ruleX([gHome("cw") / 100], { x: (v) => v, stroke: "var(--ink-2)", strokeWidth: 1 }));
-      const mx = Math.round(p.max * 100);
-      m.push(raw(({ x }) => `<g class="glider" data-panel="${p.k}" data-x0="${x(0)}" data-x1="${x(p.max)}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
-        <rect class="ghit" x="0" y="${top - 10}" width="28" height="${H - 40 - top + 10 + 22}" fill="transparent"/><line class="gl" x1="0" x2="0" y1="${top - 4}" y2="${H - 40}"/>
-        <rect class="gh top" x="-6" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="-6" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="9" y="${top + 6}" style="font-size:12px"></text></g>`));
-      const svg = plot({ width, height: H, marginLeft: ml, marginRight: mr, marginTop: top - 4, marginBottom: 40, x: { domain: [0, p.max] }, y: { type: "identity" }, ariaLabel: `${p.title} per setup and model, both question sets`, marks: m });
-      svg.style.width = (100 * width / W) + "%";
-      return svg;
+      if (p.k === "cw" && gHome("cw") != null) m.push(Plot.ruleX([gHome("cw") / 100], { x: (v) => v, stroke: "var(--ink-2)", strokeWidth: 1, className: "over-rows" }));
+      const svg = plot({ width, height: H, marginLeft: ml, marginRight: mr, marginTop: top - 4, marginBottom: 40, x: { domain: [0, p.max] }, y: { type: "identity" }, marks: m });
+      return { p, svg, C, x: svg.scale("x") };
     }
+    // The rows in the old order, label then one focusable group per set; a second panel's parts join the
+    // same group, shifted to where that panel sits, so each row and set is one stop over both panels.
+    function rowsOf(parts) {
+      const g = G();
+      seq.forEach((q) => {
+        if (!q.u) { const k = parts[0].C.take("h" + q.f); if (k.length) g.append(G({ "data-fam": q.f }, k)); return; }
+        const u = q.u, kids = parts[0].C.take("l" + u.key);
+        SETS.forEach((s) => {
+          const r = rowOf(s, u.key); if (!r || !r.plotted) return;
+          const inner = parts.flatMap((pt) => (pt.dx ? [G({ transform: `translate(${pt.dx},0)` }, pt.C.take("t" + r.id))] : pt.C.take("t" + r.id)));
+          kids.push(G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ", " + S(r.set).label + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, inner));
+        });
+        g.append(G(mkA(u.key, u.arm, u.any.family), kids));
+      });
+      return g;
+    }
+    function glider(pt) {
+      const p = pt.p, mx = Math.round(p.max * 100), x0 = (pt.dx || 0) + pt.x.apply(0), x1 = (pt.dx || 0) + pt.x.apply(p.max);
+      return `<g class="glider" data-panel="${p.k}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+        <rect class="ghit" x="0" y="${top - 10}" width="28" height="${H - 40 - top + 10 + 22}" fill="transparent"/><line class="gl" x1="0" x2="0" y1="${top - 4}" y2="${H - 40}"/>
+        <rect class="gh top" x="-6" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="-6" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="9" y="${top + 6}" style="font-size:12px"></text></g>`;
+    }
+    const finish = (svg, label) => { svg.setAttribute("aria-label", `${label} per setup and model, both question sets`); svg.style.width = "100%"; };
     el.innerHTML = "";
-    if (narrow) panels.forEach((p) => { const d = document.createElement("div"); d.className = "stack"; d.append(panel(p, W, L + 8, 18, true, p.k === "acc")); el.append(d); });
+    if (narrow) panels.forEach((p) => {
+      const pt = panel(p, W, L + 8, 18, true); settle(pt.svg, rowsOf([pt]));
+      pt.svg.append(G(null, [])); pt.svg.lastChild.innerHTML = glider(pt); finish(pt.svg, p.title);
+      const d = document.createElement("div"); d.className = "stack"; d.append(pt.svg); el.append(d);
+    });
     else {
-      const pw = (W - L - gap - 10) / 2; const d = document.createElement("div"); d.className = "fpanels";
-      d.append(panel(panels[0], L + pw, L + 8, 8, true, true), panel(panels[1], gap + pw + 10, gap + 8, 18, false, false)); el.append(d);
+      // two Plots, one per panel (their x scales differ), joined into one SVG as the page had it
+      const pw = (W - L - gap - 10) / 2, A = panel(panels[0], L + pw, L + 8, 8, true), B = panel(panels[1], gap + pw + 10, gap + 8, 18, false);
+      B.dx = L + pw;
+      const svg = A.svg; svg.setAttribute("width", W); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      const rowsG = rowsOf([A, B]); prune(A.svg); prune(B.svg);
+      const over = (s) => [...s.querySelectorAll(":scope > .over-rows")].map((e) => (e.remove(), e));
+      const overA = over(A.svg), overB = over(B.svg);
+      svg.append(G({ transform: `translate(${B.dx},0)` }, [...B.svg.children].filter((c) => c.tagName.toLowerCase() !== "style")));
+      svg.append(rowsG, ...overA, G({ transform: `translate(${B.dx},0)` }, overB), G());
+      svg.lastChild.innerHTML = glider(A) + glider(B);
+      finish(svg, panels.map((p) => p.title).join(" and ")); el.append(svg);
     }
     wireGliders(el); applyGlide();
     $("#leg2").innerHTML = legendFams(Object.values(ALL)) + legendRoles() + (SETS.length > 1 ? `<span class="k">each row: upper mark frozen set, lower mark (hollow) hard set</span>` : "");
   }
-
 
   /* ---------- Figure 2's threshold gliders ---------- */
   const GL = { acc: null, cw: null }; // null: at home, the managed best
@@ -2173,6 +2207,7 @@ window.reportReady(() => {
     const [gxi, gxa] = steps(xmin, 1, 0.02, 0.1), [gyi, gya] = steps(0, ymax, 0.01, 0.05);
     const xt = []; for (let v = Math.ceil(xmin * 10) / 10; v <= 1 + 1e-9; v += W < 640 ? 0.2 : 0.1) xt.push(+v.toFixed(2));
     const yt = []; for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.25 ? 0.1 : 0.05) yt.push(+v.toFixed(2));
+    const C = collector();
     const mk = [
       Plot.gridX({ ticks: gxi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: gxa, stroke: "var(--grid-major)", strokeOpacity: 1 }),
       Plot.gridY({ ticks: gyi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridY({ ticks: gya, stroke: "var(--grid-major)", strokeOpacity: 1 }),
@@ -2184,25 +2219,68 @@ window.reportReady(() => {
     const mb = byId(S(s).managedBest);
     if (mb) mk.push(Plot.ruleX([mb.acc[0]], { x: (v) => v, stroke: "var(--ink-3)", strokeDasharray: "1 3" }));
     const order = rows.slice().sort((a, b) => (b.primary - a.primary)).reverse();
+    const put = (e, r) => C.put("t" + r.id)(e);
     [false, true].forEach((dash) => {
-      const ds = order.filter((r) => !!r.major === dash); const o = { stroke: (r) => famC(r.family), strokeWidth: 1.4, strokeDasharray: dash ? "3 3" : undefined, render: tag(ds, (e, r) => { tipOn(r)(e); wrapRow(e, r); }) };
+      const ds = order.filter((r) => !!r.major === dash); const o = { stroke: (r) => famC(r.family), strokeWidth: 1.4, strokeDasharray: dash ? "3 3" : undefined, render: tag(ds, put) };
       mk.push(Plot.link(ds, Object.assign({ x1: (r) => r.acc[1], x2: (r) => r.acc[2], y1: (r) => r.cw[0], y2: (r) => r.cw[0] }, o)));
       mk.push(Plot.link(ds, Object.assign({ x1: (r) => r.acc[0], x2: (r) => r.acc[0], y1: (r) => r.cw[1], y2: (r) => r.cw[2] }, o)));
     });
-    mk.push(hits(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 12, row: (r) => r, aria: (r) => label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }));
-    mk.push(glyphs(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 5, role: (r) => r.role, color: (r) => famC(r.family), tag: (e, r) => { tipOn(r)(e); wrapRow(e, r); } }));
-    const mf = byId(S(s).mf); let prev = null;
-    [[mb, "managed best"], [mf, "decides"]].forEach(([r, why]) => {
-      if (!r) return;
-      const px = x(r.acc[0]), py = y(r.cw[0]); const right = px < W * 0.62;
-      let ly = py + (why === "decides" ? 20 : -12);
-      if (prev && Math.abs(prev - ly) < 16) ly = prev + 16; prev = ly;
-      mk.push(txt([r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, dx: right ? 10 : -10, dy: mid(ly, 12) - py, textAnchor: right ? "start" : "end",
-        stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([r], (e, q) => { attrs(e, { "data-setup": q.arm, "data-arm": q.arm, tabindex: 0 }); wrapRow(e, q); }) }));
-    });
-    el.innerHTML = "";
-    el.append(plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk }));
+    mk.push(Plot.dot(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 12, fill: "transparent", sort: null, render: tag(order, (e, r) => { e.setAttribute("class", "hit"); put(e, r); }) }));
+    mk.push(glyphs(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 5, role: (r) => r.role, color: (r) => famC(r.family), tag: (e, r) => { e.classList.add("gly"); put(e, r); } }));
+    const mf = byId(S(s).mf);
+    const labs = [[mb, -12], [mf, 20]].filter(([r]) => r).map(([r, pref], i) => ({ r, pref, i }));
+    labs.forEach((L) => mk.push(txt([L.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
+      stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([L.r], (e, q) => { attrs(e, { "data-setup": q.arm, "data-arm": q.arm, tabindex: 0 }); C.put("l" + L.i)(e); }) })));
+    const svg = plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk });
+    const rowsG = G();
+    order.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, C.take("t" + r.id))])));
+    labs.forEach((L) => { L.g = G(mkOf(L.r), C.take("l" + L.i)); L.text = L.g.querySelector("text"); L.px = x(L.r.acc[0]); L.py = y(L.r.cw[0]); rowsG.append(L.g); });
+    settle(svg, rowsG);
+    el.innerHTML = ""; el.append(svg);
+    placeLabels(svg, labs, { l: m.l, r: W - m.r, t: 0, b: H - m.b, W });
     $("#leg3").innerHTML = legendFams(rows) + legendRoles();
+  }
+  // Figure 3's two labels: of the spots around the mark (either side, sliding along, up or down the plot),
+  // the nearest whose box clears every glyph, the other label and the plot's edges, the usual spot
+  // (managed best above its mark, the deciding setup below) first; a label off its usual spot gets a
+  // short leader line back to its mark.
+  function placeLabels(svg, labs, fr) {
+    const sr = svg.getBoundingClientRect();
+    const rel = (b) => ({ l: b.left - sr.left, r: b.right - sr.left, t: b.top - sr.top, b: b.bottom - sr.top });
+    const glyphsBoxes = [...svg.querySelectorAll(".gly")].map((e) => rel(e.getBoundingClientRect()));
+    const meets = (a, o) => a.l < o.r + 2 && a.r > o.l - 2 && a.t < o.b + 1 && a.b > o.t - 1;
+    const placed = [];
+    labs.forEach((L) => {
+      const t = L.text; t.parentNode.removeAttribute("transform"); t.setAttribute("text-anchor", "start");
+      const bb = t.getBBox(); // local box: its x and y offsets do not move with the translate below
+      const right0 = L.px < fr.W * 0.62, near = L.pref, w = bb.width;
+      const boxAt = (tx, ty) => ({ l: tx + bb.x, r: tx + bb.x + w, t: ty + bb.y, b: ty + bb.y + bb.height });
+      const usual = { tx: right0 ? L.px + 10 : L.px - 10 - w, ty: L.py + near };
+      let best = null;
+      for (let dy = -210; dy <= 210; dy += 7) {
+        const dyy = dy === 0 ? near : dy;
+        for (const tx of [L.px + 10, L.px - 10 - w, L.px - w * 0.25, L.px - w * 0.5, L.px - w * 0.75]) {
+          const ty = L.py + dyy, b = boxAt(tx, ty);
+          if (b.l < fr.l || b.r > fr.r || b.t < fr.t || b.b > fr.b) continue;
+          if (glyphsBoxes.some((o) => meets(b, o)) || placed.some((o) => meets(b, o))) continue;
+          const qx = Math.max(b.l, Math.min(L.px, b.r)), qy = Math.max(b.t, Math.min(L.py, b.b));
+          const isUsual = tx === usual.tx && ty === usual.ty;
+          const score = isUsual ? -1 : Math.hypot(qx - L.px, qy - L.py) + (Math.sign(dyy) !== Math.sign(near) ? 6 : 0);
+          if (!best || score < best.score) best = { tx, ty, b, score, isUsual };
+        }
+      }
+      if (!best) best = Object.assign({ b: boxAt(usual.tx, usual.ty), isUsual: true }, usual);
+      t.setAttribute("transform", `translate(${best.tx},${best.ty})`);
+      placed.push(best.b);
+      if (!best.isUsual) { // a leader from the mark's edge to the label's nearest point
+        const qx = Math.max(best.b.l, Math.min(L.px, best.b.r)), qy = Math.max(best.b.t, Math.min(L.py, best.b.b));
+        const d = Math.hypot(qx - L.px, qy - L.py) || 1, ux = (qx - L.px) / d, uy = (qy - L.py) / d;
+        const seg = { x1: L.px + ux * 8, y1: L.py + uy * 8, x2: qx - ux * 2, y2: qy - uy * 2 };
+        const ln = G({ class: "leader" }); // a paper halo keeps the leader legible across the interval lines
+        ln.innerHTML = `<line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="var(--paper)" stroke-width="3" stroke-linecap="round"/><line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="var(--ink-2)" stroke-width="1"/>`;
+        L.g.insertBefore(ln, L.g.firstChild);
+      }
+    });
   }
 
   /* ---------- Figure 4: strip plot by question group, both sets ---------- */
@@ -2219,31 +2297,46 @@ window.reportReady(() => {
     });
     const H = y + 34;
     const GT = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" };
+    blocks.forEach((b, bi) => (b.i = bi));
     const subs = blocks.flatMap((b) => b.subs.map((sb) => Object.assign({ b }, sb)));
+    subs.forEach((sb, i) => (sb.i = i));
     const lanes = [], pts = [];
     subs.forEach((sb) => {
-      const thin = (S(sb.s).groupCases[sb.b.g.key] || 0) < 10;
+      const thin = (S(sb.s).groupCases[sb.b.g.key] || 0) < 10; sb.lanes = [];
       sb.fams.forEach((f, fi) => {
-        const ly = sb.y0 + fi * lane + lane / 2; lanes.push(ly);
-        S(sb.s).rows.filter((r) => r.plotted && r.family === f && r.groups[sb.b.g.key]).sort((a, c) => a.primary - c.primary).forEach((r) => pts.push({ r, g: sb.b.g, y: ly, thin }));
+        const ln = { y: sb.y0 + fi * lane + lane / 2, i: lanes.length, pts: [] }; lanes.push(ln); sb.lanes.push(ln);
+        S(sb.s).rows.filter((r) => r.plotted && r.family === f && r.groups[sb.b.g.key]).sort((a, c) => a.primary - c.primary).forEach((r) => { const d = { r, g: sb.b.g, y: ln.y, thin, i: pts.length }; pts.push(d); ln.pts.push(d); });
       });
     });
     const [gi, ga] = steps(0, 1, 0.05, 0.25), ticks = [0, .25, .5, .75, 1];
-    const aria = (d) => label(d.r) + ", " + d.g.label + ": " + P(d.r.groups[d.g.key][0]) + "%";
+    const C = collector();
     const mk = [
       Plot.gridX({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
       Plot.axisX({ anchor: "bottom", ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
       Plot.axisX({ anchor: "top", ticks, tickFormat: P, tickSize: 0, tickPadding: 2, label: null, className: "t-mute" }),
       one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - 2, 12.5) - (H - 34), textAnchor: "end", className: "t-ink" }),
-      Plot.ruleY(blocks, { y: (b) => b.y0 - 4, stroke: "var(--rule)", insetLeft: -ml, insetRight: -mr }),
-      txt(blocks, { y: (b) => mid(b.y0 + 10, 12.5), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); }) }),
-      txt(subs, { y: (sb) => mid(sb.y0 + (sb.fams.length * lane) / 2 + 4, 12), text: (sb) => `${short(sb.s)}, ${S(sb.s).groupCases[sb.b.g.key] || 0} q`, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12" }),
-      Plot.ruleY(lanes, { y: (v) => v, stroke: "var(--grid)" }),
-      hits(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 7, opacity: (d) => (d.thin ? 0.5 : 1), row: (d) => d.r, aria, g: (d) => d.g.key }),
-      glyphs(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 3.6, role: (d) => d.r.role, color: (d) => famC(d.r.family), opacity: (d) => (d.thin ? 0.5 : 1), tag: (e, d) => { tipOn(d.r, d.g.key)(e); wrapRow(e, d.r); } }),
+      Plot.ruleY(blocks, { y: (b) => b.y0 - 4, stroke: "var(--rule)", insetLeft: -ml, insetRight: -mr, render: tag(blocks, (e, b) => C.put("b" + b.i)(e)) }),
+      txt(blocks, { y: (b) => mid(b.y0 + 10, 12.5), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); C.put("b" + b.i)(e); }) }),
+      txt(subs, { y: (sb) => mid(sb.y0 + (sb.fams.length * lane) / 2 + 4, 12), text: (sb) => `${short(sb.s)}, ${S(sb.s).groupCases[sb.b.g.key] || 0} q`, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12", render: tag(subs, (e, sb) => C.put("s" + sb.i)(e)) }),
+      Plot.ruleY(lanes, { y: (l) => l.y, stroke: "var(--grid)", render: tag(lanes, (e, l) => C.put("n" + l.i)(e)) }),
+      Plot.dot(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 7, fill: "transparent", sort: null, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.i)(e); }) }),
+      glyphs(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 3.6, role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: (e, d) => C.put("t" + d.i)(e) }),
     ];
-    el.innerHTML = "";
-    el.append(plot({ width: W, height: H, marginTop: 14, marginRight: mr, marginBottom: 34, marginLeft: ml, x: { domain: [0, 1] }, y: { type: "identity" }, ariaLabel: "Share right by question group, both question sets", marks: mk }));
+    const svg = plot({ width: W, height: H, marginTop: 14, marginRight: mr, marginBottom: 34, marginLeft: ml, x: { domain: [0, 1] }, y: { type: "identity" }, ariaLabel: "Share right by question group, both question sets", marks: mk });
+    // reading order: each block's rule and heading, then per set its label, then each lane and its marks
+    const rowsG = G();
+    blocks.forEach((b) => {
+      rowsG.append(...C.take("b" + b.i));
+      subs.filter((sb) => sb.b === b).forEach((sb) => {
+        rowsG.append(...C.take("s" + sb.i));
+        sb.lanes.forEach((ln) => {
+          rowsG.append(...C.take("n" + ln.i));
+          ln.pts.forEach((d) => rowsG.append(G(mkOf(d.r), [G({ "data-tip": d.r.id, "data-g": d.g.key, tabindex: 0, "aria-label": label(d.r) + ", " + d.g.label + ": " + P(d.r.groups[d.g.key][0]) + "%", opacity: d.thin ? 0.5 : 1 }, C.take("t" + d.i))])));
+        });
+      });
+    });
+    settle(svg, rowsG);
+    el.innerHTML = ""; el.append(svg);
     $("#leg4").innerHTML = legendFams(Object.values(ALL)) + legendRoles();
   }
 
@@ -2259,7 +2352,8 @@ window.reportReady(() => {
     const mb = byId(S(s).managedBest);
     const panels = famRows(rows);
     $("#t5").textContent = (D.sentences.slope || {})[s] || "Share right on covered, hidden-rule and uncovered questions.";
-    el.innerHTML = ""; el.classList.add("panels"); el.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`; el.style.gap = `${gapY}px ${gapX}px`;
+    // each panel row ends with the gap below it, the last one included, as the single drawing had
+    el.innerHTML = ""; el.classList.add("panels"); el.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`; el.style.gap = `${gapY}px ${gapX}px`; el.style.paddingBottom = `${gapY}px`;
     el.setAttribute("role", "group"); el.setAttribute("aria-label", `Share right on covered, hidden-rule and uncovered questions, ${S(s).label}`);
     panels.forEach((p) => {
       const lw = Math.min(200, pw * 0.4); const ml = 34, mr = lw + 10, t = 44, b = ph - 36;
@@ -2275,6 +2369,7 @@ window.reportReady(() => {
       const ord = p.rows.slice().sort((a, c) => a.primary - c.primary);
       const line = ord.flatMap((r) => keys.map((k) => ({ r, k, v: r.groups[k][0] })));
       const aria = (r) => label(r) + ": covered " + P(r.groups.covered[0]) + "%, hidden-rule " + P(r.groups.trap[0]) + "%, uncovered " + P(r.groups.uncovered[0]) + "%";
+      const C = collector(), put = (e, d) => C.put("t" + d.r.key)(e);
       const mk = [
         one(D.familyLabel[p.f] || p.f, { frameAnchor: "top-left", dx: -ml, dy: mid(14, 12.5) - t, textAnchor: "start", className: "t-strong", render: tag([0], (e) => attrs(e, { "data-fam": p.f })) }),
         one("% of runs right", { frameAnchor: "top-left", dx: -ml, dy: mid(30, 11.5) - t, textAnchor: "start", className: "t-mute f11" }),
@@ -2288,17 +2383,20 @@ window.reportReady(() => {
         const gl = lab.find((l) => l.ghost);
         mk.push(one(`managed best ${P(mb.groups.uncovered[0])}`, { x: () => "uncovered", y: () => yv(gl.y), dx: 10, dy: 4 - 0.32 * 11.5, textAnchor: "start", className: "t-mute f11" }));
       }
-      const onSeries = (fn) => tag(line, fn);
-      mk.push(Plot.line(line, { x: "k", y: "v", z: (d) => d.r.key, stroke: "transparent", strokeWidth: 12, render: onSeries((e, d) => { e.style.pointerEvents = "stroke"; attrs(e, { "data-tip": d.r.id, tabindex: 0, "aria-label": aria(d.r) }); wrapRow(e, d.r); }) }));
+      mk.push(Plot.line(line, { x: "k", y: "v", z: (d) => d.r.key, stroke: "transparent", strokeWidth: 12, render: tag(line, (e, d) => { e.style.pointerEvents = "stroke"; put(e, d); }) }));
       [false, true].forEach((dash) => {
         const ds = line.filter((d) => !!d.r.major === dash);
-        mk.push(Plot.line(ds, { x: "k", y: "v", z: (d) => d.r.key, stroke: (d) => famC(d.r.family), strokeWidth: (d) => (d.r.primary ? 2.25 : 1.5), strokeDasharray: dash ? "3 3" : undefined, strokeLinecap: "butt", render: tag(ds, (e, d) => { tipOn(d.r)(e); wrapRow(e, d.r); }) }));
+        mk.push(Plot.line(ds, { x: "k", y: "v", z: (d) => d.r.key, stroke: (d) => famC(d.r.family), strokeWidth: (d) => (d.r.primary ? 2.25 : 1.5), strokeDasharray: dash ? "3 3" : undefined, strokeLinecap: "butt", render: tag(ds, put) }));
       });
-      mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: (e, d) => { tipOn(d.r)(e); wrapRow(e, d.r); } }));
+      mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: put }));
       const lr = lab.filter((l) => !l.ghost);
       mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, dy: 4 - 0.32 * 11.5, text: (l) => `${shortArm(l.r.arm)} ${shortModel(l.r)} ${P(l.r.groups.uncovered[0])}${l.r.status === "pending" ? " (pending)" : ""}`, textAnchor: "start",
-        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); wrapRow(e, l.r); }) }));
+        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
       const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
+      // per setup, as before: its line, marks and hit area in one focusable group, then its label
+      const rowsG = G();
+      ord.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": aria(r) }, C.take("t" + r.key)), ...C.take("l" + r.key)])));
+      settle(svg, rowsG);
       el.append(svg);
     });
     $("#leg5").innerHTML = legendRoles() + `<span class="k"><svg width="22" height="6" aria-hidden="true"><line x1="1" y1="3" x2="21" y2="3" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/></svg>managed best</span><span class="k">labels: setup, model, % right on uncovered</span>`;
@@ -2323,46 +2421,59 @@ window.reportReady(() => {
     bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
     return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
   }
-  // One row of squares as a Plot of rects on pixel (identity) scales: three runs per question, stacked.
+  // One row of squares as a Plot on pixel (identity) scales: three runs per question, stacked.
+  // The squares are drawn as one path per outcome paint (a few paths per row instead of a rect per
+  // square), which keeps the plate's redraw fast; the shapes are the canvas plate's, pixel for pixel.
+  const sqr = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
   function unitsPlot(r, G) {
-    const s = G.pitch - 1, fills = [], strokes = [];
-    G.order.forEach((ci) => {
+    const s = G.pitch - 1, F = {}, K = {}; // solid and outline path data per colour token
+    // an outline is drawn as a 1 px ring (outer square less inner square, even-odd), which covers
+    // exactly the pixels the canvas's strokeRect at half-pixel offsets covered, corners included
+    const ring = (x, y) => sqr(x, y, s, s) + sqr(x + 1, y + 1, s - 2, s - 2);
+    const add = (o, c, d) => { o[c] = (o[c] || "") + d; };
+    G.order.forEach((ci, j) => {
       const x = G.xs.get(ci);
       for (let k = 0; k < 3; k++) {
         const y = G.h - (k + 1) * G.pitch + 1, ch = r.units[ci * 3 + k] || ".";
-        if (ch === ".") fills.push([x + s / 2 - 1, y + s / 2 - 1, 2, 2, "var(--o-none)"]);
-        else if (ch === "0") fills.push([x, y, s, s, "var(--o-right)"]);
-        else if (ch === "1") strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-decl)"]);
-        else if (ch === "2") { fills.push([x, y + s / 2, s, s / 2, "var(--o-wrong)"]); strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-wrong)"]); }
-        else if (ch === "3") { strokes.push([x + .5, y + .5, s - 1, s - 1, "var(--o-decl)"]); fills.push([x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5, "var(--o-decl)"]); }
-        else fills.push([x - .5, y - .5, s + 1, s + 1, "var(--o-cw)"]);
+        if (ch === ".") add(F, "o-none", sqr(x + s / 2 - 1, y + s / 2 - 1, 2, 2));
+        else if (ch === "0") add(F, "o-right", sqr(x, y, s, s));
+        else if (ch === "1") add(K, "o-decl", ring(x, y));
+        else if (ch === "2") { add(F, "o-wrong", sqr(x, y + s / 2, s, s / 2)); add(K, "o-wrong", ring(x, y)); }
+        else if (ch === "3") { add(K, "o-decl", ring(x, y)); add(F, "o-decl", sqr(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5)); }
+        // confident-wrong squares overhang their cell by half a pixel and meet their neighbours' on the
+        // gap; the canvas blended the two halves, so neighbours go to separate paths to blend the same way
+        else add(F, `o-cw#${k}${j % 2}`, sqr(x - .5, y - .5, s + 1, s + 1));
       }
     });
-    const box = { x1: (d) => d[0], x2: (d) => d[0] + d[2], y1: (d) => d[1], y2: (d) => d[1] + d[3] };
+    const paths = Object.entries(F).map(([c, d]) => `<path fill="var(--${c.split("#")[0]})" d="${d}"/>`).join("") + Object.entries(K).map(([c, d]) => `<path fill="var(--${c})" fill-rule="evenodd" d="${d}"/>`).join("");
     const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
-      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>`),
-      Plot.rect(fills, Object.assign({ fill: (d) => d[4] }, box)),
-      Plot.rect(strokes, Object.assign({ fill: "none", stroke: (d) => d[4], strokeWidth: 1 }, box)),
+      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
     ] });
-    svg.style.width = G.UW + "px"; svg.style.height = G.h + "px"; svg.style.overflow = "visible";
+    trueSize(svg, G.UW, G.h); svg.style.overflow = "hidden"; // clipped to its box, as the canvas was
     return svg;
   }
+  // The plate's cells are 1 px narrower than their content (a left border under border-box); like the
+  // canvases before, each SVG keeps its own size and overflows by that pixel, so squares stay crisp.
+  // Each Plot carries its own <style> of class defaults; the plate sets those inline instead, which spares
+  // the browser about a hundred style sheets on a set switch.
+  function trueSize(svg, w, h) { const st = svg.querySelector(":scope > style"); if (st) st.remove(); Object.assign(svg.style, { display: "block", flex: "none", width: w + "px", height: h + "px", maxWidth: "none", overflow: "visible" }); }
   function bandAt(ci) { // the hovered question's column, on every row
     const G = plateState.G; const on = ci != null && G.xs.has(ci);
     plateState.svgs.forEach((sv) => { const b = sv.querySelector(".pband"); if (!b) return; b.setAttribute("visibility", on ? "visible" : "hidden"); if (on) b.setAttribute("x", G.xs.get(ci) - 1); });
   }
-  // The small interval charts beside each row, as Plots: a zero line, the interval, the mean and its value.
+  // The small interval charts beside each row: a Plot gives the x scale and the zero rule; the interval,
+  // its mean and the value are one function mark on that scale (four Plot marks per chart cost the
+  // plate's set switch about 12 ms across its 60-odd charts, one mark costs about 2).
   function miniIv(v, w, h, dom, kind, partial) {
     const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const yc = h / 2;
-    const vt = { frameAnchor: "right", dx: 40, textAnchor: "end", fontFamily: "var(--label)" };
-    const mk = [Plot.ruleX([0], { x: (q) => q, y1: 2, y2: h - 2, stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" })];
-    if (!v) mk.push(one("–", Object.assign({ fill: "var(--ink-3)", fontSize: 12 }, vt)));
-    else mk.push(
-      Plot.link([v], { x1: (q) => cl(q[1]), x2: (q) => cl(q[2]), y1: yc, y2: yc, stroke: col, strokeWidth: 2, strokeLinecap: "round", strokeDasharray: partial ? "3 2" : undefined }),
-      Plot.dot([v], { x: (q) => cl(q[0]), y: yc, r: 3.6, fill: partial ? "var(--paper)" : col, stroke: partial ? col : "var(--paper)", strokeWidth: 1.5 }),
-      one(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", Object.assign({ fill: "var(--ink)", fontSize: 12.5 }, vt)));
-    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 0, marginBottom: 0, x: { domain: dom }, y: { type: "identity" }, marks: mk });
-    svg.setAttribute("aria-hidden", "true"); svg.style.overflow = "visible"; svg.style.width = w + "px";
+    const val = (t, fill, fs) => `<text x="${w - 6}" y="${yc + 4}" text-anchor="end" fill="${fill}" font-size="${fs}" font-family="var(--label)">${t}</text>`;
+    const body = ({ x }) => !v ? val("–", "var(--ink-3)", 12)
+      : `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${yc}" y2="${yc}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`
+      + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
+      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 12.5);
+    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
+      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" }), raw(body)] });
+    svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
   function renderPlate() {
@@ -2439,6 +2550,8 @@ window.reportReady(() => {
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
+  // Figure 3 places its labels by their measured width: place them again once the web fonts arrive.
+  try { if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => renderScatter()); } catch (e) {}
   window.__reportMarkReady();
 })();
 </script>
