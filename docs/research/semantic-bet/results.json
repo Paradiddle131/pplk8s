@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T00:35Z",
+ "written": "2026-11-05T00:37Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -883,24 +883,24 @@
    "rung": 4,
    "cases": 96,
    "of_cases": 96,
-   "runs": 96,
+   "runs": 192,
    "accuracy": [
-    0.729166666667,
-    0.635416666667,
+    0.734375,
+    0.645833333333,
     0.8125
    ],
    "confident_wrong": [
-    0.03125,
-    0.0,
-    0.072916666667
+    0.036458333333,
+    0.010416666667,
+    0.067708333333
    ],
    "groups": {
     "conversation": [
-     0.8571428571428571,
+     0.9285714285714286,
      7
     ],
     "covered": [
-     0.9701492537313433,
+     0.9776119402985075,
      67
     ],
     "distractor": [
@@ -920,15 +920,15 @@
      29
     ]
    },
-   "pass_all": 0.7291666666666666,
+   "pass_all": 0.6979166666666666,
    "outcomes": {
-    "right": 70,
-    "declined": 12,
-    "wrong": 10,
-    "confident-wrong": 3,
-    "unclear": 1
+    "right": 141,
+    "declined": 24,
+    "wrong": 18,
+    "confident-wrong": 7,
+    "unclear": 2
    },
-   "model_calls": 102
+   "model_calls": 204
   },
   {
    "set": "frozen",
@@ -2127,6 +2127,42 @@
   },
   {
    "set": "hard",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 9,
+   "of_cases": 43,
+   "runs": 9,
+   "accuracy": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "covered": [
+     1.0,
+     9
+    ],
+    "trap": [
+     1.0,
+     4
+    ]
+   },
+   "pass_all": 1.0,
+   "outcomes": {
+    "right": 9
+   },
+   "model_calls": 36
+  },
+  {
+   "set": "hard",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "harness": "claude-code-subagent",
@@ -3218,16 +3254,16 @@
    "arm": "cc-metricflow",
    "model": "claude-code (fresh-haiku)",
    "cases": 96,
-   "runs": 96,
+   "runs": 192,
    "accuracy": [
-    -0.211805555556,
-    -0.309027777778,
+    -0.206597222222,
+    -0.296875,
     -0.121527777778
    ],
    "confident_wrong": [
-    0.017361111111,
-    -0.020833333333,
-    0.0625
+    0.022569444444,
+    -0.013888888889,
+    0.060763888889
    ],
    "worth": false
   },
@@ -3408,6 +3444,24 @@
     0.06976744186,
     0.023255813953,
     0.124031007752
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 9,
+   "runs": 9,
+   "accuracy": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
    ],
    "worth": false
   },
