@@ -135,8 +135,8 @@ The first pass put about 12 cases in one subagent session, where every API run s
 | (ADK on the API, k = 3) | 81.2% [73.3, 88.5] | 2.4% [0.7, 4.5] | | 44% |
 
 - The leaner agent type ties the general-purpose one (69.8% against 72.9% on the same run; 11 of 96 cases changed outcome, both ways) and declines `uncovered` questions as often or more (10% against 17%).
-- So the gap to ADK is not the general-purpose agent's system prompt or its tool list; what stays common to both subagent rows is the task prompt (`374_cc_prompt.md`: answer only through the tool, never compute a figure, say so when no metric answers) and Claude Code's base harness, so those are the next suspects.
+- So the gap to ADK is not the general-purpose agent's system prompt or its tool list. The task prompt's rules are the ADK agent's own (`374_cc_prompt.md` against `metrics.py` and `hybrid.py`: never compute a figure, say so when no metric answers, name the closest metrics), so the rules are not it either; what stays is Claude Code's base harness: tools reached as a shell command returning JSON text, not as typed function calls.
 
 ### Still unknown
 
-- Whether the task prompt's "never compute a figure" line, which the ADK agent's instruction words differently, is what turns `uncovered` questions into declines: a one-line variant of the prompt on the `uncovered` cases would test it.
+- Whether typed function calls are what lets Haiku compose metrics for `uncovered` questions: the same three tools offered to a subagent as typed tools (an MCP server over `tool_cli`) would test it; not run, since it needs a new harness.
