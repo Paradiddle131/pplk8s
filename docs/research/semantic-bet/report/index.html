@@ -98,8 +98,14 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .plot .f12, .plot .f12 text { font-size: 12px; }
 .plot .hit { fill: transparent; }
 .plot [data-tip]:focus, .plot [data-setup]:focus { outline: none; }
-.plot [data-tip]:focus .hit, .plot [data-tip]:hover .hit, .plot .hit.tiphl { fill: var(--band); }
+.plot [data-tip]:focus .hit, .plot [data-tip]:hover .hit { fill: var(--band); }
 .plot.panels { display: grid; }
+.f3key { margin-top: 8px; }
+.f3key .k { cursor: help; }
+.f3key .k:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.plot .keyring { pointer-events: none; }
+.plot .direct { visibility: hidden; }
+.plot .direct.placed { visibility: visible; }
 .plot text[data-setup]:focus { text-decoration: underline; }
 .plot .frame { fill: none; stroke: var(--rule); }
 .mk { transition: opacity .12s ease-out; }
@@ -294,6 +300,7 @@ window.REPORT = D;
     <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
     <div class="figtools"><div class="legend" id="leg3"></div><div class="seg" role="group" aria-label="Question set for Figure 3" data-view="scatter"></div></div>
     <div class="plot" id="scatter"></div>
+    <div class="legend f3key" id="key3"></div>
     <figcaption>Up and to the right is better; the lines through each mark are its 95% intervals on both axes.</figcaption>
   </figure>
 
@@ -1786,19 +1793,6 @@ window.reportReady(() => {
     if (!tipEl || !isUnits(tipEl)) hideTip();
   }, { passive: true });
 
-  /* ---------- the row band: every hit area of the hovered or focused row, across panels ---------- */
-  let bandId = null;
-  function band(id) {
-    if (id === bandId) return;
-    document.querySelectorAll(".plot .hit.tiphl").forEach((h) => h.classList.remove("tiphl"));
-    bandId = id;
-    if (id) document.querySelectorAll(`.plot [data-tip="${CSS.escape(id)}"] .hit`).forEach((h) => h.classList.add("tiphl"));
-  }
-  const plotTip = (t) => (t && t.closest ? t.closest(".plot [data-tip]") : null);
-  document.addEventListener("pointerover", (e) => { const t = plotTip(e.target); band(t ? t.dataset.tip : null); });
-  document.addEventListener("focusin", (e) => { const t = plotTip(e.target); band(t ? t.dataset.tip : null); });
-  document.addEventListener("focusout", () => band(null));
-
   /* ---------- hover to focus, delegated on any .focusable ---------- */
   const FSEL = "[data-key],[data-arm],[data-fam]";
   function applyFocus(fig, el) {
@@ -2227,59 +2221,71 @@ window.reportReady(() => {
     });
     mk.push(Plot.dot(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 12, fill: "transparent", sort: null, render: tag(order, (e, r) => { e.setAttribute("class", "hit"); put(e, r); }) }));
     mk.push(glyphs(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 5, role: (r) => r.role, color: (r) => famC(r.family), tag: (e, r) => { e.classList.add("gly"); put(e, r); } }));
+    // The two key setups are ringed on the plot (managed best solid, the deciding setup dashed) and named in
+    // a key under it; a text label goes beside a ring only where it fits touching its own mark.
     const mf = byId(S(s).mf);
-    const labs = [[mb, -12], [mf, 20]].filter(([r]) => r).map(([r, pref], i) => ({ r, pref, i }));
-    labs.forEach((L) => mk.push(txt([L.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
-      stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([L.r], (e, q) => { attrs(e, { "data-setup": q.arm, "data-arm": q.arm, tabindex: 0 }); C.put("l" + L.i)(e); }) })));
+    const keys = [[mb, "managed best", "solid"], [mf, "decides", "dashed"]].filter(([r]) => r).map(([r, role, style], i) => ({ r, role, style, i }));
+    keys.forEach((K) => {
+      mk.push(Plot.dot([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], r: 9.5, fill: "none", stroke: "var(--ink)", strokeWidth: 2, strokeDasharray: K.style === "dashed" ? "3 2.5" : undefined, render: tag([K.r], (e) => { e.classList.add("keyring"); C.put("r" + K.i)(e); }) }));
+      mk.push(txt([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
+        stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([K.r], (e, q) => { e.classList.add("direct"); attrs(e, { "data-setup": q.arm, "data-arm": q.arm }); C.put("l" + K.i)(e); }) }));
+    });
     const svg = plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk });
     const rowsG = G();
     order.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, C.take("t" + r.id))])));
-    labs.forEach((L) => { L.g = G(mkOf(L.r), C.take("l" + L.i)); L.text = L.g.querySelector("text"); L.px = x(L.r.acc[0]); L.py = y(L.r.cw[0]); rowsG.append(L.g); });
+    keys.forEach((K) => { K.g = G(mkOf(K.r), [...C.take("r" + K.i), ...C.take("l" + K.i)]); K.text = K.g.querySelector("text"); K.px = x(K.r.acc[0]); K.py = y(K.r.cw[0]); rowsG.append(K.g); }); // above every other mark
     settle(svg, rowsG);
     el.innerHTML = ""; el.append(svg);
-    placeLabels(svg, labs, { l: m.l, r: W - m.r, t: 0, b: H - m.b, W });
+    const ring = (style) => `<svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><circle r="7" fill="none" stroke="var(--ink)" stroke-width="2"${style === "dashed" ? ' stroke-dasharray="3 2.5"' : ""}/></svg>`;
+    $("#key3").innerHTML = keys.map((K) => `<span class="k" data-setup="${esc(K.r.arm)}" data-key="${esc(K.r.key)}" tabindex="0">${ring(K.style)}<span>${esc(K.r.arm)}, ${esc(K.r.modelLabel)} — ${K.role}</span></span>`).join("");
+    directLabels(svg, keys, { l: m.l, r: W - m.r, t: 0, b: H - m.b });
     $("#leg3").innerHTML = legendFams(rows) + legendRoles();
   }
-  // Figure 3's two labels: of the spots around the mark (either side, sliding along, up or down the plot),
-  // the nearest whose box clears every glyph, the other label and the plot's edges, the usual spot
-  // (managed best above its mark, the deciding setup below) first; a label off its usual spot gets a
-  // short leader line back to its mark.
-  function placeLabels(svg, labs, fr) {
-    const sr = svg.getBoundingClientRect();
-    const rel = (b) => ({ l: b.left - sr.left, r: b.right - sr.left, t: b.top - sr.top, b: b.bottom - sr.top });
-    const glyphsBoxes = [...svg.querySelectorAll(".gly")].map((e) => rel(e.getBoundingClientRect()));
-    const meets = (a, o) => a.l < o.r + 2 && a.r > o.l - 2 && a.t < o.b + 1 && a.b > o.t - 1;
-    const placed = [];
-    labs.forEach((L) => {
-      const t = L.text; t.parentNode.removeAttribute("transform"); t.setAttribute("text-anchor", "start");
-      const bb = t.getBBox(); // local box: its x and y offsets do not move with the translate below
-      const right0 = L.px < fr.W * 0.62, near = L.pref, w = bb.width;
-      const boxAt = (tx, ty) => ({ l: tx + bb.x, r: tx + bb.x + w, t: ty + bb.y, b: ty + bb.y + bb.height });
-      const usual = { tx: right0 ? L.px + 10 : L.px - 10 - w, ty: L.py + near };
-      let best = null;
-      for (let dy = -210; dy <= 210; dy += 7) {
-        const dyy = dy === 0 ? near : dy;
-        for (const tx of [L.px + 10, L.px - 10 - w, L.px - w * 0.25, L.px - w * 0.5, L.px - w * 0.75]) {
-          const ty = L.py + dyy, b = boxAt(tx, ty);
-          if (b.l < fr.l || b.r > fr.r || b.t < fr.t || b.b > fr.b) continue;
-          if (glyphsBoxes.some((o) => meets(b, o)) || placed.some((o) => meets(b, o))) continue;
-          const qx = Math.max(b.l, Math.min(L.px, b.r)), qy = Math.max(b.t, Math.min(L.py, b.b));
-          const isUsual = tx === usual.tx && ty === usual.ty;
-          const score = isUsual ? -1 : Math.hypot(qx - L.px, qy - L.py) + (Math.sign(dyy) !== Math.sign(near) ? 6 : 0);
-          if (!best || score < best.score) best = { tx, ty, b, score, isUsual };
-        }
-      }
-      if (!best) best = Object.assign({ b: boxAt(usual.tx, usual.ty), isUsual: true }, usual);
-      t.setAttribute("transform", `translate(${best.tx},${best.ty})`);
-      placed.push(best.b);
-      if (!best.isUsual) { // a leader from the mark's edge to the label's nearest point
-        const qx = Math.max(best.b.l, Math.min(L.px, best.b.r)), qy = Math.max(best.b.t, Math.min(L.py, best.b.b));
-        const d = Math.hypot(qx - L.px, qy - L.py) || 1, ux = (qx - L.px) / d, uy = (qy - L.py) / d;
-        const seg = { x1: L.px + ux * 8, y1: L.py + uy * 8, x2: qx - ux * 2, y2: qy - uy * 2 };
-        const ln = G({ class: "leader" }); // a paper halo keeps the leader legible across the interval lines
-        ln.innerHTML = `<line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="var(--paper)" stroke-width="3" stroke-linecap="round"/><line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="var(--ink-2)" stroke-width="1"/>`;
-        L.g.insertBefore(ln, L.g.firstChild);
-      }
+  // A key setup's text label shows only where it fits touching its own mark: 5 px from its glyph on one side,
+  // covering no glyph, ring or other label, inside the plot, and nearer its own glyph than any other.
+  // The label is anchored on the side that touches the mark, so a change of font only changes how far it
+  // reaches away from it. Placing waits for the web font (at most 1.5 s); if the font lands later, each
+  // placed label is checked again where it stands and dropped if it no longer fits, never moved.
+  const fontsReady = (() => { let p = null; return () => p || (p = (document.fonts && document.fonts.status !== "loaded") ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve()); })();
+  function directLabels(svg, keys, fr) {
+    const scene = () => {
+      const sr = svg.getBoundingClientRect();
+      const rel = (b) => ({ l: b.left - sr.left, r: b.right - sr.left, t: b.top - sr.top, b: b.bottom - sr.top });
+      return { rel, glyphs: [...svg.querySelectorAll(".gly")].map((e) => ({ e, key: e.closest(".mk").dataset.key, b: rel(e.getBoundingClientRect()) })), rings: [...svg.querySelectorAll(".keyring")].map((e) => rel(e.getBoundingClientRect())) };
+    };
+    const meets = (a, o) => a.l < o.r && a.r > o.l && a.t < o.b && a.b > o.t;
+    const dist = (a, o) => Math.hypot(Math.max(0, o.l - a.r, a.l - o.r), Math.max(0, o.t - a.b, a.t - o.b));
+    const fits = (sc, key, b, others) => {
+      const own = sc.glyphs.find((g) => g.key === key);
+      return own && b.l >= fr.l && b.r <= fr.r && b.t >= fr.t && b.b <= fr.b
+        && !sc.glyphs.some((g) => meets(b, g.b)) && !sc.rings.some((o) => meets(b, o)) && !others.some((o) => meets(b, o))
+        && dist(b, own.b) <= 6 && sc.glyphs.every((g) => g === own || dist(b, g.b) > dist(b, own.b));
+    };
+    const drop = (t) => { t.classList.remove("placed"); t.removeAttribute("tabindex"); };
+    const run = () => {
+      if (!svg.isConnected) return;
+      const sc = scene(), placed = [];
+      keys.forEach((K) => {
+        const t = K.text; t.parentNode.removeAttribute("transform"); t.setAttribute("text-anchor", "start"); t.setAttribute("transform", "translate(0,0)");
+        const own = sc.glyphs.find((g) => g.key === K.r.key); if (!own) return drop(t);
+        const bb = t.getBBox(), w = bb.width, hgt = bb.height, gap = 5, ob = own.b;
+        // [anchor, x of the anchor, y of the text's centre line]; the box follows from the anchor
+        const spots = [["start", ob.r + gap, K.py], ["end", ob.l - gap, K.py], ["middle", K.px, ob.t - gap - (bb.y + hgt)], ["middle", K.px, ob.b + gap - bb.y]];
+        const boxOf = ([an, ax, ty]) => { const l = an === "start" ? ax : an === "end" ? ax - w : ax - w / 2; return { l, r: l + w, t: ty + bb.y, b: ty + bb.y + hgt }; };
+        const hit = spots.find((sp) => fits(sc, K.r.key, boxOf(sp), placed));
+        if (!hit) return drop(t);
+        t.setAttribute("text-anchor", hit[0]); t.setAttribute("transform", `translate(${hit[1] - bb.x * (hit[0] === "start" ? 1 : 0)},${hit[2]})`);
+        t.classList.add("placed"); t.setAttribute("tabindex", "0"); placed.push(boxOf(hit));
+      });
+    };
+    fontsReady().then(() => {
+      run();
+      if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => {
+        if (!svg.isConnected) return;
+        const sc = scene(), labels = [...svg.querySelectorAll(".direct.placed")];
+        labels.forEach((t) => { const others = labels.filter((o) => o !== t && o.classList.contains("placed")).map((o) => sc.rel(o.getBoundingClientRect()));
+          if (!fits(sc, t.closest(".mk").dataset.key, sc.rel(t.getBoundingClientRect()), others)) drop(t); });
+      });
     });
   }
 
@@ -2550,8 +2556,7 @@ window.reportReady(() => {
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
-  // Figure 3 places its labels by their measured width: place them again once the web fonts arrive.
-  try { if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => renderScatter()); } catch (e) {}
+
   window.__reportMarkReady();
 })();
 </script>
