@@ -858,3 +858,17 @@ def test_each_row_says_how_many_questions_shared_a_session():
     assert bet_eval.session_kind("claude-code (haiku)") == "shared per batch"
     assert bet_eval.session_kind("claude-code (fresh-haiku)") == "fresh per case"
     assert bet_eval.session_kind("claude-haiku-5-5") == "fresh per run"
+
+
+def test_a_k1_pass_writes_every_arm_at_the_rules_k(monkeypatch, tmp_path):
+    """A pass asked at --runs 1 still scores eval.md and results.json at the rule's k: written at
+    the pass's own k, a k = 1 free-model pass cut every other arm's runs 2 and 3 (2026-11-05)."""
+    monkeypatch.setattr("semantic_agent.model.judge_model_id", lambda: "j")
+    log, report = tmp_path / "eval-local.jsonl", tmp_path / "eval-local.md"
+    log.write_text("")
+    monkeypatch.setattr(bet_eval.SetFiles, "local_log", lambda self, directory=None: log)
+    monkeypatch.setattr(bet_eval.SetFiles, "local_report", lambda self, directory=None: report)
+    written = []
+    monkeypatch.setattr(bet_eval, "write_every_arm", lambda **kw: written.append(kw) or tmp_path)
+    assert asyncio.run(bet_eval.main(["--report-only", "--runs", "1"])) in (0, 3)
+    assert written == [{}] and report.exists()

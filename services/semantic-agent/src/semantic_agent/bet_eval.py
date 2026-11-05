@@ -1488,7 +1488,9 @@ async def main(argv: Sequence[str]) -> int:
     local_report.write_text(text)
     print(text)
     print(f"stopped: {why}; written to {local_report}")
-    print(f"every arm: written to {write_every_arm(runs=args.runs)}")
+    # eval.md and results.json are scored at the rule's k whatever this pass asked, as
+    # 328_mcp_live.py writes them: a k = 1 pass would otherwise cut every arm's runs 2 and 3.
+    print(f"every arm: written to {write_every_arm()}")
     if args.judge:
         return 0 if why == "done" else 2 if why == "canary" else 3
     complete = all(score_log(bet, read_log(local_log), m, args.runs).complete for m in [model])
