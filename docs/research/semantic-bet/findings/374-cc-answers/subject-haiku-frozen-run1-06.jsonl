@@ -1,0 +1,1 @@
+{"case": "orders_one_day", "run": 1, "turns": [{"question": "How many orders were placed on 1 October 2026, cancelled ones included?", "answer": "15 orders (count) were placed on 1 October 2026, cancelled orders included. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}
