@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T01:04Z",
+ "written": "2026-11-05T01:05Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -212,9 +212,9 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 3,
-   "cases": 22,
+   "cases": 23,
    "of_cases": 96,
-   "runs": 22,
+   "runs": 23,
    "accuracy": [
     1.0,
     1.0,
@@ -228,7 +228,7 @@
    "groups": {
     "covered": [
      1.0,
-     22
+     23
     ],
     "trap": [
      1.0,
@@ -237,9 +237,9 @@
    },
    "pass_all": 1.0,
    "outcomes": {
-    "right": 22
+    "right": 23
    },
-   "model_calls": 115
+   "model_calls": 125
   },
   {
    "set": "frozen",
@@ -3094,12 +3094,12 @@
    "set": "frozen",
    "arm": "native-mcp",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 22,
-   "runs": 22,
+   "cases": 23,
+   "runs": 23,
    "accuracy": [
-    0.015151515152,
+    0.014492753623,
     0.0,
-    0.045454545455
+    0.04347826087
    ],
    "confident_wrong": [
     0.0,
