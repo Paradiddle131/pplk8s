@@ -1,0 +1,1 @@
+{"case": "signups_september", "run": 3, "turns": [{"question": "How many new customers signed up in September 2026?", "answer": "9 customers signed up (Signups metric) from 2026-09-01 to 2026-09-30. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "query_metrics"]}]}
