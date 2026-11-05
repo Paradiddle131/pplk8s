@@ -13,7 +13,8 @@ LOG_DIR       directory holding eval-*.jsonl and judge.jsonl; default: beside RE
 SETS_DIR      directory holding semantic_bet.yaml and semantic_bet_hard.yaml (question text and
               groups); default: LOG_DIR/../../../services/semantic-agent/evals.
 
-Writes index.html beside this script, from template.html. Standard library only.
+Writes index.html beside this script, from template.html, with the vendored Observable Plot and d3
+(vendor/, checked by sha256) inlined. Standard library only.
 Every number on the page comes from RESULTS_JSON or from the logs; prose that cites a number is a
 template filled here. Intervals computed here (paired against the floor, per question group, ties
 in the winners band) are percentile bootstraps over questions, seeded.
@@ -29,6 +30,9 @@ from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FALLBACK_LOGS = "/home/user/pplk8s/docs/research/semantic-bet"
+# Observable Plot and its d3, inlined at <!--VENDOR--> so the page stays one file; see vendor/README.md.
+VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"),
+          ("vendor/plot-0.6.17.umd.min.js", "4358086467740777dd788d6b27a95cebdbaefdd50c730a3060117073bd7134cb")]
 
 SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set"}
 GROUPS = [("covered", "Covered"), ("trap", "Hidden-rule"), ("uncovered", "Uncovered"), ("conversation", "Conversation")]
@@ -463,9 +467,25 @@ def build(results_path, log_dir, sets_dir, out_path):
     for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
         sections.append(open(path, encoding="utf-8").read())
     page = page.replace("<!--SECTIONS-->", "\n".join(sections))
+    page = page.replace("<!--VENDOR-->", vendor_scripts())
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)
     print("wrote %s (%d bytes)" % (out_path, len(page.encode("utf-8"))))
+
+
+def vendor_scripts():
+    """The vendored libraries as inline scripts, each checked against its pinned sha256."""
+    out = []
+    for rel, want in VENDOR:
+        raw = open(os.path.join(HERE, rel), "rb").read()
+        got = hashlib.sha256(raw).hexdigest()
+        if got != want:
+            sys.exit("%s: sha256 %s, expected %s (see vendor/README.md)" % (rel, got, want))
+        text = raw.decode("utf-8")
+        if "</script" in text.lower():
+            sys.exit("%s holds a closing script tag; it cannot be inlined" % rel)
+        out.append("<script>\n%s\n</script>" % text.rstrip("\n"))
+    return "\n".join(out)
 
 
 def make_pillars(st, rows, ids, groups, floor, mf):
