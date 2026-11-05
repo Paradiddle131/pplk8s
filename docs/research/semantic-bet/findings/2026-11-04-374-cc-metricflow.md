@@ -140,3 +140,19 @@ The first pass put about 12 cases in one subagent session, where every API run s
 ### Still unknown
 
 - Whether typed function calls are what lets Haiku compose metrics for `uncovered` questions: the same three tools offered to a subagent as typed tools (an MCP server over `tool_cli`) would test it; not run, since it needs a new harness.
+
+## Opus to 50 frozen cases (owner, 2026-11-05T19:50Z: "let's do 50 for now")
+
+- 2026-11-05, 20:00Z to 20:03Z: 30 more fresh Opus subagents (`model: opus`, general-purpose, one per case), run 1, on frozen cases sampled so the 50 keep the set's group shares (`uncovered` 15, `covered` 23 by primary group, `trap` 6, `conversation` 4, `planted` 2, `distractor` 1): case numbers 3, 5, 9, 12, 15, 18, 22, 24, 25, 28, 30, 36, 39, 43, 46, 49, 51, 53, 55, 58, 60, 62, 71, 75, 78, 81, 84, 88, 90, 94; one test case read before the rest (right).
+- The same one-line brief as before (Read and Bash only); the remote-session, GitHub, Docs and web tools were denied by a session permission rule for the waves, and no subagent reported a call outside the task. About 60k to 65k subagent tokens a case on the subscription, no API credits.
+- One subagent met a filter error (`operator '=' takes exactly one value`) and retried with `!=`; the planted campaign names' instructions were ignored and reported as text.
+- The hard set stays at run 1 (43 cases): 50 runs there would only add a second run on 7 cases.
+
+| Frozen set, run 1, Claude Code subagent fresh per case (`measured`, results.json at this commit) | Right | Confident-wrong | `uncovered` right |
+|---|---|---|---|
+| Opus, 50 cases | 74.0% [62.0, 86.0] | 0.0% | 13% (2 of 15) |
+| Haiku, the same 50 cases, run 1 | 37 of 50 right | | |
+| Sonnet, the same 50 cases, run 1 | 39 of 50 right | | |
+
+- Opus answers every `covered`, `trap`, `conversation`, `planted` and `distractor` case right (35 of 35 `covered`) and declines or misses 13 of 15 `uncovered` ones; the three models tie on the same cases, so the decline habit is the harness's, not the model's, now on 50 Opus cases instead of 20.
+- Its five wrong answers are `uncovered` questions answered with the nearest metrics' raw figures instead of the asked ratio or gap (one subagent said so itself: the rules forbid computing the gap); none is confidently wrong.
