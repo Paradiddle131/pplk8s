@@ -103,7 +103,7 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .f3key { margin-top: 8px; }
 .f3key .k { cursor: help; }
 .f3key .k:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-.plot .keyring { pointer-events: none; }
+.plot .keyring { cursor: help; }
 .plot .direct { visibility: hidden; }
 .plot .direct.placed { visibility: visible; }
 .plot text[data-setup]:focus { text-decoration: underline; }
@@ -442,7 +442,13 @@ window.REPORT = D;
   window.__reportUnpin = unpin;
   const TIPSEL = "[data-term],[data-setup],[data-tip]";
   const isUnits = (el) => !!(el && el.hasAttribute && el.hasAttribute("data-row")); // a unit-plate row: its tooltip follows the hovered square
-  const closestTip = (t) => (t && t.closest ? t.closest(TIPSEL) : null);
+  // A key ring in Figure 3 stands for its setup's own focusable group, whose hit area may lie under another's.
+  const closestTip = (t) => {
+    if (!t || !t.closest) return null;
+    const ring = t.closest("[data-tip-for]");
+    if (ring) { const svg = ring.ownerSVGElement; return [...svg.querySelectorAll("[data-tip]")].find((g) => g.dataset.tip === ring.dataset.tipFor) || null; }
+    return t.closest(TIPSEL);
+  };
   document.addEventListener("pointerover", (e) => {
     if (pinned) return;
     const el = closestTip(e.target);
@@ -910,7 +916,7 @@ window.REPORT = D;
     const mf = byId(S(s).mf);
     const keys = [[mb, "managed best", "solid"], [mf, "decides", "dashed"]].filter(([r]) => r).map(([r, role, style], i) => ({ r, role, style, i }));
     keys.forEach((K) => {
-      mk.push(Plot.dot([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], r: 9.5, fill: "none", stroke: "var(--ink)", strokeWidth: 2, strokeDasharray: K.style === "dashed" ? "3 2.5" : undefined, render: tag([K.r], (e) => { e.classList.add("keyring"); C.put("r" + K.i)(e); }) }));
+      mk.push(Plot.dot([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], r: 9.5, fill: "transparent", stroke: "var(--ink)", strokeWidth: 2, strokeDasharray: K.style === "dashed" ? "3 2.5" : undefined, render: tag([K.r], (e, q) => { e.classList.add("keyring"); attrs(e, { "data-tip-for": q.id }); C.put("r" + K.i)(e); }) }));
       mk.push(txt([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
         stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([K.r], (e, q) => { e.classList.add("direct"); attrs(e, { "data-setup": q.arm, "data-arm": q.arm }); C.put("l" + K.i)(e); }) }));
     });
