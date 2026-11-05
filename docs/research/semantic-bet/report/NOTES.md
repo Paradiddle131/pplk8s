@@ -43,5 +43,6 @@ Build: `python3 build.py ../results.json`.
 ## After revision 2
 
 - The owner, 2026-11-05: "The new revision is good"; the pick between the two setup sections is still theirs.
+- The owner, 2026-11-05T19:50Z: "I wanna keep both for now I loved both equally": the setup map and the setup explorer both stay, in that order, before "Method, briefly".
 - The explorer's "What changes" list: a piece swapped for another of the same title (the instruction reworded, as from `custom-metricflow` to `custom-hybrid`) no longer reads as the same line added and dropped; such a pair carries its first line, so the two read apart.
   Checked in Chromium: `custom-hybrid` shows "+ Instruction (given): metrics first; …" and "− Instruction (given): use only the metrics; …", with no console errors.
