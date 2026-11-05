@@ -1,0 +1,1 @@
+{"case": "revenue_fiscal_q3", "run": 2, "turns": [{"question": "What was our revenue in the third quarter of fiscal 2026?", "answer": "Revenue for fiscal Q3 of fiscal 2026 (2026-08-01 to 2026-10-31) was 19,793.59 EUR. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "query_metrics"]}]}
