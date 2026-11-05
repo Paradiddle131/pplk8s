@@ -93,3 +93,29 @@ The first pass put about 12 cases in one subagent session, where every API run s
 ### Still unknown
 
 - Runs 2 and 3 of the fresh subagents on both sets; Opus on the other 76 frozen cases (the owner's go is needed past about 20 Opus runs a setup).
+
+## Haiku and Sonnet at the rule's k, fresh per case (2026-11-05, to 01:14Z)
+
+- Runs 2 and 3 of both sets for Haiku and Sonnet, one fresh subagent per case-run, about 10 at once, the brief and the rendered prompt as in run 1 (the two-tool brief from Haiku's frozen case 35 of run 1 on), answers pushed after every wave; the hard set's runs 2 and 3 ran before the frozen set's.
+- No stray remote-session call in runs 2 and 3: the deny rules held, and every subagent reported only the tool command and the answer file.
+- A few reported their own recoveries and were scored as given: an empty argument to `list_metrics` retried with none, a numeric filter value retried as a string, a two-value filter retried as a grouping, an end date past the layer's limit retried within it.
+- Opus stays at its sample (20 frozen cases, run 1; 43 hard cases, run 1, from before the owner's go): its 20 frozen runs are the owner's limit for that setup.
+
+| Claude Code subagent fresh per case, k = 3 (`measured`, results.json at this commit) | Frozen: right | Frozen: confident-wrong | Frozen `uncovered` right | Hard: right | Hard: confident-wrong | Hard `uncovered` right |
+|---|---|---|---|---|---|---|
+| Haiku | 72.6% [63.5, 80.6] | 4.5% [1.7, 8.0] | 17% | 54.3% [40.3, 68.2] | 7.0% [1.6, 13.2] | 14% |
+| Sonnet | 72.9% [63.9, 81.2] | 2.1% [0.3, 4.2] | 16% | 50.4% [35.7, 65.1] | 12.4% [4.7, 21.7] | 9% |
+| Opus (run 1 only: 20 frozen, 43 hard cases) | 70.0% [50.0, 90.0] | 0.0% | 0% | 51.2% [37.2, 65.1] | 7.0% [0.0, 16.3] | 11% |
+| (Haiku, ADK on the API, k = 3) | 81.2% [73.3, 88.5] | 2.4% [0.7, 4.5] | 44% | 73.6% [61.2, 85.3] | 9.3% [2.3, 17.8] | 56% |
+| (Sonnet, ADK on the API, k = 3) | 74.7% [66.0, 82.6] | 1.4% [0.0, 3.5] | 18% | 57.4% [41.9, 72.1] | 5.4% [0.0, 12.4] | 25% |
+
+- Run by run the rates hold still: Haiku frozen 72.9%, 74.0%, 70.8% right; Sonnet frozen 74.0%, 72.9%, 71.9%; Haiku hard 58.1%, 51.2%, 53.5%; Sonnet hard 48.8%, 48.8%, 53.5%. Run 1 was not a lucky draw.
+- Confident-wrong drifts up across runs for Haiku (frozen 3.1%, 4.2%, 6.2%; hard 4.7%, 7.0%, 9.3%) and for Sonnet on the hard set (11.6%, 11.6%, 14.0%); the same cases recur (`bet_sessions_per_order` was confident-wrong in run 3 for both models), so it reads as noise on a few hard cases, not a trend; k = 3 is the figure to quote.
+- At k = 3 Sonnet as a subagent still ties Sonnet through ADK on the frozen set (72.9% against 74.7%) and stays inside its interval on the hard set (50.4% against 57.4%), but its hard confident-wrong is about twice ADK's (12.4% against 5.4%, intervals overlapping).
+- Haiku as a subagent stays below Haiku through ADK on both sets (72.6% against 81.2%; 54.3% against 73.6%), almost all of it in `uncovered` (17% against 44%; 14% against 56%): the harness gap is Haiku's, and it is the decline habit.
+- Opus's hard confident-wrong reads 7.0% in results.json against 9.3% in run 1's table above: one of its four confident-wrong answers is now `unclear` to the scorer; the run-1 figure is kept above as it was measured.
+
+### Still unknown
+
+- Opus past its sample (needs the owner's go).
+- Whether the decline habit is the harness's system prompt or its shell-tool framing (a Bash-and-Read-only agent type, `bet-subject`, now exists for that pass).

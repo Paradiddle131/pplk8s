@@ -31,7 +31,13 @@ Question: on the free model that decides (RULE.md § The rule), how do the passe
 - Under RULE.md the free model decides: the hybrid is our best custom setup on it so far, and the gap to the managed best narrows from about 13 to 21 points (metrics only) to about 9.
 - Not yet a verdict: the rule compares at k = 3 with paired intervals; the k = 3 passes follow after the k = 1 lane (profile § The completion plan).
 
+## `native-mcp` on the free model, the first 23 frozen cases (2026-11-05, 00:55Z to 01:05Z)
+
+- The lane started `native-mcp` frozen with what was left of the day's cap (`--requests 129` at a free count of 721); Google's MCP servers spend about five or six model calls a case, so the pass stopped at the cap after 23 of 96 cases (exit 3) and the lane skipped `native-mcp` hard (free count 840 of 850).
+- Those 23 cases are all right (23 of 23), but they are the set's first 23, all `covered` and `trap` questions: no `uncovered` question has run, so the figure says nothing yet against the hybrid.
+- The rest of the frozen set and the hard set follow from the 2026-11-06 00:00Z reset.
+
 ## Still unknown
 
-- `native-mcp` on the free model (the lane's next passes, with what is left of the day's cap, then the next reset).
+- `native-mcp` on the rest of the frozen set and on the hard set (from the next reset).
 - The hybrid at k = 3 on the free model; whether its fallback answers are right more often than the data agents' SQL on the same `uncovered` questions.
