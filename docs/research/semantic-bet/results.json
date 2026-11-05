@@ -1,5 +1,5 @@
 {
- "written": "2026-11-05T00:33Z",
+ "written": "2026-11-05T00:35Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1887,8 +1887,7 @@
     "right": 58,
     "wrong": 26,
     "confident-wrong": 9,
-    "declined": 35,
-    "unclear": 1
+    "declined": 36
    },
    "model_calls": 259
   },
@@ -2002,9 +2001,9 @@
     0.627906976744
    ],
    "confident_wrong": [
-    0.093023255814,
+    0.085271317829,
     0.023255813953,
-    0.186046511628
+    0.162790697674
    ],
    "groups": {
     "conversation": [
@@ -2027,8 +2026,8 @@
    "pass_all": 0.46511627906976744,
    "outcomes": {
     "right": 62,
-    "wrong": 19,
-    "confident-wrong": 12,
+    "wrong": 20,
+    "confident-wrong": 11,
     "declined": 35,
     "unclear": 1
    },
@@ -2167,10 +2166,9 @@
    "pass_all": 0.4418604651162791,
    "outcomes": {
     "right": 19,
-    "declined": 6,
+    "declined": 7,
     "confident-wrong": 8,
-    "wrong": 9,
-    "unclear": 1
+    "wrong": 9
    },
    "model_calls": 47
   },
@@ -2217,8 +2215,7 @@
     "right": 22,
     "wrong": 6,
     "confident-wrong": 13,
-    "declined": 1,
-    "unclear": 1
+    "declined": 2
    },
    "model_calls": 47
   },
@@ -2378,9 +2375,9 @@
     0.651162790698
    ],
    "confident_wrong": [
-    0.093023255814,
-    0.023255813953,
-    0.186046511628
+    0.06976744186,
+    0.0,
+    0.162790697674
    ],
    "groups": {
     "conversation": [
@@ -2405,7 +2402,8 @@
     "right": 22,
     "declined": 2,
     "wrong": 15,
-    "confident-wrong": 4
+    "confident-wrong": 3,
+    "unclear": 1
    },
    "model_calls": 47
   },
@@ -3371,9 +3369,9 @@
     -0.317829457364
    ],
    "confident_wrong": [
-    0.093023255814,
+    0.085271317829,
     0.023255813953,
-    0.186046511628
+    0.162790697674
    ],
    "worth": false
   },
@@ -3515,9 +3513,9 @@
     -0.294573643411
    ],
    "confident_wrong": [
-    0.093023255814,
-    0.023255813953,
-    0.186046511628
+    0.06976744186,
+    0.0,
+    0.162790697674
    ],
    "worth": false
   }
