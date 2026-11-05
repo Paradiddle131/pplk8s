@@ -1,0 +1,1 @@
+{"case": "returns_amount", "run": 2, "turns": [{"question": "How much money went back to customers through partner returns in early October 2026?", "answer": "Partner returns came to 89.75 EUR (Returns (EUR)) for returns recorded from 1 to 10 October 2026. Fresh: returns.silver is ready up to 2026-10-03T00:00Z.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}
