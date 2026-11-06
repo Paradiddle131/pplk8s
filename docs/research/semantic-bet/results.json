@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T01:09Z",
+ "written": "2026-11-06T01:21Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -212,18 +212,18 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 3,
-   "cases": 79,
+   "cases": 96,
    "of_cases": 96,
-   "runs": 79,
+   "runs": 96,
    "accuracy": [
-    0.898734177215,
-    0.822784810127,
-    0.962025316456
+    0.885416666667,
+    0.822916666667,
+    0.947916666667
    ],
    "confident_wrong": [
-    0.037974683544,
-    0.0,
-    0.088607594937
+    0.0625,
+    0.020833333333,
+    0.114583333333
    ],
    "groups": {
     "conversation": [
@@ -247,18 +247,18 @@
      11
     ],
     "uncovered": [
-     0.8333333333333334,
-     12
+     0.8275862068965517,
+     29
     ]
    },
-   "pass_all": 0.8987341772151899,
+   "pass_all": 0.8854166666666666,
    "outcomes": {
-    "right": 71,
-    "confident-wrong": 3,
+    "right": 85,
+    "confident-wrong": 6,
     "wrong": 4,
     "declined": 1
    },
-   "model_calls": 475
+   "model_calls": 588
   },
   {
    "set": "frozen",
@@ -3166,17 +3166,17 @@
    "set": "frozen",
    "arm": "native-mcp",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 79,
-   "runs": 79,
+   "cases": 96,
+   "runs": 96,
    "accuracy": [
-    -0.04641350211,
-    -0.118143459916,
-    0.021097046414
+    -0.055555555556,
+    -0.118055555556,
+    0.003472222222
    ],
    "confident_wrong": [
-    0.037974683544,
-    0.0,
-    0.088607594937
+    0.052083333333,
+    0.010416666667,
+    0.104166666667
    ],
    "worth": false
   },
@@ -3726,7 +3726,8 @@
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
    "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)",
    "native-mcp on claude-haiku-5-5",
-   "native-mcp on claude-sonnet-5-5"
+   "native-mcp on claude-sonnet-5-5",
+   "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ],
   "hard": [
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
