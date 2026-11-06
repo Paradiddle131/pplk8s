@@ -3,6 +3,7 @@ no built-in tool, only its setup's MCP tools, and a deterministic audit of every
 
 Setups (semantic_agent.bet_tools.DECLARED; RULE.md § Changes since freezing, 2026-11-06T18:40Z):
   cc-metricflow   mirrors custom-metricflow: semantic_agent.mcp_server (127.0.0.1:8765), toolset_metricflow.INSTRUCTION
+  cc-metricflow-compute  mirrors custom-metricflow-compute (#400): the same server, toolset_metricflow.INSTRUCTION_COMPUTE
   cc-native-mcp   mirrors native-mcp: probes/387_mcp_guard.py (127.0.0.1:8766), 328_mcp_agent.INSTRUCTION
 
 Each run: `claude -p --model M --tools "" --strict-mcp-config --mcp-config <setup> --allowedTools <its tools>
@@ -29,7 +30,7 @@ Run from services/semantic-agent (servers up, NO_PROXY covering 127.0.0.1):
       one case, unlogged, its answer and audit printed, nothing written beside the answers.
 Scoring (the recorded-answer agent module, as 374_cc_agent.py):
   BET_CC_MODEL=<model> uv run python ../../docs/research/semantic-bet/probes/328_mcp_live.py --agent 387_cc_strict.py \
-    --arm cc-metricflow|cc-native-mcp --set SET --runs 3 --no-canary
+    --arm cc-metricflow|cc-metricflow-compute|cc-native-mcp --set SET --runs 3 --no-canary
 """
 
 from __future__ import annotations
@@ -69,13 +70,17 @@ def _declared(setup: str) -> frozenset[str]:
     return declared(setup)
 
 
+# The setups served by the semantic MCP server, each under its own instruction.
+METRICFLOW_SETUPS = ("cc-metricflow", "cc-metricflow-compute")
+
+
 def instruction(setup: str) -> str:
     """The arm's own ADK instruction, the system prompt its Claude Code variant runs under."""
-    if setup == "cc-metricflow":
+    if setup in METRICFLOW_SETUPS:
         sys.path.insert(0, str(ROOT / "services/semantic-agent/src"))
-        from semantic_agent.toolset_metricflow import INSTRUCTION
+        from semantic_agent.toolset_metricflow import INSTRUCTION, INSTRUCTION_COMPUTE
 
-        return INSTRUCTION
+        return INSTRUCTION_COMPUTE if setup == "cc-metricflow-compute" else INSTRUCTION
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -88,6 +93,7 @@ def instruction(setup: str) -> str:
 
 SERVERS = {
     "cc-metricflow": ("semantic", "http://127.0.0.1:8765/mcp"),
+    "cc-metricflow-compute": ("semantic", "http://127.0.0.1:8765/mcp"),
     "cc-native-mcp": ("google", "http://127.0.0.1:8766/mcp"),
 }
 
@@ -105,7 +111,7 @@ async def served(setup: str, model: str) -> list[str]:
 
     server, url = SERVERS[setup]
     os.environ.setdefault("NO_PROXY", "127.0.0.1,localhost")
-    if setup == "cc-metricflow":
+    if setup in METRICFLOW_SETUPS:
         import httpx2
         from mcp.client.streamable_http import streamable_http_client
 
@@ -128,7 +134,7 @@ async def served(setup: str, model: str) -> list[str]:
 def mcp_config(setup: str, model: str) -> dict[str, Any]:
     server, url = SERVERS[setup]
     entry: dict[str, Any] = {"type": "http", "url": url}
-    if setup == "cc-metricflow":
+    if setup in METRICFLOW_SETUPS:
         entry["headers"] = {"Authorization": f"Bearer {token(model)}"}
     return {"mcpServers": {server: entry}}
 

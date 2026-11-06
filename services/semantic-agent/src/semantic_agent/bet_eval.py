@@ -114,7 +114,7 @@ RUNS = 3
 # A run that errors (not a spent quota) is asked again once on a later pass; twice is scored wrong.
 MAX_ERRORS = 2
 # The two local arms, in the order a run asks them: the pair compared is baseline → metricflow.
-ARMS = ("baseline", "custom-metricflow", "custom-hybrid")
+ARMS = ("baseline", "custom-metricflow", "custom-hybrid", "custom-metricflow-compute")
 # What a pass asks when --arms is not given: the pair the local log has always held.
 DEFAULT_ARMS = ("baseline", "custom-metricflow")
 # RULE.md § The arms: every arm that writes SQL has the `legacy` tables in reach beside the
@@ -145,9 +145,13 @@ RUNG = {
     "custom-metricflow": 4,
     # MetricFlow first, a read-only SQL fallback for what no metric covers (#373).
     "custom-hybrid": 4,
+    # MetricFlow with the arithmetic over metric results Google's governed agent does in SQL (#400).
+    "custom-metricflow-compute": 4,
     # The same MetricFlow tools through a Claude Code subagent on the subscription (#374): another
     # agent harness, not the rule's arm; the report names it apart.
     "cc-metricflow": 4,
+    # custom-metricflow-compute's instruction from headless Claude Code (#400), descriptive.
+    "cc-metricflow-compute": 4,
     # Google's MCP tools through a headless Claude Code run (#387, #388), mirroring native-mcp:
     # another harness, descriptive like cc-metricflow.
     "cc-native-mcp": 3,
@@ -1779,6 +1783,7 @@ async def main(argv: Sequence[str]) -> int:
             return 2
         from semantic_agent.agent import build_agent as build_semantic
         from semantic_agent.hybrid import build_agent as build_hybrid
+        from semantic_agent.toolset_metricflow import toolset_compute
         from sql_baseline.agent import build_agent as build_baseline
 
         asked = load_set(args.which, args.ids) if args.ids else bet
@@ -1793,6 +1798,7 @@ async def main(argv: Sequence[str]) -> int:
             "baseline": lambda: build_baseline(extra_tables=LEGACY_TABLES),
             "custom-metricflow": build_semantic,
             "custom-hybrid": lambda: build_hybrid(extra_tables=LEGACY_TABLES),
+            "custom-metricflow-compute": lambda: build_semantic(toolset=toolset_compute()),
         }
         agents = {arm: builders[arm]() for arm in args.arms}
         deadline = time.monotonic() + 60 * args.minutes if args.minutes else None

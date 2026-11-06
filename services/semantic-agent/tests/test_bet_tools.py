@@ -118,3 +118,24 @@ def test_the_check_reads_every_log_and_fails_only_runs_in_force(tmp_path):
     redact = {"kind": "run", **{k: row[k] for k in ("arm", "model", "case", "run", "at")}}
     (tmp_path / bet_eval.OVERLAY).write_text(json.dumps(redact) + "\n")
     assert bet_tools.check(tmp_path)[1] == []
+
+
+def test_the_compute_setup_differs_from_metricflow_only_in_allowing_arithmetic_over_results():
+    """#400: custom-metricflow-compute is custom-metricflow's agent and tools, its instruction
+    allowing a sum, difference, ratio or share of query_metrics results (as Google's agents do in
+    SQL) and nothing else."""
+    from semantic_agent.toolset_metricflow import INSTRUCTION, INSTRUCTION_COMPUTE, toolset_compute
+
+    model = ScriptedLlm(steps=[])
+    agent = semantic_agent(model, toolset=toolset_compute())
+    assert names(agent) == bet_tools.DECLARED["custom-metricflow-compute"] == bet_tools.METRICFLOW
+    assert bet_tools.DECLARED["cc-metricflow-compute"] == bet_tools.METRICFLOW
+    assert agent.instruction == INSTRUCTION_COMPUTE != INSTRUCTION
+    assert "never compute" in INSTRUCTION and "never compute" not in INSTRUCTION_COMPUTE
+    for kept in ("never write SQL", "Never estimate or recall a figure", "sum of its numerator"):
+        assert kept in INSTRUCTION_COMPUTE
+    assert (
+        "custom-metricflow-compute" in bet_eval.ARMS
+        and bet_eval.RUNG["custom-metricflow-compute"] == 4
+    )
+    assert probe("387_cc_strict.py").instruction("cc-metricflow-compute") == INSTRUCTION_COMPUTE

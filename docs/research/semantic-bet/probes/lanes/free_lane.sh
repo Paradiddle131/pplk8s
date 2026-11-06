@@ -109,6 +109,9 @@ hard_v2() {
   carry
   pass "custom-hybrid hard-v2 k=$k" 120 "${BE[@]}" --arms custom-hybrid --set hard-v2 --runs $k || exit 0
   pass "custom-metricflow hard-v2 k=$k" 100 "${BE[@]}" --arms custom-metricflow --set hard-v2 --runs $k || exit 0
+  # The MetricFlow setup with arithmetic over metric results (#400): new, so every case is asked, hard-v2 first.
+  pass "custom-metricflow-compute hard-v2 k=$k" 260 "${BE[@]}" --arms custom-metricflow-compute --set hard-v2 --runs $k || exit 0
+  pass "custom-metricflow-compute frozen k=$k" 350 "${BE[@]}" --arms custom-metricflow-compute --runs $k || exit 0
   gcp_gate || { log "ANOMALY: GCP gate failed before native-mcp hard-v2"; exit 1; }
   pass "native-mcp hard-v2 k=$k" 160 "${LIVE[@]}" --runs $k --set hard-v2 || exit 0
   gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp hard-v2"; exit 1; }

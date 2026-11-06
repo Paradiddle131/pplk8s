@@ -79,6 +79,7 @@ DATA_AGENT_ARMS = (
 DECLARED: dict[str, frozenset[str]] = {
     "baseline": frozenset({"execute_sql"}),
     "custom-metricflow": METRICFLOW,
+    "custom-metricflow-compute": METRICFLOW,
     "custom-hybrid": METRICFLOW | {"execute_sql"},
     "custom-toolbox": TOOLBOX,
     "custom-lightdash": frozenset({"query_metrics"}),
@@ -87,6 +88,7 @@ DECLARED: dict[str, frozenset[str]] = {
     # The Claude Code setups: the shell-tool subagents (#374, calls self-reported) and the two
     # variants the strict headless runner gives exactly these tools (#387).
     "cc-metricflow": METRICFLOW,
+    "cc-metricflow-compute": METRICFLOW,
     "cc-native-mcp": GOOGLE_MCP,
 }
 
