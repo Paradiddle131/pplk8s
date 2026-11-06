@@ -4,6 +4,15 @@ You are one of three designers working in parallel on the same task, each with a
 The owner will compare the three side by side and pick one; the chosen one is then built in full.
 So build a **convincing slice**, not the whole report: the first screen plus the central views below, on the real data, polished enough that the owner can judge look, feel and statistical honesty.
 
+## The reader rule (owner, 2026-11-06; binding on every section and design)
+
+The reader sees only the report: never our code base, issues, pull requests, designs, logs or files.
+The owner: "The agents should always know that the reader will not see the code base, our issues, pull requests, our designs, etc. They are just looking at a report."
+- Show only what a reader understands at a glance, with tooltips or a short explanation where a term needs one; every shown term has a glossary entry (`build.py` `TERMS`, checked by `tests/test_report_build.py`).
+- Never on the page: hashes, freeze dates, set-version lineage ("v1", "v2", "supersedes", "not yet adopted", "new in a version"), retired questions in any form (no count, no reason, no list, not even beside a verdict: owner, 2026-11-06, RULE.md § Changes since freezing), pass or run bookkeeping, issue or PR numbers, file names, the owner's decisions, or filters over such fields ("Any / Scored / Retired / New in a version").
+- A set is named by what it holds; a difference between two sets is explained only where a reader needs it to read a number.
+- These facts stay in RULE.md, the findings and the data (`results.json`); `build.py` keeps them out of the page's visible text and its embedded data.
+
 ## The subject
 
 A research track asked: for a business user asking questions about a shop's warehouse, which agent setup gives the right number, and which gives a confidently wrong one?

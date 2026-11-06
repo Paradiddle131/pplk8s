@@ -5,6 +5,15 @@ Build: `python3 build.py ../results.json`.
 Set versions (RULE.md § Set versions, #378): the page shows one version of each set family, `hard` (v1) until the owner's go on #380, then `hard-v2` with `--show hard-v2` (or `BET_REPORT_SHOW=hard-v2`, and #381 flips `SHOWN`); the other version goes to the appendix, "Appendix: other versions of a question set", labelled not yet adopted or superseded, with its numbers from `results.json`.
 Clipped text (2026-11-06, the owner's report of "Claude Code subagent" losing its first letters in the setup explorer): `tools/clipcheck.js` (Playwright) checks text clipped by a container, past the page, outside an SVG's viewBox, overflowing, overlapping or covered, at 1280, 1024, 768, 400 and 360 px in light, dark and the dark button, over every set switch, explorer setup, map target and Figure 2 glider; it found 26 problems from 6 causes (the explorer's lane heads and narrow side titles, Figure 2's two-panel and phone labels, Figure 5's right labels, Figure 4's axis title), now 0. Lane heads, model labels, family headers and slope labels wrap instead of clipping, and Figures 2 and 5 redraw once the label font loads. Run it from `report/` with `node tools/clipcheck.js --quick` after any change to the page.
 
+## The reader rule (owner, 2026-11-06; binding on every section and design)
+
+The reader sees only the report: never our code base, issues, pull requests, designs, logs or files.
+The owner: "The agents should always know that the reader will not see the code base, our issues, pull requests, our designs, etc. They are just looking at a report."
+- Show only what a reader understands at a glance, with tooltips or a short explanation where a term needs one; every shown term has a glossary entry (`build.py` `TERMS`, checked by `tests/test_report_build.py`).
+- Never on the page: hashes, freeze dates, set-version lineage ("v1", "v2", "supersedes", "not yet adopted", "new in a version"), retired questions in any form (no count, no reason, no list, not even beside a verdict: owner, 2026-11-06, RULE.md § Changes since freezing), pass or run bookkeeping, issue or PR numbers, file names, the owner's decisions, or filters over such fields ("Any / Scored / Retired / New in a version").
+- A set is named by what it holds; a difference between two sets is explained only where a reader needs it to read a number.
+- These facts stay in RULE.md, the findings and the data (`results.json`); `build.py` keeps them out of the page's visible text and its embedded data.
+
 ## What changed in revision 2
 
 - Tooltips, click to pin: hover works as before. A click, a tap, or Enter/Space on a focused element pins the tooltip in place. Pinned text can be selected and copied (pointer events on, user-select text) and has a drawn close mark. While a tooltip is pinned, hovering shows nothing else. A click on another tooltip-bearing element moves the pin; a click anywhere else unpins, and so does Escape, which also returns focus to the element.

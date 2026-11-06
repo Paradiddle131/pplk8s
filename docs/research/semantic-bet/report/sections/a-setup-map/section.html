@@ -141,7 +141,7 @@
   "use strict";
   window.reportReady(() => {
     /* ---------- static facts the data lacks, keyed by setup ----------
-       asks: da (Google's data agent), adk (our ADK agent), cc (a Claude Code subagent).
+       asks: da (Google's data agent), adk (our ADK agent), cc (Claude Code, run headless with only the setup's tools).
        p: the parts of the map the setup uses (cards, rows, arrows); models come from the data. */
     const DA = ["da", "da.sql", "e-da-bq", "bq"];
     const KC = ["e-da-kc", "kc", "kc.import"];
@@ -213,10 +213,15 @@
         reach: "the semantic models, then gold, exposed and the legacy tables through SQL", sql: "MetricFlow writes it; for the fallback, the agent, and its answer says so." },
       "cc-metricflow": { asks: "cc", delta: "the same three tools in another harness",
         p: ["cc", "e-cc-mft", ...MFT],
-        tools: "the same three MetricFlow tools, called as a command", ctx: "the semantic layer, as custom-metricflow",
-        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; the subagent is told not to write SQL." },
+        tools: "the same three MetricFlow tools, and no other tool: no shell, file or web access", ctx: "the semantic layer and custom-metricflow's instruction, word for word",
+        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; Claude Code has no tool that runs SQL." },
+      "cc-native-mcp": { asks: "cc", delta: "Google's MCP servers in another harness",
+        p: ["cc", "e-cc-mcp", "mcp", "mcp.sql", "e-mcp-kc", "kc", "kc.import", "e-mcp-bq", "bq", ...BQ_ALL],
+        tools: "Google's managed MCP servers, their read-only tools only, and no other tool: no shell, file or web access",
+        ctx: "what the catalog returns, and native-mcp's instruction, word for word",
+        reach: "anything in the lab project; the same guard dry-runs each query and caps its size", sql: "Claude writes it and runs it through BigQuery's MCP server." },
     };
-    const ASKS = { da: "Google's managed BigQuery data agent", adk: "Our ADK agent", cc: "A Claude Code subagent, told to use only the tool command" };
+    const ASKS = { da: "Google's managed BigQuery data agent", adk: "Our ADK agent", cc: "Claude Code, run headless: one fresh session a question, only the setup's tools" };
     const ROLE_PARTS = { gemini: ["gem", "e-da-gem"], decides: ["free", "e-adk-free"], check: ["claude", "e-adk-claude"], cc: ["ccm", "e-cc-ccm"] };
     const ROLE_DEFAULT = { da: "gemini", adk: "decides", cc: "cc" };
     const ROLE_WORD = { decides: "decides", check: "the check" };
@@ -375,7 +380,7 @@
       rows: [{ id: "mf.def", text: "metrics, dimensions, glossary", name: "the metric definitions" }, { id: "mf.sql", text: "writes the SQL", sql: true, name: "the SQL MetricFlow writes" }] });
     // align the tool rows' arrows on MetricFlow
     const adk = card({ id: "adk", x: 192, y: y0, w: 160, title: "Our ADK agent", logo: "adk", lines: ["Agent Development Kit", "model through an API"], name: "our ADK agent", minH: mft.y + 16 + 14 - y0 });
-    const cc = card({ id: "cc", x: 192, y: Math.max(adk.b, mft.b - 40) + 24, w: 160, title: "Claude Code subagent", lines: ["same tools, by command"], name: "a Claude Code subagent" });
+    const cc = card({ id: "cc", x: 192, y: Math.max(adk.b, mft.b - 40) + 24, w: 160, title: "Claude Code", lines: ["headless, only these tools"], name: "Claude Code, run headless" });
     const ccm = card({ id: "ccm", x: 24, y: cc.y, w: 120, title: "Claude", lines: ["subscription"], hatch: true, name: "Claude on a Claude Code subscription" });
     // the warehouse stand-in
     const lwTop = ld.y + 8;
@@ -405,6 +410,7 @@
     edge("e-mft-3", [[mft.r, G["mft.3"].cy], [mf.x, G["mft.3"].cy]]);
     edge("e-mf-lw", [[mf.r, G["mf.sql"].cy], [856, G["mf.sql"].cy]]);
     edge("e-cc-mft", [[cc.r, cc.y + 26], [368, cc.y + 26], [368, mft.b - 10], [mft.x, mft.b - 10]]);
+    edge("e-cc-mcp", [[cc.r, cc.y + 12], [376, cc.y + 12], [376, mcpIn + 12], [mcp.x, mcpIn + 12]]);
     edge("e-cc-ccm", [[cc.x, cc.y + 26], [ccm.r, cc.y + 26]]);
 
     const H = oBot + 8;

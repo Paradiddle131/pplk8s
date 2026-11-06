@@ -37,7 +37,7 @@ FALLBACK_LOGS = "/home/user/pplk8s/docs/research/semantic-bet"
 VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"),
           ("vendor/plot-0.6.17.umd.min.js", "4358086467740777dd788d6b27a95cebdbaefdd50c730a3060117073bd7134cb")]
 
-SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set", "hard-v2": "Hard set v2"}
+SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set", "hard-v2": "Extended hard set"}
 # Set families (RULE.md § Set versions): each family's versions, oldest first. The page shows one
 # version per family (SHOWN, or --show); the others go to the appendix. A set in no family is shown.
 FAMILIES = {"hard": ["hard", "hard-v2"]}
@@ -90,14 +90,14 @@ FAMILY = {
     "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf", "cc-native-mcp": "gt",
     "baseline": "ref",
 }
-FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our ADK agent on Google's tools",
+FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our agent on Google's tools",
                 "mf": "Our agent on a semantic-layer server", "ref": "Text-to-SQL baseline", "other": "Another setup"}
 UNDESCRIBED = "Not yet described."
 COMPARISON_ONLY = {"cc-metricflow", "cc-native-mcp"}  # another harness: shown, never deciding
 HARNESS = {"adk-openrouter": "ADK runner, model through OpenRouter",
            "adk-anthropic-api": "ADK runner, model through the Anthropic API",
            "claude-code-subagent": "Claude Code subagent (a different harness)",
-           "claude-code-headless": "Claude Code headless, one fresh session a run, only the setup's MCP tools (strict)",
+           "claude-code-headless": "Claude Code, run headless: one fresh session a run, only the setup's tools, no shell, file or web tool",
            "google-data-agent": "Google's data agent, Google's harness"}
 # The cost ladder in plain words, cheapest first.
 LADDER = [
@@ -128,12 +128,60 @@ TERMS = [
     ("decides", "Decides", "Our setups run on a free model, which decides; Google's agents run on Gemini only."),
     ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
-    ("partial", "Partial pass", "A pass with fewer questions than the set, or fewer than three runs per question."),
+    ("partial", "Partial", "Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider."),
     ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
     ("exact", "Exact bound", "When every run of every question is right, or none is, the bootstrap has no spread; the page then gives the exact two-sided 95% (Clopper-Pearson) bound over the questions instead."),
     ("frozen", "Frozen set", "The first question set, fixed before any setup was scored; its uncovered questions are medians, times between events, peaks, and ratios of two measures."),
     ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it: hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), and its uncovered questions are mostly ratios and differences of two measures. It detects only larger gaps."),
+    # Question groups beyond the four headline ones, and the unit plate's catch-all column (#395)
+    ("composable", "Composable", "No single metric answers it, but arithmetic over a few metric results does, such as a ratio or a difference of two."),
+    ("distractor", "Distractor", "A covered question with an older, replaced table in reach that gives another number."),
+    ("planted", "Planted", "A covered question whose data holds text written like an instruction to the agent, which it must ignore."),
+    ("other-covered", "Other covered", "Covered questions asked as a follow-up, beside an older replaced table, or with planted text."),
+    # What makes a hard-set question hard (a question can be several)
+    ("jargon", "Jargon", "The question uses a business term, such as AOV or churn, instead of the metric's name."),
+    ("period", "Period", "The period is relative or fiscal (last month, last quarter, the week before) and must be worked out from a date."),
+    ("multi-metric", "Several metrics", "The answer needs more than one metric, or a metric of a metric."),
+    ("segment", "Segment", "The question compares or ranks segments, such as channels, countries or customer groups."),
+    ("implicit", "Implicit definition", "The question leaves a definition unsaid that the business has fixed, such as which orders count."),
+    ("ambiguous-followup", "Ambiguous follow-up", "A follow-up in a chat, or a term with more than one meaning that the agent should ask about."),
+    ("multi-step", "Multi-step", "The answer needs one result before the next can be asked for."),
+    ("sql-hard", "Hard in SQL", "The obvious SQL gives another number, for one of the reasons below."),
+    # Why the obvious SQL goes wrong (the hard-in-SQL rubric)
+    ("fan-out-join", "Fan-out join", "A join repeats rows, so a sum over the joined table counts some values twice."),
+    ("distinct-across-join", "Distinct across a join", "A count must stay distinct across a join that repeats rows."),
+    ("ratio-of-sums", "Ratio of sums", "The rate is a sum divided by a sum, not the average of each row's ratio."),
+    ("window", "Window", "The answer needs a running or ranked value over ordered rows."),
+    ("median-percentile", "Median or percentile", "The answer is a middle or a percentile value, which no plain sum or average gives."),
+    ("sessions-gaps-islands", "Sessions and gaps", "Events must be grouped into runs separated by gaps in time."),
+    ("cohort-retention", "Cohort retention", "Customers are grouped by when they started and followed over later periods."),
+    ("anti-join", "Anti-join", "The question asks for what has no match, such as sign-ups that never ordered."),
+    ("date-spine", "Date spine", "Days with no rows must still count, as zeros, so the days need generating."),
+    ("fiscal-timezone", "Fiscal or time-zone boundary", "A period starts on a fiscal date or in a local time zone, not on UTC calendar days."),
+    # Who answers: the setup families and the model roles
+    ("family-da", "Google's managed data agent", "Google's own agent in BigQuery, on Gemini; we only change what it is given to read."),
+    ("family-gt", "Our agent on Google's tools", "Our own agent (built with Google's Agent Development Kit, or Claude Code for comparison) calling Google's MCP servers or tools generated over the tables."),
+    ("family-mf", "Our agent on a semantic-layer server", "Our own agent (ADK, or Claude Code for comparison) asking a semantic layer, MetricFlow or Lightdash, for metrics instead of writing SQL."),
+    ("family-ref", "Text-to-SQL baseline", "A plain agent that reads the table docs and writes SQL; the reference the others are read against."),
+    ("claude-code", "Claude Code", "Anthropic's agent harness, run headless with only the setup's tools; shown for comparison, never deciding."),
 ]
+# Each key a page shows a term for, mapped to its TERMS key where the data names it otherwise (#395).
+TERM_ALIAS = {"trap": "hidden-rule", "plain": "covered", "other": "other-covered", "cc": "claude-code"}
+
+
+def term_key(key):
+    """The TERMS key for a group, bucket, kind, rubric kind or role key as the data spells it."""
+    return TERM_ALIAS.get(key, key.replace("_", "-"))
+
+
+# A question's fields that are process, never shown to a reader (#393): whether it was retired, and in which version it was added.
+READER_HIDDEN = {"retired", "new"}
+# What a set in the appendix tests, in a reader's words (what it holds, never its history: #393).
+APPENDIX_ABOUT = {
+    "hard-v2": "The hard set's questions plus fifteen that are hard to write in SQL (joins that multiply rows, "
+               "ratios of sums, windows, medians, date spines); questions answered by arithmetic over two metrics "
+               "form their own group, composable.",
+}
 # What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
 UNCOVERED_KIND = {
     "frozen": "Its uncovered questions: medians, times between events, peaks, ratios of two measures.",
@@ -157,7 +205,7 @@ def model_info(model):
         return m.group(1).capitalize(), "check"
     m = re.match(r"claude-code-strict \((.+)\)", model)
     if m:  # the strict headless runner (#387): one fresh session a run, only the setup's MCP tools
-        return "Claude Code " + m.group(1).capitalize() + ", strict", "cc"
+        return "Claude Code " + m.group(1).capitalize(), "cc"
     m = re.match(r"claude-code \((.+)\)", model)
     if m:
         name = m.group(1)
@@ -388,8 +436,8 @@ def family_of(st):
 
 
 def shown_sets(every, show):
-    """The sets the page shows (one version per family: `show`'s, else SHOWN's) and the others,
-    each with the appendix label saying why it is not shown (RULE.md § Set versions)."""
+    """The sets the page shows (one version per family: `show`'s, else SHOWN's) and the others, each
+    with its reader-facing label; why a version is not shown is process, kept out of the page (#393)."""
     chosen = {**SHOWN, **show}
     present, appendix = [], []
     for st in every:
@@ -397,11 +445,7 @@ def shown_sets(every, show):
         if fam is None or chosen.get(fam) == st:
             present.append(st)
             continue
-        versions = FAMILIES[fam]
-        newer = versions.index(st) > versions.index(chosen[fam])
-        why = ("not yet adopted: shown in its family's place only after the owner's go (#380)" if newer
-               else "superseded by %s" % set_label(chosen[fam]).lower())
-        appendix.append((st, "%s, %s" % (set_label(st), why)))
+        appendix.append((st, set_label(st)))
     return present, appendix
 
 
@@ -416,18 +460,22 @@ def appendix_html(R, appendix):
            " .apx th, .apx td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }"
            " .apx th { color: var(--ink-3); font-weight: 500; } .apx td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }"
            " .apx td:first-child { white-space: nowrap; } .apx .apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .apx h3 { margin: 18px 0 6px; }</style>",
-           '<h2 id="apx-h">Appendix: other versions of a question set</h2>',
-           '<p class="col">A question set is versioned, never edited (RULE.md § Set versions). The page above shows one version of each set; the others keep their numbers here, read from the same results.</p>']
+           '<h2 id="apx-h">Appendix: more question sets</h2>',
+           '<p class="col">Sets the figures above do not draw, with each setup\'s numbers from the same runs.</p>']
+    glabel = dict(GROUPS_ALL)
     for st, label in appendix:
-        rows = [a for a in R.get("arms", []) if a["set"] == st]
-        groups = sorted({g for a in rows for g in a.get("groups", {})})
+        rows = [a for a in strict_view(R.get("arms", [])) if a["set"] == st]
+        groups = [g for g in [k for k, _ in GROUPS_ALL] + sorted({g for a in rows for g in a.get("groups", {})}) if any(g in a.get("groups", {}) for a in rows)]
+        groups = list(dict.fromkeys(groups))
+        if APPENDIX_ABOUT.get(st):
+            out.append('<p class="col">%s</p>' % html_escape(APPENDIX_ABOUT[st]))
         out.append('<h3>%s</h3><div class="apx-scroll"><table><thead><tr><th scope="col">Setup</th><th scope="col">Model</th>'
                    '<th scope="col">Questions</th><th scope="col">Accuracy</th><th scope="col">Confident-wrong</th>%s</tr></thead><tbody>'
-                   % (html_escape(label), "".join('<th scope="col">%s</th>' % html_escape(g.capitalize()) for g in groups)))
+                   % (html_escape(label), "".join('<th scope="col">%s</th>' % html_escape(glabel.get(g, g.capitalize())) for g in groups)))
         for a in sorted(rows, key=lambda a: (a["arm"], a["model"])):
             cells = "".join('<td class="n">%s</td>' % (pc(a["groups"][g][0]) if g in a.get("groups", {}) else "–") for g in groups)
             out.append('<tr><td>%s</td><td>%s</td><td class="n">%d of %d</td><td class="n">%s</td><td class="n">%s</td>%s</tr>'
-                       % (html_escape(a["arm"]), html_escape(a["model"]), a["cases"], a.get("of_cases") or a["cases"],
+                       % (html_escape(a["arm"]), html_escape(model_info(a["model"])[0]), a["cases"], a.get("of_cases") or a["cases"],
                           pc(a["accuracy"][0]), pc(a["confident_wrong"][0]), cells))
         out.append("</tbody></table></div>")
     out.append("</section>")
@@ -513,11 +561,15 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
             label, role = model_info(a["model"])
             of = a.get("of_cases") or a.get("cases") or 0
             expected = of * 3
+            # Shown only when a reader should read the interval as wider: fewer questions than the set, or
+            # clearly fewer than three runs a question; a run or two missing is no news to a reader (#393).
             partial = None
             if a["cases"] < of:
                 partial = "%d of %d questions" % (a["cases"], of)
-            elif a["runs"] < expected:
-                partial = "%d of %d runs" % (a["runs"], expected)
+            elif a["runs"] <= a["cases"]:
+                partial = "one run per question"
+            elif a["runs"] < 0.9 * expected:
+                partial = "fewer runs per question"
             entries = sorted(raw.get((st, a["arm"], a["model"]), []), key=lambda e: e.get("at", ""))[: a["runs"]]
             pc = defaultdict(list)
             example = None
@@ -595,9 +647,13 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
             "buckets": [{"key": k, "label": l, "help": h} for k, l, h in BUCKETS],
             "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED,
             "terms": [{"key": k, "label": l, "text": t} for k, l, t in TERMS],
-            # Every set as written, shown or not (#390): its meta and every case, retired ones with their reason.
+            "termAlias": TERM_ALIAS,
+            # Every set, shown or not (#390), as its reader sees it (#393, #394): its scored questions and groups only;
+            # retired questions, hashes, freeze dates and version lineage stay in RULE.md and results.json.
             "questionSets": {st: {"label": set_label(st), "shown": st in present, "appendix": st in {a for a, _ in appendix},
-                                  **{k: v for k, v in spec.items() if k not in ("cases",)}}
+                                  "groups": {c: g for c, g in (spec.get("groups") or {}).items() if c in set(spec.get("cases") or [])},
+                                  "questions": [{k: v for k, v in q.items() if k not in READER_HIDDEN}
+                                                for q in spec.get("questions") or [] if q.get("id") in set(spec.get("cases") or [])]}
                              for st, spec in (R.get("sets") or {}).items()},
             "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")

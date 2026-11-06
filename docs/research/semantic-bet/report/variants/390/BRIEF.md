@@ -6,7 +6,16 @@ Today the page names sets, groups (`covered`, `composable`, `uncovered`, `trap` 
 The owner wants one section that explains the sets and lets a reader browse every question only if they want to.
 Three designers draft it in parallel with different approaches; the owner keeps one. You are one of them; your approach is at the end of your prompt.
 
-## What to show
+## The reader rule (owner, 2026-11-06; binding on every section and design)
+
+The reader sees only the report: never our code base, issues, pull requests, designs, logs or files.
+The owner: "The agents should always know that the reader will not see the code base, our issues, pull requests, our designs, etc. They are just looking at a report."
+- Show only what a reader understands at a glance, with tooltips or a short explanation where a term needs one; every shown term has a glossary entry (`build.py` `TERMS`, checked by `tests/test_report_build.py`).
+- Never on the page: hashes, freeze dates, set-version lineage ("v1", "v2", "supersedes", "not yet adopted", "new in a version"), retired questions in any form (no count, no reason, no list, not even beside a verdict: owner, 2026-11-06, RULE.md § Changes since freezing), pass or run bookkeeping, issue or PR numbers, file names, the owner's decisions, or filters over such fields ("Any / Scored / Retired / New in a version").
+- A set is named by what it holds; a difference between two sets is explained only where a reader needs it to read a number.
+- These facts stay in RULE.md, the findings and the data (`results.json`); `build.py` keeps them out of the page's visible text and its embedded data.
+
+## What to show (written before the reader rule; where it conflicts, the rule above wins)
 
 Per set: what it tests (in plain words), how many questions it has as written and as scored, how many are retired and why (the register's classes: a wrong expected SQL, a fixture that fixes the answer, more than one reasonable reading), its group mix, when it was frozen and its file hash (short, with the full one on demand), whether the report shows it or keeps it in the appendix, and for `hard-v2` what it supersedes and why.
 Per question, on demand: its text (every turn of a conversation), its groups and kinds (and for v2's new ones their SQL-rubric kinds: fan-out join, ratio of sums, window, median, anti-join, date spine, fiscal or timezone boundary, ...), the expected answer (the numbers each turn must carry), whether it is new in v2, whether it is retired and the reason, and, for a set the report shows, every setup's outcome on it (right, declined, wrong, confident-wrong, unclear, per run).

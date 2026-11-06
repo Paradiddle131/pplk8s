@@ -134,7 +134,7 @@ window.reportReady(() => {
   const AG = {
     da: P("da", "Google's data agent", ["Conversational Analytics"]),
     adk: (role) => P("adk", "Our ADK agent", [role], { logo: "adk" }),
-    cc: P("cc", "Claude Code subagent", ["another agent harness"]),
+    cc: P("cc", "Claude Code", ["another agent harness, run headless"]),
   };
   const CX = {
     instr: P("instr", "A one-line instruction", []),
@@ -204,9 +204,14 @@ window.reportReady(() => {
       reach: [Object.assign({}, RE.silver, { lines: ["read by MetricFlow"] }), RE.gold, RE.legacy], sql: [SQL.mf, SQL.fb],
       why: "A read-only SQL fallback is added for what no metric covers; its answer then opens with “Not a governed metric:”.", seq: { kind: "mf", hybrid: true } }),
     "cc-metricflow": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.cc,
-      ctx: [P("i-cc", "A prompt", ["the same rules, kept by instruction only"])], tools: [MFT("MetricFlow's tools, as a command line")], server: MFS,
+      ctx: [P("i-mf", "Instruction", ["use only the metrics; never write SQL"])], tools: [MFT()], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
-      why: "The same three tools, called by a Claude Code subagent instead of the ADK agent.", seq: { kind: "mf", cc: true } }),
+      why: "The same three tools and instruction in Claude Code instead of the ADK agent; with no shell, file or web tool, the tools are its only way to a number.", seq: { kind: "mf", cc: true } }),
+    "cc-native-mcp": OURS({ kind: "gt", before: "native-mcp", side: { agent: "o", tools: "o", server: "g" }, wh: "bq", agent: AG.cc,
+      tools: [P("gmcp-tools", "Google's MCP tools", [M("search_entries, lookup_context"), M("get_table_info"), M("execute_sql_readonly"), "read-only ones only, and no other tool"])],
+      server: P("gmcp", "Google's MCP servers", ["Knowledge Catalog and BigQuery; the catalog holds the import of the dbt metrics"], { logo: "dbt" }),
+      reach: [Object.assign({}, RE.silver, { lines: ["the only dataset it may query"] })], sql: [SQL.agent],
+      why: "The same Google MCP tools and instruction in Claude Code instead of the ADK agent, behind the same cost guard.", seq: { kind: "mcp", cc: true } }),
     "baseline": OURS({ kind: "ref", agent: AG.adk("plain text-to-SQL"),
       ctx: [P("i-sql", "Instruction", ["names the tables it may read"])], tools: [P("sql-tool", "One SQL tool", [M("execute_sql"), "one read-only statement"])], server: null,
       reach: [RE.gold, RE.legacy], sql: [SQL.agent],
@@ -579,7 +584,7 @@ window.reportReady(() => {
       { a: 0, b: 0, t: "answers with the figure", end: true }],
       cap: "Google's agent writes the SQL itself, on Gemini; nothing in between checks it against a metric." };
     if (q.kind === "mf") {
-      const lane0 = q.cc ? "Claude Code subagent" : "ADK agent";
+      const lane0 = q.cc ? "Claude Code" : "ADK agent";
       const st = [
         { a: 0, b: 1, t: "list_metrics", m: true }, { a: 1, b: 0, t: "every metric and its meaning; it picks " + EXM, ret: true },
         { a: 0, b: 1, t: "describe_metric(" + EXM + ")", m: true }, { a: 1, b: 0, t: "revenue over non-cancelled orders; its dimensions", ret: true },
@@ -589,7 +594,7 @@ window.reportReady(() => {
         { a: 0, b: 0, t: "answers with the figure and its freshness; it never wrote SQL", end: true }];
       if (q.hybrid) st.push({ a: 0, b: 2, t: "only when no metric covers a question: execute_sql, its own read-only query, the answer opening “Not a governed metric:”", m: false, add: true });
       return { lanes: [lane0, "MetricFlow", "Warehouse"], steps: st,
-        cap: q.cc ? "The tools run as a command line; the subagent keeps to them because its prompt says so." : "The agent names a metric and a period; MetricFlow turns the definition into SQL." };
+        cap: q.cc ? "The same tools, served over MCP; Claude Code has no other tool, so it cannot write or run SQL." : "The agent names a metric and a period; MetricFlow turns the definition into SQL." };
     }
     if (q.kind === "ld") return { lanes: ["ADK agent", "Lightdash", "Warehouse"], steps: [
       { a: 0, b: 0, t: "finds the explore and metric in its instruction" },
@@ -598,7 +603,7 @@ window.reportReady(() => {
       { a: 1, b: 0, t: "rows, each metric's description, the SQL", ret: true },
       { a: 0, b: 0, t: "answers with the figure; it never wrote SQL", end: true }],
       cap: "The tool checks every name against what Lightdash serves, then sends a metric query, never SQL." };
-    if (q.kind === "mcp") return { lanes: ["ADK agent", "Google's MCP servers", "BigQuery"], steps: [
+    if (q.kind === "mcp") return { lanes: [q.cc ? "Claude Code" : "ADK agent", "Google's MCP servers", "BigQuery"], steps: [
       { a: 0, b: 1, t: "search_entries, lookup_context", m: true }, { a: 1, b: 0, t: "the imported dbt definition of average order value", ret: true },
       { a: 0, b: 1, t: "get_table_info", m: true }, { a: 1, b: 0, t: "the cleaned tables' columns", ret: true },
       { a: 0, b: 0, t: "writes its own SQL from the definition" },

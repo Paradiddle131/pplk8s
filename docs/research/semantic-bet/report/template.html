@@ -320,7 +320,7 @@ window.REPORT = D;
     <div class="figtools"><div class="legend" id="leg2"></div></div>
     <div class="plot" id="forest"></div>
     <p class="live" id="glide-live" aria-live="polite"></p>
-    <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals are partial passes.</figcaption>
+    <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals rest on fewer questions or runs.</figcaption>
   </figure>
   <figure id="fig3" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
@@ -357,9 +357,9 @@ window.REPORT = D;
 
   <h2>Method, briefly</h2>
   <div class="col notes">
-    <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code runs in another harness, so it is shown for comparison and never decides: its strict rows run one headless process a run with only the setup's MCP tools and no shell, file or web tool, every transcript audited; until those are whole on a set, the earlier subagent rows stand there, which also had a shell. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
+    <p>Each question is asked up to three times per setup and model, each run in a fresh session. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
+    <p>Claude Code is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</p>
     <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
-    <p>Every answer is scored by the current rule, and only questions that passed a blind audit of the test itself count: a question whose expected number was wrong, had no unique answer on the data, or could be matched by chance is left out (RULE.md, the register of retired questions).</p>
   </div>
 
   <h2>Glossary</h2>
@@ -408,7 +408,7 @@ window.REPORT = D;
   }
   const shapeKey = (role, color) => `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`;
   const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
-  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
+  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "<span class=\"term\" data-term=\"claude-code\" tabindex=\"0\">Claude Code</span>"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
   const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
@@ -419,6 +419,8 @@ window.REPORT = D;
   let lockFor = () => {}, unlockFocus = () => {}; // set by the focus code below
   const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
   const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
+  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (#395)
+  const TK = (k) => { const t = (D.termAlias || {})[k] || String(k).replace(/_/g, "-"); return TERM[t] ? t : null; };
   function termTip(key) { const t = TERM[key]; return t ? `<h4>${esc(t.label)}</h4><p>${esc(t.text)}</p>` : `<h4>${esc(key)}</h4><p>Not yet defined.</p>`; }
   function setupTip(arm) { return `<h4><span class="id">${esc(arm)}</span></h4><p>${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
@@ -747,7 +749,7 @@ window.REPORT = D;
     SETS.forEach((s) => { best[s] = {}; D.groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0]); best[s][g.key] = v.length ? Math.max(...v) : null; }); });
     const setsSub = SETS.map((s) => short(s)).join(", then ");
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
-    const GT = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" };
+    const GT = new Proxy({}, { get: (_, k) => TK(k) });
     D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
     h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">${term("confident-wrong")}<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
     const ncol = 4 + D.groups.length;
@@ -1196,7 +1198,7 @@ window.REPORT = D;
       b.y1 = y; y += 10; blocks.push(b);
     });
     const H = y + 34;
-    const GT = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" };
+    const GT = new Proxy({}, { get: (_, k) => TK(k) });
     blocks.forEach((b, bi) => (b.i = bi));
     const subs = blocks.flatMap((b) => b.subs.map((sb) => Object.assign({ b }, sb)));
     subs.forEach((sb, i) => (sb.i = i));
@@ -1391,7 +1393,7 @@ window.REPORT = D;
     $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
     const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
     let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:44px">`;
-    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${esc(bk.label)}<small>${b.n} q</small></span>`; });
+    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} q</small></span>`; });
     hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
     // narrow bands: a column label that would run into the previous label on its tier moves right past it
