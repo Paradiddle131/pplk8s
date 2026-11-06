@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T19:15Z",
+ "written": "2026-11-06T19:17Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4742,6 +4742,76 @@
   },
   {
    "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (opus)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 50,
+   "of_cases": 55,
+   "runs": 50,
+   "accuracy": [
+    0.42,
+    0.28,
+    0.56
+   ],
+   "confident_wrong": [
+    0.04,
+    0.0,
+    0.1
+   ],
+   "groups": {
+    "composable": [
+     0.05263157894736842,
+     19
+    ],
+    "conversation": [
+     0.75,
+     8
+    ],
+    "covered": [
+     0.782608695652174,
+     23
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.25,
+     8
+    ]
+   },
+   "pass_all": 0.42,
+   "outcomes": {
+    "right": 21,
+    "unclear": 2,
+    "wrong": 23,
+    "confident-wrong": 2,
+    "declined": 2
+   },
+   "model_calls": 54,
+   "new": {
+    "all": [
+     0.1111111111111111,
+     9
+    ],
+    "composable": [
+     0.0,
+     5
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.0,
+     3
+    ]
+   }
+  },
+  {
+   "set": "hard-v2",
    "arm": "native-bare",
    "model": "google-data-agent (MODEL_UNSPECIFIED)",
    "harness": "google-data-agent",
@@ -6534,6 +6604,24 @@
     0.072727272727,
     0.024242424242,
     0.127272727273
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (opus)",
+   "cases": 50,
+   "runs": 50,
+   "accuracy": [
+    -0.513333333333,
+    -0.653333333333,
+    -0.373333333333
+   ],
+   "confident_wrong": [
+    0.04,
+    0.0,
+    0.1
    ],
    "worth": false
   }
