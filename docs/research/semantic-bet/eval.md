@@ -4,7 +4,7 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-06T15:15Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-06T16:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -582,7 +582,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set
 
-Written 2026-11-06T15:15Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-06T16:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -923,7 +923,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set v2
 
-Written 2026-11-06T15:15Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 55 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-06T16:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 55 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -1109,18 +1109,18 @@ Turns the current wordings score otherwise than their log (RULE.md § Changes si
 
 ### `claude-code (fresh-haiku)`
 
-Scored on partial: 1 run(s) of 41 of 55 cases; runs finished: cc-metricflow 123 of 165; model responses spent: cc-metricflow 135.
+Scored on all 3 runs of every case; runs finished: cc-metricflow 165 of 165; model responses spent: cc-metricflow 177.
 
 | | `cc-metricflow` |
 |---|---|
-| Accuracy | 53.7% |
-| Confident-wrong | 2.4% |
-| pass^1 | 53.7% |
-| `composable` (14) accuracy | 21.4% |
-| `conversation` (8) accuracy | 75.0% |
-| `covered` (22) accuracy | 86.4% |
-| `trap` (5) accuracy | 100.0% |
-| `uncovered` (5) accuracy | 0.0% |
+| Accuracy | 45.5% |
+| Confident-wrong | 7.3% |
+| pass^3 | 34.5% |
+| `composable` (21) accuracy | 27.0% |
+| `conversation` (8) accuracy | 62.5% |
+| `covered` (23) accuracy | 81.2% |
+| `trap` (5) accuracy | 93.3% |
+| `uncovered` (11) accuracy | 6.1% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 11 (`cc-metricflow` 4 confident-wrong to right; `cc-metricflow` 2 confident-wrong to wrong; `cc-metricflow` 4 right to unclear; `cc-metricflow` 1 wrong to right).
 
@@ -1225,16 +1225,16 @@ Confident-wrong turns the judge moved: 0 of 1 (0 to wrong, hedged; 0 to unclear)
 
 ### `google-data-agent (MODEL_UNSPECIFIED, THINKING)`
 
-Scored on partial: 2 run(s) of 55 of 55 cases; runs finished: native-context-bare 164 of 165; model responses spent: native-context-bare 176.
+Scored on all 3 runs of every case; runs finished: native-context-bare 165 of 165; model responses spent: native-context-bare 177.
 
 | | `native-context-bare` |
 |---|---|
-| Accuracy | 93.6% |
+| Accuracy | 93.9% |
 | Confident-wrong | 0.0% |
-| pass^2 | 92.7% |
+| pass^3 | 92.7% |
 | `composable` (21) accuracy | 100.0% |
-| `conversation` (8) accuracy | 68.8% |
-| `covered` (23) accuracy | 89.1% |
+| `conversation` (8) accuracy | 70.8% |
+| `covered` (23) accuracy | 89.9% |
 | `trap` (5) accuracy | 100.0% |
 | `uncovered` (11) accuracy | 90.9% |
 
@@ -1280,7 +1280,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 - `cc-metricflow` (rung 4) on `claude-code (haiku)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.528 [-0.683, -0.374], confident-wrong +0.073 [+0.000, +0.171]: not worth building (the check; 41 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.504 [-0.659, -0.350], confident-wrong +0.073 [+0.000, +0.171]: not worth building (the check; 41 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.431 [-0.585, -0.285], confident-wrong +0.000 [+0.000, +0.000]: not worth building (the check; 41 runs finished).
-- `cc-metricflow` (rung 4) on `claude-code (fresh-haiku)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.415 [-0.553, -0.285], confident-wrong +0.024 [+0.000, +0.065]: not worth building (the check; 123 runs finished).
+- `cc-metricflow` (rung 4) on `claude-code (fresh-haiku)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 55 of 55 cases: accuracy -0.485 [-0.606, -0.364], confident-wrong +0.073 [+0.018, +0.139]: not worth building (the check; 165 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (fresh-sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.472 [-0.618, -0.325], confident-wrong +0.033 [+0.000, +0.081]: not worth building (the check; 123 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (fresh-opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 41 of 55 cases: accuracy -0.455 [-0.602, -0.309], confident-wrong +0.000 [+0.000, +0.000]: not worth building (the check; 41 runs finished).
 - The check on `custom-metricflow`: the same verdict on every model, so the gap is not the model's.
