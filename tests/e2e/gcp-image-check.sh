@@ -28,9 +28,12 @@ AGENT=pplk8s-gcp-image-check-agent
 REGISTRY=pplk8s-gcp-image-check-registry
 AGENT_PORT=18080 MODEL_PORT=18081 REGISTRY_PORT=5055
 COMPOSE=(docker compose -f "$REPO/platform/compose/compose.yaml" --profile bigquery)
+# shellcheck source=lib/host-port.sh
+source "$REPO/tests/e2e/lib/host-port.sh"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 DB=gcp_image_check
 psql_db() { "${COMPOSE[@]}" exec -T warehouse psql -U warehouse -d "$DB" -v ON_ERROR_STOP=1 -qAt "$@"; }
+host_port_free 9050 bigquery-api # the emulator's host port: another holder fails here, before the builds (#292)
 rm -rf "$OUT" && mkdir -p "$OUT"
 
 model_pid=
@@ -57,8 +60,11 @@ echo "ok: $AGENT_IMAGE built (WAREHOUSE=bigquery): no Postgres package or TLC pa
 psql_db <"$REPO/dbt/dev/fixture.sql" >"$OUT/fixture-sql.log" 2>&1 || { tail -20 "$OUT/fixture-sql.log" >&2; fail "loading dbt/dev/fixture.sql into $DB"; }
 orders=$(psql_db -c "select count(*) from ds_source.synthetic_orders")
 echo "ok: $DB recreated with dbt/dev/fixture.sql alone ($orders orders)"
-"${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >/dev/null 2>&1 ||
-  { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come up"; }
+"${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >"$OUT/emulator-up.log" 2>&1 || {
+  "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2
+  tail -5 "$OUT/emulator-up.log" >&2
+  fail "the emulator did not come up"
+}
 (cd "$REPO/dbt" && BQ_API_ENDPOINT=http://localhost:9050 uv run --quiet --no-project \
   --with-requirements requirements-postgres.txt --with dbt-bigquery==1.12.1 --with 'psycopg[binary]==3.3.6' \
   python -I "$REPO/tests/e2e/lib/fixture_to_bigquery.py" "host=localhost port=5433 user=warehouse password=warehouse dbname=$DB") \
