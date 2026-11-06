@@ -494,7 +494,9 @@ def recorded(arm: str) -> dict[str, list[dict[str, Any]]]:
         done = logged(arm, model, name)
         for line in path.read_text().splitlines():
             row = json.loads(line)
+            # One answer a (case, run): two processes on one set could both answer it; the first stands.
             if (row["case"], row["run"]) not in done:
+                done.add((row["case"], row["run"]))
                 by_case.setdefault(row["case"], []).append(row)
     for rows in by_case.values():
         rows.sort(key=lambda r: r["run"])
