@@ -100,3 +100,17 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none. Filed: #392 (the `native-mcp` guard drops BigQuery's error text).
 - Nothing left running: every strict lane finished and is scored; the MCP servers are stopped.
 - Next: epic #399 in its order: #393 (reader rule on the page), #394 (retired questions, the owner's decision), #395 (term tooltips), #396 (three tab designs); the free lane carries #379 nightly; #380 waits for #379.
+
+## 2026-11-06, 2026-11-06T21:32Z (session end: epic #399's first four items, the owner's figure fixes, #400 filed)
+
+- No free-model pass (991 of 1,000 at the start and the end, read from `/api/v1/key`); the nightly 00:07Z lane is unchanged. No GCP and no Claude API work.
+- The owner's figure fixes: Figures 2 to 5 dim by one source at a time (the glider off home, else a clicked lock held until its pin closes, else hover); group legend entries and Figure 5's family titles lock by click, Enter or Space; Figure 1's column heads stay on screen (a sticky copy, which `tools/clipcheck.js` reads as a mirror).
+- #393: no process metadata on the page or in its data; the reader rule is in `report/NOTES.md`, the profile, every brief under `report/variants/` and #336's brief artifact; the setup map and explorer describe the Claude Code setups as headless with only their tools, and the explorer shows `cc-native-mcp`.
+- #394: the owner's decision ("Remove retired questions entirely ... remove cleanly. no clutter") is in RULE.md § Changes since freezing; nothing of a retired question is left on the page or in its data.
+- #395: `TERMS` covers every group, kind, rubric kind, family and role; `tests/test_report_build.py` fails on a missing one or on a process word on the built page (6 pass).
+- #396: three designs published and posted (A tab strip, B contents rail, C overview and chapters); recommended A; waiting for the owner's pick.
+- #400 (new): the MetricFlow setups' score rewards breaking their no-arithmetic instruction (Haiku 64%, Sonnet 52%, Opus 42% on the extended hard set; through the metrics only 33%, 29%, 36%; the same inversion in the ADK runner on the frozen set); three options, A recommended; the owner's pick.
+- Report: page version 27; #336's artifact 4 read back with the same SHA-256 (20c6870a…).
+- claude-dotfiles PR #47: the generic reader rule in `cloud/CLAUDE.md`.
+- Anomalies: none. Nothing left running.
+- Next: #396 (the owner's pick), then #390 built into it; #400 (the owner's pick); the free lane carries #379 nightly; #380 waits for #379.
