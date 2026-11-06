@@ -125,3 +125,17 @@ Build: `python3 build.py ../results.json`.
   At exactly 1180 px the map is 886 px, 77.2% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
   Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
 - Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
+
+### The owner's question: why "Uncovered questions" reads 93% [83, 100] on the frozen set but 100% [100, 100] on the hard set
+
+Measured from the page's data (results.json at d37d3bf, the logs scored as the eval scores them), 2026-11-06.
+- Two different setups lead: on the frozen set `native-kc-max` on Gemini, 29 uncovered questions, 87 runs, 81 right and 6 declined; on the hard set `native-context` on Gemini, 19 uncovered questions, 57 runs, all 57 right.
+- The frozen leader's 6 declines are the two temperature questions (`amsterdam_temperature`, `bet_istanbul_warmer`), declined on every run by every managed agent: "the available data ... does not contain weather or temperature records"; the managed agents cannot see the weather table, so 27 of 29 (93%) is their ceiling on that set.
+- [100, 100] was the question-level bootstrap collapsing when every run is right: resampling questions that are all right can only give 100%, so it is not a 95% interval.
+  The page now shows the exact two-sided 95% Clopper-Pearson bound over the questions instead: 19 of 19 gives a lower bound of 82%.
+- The sets are hard in different ways.
+  The frozen set's uncovered questions are medians, percentiles, times between events and weather: shapes no metric composes and SQL agents sometimes get wrong (`native-context` was confidently wrong on 15 of its 87 frozen uncovered runs, mostly medians and percentiles; 0 of 57 on the hard set).
+  The hard set was built hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity; `findings/2026-11-03-356-hard-set.md`); its uncovered questions are mostly ratios and differences of two measures (11 of its 12 `multi_metric` cases are uncovered), ordinary SQL for an agent that writes SQL.
+- The owner's expectation about MetricFlow holds: the ratio questions are composable from two metric queries, so MetricFlow on the free model answers more of the hard set's uncovered questions than the frozen set's (61% of 57 runs against 38% of 29 runs; the hybrid 84% of 19 against 52% of 29).
+  The cost: on the hard set's uncovered questions MetricFlow was confidently wrong on 6 of 57 runs, against 0 of 29 on the frozen set, where it mostly declines.
+- The page also said MetricFlow "declines them by design" next to its 61%: that sentence now reads "which no single metric answers", and the setup's description says it is told to answer only through the metrics.
