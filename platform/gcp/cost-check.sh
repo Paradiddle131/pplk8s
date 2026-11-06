@@ -47,8 +47,16 @@ SELECT service, sku, FORMAT('%.6f', net) AS net,
        FORMAT('%.2f', SUM(net) OVER ()) AS month_total,
        (SELECT FORMAT_TIMESTAMP('%FT%H:%MZ', MAX(export_time)) FROM \`$GCP_PROJECT.$dataset.$table\`) AS exported_until
 FROM c ORDER BY net DESC"
-if ! rows=$(bq query --quiet --format=csv --max_rows=1000 --maximum_bytes_billed="$cap" "$sql"); then
-  echo "gcp-cost-check: UNKNOWN: the billing export query failed" >&2
+# A spent daily query fence refuses this query too (#369): say so, since it resets at 00:00 Pacific and the
+# export is fine. bq prints "Custom quota exceeded: Your usage exceeded the custom quota for QueryUsagePerDay".
+if ! rows=$(bq query --quiet --format=csv --max_rows=1000 --maximum_bytes_billed="$cap" "$sql" 2>"$err"); then
+  said=$(printf '%s\n%s\n' "$rows" "$(cat "$err")")
+  fence=$(grep -o 'Custom quota exceeded[^.]*\(QueryUsagePerDay\|QueryUsagePerUserPerDay\)' <<<"$said" | grep -o 'QueryUsagePer[A-Za-z]*' | head -n 1 || true)
+  if [ -n "$fence" ]; then
+    echo "gcp-cost-check: UNKNOWN: BigQuery's daily query fence ($fence, free-path.yaml caps.bigquery_query_mib_per_day) is spent, so the billing export query was refused: wait for its reset at 00:00 Pacific; the export is not broken" >&2
+  else
+    echo "gcp-cost-check: UNKNOWN: the billing export query failed: $(grep -v '^[[:space:]]*$' <<<"$said" | tail -n 5 | tr '\n' ' ' | sed 's/ *$//')" >&2
+  fi
   exit 3
 fi
 

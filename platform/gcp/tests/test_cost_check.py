@@ -160,10 +160,35 @@ def test_a_malformed_tolerance_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_failed_query_is_unknown(tmp_path: Path) -> None:
-    bindir = fake_bq(tmp_path, listing(), "exit 1")
+    bindir = fake_bq(tmp_path, listing(), "echo 'BigQuery error: boom'; exit 1")
     r = run(bindir)
     assert r.returncode == 3
-    assert "query failed" in r.stderr
+    assert "the billing export query failed: BigQuery error: boom" in r.stderr
+    assert "fence" not in r.stderr
+
+
+# The error bq gave on 2026-11-03 once the fence was spent (#369); the quoted middle is from the issue, the
+# "BigQuery error in query operation" prefix and the tail are bq's usual framing around it.
+SPENT = (
+    "BigQuery error in query operation: Error processing job 'lab-test:bqjob_r1': "
+    "Custom quota exceeded: Your usage exceeded the custom quota for {quota}, "
+    "which is set by your administrator. For more information, see "
+    "https://cloud.google.com/bigquery/cost-controls"
+)
+
+
+@pytest.mark.parametrize("quota", ["QueryUsagePerDay", "QueryUsagePerUserPerDay"])
+@pytest.mark.parametrize("stream", ["", " >&2"])
+def test_a_spent_daily_fence_is_named(tmp_path: Path, quota: str, stream: str) -> None:
+    """The cost check's own query is refused by a spent fence: wait for the reset, the export is fine (#369)."""
+    bindir = fake_bq(
+        tmp_path, listing(), f'echo "{SPENT.format(quota=quota)}"{stream}; exit 2'
+    )
+    r = run(bindir)
+    assert r.returncode == 3
+    assert f"UNKNOWN: BigQuery's daily query fence ({quota}," in r.stderr
+    assert "wait for its reset at 00:00 Pacific" in r.stderr
+    assert "query failed" not in r.stderr
 
 
 @pytest.mark.parametrize("output", ["", HEADER])
