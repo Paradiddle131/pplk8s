@@ -445,7 +445,11 @@ window.REPORT = D;
   .sm .sm-rungs:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
   .sm .sm-side { position: sticky; top: 8px; display: flex; flex-direction: column; min-width: 0; }
   .sm .sm-scroll { order: 1; overflow: visible; }
-  .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; }
+  .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
+  .sm .sm-read .sm-rt { margin-bottom: 4px; }
+  /* each fact's name runs in before it, a line saved per row of facts */
+  .sm .sm-grid dt, .sm .sm-grid dd { display: inline; }
+  .sm .sm-grid dt { margin-right: 5px; }
   .sm .sm-legend { order: 3; margin-top: 6px; }
   .sm svg.sm-sheet { min-width: 0; max-width: 1200px; }
   .sm .sm-swipe { display: none; }
@@ -578,7 +582,13 @@ window.REPORT = D;
       const by = {};
       rows.filter((r) => r.arm === arm).forEach((r) => { (by[r.role] = by[r.role] || []); if (!by[r.role].includes(r.modelLabel)) by[r.role].push(r.modelLabel); });
       const order = ["decides", "check", "gemini", "cc", "other"];
-      const parts = order.filter((k) => by[k]).map((k) => by[k].join(", ") + (ROLE_WORD[k] ? " (" + ROLE_WORD[k] + ")" : ""));
+      // several models of one family read once: "Claude Code: Haiku; Sonnet, fresh sessions"
+      const join = (ls) => {
+        const w = ls.map((l) => l.split(" ")), pre = [];
+        for (let i = 0; ls.length > 1 && w.every((x) => x.length > i + 1 && x[i] === w[0][i]); i++) pre.push(w[0][i]);
+        return pre.length ? pre.join(" ") + ": " + ls.map((l) => l.split(" ").slice(pre.length).join(" ")).join("; ") : ls.join(", ");
+      };
+      const parts = order.filter((k) => by[k]).map((k) => join(by[k]) + (ROLE_WORD[k] ? " (" + ROLE_WORD[k] + ")" : ""));
       if (parts.length) return parts.join("; ");
       const sp = specOf(arm);
       return sp ? ({ da: "Gemini, inside Google's agent", adk: "the lab's free model", cc: "Claude" })[sp.asks] : "not recorded";
@@ -883,21 +893,36 @@ window.REPORT = D;
     document.addEventListener("click", (e) => { if (pinned && !listEl.contains(e.target) && !svg.contains(e.target) && !(e.target.closest && e.target.closest(".tip"))) { pinned = null; preview = null; apply(); } });
     apply();
 
-    // Wide layout: the map takes its column's width, unless the viewport is too short to show all of it
-    // with the readout's first line below; then it shrinks to fit. A longer readout never moves the map.
-    const wide = window.matchMedia("(min-width: 1180px)"), scroller = svg.parentElement;
+    // Wide layout: the map and its readout fit the viewport together. The readout keeps the height of its
+    // longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves.
+    // The map takes the rest of the height, never under 78% of the 1148 px it has in the page column and
+    // never over its column's width; the legend comes last, the first to go below the fold.
+    const wide = window.matchMedia("(min-width: 1180px)"), scroller = svg.parentElement, side = scroller.parentElement;
+    function readMax() {
+      const probe = document.createElement("div");
+      probe.className = "sm-read"; probe.setAttribute("aria-hidden", "true");
+      Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: side.clientWidth + "px", minHeight: "0" });
+      side.append(probe);
+      let m = 0;
+      [restText()].concat(allArms.map(setupText), ladder.map((l) => rungText(l.key)), Object.keys(NAME).map(partText))
+        .forEach((t) => { probe.innerHTML = t; m = Math.max(m, probe.offsetHeight); });
+      probe.remove();
+      return m;
+    }
     function fit() {
-      syncVw(); svg.style.width = ""; listEl.style.maxHeight = "";
+      syncVw(); svg.style.width = ""; listEl.style.maxHeight = ""; read.style.minHeight = "";
       if (!wide.matches) return;
+      const rh = readMax(); read.style.minHeight = rh + "px";
       const vb = svg.viewBox.baseVal, col = scroller.clientWidth;
-      const w = Math.min(col, (window.innerHeight - 16 - 30) * vb.width / vb.height);
-      if (w < col - 0.5) svg.style.width = Math.max(320, Math.floor(w)) + "px";
-      // the list's own column ends where the map's legend does, the readout at rest included
-      listEl.style.maxHeight = Math.min(window.innerHeight - 16, scroller.parentElement.offsetHeight) + "px";
+      const w = Math.min(col, Math.max((window.innerHeight - 16 - 8 - rh) * vb.width / vb.height, 0.78 * 1148));
+      if (w < col - 0.5) svg.style.width = Math.floor(w) + "px";
+      // the list's own column is as tall as the map and its readout, within the viewport
+      listEl.style.maxHeight = Math.min(window.innerHeight - 16, scroller.offsetHeight + 8 + rh) + "px";
     }
     let ft = 0;
     window.addEventListener("resize", () => { clearTimeout(ft); ft = setTimeout(fit, 100); });
     fit();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   });
 })();
 </script>
