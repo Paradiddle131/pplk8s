@@ -110,6 +110,11 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .plot.panels { display: grid; }
 .f3key { margin-top: 8px; }
 .f3key .k { cursor: help; }
+.focusable .legend .k[data-fam] { cursor: pointer; border-radius: 3px; padding: 1px 4px; margin: -1px -4px; }
+.focusable .legend .k[data-fam]:hover, .focusable .legend .k.locked { background: var(--band); color: var(--ink); }
+.focusable .legend .k.locked { box-shadow: inset 0 0 0 1px var(--ink-3); }
+.focusable .legend .k[data-fam]:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.focusable [data-fam] text, .focusable text[data-fam], .focusable g[data-fam] { cursor: pointer; }
 .f3key .k:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
 .plot .keyring { cursor: help; }
 .plot .direct { visibility: hidden; }
@@ -175,6 +180,8 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .stack + .stack { margin-top: 20px; }
 
 /* decision map */
+.maphead { position: sticky; top: 0; z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
+.maphead table.map { margin: 0; }
 .mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
 table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
 table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
@@ -403,12 +410,13 @@ window.REPORT = D;
   const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
   const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
-  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
+  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
   const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
 
   /* ---------- one tooltip, delegated: hover shows, click or Enter pins ---------- */
   const tip = $("#tip"); let tipEl = null, tipByFocus = false, pinned = false, pinEl = null, quietFocus = false;
+  let lockFor = () => {}, unlockFocus = () => {}; // set by the focus code below
   const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
   const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
   function termTip(key) { const t = TERM[key]; return t ? `<h4>${esc(t.label)}</h4><p>${esc(t.text)}</p>` : `<h4>${esc(key)}</h4><p>Not yet defined.</p>`; }
@@ -456,6 +464,7 @@ window.REPORT = D;
     tip.style.position = "absolute"; tip.classList.add("pinned");
     tip.setAttribute("role", "dialog"); tip.setAttribute("aria-label", "Pinned detail");
     tip.innerHTML = CLOSE + h + jumpLine(el); tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+    lockFor(el);
   }
   /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
   // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
@@ -494,7 +503,7 @@ window.REPORT = D;
     if (!pinned) return;
     const el = pinEl; pinned = false; pinEl = null;
     tip.classList.remove("pinned"); tip.style.position = ""; tip.setAttribute("role", "tooltip"); tip.removeAttribute("aria-label");
-    hideTip();
+    hideTip(); unlockFocus();
     if (returnFocus && el && el.focus && document.contains(el)) { quietFocus = true; el.focus({ preventScroll: true }); quietFocus = false; }
   }
   window.__reportUnpin = unpin;
@@ -546,10 +555,14 @@ window.REPORT = D;
     if (!tipEl || !isUnits(tipEl)) hideTip();
   }, { passive: true });
 
-  /* ---------- hover to focus, delegated on any .focusable ---------- */
+  /* ---------- focus, delegated on any .focusable: one dimming source at a time ---------- */
+  // A figure dims by one source only: the threshold glider while it sits off its home (Figure 2), else a
+  // locked focus (a clicked mark, label or legend entry, held until its pin closes or it is clicked again),
+  // else the hovered or keyboard-focused mark. A lower source never adds its own dimming on top.
   const FSEL = "[data-key],[data-arm],[data-fam]";
   function applyFocus(fig, el) {
     const mks = fig.querySelectorAll(".mk");
+    fig.querySelectorAll(".k.locked").forEach((k) => { k.classList.remove("locked"); if (k.hasAttribute("aria-pressed")) k.setAttribute("aria-pressed", "false"); });
     if (!el) { fig.classList.remove("focusing"); mks.forEach((m) => m.classList.remove("on")); return; }
     let pred;
     if (el.dataset.key) pred = (m) => m.dataset.key === el.dataset.key;
@@ -557,19 +570,53 @@ window.REPORT = D;
     else pred = (m) => m.dataset.fam === el.dataset.fam;
     fig.classList.add("focusing"); mks.forEach((m) => m.classList.toggle("on", pred(m)));
   }
-  let focusFig = null;
+  let focusFig = null, lock = null; // lock: {fig, el}, a focus fixed by a click
+  const gliding = (fig) => fig.classList.contains("gliding");
+  const focusTarget = (fig, t) => { const el = t && t.closest ? t.closest(FSEL) : null; return el && fig.contains(el) && el !== fig ? el : null; };
   function focusAt(target) {
+    if (lock) return;
     const fig = target && target.closest ? target.closest(".focusable") : null;
     if (focusFig && focusFig !== fig) applyFocus(focusFig, null);
     focusFig = fig;
     if (!fig) return;
-    const el = target.closest(FSEL);
-    applyFocus(fig, el && fig.contains(el) && el !== fig ? el : null);
+    applyFocus(fig, gliding(fig) ? null : focusTarget(fig, target));
   }
+  function setLock(fig, el) {
+    if (lock) applyFocus(lock.fig, null);
+    if (focusFig && focusFig !== fig) applyFocus(focusFig, null);
+    lock = null; focusFig = null;
+    if (!fig || !el || gliding(fig)) return;
+    lock = { fig, el }; applyFocus(fig, el);
+    if (el.classList.contains("k")) { el.classList.add("locked"); if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", "true"); }
+  }
+  function clearLock() { if (lock) { applyFocus(lock.fig, null); lock = null; } }
+  // pin() and unpin() above call these, so a pinned mark keeps the others dimmed until the pin closes
+  lockFor = (el) => { const fig = el && el.closest ? el.closest(".focusable") : null; const t = fig && focusTarget(fig, el); if (t) setLock(fig, t); else clearLock(); };
+  unlockFocus = clearLock;
+  window.__reportFocus = { lockFor: (el) => lockFor(el), clear: clearLock, gliding: (on) => {
+    const fig = $("#fig2"); if (!fig) return; fig.classList.toggle("gliding", on);
+    if (on) { if (lock && lock.fig === fig) { unpin(false); clearLock(); } applyFocus(fig, null); }
+  } };
+  // a legend entry, a family title or a label that names a group (data-fam) or a setup (data-key) and has no
+  // tooltip of its own toggles a lock by click; a legend entry also by Enter or Space
+  const lockable = (t) => {
+    if (!t || !t.closest || closestTip(t)) return null;
+    const el = t.closest(FSEL), fig = el && el.closest(".focusable");
+    return fig && el !== fig ? el : null;
+  };
+  const toggleLock = (el) => { const was = lock && lock.el === el; unpin(false); if (was) clearLock(); else setLock(el.closest(".focusable"), el); };
+  document.addEventListener("click", (e) => { const el = lockable(e.target); if (!el) return; toggleLock(el); e.stopPropagation(); }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && lock && !pinned) { clearLock(); return; }
+    const el = document.activeElement;
+    if ((e.key === "Enter" || e.key === " ") && el && el.classList && el.classList.contains("k") && lockable(el) === el) { e.preventDefault(); toggleLock(el); }
+  });
+  // a click on empty page clears a lock that no pin holds (a pin's own close goes through unpin)
+  document.addEventListener("click", (e) => { if (lock && !pinned && !lockable(e.target) && !closestTip(e.target)) clearLock(); });
   document.addEventListener("pointerover", (e) => focusAt(e.target));
-  document.addEventListener("pointerout", (e) => { if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
-  document.addEventListener("focusin", (e) => focusAt(e.target));
-  document.addEventListener("focusout", (e) => { if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+  document.addEventListener("pointerout", (e) => { if (lock) return; if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+  document.addEventListener("focusin", (e) => { if (!quietFocus) focusAt(e.target); });
+  document.addEventListener("focusout", (e) => { if (lock) return; if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
 
   /* ---------- theme switch ---------- */
   const themeBtn = $("#themebtn");
@@ -983,6 +1030,7 @@ window.REPORT = D;
       });
     });
     const moved = ["acc", "cw"].filter((k) => GL[k] != null);
+    if (window.__reportFocus) window.__reportFocus.gliding(moved.length > 0);
     const isOut = (r) => moved.some((k) => beyond(k, GL[k], r[k][0]));
     // a row's set: its marks in every panel dim when it fails any glider off home
     root.querySelectorAll("[data-tip]").forEach((t) => { const r = byId(t.dataset.tip); const o = !!r && isOut(r); t.querySelectorAll(".pm").forEach((m) => m.classList.toggle("gdim", o)); });
@@ -1400,7 +1448,34 @@ window.REPORT = D;
     $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
   }
 
-  function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  /* ---------- Figure 1's column heads stay on screen while its rows scroll by ---------- */
+  // The map scrolls sideways inside its box on narrow screens, which stops a sticky thead at the page's top;
+  // so a copy of the head (aria-hidden, no tab stops) sits sticky above the box, laid exactly over the real
+  // head, with each column's width copied and its sideways scroll kept in step.
+  let mapHeadRO = null;
+  function stickMapHead() {
+    const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
+    let head = $("#maphead");
+    if (!head) {
+      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true");
+      wrap.parentNode.insertBefore(head, wrap);
+      wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
+    }
+    const t = document.createElement("table"); t.className = "map"; t.appendChild(thead.cloneNode(true));
+    t.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
+    t.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+    head.replaceChildren(t);
+    const fit = () => {
+      const W = tbl.getBoundingClientRect().width; t.style.width = W + "px"; t.style.minWidth = W + "px"; t.style.tableLayout = "fixed";
+      const src = [...thead.rows[0].cells], dst = [...t.tHead.rows[0].cells];
+      src.forEach((c, i) => { if (dst[i]) dst[i].style.width = c.getBoundingClientRect().width + "px"; });
+      head.style.marginBottom = -(thead.getBoundingClientRect().height + 1) + "px"; head.scrollLeft = wrap.scrollLeft;
+    };
+    fit();
+    if (mapHeadRO) mapHeadRO.disconnect();
+    if (window.ResizeObserver) { mapHeadRO = new ResizeObserver(() => fit()); mapHeadRO.observe(tbl); [...thead.rows[0].cells].forEach((c) => mapHeadRO.observe(c)); }
+  }
+  function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
