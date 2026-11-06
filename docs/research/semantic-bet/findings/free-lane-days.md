@@ -13,3 +13,24 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none; GCP cost $0.000010 (the known Artifact Registry egress), usage check ok, before the pass.
 - Not on OpenRouter: Opus as a fresh Claude Code subagent went from 20 to 50 frozen cases (74.0% right, 0.0% confident-wrong; `2026-11-04-374-cc-metricflow.md`).
 - Next: the 00:07Z wake on 2026-11-06 starts the lane from the top; the first pass with work is `native-mcp` frozen from case 38 (k = 1), then `native-mcp` hard, `custom-toolbox` both sets, `baseline` (48 of 96 frozen, 0 of 43 hard), `custom-lightdash` (41 of 96 frozen, 0 of 43 hard), then the k = 3 round.
+
+## 2026-11-06 (the lane run by hand in the report-feedback session, after the scheduled wake failed to start)
+
+- The scheduled task "semantic-bet free lane (daily, after the 00:00Z reset)" fired at 00:08Z and failed in 3 s: "Setup script failed" (its fresh session has no repositories, so the environment's `bash /home/user/claude-dotfiles/bin/cloud-setup.sh pplk8s` finds no clone); the session that was handling the owner's report feedback ran the lane by hand instead, exactly as the task's prompt says.
+- Gates at 00:32Z: free count 0 of 1,000; `make services-up` and the agents fixture ok; GCP cost $0.000010 (the known Artifact Registry egress), usage check ok; the same after the lane at 02:38Z.
+- Free count 0 at 00:35Z, 991 at 02:38Z (the lane's cap of 990, overrun by the last case's own calls); the container restarted at about 01:02Z mid-pass, and the lane was restarted at 01:05Z from its logs (no case lost: the log's last line was whole and pushed first).
+- `custom-hybrid` frozen and hard: already whole at k = 1, skipped; the judge between passes spent its share on unclear turns (12 verdicts logged today).
+- `native-mcp` frozen, k = 1: 59 cases today (38 to 96), log whole, 96 of 96.
+- `native-mcp` hard, k = 1: 43 cases today, log whole, 43 of 43.
+- `custom-toolbox` frozen, k = 1: 96 cases today, log whole, 96 of 96.
+- `custom-toolbox` hard, k = 1: 43 cases today, log whole, 43 of 43.
+- `baseline` frozen, k = 1: 8 cases today (49 to 56), stopped at the day's cap, 56 of 96; `baseline` hard skipped for the day (0 of 43).
+- Moved (`measured`, the report rebuilt at f2ff858 from results.json written 2026-11-06T02:37Z), free model unless named:
+  - `native-mcp` frozen 88.5% [82.3, 94.8] right, 6.2% [2.1, 11.5] confident-wrong; against the managed best (`native-context-bare`, 94.1%) paired by question −5.6 points [−11.8, 0.3] right and +5.2 [1.0, 10.4] confident-wrong.
+  - `native-mcp` hard 93.0% [83.7, 100.0] right, 0 of 43 confident-wrong; against the managed best (94.6%) −1.6 points [−7.0, 2.3]: a tie on the hard set at k = 1.
+  - `native-mcp` answers 83% of the frozen set's uncovered questions and 100% of the hard set's (19 questions), against the hybrid's 52% and 84%; it now leads the hard set's uncovered pillar.
+  - `custom-toolbox` frozen 38.5% [29.2, 47.9] right, declining 49 of 96 (Haiku 43.1%, Sonnet 41.7%: the setup's reach, not the model); hard 39.5% [25.6, 53.5] right and 16.3% [7.0, 27.9] confident-wrong.
+  - `baseline` frozen 67.9% [55.4, 80.4] right on 56 of 96, 10.7% confident-wrong.
+- What the day says: Google's MCP servers driven by our ADK agent on the free model are, at k = 1, within a few points of the best managed agent on both sets and ahead of the MetricFlow hybrid on both, but state wrong numbers unhedged more often on the frozen set (6.2% against the hybrid's 1.0%); the generated Toolbox tools trail every other setup on every model.
+- Anomalies: none (two OpenRouter transfer errors, retried by the pass; the container restart is infrastructure).
+- Next: the 00:07Z wake on 2026-11-07, if its setup starts (the owner's fix: the environment's Repositories list, or a guarded setup script); otherwise a session runs `probes/lanes/free_lane.sh` by hand. The first pass with work is `baseline` frozen from case 57 (k = 1), then `baseline` hard (0 of 43), `custom-lightdash` frozen from case 42 and hard (0 of 43; the 15 GB image, last), then the k = 3 round from `custom-hybrid` frozen.
