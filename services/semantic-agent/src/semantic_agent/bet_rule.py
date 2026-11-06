@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from semantic_agent.evaluation import ASKS_WHICH, DECLINE, NUMBER, carries, numbers_in
+from semantic_agent.evaluation import ASKS_WHICH, DATES, DECLINE, NUMBER, carries
 
 RESAMPLES = 10_000
 SEED = 325
@@ -32,12 +32,117 @@ class Outcome(StrEnum):
     UNCLEAR = "unclear"
 
 
+# The bet's reading of an answer's numbers (#382, RULE.md § Changes since freezing, 2026-11-06):
+# the eval's parser (evaluation.carries, shared with the main track's eval and unchanged) misses
+# dates and times written as models write them, so a date could carry the expected number, and it
+# misses right answers in words, whole percentages and "N of M" shares. These widen and narrow
+# what the bet reads, the same for every arm.
+HYPHENS = "\\-\u2010\u2011\u2012\u2013\u2014"
+MONTH_ABBR = "Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec"
+EXTRA_DATES = re.compile(
+    rf"\b\d{{4}}[{HYPHENS}]\d{{1,2}}[{HYPHENS}]\d{{1,2}}(?:[T ]\d{{1,2}}:\d{{2}}(?::\d{{2}})?Z?)?"
+    rf"|\b\d{{1,2}}:\d{{2}}(?::\d{{2}})?(?:\s*[AP]M)?\b|T\d{{2}}:\d{{2}}Z?"
+    rf"|\b\d{{1,2}}(?:\s*[{HYPHENS}]\s*\d{{1,2}})?\s+(?:{MONTH_ABBR})\.?(?:\s+\d{{4}})?\b"
+    rf"|\b(?:{MONTH_ABBR})\.?\s+\d{{1,2}}(?:\s*[{HYPHENS}]\s*\d{{1,2}})?(?:,?\s+\d{{4}})?\b"
+    rf"|\b\d{{1,2}}/\d{{1,2}}(?:/\d{{2,4}})?\b",
+    re.IGNORECASE,
+)
+WORDS = {
+    "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30,
+    "forty": 40, "fifty": 50,
+}  # fmt: skip
+# "one" only as a count ("one customer", "only one"), never "one of" or "one-off".
+NUMBER_WORD = re.compile(
+    r"\b(?:(" + "|".join(WORDS) + r")|(only one|one)(?![\s-]+(?:of|another|off|way|time)\b))\b"
+    r"(?=\s+[a-z])",
+    re.IGNORECASE,
+)
+FRACTION_WORD = re.compile(
+    r"\b(half|a third|one third|two thirds|a quarter|one quarter|three quarters)\b", re.IGNORECASE
+)
+FRACTIONS = {"half": 0.5, "third": 1 / 3, "two thirds": 2 / 3, "quarter": 0.25}
+FRACTIONS |= {"three quarters": 0.75}
+WHOLE_PERCENT = re.compile(r"(?<![\d.,])(\d{1,3})\s*(?:%|percent\b)")
+N_OF_M = re.compile(r"\b(\d+)\s+(?:of|out of)\s+(?:the\s+)?(\d+)\b")
+
+
+def plain(text: str) -> str:
+    """The answer with the dates and times the eval's DATES misses taken out, and a typographic
+    minus read as one."""
+    return EXTRA_DATES.sub(" ", text.replace("\u2212", "-"))
+
+
+def _words(text: str) -> list[float]:
+    return [v for _, v in _placed_words(text)]
+
+
+def _placed_words(text: str) -> list[tuple[int, float]]:
+    found = [(m.start(), float(WORDS.get(m.group(1).lower(), 1)) if m.group(1) else 1.0)
+             for m in NUMBER_WORD.finditer(text)]  # fmt: skip
+    for m in FRACTION_WORD.finditer(text):
+        phrase = m.group(1).lower()
+        found.append((m.start(), FRACTIONS.get(phrase, FRACTIONS.get(phrase.split()[-1], 0.0))))
+    return found
+
+
+def figures(text: str) -> list[float]:
+    """Every figure the answer states, digits and words, in the order they appear, with every date
+    and time (the eval's DATES and EXTRA_DATES) left out."""
+    text = DATES.sub(" ", plain(text))
+    digits = [(m.start(), float(m.group(0).replace(",", ""))) for m in NUMBER.finditer(text)]
+    return [v for _, v in sorted([*digits, *_placed_words(text)])]
+
+
+def bet_carries(text: str, forms: Sequence[float]) -> bool:
+    """An expected number (in one of its forms) carried by the answer as the bet reads it: the
+    eval's own rule on the answer without the extra dates, or a number word, a whole percentage
+    that rounds to the rate, or an "N of M" share within the eval's tolerance."""
+    text = plain(text)
+    if carries(text, list(forms)):
+        return True
+    if any(abs(w - f) <= 0.006 for w in _words(text) for f in forms):
+        return True
+    rates = [f for f in forms if 0 < f < 1]
+    for m in WHOLE_PERCENT.finditer(text):
+        if any(round(r * 100) == int(m.group(1)) for r in rates):
+            return True
+    # Only the first "N of M" is the answer's share; a later one is a part ("2 of 6 rejected").
+    m = N_OF_M.search(text)
+    if m:
+        n, d = int(m.group(1)), int(m.group(2))
+        if d and n <= d and any(abs(n / d - f) <= 0.006 for f in forms):
+            return True
+    return False
+
+
 def number_right(text: str, meanings: Sequence[Sequence[float]]) -> bool:
     """A number turn is right when it carries every expected number (each in one of its forms).
 
     Unlike the eval's answer_correct, a decline is never right: on a case no metric covers, only
     the number counts."""
-    return bool(meanings) and all(carries(text, list(forms)) for forms in meanings)
+    return bool(meanings) and all(bet_carries(text, list(forms)) for forms in meanings)
+
+
+# Small or common expected numbers (#382): a whole number of 40 or less, or one the question holds,
+# is carried by chance as an ID, a day or a count of something else. A right turn on one stands by
+# the code only when the expected number is the answer's own first figure; otherwise the blind
+# judge decides (RULE.md § Scoring a run).
+AT_RISK_MAX = 40
+
+
+def at_risk(meanings: Sequence[Sequence[float]], question: str = "") -> bool:
+    asked = {float(n.replace(",", "")) for n in NUMBER.findall(question)}
+    firsts = [forms[0] for forms in meanings if forms]
+    return any((f == int(f) and abs(f) <= AT_RISK_MAX) or f in asked for f in firsts)
+
+
+def first_figure_is_expected(text: str, meanings: Sequence[Sequence[float]], question: str) -> bool:
+    """The answer's first figure (dates and times left out; a number the question holds counts,
+    as the answer may restate it as its own) is one of the expected numbers."""
+    found = figures(text)
+    return bool(found) and any(abs(found[0] - f) <= 0.006 for forms in meanings for f in forms)
 
 
 # Sentences that say the data cannot give the figure, beyond the eval's DECLINE: the bet's code
@@ -51,7 +156,9 @@ NOT_IN_DATA = re.compile(
     r"not (?:separately|possible to (?:determine|compute|calculate))|"
     r"(?:cannot|can't|unable to) (?:provide|determine|compute|calculate)|"
     r"\bnot tracked\b|"
-    r"\bno\b[^.]{0,40}?\b(?:column|table|field)s?\b[^.]{0,80}?\bto (?:compute|calculate|determine)",
+    r"\bno\b[^.]{0,40}?\b(?:column|table|field)s?\b[^.]{0,80}?\bto (?:compute|calculate|determine)|"
+    # #382: "has no median order value metric" (DECLINE allows one word between "no" and "metric").
+    r"\bno\b(?:\s+[\w-]+){1,5}\s+metrics?\b",
     re.IGNORECASE,
 )
 
@@ -76,7 +183,10 @@ def stated(text: str, question: str = "") -> list[float]:
     """The numbers an answer states (dates left out), less those the question itself holds: an
     answer that repeats "over 100 EUR on 1 and 2 October" states nothing of its own."""
     asked = {float(n.replace(",", "")) for n in NUMBER.findall(question)}
-    return [n for n in numbers_in(text) if n not in asked]
+    # Digits only: a number word in prose ("over those two days") is no figure of the answer's own;
+    # words count only toward carrying the expected number and the first-figure check.
+    text = DATES.sub(" ", plain(text))
+    return [n for n in (float(m.replace(",", "")) for m in NUMBER.findall(text)) if n not in asked]
 
 
 def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = "") -> Outcome:
@@ -144,6 +254,32 @@ def judge_prompt(question: str, meanings: Sequence[Sequence[float]], answer: str
         shown.append(f"{number} ({_number(forms[1])}%)" if len(forms) > 1 else number)
     expected = ", ".join(shown) or "none (the question asks for no number)"
     return JUDGE_PROMPT.format(question=question, expected=expected, answer=answer)
+
+
+# A `define` turn ("how was that computed?") the code cannot match word for word (#382): the judge
+# reads whether the answer states the governed definition, in any words.
+DEFINE_PROMPT = """You grade one answer of a data assistant by a fixed rubric.
+
+The user asked how a figure was computed: {question}
+The governed definition: {definition}
+The answer:
+<<<
+{answer}
+>>>
+
+Give exactly one outcome:
+- right: the answer explains the computation in a way that matches the governed definition (its
+  own words are fine; it must not contradict the definition or describe another computation).
+- declined: the answer says it cannot explain or does not know.
+- wrong: anything else.
+
+Reason briefly if you need to, then end with one line:
+VERDICT: <right|declined|wrong>
+"""
+
+
+def define_prompt(question: str, definition: str, answer: str) -> str:
+    return DEFINE_PROMPT.format(question=question, definition=definition, answer=answer)
 
 
 def parse_verdict(text: str) -> Outcome | None:

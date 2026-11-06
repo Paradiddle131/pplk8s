@@ -357,3 +357,43 @@ def test_float_noise_never_makes_an_interval_exclude_zero():
             a[case], b[case] = x / 3, y / 3
     gap = paired_interval(a, b)
     assert gap.low == 0 and not gap.differs
+
+
+# #382: the bet reads numbers past the eval's parser, the same for every arm.
+def test_number_words_whole_percentages_and_shares_carry_the_expected_number():
+    assert bet_rule.number_right("Nine distinct customers bought on 2 October.", [[9.0]])
+    assert bet_rule.number_right("About 33% of the leads booked.", [[1 / 3, 100 / 3]])
+    assert bet_rule.number_right("5 of 30 orders were cancelled.", [[1 / 6, 100 / 6]])
+    assert bet_rule.number_right("Half of the calls had an objection.", [[0.5, 50.0]])
+    # "one of the campaigns" is not a count of one.
+    assert not bet_rule.number_right("It was one of the campaigns that spent the most.", [[1.0]])
+
+
+def test_a_date_or_time_written_as_models_write_it_carries_nothing():
+    assert not bet_rule.number_right("Partners engaged on Oct 2, 2026: 1 partner", [[2.0]])
+    assert not bet_rule.number_right("The checkout at 09:10 was the first.", [[10.0]])
+    assert not bet_rule.number_right("Customers to date as of Sept 30: 28.", [[30.0]])
+    assert not bet_rule.number_right("From Sep 21–27 the cost rose by 30.", [[27.0]])
+    assert not bet_rule.number_right("On 2026‑09‑30 we had 12 customers.", [[30.0]])
+
+
+def test_only_the_first_share_is_the_answers_share():
+    text = "4 of 6 were still in the running; 2 of 6 had been rejected."
+    assert not bet_rule.number_right(text, [[1 / 3, 100 / 3]])
+
+
+def test_a_multi_word_no_metric_is_a_decline():
+    assert bet_rule.declines(
+        "The semantic layer has no median order value metric; the closest is 47."
+    )
+
+
+def test_a_small_expected_number_stands_only_as_the_answers_first_figure():
+    assert bet_rule.at_risk([[9.0]]) and not bet_rule.at_risk([[114.39]])
+    assert bet_rule.at_risk([[30.0]]) and bet_rule.at_risk([[2026.5]], "over 2026.5 EUR")
+    question = "How many partners replied on 2 October 2026?"
+    assert bet_rule.first_figure_is_expected(
+        "2 partners replied on 2 October 2026.", [[2.0]], question
+    )
+    listed = "13 customers never ordered: 11, 13, 14, 16, 17."
+    assert not bet_rule.first_figure_is_expected(listed, [[16.0]], "How many?")

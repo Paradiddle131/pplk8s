@@ -186,3 +186,10 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Why: the hard set detects about 15 points at k = 3 against the frozen set's 10 (findings/2026-11-03-356-hard-set.md), so its most likely disagreement is a difference it is too small to see; reading that as a tie keeps the two sets from cancelling into no verdict.
   Written 2026-11-03T22:15Z, before any comparison on the hard set was computed or read.
   The owner's answer, 2026-11-03, in a session: "#356: which question set does the verdict rest on? we can go both as you recommended".
+- 2026-11-06 ([#382](../../../../../issues/382), the owner's go, in a session: "Fix scorer + redact"): § Scoring a run's code reads an answer's numbers past the eval's parser, the same for every arm and set, and scores every log again on read in full from each case's expected numbers, cached once from the fixture (`expected.json`, `bet_eval --write-expected`).
+  - Dates and times written as models write them ("Oct 2", "Sept 30", "Sep 21–27", ISO dates with any hyphen, clock times) carry no number.
+  - Number words ("Nine customers", "half"), whole percentages that round to the rate ("about 33%") and the answer's first "N of M" share carry the expected number.
+  - "no … metric" with several words between is a decline.
+  - A right turn whose expected number is a whole number of 40 or less, or one the question holds, stands by the code only as the answer's first figure; otherwise the blind judge decides.
+  - A `define` turn that does not quote the definition word for word goes to the blind judge, shown the definition, instead of being wrong.
+  - Why: the blind audit found that the scorer passed answers carrying a small expected number by chance (a day, an ID, a count of something else) and failed right answers in words or whole percentages (`findings/382-case-audit/`). Every audited miss now reads right, the 121 audited chance carries are redacted (§ Retiring a defective case), and the eval's own scorer (`evaluation.carries`, the main track's) is unchanged.

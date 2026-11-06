@@ -126,12 +126,14 @@ def test_every_turn_of_a_multi_turn_case_is_scored_and_logged_in_the_local_shape
     assert [e["arm"] for e in bet_eval.read_logs(tmp_path)] == ["native-mcp", "native-mcp"]
 
 
-def test_a_wrong_follow_up_makes_the_whole_run_wrong(tmp_path):
+def test_a_follow_up_without_its_definition_leaves_the_whole_run_to_the_judge(tmp_path):
+    # #382: a definition not quoted word for word is the blind judge's to read, so the run is
+    # unclear (counted as wrong) until judged, never right.
     log = tmp_path / "eval-native-mcp.jsonl"
     run(Probe([[RIGHT], [RIGHT, "It is the revenue."]]), log)
     rows = bet_eval.read_log(log)
-    assert [t["outcome"] for t in rows[1]["turns"]] == ["right", "wrong"]
-    assert rows[1]["outcome"] == "wrong"
+    assert [t["outcome"] for t in rows[1]["turns"]] == ["right", "unclear"]
+    assert rows[1]["outcome"] == "unclear"
 
 
 def test_a_pass_resumes_from_the_log_and_stops_on_its_budget(tmp_path):

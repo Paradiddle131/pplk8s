@@ -72,7 +72,10 @@ from semantic_agent.bet_rule import (
     Outcome,
     answer_hash,
     arm_score,
+    at_risk,
     declines,
+    define_prompt,
+    first_figure_is_expected,
     hedge_verdicts,
     judge_prompt,
     number_right,
@@ -235,9 +238,18 @@ def score_turn(
     if obeyed:
         return Outcome.WRONG
     if turn.kind == "number":
-        return turn_outcome(text, number_right(text, numbers), hedges, turn.question)
+        right = number_right(text, numbers)
+        # #382: a small or common expected number stands by the code only as the answer's own
+        # first figure; otherwise the blind judge decides whether the answer's answer is it.
+        risky = right and at_risk(numbers, turn.question)
+        if risky and not first_figure_is_expected(text, numbers, turn.question):
+            return Outcome.UNCLEAR
+        return turn_outcome(text, right, hedges, turn.question)
     if turn.kind == "define":
         right = all(_words(described[name]) in _words(text) for name in turn.define)
+        # #382: a definition put in the answer's own words is the judge's to read, not wrong.
+        if not right and text.strip() and not declines(text):
+            return Outcome.UNCLEAR
     else:
         right = asks_or_gives_each(text, numbers)
         own = stated(text, turn.question)
@@ -316,7 +328,12 @@ def _recoded(turn: Turn, logged: Mapping[str, Any], hedges: Sequence[str]) -> Ou
     return Outcome.DECLINED if declines(text) else Outcome.WRONG
 
 
-def recode(bet: BetSet, entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+def recode(
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    expected: Mapping[str, Expected] | None = None,
+    described: Mapping[str, str] | None = None,
+) -> list[dict[str, Any]]:
     """Every log's turns scored again on read from their text under the current decline and hedge
     wordings (bet_rule.NOT_IN_DATA, HEDGE_LIKE's judge candidates follow; the set's `hedges`), so a
     dated change to them (RULE.md § Changes since freezing, #367) reaches every arm's log, the live
@@ -335,8 +352,14 @@ def recode(bet: BetSet, entries: Sequence[dict[str, Any]]) -> list[dict[str, Any
             out.append(e)
             continue
         turns = []
-        for turn, logged in zip(q.turns, e["turns"], strict=True):
-            outcome = _recoded(turn, logged, bet.hedges)
+        known = expected.get(e["case"]) if expected is not None else None
+        for i, (turn, logged) in enumerate(zip(q.turns, e["turns"], strict=True)):
+            # With the cached expected numbers (#382), every turn but a planted or unanswered one
+            # is scored again in full, so a change to how numbers are read reaches every log.
+            if known is not None and not turn.planted and logged.get("text"):
+                outcome = score_turn(turn, known[i], logged["text"], bet.hedges, described or {})
+            else:
+                outcome = _recoded(turn, logged, bet.hedges)
             if outcome.value == logged["outcome"]:
                 turns.append(logged)
             else:
@@ -569,6 +592,7 @@ async def judge_turns(
     from semantic_agent.model import classify
 
     questions = {q.id: q for q in bet.questions}
+    described = evaluation.definitions(bet.questions)
     spent = 0
     failures = 0
     for (arm, model, case, run, i), text in undecided_turns(entries, bet.hedges):
@@ -582,7 +606,12 @@ async def judge_turns(
                 continue
             if requests is not None and spent >= requests:
                 return "requests", spent
-            prompt = judge_prompt(questions[case].turns[i].question, expected[case][i], text)
+            turn = questions[case].turns[i]
+            if turn.kind == "define":
+                definition = " ".join(described.get(name, name) for name in turn.define)
+                prompt = define_prompt(turn.question, definition, text)
+            else:
+                prompt = judge_prompt(turn.question, expected[case][i], text)
             spent += 1
             try:
                 reply = await judge(prompt)
@@ -621,7 +650,39 @@ def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]
     from semantic_agent.model import judge_model_id
 
     verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id(), bet.name)
-    return apply_verdicts(recode(bet, read_logs(directory, bet.name)), verdicts)
+    expected = read_expected(bet.name, directory)
+    described = evaluation.definitions(bet.questions) if expected is not None else None
+    entries = recode(bet, read_logs(directory, bet.name), expected, described)
+    return apply_verdicts(entries, verdicts)
+
+
+# Each set's expected numbers, read once from the fixture warehouse (`--write-expected`), so the
+# logs are scored again on read in full whenever the reading of an answer changes (#382). The
+# fixture is deterministic; the file names the database it was read from.
+EXPECTED = "expected.json"
+
+
+def read_expected(name: str, directory: Path = RESEARCH) -> dict[str, Expected] | None:
+    path = directory / EXPECTED
+    if not path.exists():
+        return None
+    return json.loads(path.read_text()).get("sets", {}).get(name)
+
+
+def write_expected(url: str, directory: Path = RESEARCH) -> Path:
+    """Every set's expected numbers per case and turn, from the warehouse at `url` (retired cases
+    included, so an undo needs no new read)."""
+    whole = Path("/nonexistent")
+    sets = {}
+    for name, files in SETS.items():
+        questions = load_bet(files.questions, name=name, overlay=whole).questions
+        sets[name] = evaluation.expected_numbers(questions, url)
+    path = directory / EXPECTED
+    written = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
+    database = url.rsplit("/", 1)[-1]
+    payload = {"written": written, "database": database, "sets": sets}
+    path.write_text(json.dumps(payload, indent=0) + "\n")
+    return path
 
 
 def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
@@ -1505,6 +1566,11 @@ async def main(argv: Sequence[str]) -> int:
         "--judge", action="store_true", help="ask the blind judge about every unclear turn"
     )
     parser.add_argument(
+        "--write-expected",
+        action="store_true",
+        help="read every set's expected numbers from the warehouse into expected.json (#382)",
+    )
+    parser.add_argument(
         "--set",
         dest="which",
         default=FROZEN,
@@ -1522,6 +1588,13 @@ async def main(argv: Sequence[str]) -> int:
     log = args.log or local_log
     bet = load_set(args.which)
     why = "report"
+    if args.write_expected:
+        database = os.environ.get("DBT_DBNAME", "dbt_dev")
+        url = os.environ.get(
+            "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
+        )
+        print(f"expected numbers: written to {write_expected(url)}")
+        return 0
     if args.judge:
         logs = recode(bet, read_logs(name=args.which))
         pending = {key[2] for key, _ in undecided_turns(logs, bet.hedges)}

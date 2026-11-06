@@ -166,7 +166,8 @@ def test_a_definition_turn_without_its_definition_is_wrong_not_confident():
     described = {"revenue_eur": "Revenue in EUR of orders not cancelled."}
     quoted = "Revenue is defined as: revenue in EUR of orders not cancelled."
     assert score_turn(turn, [], quoted, HEDGES, described) is Outcome.RIGHT
-    assert score_turn(turn, [], "It was 868.65 EUR.", HEDGES, described) is Outcome.WRONG
+    # #382: anything but the quote is the blind judge's to read, never confident-wrong.
+    assert score_turn(turn, [], "It was 868.65 EUR.", HEDGES, described) is Outcome.UNCLEAR
 
 
 def test_an_ambiguous_turn_that_picks_one_meaning_silently_is_wrong():
@@ -958,3 +959,17 @@ def test_a_label_in_the_overlay_corrects_a_frozen_sets_group_for_that_set_only(t
     assert frozen.groups["cost_per_booking_total"] == ["covered", "trap"]
     hard = bet_eval.load_bet(bet_eval.SETS["hard"].questions, name="hard", overlay=tmp_path)
     assert "cost_per_booking_total" not in hard.groups
+
+
+def test_a_small_number_carried_by_a_list_goes_to_the_judge_and_a_paraphrased_definition_too():
+    turn = Turn(question="How many customers never ordered?", expected_sql="select 16")
+    listed = "13 customers never ordered: 11, 13, 14, 16, 17."
+    assert bet_eval.score_turn(turn, [[16.0]], listed, [], {}) is Outcome.UNCLEAR
+    assert (
+        bet_eval.score_turn(turn, [[16.0]], "16 customers never ordered.", [], {}) is Outcome.RIGHT
+    )
+    define = Turn(question="How was that computed?", define=["net_revenue_eur"])
+    described = {"net_revenue_eur": "Revenue minus partner returns (finance's net sales)."}
+    own = "I took the revenue and subtracted what partners returned."
+    assert bet_eval.score_turn(define, [], own, [], described) is Outcome.UNCLEAR
+    assert bet_eval.score_turn(define, [], "I don't know.", [], described) is not Outcome.RIGHT
