@@ -26,7 +26,7 @@ Each wake changes only its own rows: status (`open`, `measuring`, `answered`, `s
 | Q9 | What do Lightdash and dbt-mcp give a team on our project for free, and what is Enterprise or platform only? | #334, #363 | answered (Lightdash's free API matches MetricFlow on 35 of 36 translated metrics, the semi-additive one silently summed; as an agent's one tool 58.5% right and 17.1% confident-wrong against `custom-metricflow`'s 95.1% and 0.0% on 41 cases, k = 1) | [dbt-mcp](findings/2026-11-03-334-dbt-mcp.md), [Lightdash](findings/2026-11-03-334-lightdash.md), [Lightdash on data](findings/2026-11-03-363-lightdash-numbers.md) |
 | Q10 | What moved at Google, dbt and Apache Ossie while the track ran? | #335 | open | [watch](findings/watch.md) |
 | Q11 | Verdict: what is worth building, where (a new repo or not), what not, and what transfers to work? | #336 | open | |
-| Q12 | Is the hard set hard on writing SQL as well as on business language, and does a versioned `hard-v2` prove it on criteria written before any run? | #375, #376, #377, #378, #379, #380 | measuring (versioning rule and criteria recorded) | [RULE.md § Set versions](RULE.md#set-versions) |
+| Q12 | Is the hard set hard on writing SQL as well as on business language, and does a versioned `hard-v2` prove it on criteria written before any run? | #375, #376, #377, #378, #379, #380 | measuring (rule and criteria recorded; `hard-v2` frozen, no arm run yet) | [RULE.md § Set versions](RULE.md#set-versions), [the freeze](findings/2026-11-06-377-hard-set-v2.md) |
 
 ## The arms
 

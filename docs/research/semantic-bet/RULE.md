@@ -65,6 +65,8 @@ Exploratory, reported with no pass or fail, since it is the hypothesis rather th
 What to expect, written before any run: pure MetricFlow (`custom-metricflow`) should decline most of the `uncovered` group by design, its value showing on `covered` and `sql_hard` cases where the metric hides the tricky SQL; the hybrid and the SQL-writing arms are what the `uncovered` group tests.
 The comparison of v1 and v2 on these criteria ([#380](../../../../../issues/380)) comes before the report shows `hard-v2` in v1's place ([#381](../../../../../issues/381)).
 
+Frozen 2026-11-06T09:33Z by [#377](../../../../../issues/377), before any arm ran on it: [`services/semantic-agent/evals/semantic_bet_hard_v2.yaml`](../../../services/semantic-agent/evals/semantic_bet_hard_v2.yaml), 58 cases (v1's 43 unchanged, 15 new; 33 `composable` or `uncovered`), its SHA-256 and the checker's output in [its finding](findings/2026-11-06-377-hard-set-v2.md).
+
 ## The arms
 
 The arms of [the register](README.md#the-arms), each built by its own issue: `native-context`, `native-governed`, `native-kc`, `native-shaped`, `native-graph`, `native-mcp`, `custom-metricflow`, `custom-toolbox`, and `baseline` (the reference, text-to-SQL that reads the generated docs).

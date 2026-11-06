@@ -2,7 +2,8 @@
 
 Measures: for each case of a bet set (services/semantic-agent/evals/semantic_bet.yaml, or the set the first
 argument names, e.g. semantic_bet_hard.yaml, #356), every turn's expected SQL on dbt_dev (each column, one meaning
-of an ambiguous turn each), and for a `trap` its naive SQL's first value, for a `distractor` its legacy SQL's;
+of an ambiguous turn each), and for each case in `naive_sql` (a `trap`, and on hard-v2 every new case, #377)
+its naive SQL's first value, for a `distractor` its legacy SQL's;
 fails when an expected value is empty, an ambiguous turn's meanings agree within the eval's tolerance (0.006), or a
 trap's or distractor's value is within that tolerance of the first turn's expected one.
 Run (from the repo root), after tests/e2e/agent-fixture.sh and the legacy models built in dbt_dev
@@ -85,6 +86,13 @@ def main() -> int:
     print(
         f"cases {cases}, uncovered {uncovered} ({share:.1f}%), traps {len(spec['naive_sql'])}"
     )
+    composable = sum("composable" in g for g in groups.values())
+    if composable:  # a set with composable cases (hard-v2, RULE.md § Set versions)
+        beyond = 100 * (composable + uncovered) / cases
+        print(
+            f"composable {composable}, composable or uncovered {composable + uncovered} ({beyond:.1f}%), "
+            f"naive SQL checked {len(spec['naive_sql'])}"
+        )
     print(f"distractors {len(spec['legacy_sql'])}, failures {len(failures)}")
     print("\n".join(failures), file=sys.stderr)
     return 1 if failures else 0

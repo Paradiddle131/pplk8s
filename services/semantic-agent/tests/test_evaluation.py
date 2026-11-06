@@ -534,3 +534,50 @@ def test_the_bets_hard_set_keeps_the_frozen_shape_and_its_kinds():
     assert {k for case in spec["kinds"].values() for k in case} == kinds
     assert set(spec["blind"]) | set(spec["post"]) == set(ids)
     assert not set(spec["blind"]) & set(spec["post"])
+
+
+def test_the_bets_hard_set_v2_keeps_v1_whole_and_proves_each_new_case_hard():
+    # RULE.md § Set versions, #377: a new file that supersedes v1, v1's cases unchanged in what
+    # scores them, every case in exactly one of covered, composable or uncovered, at least 30%
+    # composable or uncovered with no metrics, and each new case sql_hard by a rubric kind with
+    # the naive SQL the checker runs.
+    v1 = yaml.safe_load(evaluation.BET_HARD_QUESTIONS.read_text())
+    spec = yaml.safe_load(evaluation.BET_HARD_V2_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_HARD_V2_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert spec["frozen"] == "2026-11-06" and spec["supersedes"] == "hard"
+    assert spec["hedges"] == v1["hedges"] and len(set(ids)) == len(ids)
+    first = {case["id"]: case for case in v1["questions"]}
+    carried = {case["id"]: case for case in spec["questions"] if case["id"] in first}
+    assert carried == first
+    new = spec["new"]
+    assert set(new) == set(ids) - set(first) and len(new) >= 12
+    groups = spec["groups"]
+    assert set(groups) == set(spec["kinds"]) == set(ids)
+    assert all(len({"covered", "composable", "uncovered"} & set(groups[i])) == 1 for i in ids)
+    beyond = [i for i in ids if {"composable", "uncovered"} & set(groups[i])]
+    assert len(beyond) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in beyond)
+    assert all({"covered", "trap"} <= set(groups[i]) or "trap" not in groups[i] for i in ids)
+    rubric = {
+        "fan_out_join",
+        "distinct_across_join",
+        "ratio_of_sums",
+        "window",
+        "median_percentile",
+    }
+    rubric |= {
+        "sessions_gaps_islands",
+        "cohort_retention",
+        "anti_join",
+        "date_spine",
+        "fiscal_timezone",
+    }
+    hard = {i for i in ids if "sql_hard" in spec["kinds"][i]}
+    assert set(new) <= hard and set(spec["rubric"]) == hard
+    assert all(spec["rubric"][i] and set(spec["rubric"][i]) <= rubric for i in hard)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]} | set(new)
+    assert set(tools.catalog().metrics) >= {m for q in questions for m in q.metrics}
+    assert set(spec["blind"]) | set(spec["post"]) == set(ids) and set(spec["post"]) == set(
+        v1["post"]
+    )

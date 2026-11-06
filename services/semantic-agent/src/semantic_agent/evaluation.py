@@ -87,6 +87,9 @@ QUESTIONS = ROOT / "evals" / "questions.yaml"
 BET_QUESTIONS = ROOT / "evals" / "semantic_bet.yaml"
 # The second, harder set (#356), frozen beside the first and scored under the same rule.
 BET_HARD_QUESTIONS = ROOT / "evals" / "semantic_bet_hard.yaml"
+# Its version 2 (#377, RULE.md § Set versions): v1's cases unchanged plus cases hard in SQL;
+# it supersedes v1.
+BET_HARD_V2_QUESTIONS = ROOT / "evals" / "semantic_bet_hard_v2.yaml"
 # The metrics and their code: also what `adk eval ... --config_file_path` takes.
 EVAL_CONFIG = EvalConfig.model_validate_json((ROOT / "evals" / "eval_config.json").read_text())
 REPORT = ROOT.parents[1] / "docs" / "research" / "semantic-agent-eval.md"
