@@ -61,11 +61,11 @@ from typing import Any
 
 import yaml
 from google.adk.agents import LlmAgent
-from google.adk.evaluation.eval_case import Invocation
+from google.adk.evaluation.eval_case import Invocation, get_all_tool_calls, get_all_tool_responses
 from google.adk.models.llm_request import LlmRequest
 from google.genai import types
 
-from semantic_agent import evaluation, spend
+from semantic_agent import bet_tools, evaluation, spend
 from semantic_agent.bet_rule import (
     ArmScore,
     Interval,
@@ -948,6 +948,27 @@ def step_three(
     ]
 
 
+# Each tool result kept in the log is cut to this many characters (bet_live's RESULT_HEAD).
+RESULT_HEAD = 400
+
+
+def tool_calls(invocation: Invocation) -> list[dict[str, Any]]:
+    """One answered turn's tool calls as the probes' logs carry them: name, arguments and the head
+    of the result, matched by call id (#388)."""
+    data = invocation.intermediate_data
+    if data is None:
+        return []
+    results = {
+        r.id: json.dumps(r.response, default=str)[:RESULT_HEAD]
+        for r in get_all_tool_responses(data)
+        if r.id
+    }
+    return [
+        {"tool": use.name, "args": dict(use.args or {}), "result": results.get(use.id or "", "")}
+        for use in get_all_tool_calls(data)
+    ]
+
+
 def append_log(entry: dict[str, Any], path: Path = LOG) -> None:
     with path.open("a") as out:
         out.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -1096,10 +1117,21 @@ async def run_bet(
                     entry["error"] = " ".join(outcome.error.split())[:300]
                     append_log(entry, log)
                     continue
+                # #388: every call the agent made, and a run outside its setup's tools unscored.
+                calls = [tool_calls(i) for i in outcome.inferences]
+                if strays := bet_tools.outside(arm, [{"calls": c} for c in calls]):
+                    print(f"{question.id} run {run}: not scored, outside {arm}'s tools: {strays}")
+                    bet_tools.write_fault(
+                        {**entry, "turns": [{"calls": c} for c in calls]}, strays, log.parent
+                    )
+                    continue
                 turns = score_case(
                     question, expected[question.id], outcome.inferences, bet.hedges, described
                 )
-                entry["turns"] = [{"text": t, "outcome": o.value} for t, o in turns]
+                entry["turns"] = [
+                    {"text": t, "outcome": o.value, "calls": c}
+                    for (t, o), c in zip(turns, calls, strict=False)
+                ]
                 entry["outcome"] = run_outcome([o for _, o in turns]).value
                 append_log(entry, log)
     return "done"
@@ -1671,15 +1703,16 @@ async def main(argv: Sequence[str]) -> int:
         # pass, 2026-11-04: 219 of 288 runs answered "the audit record could not be written").
         os.environ.setdefault("DBT_HOST", "localhost")
         os.environ.setdefault("DBT_PORT", "5433")
-        if problem := warehouse_unreachable():
-            print(f"stopped: {problem}")
-            return 2
+        # A Claude pass without its key is skipped before anything else: it needs no warehouse.
         if claude:
             try:
                 claude_key()
             except MissingKey as missing:
                 print(f"skipped: {missing}")
                 return 3
+        if problem := warehouse_unreachable():
+            print(f"stopped: {problem}")
+            return 2
         from semantic_agent.agent import build_agent as build_semantic
         from semantic_agent.hybrid import build_agent as build_hybrid
         from sql_baseline.agent import build_agent as build_baseline

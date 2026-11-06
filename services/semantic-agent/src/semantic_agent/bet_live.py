@@ -30,7 +30,7 @@ from google.adk.evaluation.eval_case import Invocation
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from semantic_agent import spend
+from semantic_agent import bet_tools, spend
 from semantic_agent.bet_eval import (
     FROZEN,
     RESEARCH,
@@ -196,6 +196,15 @@ async def run_live(
                     return "budget"
                 if failed["kind"] in FATAL:
                     return "quota"
+                continue
+            # #388: a run that called outside its setup's tools is a test fault, never scored.
+            if strays := bet_tools.outside(arm, turns):
+                say(f"{question.id} run {run}: not scored, calls outside {arm}'s tools: {strays}")
+                bet_tools.write_fault(
+                    {"arm": arm, "model": model, "run": run, "case": question.id, "turns": turns},
+                    strays,
+                    log.parent,
+                )
                 continue
             scored = score_case(
                 question,

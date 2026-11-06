@@ -83,7 +83,7 @@ def test_two_runs_score_each_turn_under_the_rule_and_resume_from_the_log(monkeyp
     ]
     assert entries[0]["outcome"] == "right" and entries[0]["model_calls"] >= 1
     assert entries[2]["turns"] == [
-        {"text": "The median order value was 51.20 EUR.", "outcome": "confident-wrong"}
+        {"text": "The median order value was 51.20 EUR.", "outcome": "confident-wrong", "calls": []}
     ]
 
     # The second pass asks only what the log lacks: five runs of the eight.

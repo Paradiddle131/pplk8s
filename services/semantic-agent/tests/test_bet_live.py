@@ -85,7 +85,7 @@ class Probe:
             failed = {"question": questions[0], "calls": [], "answer": "", "failure": texts}
             return [{**failed, "model_calls": 1}]
         return [
-            {"question": q, "calls": [{"tool": "search"}], "answer": a, "model_calls": 2}
+            {"question": q, "calls": [{"tool": "search_entries"}], "answer": a, "model_calls": 2}
             for q, a in zip(questions, texts, strict=True)
         ]
 
@@ -119,8 +119,8 @@ def test_every_turn_of_a_multi_turn_case_is_scored_and_logged_in_the_local_shape
     ]
     assert rows[1]["model_calls"] == 4
     assert rows[1]["turns"] == [
-        {"text": RIGHT, "outcome": "right", "calls": [{"tool": "search"}]},
-        {"text": DEFINED, "outcome": "right", "calls": [{"tool": "search"}]},
+        {"text": RIGHT, "outcome": "right", "calls": [{"tool": "search_entries"}]},
+        {"text": DEFINED, "outcome": "right", "calls": [{"tool": "search_entries"}]},
     ]
     # The log reads beside the others, named by its file.
     assert [e["arm"] for e in bet_eval.read_logs(tmp_path)] == ["native-mcp", "native-mcp"]
