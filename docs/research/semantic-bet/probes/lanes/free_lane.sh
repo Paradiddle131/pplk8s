@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # The free-model lane (owner, 2026-11-04T20:15Z: k = 1 first, then k = 3; 2026-11-05: spend the whole daily quota).
-# Every pass the plan names, in order: each arm's frozen set, then its hard set, at k = 1; then the same at k = 3.
+# The order (epic #375's plan, accepted by the owner 2026-11-06T09:16Z, #379): v1's k = 1 round (each arm's frozen set,
+# then its hard set; what is left of it is baseline and custom-lightdash), then the hard set v2 (hard-v2, RULE.md § Set
+# versions) at k = 1 and at k = 3 for the core arms, each after carrying v1's runs of its unchanged cases (bet_carry),
+# then the frozen set's k = 3 round; v1-hard's k = 3 round is dropped, since hard-v2 supersedes it.
 # A pass resumes from its log and skips itself (no canary, no request) once its log holds every run, so the lane
 # can start every day from the top and spends the day's quota where the work is; the judge and a push after each.
 # Run from anywhere: bash docs/research/semantic-bet/probes/lanes/free_lane.sh (needs make services-up and the agents fixture).
@@ -25,6 +28,7 @@ judge() {
   local left=$((CAP - $(used))); [ $left -gt 10 ] || return 0
   cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --judge --requests $((left < 40 ? left : 40)) 2>&1 | grep -v Warning | tail -2
   cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set hard --judge --requests 20 2>&1 | grep -v Warning | tail -2
+  cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set hard-v2 --judge --requests 20 2>&1 | grep -v Warning | tail -2
 }
 # One pass: name, budget estimate, command (run from services/semantic-agent).
 pass() {
@@ -38,7 +42,7 @@ pass() {
   log "end $name: exit $rc, free count $(used)"
   [ $rc -eq 2 ] && { log "ANOMALY: $name missed its canary twice; lane stopped"; push "$name stopped at its canary"; exit 2; }
   judge
-  push "$name, k = 1 (exit $rc)"
+  push "$name (exit $rc)"
   return 0
 }
 gcp_gate() { cd "$REPO" && make -s gcp-cost-check | tail -2 && make -s gcp-usage-check | tail -1; }
@@ -71,28 +75,47 @@ lightdash() {
       >"$S/lightdash.log" 2>&1 || { log "skip custom-lightdash: Lightdash did not start ($S/lightdash.log)"; return 1; }
 }
 
-# One round at k: each pass on the frozen set, then the hard set. The order is the plan's (profile § The
-# completion plan): the arms the free model lacks first, the 15 GB Lightdash last.
+# One round at k: each pass on the frozen set, then (when the second argument is "hard") the hard set v1. The order
+# is the plan's (profile § The completion plan): the arms the free model lacks first, the 15 GB Lightdash last.
 round() {
-  local k=$1
+  local k=$1 v1=${2:-}
   pass "custom-hybrid frozen k=$k" 300 "${BE[@]}" --arms custom-hybrid --runs $k || exit 0
-  pass "custom-hybrid hard k=$k" 150 "${BE[@]}" --arms custom-hybrid --set hard --runs $k || exit 0
+  [[ $v1 = hard ]] && { pass "custom-hybrid hard k=$k" 150 "${BE[@]}" --arms custom-hybrid --set hard --runs $k || exit 0; }
   gcp_gate || { log "ANOMALY: GCP gate failed before native-mcp"; exit 1; }
   pass "native-mcp frozen k=$k" 530 "${LIVE[@]}" --runs $k || exit 0
-  pass "native-mcp hard k=$k" 240 "${LIVE[@]}" --runs $k --set hard || exit 0
+  [[ $v1 = hard ]] && { pass "native-mcp hard k=$k" 240 "${LIVE[@]}" --runs $k --set hard || exit 0; }
   gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp"; exit 1; }
   toolbox
   pass "custom-toolbox frozen k=$k" 300 "${LIVE[@]}" --agent 330_toolbox_agent.py --runs $k || exit 0
-  pass "custom-toolbox hard k=$k" 140 "${LIVE[@]}" --agent 330_toolbox_agent.py --runs $k --set hard || exit 0
+  [[ $v1 = hard ]] && { pass "custom-toolbox hard k=$k" 140 "${LIVE[@]}" --agent 330_toolbox_agent.py --runs $k --set hard || exit 0; }
   gcp_gate || { log "ANOMALY: GCP gate failed after custom-toolbox"; exit 1; }
   pass "baseline frozen k=$k" 450 "${BE[@]}" --arms baseline --runs $k || exit 0
-  pass "baseline hard k=$k" 200 "${BE[@]}" --arms baseline --set hard --runs $k || exit 0
+  [[ $v1 = hard ]] && { pass "baseline hard k=$k" 200 "${BE[@]}" --arms baseline --set hard --runs $k || exit 0; }
   [[ $k = 3 ]] && { pass "custom-metricflow frozen k=3" 400 "${BE[@]}" --arms custom-metricflow --runs 3 || exit 0; }
   if lightdash; then
     pass "custom-lightdash frozen k=$k" 400 "${LIVE[@]}" --agent 363_lightdash_agent.py --runs $k || exit 0
-    pass "custom-lightdash hard k=$k" 180 "${LIVE[@]}" --agent 363_lightdash_agent.py --runs $k --set hard || exit 0
+    [[ $v1 = hard ]] && { pass "custom-lightdash hard k=$k" 180 "${LIVE[@]}" --agent 363_lightdash_agent.py --runs $k --set hard || exit 0; }
   fi
 }
-round 1
+# v1's runs of hard-v2's unchanged cases, copied with their hash (RULE.md § Set versions); a refused case is an anomaly.
+carry() {
+  cd "$SA" && uv run --quiet python -m semantic_agent.bet_carry 2>&1 | grep "^bet_carry"
+  [ "${PIPESTATUS[0]}" -eq 0 ] || { log "ANOMALY: bet_carry refused a case or a carried row's hash differs"; exit 1; }
+}
+# hard-v2 at k for the core arms (#379): a pass asks only what its log lacks, so after the carry k = 1 asks the 15 new
+# cases (and v1's cases an arm never ran), and k = 3 asks every case's runs 2 and 3.
+hard_v2() {
+  local k=$1
+  carry
+  pass "custom-hybrid hard-v2 k=$k" 120 "${BE[@]}" --arms custom-hybrid --set hard-v2 --runs $k || exit 0
+  pass "custom-metricflow hard-v2 k=$k" 100 "${BE[@]}" --arms custom-metricflow --set hard-v2 --runs $k || exit 0
+  gcp_gate || { log "ANOMALY: GCP gate failed before native-mcp hard-v2"; exit 1; }
+  pass "native-mcp hard-v2 k=$k" 160 "${LIVE[@]}" --runs $k --set hard-v2 || exit 0
+  gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp hard-v2"; exit 1; }
+  pass "baseline hard-v2 k=$k" 250 "${BE[@]}" --arms baseline --set hard-v2 --runs $k || exit 0
+}
+round 1 hard
+hard_v2 1
+hard_v2 3
 round 3
 log "free lane: every pass is done at k = 3; free count $(used)"

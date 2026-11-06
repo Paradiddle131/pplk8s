@@ -4,7 +4,7 @@
 set -uo pipefail
 mode=$1 set=$2
 REPO=$(cd "$(dirname "$0")/../../../../.." && pwd)
-cd "$REPO/services/semantic-agent"
+cd "$REPO/services/semantic-agent" || exit 1
 setarg=(); [ "$set" != frozen ] && setarg=(--set "$set")
 echo "start $(date -u +%FT%H:%MZ) $mode $set"
 BET_DATA_AGENT_THINKING=$mode GCP_PROJECT=pplk8s-lab-001 DBT_DBNAME=dbt_dev DBT_HOST=localhost DBT_PORT=5433 \
