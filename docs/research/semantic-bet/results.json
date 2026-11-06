@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T10:00Z",
+ "written": "2026-11-06T10:06Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4339,13 +4339,13 @@
    "harness": "google-data-agent",
    "session": "fresh per run",
    "rung": 1,
-   "cases": 43,
+   "cases": 58,
    "of_cases": 58,
-   "runs": 129,
+   "runs": 144,
    "accuracy": [
-    0.922480620155,
-    0.837209302326,
-    0.984496124031
+    0.942528735632,
+    0.879310344828,
+    0.988505747126
    ],
    "confident_wrong": [
     0.0,
@@ -4355,32 +4355,53 @@
    "groups": {
     "composable": [
      1.0,
-     14
+     20
     ],
     "conversation": [
      0.5833333333333334,
      8
     ],
     "covered": [
-     0.8611111111111112,
-     24
+     0.8666666666666667,
+     25
     ],
     "trap": [
      1.0,
-     6
+     7
     ],
     "uncovered": [
      1.0,
-     5
+     13
     ]
    },
-   "pass_all": 0.9069767441860465,
+   "pass_all": 0.9310344827586207,
    "outcomes": {
-    "right": 119,
+    "right": 134,
     "wrong": 10
    },
-   "model_calls": 142,
-   "new": {},
+   "model_calls": 157,
+   "new": {
+    "all": [
+     1.0,
+     15
+    ],
+    "composable": [
+     1.0,
+     6
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "trap": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     1.0,
+     8
+    ]
+   },
    "carried_runs": 129
   },
   {
@@ -5868,6 +5889,7 @@
    "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ],
   "hard-v2": [
+   "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)"
   ]
  },
