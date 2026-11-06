@@ -43,6 +43,8 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=lib/dbt-deps.sh
 source "$REPO/tests/e2e/lib/dbt-deps.sh"
+# shellcheck source=lib/host-port.sh
+source "$REPO/tests/e2e/lib/host-port.sh"
 DB=dbt_dev
 BQ_TARGET=${BQ_TARGET:-emulator}
 OUT=${TMPDIR:-/tmp}/pplk8s-bigquery-run-check-$BQ_TARGET
@@ -57,6 +59,7 @@ DBT_BIGQUERY=dbt-bigquery==1.12.1
 export BQ_LIB="$REPO/tests/e2e/lib" DBT_PROFILES_DIR="$PROJECT_DIR"
 case "$BQ_TARGET" in
   emulator)
+    host_port_free 9050 bigquery-api # the emulator's host port: another holder fails here, naming it (#292)
     export DBT_TARGET=bigquery_emulator BQ_API_ENDPOINT=http://localhost:9050 BQ_WHERE="the emulator" ;;
   gcp)
     : "${GCP_PROJECT:?GCP_PROJECT is unset: the live run needs the id of the lab project (platform/gcp/README.md)}"
@@ -88,8 +91,11 @@ run_() { (cd "$PROJECT_DIR" && uv run --quiet --no-project --with-requirements r
 # empties it; on the lab project the copier empties the datasets.
 fresh_() {
   if [ "$BQ_TARGET" = emulator ]; then
-    "${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >/dev/null 2>&1 ||
-      { "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2; fail "the emulator did not come up"; }
+    "${COMPOSE[@]}" up -d --force-recreate --wait bigquery bigquery-api >"$OUT/emulator-up.log" 2>&1 || {
+      "${COMPOSE[@]}" logs --tail 20 bigquery bigquery-api >&2
+      tail -5 "$OUT/emulator-up.log" >&2
+      fail "the emulator did not come up"
+    }
     echo "ok: BigQuery emulator up on $BQ_API_ENDPOINT (empty)"
   fi
   run_ --with 'psycopg[binary]==3.3.6' python -I "$BQ_LIB/fixture_to_bigquery.py" \
