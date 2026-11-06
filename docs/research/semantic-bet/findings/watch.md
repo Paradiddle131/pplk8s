@@ -15,3 +15,9 @@ Each check also runs `python3 -I docs/research/semantic-bet/probes/349_kc_compil
   - Conversational Analytics API, 2026-11-05: an asia-northeast1 regional endpoint, nothing for the bet ([release notes](https://docs.cloud.google.com/gemini/docs/conversational-analytics-api/release-notes)).
   - dbt: dbt-mcp 2.10.1 (2026-11-02) removes docs helpers and changes job access checks, nothing for metrics ([changelog](https://github.com/dbt-labs/dbt-mcp/blob/main/CHANGELOG.md)); dbt-metricflow 0.15.0 and dbt-core 1.12.6 are still the latest on PyPI.
   - Not read today: Apache Ossie.
+- 2026-11-06 (`stated`, read 2026-11-06T00:35Z): catalog MCP `compile_query` and `execute_query` still fail (`Method not found.`, HTTP 404; `349_kc_compile.py`; its `tools/list` still shows 14 tools, neither of the two among them); nothing that moves the verdict.
+  - BigQuery, 2026-11-05: the Metadata curation console page is removed in favour of Knowledge Catalog for discovery scans, profiling and data quality, and conversational analytics in BigQuery reaches asia-northeast1 (Tokyo); nothing for the bet ([release notes](https://docs.cloud.google.com/bigquery/docs/release-notes)).
+  - Knowledge Catalog: no new entry since 2026-11-03, so no news on dbt or MetricFlow import, verified queries or guardrails ([release notes](https://docs.cloud.google.com/knowledge-catalog/docs/release-notes)).
+  - Conversational Analytics API: no new entry since the asia-northeast1 endpoint of 2026-11-05 ([release notes](https://docs.cloud.google.com/gemini/docs/conversational-analytics-api/release-notes)).
+  - dbt: no new entry; dbt-mcp 2.10.1 (2026-11-02) is still the latest in the changelog ([changelog](https://github.com/dbt-labs/dbt-mcp/blob/main/CHANGELOG.md)); dbt-metricflow 0.15.0 and dbt-core 1.12.6 are still the latest on PyPI.
+  - Not read today: Apache Ossie.
