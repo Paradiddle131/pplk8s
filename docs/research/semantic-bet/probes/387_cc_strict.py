@@ -537,6 +537,62 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
     return ask
 
 
+def redact_faults(dry: bool = False) -> int:
+    """Every logged strict run whose transcript failed the tool check (a call outside the setup's
+    tools, a built-in tool, or an init list unlike the server's) gets one `run` row in
+    redacted.jsonl as a test fault, the same check on every Claude Code setup; prints the census."""
+    sys.path.insert(0, str(ROOT / "services/semantic-agent/src"))
+    from semantic_agent.bet_eval import OVERLAY, read_overlay, run_key
+
+    _, redacted = read_overlay(RESEARCH)
+    failed: dict[tuple[str, str, str, int], dict[str, Any]] = {}
+    for path in sorted((OUT / "answers").glob("*.jsonl")):
+        setup, model, name = _parts(path.stem)
+        for line in path.read_text().splitlines():
+            row = json.loads(line)
+            if not row["audit"]["tools_ok"]:
+                failed[(setup, model, name, row["case"], row["run"])] = row["audit"]
+    rows = []
+    for setup, model, name, case, run in failed:
+        log = RESEARCH / f"{SETS[name][1]}{setup}.jsonl"
+        label = f"claude-code-strict ({model})"
+        for line in log.read_text().splitlines() if log.exists() else []:
+            r = json.loads(line)
+            if r["model"] == label and r["case"] == case and r["run"] == run:
+                key = run_key({"arm": setup, **r})
+                if key not in redacted:
+                    rows.append(
+                        {
+                            "kind": "run",
+                            "arm": setup,
+                            "model": label,
+                            "case": case,
+                            "run": run,
+                            "at": r["at"],
+                            "class": "test_fault",
+                            "reason": f"strict audit: tools {failed[(setup, model, name, case, run)]['outside']}",
+                            "issue": 387,
+                        }
+                    )
+    print(
+        f"387: {len(failed)} recorded runs failed the tool check; {len(rows)} logged and not yet redacted"
+    )
+    if rows and not dry:
+        with (RESEARCH / OVERLAY).open("a") as out:
+            for row in rows:
+                out.write(json.dumps(row) + "\n")
+    return 0
+
+
+def _parts(stem: str) -> tuple[str, str, str]:
+    """An answers file's setup, model and set from `<setup>-<model>-<set>`."""
+    for setup in SERVERS:
+        if stem.startswith(setup + "-"):
+            model, _, name = stem[len(setup) + 1 :].partition("-")
+            return setup, model, name
+    raise ValueError(stem)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -552,9 +608,11 @@ def main() -> int:
     s.add_argument("setup", choices=sorted(SERVERS))
     s.add_argument("model", choices=MODELS)
     s.add_argument("case")
-    c = sub.add_parser("clients")
-    del c
+    sub.add_parser("clients")
+    sub.add_parser("redact")
     args = parser.parse_args()
+    if args.cmd == "redact":
+        return redact_faults()
     if args.cmd == "clients":
         print(clients())
         return 0
