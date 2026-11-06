@@ -114,3 +114,13 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - claude-dotfiles PR #47: the generic reader rule in `cloud/CLAUDE.md`.
 - Anomalies: none. Nothing left running.
 - Next: #396 (the owner's pick), then #390 built into it; #400 (the owner's pick); the free lane carries #379 nightly; #380 waits for #379.
+
+## 2026-11-06, 2026-11-06T23:04Z (session end, near the usage limit: #400 option A run, report revision 3 built)
+
+- Free count 991 of 1,000 (no free-model pass this session); tonight's 00:07Z lane now also asks `custom-metricflow-compute` (hard-v2, then frozen) after `custom-metricflow`'s hard-v2 pass in each `hard_v2` round.
+- #400: the owner chose A; `custom-metricflow-compute` and `cc-metricflow-compute` joined (RULE.md 2026-11-06T21:57Z); strict Claude Code passes done: Haiku and Sonnet k = 3 on frozen (86%, 86%), hard (80%, 76%), hard-v2 (75%, 72%), Opus 50 on hard-v2 (74%); the inversion of `cc-metricflow` (64%, 52%, 42%) is gone.
+- #396: the owner picked A; built into the page with titles only. #401 (filed): grouped glossary table, structured tooltips, impeccable detector pass: done, waiting for the owner's look.
+- Report: page version 28; #336's artifact 4 read back with the same SHA-256 (28ffaa4b…).
+- A container restart at about 22:45Z stopped the metrics MCP server and the lane mid-pass; the runner's init check refused the runs without tools, and the pass resumed from its answers file; nothing was mis-scored.
+- Nothing left running; the Compose services were up when the session ended (they do not survive a new session).
+- Next: #400's open question (should the headline "MetricFlow on the free model" read `custom-metricflow-compute` once the free lane has run it); then #390 (the question section, option C, inside the "Question sets" tab), #397, #398; the free lane carries #379 and the new setup nightly.
