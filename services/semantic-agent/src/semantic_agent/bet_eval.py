@@ -1455,6 +1455,8 @@ def harness(model: str) -> str:
     Anthropic API, or ADK on OpenRouter."""
     if model.startswith("google-data-agent"):
         return "google-data-agent"
+    if model.startswith("claude-code-strict"):
+        return "claude-code-headless"
     if model.startswith("claude-code"):
         return "claude-code-subagent"
     if model.startswith("claude-"):
@@ -1467,6 +1469,8 @@ def session_kind(model: str) -> str:
     the batched subagents), or one batch of about 12 cases per Claude Code subagent (#374's first
     pass, 2026-11-04), or one case per fresh subagent (`fresh-<model>`, the matched rerun, and
     `subject-<model>`, the Bash-and-Read-only agent type, also one fresh subagent per case)."""
+    if model.startswith("claude-code-strict"):
+        return "fresh per run"
     if model.startswith(("claude-code (fresh-", "claude-code (subject-")):
         return "fresh per case"
     if model.startswith("claude-code"):

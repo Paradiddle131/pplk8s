@@ -51,6 +51,7 @@ ARMS = {
     "363_lightdash_agent.py": "custom-lightdash",
     "354_data_agent.py": "native-kc",  # or --arm <any of its AGENTS>
     "374_cc_agent.py": "cc-metricflow",  # recorded Claude Code subagent answers (#374)
+    "387_cc_strict.py": "cc-metricflow",  # or --arm cc-native-mcp: the strict headless runner's answers (#387)
 }
 
 

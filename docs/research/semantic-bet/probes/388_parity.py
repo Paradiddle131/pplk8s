@@ -82,7 +82,9 @@ def agents() -> int:
                     "tables": data_agent.published_tables(agent),
                     "verified_queries": len(context.get("exampleQueries") or []),
                     "glossary_terms": len(context.get("glossaryTerms") or []),
-                    "system_instruction_chars": len(context.get("systemInstruction") or ""),
+                    "system_instruction_chars": len(
+                        context.get("systemInstruction") or ""
+                    ),
                     "options": context.get("options") or {},
                     "context_keys": sorted(context),
                     "update_time": agent.get("updateTime"),
@@ -96,7 +98,9 @@ def first_question(case: str) -> str:
     import yaml  # the semantic agent's environment has it; --sample runs there
 
     for name in SET_FILES:
-        data = yaml.safe_load((ROOT / "services/semantic-agent/evals" / name).read_text())
+        data = yaml.safe_load(
+            (ROOT / "services/semantic-agent/evals" / name).read_text()
+        )
         for q in data["questions"]:
             if q["id"] == case:
                 return (q.get("turns") or [q])[0]["question"]
@@ -125,12 +129,18 @@ def sample(out: Path, pairs: list[str]) -> int:
             "status": status,
             "seconds": seconds,
             "census": census(stream),
-            "summary": {k: v for k, v in shaped.summarise(stream).items() if k != "texts"},
+            "summary": {
+                k: v for k, v in shaped.summarise(stream).items() if k != "texts"
+            },
             "stream": stream,
         }
         with out.open("a") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(json.dumps({k: row[k] for k in ("arm", "case", "status", "seconds", "census")}))
+        print(
+            json.dumps(
+                {k: row[k] for k in ("arm", "case", "status", "seconds", "census")}
+            )
+        )
     return 0
 
 
