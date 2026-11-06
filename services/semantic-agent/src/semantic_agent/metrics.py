@@ -386,14 +386,21 @@ class MetricQuery:
 
 @cache
 def engine():  # -> MetricFlowEngine
-    """MetricFlow's engine on the dbt project, set up as the mf CLI sets it up (about 1 s)."""
+    """MetricFlow's engine on the dbt project, set up as the mf CLI sets it up (about 1 s); on
+    BigQuery, its SQL has reserved-word names quoted, which MetricFlow leaves bare (#322)."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
     from metricflow.engine.metricflow_engine import MetricFlowEngine
+    from metricflow.protocols.sql_client import SqlEngine
 
     config = CLIConfiguration()
     config.setup(dbt_project_path=project_dir(), dbt_profiles_path=project_dir())
+    sql_client = config.sql_client
+    if sql_client.sql_engine_type is SqlEngine.BIGQUERY:
+        from semantic_agent.bigquery_sql import QuotingSqlClient
+
+        sql_client = QuotingSqlClient(sql_client)
     return MetricFlowEngine(
-        semantic_manifest_lookup=config.semantic_manifest_lookup, sql_client=config.sql_client
+        semantic_manifest_lookup=config.semantic_manifest_lookup, sql_client=sql_client
     )
 
 
