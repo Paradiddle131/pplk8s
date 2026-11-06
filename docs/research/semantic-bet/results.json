@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T16:31Z",
+ "written": "2026-11-06T16:32Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -3959,31 +3959,31 @@
    "harness": "claude-code-subagent",
    "session": "shared per batch",
    "rung": 4,
-   "cases": 41,
+   "cases": 55,
    "of_cases": 55,
-   "runs": 41,
+   "runs": 55,
    "accuracy": [
-    0.439024390244,
-    0.292682926829,
-    0.585365853659
+    0.345454545455,
+    0.218181818182,
+    0.472727272727
    ],
    "confident_wrong": [
-    0.073170731707,
-    0.0,
-    0.170731707317
+    0.127272727273,
+    0.054545454545,
+    0.218181818182
    ],
    "groups": {
     "composable": [
      0.0,
-     14
+     21
     ],
     "conversation": [
      0.75,
      8
     ],
     "covered": [
-     0.8181818181818182,
-     22
+     0.8260869565217391,
+     23
     ],
     "trap": [
      1.0,
@@ -3991,19 +3991,36 @@
     ],
     "uncovered": [
      0.0,
-     5
+     11
     ]
    },
-   "pass_all": 0.43902439024390244,
+   "pass_all": 0.34545454545454546,
    "outcomes": {
-    "right": 18,
+    "right": 19,
     "unclear": 2,
-    "wrong": 16,
-    "confident-wrong": 3,
-    "declined": 2
+    "wrong": 24,
+    "confident-wrong": 7,
+    "declined": 3
    },
-   "model_calls": 45,
-   "new": {},
+   "model_calls": 59,
+   "new": {
+    "all": [
+     0.07142857142857142,
+     14
+    ],
+    "composable": [
+     0.0,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.0,
+     6
+    ]
+   },
    "carried_runs": 41
   },
   {
@@ -5855,17 +5872,17 @@
    "set": "hard-v2",
    "arm": "cc-metricflow",
    "model": "claude-code (sonnet)",
-   "cases": 41,
-   "runs": 41,
+   "cases": 55,
+   "runs": 55,
    "accuracy": [
-    -0.50406504065,
-    -0.658536585366,
-    -0.349593495935
+    -0.593939393939,
+    -0.727272727273,
+    -0.460606060606
    ],
    "confident_wrong": [
-    0.073170731707,
-    0.0,
-    0.170731707317
+    0.127272727273,
+    0.054545454545,
+    0.218181818182
    ],
    "worth": false
   },
