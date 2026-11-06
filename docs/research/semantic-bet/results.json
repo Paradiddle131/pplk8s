@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T02:20Z",
+ "written": "2026-11-06T02:34Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -2329,6 +2329,53 @@
   },
   {
    "set": "hard",
+   "arm": "custom-toolbox",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 43,
+   "accuracy": [
+    0.395348837209,
+    0.255813953488,
+    0.53488372093
+   ],
+   "confident_wrong": [
+    0.162790697674,
+    0.06976744186,
+    0.279069767442
+   ],
+   "groups": {
+    "conversation": [
+     0.125,
+     8
+    ],
+    "covered": [
+     0.4583333333333333,
+     24
+    ],
+    "trap": [
+     0.3333333333333333,
+     6
+    ],
+    "uncovered": [
+     0.3157894736842105,
+     19
+    ]
+   },
+   "pass_all": 0.3953488372093023,
+   "outcomes": {
+    "confident-wrong": 7,
+    "right": 17,
+    "declined": 14,
+    "wrong": 5
+   },
+   "model_calls": 82
+  },
+  {
+   "set": "hard",
    "arm": "native-mcp",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "harness": "adk-openrouter",
@@ -3727,6 +3774,24 @@
     0.0,
     0.0,
     0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "custom-toolbox",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.550387596899,
+    -0.697674418605,
+    -0.403100775194
+   ],
+   "confident_wrong": [
+    0.162790697674,
+    0.06976744186,
+    0.279069767442
    ],
    "worth": false
   },
