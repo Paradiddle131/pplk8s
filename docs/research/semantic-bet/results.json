@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T10:06Z",
+ "written": "2026-11-06T10:12Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4517,49 +4517,70 @@
    "harness": "google-data-agent",
    "session": "fresh per run",
    "rung": 1,
-   "cases": 43,
+   "cases": 58,
    "of_cases": 58,
-   "runs": 128,
+   "runs": 143,
    "accuracy": [
-    0.883720930233,
-    0.782945736434,
-    0.968992248062
+    0.913793103448,
+    0.83908045977,
+    0.977011494253
    ],
    "confident_wrong": [
-    0.007751937984,
+    0.005747126437,
     0.0,
-    0.023255813953
+    0.01724137931
    ],
    "groups": {
     "composable": [
-     0.9761904761904762,
-     14
+     0.9833333333333334,
+     20
     ],
     "conversation": [
      0.4166666666666667,
      8
     ],
     "covered": [
-     0.8055555555555555,
-     24
+     0.8133333333333332,
+     25
     ],
     "trap": [
      1.0,
-     6
+     7
     ],
     "uncovered": [
      1.0,
-     5
+     13
     ]
    },
-   "pass_all": 0.8604651162790697,
+   "pass_all": 0.896551724137931,
    "outcomes": {
-    "right": 113,
+    "right": 128,
     "wrong": 14,
     "confident-wrong": 1
    },
-   "model_calls": 138,
-   "new": {},
+   "model_calls": 153,
+   "new": {
+    "all": [
+     1.0,
+     15
+    ],
+    "composable": [
+     1.0,
+     6
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "trap": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     1.0,
+     8
+    ]
+   },
    "carried_runs": 128
   },
   {
