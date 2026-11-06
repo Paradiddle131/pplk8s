@@ -180,6 +180,7 @@ paid:
 #   source: the page that states the free tier.
 # Monitoring's read API bills time series returned past the first million a month per billing account; each metric
 # here is aggregated server-side into one or two series, so a run returns about 30, counted by its own entry.
+# usage_check.py adds one line of its own, from `caps`: today's billed bytes against the daily query fence (#369).
 usage:
   - {name: BigQuery queries, api: bigquery.googleapis.com, free: 1099511627776, unit: bytes, window: month, metric: bigquery.googleapis.com/query/statement_scanned_bytes_billed, source: https://cloud.google.com/bigquery/pricing#free-usage-tier}
   - {name: BigQuery storage, api: bigquery.googleapis.com, free: 10737418240, unit: bytes, window: now, metric: bigquery.googleapis.com/storage/stored_bytes, source: https://cloud.google.com/bigquery/pricing#free-usage-tier}

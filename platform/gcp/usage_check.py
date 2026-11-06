@@ -1,6 +1,7 @@
 """This month's usage of each free tier on the lab project, from sources minutes behind (#313).
 
-`make gcp-usage-check`: one line per free-path.yaml `usage` entry: used, free tier, share, source.
+`make gcp-usage-check`: one line per free-path.yaml `usage` entry: used, free tier, share, source; and one for
+BigQuery's daily query fence (`caps.bigquery_query_mib_per_day`), today's billed bytes against it (#369).
 Exit 0: every measured tier at or below `--share` percent of its free amount, or below its entry's own `share`.
 Exit 1: one or more past it (a tier of 0, a SKU with no free tier, fails on any use).
 Exit 3: a source could not be read: nothing is proven, so no live GCP work (as `make gcp-cost-check`'s 3).
@@ -44,6 +45,16 @@ BILLING_TZ = ZoneInfo("America/Los_Angeles")
 GAUGE_LOOKBACK = dt.timedelta(days=7)
 MONITORING = "https://monitoring.googleapis.com/v3"
 WINDOWS = ("month", "day", "now")
+# BigQuery's daily query fence (#369, #370): a custom quota on the bytes a day's queries bill, for the project and
+# for each user at the same value (so the project's binds first), reset at 00:00 Pacific. Measured by the metric
+# the monthly tier reads, which tracks the quota's own counter (`serviceruntime.googleapis.com/quota/rate/net_usage`
+# for `bigquery.googleapis.com/quota/query/usage`: 4,940 MiB against 4,960 MiB on 2026-11-06). It fails past
+# FENCE_SHARE, which leaves a tenth of the fence (20 GiB at 0.2 TiB) for the cost check's own query (its cap
+# is 100 MiB, cost-check.sh) and whatever is in flight: a spent fence refuses that query too.
+FENCE_QUOTAS = ("QueryUsagePerDay", "QueryUsagePerUserPerDay")
+FENCE_METRIC = "bigquery.googleapis.com/query/statement_scanned_bytes_billed"
+FENCE_SHARE = 90.0
+FENCE_SOURCE = "https://cloud.google.com/bigquery/docs/custom-quotas"
 READS = ("artifact_registry_bytes", "scheduler_jobs", "secret_versions")
 
 
@@ -77,6 +88,9 @@ class Tier:
     warn: str | None = (
         None  # why this reading only warns: past its limit it is WARN, never OVER
     )
+    fence: tuple[
+        str, ...
+    ] = ()  # the quotas this tier is: past `free` they refuse the work, not bill it
 
 
 @dataclasses.dataclass(frozen=True)
@@ -91,8 +105,31 @@ class Line:
         return share(self.used, self.tier.free)
 
 
+def fence_tier(spec: dict) -> Tier | None:
+    """The daily query fence from free-path.yaml's `caps`, in bytes, or None where no cap is set."""
+    mib = (spec.get("caps") or {}).get("bigquery_query_mib_per_day")
+    if mib is None:
+        return None
+    if not isinstance(mib, int) or mib <= 0:
+        raise ValueError(
+            f"caps.bigquery_query_mib_per_day: {mib!r} is not a positive MiB count"
+        )
+    return Tier(
+        name="BigQuery daily query fence",
+        api="bigquery.googleapis.com",
+        free=float(mib * 2**20),
+        unit="bytes",
+        window="day",
+        source=FENCE_SOURCE,
+        metrics=(FENCE_METRIC,),
+        share=FENCE_SHARE,
+        fence=FENCE_QUOTAS,
+    )
+
+
 def tiers(spec: dict) -> list[Tier]:
-    """free-path.yaml's `usage` entries as tiers; a malformed entry is a ValueError naming it."""
+    """free-path.yaml's `usage` entries as tiers, then its daily query fence; a malformed entry is a ValueError
+    naming it."""
     out = []
     for entry in spec.get("usage") or []:
         metric = entry.get("metric")
@@ -134,7 +171,8 @@ def tiers(spec: dict) -> list[Tier]:
                 f"{tier.name}: its own share is a percent in (0, 100], not {tier.share}"
             )
         out.append(tier)
-    return out
+    fence = fence_tier(spec)
+    return out + [fence] if fence else out
 
 
 def window_start(window: str, now: dt.datetime) -> dt.datetime:
@@ -259,7 +297,26 @@ def measure(gcp: Gcp, project: str, region: str, tier: Tier, now: dt.datetime) -
         return Line(
             tier, "info", used, detail=f"{how}; {tier.note}" if tier.note else how
         )
+    if tier.fence:
+        how += f"; the quotas {' and '.join(tier.fence)}"
     return Line(tier, "ok", used, detail=how)
+
+
+def spent(line: Line) -> bool:
+    """A fence used up: BigQuery refuses every query until it resets."""
+    return (
+        bool(line.tier.fence)
+        and line.used is not None
+        and line.used >= (line.tier.free or 0)
+    )
+
+
+def next_day(now: dt.datetime) -> dt.datetime:
+    """The next 00:00 Pacific, in UTC: when the daily quotas reset."""
+    tomorrow = now.astimezone(BILLING_TZ).date() + dt.timedelta(days=1)
+    return dt.datetime.combine(tomorrow, dt.time(), tzinfo=BILLING_TZ).astimezone(
+        dt.UTC
+    )
 
 
 def judge(lines: list[Line], threshold: float) -> tuple[list[Line], int]:
@@ -336,6 +393,12 @@ def run(
     out += [render(line) for line in lines]
     over = [line.tier.name for line in lines if line.status == "OVER"]
     unknown = [line.tier.name for line in lines if line.status == "UNKNOWN"]
+    for line in lines:
+        if spent(line):
+            out.append(
+                f"gcp-usage-check: FAIL: {line.tier.name} ({', '.join(line.tier.fence)}) is spent: BigQuery refuses "
+                f"every query, the cost check's included, until 00:00 Pacific ({rfc3339(next_day(now))})"
+            )
     if code == 1:
         out.append(f"gcp-usage-check: FAIL: past its limit: {', '.join(over)}")
     if unknown:

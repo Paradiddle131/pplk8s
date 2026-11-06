@@ -440,3 +440,74 @@ def test_every_enabled_api_with_usage_charges_has_an_entry():
 def test_a_malformed_entry_is_refused(bad, message):
     with pytest.raises(ValueError, match=message):
         uc.tiers(spec_of(entry(**bad)))
+
+
+# The daily query fence (#369): today's billed bytes against `caps.bigquery_query_mib_per_day`.
+
+FENCE = {"caps": {"bigquery_query_mib_per_day": 100}}  # 100 MiB a day
+MIB = 2**20
+
+
+def fenced(used_mib):
+    return FakeGcp(metrics={uc.FENCE_METRIC: used_mib * MIB})
+
+
+def test_the_fence_is_free_path_yamls_cap_in_bytes_and_read_by_the_day():
+    fence = next(t for t in uc.tiers(SPEC) if t.fence)
+    assert fence.free == SPEC["caps"]["bigquery_query_mib_per_day"] * MIB
+    assert fence.window == "day"
+    assert fence.fence == ("QueryUsagePerDay", "QueryUsagePerUserPerDay")
+    assert uc.tiers({"usage": []}) == []  # no cap, no fence line
+
+
+def test_todays_bytes_are_summed_since_midnight_pacific():
+    gcp = fenced(1)
+    lines, code = run(gcp, FENCE)
+    params = next(p for url, p in gcp.calls if url.endswith("/timeSeries"))
+    assert params["interval.startTime"] == "2026-11-02T08:00:00Z"
+    assert params["filter"] == f'metric.type = "{uc.FENCE_METRIC}"'
+    assert code == 0
+    assert "BigQuery daily query fence" in lines[1]
+    assert "1.00 MiB of 100.00 MiB today" in lines[1]
+    assert "QueryUsagePerDay and QueryUsagePerUserPerDay" in lines[1]
+
+
+def test_the_fence_fails_past_its_share_before_it_is_spent():
+    assert run(fenced(90), FENCE)[1] == 0
+    lines, code = run(fenced(91), FENCE)
+    assert code == 1
+    assert lines[-1] == (
+        "gcp-usage-check: FAIL: past its limit: BigQuery daily query fence"
+    )
+    assert not any("is spent" in line for line in lines)
+
+
+def test_a_spent_fence_is_named_with_its_reset():
+    lines, code = run(fenced(100), FENCE)
+    assert code == 1
+    assert (
+        "gcp-usage-check: FAIL: BigQuery daily query fence (QueryUsagePerDay, "
+        "QueryUsagePerUserPerDay) is spent: BigQuery refuses every query, the cost "
+        "check's included, until 00:00 Pacific (2026-11-03T08:00:00Z)"
+    ) in lines
+
+
+def test_the_reset_is_the_next_midnight_pacific_across_daylight_time():
+    # 2026-11-01 is 25 hours long in Pacific time: daylight time ends at 02:00 PDT.
+    assert uc.next_day(dt.datetime(2026, 11, 1, 7, 30, tzinfo=UTC)) == dt.datetime(
+        2026, 11, 2, 8, tzinfo=UTC
+    )
+    assert uc.next_day(NOW) == dt.datetime(2026, 11, 3, 8, tzinfo=UTC)
+
+
+def test_the_share_leaves_room_for_the_cost_checks_own_query():
+    cost_check = (GCP / "cost-check.sh").read_text().splitlines()
+    cap = int(next(line[4:] for line in cost_check if line.startswith("cap=")))
+    fence = next(t for t in uc.tiers(SPEC) if t.fence)
+    assert fence.free * (100 - fence.share) / 100 >= 10 * cap
+
+
+@pytest.mark.parametrize("bad", [0, -1, "lots"])
+def test_a_malformed_fence_is_refused(bad):
+    with pytest.raises(ValueError, match="bigquery_query_mib_per_day"):
+        uc.tiers({"caps": {"bigquery_query_mib_per_day": bad}})
