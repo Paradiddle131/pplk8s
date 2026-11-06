@@ -576,8 +576,13 @@ def redact_faults(dry: bool = False) -> int:
         setup, model, name = _parts(path.stem)
         for line in path.read_text().splitlines():
             row = json.loads(line)
-            if not row["audit"]["tools_ok"]:
-                failed[(setup, model, name, row["case"], row["run"])] = row["audit"]
+            # The check as it stands now, from the recorded calls (a harness-refused call is no fault), plus the
+            # init check recorded at the time.
+            outside = bet_outside(setup, row["turns"])
+            if outside or not row["audit"]["init_tools_ok"]:
+                failed[(setup, model, name, row["case"], row["run"])] = {
+                    "outside": outside
+                }
     rows = []
     for setup, model, name, case, run in failed:
         log = RESEARCH / f"{SETS[name][1]}{setup}.jsonl"
@@ -603,11 +608,43 @@ def redact_faults(dry: bool = False) -> int:
     print(
         f"387: {len(failed)} recorded runs failed the tool check; {len(rows)} logged and not yet redacted"
     )
+    print(
+        f"387: {mismatched()} strict runs in force carry another run's or another set's recording"
+    )
     if rows and not dry:
         with (RESEARCH / OVERLAY).open("a") as out:
             for row in rows:
                 out.write(json.dumps(row) + "\n")
     return 0
+
+
+def bet_outside(setup: str, turns: Sequence[dict[str, Any]]) -> list[str]:
+    """semantic_agent.bet_tools.outside on recorded turns: the calls outside the setup's tools, refused ones left out."""
+    from semantic_agent.bet_tools import outside
+
+    return outside(setup, turns)
+
+
+def mismatched() -> int:
+    """Logged strict runs (through the overlay) whose answer text is not their own set's recording of that run."""
+    from semantic_agent.bet_eval import read_log
+
+    def norm(texts: Sequence[str]) -> list[str]:
+        return [" ".join(t.split()) for t in texts]
+
+    bad = 0
+    for path in sorted((OUT / "answers").glob("*.jsonl")):
+        setup, model, name = _parts(path.stem)
+        own = {
+            (r["case"], r["run"]): norm([t["answer"] for t in r["turns"]])
+            for r in map(json.loads, path.read_text().splitlines())
+        }
+        for r in read_log(RESEARCH / f"{SETS[name][1]}{setup}.jsonl"):
+            if r["model"] == f"claude-code-strict ({model})":
+                bad += own.get((r["case"], r["run"])) != norm(
+                    [t["text"] for t in r["turns"]]
+                )
+    return bad
 
 
 def _parts(stem: str) -> tuple[str, str, str]:
