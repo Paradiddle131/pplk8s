@@ -60,3 +60,12 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none.
 - The #335 watch line for the later read is in `watch.md` (catalog MCP `compile_query` still 404; PyPI versions unchanged).
 - Next: the 00:07Z wake on 2026-11-07 starts `free_lane.sh` with `backlog` (the judge on about 265 unclear turns, the carry), then `baseline` frozen (against 76 cases), `baseline` hard, `custom-lightdash`, then `hard-v2` at k = 1.
+
+## 2026-11-06, 2026-11-06T15:58Z (the epic #375 session after the re-run wake: no second lane)
+
+- Free count 991 of 1,000 at the start (read from `/api/v1/key`), and the train's head (527861e, 15:53:57Z) was 4 minutes old from the re-run scheduled wake: by the lane guard, no second lane, no model call, no gate needed.
+- The scheduled task's re-run (15:52:59Z) started and finished as `SUCCEEDED` with the two repositories added, so the setup failure of the night's firing should not recur; its next firing is 2026-11-07T00:07Z.
+- Passes touched: none; no log changed and the report was not rebuilt.
+- #379 stays open (the free-model arms are not whole on `hard-v2` at k = 3), so #380 does not start; #381 waits for the owner's go on #380.
+- Anomalies: none.
+- Next: the 00:07Z wake on 2026-11-07 runs `free_lane.sh` from `backlog` (the judge on about 265 unclear turns, about 530 requests), then `baseline` frozen (against 76 cases), `baseline` hard, `custom-lightdash`, then `bet_carry` and `hard-v2` at k = 1; #379 needs about four daily quotas in all.
