@@ -64,7 +64,7 @@ DESC = {
     "native-graph": "Google's data agent with a property graph and its measures beside the tables.",
     "native-mcp": "Our ADK agent calling Google's Knowledge Catalog and BigQuery MCP servers.",
     "custom-toolbox": "Our ADK agent on generated MCP Toolbox tools over table functions.",
-    "custom-metricflow": "Our ADK agent on MetricFlow tools; it declines what no metric covers.",
+    "custom-metricflow": "Our ADK agent on MetricFlow tools, told to answer only through the metrics.",
     "custom-lightdash": "Our ADK agent with one tool on Lightdash's free metric query API.",
     "custom-hybrid": "MetricFlow tools first, then a read-only SQL fallback that says so.",
     "cc-metricflow": "The same MetricFlow tools called by a Claude Code subagent; another harness, shown for comparison only.",
@@ -117,9 +117,16 @@ TERMS = [
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
     ("partial", "Partial pass", "A pass with fewer questions than the set, or fewer than three runs per question."),
     ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
-    ("frozen", "Frozen set", "The first question set, fixed before any setup was scored."),
-    ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it; it detects only larger gaps."),
+    ("exact", "Exact bound", "When every run of every question is right, or none is, the bootstrap has no spread; the page then gives the exact two-sided 95% (Clopper-Pearson) bound over the questions instead."),
+    ("frozen", "Frozen set", "The first question set, fixed before any setup was scored; its uncovered questions are medians, percentiles, times between events and weather."),
+    ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it: hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), and its uncovered questions are mostly ratios and differences of two measures. It detects only larger gaps."),
 ]
+# What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
+UNCOVERED_KIND = {
+    "frozen": "Its uncovered questions: medians, percentiles, times between events, weather.",
+    "hard": "Its uncovered questions: mostly ratios and differences of two measures.",
+}
+FEW_QUESTIONS = 20  # a pillar figure resting on fewer questions than this reads only large gaps
 FREE = "nvidia/nemotron-3.5-super-vl:free"
 MIN_CASES_TO_PLOT = 5
 OUTCODE = {"right": "0", "declined": "1", "wrong": "2", "unclear": "3", "confident-wrong": "4"}
@@ -288,6 +295,15 @@ def paired(pc_a, pc_b, cases, what, seed):
     return (r + [len(common)]) if r else None
 
 
+def exact(iv, n):
+    """The two-sided 95% Clopper-Pearson interval over n questions, when a bootstrap interval has
+    collapsed because every question's share is 0 or every one is 1; None otherwise."""
+    if not iv or not n or iv[1] != iv[2] or iv[0] not in (0, 1):
+        return None
+    b = 0.025 ** (1.0 / n)
+    return [b, 1.0] if iv[0] == 1 else [0.0, 1.0 - b]
+
+
 def pct(x):
     return round(100 * x)
 
@@ -412,6 +428,7 @@ def build(results_path, log_dir, sets_dir, out_path):
                 "major": a["cases"] < of or a["runs"] < 0.9 * expected,
                 "plotted": a["cases"] >= MIN_CASES_TO_PLOT, "example": example,
                 "managedBest": a["arm"] == mbr[0] and a["model"] == mbr[1],
+                "exact": {k: exact(a[f], a["cases"]) for k, f in (("acc", "accuracy"), ("cw", "confident_wrong")) if exact(a[f], a["cases"])},
                 "step2": step2.get((st, a["arm"], a["model"])), "units": units, "_pc": pc,
             })
         for arm in {r["arm"] for r in rows}:
@@ -523,12 +540,15 @@ def make_pillars(st, rows, ids, groups, floor, mf):
             v = [share(r["_pc"][c], what) for c in cs if c in r["_pc"]]
             return sum(v) / len(v) if v else None
         if key == "uncovered" and mf is not None and mf is not lead[0]:
-            contrast = ("MetricFlow, which declines them by design", mean_of(mf))
+            contrast = ("MetricFlow on the free model", mean_of(mf))
         else:
             contrast = ("the bare agent with tables only", mean_of(floor))
+        runs = sum(len(lead[0]["_pc"][c]) for c in cs if c in lead[0]["_pc"])
         out.append({"title": title, "group": key, "what": what, "n": len(cs), "why": why,
+                    "kind": UNCOVERED_KIND.get(st) if key == "uncovered" else None,
                     "lead": {"id": lead[0]["id"], "arm": lead[0]["arm"], "model": lead[0]["modelLabel"],
-                             "iv": lead[1], "partial": lead[0]["partial"]},
+                             "iv": lead[1], "partial": lead[0]["partial"], "q": lead[2], "runs": runs,
+                             "exact": exact(lead[1], lead[2]), "few": lead[2] < FEW_QUESTIONS},
                     "tied": tied, "contrast": [contrast[0], contrast[1]] if contrast[1] is not None else None})
     return out
 
@@ -540,10 +560,10 @@ def make_parts(st, rows, mb, floor, mf):
         return pct(v[0]) if v else None
     P = {"label": set_label(st), "n": max((r["of"] for r in rows), default=0)}
     if mb:
-        P["mb"] = {"name": "%s on %s" % (mb["arm"], mb["modelLabel"]), "acc": mb["acc"], "cw": mb["cw"],
+        P["mb"] = {"name": "%s on %s" % (mb["arm"], mb["modelLabel"]), "acc": mb["acc"], "cw": mb["cw"], "ex": mb["exact"],
                    "unc": g(mb, "uncovered"), "cov": g(mb, "covered")}
     if mf:
-        P["mf"] = {"acc": mf["acc"], "cw": mf["cw"], "cov": g(mf, "covered"), "trap": g(mf, "trap"), "unc": g(mf, "uncovered")}
+        P["mf"] = {"acc": mf["acc"], "cw": mf["cw"], "ex": mf["exact"], "cov": g(mf, "covered"), "trap": g(mf, "trap"), "unc": g(mf, "uncovered")}
         if mf["step2"]:
             P["mf"]["vsBest"] = mf["step2"]["accuracy"]
             P["mf"]["vsBestCw"] = mf["step2"].get("confident_wrong")
@@ -584,7 +604,8 @@ def make_abstract(sets, order):
         a = P["mf"].get("vsBest")
         c = P["mf"].get("vsBestCw")
         rows.append({"set": s, "label": P["label"], "n": P["n"], "mb": P["mb"]["name"], "mbArm": P["mb"]["name"].split(" on ")[0],
-                     "mbAcc": P["mb"]["acc"], "mbCw": P["mb"]["cw"], "mfAcc": P["mf"]["acc"], "mfCw": P["mf"]["cw"], "d": a, "dCw": c})
+                     "mbAcc": P["mb"]["acc"], "mbCw": P["mb"]["cw"], "mfAcc": P["mf"]["acc"], "mfCw": P["mf"]["cw"], "d": a, "dCw": c,
+                     "mbEx": P["mb"]["ex"], "mfEx": P["mf"]["ex"]})
         if a:
             (below if a[2] < 0 else above if a[1] > 0 else tie).append(P["label"].lower())
         if c:
@@ -630,8 +651,8 @@ def make_twins(sets, order):
         head = ("keeps level with the best managed agent on covered and hidden-rule questions" if lvl else
                 "keeps level with the best managed agent on hidden-rule questions" if trap_lvl else
                 "trails or ties the best managed agent on covered and hidden-rule questions")
-        tail = (", and falls behind on uncovered ones on every set, where it declines by design." if unc_below else
-                ", and on uncovered questions, where it declines by design, it is not behind on every set.")
+        tail = (", and falls behind on uncovered ones, which no single metric answers, on every set." if unc_below else
+                ", and on uncovered questions, which no single metric answers, it is not behind on every set.")
         T["mapLead"] = "On the free model, MetricFlow " + head + tail
     st = T["strip"]
     if st:
@@ -664,7 +685,7 @@ def combine(sets, order):
         if not rel or None in rel:
             continue
         if not m:
-            m.append("On the free model, MetricFlow is %s the best managed agent on covered questions, %s it on hidden-rule ones and %s on uncovered ones, where it declines by design (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
+            m.append("On the free model, MetricFlow is %s the best managed agent on covered questions, %s it on hidden-rule ones and %s on uncovered ones, which no single metric answers (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
         else:
             m.append("on the %s: %s, %s and %s" % (P["label"].lower(), rel[0], rel[1], rel[2]))
     S["map"] = "; ".join(m) + "." if m else "Share of runs right per question type, per setup."

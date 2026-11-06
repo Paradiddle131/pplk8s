@@ -59,6 +59,8 @@ p { margin: 0 0 1em; }
 /* winners band */
 .winners { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 6px; }
 .pillar { border-top: 2px solid var(--ink); padding-top: 10px; }
+/* the pillars share rows (title, why, one per set), so each set's figure sits on one line across the band */
+@supports (grid-template-rows: subgrid) { .pillar { display: grid; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
 .pillar h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; }
 .pillar .why { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
 .pset { border-top: 1px solid var(--rule); padding: 8px 0 8px; font-family: var(--label); font-size: 14px; line-height: 1.4; }
@@ -66,8 +68,14 @@ p { margin: 0 0 1em; }
 .pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
 .pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
 .pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
-.pset .who { font-size: 14.5px; color: var(--ink); }
-.pset .who .id { font-size: 12.5px; }
+.pset .who { font-size: 14.5px; color: var(--ink); margin: 1px 0 1px; }
+.pset .who .by { color: var(--ink-3); font-size: 13px; margin-right: 2px; }
+.pset .who .id { font-size: 13px; font-weight: 600; }
+.pset .pn { color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pset .pn .few { color: var(--ink-3); }
+.pillar .lchg { display: block; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
+.pset .kind { color: var(--ink-3); font-size: 13px; }
+#w-diff { margin: 0 0 8px; color: var(--ink-2); }
 .pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
 .winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
 
@@ -141,15 +149,17 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .tw .note { color: var(--ink-3); font-size: 13px; }
 .live { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 8px 0 0; min-height: 1.4em; }
 .glider { cursor: ew-resize; outline: none; touch-action: none; }
-.glider .gl { stroke: var(--ink-2); stroke-width: 1.5; transition: stroke-width .12s ease-out; }
+.glider .gl { stroke: var(--ink-2); stroke-width: 1.5; }
 .glider .gh { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
 .glider.home .gh { fill: var(--ink); }
-.glider.caught .gl { stroke: var(--ink); stroke-width: 3; }
-.glider .gv { display: none; font-weight: 600; fill: var(--ink); }
-.glider.active .gv, .glider:focus-visible .gv { display: block; }
+.gtrack { cursor: ew-resize; touch-action: none; }
+/* the live value: beside the top handle, on a paper halo so grid and rules stay behind it */
+.glider .gv { visibility: hidden; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.glider.active .gv, .glider:focus-visible .gv, .glider:not(.home) .gv { visibility: visible; }
 .glider:focus-visible .gh { stroke: var(--mf); stroke-width: 2.5; }
 .pm { transition: opacity .12s ease-out; }
-.pm.gdim { opacity: .15; }
+.pm.gdim, .lab.gdim { opacity: .15; }
+.lab { transition: opacity .12s ease-out; }
 .tip.pinned { pointer-events: auto; user-select: text; -webkit-user-select: text; padding-right: 30px; border-color: var(--ink-2); }
 .tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
 .tip.pinned .tipclose { display: block; }
@@ -242,7 +252,7 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
   table.map td.setup { min-width: 158px; }
 }
-@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .glider .gl { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab { transition: none; } }
 </style>
 
 <script>
@@ -276,6 +286,7 @@ window.REPORT = D;
 
   <section aria-labelledby="w-h">
     <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
+    <p class="winners-note" id="w-diff" hidden></p>
     <div class="winners" id="winners"></div>
     <p class="winners-note">Each setup enters on the model that decides for it; a setup with runs on Claude only waits, tagged pending in the tables.</p>
   </section>
@@ -348,6 +359,11 @@ window.REPORT = D;
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const P = (x) => Math.round(x * 100);
   const sg = (x) => { const v = Math.round(x * 100); return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v); };
+  // An interval as the page writes it: the bootstrap's [lo, hi]; or, when that has collapsed (every
+  // question all right, or none), the exact 95% bound over questions that build.py computed (ex),
+  // rounded outward and marked with the "exact" term.
+  const ivB = (v, ex) => (ex ? [Math.floor(ex[0] * 100 + 1e-9), Math.ceil(ex[1] * 100 - 1e-9)] : [P(v[1]), P(v[2])]);
+  const ivTxt = (v, ex) => { const b = ivB(v, ex); return `[${b[0]}, ${b[1]}]`; };
   const SETS = D.setOrder;
   const FAMS = ["da", "gt", "mf", "ref", "other"];
   const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
@@ -400,8 +416,8 @@ window.REPORT = D;
     const vf = r.vsFloor && r.vsFloor.acc ? `<dt>vs the floor</dt><dd>${sg(r.vsFloor.acc[0])} points [${sg(r.vsFloor.acc[1])}, ${sg(r.vsFloor.acc[2])}], paired</dd>` : "";
     return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}, ${esc(S(r.set).label.toLowerCase())}</h4>
       <p>${esc(r.desc)}</p>
-      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% [${P(r.acc[1])}, ${P(r.acc[2])}]</dd>
-      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% [${P(r.cw[1])}, ${P(r.cw[2])}]</dd>${s2}${vf}
+      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% ${ivTxt(r.acc, r.exact && r.exact.acc)}${r.exact && r.exact.acc ? `, exact bound over ${r.cases} questions` : ""}</dd>
+      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% ${ivTxt(r.cw, r.exact && r.exact.cw)}${r.exact && r.exact.cw ? `, exact bound over ${r.cases} questions` : ""}</dd>${s2}${vf}
       <dt>Ran</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${r.expected} runs${r.status === "pending" ? "; pending: deciding run" : ""}</dd>
       <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
   }
@@ -542,7 +558,8 @@ window.REPORT = D;
 
   /* ---------- text, winners ---------- */
   const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
-  const num = (v) => `<span class="n">${P(v[0])}%</span><span class="ivs">[${P(v[1])}, ${P(v[2])}]</span>`;
+  const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
+  const num = (v, ex) => `<span class="n">${P(v[0])}%</span><span class="ivs">${exIv(v, ex)}</span>`;
   const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
   function renderText() {
     $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
@@ -552,14 +569,14 @@ window.REPORT = D;
     const lines = [
       [`The ${term("managed-best", "managed best")}`, null, "grp"],
       ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
-      ["Right", (r) => num(r.mbAcc)], [term("confident-wrong"), (r) => num(r.mbCw)],
+      ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
       [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
-      ["Right", (r) => num(r.mfAcc)], [term("confident-wrong"), (r) => num(r.mfCw)],
+      ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
       [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
     ];
     $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
       lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
-      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets; each column is one question set.</p>` : "";
+      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
     $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the best managed agent</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
@@ -572,24 +589,50 @@ window.REPORT = D;
     $("#gloss").innerHTML = (D.terms || []).map((t) => `<dt id="term-${esc(t.key)}">${esc(t.label)}</dt><dd>${esc(t.text)}</dd>`).join("");
   }
   const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
+  // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
+  function pillarFig(p) {
+    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = `${L.q} question${L.q === 1 ? "" : "s"}`;
+    const what = p.what === "right" ? "right" : "confidently wrong";
+    let fig, nl;
+    if (L.exact) {
+      const b = ivB(iv, L.exact), all = iv[0] === 1;
+      fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
+      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}`;
+    } else {
+      fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
+      nl = `${qs}, ${runs}`;
+    }
+    if (L.few) nl += `<span class="few"> · few questions: reads only large gaps</span>`;
+    return { fig, nl };
+  }
   function renderWinners() {
     const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
-    $("#winners").innerHTML = titles.map((t) => {
+    const differs = [];
+    const html = titles.map((t) => {
       let why = "";
+      const leads = new Set(); let nSets = 0;
       const blocks = SETS.map((s) => {
         const p = S(s).pillars.find((x) => x.title === t);
         if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
         why = p.why;
-        const L = p.lead, iv = L.iv;
+        const L = p.lead; leads.add(L.id.split("|").slice(1).join("|")); nSets++;
         const tied = p.tied.length ? `${term("interval", "Tied within the interval")}: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} <span class="n">${P(x.v)}%</span>`).join(", ")}.` : `No setup ties it within the ${term("interval", "interval")}.`;
         const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, <span class="n">${P(p.contrast[1])}%</span>.</div>` : "";
+        const f = pillarFig(p);
         return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
-          <div class="lead"><span class="num">${P(iv[0])}%<small>[${P(iv[1])}, ${P(iv[2])}]</small></span><span class="who"><span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)}</span>` : ""}</span></div>
+          <div class="lead"><span class="num">${f.fig}</span></div>
+          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">partial: ${esc(L.partial)} over the whole set</span>` : ""}</div>
+          <div class="pn">${f.nl}</div>${p.kind ? `<div class="kind">${esc(p.kind)}</div>` : ""}
           <div class="tied">${tied}</div>${ctr}</div>`;
       }).join("");
       const pt = PILLAR_TERM[t];
-      return `<div class="pillar"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}</p>${blocks}</div>`;
+      const differ = nSets > 1 && leads.size > 1; differs.push(nSets > 1 ? differ : null);
+      return `<div class="pillar" style="grid-row:span ${2 + SETS.length}"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}@@DIFF${titles.indexOf(t)}@@</p>${blocks}</div>`;
     }).join("");
+    // "a different setup leads on each set": once for the band when it holds in every pillar, else per pillar
+    const multi = differs.filter((d) => d !== null), all = multi.length > 1 && multi.every(Boolean);
+    $("#winners").innerHTML = html.replace(/@@DIFF(\d+)@@/g, (m, i) => (!all && differs[+i] ? `<span class="lchg">A different setup leads on each set.</span>` : ""));
+    const wd = $("#w-diff"); wd.hidden = !all; wd.textContent = all ? "In every pillar, a different setup leads on each set." : "";
   }
 
   /* ---------- Figure 1: decision map, both sets ---------- */
@@ -643,7 +686,7 @@ window.REPORT = D;
             }).join("") + `</td>`;
           });
           ["acc", "cw"].forEach((k) => {
-            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>[${P(r[k][1])}, ${P(r[k][2])}]</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
+            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>${exIv(r[k], r.exact && r.exact[k])}</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
           });
           h += `</tr>`;
         });
@@ -735,7 +778,7 @@ window.REPORT = D;
     const rh = narrow ? 36 : 30, gh = 28, top = narrow ? 62 : 46;
     const L = narrow ? 132 : 330, gap = 40;
     // rows on a pixel layout (Plot's identity y): a header per family, then its setups
-    let y = top; const heads = [], rows = [], seq = [];
+    let y = top + (narrow ? 4 : 0); const heads = [], rows = [], seq = []; // narrow: room for the glider's value above the first header
     groups.forEach((g) => { const h = { f: g.f, y: y + 18 }; heads.push(h); seq.push(h); y += gh; g.keys.forEach((u) => { const q = { u, y: y + rh / 2 }; rows.push(q); seq.push(q); y += rh; }); });
     const H = y + 44;
     const pts = [];
@@ -783,6 +826,7 @@ window.REPORT = D;
       seq.forEach((q) => {
         if (!q.u) { const k = parts[0].C.take("h" + q.f); if (k.length) g.append(G({ "data-fam": q.f }, k)); return; }
         const u = q.u, kids = parts[0].C.take("l" + u.key);
+        kids.forEach((k) => k.classList.add("lab")); // the row's setup and model text: dims with the row under the gliders
         SETS.forEach((s) => {
           const r = rowOf(s, u.key); if (!r || !r.plotted) return;
           const inner = parts.flatMap((pt) => (pt.dx ? [G({ transform: `translate(${pt.dx},0)` }, pt.C.take("t" + r.id))] : pt.C.take("t" + r.id)));
@@ -792,11 +836,17 @@ window.REPORT = D;
       });
       return g;
     }
+    // A glider: its line and two handles, in a group moved along x; and, fixed, two track strips (the
+    // band of the top handle and the band of the axis) where a press moves the glider to that value.
+    // Its hit area is 28 px wide between the handles and 18 px at the handles, so a press in the bands
+    // a few pixels off the handle jumps there instead of grabbing it.
     function glider(pt) {
       const p = pt.p, mx = Math.round(p.max * 100), x0 = (pt.dx || 0) + pt.x.apply(0), x1 = (pt.dx || 0) + pt.x.apply(p.max);
-      return `<g class="glider" data-panel="${p.k}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
-        <rect class="ghit" x="0" y="${top - 10}" width="28" height="${H - 40 - top + 10 + 22}" fill="transparent"/><line class="gl" x1="0" x2="0" y1="${top - 4}" y2="${H - 40}"/>
-        <rect class="gh top" x="-6" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="-6" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="9" y="${top + 6}" style="font-size:12px"></text></g>`;
+      const strip = (y, h) => `<rect class="gtrack" data-panel="${p.k}" x="${x0 - 8}" y="${y}" width="${x1 - x0 + 16}" height="${h}" fill="transparent"/>`;
+      const rules = p.k === "acc" ? SETS.map((s) => byId(S(s).managedBest)).filter(Boolean).map((r) => r.acc[0] * 100) : [gHome("cw")];
+      return strip(top - 8, 18) + strip(H - 49, 30) + `<g class="glider" data-panel="${p.k}" data-rules="${rules.join(",")}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+        <rect class="ghit" x="0" y="${top + 10}" width="28" height="${H - 49 - top - 10}" fill="transparent"/><rect class="ghit" x="5" y="${top - 10}" width="18" height="22" fill="transparent"/><rect class="ghit" x="5" y="${H - 51}" width="18" height="22" fill="transparent"/><line class="gl" x1="14" x2="14" y1="${top - 4}" y2="${H - 40}"/>
+        <rect class="gh top" x="8" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="8" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="24" y="${top + 5}" style="font-size:12px"></text></g>`;
     }
     const finish = (svg, label) => { svg.setAttribute("aria-label", `${label} per setup and model, both question sets`); svg.style.width = "100%"; };
     el.innerHTML = "";
@@ -823,57 +873,84 @@ window.REPORT = D;
   }
 
   /* ---------- Figure 2's threshold gliders ---------- */
+  // Each glider moves in whole percent from 0 to its axis' end, with no snapping. Its home is the
+  // managed best: sitting exactly there, nothing is dimmed. The gliders off home make one joint
+  // filter: a row's set is out when it fails any of them, and an out set's marks dim in both panels;
+  // the row's setup and model text (every copy of it) dims when every one of its sets is out.
   const GL = { acc: null, cw: null }; // null: at home, the managed best
   function gHome(k) { const mb = byId(S(SETS[0]).managedBest); return mb ? Math.round(mb[k][0] * 100) : (k === "acc" ? 100 : 0); }
   const gVal = (k) => (GL[k] == null ? gHome(k) : GL[k]);
-  let glideRaf = 0, caughtT = 0;
+  const gMax = (k) => k === "acc" ? 100 : Math.round(+($(`#forest .glider[data-panel="${k}"]`) || { dataset: { max: 100 } }).dataset.max);
+  const beyond = (k, v, x) => (k === "acc" ? x * 100 < v - 1e-9 : x * 100 > v + 1e-9); // x: a share; v: the glider, in %
+  let glideRaf = 0;
   function applyGlide() {
     const root = $("#forest");
     ["acc", "cw"].forEach((k) => {
       const v = gVal(k), home = GL[k] == null;
-      root.querySelectorAll(`.pm[data-panel="${k}"]`).forEach((m) => { const mv = +m.dataset.v * 100; m.classList.toggle("gdim", !home && (k === "acc" ? mv < v - 1e-9 : mv > v + 1e-9)); });
       root.querySelectorAll(`.glider[data-panel="${k}"]`).forEach((g) => {
         const x0 = +g.dataset.x0, x1 = +g.dataset.x1, mx = +g.dataset.max;
         const x = x0 + (x1 - x0) * Math.max(0, Math.min(mx, v)) / mx;
         g.setAttribute("transform", `translate(${x - 14},0)`);
-        g.querySelector(".gl").setAttribute("x1", 14); g.querySelector(".gl").setAttribute("x2", 14);
-        g.querySelectorAll(".gh").forEach((h) => h.setAttribute("x", 8));
-        const t = g.querySelector(".gv"); t.textContent = `${v}%`; t.setAttribute("x", 23);
+        const t = g.querySelector(".gv"); t.textContent = `${v}%`;
+        // right of the top handle; on its left when it would leave the panel's frame or cross a
+        // managed-best rule there (and not on the left), so its halo never hides a rule it need not
+        const w = (t.getComputedTextLength ? t.getComputedTextLength() : 0) || 30;
+        const rx = (g.dataset.rules || "").split(",").filter(Boolean).map((r) => x0 + (x1 - x0) * +r / mx);
+        const hits = (a, b) => rx.some((r) => r > a - 2 && r < b + 2);
+        const R = [x + 10, x + 10 + w], Lf = [x - 10 - w, x - 10];
+        const flip = R[1] > x1 + 6 || (hits(R[0], R[1]) && !hits(Lf[0], Lf[1]) && Lf[0] >= x0 - 8);
+        t.setAttribute("x", flip ? 4 : 24); t.setAttribute("text-anchor", flip ? "end" : "start");
         g.classList.toggle("home", home); g.setAttribute("aria-valuenow", v); g.setAttribute("aria-valuetext", `${v}%${home ? ", the managed best" : ""}`);
       });
     });
+    const moved = ["acc", "cw"].filter((k) => GL[k] != null);
+    const isOut = (r) => moved.some((k) => beyond(k, GL[k], r[k][0]));
+    // a row's set: its marks in every panel dim when it fails any glider off home
+    root.querySelectorAll("[data-tip]").forEach((t) => { const r = byId(t.dataset.tip); const o = !!r && isOut(r); t.querySelectorAll(".pm").forEach((m) => m.classList.toggle("gdim", o)); });
+    // a row's text dims when every one of its sets is out
+    root.querySelectorAll(".mk[data-key]").forEach((row) => {
+      const rs = SETS.map((s) => rowOf(s, row.dataset.key)).filter((r) => r && r.plotted);
+      const out = moved.length > 0 && rs.length > 0 && rs.every(isOut);
+      row.querySelectorAll(":scope > .lab").forEach((l) => l.classList.toggle("gdim", out));
+    });
     const live = $("#glide-live"); if (!live) return;
-    if (GL.acc == null && GL.cw == null) { live.textContent = `Both thresholds sit at the managed best (${gVal("acc")}% right, ${gVal("cw")}% confidently wrong); drag a handle, or focus it and use the arrow keys, to dim the rows beyond it.`; return; }
-    const parts = [];
-    const count = (k, v) => SETS.map((s) => { const rs = S(s).rows.filter((r) => r.plotted); const n = rs.filter((r) => (k === "acc" ? r.acc[0] * 100 >= v - 1e-9 : r.cw[0] * 100 <= v + 1e-9)).length; return `${n} of ${rs.length} setup rows on the ${short(s)} set`; }).join(", ");
-    if (GL.acc != null) parts.push(`At or above ${GL.acc}% right: ${count("acc", GL.acc)}.`);
-    if (GL.cw != null) parts.push(`At or below ${GL.cw}% confidently wrong: ${count("cw", GL.cw)}.`);
-    live.textContent = parts.join(" ");
+    if (GL.acc == null && GL.cw == null) { live.textContent = `Both thresholds sit at the managed best (${gVal("acc")}% right, ${gVal("cw")}% confidently wrong); drag a handle or press on the axis, or focus a handle and use the arrow keys, to dim the rows beyond it.`; return; }
+    const conds = [GL.acc != null ? `at or above ${GL.acc}% right` : null, GL.cw != null ? `at or below ${GL.cw}% confidently wrong` : null].filter(Boolean).join(" and ");
+    const count = SETS.map((s) => { const rs = S(s).rows.filter((r) => r.plotted); return `${rs.filter((r) => !isOut(r)).length} of ${rs.length} setup rows on the ${short(s)} set`; }).join(", ");
+    const anyOut = SETS.some((s) => S(s).rows.some((r) => r.plotted && isOut(r)));
+    live.textContent = `${conds.charAt(0).toUpperCase() + conds.slice(1)}: ${count}${anyOut ? "; the others are dimmed in both panels" : "; none is dimmed"}.`;
   }
-  function setGlide(k, v, snap) {
-    const home = gHome(k), mx = k === "acc" ? 100 : Math.round(+($(`#forest .glider[data-panel="${k}"]`) || { dataset: { max: 100 } }).dataset.max);
-    v = Math.max(0, Math.min(mx, Math.round(v)));
-    const was = GL[k];
-    if (snap && Math.abs(v - home) <= 2) v = home;
-    GL[k] = v === home ? null : v;
-    if (snap && was != null && GL[k] == null) { document.querySelectorAll(`#forest .glider[data-panel="${k}"]`).forEach((g) => g.classList.add("caught")); clearTimeout(caughtT); caughtT = setTimeout(() => document.querySelectorAll("#forest .glider.caught").forEach((g) => g.classList.remove("caught")), 320); }
+  function setGlide(k, v) {
+    v = Math.max(0, Math.min(gMax(k), Math.round(v)));
+    GL[k] = v === gHome(k) ? null : v;
     if (!glideRaf) glideRaf = requestAnimationFrame(() => { glideRaf = 0; applyGlide(); });
   }
   function wireGliders(root) {
     root.querySelectorAll(".glider").forEach((g) => {
       const k = g.dataset.panel; const svg = g.ownerSVGElement;
       const valAt = (cx) => { const r = svg.getBoundingClientRect(); const vbw = svg.viewBox.baseVal.width || r.width; const x = (cx - r.left) * vbw / r.width; const x0 = +g.dataset.x0, x1 = +g.dataset.x1; return (x - x0) / (x1 - x0) * +g.dataset.max; };
-      g.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); g.classList.add("active"); g.focus({ preventScroll: true }); });
-      g.addEventListener("pointermove", (e) => { if (!g.hasPointerCapture(e.pointerId)) return; setGlide(k, valAt(e.clientX), true); });
-      const end = (e) => { if (g.hasPointerCapture && g.hasPointerCapture(e.pointerId)) g.releasePointerCapture(e.pointerId); g.classList.remove("active"); };
-      g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
-      g.addEventListener("click", (e) => e.stopPropagation());
+      // a drag keeps the grab offset, so a handle taken off-centre does not jump; the clamp lets it reach 0 and the end
+      const drag = (el, absolute) => {
+        let off = 0;
+        el.addEventListener("pointerdown", (e) => {
+          if (e.button) return;
+          e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId); g.classList.add("active"); g.focus({ preventScroll: true });
+          off = absolute ? 0 : valAt(e.clientX) - gVal(k);
+          if (absolute) setGlide(k, valAt(e.clientX));
+        });
+        el.addEventListener("pointermove", (e) => { if (el.hasPointerCapture(e.pointerId)) setGlide(k, valAt(e.clientX) - off); });
+        const end = (e) => { if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId); g.classList.remove("active"); };
+        el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+        el.addEventListener("click", (e) => e.stopPropagation());
+      };
+      drag(g, false);
+      root.querySelectorAll(`.gtrack[data-panel="${k}"]`).forEach((t) => { if (t.ownerSVGElement === svg) drag(t, true); });
       g.addEventListener("dblclick", (e) => { e.preventDefault(); GL[k] = null; applyGlide(); });
       g.addEventListener("keydown", (e) => {
-        const step = e.shiftKey ? 5 : 1;
-        if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setGlide(k, gVal(k) + step, false); }
-        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setGlide(k, gVal(k) - step, false); }
+        const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key];
+        if (step) { e.preventDefault(); setGlide(k, gVal(k) + step * (e.shiftKey && Math.abs(step) === 1 ? 5 : 1)); }
         else if (e.key === "Home") { e.preventDefault(); GL[k] = null; applyGlide(); }
+        else if (e.key === "End") { e.preventDefault(); setGlide(k, gMax(k)); }
       });
     });
   }

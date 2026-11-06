@@ -82,3 +82,68 @@ Build: `python3 build.py ../results.json`.
   - Hovering a mark lights only its own row band (and, in Figure 2, the same row in the other panel), as on the hand-drawn page.
   - Hover, pin, select, hold, move, close, Escape, the gliders (+1 to 2% with 43 rows dimmed, Shift+5 to 7% with 13, Home, a 40 px drag to 83% with 41 rows), the plate's hover and pin, both setup sections' own focus and tooltips, and the theme switch give the old page's results.
   - Contrast, computed from the rendered figures: text at least 5.56:1 (light) and 6.49:1 (dark); data marks at least 3.26:1 and 3.25:1. Under `prefers-reduced-motion` the transitions are 0 s and Plot adds no animation.
+
+## Feedback round 2026-11-05 night
+
+- Figure 2's gliders no longer snap.
+  Each moves in whole percent from 0 to its axis' end: by dragging a handle (the grab offset is kept, so a handle taken off-centre does not jump), by pressing in the band of the top handle or of the axis (the glider jumps there and follows the drag), and by keys: arrows ±1, Shift ±5, PageUp and PageDown ±10, Home to the managed best, End to the axis' end.
+  Sitting exactly on the managed best is the reset state: filled handles, nothing dimmed.
+  In the confident-wrong panel the bold light line in dark mode is the managed best's rule at 1%; the glider now sits at 0, left of it.
+  The hit area is 28 px wide between the handles and 18 px at the handles, so a press in the bands a few pixels off a handle jumps rather than grabs.
+- The gliders off home make one joint filter.
+  A row's set (frozen or hard) is out when it fails any glider off home, and an out set's marks dim in both panels, not only in the panel whose glider excluded it.
+  A row's setup and model text, each copy of it (one per panel in the stacked layout under 700 px), dims when every one of the row's sets is out, so in every SVG the text dims exactly when all of that row's marks there dim.
+  With one glider moved, its panel dims as before and the same sets dim in the other panel too.
+  Family headers never dim; the text uses the marks' opacity and 120 ms fade, none under reduced motion.
+  The live line counts the rows passing every active threshold, per set.
+- The glider's value sits beside its top handle on a 3 px paper halo (a text stroke).
+  It moves to the handle's left near the panel's end, and also when on the right it would cross a managed-best rule, so the halo never hides one.
+  It shows while dragging, while focused, and whenever the glider is off home.
+  Under 700 px the rows start 4 px lower, so the value clears the first family header.
+- The winners band shows the n behind each figure: the leader's questions and runs.
+  An interval with no spread (every run right, or none) is not shown as [100, 100] or [0, 0]: the page gives the exact two-sided 95% Clopper-Pearson bound over the questions (lower bound 0.025^(1/n) for n of n, upper bound 1 − 0.025^(1/n) for 0 of n), computed in `build.py`, rounded outward and marked with a glossary term, "Exact bound".
+  The same formatter serves the abstract table, the decision map's interval cells and the row tooltips; the paired differences keep their bootstrap.
+  A figure resting on fewer than 20 questions adds "few questions: reads only large gaps".
+  The pillars share grid rows (subgrid), so each set's figure sits on one line across the band; the note on what a set's uncovered questions are sits below the leader.
+  The leader is labelled and set bold, and its partial flag names its scope ("partial: 110 of 288 runs over the whole set"), apart from the pillar's own runs.
+  When a different setup leads on each set in every pillar, the band says so once above the pillars; otherwise each such pillar says it.
+  The frozen and hard terms say what each set's uncovered questions are.
+- The setup map, from 1180 px: the rungs and their setups are one list on the left, scrolling in its own column, and the map, its readout and legend sit on the right; both stay in view.
+  The section leaves the page column (up to 1456 px, centred, inside the 16 px gutters; the script sets the viewport width without its scrollbar).
+  The readout keeps the height of its longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves; the map takes the rest of the viewport's height, never under 78% of the 1148 px it has in the page column and never over its column's width; the legend comes last and is the first to go below the fold.
+  To keep the readout short, its facts run their names in, and one family's models read once ("Claude Code: Haiku; Sonnet; ...").
+  Measured in Chromium with overlay scrollbars, in the sticky state (map width against 1148 px; worst last readout line against the viewport's bottom, over every setup and rung):
+
+  | Viewport | Map | Readout |
+  | --- | --- | --- |
+  | 1280 × 800 | 895 px, 78.0% (the floor) | fits, 11 px to spare |
+  | 1280 × 900 | 986 px, 85.9% | fits, 46 px to spare |
+  | 1366 × 768 | 895 px, 78.0% (the floor) | 5 of 25 texts end up to 21 px below |
+  | 1440 × 900 | 1022 px, 89.0% | fits, 20 px to spare |
+  | 1920 × 1080 | 1194 px, 104.0% | fits, 77 px to spare |
+
+  At exactly 1180 px the map is 886 px, 77.2% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
+  Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
+- Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
+
+### Review, two rounds (an independent reviewer with its own Playwright scripts, old page d37d3bf against new)
+
+- Round 1, "fix first": at 400 px a row's text in one stacked panel dimmed for the other panel's glider; with both gliders moved, marks (per panel) and texts (joint) followed two rules; the setup map's readout fell below the fold at laptop heights (up to 145 px at 1366 by 768); the winners' figures did not line up across columns, and "a different setup leads" repeated in every pillar.
+  Decided: one joint filter everywhere, the readout's height reserved beside the list, the figures on shared grid rows and the repeated line said once.
+- Round 2, "ship": 0 violations of the joint filter in every SVG at every keyboard value and six two-glider pairs at 1280 and 400 px; every value reached by keyboard and by real mouse drag on both panels at both widths (the old page missed 92, 93, 95 and 96 on % right and 0, 2 and 3 on confident-wrong); 0 overlapping text boxes; the tab stops of Figures 2 to 6 unchanged (624, 600 and 717); numbers differ from the old page only in the exact bounds and the winners' new lines; no console errors, no horizontal scroll from 360 to 1920 px, classic 15 px scrollbars included; transitions 0 s under reduced motion; new text at least 5.56:1 (light) and 6.49:1 (dark).
+- Left as P3: near 97 to 100% right the readout's halo still covers a few pixels of the managed-best rules (it must sit left of the handle there); Home returns to the managed best, not 0 (the reset the owner asked for); at 1366 by 768 the map sits at its 78% floor and 4 of 95 hovered targets end up to 14 px below the fold; at 1440 by 900 the map is 89% where it was full size, to keep the readout in view.
+- The live line no longer says "the others are dimmed" when no row is.
+
+### The owner's question: why "Uncovered questions" reads 93% [83, 100] on the frozen set but 100% [100, 100] on the hard set
+
+Measured from the page's data (results.json at d37d3bf, the logs scored as the eval scores them), 2026-11-06.
+- Two different setups lead: on the frozen set `native-kc-max` on Gemini, 29 uncovered questions, 87 runs, 81 right and 6 declined; on the hard set `native-context` on Gemini, 19 uncovered questions, 57 runs, all 57 right.
+- The frozen leader's 6 declines are the two temperature questions (`amsterdam_temperature`, `bet_istanbul_warmer`), declined on every run by every managed agent: "the available data ... does not contain weather or temperature records"; the managed agents cannot see the weather table, so 27 of 29 (93%) is their ceiling on that set.
+- [100, 100] was the question-level bootstrap collapsing when every run is right: resampling questions that are all right can only give 100%, so it is not a 95% interval.
+  The page now shows the exact two-sided 95% Clopper-Pearson bound over the questions instead: 19 of 19 gives a lower bound of 82%.
+- The sets are hard in different ways.
+  The frozen set's uncovered questions are medians, percentiles, times between events and weather: shapes no metric composes and SQL agents sometimes get wrong (`native-context` was confidently wrong on 15 of its 87 frozen uncovered runs, mostly medians and percentiles; 0 of 57 on the hard set).
+  The hard set was built hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity; `findings/2026-11-03-356-hard-set.md`); its uncovered questions are mostly ratios and differences of two measures (11 of its 12 `multi_metric` cases are uncovered), ordinary SQL for an agent that writes SQL.
+- The owner's expectation about MetricFlow holds: the ratio questions are composable from two metric queries, so MetricFlow on the free model answers more of the hard set's uncovered questions than the frozen set's (61% of 57 runs against 38% of 29 runs; the hybrid 84% of 19 against 52% of 29).
+  The cost: on the hard set's uncovered questions MetricFlow was confidently wrong on 6 of 57 runs, against 0 of 29 on the frozen set, where it mostly declines.
+- The page also said MetricFlow "declines them by design" next to its 61%: that sentence now reads "which no single metric answers", and the setup's description says it is told to answer only through the metrics.
