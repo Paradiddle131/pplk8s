@@ -122,6 +122,6 @@ Build: `python3 build.py ../results.json`.
   | 1440 × 900 | 1022 px, 89.0% | fits, 20 px to spare |
   | 1920 × 1080 | 1194 px, 104.0% | fits, 77 px to spare |
 
-  At exactly 1180 px the map is 892 px, 77.7% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
+  At exactly 1180 px the map is 886 px, 77.2% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
   Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
 - Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
