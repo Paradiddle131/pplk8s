@@ -16,6 +16,8 @@ PROJECT="$OUT/dbt"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 export DBT_TARGET=bigquery DBT_PROFILES_DIR="$PROJECT"
+# build_governed.py quotes reserved-word names with the semantic agent's own module (#322), from the repo, not the copy.
+export SEMANTIC_AGENT_SRC="$REPO/services/semantic-agent/src/semantic_agent"
 run_() { (cd "$PROJECT" && uv run --quiet --no-project --with-requirements requirements-postgres.txt --with dbt-bigquery==1.12.1 "$@"); }
 
 rm -rf "$OUT" && mkdir -p "$PROJECT"
