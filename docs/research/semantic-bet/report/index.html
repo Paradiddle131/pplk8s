@@ -154,7 +154,7 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .glider.home .gh { fill: var(--ink); }
 .gtrack { cursor: ew-resize; touch-action: none; }
 /* the live value: beside the top handle, on a paper halo so grid and rules stay behind it */
-.glider .gv { visibility: hidden; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.glider .gv { visibility: hidden; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
 .glider.active .gv, .glider:focus-visible .gv, .glider:not(.home) .gv { visibility: visible; }
 .glider:focus-visible .gh { stroke: var(--mf); stroke-width: 2.5; }
 .pm { transition: opacity .12s ease-out; }
@@ -2223,7 +2223,8 @@ window.reportReady(() => {
     function glider(pt) {
       const p = pt.p, mx = Math.round(p.max * 100), x0 = (pt.dx || 0) + pt.x.apply(0), x1 = (pt.dx || 0) + pt.x.apply(p.max);
       const strip = (y, h) => `<rect class="gtrack" data-panel="${p.k}" x="${x0 - 8}" y="${y}" width="${x1 - x0 + 16}" height="${h}" fill="transparent"/>`;
-      return strip(top - 8, 18) + strip(H - 49, 30) + `<g class="glider" data-panel="${p.k}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+      const rules = p.k === "acc" ? SETS.map((s) => byId(S(s).managedBest)).filter(Boolean).map((r) => r.acc[0] * 100) : [gHome("cw")];
+      return strip(top - 8, 18) + strip(H - 49, 30) + `<g class="glider" data-panel="${p.k}" data-rules="${rules.join(",")}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
         <rect class="ghit" x="0" y="${top + 10}" width="28" height="${H - 49 - top - 10}" fill="transparent"/><rect class="ghit" x="5" y="${top - 10}" width="18" height="22" fill="transparent"/><rect class="ghit" x="5" y="${H - 51}" width="18" height="22" fill="transparent"/><line class="gl" x1="14" x2="14" y1="${top - 4}" y2="${H - 40}"/>
         <rect class="gh top" x="8" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="8" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="24" y="${top + 5}" style="font-size:12px"></text></g>`;
     }
@@ -2271,9 +2272,13 @@ window.reportReady(() => {
         const x = x0 + (x1 - x0) * Math.max(0, Math.min(mx, v)) / mx;
         g.setAttribute("transform", `translate(${x - 14},0)`);
         const t = g.querySelector(".gv"); t.textContent = `${v}%`;
-        // right of the top handle; on its left when it would leave the panel's frame
-        const w = t.getComputedTextLength ? t.getComputedTextLength() : 30;
-        const flip = x + 10 + (w || 30) > x1 + 6;
+        // right of the top handle; on its left when it would leave the panel's frame or cross a
+        // managed-best rule there (and not on the left), so its halo never hides a rule it need not
+        const w = (t.getComputedTextLength ? t.getComputedTextLength() : 0) || 30;
+        const rx = (g.dataset.rules || "").split(",").filter(Boolean).map((r) => x0 + (x1 - x0) * +r / mx);
+        const hits = (a, b) => rx.some((r) => r > a - 2 && r < b + 2);
+        const R = [x + 10, x + 10 + w], Lf = [x - 10 - w, x - 10];
+        const flip = R[1] > x1 + 6 || (hits(R[0], R[1]) && !hits(Lf[0], Lf[1]) && Lf[0] >= x0 - 8);
         t.setAttribute("x", flip ? 4 : 24); t.setAttribute("text-anchor", flip ? "end" : "start");
         g.classList.toggle("home", home); g.setAttribute("aria-valuenow", v); g.setAttribute("aria-valuetext", `${v}%${home ? ", the managed best" : ""}`);
       });
