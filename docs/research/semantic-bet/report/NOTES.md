@@ -83,28 +83,45 @@ Build: `python3 build.py ../results.json`.
   - Hover, pin, select, hold, move, close, Escape, the gliders (+1 to 2% with 43 rows dimmed, Shift+5 to 7% with 13, Home, a 40 px drag to 83% with 41 rows), the plate's hover and pin, both setup sections' own focus and tooltips, and the theme switch give the old page's results.
   - Contrast, computed from the rendered figures: text at least 5.56:1 (light) and 6.49:1 (dark); data marks at least 3.26:1 and 3.25:1. Under `prefers-reduced-motion` the transitions are 0 s and Plot adds no animation.
 
-## Feedback round: gliders, pillars' n, setup map beside its list
+## Feedback round 2026-11-05 night
 
 - Figure 2's gliders no longer snap.
   Each moves in whole percent from 0 to its axis' end: by dragging a handle (the grab offset is kept, so a handle taken off-centre does not jump), by pressing in the band of the top handle or of the axis (the glider jumps there and follows the drag), and by keys: arrows ±1, Shift ±5, PageUp and PageDown ±10, Home to the managed best, End to the axis' end.
   Sitting exactly on the managed best is the reset state: filled handles, nothing dimmed.
   In the confident-wrong panel the bold light line in dark mode is the managed best's rule at 1%; the glider now sits at 0, left of it.
   The hit area is 28 px wide between the handles and 18 px at the handles, so a press in the bands a few pixels off a handle jumps rather than grabs.
-- A row's setup and model text dims with its marks.
-  The rule: a row's text dims when none of its sets (frozen, hard) passes every glider that is off home; a set passes a glider when its mark in that glider's panel is not dimmed.
-  With one glider moved, that is "every mark of the row in that panel is dimmed"; with both moved, a set dimmed by either glider counts as out.
-  Marks keep dimming per panel, as before; family headers never dim; the text uses the marks' opacity and 120 ms fade, none under reduced motion.
-- The glider's value sits beside its top handle, on a paper halo, and flips to the handle's left near the panel's end.
+- The gliders off home make one joint filter.
+  A row's set (frozen or hard) is out when it fails any glider off home, and an out set's marks dim in both panels, not only in the panel whose glider excluded it.
+  A row's setup and model text, each copy of it (one per panel in the stacked layout under 700 px), dims when every one of the row's sets is out, so in every SVG the text dims exactly when all of that row's marks there dim.
+  With one glider moved, its panel dims as before and the same sets dim in the other panel too.
+  Family headers never dim; the text uses the marks' opacity and 120 ms fade, none under reduced motion.
+  The live line counts the rows passing every active threshold, per set.
+- The glider's value sits beside its top handle on a 3 px paper halo (a text stroke).
+  It moves to the handle's left near the panel's end, and also when on the right it would cross a managed-best rule, so the halo never hides one.
   It shows while dragging, while focused, and whenever the glider is off home.
   Under 700 px the rows start 4 px lower, so the value clears the first family header.
 - The winners band shows the n behind each figure: the leader's questions and runs.
-  An interval with no spread (every run right, or none) is not shown as [100, 100] or [0, 0]: the page gives the exact two-sided 95% Clopper-Pearson bound over the questions (lower bound 0.025^(1/n) for n of n, upper bound 1 − 0.025^(1/n) for 0 of n), computed in `build.py`, rounded outward and marked with a new glossary term, "Exact bound".
+  An interval with no spread (every run right, or none) is not shown as [100, 100] or [0, 0]: the page gives the exact two-sided 95% Clopper-Pearson bound over the questions (lower bound 0.025^(1/n) for n of n, upper bound 1 − 0.025^(1/n) for 0 of n), computed in `build.py`, rounded outward and marked with a glossary term, "Exact bound".
   The same formatter serves the abstract table, the decision map's interval cells and the row tooltips; the paired differences keep their bootstrap.
   A figure resting on fewer than 20 questions adds "few questions: reads only large gaps".
-  The leader is labelled and set bold, a pillar says when a different setup leads on each set, and the uncovered pillar and the frozen and hard terms say what each set's uncovered questions are.
-  The uncovered pillar's contrast no longer says MetricFlow declines them by design: on the hard set it answers most of them.
+  The pillars share grid rows (subgrid), so each set's figure sits on one line across the band; the note on what a set's uncovered questions are sits below the leader.
+  The leader is labelled and set bold, and its partial flag names its scope ("partial: 110 of 288 runs over the whole set"), apart from the pillar's own runs.
+  When a different setup leads on each set in every pillar, the band says so once above the pillars; otherwise each such pillar says it.
+  The frozen and hard terms say what each set's uncovered questions are.
 - The setup map, from 1180 px: the rungs and their setups are one list on the left, scrolling in its own column, and the map, its readout and legend sit on the right; both stay in view.
-  The section leaves the page column (up to 1456 px, centred, inside the 16 px gutters; the script sets the viewport width without its scrollbar), and the map takes its column's width unless the viewport is too short to show all of it.
-  Measured in Chromium: 986 px wide at 1280 by 900 (86% of the 1148 px page-column map), 1146 px at 1440 by 900 (full size), 1200 px at 1920 by 1080.
-  Below 1180 px the stacked layout stays: there the map would fall under 78% of its size beside a list, and on a phone it scrolls sideways in any layout, so the readout carries the facts.
-- Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value; dimmed texts match the rule on every step; hovering a setup or rung anywhere in the list highlights the map with both in view at 1280 by 900, 1440 by 900 and 1366 by 768; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
+  The section leaves the page column (up to 1456 px, centred, inside the 16 px gutters; the script sets the viewport width without its scrollbar).
+  The readout keeps the height of its longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves; the map takes the rest of the viewport's height, never under 78% of the 1148 px it has in the page column and never over its column's width; the legend comes last and is the first to go below the fold.
+  To keep the readout short, its facts run their names in, and one family's models read once ("Claude Code: Haiku; Sonnet; ...").
+  Measured in Chromium with overlay scrollbars, in the sticky state (map width against 1148 px; worst last readout line against the viewport's bottom, over every setup and rung):
+
+  | Viewport | Map | Readout |
+  | --- | --- | --- |
+  | 1280 × 800 | 895 px, 78.0% (the floor) | fits, 11 px to spare |
+  | 1280 × 900 | 986 px, 85.9% | fits, 46 px to spare |
+  | 1366 × 768 | 895 px, 78.0% (the floor) | 5 of 25 texts end up to 21 px below |
+  | 1440 × 900 | 1022 px, 89.0% | fits, 20 px to spare |
+  | 1920 × 1080 | 1194 px, 104.0% | fits, 77 px to spare |
+
+  At exactly 1180 px the map is 892 px, 77.7% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
+  Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
+- Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
