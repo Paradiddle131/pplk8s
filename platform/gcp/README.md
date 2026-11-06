@@ -33,6 +33,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 - Dry-run a query before running it, and keep `maximum_bytes_billed` on every job; no streaming inserts (no free tier).
 - Artifact Registry holds at most 0.5 GiB-month across the billing account: images go there only to be pulled by Cloud Run in us-central1, never pulled to a laptop or a cloud session (internet egress), and the Container Scanning and On-Demand Scanning APIs stay off (billed per image).
 - Never raise a quota, a cap or the budget, and never test a permission by attempting the action: ask with `testIamPermissions`.
+  The one exception is the owner's own: the daily query fence, which the owner raised to 209,715 MiB (0.2 TiB) on 2026-11-03 ([#370](../../../../issues/370)); an agent records it and never changes it.
 - Cloud Run serves only IAM callers (no public member, invoker IAM on) and bills per request: a public URL would spend the free requests and vCPU-seconds of anyone who finds it.
 - Cloud sessions also carry claude-dotfiles' GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
 
@@ -50,7 +51,9 @@ The cloud sessions' credential holds no role that can enable an API, change IAM 
 
 ## Guard rails in place
 
-- BigQuery query usage per day and per user: 31,457 MiB (`free-path.yaml` `caps`; set by hand in #226, imported and held by `infra/bigquery.tf`): 31 days of it stay under the free 1 TiB, and `make gcp-validate` fails a higher cap.
+- BigQuery query usage per day and per user, the daily query fence: 209,715 MiB (0.2 TiB; `free-path.yaml` `caps`; set by hand in #226 at 31,457, raised by the owner on 2026-11-03, #370; imported and held by `infra/bigquery.tf`).
+  It is a per-day brake, not the month's limit: the month's free 1 TiB is the limit, guarded by `make gcp-usage-check` before every live step (fails past half of it), and `make gcp-validate` fails a fence that does not fit in the other half (512 GiB).
+  A spent fence refuses every query until 00:00 Pacific, the cost check's included, which then reads UNKNOWN and names the fence (#369).
 - Firestore: only the `(default)` database, which is the free one, with point-in-time recovery off; no TTL policies or backups (billed from the first byte).
 - Cloud Run (#209): the agent's service scales from 0 to `caps.cloud_run_max_instances` (1) with CPU only during requests, inside the free 180,000 vCPU-seconds, 360,000 GiB-seconds and 2 million requests a month; each Job runs one task with no retry, and `make gcp-validate` holds the scheduled Jobs' worst month (every run for its whole timeout: 197,160 vCPU-seconds) under the Jobs' free 240,000.
 - Cloud Scheduler: at most `caps.cloud_scheduler_jobs` (3, the billing account's free ones); the dbt Jobs take two, #228 the third.

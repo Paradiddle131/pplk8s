@@ -113,8 +113,15 @@ implicit:
 
 # The stops, in one place: infra/ applies the query quota, and `make gcp-guardrails-check` reads them back.
 caps:
-  # BigQuery bytes a day, for the project and for each user, in MiB: 31 days stay under the free 1 TiB.
-  bigquery_query_mib_per_day: 31457
+  # BigQuery bytes a day, for the project and for each user, in MiB (QueryUsagePerDay, QueryUsagePerUserPerDay): a
+  # per-day brake, not the month's limit. The month's free 1 TiB is the limit, guarded by `make gcp-usage-check`
+  # before every live step (it fails past half the TiB), so one day's fence must fit in the other half
+  # (check_free_path.py). Raised from 31,457 (31 days under the TiB) by the owner in the console, 2026-11-03 (#370):
+  # "the only billing would occur if we hit a certain number over the month, but never a day ... we're not gonna run
+  # similar stuff every single day all throughout the month. The daily quota was probably quite arbitrary, unlike
+  # the monthly one", then "I manually set it to 0.2 instead of 0.03 TiB" and "QueryUsagePerUserPerDay also 0.2 now";
+  # both read back 209,715 MiB (0.2 TiB) through the Cloud Quotas API, granted, 2026-11-06T17:01Z.
+  bigquery_query_mib_per_day: 209715
   # Bytes one query job may bill (cloud sessions' ~/.bigqueryrc, dbt's `gcp` target): 1 GiB.
   bigquery_maximum_bytes_billed: 1073741824
   # Instances one Cloud Run service may run at once (its max_instance_count; minimum always 0).
