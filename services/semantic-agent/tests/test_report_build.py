@@ -87,3 +87,8 @@ def test_every_group_bucket_kind_rubric_family_and_role_the_page_can_show_has_a_
     families = [f for f in build.FAMILY_LABEL if f != "other"]
     missing += sorted("family-" + f for f in families if "family-" + f not in terms)
     assert not missing, f"shown with no glossary entry: {missing}"
+
+
+def test_every_glossary_term_has_a_type():
+    untyped = [k for k, _, _ in build.TERMS if k not in build.TERM_TYPE]
+    assert not untyped, f"glossary terms with no type: {untyped}"

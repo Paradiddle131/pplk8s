@@ -165,6 +165,21 @@ TERMS = [
     ("family-ref", "Text-to-SQL baseline", "A plain agent that reads the table docs and writes SQL; the reference the others are read against."),
     ("claude-code", "Claude Code", "Anthropic's agent harness, run headless with only the setup's tools; shown for comparison, never deciding."),
 ]
+# Each glossary term's type, so the glossary reads as groups, not one long list (owner, 2026-11-06); in this order.
+TERM_TYPES = ["Question sets", "Question groups", "What makes a question hard", "Why the obvious SQL goes wrong",
+              "Setups and models", "Measures and statistics"]
+TERM_TYPE = {
+    "frozen": 0, "hard": 0,
+    "covered": 1, "hidden-rule": 1, "uncovered": 1, "conversation": 1, "composable": 1, "distractor": 1,
+    "planted": 1, "other-covered": 1,
+    "jargon": 2, "period": 2, "multi-metric": 2, "segment": 2, "implicit": 2, "ambiguous-followup": 2,
+    "multi-step": 2, "sql-hard": 2,
+    "fan-out-join": 3, "distinct-across-join": 3, "ratio-of-sums": 3, "window": 3, "median-percentile": 3,
+    "sessions-gaps-islands": 3, "cohort-retention": 3, "anti-join": 3, "date-spine": 3, "fiscal-timezone": 3,
+    "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "check": 4, "pending": 4, "family-da": 4,
+    "family-gt": 4, "family-mf": 4, "family-ref": 4, "claude-code": 4,
+    "confident-wrong": 5, "over-the-floor": 5, "partial": 5, "interval": 5, "exact": 5,
+}
 # Each key a page shows a term for, mapped to its TERMS key where the data names it otherwise (#395).
 TERM_ALIAS = {"trap": "hidden-rule", "plain": "covered", "other": "other-covered", "cc": "claude-code"}
 
@@ -646,7 +661,8 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
             "groupsAll": [{"key": k, "label": l, "help": GROUP_HELP[k]} for k, l in GROUPS_ALL],
             "buckets": [{"key": k, "label": l, "help": h} for k, l, h in BUCKETS],
             "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED,
-            "terms": [{"key": k, "label": l, "text": t} for k, l, t in TERMS],
+            "terms": [{"key": k, "label": l, "text": t, "type": TERM_TYPES[TERM_TYPE[k]]} for k, l, t in TERMS],
+            "termTypes": TERM_TYPES,
             "termAlias": TERM_ALIAS,
             # Every set, shown or not (#390), as its reader sees it (#393, #394): its scored questions and groups only;
             # retired questions, hashes, freeze dates and version lineage stay in RULE.md and results.json.
