@@ -21,3 +21,4 @@ Each check also runs `python3 -I docs/research/semantic-bet/probes/349_kc_compil
   - Conversational Analytics API: no new entry since the asia-northeast1 endpoint of 2026-11-05 ([release notes](https://docs.cloud.google.com/gemini/docs/conversational-analytics-api/release-notes)).
   - dbt: no new entry; dbt-mcp 2.10.1 (2026-11-02) is still the latest in the changelog ([changelog](https://github.com/dbt-labs/dbt-mcp/blob/main/CHANGELOG.md)); dbt-metricflow 0.15.0 and dbt-core 1.12.6 are still the latest on PyPI.
   - Not read today: Apache Ossie.
+- 2026-11-06, later (`stated`, read 2026-11-06T16:05Z): catalog MCP `compile_query` still fails (`Method not found.`, HTTP 404; `349_kc_compile.py`); dbt-metricflow 0.15.0, dbt-core 1.12.6 and dbt-mcp 2.10.1 are still the latest on PyPI; release notes not re-read since the 00:35Z line.

@@ -52,3 +52,11 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Sets as scored: frozen 76 cases, hard 41, hard-v2 55 (each log's totals are now against these).
 - GCP: the data agents' 4 redacted runs rerun (native-governed 2, native-kc 1, native-context-bare thinking 1), $0.000010 at each gate.
 - Next: the 00:07Z lane on 2026-11-07 starts with `backlog`: the judge on about 265 unclear turns (frozen, then hard, about 530 requests), the carry, and a push; then `baseline` frozen (now against 76 cases, its 3 redacted free-model runs included), `baseline` hard, `custom-lightdash`, then `hard-v2` k = 1.
+
+## 2026-11-06, 2026-11-06T15:53Z (the scheduled free-lane wake: quota already spent)
+
+- Free count 991 of 1,000 at the start and at the end (read from `/api/v1/key`): the 00:00Z quota was spent by the by-hand lane at 02:38Z, so no free-model pass ran and no gate beyond that was needed.
+- Passes touched: none; no log changed, so no new right or confident-wrong figure moved and the report was not rebuilt.
+- Anomalies: none.
+- The #335 watch line for the later read is in `watch.md` (catalog MCP `compile_query` still 404; PyPI versions unchanged).
+- Next: the 00:07Z wake on 2026-11-07 starts `free_lane.sh` with `backlog` (the judge on about 265 unclear turns, the carry), then `baseline` frozen (against 76 cases), `baseline` hard, `custom-lightdash`, then `hard-v2` at k = 1.
