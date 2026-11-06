@@ -462,7 +462,7 @@ def strict_view(arms):
     return out
 
 
-def build(results_path, log_dir, sets_dir, out_path, show=None):
+def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=()):
     R = json.load(open(results_path, encoding="utf-8"))
     arms_all = strict_view(R.get("arms", []))
     every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
@@ -595,11 +595,17 @@ def build(results_path, log_dir, sets_dir, out_path, show=None):
             "buckets": [{"key": k, "label": l, "help": h} for k, l, h in BUCKETS],
             "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED,
             "terms": [{"key": k, "label": l, "text": t} for k, l, t in TERMS],
+            # Every set as written, shown or not (#390): its meta and every case, retired ones with their reason.
+            "questionSets": {st: {"label": set_label(st), "shown": st in present, "appendix": st in {a for a, _ in appendix},
+                                  **{k: v for k, v in spec.items() if k not in ("cases",)}}
+                             for st, spec in (R.get("sets") or {}).items()},
             "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     page = open(os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
     sections = []
     for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
+        sections.append(open(path, encoding="utf-8").read())
+    for path in extra_sections:  # a design variant previewed beside the page's own sections (#390)
         sections.append(open(path, encoding="utf-8").read())
     page = page.replace("<!--SECTIONS-->", "\n".join(sections + [appendix_html(R, appendix)]))
     page = page.replace("<!--VENDOR-->", vendor_scripts())
@@ -858,6 +864,15 @@ if __name__ == "__main__":
         i = args.index("--show")
         picked = args[i + 1]
         del args[i:i + 2]
+    extra, out = [], os.path.join(HERE, "index.html")
+    while "--section" in args:  # preview: --section <variant>/section.html --out <page>.html
+        i = args.index("--section")
+        extra.append(args[i + 1])
+        del args[i:i + 2]
+    if "--out" in args:
+        i = args.index("--out")
+        out = args[i + 1]
+        del args[i:i + 2]
     if picked:
         if family_of(picked) is None:
             sys.exit("--show %s: not a version of a set family (%s)" % (picked, FAMILIES))
@@ -870,4 +885,4 @@ if __name__ == "__main__":
     if not glob.glob(os.path.join(logs, "eval-*.jsonl")):
         logs = FALLBACK_LOGS
     sets_dir = sys.argv[3] if len(sys.argv) > 3 else os.path.normpath(os.path.join(logs, "../../../services/semantic-agent/evals"))
-    build(res, logs, sets_dir, os.path.join(HERE, "index.html"), show)
+    build(res, logs, sets_dir, out, show, extra)

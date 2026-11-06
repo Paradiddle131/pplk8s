@@ -50,6 +50,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import datetime
+import hashlib
 import json
 import os
 import sys
@@ -1543,6 +1544,61 @@ def arm_result(
     }
 
 
+def question_set(name: str, directory: Path = RESEARCH) -> dict[str, Any]:
+    """What the question-set section of the report shows of one set (#390): its freeze date, hash,
+    what it supersedes, and every case as written (retired ones too, with the register's reason):
+    its turns, groups, kinds, SQL-rubric kinds and expected numbers (expected.json)."""
+    path = SETS[name].questions
+    text = path.read_text()
+    spec = yaml.safe_load(text)
+    expected = (read_expected_raw(directory) or {}).get(name, {})
+    reasons = {}
+    overlay = directory / OVERLAY
+    for line in overlay.read_text().splitlines() if overlay.exists() else []:
+        row = json.loads(line)
+        if row.get("kind") == "case":
+            reasons[row["case"]] = (
+                None
+                if row.get("undo")
+                else {
+                    "class": row.get("class"),
+                    "reason": row.get("reason"),
+                    "date": row.get("date"),
+                }
+            )
+    kinds = spec.get("kinds") or {}
+    rubric = spec.get("rubric") or {}
+    new = set(spec.get("new") or ())
+    cases = []
+    for q in spec["questions"]:
+        turns = q.get("turns") or [q]
+        cases.append(
+            {
+                "id": q["id"],
+                "turns": [t["question"] for t in turns],
+                "groups": (spec.get("groups") or {}).get(q["id"], []),
+                "kinds": kinds.get(q["id"], []),
+                "rubric": rubric.get(q["id"], []),
+                "naive": q["id"] in (spec.get("naive_sql") or {}),
+                "new": q["id"] in new,
+                "expected": expected.get(q["id"]),
+                "retired": reasons.get(q["id"]),
+            }
+        )
+    return {
+        "frozen": str(spec.get("frozen") or ""),
+        "sha256": hashlib.sha256(text.encode()).hexdigest(),
+        "supersedes": spec.get("supersedes"),
+        "supersedes_why": " ".join(str(spec.get("supersedes_why") or "").split()) or None,
+        "questions": cases,
+    }
+
+
+def read_expected_raw(directory: Path = RESEARCH) -> dict[str, Any] | None:
+    path = directory / EXPECTED
+    return json.loads(path.read_text())["sets"] if path.exists() else None
+
+
 def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
     """results.json: every number eval.md shows, as data, for the report and its charts (#336):
     each arm on each model on each set, step 2's pairs against each set's managed best, step 3's
@@ -1570,6 +1626,7 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
             "groups": bet.groups,
             "new": list(bet.new),
             "retired": sorted(c for c in retired if c in yaml_ids(SETS[name].questions)),
+            **question_set(name, directory),
         }
         entries = judged_logs(bet, directory)
         for model in dict.fromkeys(e["model"] for e in entries):

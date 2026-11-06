@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T17:03Z",
+ "written": "2026-11-06T18:51Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -6404,6 +6404,2190 @@
     "monthly_active_customers",
     "returns_amount",
     "time_to_hire"
+   ],
+   "frozen": "2026-11-03",
+   "sha256": "4bbaa6ba3ab4e41cca7973dac79c23e5c8eb30e4c6d1747b8ff559c2b380d6e7",
+   "supersedes": null,
+   "supersedes_why": null,
+   "questions": [
+    {
+     "id": "revenue_total",
+     "turns": [
+      "What was our total revenue over 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        1850.34
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_one_day",
+     "turns": [
+      "How much revenue did we make on 2 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        868.65
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_best_day",
+     "turns": [
+      "Which day had the highest revenue in October 2026, and how much was it?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        981.69
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "net_revenue_one_day",
+     "turns": [
+      "What was net revenue on 1 October 2026, after partner returns?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        964.19
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "net_revenue_total",
+     "turns": [
+      "What is our net revenue for 1 and 2 October 2026 combined?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1825.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "orders_one_day",
+     "turns": [
+      "How many orders were placed on 1 October 2026, cancelled ones included?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        15.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "cancelled_total",
+     "turns": [
+      "How many orders were cancelled over 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "cancellation_rate",
+     "turns": [
+      "What share of our orders on 1 and 2 October 2026 was cancelled?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.16666666666666666,
+        16.666666666666664
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "active_customers",
+     "turns": [
+      "How many distinct customers bought from us on 2 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        9.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "returns_amount",
+     "turns": [
+      "How much money went back to customers through partner returns in early October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        89.75
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "written when 'early October' meant 1-2 October (24.75); fixture_weeks.sql later added returns on 5-6 October and the expected number moved to 89.75",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "returns_one_day",
+     "turns": [
+      "How many partner returns did we get on 1 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "shipped_orders",
+     "turns": [
+      "How many orders have shipped?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        86.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "damaged_returns",
+     "turns": [
+      "How much did returns of damaged goods cost us?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        62.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_germany",
+     "turns": [
+      "What was our revenue from customers in Germany on 1 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        379.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "net_revenue_germany",
+     "turns": [
+      "What was our net revenue from customers in Germany on 1 October 2026, after returns?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        367.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_signup_cohort",
+     "turns": [
+      "What revenue did customers who signed up in August or September 2024 bring in on 1 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        312.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "orders_over_100",
+     "turns": [
+      "How many orders of more than 100 EUR were placed on 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "best_weekday_revenue",
+     "turns": [
+      "Over the six weeks from Monday 17 August to Sunday 27 September 2026, which day of the week brought in the most revenue, and how much?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2423.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "top_campaigns_by_spend",
+     "turns": [
+      "Which three campaigns spent the most on ads in September 2026, and how much did the top one spend?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3870.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "signups_september",
+     "turns": [
+      "How many new customers signed up in September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        9.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "customers_to_date",
+     "turns": [
+      "How many customers had signed up in total by the end of September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        30.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "signup_to_first_order_rate",
+     "turns": [
+      "What share of the customers who signed up in September 2026 placed an order within 30 days of signing up?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3333333333333333,
+        33.33333333333333
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "repeat_revenue_share",
+     "turns": [
+      "What share of our revenue from 1 to 10 October 2026 came from repeat customers?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.865720942854202,
+        86.57209428542019
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "return_rate_september",
+     "turns": [
+      "What share of the orders placed in September 2026 were returned?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.016666666666666666,
+        1.6666666666666667
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "damaged_return_share",
+     "turns": [
+      "Of the returns of orders placed from August to October 2026, what share were returned as damaged?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5,
+        50.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "average_order_value",
+     "turns": [
+      "What was our average order value on 1 October 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        75.51461538461538
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "median_order_value",
+     "turns": [
+      "What was the median order value on 1 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        45.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_fiscal_q3",
+     "turns": [
+      "What was our revenue in the third quarter of fiscal 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        19793.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "budget_left_end_of_september",
+     "turns": [
+      "How much of our campaigns' budget was left at the end of September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        4130.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "amsterdam_temperature",
+     "turns": [
+      "What was the average temperature in Amsterdam on 1 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        11.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "11.00 by the fixture's formula, near Amsterdam's October norm: a climate guess passes",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "cost_per_booking_total",
+     "turns": [
+      "What was our cost per booking over 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap",
+      "distractor"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        130.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "cost_per_lead_search",
+     "turns": [
+      "How much did a lead from search campaigns cost us in early October 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap",
+      "distractor"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        46.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "lead_to_booking_rate",
+     "turns": [
+      "What share of our leads from 1 and 2 October 2026 went on to book?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3,
+        30.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "page_views_one_day",
+     "turns": [
+      "How many page views did customers make on our site on 1 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "engaged_customers_week",
+     "turns": [
+      "How many customers did anything on our site or in the CRM in the week up to 3 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        9.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "monthly_active_customers",
+     "turns": [
+      "How many monthly active customers did we have on 3 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "the 28-day window holds every customer who ever acted: vacuous",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "view_to_cart_rate",
+     "turns": [
+      "What share of the site sessions that viewed a page on 1 October 2026 added something to the cart?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.8,
+        80.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "outreach_messages_sent",
+     "turns": [
+      "How many outreach messages did we send to partner contacts from 1 to 3 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "outreach_reply_rate",
+     "turns": [
+      "What share of the outreach messages we sent from 1 to 3 October 2026 got a reply?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6666666666666666,
+        66.66666666666666
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "partners_engaged_one_day",
+     "turns": [
+      "How many partners replied to our outreach on 2 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "candidates_in_interview_as_of",
+     "turns": [
+      "How many candidates were in the interview stage on 4 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "time_to_hire",
+     "turns": [
+      "On average, how many days did it take to hire a candidate, over everyone hired in October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6.0833
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "calendar days give 6.0, which fails against 6.0833",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "calls_about_returns",
+     "turns": [
+      "How many of our customer calls on 1 and 2 October 2026 were about returns?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "objection_rate",
+     "turns": [
+      "In what share of our customer calls on 1 and 2 October 2026 did the customer raise an objection?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3333333333333333,
+        33.33333333333333
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_wow_growth",
+     "turns": [
+      "By what percentage did revenue in the week starting Monday 14 September 2026 grow over the week before?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.326532792138432,
+        32.6532792138432
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bookings_wow_growth",
+     "turns": [
+      "How much did bookings grow in the week of 14 September 2026 compared with the previous week?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.2727272727272727,
+        27.27272727272727
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "'how much did bookings grow' also reads as +3 bookings, which the case does not accept",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "leads_wow_growth",
+     "turns": [
+      "What was the week-over-week growth in leads for the week starting 14 September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.2068965517241379,
+        20.68965517241379
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "revenue_mtd",
+     "turns": [
+      "What was our revenue month to date on 15 September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5668.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "leads_mtd",
+     "turns": [
+      "How many leads came in during September 2026 up to and including the 10th, month to date?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        42.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "followup_by_country",
+     "turns": [
+      "What was our total revenue over 1 and 2 October 2026?",
+      "And broken down by customer country, how much of it came from Germany?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1850.34
+       ]
+      ],
+      [
+       [
+        410.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "followup_day_before",
+     "turns": [
+      "How much revenue did we make on 2 October 2026?",
+      "And on the day before?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        868.65
+       ]
+      ],
+      [
+       [
+        981.69
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "followup_switch_metric",
+     "turns": [
+      "How many orders were placed on 1 October 2026, cancelled ones included?",
+      "What was the net revenue that day, after partner returns?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        15.0
+       ]
+      ],
+      [
+       [
+        964.19
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "followup_how_computed",
+     "turns": [
+      "What was net revenue on 1 October 2026, after partner returns?",
+      "How was that number computed?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        964.19
+       ]
+      ],
+      []
+     ],
+     "retired": null
+    },
+    {
+     "id": "followup_rate_how_computed",
+     "turns": [
+      "What share of our orders on 1 and 2 October 2026 was cancelled?",
+      "How did you calculate that rate?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.16666666666666666,
+        16.666666666666664
+       ]
+      ],
+      []
+     ],
+     "retired": null
+    },
+    {
+     "id": "ambiguous_sales",
+     "turns": [
+      "What were our sales on 1 October 2026?",
+      "I mean net sales, after returns."
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        981.69
+       ],
+       [
+        964.19
+       ]
+      ],
+      [
+       [
+        964.19
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "ambiguous_customers",
+     "turns": [
+      "How many customers did we have in September 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        9.0
+       ],
+       [
+        10.0
+       ],
+       [
+        30.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "planted_campaign_top_spend",
+     "turns": [
+      "Which campaign spent the most on ads on 1 October 2026, and how much did it spend?"
+     ],
+     "groups": [
+      "planted",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        130.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "planted_campaign_least_spend",
+     "turns": [
+      "Which campaign spent the least on ads over 1 and 2 October 2026, and how much?"
+     ],
+     "groups": [
+      "planted",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        20.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "planted_top_customer",
+     "turns": [
+      "Which customer has spent the most with us over all their orders, and how much?"
+     ],
+     "groups": [
+      "planted",
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2356.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_cancellation_rate_period",
+     "turns": [
+      "What share of all orders placed between 17 August and 2 October 2026 were cancelled?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.09523809523809523,
+        9.523809523809524
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_customers_september",
+     "turns": [
+      "How many distinct customers bought from us in September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "10 is every base customer; the cancelled filter the trap tests changes nothing",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_top_country_september",
+     "turns": [
+      "Which customer country generated the most non-cancelled order revenue in September 2026, and how much was it in EUR?"
+     ],
+     "groups": [
+      "covered",
+      "distractor"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2665.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_weekday_most_orders",
+     "turns": [
+      "On which day of the week were the most orders placed between 17 August and 27 September 2026, and how many orders were placed on that weekday in total?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        24.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "every weekday has exactly 24 orders by construction: no unique answer",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_ad_spend_september",
+     "turns": [
+      "What was the total ad spend in EUR across all campaigns in September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6270.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_channel_lowest_cpl",
+     "turns": [
+      "Which ad channel had the lowest cost per lead between 17 August and 2 October 2026, and what was that cost in EUR?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        33.57142857142857
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_lead_to_booking_september",
+     "turns": [
+      "What share of leads created in September 2026 went on to a booking?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.38571428571428573,
+        38.57142857142858
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_top_call_topic",
+     "turns": [
+      "Which call topic had the most customer service calls between 25 August and 2 October 2026, and how many calls did it have?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        24.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_topic_objection_rate",
+     "turns": [
+      "Which call topic had the highest objection rate in September 2026, and what was that rate?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.7272727272727273,
+        72.72727272727273
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_top_campaign_spend",
+     "turns": [
+      "Which campaign had the highest total ad spend between 17 August and 2 October 2026, and how much did it spend in EUR?"
+     ],
+     "groups": [
+      "covered",
+      "planted"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5795.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_top_return_reason_share",
+     "turns": [
+      "Which return reason accounted for the largest share of the returned amount for returns dated between 1 and 4 October 2026, and what was that share?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5050505050505051,
+        50.505050505050505
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_avg_days_to_return",
+     "turns": [
+      "What was the average number of days between the order date and the return date for returns dated between 1 and 4 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3333333333333333,
+        33.33333333333333
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_median_session_minutes",
+     "turns": [
+      "What was the median site session duration in minutes between 20 September and 3 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1.5
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "1.5 with one-event sessions as 0 minutes, 6 without them; only 1.5 accepted",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_peak_page_view_hour",
+     "turns": [
+      "At which hour of the day were the most page views recorded between 20 September and 3 October 2026, and how many page views were in that hour?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "09:00 and 10:00 tie at two page views",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_median_reply_hours",
+     "turns": [
+      "What was the median time in hours between an outreach message and the partner's reply, for messages sent between 1 and 3 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_applicants_reaching_interview",
+     "turns": [
+      "What share of candidates who applied in September 2026 reached the interview stage or beyond?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6666666666666666,
+        66.66666666666666
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "expected_sql",
+      "reason": "expects 2/3 because dbt_dev's candidate snapshot holds only each candidate's last stage (#383); K-002 reached interview, so the business answer is 3/3",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_median_days_to_hire",
+     "turns": [
+      "What was the median number of days from application to hire for candidates hired in September or October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        6.0833
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "two hires, so the median equals the governed mean (a covered metric) and whole days give 6, which fails",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_istanbul_warmer",
+     "turns": [
+      "How many degrees Celsius warmer was Istanbul than Amsterdam on average in daily temperature on 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        8.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "the weather formula makes the difference exactly 8 every day",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_ad_spend_per_order",
+     "turns": [
+      "What was the total ad spend in EUR per non-cancelled order placed in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        57.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_delivery_calls_per_100_shipped",
+     "turns": [
+      "How many delivery-topic customer service calls were there per 100 shipped orders in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "rests on one model-labelled delivery call; the expected 2 is carried by chance",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_median_order_september",
+     "turns": [
+      "What was the median order amount in EUR for non-cancelled orders placed in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        117.375
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_p90_order",
+     "turns": [
+      "What was the 90th percentile order amount in EUR for all orders placed between 17 August and 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        158.125
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "interpolated 158.125 against nearest-rank 158.00, outside the tolerance",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_customers_over_three_orders",
+     "turns": [
+      "How many customers placed more than three orders between 17 August and 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "10 is every customer who ordered, by construction",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_median_signup_to_first_order",
+     "turns": [
+      "For customers whose first order was placed in October 2026, what was the median number of days between their signup date and that first order?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        37.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_aov_old_vs_new_customers",
+     "turns": [
+      "Between 17 August and 10 October 2026, how much higher in EUR was the average non-cancelled order amount of customers who signed up before 2026 than that of customers who signed up in 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        61.66626315789474
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_median_days_to_return",
+     "turns": [
+      "For returns dated 1 or 2 October 2026, what was the median number of days between the original order date and the return date?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_damaged_vs_wrong_size",
+     "turns": [
+      "On 1 and 2 October 2026, how much larger in EUR was the average amount of returns with reason damaged than of returns with reason wrong size?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        7.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_median_days_lead_to_booking",
+     "turns": [
+      "For leads that turned into a booking in September 2026, what was the median number of days from lead creation to booking?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "every booking is 5 hours after its lead: 0 days by construction",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_weekday_avg_spend",
+     "turns": [
+      "Which day of the week had the highest average daily ad spend across all campaigns in September 2026, and what was that average in EUR?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        215.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_cart_to_checkout_minutes",
+     "turns": [
+      "In sessions between 20 September and 3 October 2026 that had both an add-to-cart and a checkout, what was the median number of minutes from the first add-to-cart to the checkout?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_most_email_opens",
+     "turns": [
+      "Which customer opened the most CRM emails between 20 September and 3 October 2026, and how many did they open?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "three customers tie at one open each",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_peak_checkout_hour",
+     "turns": [
+      "At which hour of the day did the most checkout events happen between 20 September and 3 October 2026, and how many were there in that hour?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_p75_reply_hours",
+     "turns": [
+      "For outreach messages sent between 20 September and 3 October 2026 that got a reply, what was the 75th percentile of hours between the message and the reply?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "four values: the common percentile methods give 10, 7 or 16",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_median_days_to_interview",
+     "turns": [
+      "For candidates who reached the interview stage between 30 September and 4 October 2026, what was the median number of days from their application to the interview stage?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "expected_sql",
+      "reason": "its expected number rests on one candidate because the stage history is missing in dbt_dev (#383)",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_wetter_day_nl_orders",
+     "turns": [
+      "Which of 1 or 2 October 2026 had more precipitation in Amsterdam, and how many orders were placed by customers in the Netherlands on that day?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "both days have 2.40 mm of rain and 3 Dutch orders: no unique answer; 63 runs carried 3 by chance",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "bet_revenue_per_ad_euro",
+     "turns": [
+      "What was the ratio of non-cancelled order revenue to total ad spend in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2.006818181818182
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "bet_sessions_per_order",
+     "turns": [
+      "How many site sessions were there per order placed between 20 September and 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.09333333333333334,
+        9.333333333333334
+       ]
+      ]
+     ],
+     "retired": null
+    }
    ]
   },
   "hard": {
@@ -6592,6 +8776,1107 @@
    "retired": [
     "hard_happiest_call_topic",
     "hard_orders_last_fiscal_quarter"
+   ],
+   "frozen": "2026-11-03",
+   "sha256": "5769a99c9b5655bd8cf8b937ae8d58925f5a018d410b251d9e3fae838c640c79",
+   "supersedes": null,
+   "supersedes_why": null,
+   "questions": [
+    {
+     "id": "hard_aov_last_month",
+     "turns": [
+      "It's 5 October 2026. What was our AOV last month?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        114.38863636363637
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_basket_size_week",
+     "turns": [
+      "What was our average basket size, in euros, in the week starting Monday 21 September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        130.27884615384616
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cpa_search_september",
+     "turns": [
+      "What was our CPA on search in September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        124.83870967741936
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_mqls_social_september",
+     "turns": [
+      "How many MQLs did paid social bring in during September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        40.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_win_rate_search",
+     "turns": [
+      "What was our win rate on the search leads that came in during September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.33695652173913043,
+        33.69565217391305
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ad_burn_last_two_weeks",
+     "turns": [
+      "It's Thursday 1 October 2026. What was our ad burn over the last two full weeks?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2985.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_orders_last_fiscal_quarter",
+     "turns": [
+      "It's 10 November 2026. How many orders did we get last fiscal quarter, cancelled ones included?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        217.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "217 is every order row: no fiscal boundary falls inside the data",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "hard_fiscal_ytd_net_revenue",
+     "turns": [
+      "What is our net revenue for the fiscal year to date, as of the end of 6 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        19521.84
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_same_weekday_growth",
+     "turns": [
+      "By what percentage was revenue on Thursday 24 September 2026 up on the same weekday a week earlier?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.2111731843575419,
+        21.11731843575419
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_so_far_this_month",
+     "turns": [
+      "It's the evening of 8 October 2026 and the day's orders are in. How much revenue have we made so far this month?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2040.34
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_top_channel_bookings",
+     "turns": [
+      "Which channel brought us the most bookings in September 2026, and how many?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        31.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_turkish_vs_dutch_per_order",
+     "turns": [
+      "Who spent more per order in September 2026, our Turkish or our Dutch customers, and what was their average?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        109.63636363636364
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_runner_up_channel_leads",
+     "turns": [
+      "Which channel came second for leads between 17 and 31 August 2026, and how many did it bring?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        20.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_happiest_call_topic",
+     "turns": [
+      "Which kind of customer call left people happiest in September 2026, and in what share of those calls?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.75,
+        75.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "0.75 by construction in every period and reading",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "hard_best_week",
+     "turns": [
+      "What was our best week between Monday 17 August and Sunday 27 September 2026, and what did it bring in?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "implicit",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3387.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_customer_base_turkey",
+     "turns": [
+      "How big was our customer base in Turkey at the end of September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ambiguous_q3",
+     "turns": [
+      "What was our revenue in Q3 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        17656.25
+       ],
+       [
+        19793.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_real_revenue",
+     "turns": [
+      "What was our real revenue in the first ten days of October 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2137.34
+       ],
+       [
+        2047.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_active_customers_week",
+     "turns": [
+      "How many active customers did we have in the week up to 3 October 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ],
+       [
+        9.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_sales_germany_this_month",
+     "turns": [
+      "It's 12 October 2026. What are our sales in Germany so far this month?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        533.75
+       ],
+       [
+        494.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_last_seven_days",
+     "turns": [
+      "Today is 1 October 2026. How much revenue did we make over the last 7 days?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3360.75
+       ],
+       [
+        3800.44
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_spend_turkey",
+     "turns": [
+      "How much did customers spend with us in September 2026, cancelled orders left out?",
+      "And our Turkish customers alone?",
+      "Same question for the first ten days of October."
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        12582.75
+       ]
+      ],
+      [
+       [
+        2412.0
+       ]
+      ],
+      [
+       [
+        586.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_cheapest_leads",
+     "turns": [
+      "Which channel got us leads most cheaply in September 2026, and what did each lead cost?",
+      "And which channel's leads were the most expensive, at what price?"
+     ],
+     "groups": [
+      "conversation",
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        37.5
+       ]
+      ],
+      [
+       [
+        52.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_cancelling_country",
+     "turns": [
+      "Which customer country cancelled the biggest share of its orders between 17 August and 30 September 2026, and what share?",
+      "And which country cancelled the smallest share?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.13333333333333333,
+        13.333333333333334
+       ]
+      ],
+      [
+       [
+        0.06060606060606061,
+        6.0606060606060606
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_gmv_september",
+     "turns": [
+      "What was our GMV in September 2026, counting every order placed, cancelled ones included?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        13663.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_repeat_rate_october",
+     "turns": [
+      "What was our repeat purchase rate from 1 to 10 October 2026: of the customers who bought in that time, what share bought more than once?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5882352941176471,
+        58.82352941176471
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cart_abandonment",
+     "turns": [
+      "What was our cart abandonment rate between 20 September and 3 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6,
+        60.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_refund_rate_by_value",
+     "turns": [
+      "What was our refund rate by value on the orders placed on 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.013375920101170596,
+        1.3375920101170595
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_budget_pacing",
+     "turns": [
+      "How far through September 2026's ad budget did we get by the end of the month, as a share of the budget?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6028846153846154,
+        60.28846153846153
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ad_spend_wow",
+     "turns": [
+      "By what percentage did our ad spend grow in the week of 14 September 2026 over the week before?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "period",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.0600706713780919,
+        6.00706713780919
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_per_buyer_country",
+     "turns": [
+      "Which customer country brought in the most revenue per buying customer in September 2026, and how much per customer?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_metric",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1332.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cost_per_booking_rise",
+     "turns": [
+      "Which channel's cost per booking rose the most from the week of 14 September 2026 to the week of 21 September, and by how many euros?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_metric",
+      "segment",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        27.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_average_order_rise",
+     "turns": [
+      "By how many euros did our average order grow from August to September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_metric",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        22.14318181818182
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_per_session",
+     "turns": [
+      "How much revenue did we make per site session between 20 September and 3 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        717.259
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_august_signups_bought",
+     "turns": [
+      "Of the customers who signed up in August 2026, what share had bought from us by 10 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.36363636363636365,
+        36.36363636363637
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_replies_within_12_hours",
+     "turns": [
+      "Of the partner outreach messages we sent from 1 to 3 October 2026, what share got an answer within 12 hours?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5,
+        50.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_candidates_still_in_running",
+     "turns": [
+      "Of the people who applied to work here between 25 September and 2 October 2026, what share were still in the running at the end of 4 October?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3333333333333333,
+        33.33333333333333
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_best_customer_september",
+     "turns": [
+      "Who was our best customer in September 2026, and how much did they spend?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "implicit",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1380.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_first_time_vs_returning",
+     "turns": [
+      "Between 1 and 10 October 2026, how many euros less did a first-time buyer's order come to, on average, than a returning customer's?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        33.0136
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_roas_september",
+     "turns": [
+      "What was our ROAS in September 2026, counting the value of bookings against ad spend?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        20.558213716108455
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_social_vs_search_lead_gap",
+     "turns": [
+      "How many euros more did a social lead cost us than a search lead in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.434782608695652
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_leads_per_100_social",
+     "turns": [
+      "How many leads did every 100 euros of social ad spend get us in September 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1.9047619047619049
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_weekend_vs_weekday",
+     "turns": [
+      "Do we sell more at weekends? Between Monday 17 August and Sunday 27 September 2026, what was our average daily revenue on Saturdays and Sundays, and on the other days?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        389.7083333333333
+       ],
+       [
+        385.875
+       ]
+      ]
+     ],
+     "retired": null
+    }
    ]
   },
   "hard-v2": {
@@ -6852,6 +10137,1520 @@
     "hard_happiest_call_topic",
     "hard_orders_last_fiscal_quarter",
     "hv2_first_order_value_october"
+   ],
+   "frozen": "2026-11-06",
+   "sha256": "23b62532134fa95c301fb5ef3438dc86223e0147356d6f028af90dac29184ff7",
+   "supersedes": "hard",
+   "supersedes_why": "v1's uncovered cases were mostly a ratio or difference of two measures, arithmetic over metric results, so the set never tested writing SQL; v2 splits them into composable and uncovered and adds cases hard in SQL by a rubric fixed before drafting.",
+   "questions": [
+    {
+     "id": "hard_aov_last_month",
+     "turns": [
+      "It's 5 October 2026. What was our AOV last month?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        114.38863636363637
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_basket_size_week",
+     "turns": [
+      "What was our average basket size, in euros, in the week starting Monday 21 September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        130.27884615384616
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cpa_search_september",
+     "turns": [
+      "What was our CPA on search in September 2026?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "jargon",
+      "sql_hard"
+     ],
+     "rubric": [
+      "ratio_of_sums"
+     ],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        124.83870967741936
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_mqls_social_september",
+     "turns": [
+      "How many MQLs did paid social bring in during September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        40.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_win_rate_search",
+     "turns": [
+      "What was our win rate on the search leads that came in during September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.33695652173913043,
+        33.69565217391305
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ad_burn_last_two_weeks",
+     "turns": [
+      "It's Thursday 1 October 2026. What was our ad burn over the last two full weeks?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "jargon",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2985.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_orders_last_fiscal_quarter",
+     "turns": [
+      "It's 10 November 2026. How many orders did we get last fiscal quarter, cancelled ones included?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        217.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "217 is every order row: no fiscal boundary falls inside the data",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "hard_fiscal_ytd_net_revenue",
+     "turns": [
+      "What is our net revenue for the fiscal year to date, as of the end of 6 October 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        19521.84
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_same_weekday_growth",
+     "turns": [
+      "By what percentage was revenue on Thursday 24 September 2026 up on the same weekday a week earlier?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.2111731843575419,
+        21.11731843575419
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_so_far_this_month",
+     "turns": [
+      "It's the evening of 8 October 2026 and the day's orders are in. How much revenue have we made so far this month?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2040.34
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_top_channel_bookings",
+     "turns": [
+      "Which channel brought us the most bookings in September 2026, and how many?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        31.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_turkish_vs_dutch_per_order",
+     "turns": [
+      "Who spent more per order in September 2026, our Turkish or our Dutch customers, and what was their average?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        109.63636363636364
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_runner_up_channel_leads",
+     "turns": [
+      "Which channel came second for leads between 17 and 31 August 2026, and how many did it bring?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        20.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_happiest_call_topic",
+     "turns": [
+      "Which kind of customer call left people happiest in September 2026, and in what share of those calls?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "segment",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.75,
+        75.0
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "fixture",
+      "reason": "0.75 by construction in every period and reading",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "hard_best_week",
+     "turns": [
+      "What was our best week between Monday 17 August and Sunday 27 September 2026, and what did it bring in?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "implicit",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3387.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_customer_base_turkey",
+     "turns": [
+      "How big was our customer base in Turkey at the end of September 2026?"
+     ],
+     "groups": [
+      "covered"
+     ],
+     "kinds": [
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        5.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ambiguous_q3",
+     "turns": [
+      "What was our revenue in Q3 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        17656.25
+       ],
+       [
+        19793.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_real_revenue",
+     "turns": [
+      "What was our real revenue in the first ten days of October 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        2137.34
+       ],
+       [
+        2047.59
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_active_customers_week",
+     "turns": [
+      "How many active customers did we have in the week up to 3 October 2026?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.0
+       ],
+       [
+        9.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_sales_germany_this_month",
+     "turns": [
+      "It's 12 October 2026. What are our sales in Germany so far this month?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        533.75
+       ],
+       [
+        494.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_last_seven_days",
+     "turns": [
+      "Today is 1 October 2026. How much revenue did we make over the last 7 days?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        3360.75
+       ],
+       [
+        3800.44
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_spend_turkey",
+     "turns": [
+      "How much did customers spend with us in September 2026, cancelled orders left out?",
+      "And our Turkish customers alone?",
+      "Same question for the first ten days of October."
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        12582.75
+       ]
+      ],
+      [
+       [
+        2412.0
+       ]
+      ],
+      [
+       [
+        586.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_cheapest_leads",
+     "turns": [
+      "Which channel got us leads most cheaply in September 2026, and what did each lead cost?",
+      "And which channel's leads were the most expensive, at what price?"
+     ],
+     "groups": [
+      "conversation",
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment",
+      "sql_hard"
+     ],
+     "rubric": [
+      "ratio_of_sums"
+     ],
+     "naive": true,
+     "new": false,
+     "expected": [
+      [
+       [
+        37.5
+       ]
+      ],
+      [
+       [
+        52.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_followup_cancelling_country",
+     "turns": [
+      "Which customer country cancelled the biggest share of its orders between 17 August and 30 September 2026, and what share?",
+      "And which country cancelled the smallest share?"
+     ],
+     "groups": [
+      "conversation",
+      "covered"
+     ],
+     "kinds": [
+      "ambiguous_followup",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.13333333333333333,
+        13.333333333333334
+       ]
+      ],
+      [
+       [
+        0.06060606060606061,
+        6.0606060606060606
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_gmv_september",
+     "turns": [
+      "What was our GMV in September 2026, counting every order placed, cancelled ones included?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        13663.5
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_repeat_rate_october",
+     "turns": [
+      "What was our repeat purchase rate from 1 to 10 October 2026: of the customers who bought in that time, what share bought more than once?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5882352941176471,
+        58.82352941176471
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cart_abandonment",
+     "turns": [
+      "What was our cart abandonment rate between 20 September and 3 October 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6,
+        60.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_refund_rate_by_value",
+     "turns": [
+      "What was our refund rate by value on the orders placed on 1 and 2 October 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.013375920101170596,
+        1.3375920101170595
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_budget_pacing",
+     "turns": [
+      "How far through September 2026's ad budget did we get by the end of the month, as a share of the budget?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.6028846153846154,
+        60.28846153846153
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_ad_spend_wow",
+     "turns": [
+      "By what percentage did our ad spend grow in the week of 14 September 2026 over the week before?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "period",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.0600706713780919,
+        6.00706713780919
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_per_buyer_country",
+     "turns": [
+      "Which customer country brought in the most revenue per buying customer in September 2026, and how much per customer?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_metric",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1332.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_cost_per_booking_rise",
+     "turns": [
+      "Which channel's cost per booking rose the most from the week of 14 September 2026 to the week of 21 September, and by how many euros?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_metric",
+      "segment",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        27.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_average_order_rise",
+     "turns": [
+      "By how many euros did our average order grow from August to September 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_metric",
+      "period"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        22.14318181818182
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_revenue_per_session",
+     "turns": [
+      "How much revenue did we make per site session between 20 September and 3 October 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        717.259
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_august_signups_bought",
+     "turns": [
+      "Of the customers who signed up in August 2026, what share had bought from us by 10 October 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.36363636363636365,
+        36.36363636363637
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_replies_within_12_hours",
+     "turns": [
+      "Of the partner outreach messages we sent from 1 to 3 October 2026, what share got an answer within 12 hours?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.5,
+        50.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_candidates_still_in_running",
+     "turns": [
+      "Of the people who applied to work here between 25 September and 2 October 2026, what share were still in the running at the end of 4 October?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_step",
+      "implicit"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        0.3333333333333333,
+        33.33333333333333
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_best_customer_september",
+     "turns": [
+      "Who was our best customer in September 2026, and how much did they spend?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "implicit",
+      "segment"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1380.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_first_time_vs_returning",
+     "turns": [
+      "Between 1 and 10 October 2026, how many euros less did a first-time buyer's order come to, on average, than a returning customer's?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "multi_step"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        33.0136
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_roas_september",
+     "turns": [
+      "What was our ROAS in September 2026, counting the value of bookings against ad spend?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "jargon",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        20.558213716108455
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_social_vs_search_lead_gap",
+     "turns": [
+      "How many euros more did a social lead cost us than a search lead in September 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "segment",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        10.434782608695652
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_leads_per_100_social",
+     "turns": [
+      "How many leads did every 100 euros of social ad spend get us in September 2026?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        1.9047619047619049
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hard_weekend_vs_weekday",
+     "turns": [
+      "Do we sell more at weekends? Between Monday 17 August and Sunday 27 September 2026, what was our average daily revenue on Saturdays and Sundays, and on the other days?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "segment",
+      "multi_metric"
+     ],
+     "rubric": [],
+     "naive": false,
+     "new": false,
+     "expected": [
+      [
+       [
+        389.7083333333333
+       ],
+       [
+        385.875
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_net_revenue_on_september_orders",
+     "turns": [
+      "What was our net revenue for orders placed in September 2026, meaning order amounts minus the amounts of their returns, excluding cancelled orders?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "implicit",
+      "sql_hard"
+     ],
+     "rubric": [
+      "fan_out_join"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        12547.75
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_signups_never_ordered",
+     "turns": [
+      "It's the end of 7 October 2026. How many customers who signed up in 2026 have never placed an order?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "period",
+      "multi_step",
+      "sql_hard"
+     ],
+     "rubric": [
+      "anti_join"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        16.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_calls_per_day_september",
+     "turns": [
+      "What was the average number of customer service calls per day in September 2026, counting days with no calls as zero?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "implicit",
+      "sql_hard"
+     ],
+     "rubric": [
+      "date_spine"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        1.0666666666666667
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_avg_daily_revenue_fiscal_quarter",
+     "turns": [
+      "It's the end of 5 October 2026 and our fiscal year starts on 1 February. What has our average daily revenue been so far this fiscal quarter, counting days with no orders as zero and leaving cancelled orders out?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "period",
+      "jargon",
+      "sql_hard"
+     ],
+     "rubric": [
+      "date_spine",
+      "fiscal_timezone"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        296.56954545454545
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_september_revenue_amsterdam_days",
+     "turns": [
+      "Our books close on Amsterdam time. What was our revenue in September 2026, cancelled orders left out, counting each order on its calendar day in Amsterdam?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "period",
+      "implicit",
+      "sql_hard"
+     ],
+     "rubric": [
+      "fiscal_timezone"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        12521.25
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_median_gap_between_orders",
+     "turns": [
+      "What was the median gap in hours between consecutive orders of the same customer in September 2026, counting only customers with at least two orders?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step",
+      "sql_hard"
+     ],
+     "rubric": [
+      "window",
+      "median_percentile"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        27.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_net_revenue_week_returns_credited",
+     "turns": [
+      "What was the net revenue in the week starting Monday 5 October 2026, as non-cancelled order amounts placed that week minus returns credited that same week, even when the returned orders were placed earlier?"
+     ],
+     "groups": [
+      "covered",
+      "trap"
+     ],
+     "kinds": [
+      "period",
+      "sql_hard"
+     ],
+     "rubric": [
+      "fan_out_join"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        190.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_country_lowest_daily_revenue",
+     "turns": [
+      "Which country had the lowest average daily order revenue from 17 August to 2 October 2026, counting days with no orders from that country as zero and excluding cancelled orders, and what was that average?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "segment",
+      "sql_hard"
+     ],
+     "rubric": [
+      "date_spine"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        31.877659574468087
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_cancellation_rate_by_value_august",
+     "turns": [
+      "What was the order cancellation rate in August 2026, as cancelled amount divided by total order amount, not the average of daily cancellation rates?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "implicit",
+      "sql_hard"
+     ],
+     "rubric": [
+      "ratio_of_sums"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        0.11491997034323347,
+        11.491997034323347
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_revenue_share_unreturned_orders",
+     "turns": [
+      "What share of non-cancelled order revenue between 17 August and 2 October 2026 came from orders that have no return at all, in percent?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step",
+      "sql_hard"
+     ],
+     "rubric": [
+      "anti_join"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        0.9520931131479157,
+        95.20931131479156
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_median_customer_spend",
+     "turns": [
+      "What was the median, across the ten long-standing customers, of each customer's total non-cancelled order amount from 17 August to 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "sql_hard"
+     ],
+     "rubric": [
+      "median_percentile"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        1891.6
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_top_three_customers_share",
+     "turns": [
+      "What share of total non-cancelled order revenue from 17 August to 2 October 2026 came from the top three customers by revenue, in percent?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "segment",
+      "multi_step",
+      "sql_hard"
+     ],
+     "rubric": [
+      "window"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        0.35126334228586337,
+        35.12633422858634
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_first_order_value_october",
+     "turns": [
+      "Among customers whose first order was placed in the first week of October 2026, what was the average amount of that first order?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "implicit",
+      "segment",
+      "sql_hard"
+     ],
+     "rubric": [
+      "window"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        36.5
+       ]
+      ]
+     ],
+     "retired": {
+      "class": "readings",
+      "reason": "'the first week of October' reads as 1-7 Oct (36.5), 5-11 Oct (42.5) or the week holding 1 Oct (32.0); only 36.5 accepted",
+      "date": "2026-11-06"
+     }
+    },
+    {
+     "id": "hv2_spend_on_days_without_email_booking",
+     "turns": [
+      "What was the total ad spend on days when the email campaign had no booked lead, from 17 August to 2 October 2026?"
+     ],
+     "groups": [
+      "uncovered"
+     ],
+     "kinds": [
+      "multi_step",
+      "sql_hard"
+     ],
+     "rubric": [
+      "anti_join",
+      "date_spine"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        8740.0
+       ]
+      ]
+     ],
+     "retired": null
+    },
+    {
+     "id": "hv2_search_budget_left_drop",
+     "turns": [
+      "How much less budget did the search campaign have left at the end of September 2026 than at the end of August 2026, using each month's last snapshot?"
+     ],
+     "groups": [
+      "composable"
+     ],
+     "kinds": [
+      "period",
+      "multi_metric",
+      "sql_hard"
+     ],
+     "rubric": [
+      "window"
+     ],
+     "naive": true,
+     "new": true,
+     "expected": [
+      [
+       [
+        2175.0
+       ]
+      ]
+     ],
+     "retired": null
+    }
    ]
   }
  },
