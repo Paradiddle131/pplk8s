@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T01:21Z",
+ "written": "2026-11-06T01:53Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -2274,6 +2274,51 @@
   },
   {
    "set": "hard",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 43,
+   "runs": 43,
+   "accuracy": [
+    0.93023255814,
+    0.837209302326,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     19
+    ]
+   },
+   "pass_all": 0.9302325581395349,
+   "outcomes": {
+    "right": 40,
+    "wrong": 3
+   },
+   "model_calls": 303
+  },
+  {
+   "set": "hard",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "harness": "claude-code-subagent",
@@ -3614,6 +3659,24 @@
   },
   {
    "set": "hard",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.015503875969,
+    -0.06976744186,
+    0.023255813953
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "cases": 43,
@@ -3736,7 +3799,8 @@
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, FAST)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
    "native-kc-reach on google-data-agent (MODEL_UNSPECIFIED)",
-   "native-mcp on claude-sonnet-5-5"
+   "native-mcp on claude-sonnet-5-5",
+   "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ]
  },
  "managed_best": {
