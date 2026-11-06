@@ -1559,7 +1559,7 @@ window.REPORT = D;
     const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
     let head = $("#maphead");
     if (!head) {
-      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true");
+      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true"); head.dataset.mirror = "#map thead";
       wrap.parentNode.insertBefore(head, wrap);
       wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
     }

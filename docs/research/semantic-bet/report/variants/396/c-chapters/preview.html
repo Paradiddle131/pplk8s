@@ -1828,7 +1828,7 @@ window.reportReady(() => {
 <section class="apx" id="other-set-versions" aria-labelledby="apx-h">
 <style>.apx table { border-collapse: collapse; font-family: var(--label); font-size: 13.5px; width: 100%; } .apx th, .apx td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: top; } .apx th { color: var(--ink-3); font-weight: 500; } .apx td.n { font-variant-numeric: tabular-nums; white-space: nowrap; } .apx td:first-child { white-space: nowrap; } .apx .apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .apx h3 { margin: 18px 0 6px; }</style>
 <h2 id="apx-h">Appendix: more question sets</h2>
-<p class="col">Sets the figures above do not draw, with each setup's numbers from the same runs.</p>
+<p class="col">More question sets, with each setup's numbers from the same runs; the figures draw the frozen and hard sets only.</p>
 <p class="col">The hard set's questions plus fifteen that are hard to write in SQL (joins that multiply rows, ratios of sums, windows, medians, date spines); questions answered by arithmetic over two metrics form their own group, composable.</p>
 <h3>Extended hard set</h3><div class="apx-scroll"><table><thead><tr><th scope="col">Setup</th><th scope="col">Model</th><th scope="col">Questions</th><th scope="col">Accuracy</th><th scope="col">Confident-wrong</th><th scope="col">Covered</th><th scope="col">Hidden-rule</th><th scope="col">Uncovered</th><th scope="col">Conversation</th><th scope="col">Composable</th></tr></thead><tbody>
 <tr><td>baseline</td><td>Haiku</td><td class="n">41 of 55</td><td class="n">58%</td><td class="n">10%</td><td class="n">65%</td><td class="n">67%</td><td class="n">13%</td><td class="n">38%</td><td class="n">62%</td></tr>
@@ -2992,7 +2992,7 @@ window.reportReady(() => {
     const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
     let head = $("#maphead");
     if (!head) {
-      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true");
+      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true"); head.dataset.mirror = "#map thead";
       wrap.parentNode.insertBefore(head, wrap);
       wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
     }

@@ -268,6 +268,9 @@ async function inPage({ rootSel, occl }) {
           // SVG glyphs hits nothing of the text, and proves nothing)
           const el = s.it.el; let ok = false, by = null, under = false;
           for (const h of document.elementsFromPoint(vx, vy)) {
+            // a sticky copy laid exactly over its original (data-mirror names the original) shows the same text
+            const mirror = h.closest && h.closest("[data-mirror]");
+            if (mirror && el.closest && el.closest(mirror.dataset.mirror)) { ok = true; break; }
             const own = h === el || (s.it.svg && el.contains(h)); // the text itself (an SVG <text> holds its tspans)
             const mine = own || h.contains(el);
             if (mine && !by) { ok = true; break; }
