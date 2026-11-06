@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T02:34Z",
+ "written": "2026-11-06T02:37Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -9,23 +9,27 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": null,
-   "cases": 48,
+   "cases": 56,
    "of_cases": 96,
-   "runs": 48,
+   "runs": 56,
    "accuracy": [
-    0.6875,
-    0.5625,
-    0.8125
+    0.678571428571,
+    0.553571428571,
+    0.803571428571
    ],
    "confident_wrong": [
-    0.125,
-    0.041666666667,
-    0.229166666667
+    0.107142857143,
+    0.035714285714,
+    0.196428571429
    ],
    "groups": {
+    "conversation": [
+     0.5714285714285714,
+     7
+    ],
     "covered": [
-     0.6956521739130435,
-     46
+     0.6851851851851852,
+     54
     ],
     "distractor": [
      1.0,
@@ -40,14 +44,14 @@
      2
     ]
    },
-   "pass_all": 0.6875,
+   "pass_all": 0.6785714285714286,
    "outcomes": {
-    "right": 33,
+    "right": 38,
     "declined": 7,
     "confident-wrong": 6,
-    "wrong": 2
+    "wrong": 5
    },
-   "model_calls": 221
+   "model_calls": 266
   },
   {
    "set": "frozen",
