@@ -437,8 +437,7 @@ window.reportReady(() => {
         let k = 0, left = x; const key = (kk) => `${r}${el.dataset.where}${kk}`;
         if (ends[key(0)] != null && left < ends[key(0)] + 4) { k = 1; if (ends[key(1)] != null && left < ends[key(1)] + 4) left = ends[key(1)] + 4; }
         left = Math.min(left, GUT + W - w);
-        el.style.left = left + "px"; el.style.top = tierY(k) + "px"; el.style.height = (k ? 29 : 14) + "px";
-        if (k) { el.style.paddingTop = el.dataset.where === "top" ? "0" : "15px"; if (el.dataset.where === "bot") el.style.top = tierY(0) + "px"; }
+        el.style.left = left + "px"; el.style.top = tierY(k) + "px"; el.style.height = "14px";
         ends[key(k)] = left + w;
       });
       // roving tab stop
