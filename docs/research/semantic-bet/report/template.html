@@ -164,6 +164,14 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
 .tip.pinned .tipclose { display: block; }
 .tipclose:hover { background: var(--band); }
+.tipjump { display: none; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--rule); font-size: 13px; }
+.tip.pinned .tipjump { display: block; }
+.tipjump a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.tipjump a:focus-visible, .jumpback:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.jumped:not(tr), tr.jumped > td { animation: jumpflash 1.8s ease-out; }
+@keyframes jumpflash { 0%, 35% { background: var(--sel); } 100% { background: transparent; } }
+.jumpback { margin-left: 8px; padding: 1px 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink-2); font: 500 12.5px var(--label); cursor: pointer; vertical-align: 1px; }
+.jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
 /* decision map */
@@ -252,7 +260,7 @@ dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); 
   dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
   table.map td.setup { min-width: 158px; }
 }
-@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab { transition: none; } .jumped:not(tr), tr.jumped > td { animation: none; } .jumped { outline: 2px solid var(--sel); } }
 </style>
 
 <script>
@@ -447,7 +455,40 @@ window.REPORT = D;
     pinned = true; pinEl = el; tipEl = el;
     tip.style.position = "absolute"; tip.classList.add("pinned");
     tip.setAttribute("role", "dialog"); tip.setAttribute("aria-label", "Pinned detail");
-    tip.innerHTML = CLOSE + h; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+    tip.innerHTML = CLOSE + h + jumpLine(el); tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+  }
+  /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
+  // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
+  function jumpTarget(el) {
+    if (!el || !el.dataset) return null;
+    if (el.dataset.term != null) { const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
+    if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
+    return null;
+  }
+  function jumpLine(el) {
+    const j = jumpTarget(el);
+    if (!j || j[0].contains(el)) return "";
+    return `<div class="tipjump"><a href="#${esc(j[0].id)}" data-jump="1">${j[1]}</a></div>`;
+  }
+  function jump(from) {
+    const j = jumpTarget(from); if (!j) return;
+    const target = j[0], backY = window.scrollY, backX = window.scrollX;
+    unpin(false);
+    document.querySelectorAll(".jumpback").forEach((b) => b.remove());
+    // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
+    target.scrollIntoView({ block: "center" });
+    target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
+    setTimeout(() => target.classList.remove("jumped"), 1900);
+    const back = document.createElement("button");
+    back.type = "button"; back.className = "jumpback"; back.textContent = "↑ Back";
+    back.setAttribute("aria-label", "Back to where you were reading");
+    back.addEventListener("click", (e) => {
+      e.stopPropagation(); back.remove();
+      window.scrollTo(backX, backY);
+      if (from && from.focus && document.contains(from)) { quietFocus = true; from.focus({ preventScroll: true }); quietFocus = false; }
+    });
+    (target.matches("tr") ? target.querySelector("td") : target).appendChild(back);
+    quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
   }
   function unpin(returnFocus) {
     if (!pinned) return;
@@ -480,7 +521,12 @@ window.REPORT = D;
   });
   document.addEventListener("focusout", () => { if (!pinned) hideTip(); });
   document.addEventListener("click", (e) => {
-    if (tip.contains(e.target)) { if (e.target.closest(".tipclose")) unpin(true); return; }
+    if (tip.contains(e.target)) {
+      if (e.target.closest(".tipclose")) unpin(true);
+      else if (e.target.closest("[data-jump]")) { e.preventDefault(); jump(pinEl); }
+      return;
+    }
+    if (e.target.closest && e.target.closest(".jumpback")) return;
     const el = closestTip(e.target);
     if (el) { pin(el, e.clientX, e.clientY); return; }
     const cv = e.target.closest && e.target.closest("[data-row]");
@@ -675,7 +721,7 @@ window.REPORT = D;
           if (any.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
           if (any.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
           rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
-          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : ""}>`;
+          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : `id="map-${esc(a)}"`}>`;
           h += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(a)}" tabindex="0">${esc(a)}</span>`}<span class="mdl">${shapeKey(any.role, famC(any.family))}${esc(any.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
           h += `<td class="what">${sub ? "" : esc(descOf(a))}</td>`;
           D.groups.forEach((g) => {
