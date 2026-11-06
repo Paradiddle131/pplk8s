@@ -872,3 +872,41 @@ def test_a_k1_pass_writes_every_arm_at_the_rules_k(monkeypatch, tmp_path):
     monkeypatch.setattr(bet_eval, "write_every_arm", lambda **kw: written.append(kw) or tmp_path)
     assert asyncio.run(bet_eval.main(["--report-only", "--runs", "1"])) in (0, 3)
     assert written == [{}] and report.exists()
+
+
+def test_hard_v2_loads_by_name_with_its_new_cases_and_canary_and_does_not_decide():
+    v2 = bet_eval.load_set("hard-v2")
+    assert v2.name == "hard-v2" and len(v2.questions) == 58 and len(v2.new) == 15
+    assert all(case.startswith("hv2_") for case in v2.new)
+    assert bet_eval.canary_case(v2).id == "hard_top_channel_bookings"
+    assert bet_eval.SETS["hard-v2"].arm_log("native-kc").name == "eval-hard-v2-native-kc.jsonl"
+    # Until the owner's go (#380, #381), the rule's verdict reads the frozen set and v1.
+    assert bet_eval.DECIDING == ("frozen", "hard")
+
+
+def test_each_set_version_reads_only_its_own_logs(tmp_path):
+    live = {"model": "m", "run": 1, "outcome": "right"}
+    _write(tmp_path / "eval-hard-native-kc.jsonl", [{**live, "case": "hard_aov_last_month"}])
+    _write(
+        tmp_path / "eval-hard-v2-native-kc.jsonl", [{**live, "case": "hv2_median_customer_spend"}]
+    )
+    assert [e["case"] for e in bet_eval.read_logs(tmp_path, "hard")] == ["hard_aov_last_month"]
+    assert [e["case"] for e in bet_eval.read_logs(tmp_path, "hard-v2")] == [
+        "hv2_median_customer_spend"
+    ]
+    assert bet_eval.read_logs(tmp_path) == []
+
+
+def test_an_arm_on_a_set_version_reports_its_new_cases_apart():
+    v2 = bet_eval.load_set("hard-v2")
+    rows = [
+        {"arm": "baseline", "model": "m", "run": 1, "case": c, "outcome": "right", "turns": []}
+        for c in ("hard_aov_last_month", "hv2_median_customer_spend")
+    ]
+    rows.append({**rows[1], "case": "hv2_signups_never_ordered", "outcome": "declined"})
+    rows[0]["carried_from"] = "hard"
+    result = bet_eval.arm_result(v2, rows, "baseline", "m", 1)
+    assert result["new"]["all"] == [0.5, 2]
+    assert result["new"]["uncovered"] == [1.0, 1] and result["new"]["composable"] == [0.0, 1]
+    assert result["carried_runs"] == 1
+    assert "new" not in bet_eval.arm_result(bet_eval.load_set("hard"), rows, "baseline", "m", 1)

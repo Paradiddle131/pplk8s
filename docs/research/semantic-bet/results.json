@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T02:37Z",
+ "written": "2026-11-06T09:40Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -3256,6 +3256,1581 @@
     "wrong": 7
    },
    "model_calls": 140
+  },
+  {
+   "set": "hard-v2",
+   "arm": "baseline",
+   "model": "claude-haiku-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": null,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.565891472868,
+    0.418604651163,
+    0.705426356589
+   ],
+   "confident_wrong": [
+    0.077519379845,
+    0.023255813953,
+    0.139534883721
+   ],
+   "groups": {
+    "composable": [
+     0.5952380952380952,
+     14
+    ],
+    "conversation": [
+     0.375,
+     8
+    ],
+    "covered": [
+     0.6666666666666666,
+     24
+    ],
+    "trap": [
+     0.5555555555555556,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.5116279069767442,
+   "outcomes": {
+    "right": 73,
+    "confident-wrong": 10,
+    "wrong": 40,
+    "unclear": 3,
+    "declined": 3
+   },
+   "model_calls": 510,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "claude-haiku-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.736434108527,
+    0.612403100775,
+    0.852713178295
+   ],
+   "confident_wrong": [
+    0.093023255814,
+    0.023255813953,
+    0.178294573643
+   ],
+   "groups": {
+    "composable": [
+     0.6666666666666667,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.26666666666666666,
+     5
+    ]
+   },
+   "pass_all": 0.6744186046511628,
+   "outcomes": {
+    "right": 95,
+    "wrong": 18,
+    "declined": 3,
+    "confident-wrong": 12,
+    "unclear": 1
+   },
+   "model_calls": 437,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-hybrid",
+   "model": "claude-haiku-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.813953488372,
+    0.697674418605,
+    0.914728682171
+   ],
+   "confident_wrong": [
+    0.031007751938,
+    0.0,
+    0.085271317829
+   ],
+   "groups": {
+    "composable": [
+     0.8571428571428571,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.4,
+     5
+    ]
+   },
+   "pass_all": 0.7906976744186046,
+   "outcomes": {
+    "right": 105,
+    "wrong": 19,
+    "confident-wrong": 4,
+    "declined": 1
+   },
+   "model_calls": 480,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "claude-haiku-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.449612403101,
+    0.302325581395,
+    0.596899224806
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.007751937984,
+    0.147286821705
+   ],
+   "groups": {
+    "composable": [
+     0.42857142857142855,
+     14
+    ],
+    "conversation": [
+     0.25,
+     8
+    ],
+    "covered": [
+     0.5555555555555556,
+     24
+    ],
+    "trap": [
+     0.5555555555555556,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.4418604651162791,
+   "outcomes": {
+    "right": 58,
+    "wrong": 26,
+    "confident-wrong": 9,
+    "declined": 36
+   },
+   "model_calls": 259,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "claude-haiku-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.813953488372,
+    0.705426356589,
+    0.906976744186
+   ],
+   "confident_wrong": [
+    0.062015503876,
+    0.015503875969,
+    0.131782945736
+   ],
+   "groups": {
+    "composable": [
+     0.8571428571428571,
+     14
+    ],
+    "conversation": [
+     0.4583333333333333,
+     8
+    ],
+    "covered": [
+     0.7638888888888888,
+     24
+    ],
+    "trap": [
+     0.9444444444444445,
+     6
+    ],
+    "uncovered": [
+     0.9333333333333333,
+     5
+    ]
+   },
+   "pass_all": 0.7209302325581395,
+   "outcomes": {
+    "right": 105,
+    "wrong": 15,
+    "confident-wrong": 8,
+    "unclear": 1
+   },
+   "model_calls": 662,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "claude-sonnet-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.573643410853,
+    0.418604651163,
+    0.720930232558
+   ],
+   "confident_wrong": [
+    0.054263565891,
+    0.0,
+    0.124031007752
+   ],
+   "groups": {
+    "composable": [
+     0.2619047619047619,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.2,
+     5
+    ]
+   },
+   "pass_all": 0.5581395348837209,
+   "outcomes": {
+    "right": 74,
+    "declined": 16,
+    "wrong": 31,
+    "confident-wrong": 7,
+    "unclear": 1
+   },
+   "model_calls": 445,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "claude-sonnet-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.480620155039,
+    0.325581395349,
+    0.627906976744
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.007751937984,
+    0.147286821705
+   ],
+   "groups": {
+    "composable": [
+     0.42857142857142855,
+     14
+    ],
+    "conversation": [
+     0.375,
+     8
+    ],
+    "covered": [
+     0.611111111111111,
+     24
+    ],
+    "trap": [
+     0.6666666666666666,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.46511627906976744,
+   "outcomes": {
+    "right": 62,
+    "wrong": 22,
+    "confident-wrong": 9,
+    "declined": 36
+   },
+   "model_calls": 257,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "claude-sonnet-5-5",
+   "harness": "adk-anthropic-api",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 87,
+   "accuracy": [
+    0.895348837209,
+    0.802325581395,
+    0.976744186047
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.5,
+     8
+    ],
+    "covered": [
+     0.8125,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.8837209302325582,
+   "outcomes": {
+    "right": 78,
+    "wrong": 9
+   },
+   "model_calls": 403,
+   "new": {},
+   "carried_runs": 87
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.736434108527,
+    0.612403100775,
+    0.84496124031
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.023255813953,
+    0.124031007752
+   ],
+   "groups": {
+    "composable": [
+     0.7380952380952381,
+     14
+    ],
+    "conversation": [
+     0.5833333333333334,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.26666666666666666,
+     5
+    ]
+   },
+   "pass_all": 0.627906976744186,
+   "outcomes": {
+    "right": 95,
+    "declined": 14,
+    "wrong": 11,
+    "confident-wrong": 9
+   },
+   "model_calls": 502,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.860465116279,
+    0.744186046512,
+    0.953488372093
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.4,
+     5
+    ]
+   },
+   "pass_all": 0.8604651162790697,
+   "outcomes": {
+    "right": 37,
+    "wrong": 6
+   },
+   "model_calls": 189,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.395348837209,
+    0.255813953488,
+    0.53488372093
+   ],
+   "confident_wrong": [
+    0.162790697674,
+    0.06976744186,
+    0.279069767442
+   ],
+   "groups": {
+    "composable": [
+     0.42857142857142855,
+     14
+    ],
+    "conversation": [
+     0.125,
+     8
+    ],
+    "covered": [
+     0.4583333333333333,
+     24
+    ],
+    "trap": [
+     0.3333333333333333,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.3953488372093023,
+   "outcomes": {
+    "confident-wrong": 7,
+    "right": 17,
+    "declined": 14,
+    "wrong": 5
+   },
+   "model_calls": 82,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.93023255814,
+    0.837209302326,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9302325581395349,
+   "outcomes": {
+    "right": 40,
+    "wrong": 3
+   },
+   "model_calls": 303,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (haiku)",
+   "harness": "claude-code-subagent",
+   "session": "shared per batch",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.441860465116,
+    0.302325581395,
+    0.581395348837
+   ],
+   "confident_wrong": [
+    0.186046511628,
+    0.06976744186,
+    0.302325581395
+   ],
+   "groups": {
+    "composable": [
+     0.0,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.7916666666666666,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.4418604651162791,
+   "outcomes": {
+    "right": 19,
+    "declined": 7,
+    "confident-wrong": 8,
+    "wrong": 9
+   },
+   "model_calls": 47,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "harness": "claude-code-subagent",
+   "session": "shared per batch",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.511627906977,
+    0.372093023256,
+    0.651162790698
+   ],
+   "confident_wrong": [
+    0.302325581395,
+    0.162790697674,
+    0.441860465116
+   ],
+   "groups": {
+    "composable": [
+     0.0,
+     14
+    ],
+    "conversation": [
+     0.75,
+     8
+    ],
+    "covered": [
+     0.9166666666666666,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.5116279069767442,
+   "outcomes": {
+    "right": 22,
+    "wrong": 6,
+    "confident-wrong": 13,
+    "declined": 2
+   },
+   "model_calls": 47,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (opus)",
+   "harness": "claude-code-subagent",
+   "session": "shared per batch",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.53488372093,
+    0.395348837209,
+    0.674418604651
+   ],
+   "confident_wrong": [
+    0.255813953488,
+    0.139534883721,
+    0.395348837209
+   ],
+   "groups": {
+    "composable": [
+     0.0,
+     14
+    ],
+    "conversation": [
+     0.75,
+     8
+    ],
+    "covered": [
+     0.9166666666666666,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.2,
+     5
+    ]
+   },
+   "pass_all": 0.5348837209302325,
+   "outcomes": {
+    "right": 23,
+    "wrong": 9,
+    "confident-wrong": 11
+   },
+   "model_calls": 47,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-haiku)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.542635658915,
+    0.403100775194,
+    0.682170542636
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.015503875969,
+    0.131782945736
+   ],
+   "groups": {
+    "composable": [
+     0.16666666666666669,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8611111111111112,
+     24
+    ],
+    "trap": [
+     0.9444444444444445,
+     6
+    ],
+    "uncovered": [
+     0.06666666666666667,
+     5
+    ]
+   },
+   "pass_all": 0.4883720930232558,
+   "outcomes": {
+    "right": 70,
+    "wrong": 35,
+    "declined": 15,
+    "confident-wrong": 9
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-sonnet)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.503875968992,
+    0.356589147287,
+    0.651162790698
+   ],
+   "confident_wrong": [
+    0.124031007752,
+    0.046511627907,
+    0.217054263566
+   ],
+   "groups": {
+    "composable": [
+     0.11904761904761904,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.0,
+     5
+    ]
+   },
+   "pass_all": 0.4883720930232558,
+   "outcomes": {
+    "right": 65,
+    "declined": 12,
+    "wrong": 36,
+    "confident-wrong": 16
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "harness": "claude-code-subagent",
+   "session": "fresh per case",
+   "rung": 4,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 43,
+   "accuracy": [
+    0.511627906977,
+    0.372093023256,
+    0.651162790698
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.0,
+    0.162790697674
+   ],
+   "groups": {
+    "composable": [
+     0.07142857142857142,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.2,
+     5
+    ]
+   },
+   "pass_all": 0.5116279069767442,
+   "outcomes": {
+    "right": 22,
+    "declined": 2,
+    "wrong": 15,
+    "confident-wrong": 3,
+    "unclear": 1
+   },
+   "model_calls": 47,
+   "new": {},
+   "carried_runs": 43
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-bare",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.651162790698,
+    0.519379844961,
+    0.782945736434
+   ],
+   "confident_wrong": [
+    0.279069767442,
+    0.162790697674,
+    0.403100775194
+   ],
+   "groups": {
+    "composable": [
+     0.6666666666666667,
+     14
+    ],
+    "conversation": [
+     0.5416666666666666,
+     8
+    ],
+    "covered": [
+     0.6527777777777778,
+     24
+    ],
+    "trap": [
+     0.5555555555555556,
+     6
+    ],
+    "uncovered": [
+     0.6,
+     5
+    ]
+   },
+   "pass_all": 0.6046511627906976,
+   "outcomes": {
+    "confident-wrong": 36,
+    "right": 84,
+    "wrong": 9
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.93023255814,
+    0.852713178295,
+    0.992248062016
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.875,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9069767441860465,
+   "outcomes": {
+    "right": 120,
+    "wrong": 9
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.922480620155,
+    0.837209302326,
+    0.984496124031
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.5833333333333334,
+     8
+    ],
+    "covered": [
+     0.8611111111111112,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9069767441860465,
+   "outcomes": {
+    "right": 119,
+    "wrong": 10
+   },
+   "model_calls": 142,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-governed",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 2,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.697674418605,
+    0.565891472868,
+    0.821705426357
+   ],
+   "confident_wrong": [
+    0.015503875969,
+    0.0,
+    0.038759689922
+   ],
+   "groups": {
+    "composable": [
+     0.6428571428571429,
+     14
+    ],
+    "conversation": [
+     0.6666666666666666,
+     8
+    ],
+    "covered": [
+     0.8611111111111112,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     0.06666666666666667,
+     5
+    ]
+   },
+   "pass_all": 0.627906976744186,
+   "outcomes": {
+    "right": 90,
+    "wrong": 19,
+    "declined": 18,
+    "confident-wrong": 2
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-graph",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 2,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.550387596899,
+    0.410852713178,
+    0.68992248062
+   ],
+   "confident_wrong": [
+    0.178294573643,
+    0.085271317829,
+    0.279069767442
+   ],
+   "groups": {
+    "composable": [
+     0.4523809523809524,
+     14
+    ],
+    "conversation": [
+     0.4583333333333333,
+     8
+    ],
+    "covered": [
+     0.611111111111111,
+     24
+    ],
+    "trap": [
+     0.3888888888888889,
+     6
+    ],
+    "uncovered": [
+     0.5333333333333333,
+     5
+    ]
+   },
+   "pass_all": 0.4883720930232558,
+   "outcomes": {
+    "confident-wrong": 23,
+    "right": 71,
+    "wrong": 20,
+    "declined": 15
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-kc-max",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 128,
+   "accuracy": [
+    0.883720930233,
+    0.782945736434,
+    0.968992248062
+   ],
+   "confident_wrong": [
+    0.007751937984,
+    0.0,
+    0.023255813953
+   ],
+   "groups": {
+    "composable": [
+     0.9761904761904762,
+     14
+    ],
+    "conversation": [
+     0.4166666666666667,
+     8
+    ],
+    "covered": [
+     0.8055555555555555,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.8604651162790697,
+   "outcomes": {
+    "right": 113,
+    "wrong": 14,
+    "confident-wrong": 1
+   },
+   "model_calls": 138,
+   "new": {},
+   "carried_runs": 128
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-kc-reach",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.868217054264,
+    0.767441860465,
+    0.953488372093
+   ],
+   "confident_wrong": [
+    0.062015503876,
+    0.007751937984,
+    0.131782945736
+   ],
+   "groups": {
+    "composable": [
+     0.9047619047619048,
+     14
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8333333333333334,
+     24
+    ],
+    "trap": [
+     0.8333333333333334,
+     6
+    ],
+    "uncovered": [
+     0.9333333333333333,
+     5
+    ]
+   },
+   "pass_all": 0.813953488372093,
+   "outcomes": {
+    "right": 112,
+    "confident-wrong": 8,
+    "wrong": 9
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-kc",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.635658914729,
+    0.503875968992,
+    0.767441860465
+   ],
+   "confident_wrong": [
+    0.131782945736,
+    0.054263565891,
+    0.22480620155
+   ],
+   "groups": {
+    "composable": [
+     0.5714285714285714,
+     14
+    ],
+    "conversation": [
+     0.5416666666666666,
+     8
+    ],
+    "covered": [
+     0.6666666666666666,
+     24
+    ],
+    "trap": [
+     0.5,
+     6
+    ],
+    "uncovered": [
+     0.6666666666666667,
+     5
+    ]
+   },
+   "pass_all": 0.5581395348837209,
+   "outcomes": {
+    "right": 82,
+    "confident-wrong": 17,
+    "wrong": 15,
+    "declined": 15
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-shaped",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 2,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 129,
+   "accuracy": [
+    0.604651162791,
+    0.46511627907,
+    0.744186046512
+   ],
+   "confident_wrong": [
+    0.131782945736,
+    0.062015503876,
+    0.217054263566
+   ],
+   "groups": {
+    "composable": [
+     0.6666666666666667,
+     14
+    ],
+    "conversation": [
+     0.375,
+     8
+    ],
+    "covered": [
+     0.5416666666666666,
+     24
+    ],
+    "trap": [
+     0.3888888888888889,
+     6
+    ],
+    "uncovered": [
+     0.7333333333333333,
+     5
+    ]
+   },
+   "pass_all": 0.5581395348837209,
+   "outcomes": {
+    "confident-wrong": 17,
+    "right": 78,
+    "wrong": 19,
+    "declined": 15
+   },
+   "model_calls": 141,
+   "new": {},
+   "carried_runs": 129
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (LATEST_GA_MODEL)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 128,
+   "accuracy": [
+    0.937984496124,
+    0.860465116279,
+    0.992248062016
+   ],
+   "confident_wrong": [
+    0.007751937984,
+    0.0,
+    0.023255813953
+   ],
+   "groups": {
+    "composable": [
+     0.9761904761904762,
+     14
+    ],
+    "conversation": [
+     0.7083333333333334,
+     8
+    ],
+    "covered": [
+     0.9027777777777778,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9069767441860465,
+   "outcomes": {
+    "right": 120,
+    "wrong": 7,
+    "confident-wrong": 1
+   },
+   "model_calls": 140,
+   "new": {},
+   "carried_runs": 128
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 128,
+   "accuracy": [
+    0.945736434109,
+    0.875968992248,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.7083333333333334,
+     8
+    ],
+    "covered": [
+     0.9027777777777778,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9302325581395349,
+   "outcomes": {
+    "right": 121,
+    "wrong": 7
+   },
+   "model_calls": 140,
+   "new": {},
+   "carried_runs": 128
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context-bare",
+   "model": "google-data-agent (MODEL_UNSPECIFIED, FAST)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 43,
+   "of_cases": 58,
+   "runs": 128,
+   "accuracy": [
+    0.945736434109,
+    0.875968992248,
+    1.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     14
+    ],
+    "conversation": [
+     0.7083333333333334,
+     8
+    ],
+    "covered": [
+     0.9027777777777778,
+     24
+    ],
+    "trap": [
+     1.0,
+     6
+    ],
+    "uncovered": [
+     1.0,
+     5
+    ]
+   },
+   "pass_all": 0.9302325581395349,
+   "outcomes": {
+    "right": 121,
+    "wrong": 7
+   },
+   "model_calls": 140,
+   "new": {},
+   "carried_runs": 128
   }
  ],
  "step_two": [
@@ -3924,6 +5499,312 @@
     0.162790697674
    ],
    "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "claude-haiku-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.209302325581,
+    -0.325581395349,
+    -0.100775193798
+   ],
+   "confident_wrong": [
+    0.093023255814,
+    0.023255813953,
+    0.178294573643
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-hybrid",
+   "model": "claude-haiku-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.131782945736,
+    -0.240310077519,
+    -0.038759689922
+   ],
+   "confident_wrong": [
+    0.031007751938,
+    0.0,
+    0.085271317829
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "claude-haiku-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.496124031008,
+    -0.643410852713,
+    -0.348837209302
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.007751937984,
+    0.147286821705
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "claude-haiku-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.131782945736,
+    -0.22480620155,
+    -0.054263565891
+   ],
+   "confident_wrong": [
+    0.062015503876,
+    0.015503875969,
+    0.131782945736
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "claude-sonnet-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.372093023256,
+    -0.519379844961,
+    -0.232558139535
+   ],
+   "confident_wrong": [
+    0.054263565891,
+    0.0,
+    0.124031007752
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "claude-sonnet-5-5",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.46511627907,
+    -0.62015503876,
+    -0.317829457364
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.007751937984,
+    0.147286821705
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "claude-sonnet-5-5",
+   "cases": 43,
+   "runs": 87,
+   "accuracy": [
+    -0.050387596899,
+    -0.116279069767,
+    0.0
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-metricflow",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.209302325581,
+    -0.317829457364,
+    -0.108527131783
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.023255813953,
+    0.124031007752
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-hybrid",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.085271317829,
+    -0.186046511628,
+    -0.007751937984
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "custom-toolbox",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.550387596899,
+    -0.697674418605,
+    -0.403100775194
+   ],
+   "confident_wrong": [
+    0.162790697674,
+    0.06976744186,
+    0.279069767442
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-mcp",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.015503875969,
+    -0.06976744186,
+    0.023255813953
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (haiku)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.503875968992,
+    -0.651162790698,
+    -0.356589147287
+   ],
+   "confident_wrong": [
+    0.186046511628,
+    0.06976744186,
+    0.302325581395
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (sonnet)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.434108527132,
+    -0.581395348837,
+    -0.286821705426
+   ],
+   "confident_wrong": [
+    0.302325581395,
+    0.162790697674,
+    0.441860465116
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (opus)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.410852713178,
+    -0.558139534884,
+    -0.263565891473
+   ],
+   "confident_wrong": [
+    0.255813953488,
+    0.139534883721,
+    0.395348837209
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-haiku)",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.403100775194,
+    -0.542635658915,
+    -0.271317829457
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.015503875969,
+    0.131782945736
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-sonnet)",
+   "cases": 43,
+   "runs": 129,
+   "accuracy": [
+    -0.441860465116,
+    -0.589147286822,
+    -0.302325581395
+   ],
+   "confident_wrong": [
+    0.124031007752,
+    0.046511627907,
+    0.217054263566
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
+   "arm": "cc-metricflow",
+   "model": "claude-code (fresh-opus)",
+   "cases": 43,
+   "runs": 43,
+   "accuracy": [
+    -0.434108527132,
+    -0.581395348837,
+    -0.294573643411
+   ],
+   "confident_wrong": [
+    0.06976744186,
+    0.0,
+    0.162790697674
+   ],
+   "worth": false
   }
  ],
  "step_three": {
@@ -3943,7 +5824,8 @@
    "native-kc-reach on google-data-agent (MODEL_UNSPECIFIED)",
    "native-mcp on claude-sonnet-5-5",
    "native-mcp on nvidia/nemotron-3.5-super-vl:free"
-  ]
+  ],
+  "hard-v2": null
  },
  "managed_best": {
   "frozen": [
@@ -3955,7 +5837,21 @@
    "native-context-bare",
    "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
    0.945736434108527
+  ],
+  "hard-v2": [
+   "native-context-bare",
+   "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   0.945736434108527
   ]
+ },
+ "deciding_sets": [
+  "frozen",
+  "hard"
+ ],
+ "set_versions": {
+  "frozen": null,
+  "hard": null,
+  "hard-v2": "hard"
  },
  "claude_spend_by_pass": {
   "probe smoke haiku": {

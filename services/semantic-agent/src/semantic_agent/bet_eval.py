@@ -17,6 +17,12 @@ frozen one: its runs go to their own logs (`eval-hard-local.jsonl`, each live ar
 own under the rule, and `eval.md` holds one section per set (#364), so the two verdicts sit side by
 side in the file the report reads.
 
+`--set hard-v2` asks the hard set's version 2 (`evals/semantic_bet_hard_v2.yaml`, #377, RULE.md §
+Set versions), which supersedes `hard`: its logs are `eval-hard-v2-*`, v1's runs of its unchanged
+cases are copied into them by `semantic_agent.bet_carry` (so a pass asks only its new cases), and
+its section in `eval.md` is descriptive until the owner's go: the verdict on both sets reads the
+sets in DECIDING (#380, #381).
+
 A turn the code cannot decide (unclear) goes to the blind judge (`--judge`, RULE.md § Scoring a
 run): a free model asked twice, shown the question, the expected number and the answer, never the
 arm. Each verdict is appended to `judge.jsonl` beside the arms' logs, keyed by the turn and a hash
@@ -26,7 +32,7 @@ it (other passes append to them at the same time), and every report applies the 
 Usage (`make agent-eval ARM=bet` sets the env, after building the fixture):
   python -m semantic_agent.bet_eval [--runs 3] [--minutes 40] [--requests 300]
     [--dollars 4.00] [--label <pass>] [--arms custom-metricflow] [--log <path>]
-    [--set frozen|hard] [--report-only | --rescore | --judge] [case ids]
+    [--set frozen|hard|hard-v2] [--report-only | --rescore | --judge] [case ids]
 The free tier's 1,000 requests a day are shared with other scheduled runs: a wake gives a pass a
 `--requests` budget (each case's model responses, counted once it finishes) rather than spend them.
 On Claude (`MODEL_BACKEND=anthropic`, #361) a pass takes a `--dollars` budget instead: it stops
@@ -166,8 +172,15 @@ class SetFiles:
 SETS = {
     "frozen": SetFiles("frozen", evaluation.BET_QUESTIONS, "eval-", "the frozen set"),
     "hard": SetFiles("hard", evaluation.BET_HARD_QUESTIONS, "eval-hard-", "the hard set"),
+    "hard-v2": SetFiles(
+        "hard-v2", evaluation.BET_HARD_V2_QUESTIONS, "eval-hard-v2-", "the hard set v2"
+    ),
 }
 FROZEN = "frozen"
+# The sets the rule's verdict reads (RULE.md § Changes since freezing, § Set versions): `hard-v2`
+# takes `hard`'s place only after the owner's go on #380's comparison (#381); until then its section
+# in eval.md is descriptive.
+DECIDING = ("frozen", "hard")
 
 
 @dataclass(frozen=True)
@@ -178,17 +191,22 @@ class BetSet:
     groups: dict[str, list[str]]
     hedges: list[str]
     name: str = FROZEN
+    # The cases a set version adds to the set it supersedes (its `new` list, RULE.md § Set
+    # versions); empty for a first version.
+    new: tuple[str, ...] = ()
 
 
 def load_bet(
     path: Path = evaluation.BET_QUESTIONS, ids: Sequence[str] = (), name: str = FROZEN
 ) -> BetSet:
     spec = yaml.safe_load(path.read_text())
-    return BetSet(evaluation.load_questions(list(ids), path), spec["groups"], spec["hedges"], name)
+    questions = evaluation.load_questions(list(ids), path)
+    new = tuple(spec.get("new") or ())
+    return BetSet(questions, spec["groups"], spec["hedges"], name, new)
 
 
 def load_set(name: str = FROZEN, ids: Sequence[str] = ()) -> BetSet:
-    """A set by its name in SETS (`frozen`, `hard`)."""
+    """A set by its name in SETS (`frozen`, `hard`, `hard-v2`)."""
     return load_bet(SETS[name].questions, ids, name)
 
 
@@ -818,7 +836,12 @@ CANARY_TRIES = 2
 # Each set's canary: the single-turn case every arm on every model answered right in every run
 # logged by 2026-11-04T19:20Z (about 20 arm-model pairs a set, the bare data agent included); the
 # first covered case is not enough: the bare agent missed the hard set's first one honestly.
-CANARIES = {"frozen": "orders_one_day", "hard": "hard_top_channel_bookings"}
+# hard-v2 carries the hard set's canary unchanged (#377).
+CANARIES = {
+    "frozen": "orders_one_day",
+    "hard": "hard_top_channel_bookings",
+    "hard-v2": "hard_top_channel_bookings",
+}
 
 
 def canary_case(bet: BetSet) -> Question | None:
@@ -1198,8 +1221,9 @@ def every_arm_report(directory: Path = RESEARCH, runs: int = RUNS) -> str:
         bet = load_set(name)
         scored[name] = (bet, judged_logs(bet, directory))
         lines += ["", report(bet, scored[name][1], runs, every_arm=True, depth=1).rstrip("\n")]
-    # The last set's section ends with both sets' verdict (RULE.md § Changes since freezing).
-    lines += both_sets(scored, runs, depth=1)
+    # The last set's section ends with both deciding sets' verdict (RULE.md § Changes since
+    # freezing); a set version not yet adopted (§ Set versions) is shown, never deciding.
+    lines += both_sets({n: scored[n] for n in DECIDING}, runs, depth=1)
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
@@ -1263,6 +1287,19 @@ def arm_result(
     calls = sum(
         int(e.get("model_calls") or 0) for e in entries if e["arm"] == arm and e["model"] == model
     )
+    # A set version's new cases on their own (RULE.md § Set versions: hard-v2's criteria read them):
+    # all of them, then by group.
+    new: dict[str, list[float]] = {}
+    for case in bet.new:
+        if case in right:
+            new.setdefault("all", []).append(right[case])
+            for group in bet.groups.get(case, []):
+                new.setdefault(group, []).append(right[case])
+    carried = sum(
+        1
+        for e in entries
+        if e["arm"] == arm and e["model"] == model and e.get("carried_from") and e["run"] <= runs
+    )
     return {
         "set": bet.name,
         "arm": arm,
@@ -1281,6 +1318,12 @@ def arm_result(
         else None,
         "outcomes": outcomes,
         "model_calls": calls,
+        **(
+            {"new": {g: [sum(v) / len(v), len(v)] for g, v in sorted(new.items())}}
+            if bet.new
+            else {}
+        ),
+        **({"carried_runs": carried} if carried else {}),
     }
 
 
@@ -1295,6 +1338,12 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
         "step_two": [],
         "step_three": {},
         "managed_best": {},
+        # RULE.md § Set versions: which sets decide, and what each version supersedes.
+        "deciding_sets": list(DECIDING),
+        "set_versions": {
+            name: yaml.safe_load(files.questions.read_text()).get("supersedes")
+            for name, files in SETS.items()
+        },
     }
     for name in SETS:
         bet = load_set(name)

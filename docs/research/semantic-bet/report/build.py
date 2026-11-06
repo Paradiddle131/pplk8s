@@ -4,7 +4,7 @@
 Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, after Figure 6 and before "Method, briefly"; a missing directory inserts nothing.
 The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
 
-Usage: python3 build.py RESULTS_JSON [LOG_DIR] [SETS_DIR]
+Usage: python3 build.py [--show SET] RESULTS_JSON [LOG_DIR] [SETS_DIR]
 
 RESULTS_JSON  docs/research/semantic-bet/results.json (or a snapshot of it): every summary number.
 LOG_DIR       directory holding eval-*.jsonl and judge.jsonl; default: beside RESULTS_JSON, else
@@ -12,6 +12,9 @@ LOG_DIR       directory holding eval-*.jsonl and judge.jsonl; default: beside RE
               intervals computed here, and one example answer per setup.
 SETS_DIR      directory holding semantic_bet.yaml and semantic_bet_hard.yaml (question text and
               groups); default: LOG_DIR/../../../services/semantic-agent/evals.
+--show SET    the version of its set family the page shows (RULE.md § Set versions): `hard` (v1, the
+              default until the owner's go on #380) or `hard-v2`; the family's other version goes to
+              the appendix, labelled, with its own numbers. Also BET_REPORT_SHOW.
 
 Writes index.html beside this script, from template.html, with the vendored Observable Plot and d3
 (vendor/, checked by sha256) inlined. Standard library only.
@@ -34,7 +37,15 @@ FALLBACK_LOGS = "/home/user/pplk8s/docs/research/semantic-bet"
 VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"),
           ("vendor/plot-0.6.17.umd.min.js", "4358086467740777dd788d6b27a95cebdbaefdd50c730a3060117073bd7134cb")]
 
-SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set"}
+SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set", "hard-v2": "Hard set v2"}
+# Set families (RULE.md § Set versions): each family's versions, oldest first. The page shows one
+# version per family (SHOWN, or --show); the others go to the appendix. A set in no family is shown.
+FAMILIES = {"hard": ["hard", "hard-v2"]}
+# v1 until the owner's go on #380's comparison; #381 flips it to hard-v2.
+SHOWN = {"hard": "hard"}
+# Each set's log prefix, longest first: eval-hard-v2-* is hard-v2's, eval-hard-* hard's, eval-* frozen's.
+LOG_PREFIX = [("eval-hard-v2-", "hard-v2"), ("eval-hard-", "hard"), ("eval-", "frozen")]
+SET_FILE = {"frozen": "semantic_bet.yaml", "hard": "semantic_bet_hard.yaml", "hard-v2": "semantic_bet_hard_v2.yaml"}
 GROUPS = [("covered", "Covered"), ("trap", "Hidden-rule"), ("uncovered", "Uncovered"), ("conversation", "Conversation")]
 GROUPS_ALL = [("covered", "Covered"), ("trap", "Hidden-rule"), ("uncovered", "Uncovered"),
               ("conversation", "Conversation"), ("distractor", "Distractor"), ("planted", "Planted")]
@@ -100,7 +111,7 @@ LADDER = [
     ("cc", "Another harness: Claude Code subagents on MetricFlow", ["cc-metricflow"]),
 ]
 PILLAR_EXCLUDE = {"baseline", "cc-metricflow"}  # references outside the decision
-SET_ORDER = ["frozen", "hard"]
+SET_ORDER = ["frozen", "hard", "hard-v2"]
 # Glossary terms: one short sentence each, the glossary and every term tooltip read these.
 TERMS = [
     ("setup", "Setup", "One way of answering: an agent, the tools and context it is given, and the tables in its reach."),
@@ -125,6 +136,7 @@ TERMS = [
 UNCOVERED_KIND = {
     "frozen": "Its uncovered questions: medians, percentiles, times between events, weather.",
     "hard": "Its uncovered questions: mostly ratios and differences of two measures.",
+    "hard-v2": "Its uncovered questions need row-level SQL (medians, rankings, first orders, anti-joins, date spines, time zones); its composable ones are arithmetic over metric results.",
 }
 FEW_QUESTIONS = 20  # a pillar figure resting on fewer questions than this reads only large gaps
 FREE = "nvidia/nemotron-3.5-super-vl:free"
@@ -204,7 +216,8 @@ def parse_set(path):
 
 
 def bucket(gs):
-    if "uncovered" in gs:
+    # hard-v2's composable cases are uncovered ones in RULE.md's sense (no single metric answers them).
+    if "uncovered" in gs or "composable" in gs:
         return "uncovered"
     if "trap" in gs:
         return "trap"
@@ -342,8 +355,7 @@ def load_logs(log_dir):
     raw = defaultdict(list)
     for path in sorted(glob.glob(os.path.join(log_dir, "eval-*.jsonl"))):
         name = os.path.basename(path)
-        m = re.match(r"eval-(hard)-", name)
-        st = "hard" if m else "frozen"
+        st = next(s for p, s in LOG_PREFIX if name.startswith(p))
         for line in open(path, encoding="utf-8"):
             line = line.strip()
             if not line:
@@ -356,11 +368,67 @@ def load_logs(log_dir):
     return raw
 
 
-def build(results_path, log_dir, sets_dir, out_path):
+def family_of(st):
+    return next((f for f, versions in FAMILIES.items() if st in versions), None)
+
+
+def shown_sets(every, show):
+    """The sets the page shows (one version per family: `show`'s, else SHOWN's) and the others,
+    each with the appendix label saying why it is not shown (RULE.md § Set versions)."""
+    chosen = {**SHOWN, **show}
+    present, appendix = [], []
+    for st in every:
+        fam = family_of(st)
+        if fam is None or chosen.get(fam) == st:
+            present.append(st)
+            continue
+        versions = FAMILIES[fam]
+        newer = versions.index(st) > versions.index(chosen[fam])
+        why = ("not yet adopted: shown in its family's place only after the owner's go (#380)" if newer
+               else "superseded by %s" % set_label(chosen[fam]).lower())
+        appendix.append((st, "%s, %s" % (set_label(st), why)))
+    return present, appendix
+
+
+def appendix_html(R, appendix):
+    """The appendix: each set the page does not show, its setups' two numbers and group accuracies
+    as results.json has them, so a superseded or not yet adopted version is never lost."""
+    if not appendix:
+        return ""
+    pc = lambda v: "–" if v is None else "%d%%" % round(100 * v)
+    out = ['<section class="apx" id="other-set-versions" aria-labelledby="apx-h">',
+           "<style>.apx table { border-collapse: collapse; font-family: var(--label); font-size: 13.5px; width: 100%; }"
+           " .apx th, .apx td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }"
+           " .apx th { color: var(--ink-3); font-weight: 500; } .apx td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }"
+           " .apx td:first-child { white-space: nowrap; } .apx .apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .apx h3 { margin: 18px 0 6px; }</style>",
+           '<h2 id="apx-h">Appendix: other versions of a question set</h2>',
+           '<p class="col">A question set is versioned, never edited (RULE.md § Set versions). The page above shows one version of each set; the others keep their numbers here, read from the same results.</p>']
+    for st, label in appendix:
+        rows = [a for a in R.get("arms", []) if a["set"] == st]
+        groups = sorted({g for a in rows for g in a.get("groups", {})})
+        out.append('<h3>%s</h3><div class="apx-scroll"><table><thead><tr><th scope="col">Setup</th><th scope="col">Model</th>'
+                   '<th scope="col">Questions</th><th scope="col">Accuracy</th><th scope="col">Confident-wrong</th>%s</tr></thead><tbody>'
+                   % (html_escape(label), "".join('<th scope="col">%s</th>' % html_escape(g.capitalize()) for g in groups)))
+        for a in sorted(rows, key=lambda a: (a["arm"], a["model"])):
+            cells = "".join('<td class="n">%s</td>' % (pc(a["groups"][g][0]) if g in a.get("groups", {}) else "–") for g in groups)
+            out.append('<tr><td>%s</td><td>%s</td><td class="n">%d of %d</td><td class="n">%s</td><td class="n">%s</td>%s</tr>'
+                       % (html_escape(a["arm"]), html_escape(a["model"]), a["cases"], a.get("of_cases") or a["cases"],
+                          pc(a["accuracy"][0]), pc(a["confident_wrong"][0]), cells))
+        out.append("</tbody></table></div>")
+    out.append("</section>")
+    return "\n".join(out)
+
+
+def html_escape(text):
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def build(results_path, log_dir, sets_dir, out_path, show=None):
     R = json.load(open(results_path, encoding="utf-8"))
     arms_all = R.get("arms", [])
-    present = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
-    setfiles = {"frozen": "semantic_bet.yaml", "hard": "semantic_bet_hard.yaml"}
+    every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
+    present, appendix = shown_sets(every, show or {})
+    setfiles = SET_FILE
     qsets = {}
     for st in present:
         try:
@@ -483,7 +551,7 @@ def build(results_path, log_dir, sets_dir, out_path):
     sections = []
     for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
         sections.append(open(path, encoding="utf-8").read())
-    page = page.replace("<!--SECTIONS-->", "\n".join(sections))
+    page = page.replace("<!--SECTIONS-->", "\n".join(sections + [appendix_html(R, appendix)]))
     page = page.replace("<!--VENDOR-->", vendor_scripts())
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)
@@ -733,11 +801,23 @@ def combine(sets, order):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    show = {}
+    picked = os.environ.get("BET_REPORT_SHOW")
+    if "--show" in args:
+        i = args.index("--show")
+        picked = args[i + 1]
+        del args[i:i + 2]
+    if picked:
+        if family_of(picked) is None:
+            sys.exit("--show %s: not a version of a set family (%s)" % (picked, FAMILIES))
+        show = {family_of(picked): picked}
+    if not args:
         sys.exit(__doc__)
+    sys.argv = [sys.argv[0]] + args
     res = sys.argv[1]
     logs = sys.argv[2] if len(sys.argv) > 2 else os.path.dirname(os.path.abspath(res))
     if not glob.glob(os.path.join(logs, "eval-*.jsonl")):
         logs = FALLBACK_LOGS
     sets_dir = sys.argv[3] if len(sys.argv) > 3 else os.path.normpath(os.path.join(logs, "../../../services/semantic-agent/evals"))
-    build(res, logs, sets_dir, os.path.join(HERE, "index.html"))
+    build(res, logs, sets_dir, os.path.join(HERE, "index.html"), show)

@@ -37,6 +37,7 @@ MODEL = f"claude-code ({os.environ.get('BET_CC_MODEL', 'unknown')})"
 SETS = {
     "frozen": ("semantic_bet.yaml", "eval-cc-metricflow.jsonl"),
     "hard": ("semantic_bet_hard.yaml", "eval-hard-cc-metricflow.jsonl"),
+    "hard-v2": ("semantic_bet_hard_v2.yaml", "eval-hard-v2-cc-metricflow.jsonl"),
 }
 
 

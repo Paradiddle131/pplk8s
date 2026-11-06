@@ -2,6 +2,7 @@
 
 Direction kept: a research memo in a scientific-paper register (STIX Two Text, Barlow Semi Condensed labels, graph-paper plots, blue-black ink), with B's scatter and strip plot and C's unit plate.
 Build: `python3 build.py ../results.json`.
+Set versions (RULE.md § Set versions, #378): the page shows one version of each set family, `hard` (v1) until the owner's go on #380, then `hard-v2` with `--show hard-v2` (or `BET_REPORT_SHOW=hard-v2`, and #381 flips `SHOWN`); the other version goes to the appendix, "Appendix: other versions of a question set", labelled not yet adopted or superseded, with its numbers from `results.json`.
 
 ## What changed in revision 2
 
