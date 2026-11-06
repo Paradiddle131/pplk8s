@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 
@@ -576,7 +577,8 @@ def test_the_hard_set_loads_by_name_with_its_groups():
     assert hard.name == "hard" and len(hard.questions) >= 40
     assert all(q.id.startswith("hard_") for q in hard.questions)
     assert set(hard.groups) == {q.id for q in hard.questions}
-    assert bet_eval.load_set().name == "frozen" and len(bet_eval.load_set().questions) == 96
+    whole = bet_eval.load_set(overlay=Path("/nonexistent"))
+    assert whole.name == "frozen" and len(whole.questions) == 96
 
 
 def test_the_judge_cache_keeps_each_sets_verdicts_apart(tmp_path):
@@ -875,8 +877,11 @@ def test_a_k1_pass_writes_every_arm_at_the_rules_k(monkeypatch, tmp_path):
 
 
 def test_hard_v2_loads_by_name_with_its_new_cases_and_canary_and_does_not_decide():
-    v2 = bet_eval.load_set("hard-v2")
+    v2 = bet_eval.load_set("hard-v2", overlay=Path("/nonexistent"))
     assert v2.name == "hard-v2" and len(v2.questions) == 58 and len(v2.new) == 15
+    # As scored, without the cases #382 retired (the overlay beside the logs).
+    scored = bet_eval.load_set("hard-v2")
+    assert len(scored.questions) == 55 and "hv2_first_order_value_october" not in scored.new
     assert all(case.startswith("hv2_") for case in v2.new)
     assert bet_eval.canary_case(v2).id == "hard_top_channel_bookings"
     assert bet_eval.SETS["hard-v2"].arm_log("native-kc").name == "eval-hard-v2-native-kc.jsonl"
@@ -944,3 +949,12 @@ def test_a_retired_case_leaves_the_logs_and_the_set_and_an_undo_restores_it(tmp_
         log.write(json.dumps({"kind": "case", "case": "revenue_one_day", "undo": True}) + "\n")
     assert [e["case"] for e in bet_eval.read_logs(tmp_path)] == ["revenue_one_day"]
     assert len(bet_eval.load_bet(overlay=tmp_path).questions) == 96
+
+
+def test_a_label_in_the_overlay_corrects_a_frozen_sets_group_for_that_set_only(tmp_path):
+    label = {"kind": "label", "case": "cost_per_booking_total", "groups": ["covered", "trap"]}
+    _overlay(tmp_path, [{**label, "set": "frozen"}])
+    frozen = bet_eval.load_bet(overlay=tmp_path)
+    assert frozen.groups["cost_per_booking_total"] == ["covered", "trap"]
+    hard = bet_eval.load_bet(bet_eval.SETS["hard"].questions, name="hard", overlay=tmp_path)
+    assert "cost_per_booking_total" not in hard.groups

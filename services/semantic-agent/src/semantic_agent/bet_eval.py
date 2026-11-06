@@ -207,13 +207,15 @@ def load_bet(
     retired, _ = read_overlay(overlay)
     questions = [q for q in evaluation.load_questions(list(ids), path) if q.id not in retired]
     groups = {c: g for c, g in spec["groups"].items() if c not in retired}
+    groups.update({c: g for c, g in read_labels(overlay, name).items() if c in groups})
     new = tuple(c for c in spec.get("new") or () if c not in retired)
     return BetSet(questions, groups, spec["hedges"], name, new)
 
 
-def load_set(name: str = FROZEN, ids: Sequence[str] = ()) -> BetSet:
-    """A set by its name in SETS (`frozen`, `hard`, `hard-v2`)."""
-    return load_bet(SETS[name].questions, ids, name)
+def load_set(name: str = FROZEN, ids: Sequence[str] = (), overlay: Path = RESEARCH) -> BetSet:
+    """A set by its name in SETS (`frozen`, `hard`, `hard-v2`), as scored: without the cases the
+    overlay beside the logs (`overlay`) retires, with its corrected labels."""
+    return load_bet(SETS[name].questions, ids, name, overlay)
 
 
 def score_turn(
@@ -377,12 +379,28 @@ def read_overlay(directory: Path = RESEARCH) -> tuple[set[str], set[tuple]]:
         if not line.strip():
             continue
         row = json.loads(line)
+        if row["kind"] not in ("case", "run"):
+            continue
         target, key = (cases, row["case"]) if row["kind"] == "case" else (runs, run_key(row))
         if row.get("undo"):
             target.discard(key)
         else:
             target.add(key)
     return cases, runs
+
+
+def read_labels(directory: Path = RESEARCH, name: str = FROZEN) -> dict[str, list[str]]:
+    """A set's corrected group labels from the overlay ({"kind": "label", "set", "case",
+    "groups"}): a frozen set file is never edited, so a wrong label found later is fixed here
+    (RULE.md § Retiring a defective case); the newest row for a case wins."""
+    path = directory / OVERLAY
+    labels: dict[str, list[str]] = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            row = json.loads(line) if line.strip() else {}
+            if row.get("kind") == "label" and row.get("set") == name:
+                labels[row["case"]] = list(row["groups"])
+    return labels
 
 
 def read_log(path: Path = LOG, raw: bool = False) -> list[dict[str, Any]]:
@@ -1277,7 +1295,7 @@ def every_arm_report(directory: Path = RESEARCH, runs: int = RUNS) -> str:
     ]
     scored = {}
     for name in SETS:
-        bet = load_set(name)
+        bet = load_set(name, overlay=directory)
         scored[name] = (bet, judged_logs(bet, directory))
         lines += ["", report(bet, scored[name][1], runs, every_arm=True, depth=1).rstrip("\n")]
     # The last set's section ends with both deciding sets' verdict (RULE.md § Changes since
@@ -1405,7 +1423,7 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
         },
     }
     for name in SETS:
-        bet = load_set(name)
+        bet = load_set(name, overlay=directory)
         entries = judged_logs(bet, directory)
         for model in dict.fromkeys(e["model"] for e in entries):
             for arm in arms_of(entries, model):

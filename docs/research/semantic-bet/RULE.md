@@ -21,9 +21,37 @@ The set is [`services/semantic-agent/evals/semantic_bet.yaml`](../../../services
   Its runs stay in the logs, never edited or deleted, so the retirement can be audited or undone; the report says how many cases are retired and links the register, and says so beside any verdict a retirement moved.
 - A set's file stays frozen: retiring is an entry in the register, not an edit of the set; a defect that a corrected case would fix goes into the next version as a new case.
 
-| Case | Set(s) | Retired | Defect and evidence |
-|---|---|---|---|
-| none yet | | | |
+The machine-readable register is [`redacted.jsonl`](redacted.jsonl) beside the logs (`semantic_agent.bet_eval.OVERLAY`): `case` rows retire a case, `run` rows redact one logged run (the runner then asks it again), `label` rows correct a group, and an `undo` row lifts one.
+The evidence for every row below is in [the audit's reports](findings/382-case-audit/) (#382).
+
+| Case | Set(s) | Retired | Class | Defect |
+|---|---|---|---|---|
+| `bet_applicants_reaching_interview` | frozen | 2026-11-06 | expected_sql | expects 2/3 because dbt_dev's candidate snapshot holds only each candidate's last stage (#383); K-002 reached interview, so the business answer is 3/3 |
+| `bet_median_days_to_interview` | frozen | 2026-11-06 | expected_sql | its expected number rests on one candidate because the stage history is missing in dbt_dev (#383) |
+| `bet_weekday_most_orders` | frozen | 2026-11-06 | fixture | every weekday has exactly 24 orders by construction: no unique answer |
+| `bet_wetter_day_nl_orders` | frozen | 2026-11-06 | fixture | both days have 2.40 mm of rain and 3 Dutch orders: no unique answer; 63 runs carried 3 by chance |
+| `bet_most_email_opens` | frozen | 2026-11-06 | fixture | three customers tie at one open each |
+| `bet_peak_page_view_hour` | frozen | 2026-11-06 | fixture | 09:00 and 10:00 tie at two page views |
+| `bet_istanbul_warmer` | frozen | 2026-11-06 | fixture | the weather formula makes the difference exactly 8 every day |
+| `bet_customers_september` | frozen | 2026-11-06 | fixture | 10 is every base customer; the cancelled filter the trap tests changes nothing |
+| `bet_customers_over_three_orders` | frozen | 2026-11-06 | fixture | 10 is every customer who ordered, by construction |
+| `bet_median_days_lead_to_booking` | frozen | 2026-11-06 | fixture | every booking is 5 hours after its lead: 0 days by construction |
+| `bet_delivery_calls_per_100_shipped` | frozen | 2026-11-06 | fixture | rests on one model-labelled delivery call; the expected 2 is carried by chance |
+| `amsterdam_temperature` | frozen | 2026-11-06 | fixture | 11.00 by the fixture's formula, near Amsterdam's October norm: a climate guess passes |
+| `monthly_active_customers` | frozen | 2026-11-06 | fixture | the 28-day window holds every customer who ever acted: vacuous |
+| `bet_median_days_to_hire` | frozen | 2026-11-06 | readings | two hires, so the median equals the governed mean (a covered metric) and whole days give 6, which fails |
+| `bet_p75_reply_hours` | frozen | 2026-11-06 | readings | four values: the common percentile methods give 10, 7 or 16 |
+| `bet_p90_order` | frozen | 2026-11-06 | readings | interpolated 158.125 against nearest-rank 158.00, outside the tolerance |
+| `bet_median_session_minutes` | frozen | 2026-11-06 | readings | 1.5 with one-event sessions as 0 minutes, 6 without them; only 1.5 accepted |
+| `bookings_wow_growth` | frozen | 2026-11-06 | readings | 'how much did bookings grow' also reads as +3 bookings, which the case does not accept |
+| `time_to_hire` | frozen | 2026-11-06 | readings | calendar days give 6.0, which fails against 6.0833 |
+| `returns_amount` | frozen | 2026-11-06 | readings | written when 'early October' meant 1-2 October (24.75); fixture_weeks.sql later added returns on 5-6 October and the expected number moved to 89.75 |
+| `hard_happiest_call_topic` | hard, hard-v2 | 2026-11-06 | fixture | 0.75 by construction in every period and reading |
+| `hard_orders_last_fiscal_quarter` | hard, hard-v2 | 2026-11-06 | fixture | 217 is every order row: no fiscal boundary falls inside the data |
+| `hv2_first_order_value_october` | hard-v2 | 2026-11-06 | readings | 'the first week of October' reads as 1-7 Oct (36.5), 5-11 Oct (42.5) or the week holding 1 Oct (32.0); only 36.5 accepted |
+
+Confirmed by the owner, 2026-11-06, in a session: "Retire all, make sure the final report doesn't care about what happened earlier and uses the latest the freshest data points only".
+After these retirements the frozen set scores 76 cases, 15 of them `uncovered` (19.7%, under § The set's 30%): its uncovered group is reported with its n and this reason, and a later version on a richer fixture rebuilds it.
 
 ## The set
 
