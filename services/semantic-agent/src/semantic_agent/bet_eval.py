@@ -197,12 +197,18 @@ class BetSet:
 
 
 def load_bet(
-    path: Path = evaluation.BET_QUESTIONS, ids: Sequence[str] = (), name: str = FROZEN
+    path: Path = evaluation.BET_QUESTIONS,
+    ids: Sequence[str] = (),
+    name: str = FROZEN,
+    overlay: Path = RESEARCH,
 ) -> BetSet:
     spec = yaml.safe_load(path.read_text())
-    questions = evaluation.load_questions(list(ids), path)
-    new = tuple(spec.get("new") or ())
-    return BetSet(questions, spec["groups"], spec["hedges"], name, new)
+    # A retired case (RULE.md § Retiring a defective case) is no longer part of any set as scored.
+    retired, _ = read_overlay(overlay)
+    questions = [q for q in evaluation.load_questions(list(ids), path) if q.id not in retired]
+    groups = {c: g for c, g in spec["groups"].items() if c not in retired}
+    new = tuple(c for c in spec.get("new") or () if c not in retired)
+    return BetSet(questions, groups, spec["hedges"], name, new)
 
 
 def load_set(name: str = FROZEN, ids: Sequence[str] = ()) -> BetSet:
@@ -346,10 +352,63 @@ def recode(bet: BetSet, entries: Sequence[dict[str, Any]]) -> list[dict[str, Any
     return out
 
 
-def read_log(path: Path = LOG) -> list[dict[str, Any]]:
+# RULE.md § Retiring a defective case (#382): an overlay beside the logs, never an edit of them.
+# Each row is a retired case ({"kind": "case", "case": ...}: every run of it, in every set, leaves
+# the scores) or a redacted run ({"kind": "run", "arm", "model", "case", "run", "at"}: that logged
+# row only, so the runner asks the run again and a later run of the same key is kept); each with
+# its `reason`, `evidence`, `issue` and the date. Rows are appended; a row with `"undo": true`
+# reverses an earlier one.
+OVERLAY = "redacted.jsonl"
+
+
+def run_key(row: Mapping[str, Any]) -> tuple:
+    """A logged run as the overlay names it; `at` tells a rerun of the same run number apart."""
+    return (row.get("arm"), row.get("model"), row.get("case"), row.get("run"), row.get("at"))
+
+
+def read_overlay(directory: Path = RESEARCH) -> tuple[set[str], set[tuple]]:
+    """The retired cases and the redacted runs in force (an `undo` row lifts an earlier one)."""
+    cases: set[str] = set()
+    runs: set[tuple] = set()
+    path = directory / OVERLAY
+    if not path.exists():
+        return cases, runs
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        target, key = (cases, row["case"]) if row["kind"] == "case" else (runs, run_key(row))
+        if row.get("undo"):
+            target.discard(key)
+        else:
+            target.add(key)
+    return cases, runs
+
+
+def read_log(path: Path = LOG, raw: bool = False) -> list[dict[str, Any]]:
+    """A JSONL log's rows. A runs log (an `eval-*.jsonl`) is read through the overlay unless `raw`:
+    the runs of a retired case and each redacted run are left out, so no score and no resume
+    sees them."""
     if not path.exists():
         return []
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    if raw or not path.name.startswith("eval-"):
+        return rows
+    cases, runs = read_overlay(path.parent)
+    if not cases and not runs:
+        return rows
+    # A per-arm log's rows may not name the arm; the file name does (`<prefix><arm>.jsonl`).
+    arm = None
+    if not path.name.endswith("local.jsonl"):
+        prefix = max(
+            (s.prefix for s in SETS.values() if path.name.startswith(s.prefix)),
+            key=len,
+            default="eval-",
+        )
+        arm = path.stem.removeprefix(prefix)
+    return [
+        r for r in rows if r.get("case") not in cases and run_key({"arm": arm, **r}) not in runs
+    ]
 
 
 def read_logs(directory: Path = RESEARCH, name: str = FROZEN) -> list[dict[str, Any]]:

@@ -910,3 +910,37 @@ def test_an_arm_on_a_set_version_reports_its_new_cases_apart():
     assert result["new"]["uncovered"] == [1.0, 1] and result["new"]["composable"] == [0.0, 1]
     assert result["carried_runs"] == 1
     assert "new" not in bet_eval.arm_result(bet_eval.load_set("hard"), rows, "baseline", "m", 1)
+
+
+def _overlay(directory, rows):
+    _write(directory / bet_eval.OVERLAY, rows)
+
+
+def test_a_redacted_run_leaves_every_read_and_a_rerun_of_it_is_kept(tmp_path):
+    first = {"model": "m", "run": 1, "case": "revenue_one_day", "outcome": "wrong", "at": "t1"}
+    other = {**first, "case": "orders_one_day", "outcome": "right"}
+    _write(tmp_path / "eval-native-kc.jsonl", [first, other])
+    redact = {"kind": "run", "arm": "native-kc", **{k: first[k] for k in ("model", "case", "run")}}
+    _overlay(tmp_path, [{**redact, "at": "t1", "reason": "infrastructure failure"}])
+    assert [e["case"] for e in bet_eval.read_logs(tmp_path)] == ["orders_one_day"]
+    # The log itself is untouched, and its raw read still has both rows.
+    assert len(bet_eval.read_log(tmp_path / "eval-native-kc.jsonl", raw=True)) == 2
+    # The runner asks the run again; the rerun has its own `at`, so it is kept.
+    with (tmp_path / "eval-native-kc.jsonl").open("a") as log:
+        log.write(json.dumps({**first, "outcome": "right", "at": "t2"}) + "\n")
+    kept = {(e["case"], e["at"]) for e in bet_eval.read_logs(tmp_path)}
+    assert kept == {("orders_one_day", "t1"), ("revenue_one_day", "t2")}
+
+
+def test_a_retired_case_leaves_the_logs_and_the_set_and_an_undo_restores_it(tmp_path):
+    row = {"model": "m", "run": 1, "case": "revenue_one_day", "outcome": "right", "at": "t"}
+    _write(tmp_path / "eval-local.jsonl", [{**row, "arm": "baseline"}])
+    _overlay(tmp_path, [{"kind": "case", "case": "revenue_one_day", "reason": "wrong SQL"}])
+    assert bet_eval.read_logs(tmp_path) == []
+    bet = bet_eval.load_bet(overlay=tmp_path)
+    assert "revenue_one_day" not in {q.id for q in bet.questions} | set(bet.groups)
+    assert len(bet.questions) == 95
+    with (tmp_path / bet_eval.OVERLAY).open("a") as log:
+        log.write(json.dumps({"kind": "case", "case": "revenue_one_day", "undo": True}) + "\n")
+    assert [e["case"] for e in bet_eval.read_logs(tmp_path)] == ["revenue_one_day"]
+    assert len(bet_eval.load_bet(overlay=tmp_path).questions) == 96
