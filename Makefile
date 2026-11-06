@@ -462,7 +462,7 @@ gcp-cost-check: ## Live, read-only: exit 1 when this month's cost on the lab pro
 # The immediate gate of a live step (#313): each free tier's use this month from Cloud Monitoring and REST reads,
 # minutes behind, where the billing export lags hours to days; the export stays the proof after the fact.
 USAGE_SHARE ?= 50
-gcp-usage-check: ## Live, read-only: this month's usage of each free-path service against its free tier, minutes behind; exit 1 past USAGE_SHARE percent (default 50) of one, 3 when a source is unreadable (GCP_PROJECT; #313)
+gcp-usage-check: ## Live, read-only: this month's usage of each free-path service against its free tier, and today's BigQuery bytes against the daily query fence, minutes behind; exit 1 past USAGE_SHARE percent (default 50) of one or 90% of the fence, 3 when a source is unreadable (GCP_PROJECT; #313, #369)
 	@: "$${GCP_PROJECT:?GCP_PROJECT is unset: the gcp- targets act on the lab project and need its id (platform/gcp/README.md)}"
 	uv run --no-project --quiet --with pyyaml==6.0.2 python platform/gcp/usage_check.py --share $(USAGE_SHARE)
 
