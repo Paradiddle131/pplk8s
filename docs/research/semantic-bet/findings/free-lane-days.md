@@ -79,3 +79,12 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - The report rebuilt (`results.json` 16:35Z) and republished (artifact version 20; #336's artifact 4 read back, same SHA-256).
 - Anomalies: none.
 - Next: the 00:07Z wake on 2026-11-07 runs `free_lane.sh` from `backlog` (it now also judges the subagents' hedged confident-wrong turns on `hard-v2`), then `baseline` frozen (76 cases), `baseline` hard, `custom-lightdash`, then `bet_carry` and `hard-v2` at k = 1; when #379 closes, `380_compare.py --whole` writes #380's numbers.
+
+## 2026-11-06, 2026-11-06T18:10Z (session end: the fair-harness plan, four small fixes merged)
+
+- No free-model pass (991 of 1,000 all session); the nightly 00:07Z lane is unchanged and still starts with `backlog`.
+- Merged: #385 (#370 and the cost-check half of #369) and #386 (#292) into `main`; the train took `main` back, plus #369's usage-check half and #322 (labels `in-train`); the train contains `main`.
+- The owner's decisions on the Claude Code setups are in the profile (§ The completion plan): no more Agent-tool eval runs; the strict headless runner (#387) and the parity audit (#388) come before any new Claude Code number; the batched and shell-tool `cc-metricflow` rows stay until the strict rows replace them.
+- Report work queued: #389 (tooltip jump, approved design: a link line in the pinned tooltip with a back link at the target), #390 (three parallel Opus designs for a question-set section, one with the full searchable question list).
+- Anomalies: none; GCP stayed at $0.000010 and the usage check ok at every gate.
+- Next: a session builds #388's parity matrix and #387's runner (subscription, no OpenRouter), then #389 and #390; the free lane carries #379 nightly; #380 waits for #379.
