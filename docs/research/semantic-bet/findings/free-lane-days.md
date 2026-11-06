@@ -69,3 +69,13 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - #379 stays open (the free-model arms are not whole on `hard-v2` at k = 3), so #380 does not start; #381 waits for the owner's go on #380.
 - Anomalies: none.
 - Next: the 00:07Z wake on 2026-11-07 runs `free_lane.sh` from `backlog` (the judge on about 265 unclear turns, about 530 requests), then `baseline` frozen (against 76 cases), `baseline` hard, `custom-lightdash`, then `bet_carry` and `hard-v2` at k = 1; #379 needs about four daily quotas in all.
+
+## 2026-11-06, 2026-11-06T16:37Z (the owner's go for the subagent pass and #380's script; no OpenRouter)
+
+- Free count 991 of 1,000 all session: no free-model pass ran; the subagent lane and one gcp run used no OpenRouter.
+- `cc-metricflow` (Claude Code subagents) on `hard-v2`'s 14 new cases, scored: fresh Haiku and Sonnet k = 3 (42 runs each), fresh Opus k = 1 (14), batched Haiku, Sonnet and Opus k = 1 (14 each); each setup's `hard-v2` log is now 55 of 55 cases (#374's finding).
+- The managed best's one missing `hard-v2` run (`native-context-bare` thinking, `hv2_avg_daily_revenue_fiscal_quarter` run 3) filled by `gcp_pass.sh`: right; `gcp-cost-check` /bin/bash.000010 and `gcp-usage-check` ok before and after.
+- `probes/380_compare.py` scores RULE.md's four `hard-v2` criteria from the scored data; its provisional readout is on #380: criterion 1 holds, criterion 2 splits by reading (83.3% on the 6 new `uncovered`, 92.3% on the 13 new `composable` or `uncovered`), criterion 4 fails (+0.0 points), criterion 3 waits for `custom-metricflow`'s 13 new cases.
+- The report rebuilt (`results.json` 16:35Z) and republished (artifact version 20; #336's artifact 4 read back, same SHA-256).
+- Anomalies: none.
+- Next: the 00:07Z wake on 2026-11-07 runs `free_lane.sh` from `backlog` (it now also judges the subagents' hedged confident-wrong turns on `hard-v2`), then `baseline` frozen (76 cases), `baseline` hard, `custom-lightdash`, then `bet_carry` and `hard-v2` at k = 1; when #379 closes, `380_compare.py --whole` writes #380's numbers.
