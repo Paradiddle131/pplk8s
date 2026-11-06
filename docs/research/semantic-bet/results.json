@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T16:32Z",
+ "written": "2026-11-06T16:34Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -3906,31 +3906,31 @@
    "harness": "claude-code-subagent",
    "session": "shared per batch",
    "rung": 4,
-   "cases": 41,
+   "cases": 55,
    "of_cases": 55,
-   "runs": 41,
+   "runs": 55,
    "accuracy": [
-    0.414634146341,
-    0.268292682927,
-    0.560975609756
+    0.327272727273,
+    0.2,
+    0.454545454545
    ],
    "confident_wrong": [
-    0.073170731707,
-    0.0,
-    0.170731707317
+    0.127272727273,
+    0.054545454545,
+    0.218181818182
    ],
    "groups": {
     "composable": [
      0.0,
-     14
+     21
     ],
     "conversation": [
      0.625,
      8
     ],
     "covered": [
-     0.7727272727272727,
-     22
+     0.782608695652174,
+     23
     ],
     "trap": [
      1.0,
@@ -3938,18 +3938,35 @@
     ],
     "uncovered": [
      0.0,
-     5
+     11
     ]
    },
-   "pass_all": 0.4146341463414634,
+   "pass_all": 0.32727272727272727,
    "outcomes": {
-    "right": 17,
+    "right": 18,
     "declined": 7,
-    "wrong": 14,
-    "confident-wrong": 3
+    "wrong": 23,
+    "confident-wrong": 7
    },
-   "model_calls": 45,
-   "new": {},
+   "model_calls": 59,
+   "new": {
+    "all": [
+     0.07142857142857142,
+     14
+    ],
+    "composable": [
+     0.0,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.0,
+     6
+    ]
+   },
    "carried_runs": 41
   },
   {
@@ -5854,17 +5871,17 @@
    "set": "hard-v2",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
-   "cases": 41,
-   "runs": 41,
+   "cases": 55,
+   "runs": 55,
    "accuracy": [
-    -0.528455284553,
-    -0.682926829268,
-    -0.373983739837
+    -0.612121212121,
+    -0.739393939394,
+    -0.484848484848
    ],
    "confident_wrong": [
-    0.073170731707,
-    0.0,
-    0.170731707317
+    0.127272727273,
+    0.054545454545,
+    0.218181818182
    ],
    "worth": false
   },
