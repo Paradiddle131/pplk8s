@@ -88,3 +88,15 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Report work queued: #389 (tooltip jump, approved design: a link line in the pinned tooltip with a back link at the target), #390 (three parallel Opus designs for a question-set section, one with the full searchable question list).
 - Anomalies: none; GCP stayed at $0.000010 and the usage check ok at every gate.
 - Next: a session builds #388's parity matrix and #387's runner (subscription, no OpenRouter), then #389 and #390; the free lane carries #379 nightly; #380 waits for #379.
+
+## 2026-11-06, 2026-11-06T20:03Z (session end: #388 and #387 done, #389 built, #390 designs and the owner's review)
+
+- No free-model pass (991 of 1,000 all session, read from `/api/v1/key`); the nightly 00:07Z lane is unchanged and still starts with `backlog`.
+- #388: every setup's tools and context verified from code, logs and BigQuery's job history (`findings/2026-11-06-388-setup-parity.md`); `semantic_agent.bet_tools` checks every log (0 runs outside their tools) and both runners refuse such runs; RULE.md names `cc-metricflow` and `cc-native-mcp`.
+- #387: the strict headless runner (`probes/387_cc_strict.py`, `probes/387_mcp_guard.py`); 2,164 strict runs, Haiku and Sonnet at k = 3 on every set for both setups, Opus 50 a setup on hard-v2; 121 mis-scored runs redacted and rescored after a fix; the report shows the strict rows in place of the subagent rows (`findings/2026-11-06-387-cc-strict.md`).
+- #389: the pinned-tooltip jump, published; #390: three designs posted; the owner picked C and gave a full review, filed as epic #399 (#393 to #398, #390), with the reader rule in the profile and #336's brief.
+- Report: page version 24; #336's artifact 4 read back with the same SHA-256.
+- GCP: $0.000010 and the usage check ok at every gate; BigQuery at 191 GiB of the free 1 TiB this month after about 18 GiB of strict `cc-native-mcp` runs.
+- Anomalies: none. Filed: #392 (the `native-mcp` guard drops BigQuery's error text).
+- Nothing left running: every strict lane finished and is scored; the MCP servers are stopped.
+- Next: epic #399 in its order: #393 (reader rule on the page), #394 (retired questions, the owner's decision), #395 (term tooltips), #396 (three tab designs); the free lane carries #379 nightly; #380 waits for #379.
