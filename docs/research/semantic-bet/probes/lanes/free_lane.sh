@@ -114,6 +114,20 @@ hard_v2() {
   gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp hard-v2"; exit 1; }
   pass "baseline hard-v2 k=$k" 250 "${BE[@]}" --arms baseline --set hard-v2 --runs $k || exit 0
 }
+# The judge's backlog first (#382): the fixed scorer sends a small expected number that is not the answer's own
+# first figure, and a definition put in the answer's own words, to the blind judge; until judged they count as
+# wrong, so the day's quota clears them before any new pass (about 530 requests once, then a few a pass).
+backlog() {
+  local s left
+  for s in frozen hard; do
+    left=$((CAP - $(used))); [ $left -gt 30 ] || return 0
+    cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set $s --judge \
+      --requests $((left < 300 ? left - 20 : 300)) 2>&1 | grep -v -i "warning\|MetricEvaluatorRegistry" | tail -2
+  done
+  carry
+  push "the judge's backlog after the #382 scorer fix"
+}
+backlog
 round 1 hard
 hard_v2 1
 hard_v2 3

@@ -968,6 +968,8 @@ def test_a_small_number_carried_by_a_list_goes_to_the_judge_and_a_paraphrased_de
     assert (
         bet_eval.score_turn(turn, [[16.0]], "16 customers never ordered.", [], {}) is Outcome.RIGHT
     )
+    declined = "Hourly data is not available; 16 customers is the total I can give."
+    assert bet_eval.score_turn(turn, [[16.0]], declined, [], {}) is Outcome.UNCLEAR
     define = Turn(question="How was that computed?", define=["net_revenue_eur"])
     described = {"net_revenue_eur": "Revenue minus partner returns (finance's net sales)."}
     own = "I took the revenue and subtracted what partners returned."

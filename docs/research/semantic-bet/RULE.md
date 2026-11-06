@@ -190,6 +190,6 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   - Dates and times written as models write them ("Oct 2", "Sept 30", "Sep 21–27", ISO dates with any hyphen, clock times) carry no number.
   - Number words ("Nine customers", "half"), whole percentages that round to the rate ("about 33%") and the answer's first "N of M" share carry the expected number.
   - "no … metric" with several words between is a decline.
-  - A right turn whose expected number is a whole number of 40 or less, or one the question holds, stands by the code only as the answer's first figure; otherwise the blind judge decides.
+  - A right turn whose expected number is a whole number of 40 or less, or one the question holds, stands by the code only as the answer's first figure in an answer that does not also decline; otherwise the blind judge decides.
   - A `define` turn that does not quote the definition word for word goes to the blind judge, shown the definition, instead of being wrong.
   - Why: the blind audit found that the scorer passed answers carrying a small expected number by chance (a day, an ID, a count of something else) and failed right answers in words or whole percentages (`findings/382-case-audit/`). Every audited miss now reads right, the 121 audited chance carries are redacted (§ Retiring a defective case), and the eval's own scorer (`evaluation.carries`, the main track's) is unchanged.
