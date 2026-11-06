@@ -210,6 +210,13 @@ def cited(value: float, decimals: int, pool: Sequence[float]) -> bool:
     return any(abs(value - p) <= step or abs(value - 100 * p) <= step for p in pool)
 
 
+def is_refused(call: dict[str, Any]) -> bool:
+    sys.path.insert(0, str(ROOT / "services/semantic-agent/src"))
+    from semantic_agent.bet_tools import refused
+
+    return refused({"result": call.get("full") or call.get("result") or ""})
+
+
 def audit(
     setup: str,
     turns: Sequence[dict[str, Any]],
@@ -218,7 +225,11 @@ def audit(
 ) -> dict[str, Any]:
     allowed = set(tool_names(setup))
     calls = [c for t in turns for c in t["calls"]]
-    outside = sorted({c["tool"] for c in calls if c["tool"] not in allowed})
+    # A call to a tool the harness does not have is refused by it and gains nothing (bet_tools.REFUSED, the same
+    # rule as for the ADK arms): listed, not a fault.
+    tried = {c["tool"] for c in calls if c["tool"] not in allowed}
+    refused = sorted({c["tool"] for c in calls if c["tool"] in tried and is_refused(c)})
+    outside = sorted(tried - set(refused))
     uncited: list[list[Any]] = []
     fabricated: list[int] = []
     for i, turn in enumerate(turns):
@@ -240,6 +251,7 @@ def audit(
         "init_tools_ok": sorted(init_tools) == sorted(expected),
         "tools_ok": not outside and sorted(init_tools) == sorted(expected),
         "outside": outside,
+        "refused": refused,
         "uncited": uncited,
         "fabricated_turns": fabricated,
     }
@@ -386,12 +398,16 @@ async def run_case(
 def logged(setup: str, model: str, name: str) -> set[tuple[str, int]]:
     log = RESEARCH / f"{SETS[name][1]}{setup}.jsonl"
     label = f"claude-code-strict ({model})"
-    done = set()
-    for line in log.read_text().splitlines() if log.exists() else []:
-        row = json.loads(line)
-        if row["model"] == label and row.get("outcome"):
-            done.add((row["case"], int(row["run"])))
-    return done
+    sys.path.insert(0, str(ROOT / "services/semantic-agent/src"))
+    from semantic_agent.bet_eval import (
+        read_log,  # through the overlay: a redacted run is asked again
+    )
+
+    return {
+        (r["case"], int(r["run"]))
+        for r in read_log(log)
+        if r["model"] == label and r.get("outcome")
+    }
 
 
 def recorded_runs(path: Path) -> set[tuple[str, int]]:
@@ -485,12 +501,17 @@ async def smoke(setup: str, model: str, case_id: str) -> int:
 # --- the recorded-answer agent module (328_mcp_live.py --agent 387_cc_strict.py) -------------------------------
 
 
-def recorded(arm: str) -> dict[str, list[dict[str, Any]]]:
-    """Every recorded answer of this setup and model by case, runs in order; a run already logged stays out."""
+def recorded(arm: str, name: str) -> dict[str, list[dict[str, Any]]]:
+    """Every recorded answer of this setup and model on one set, by case, runs in order; a run already logged
+    stays out. Only that set's file: the hard set and hard-v2 share 43 questions, and a run of one set is never
+    scored with an answer recorded for the other."""
     model = os.environ["BET_CC_MODEL"]
     by_case: dict[str, list[dict[str, Any]]] = {}
-    for path in sorted((OUT / "answers").glob(f"{arm}-{model}-*.jsonl")):
-        name = path.stem.removeprefix(f"{arm}-{model}-")
+    for path in (
+        [answers_path(arm, model, name)]
+        if answers_path(arm, model, name).exists()
+        else []
+    ):
         done = logged(arm, model, name)
         for line in path.read_text().splitlines():
             row = json.loads(line)
@@ -503,9 +524,12 @@ def recorded(arm: str) -> dict[str, list[dict[str, Any]]]:
     return by_case
 
 
-def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]:
-    by_case = recorded(arm)
-    by_turns = {tuple(c["turns"]): c["id"] for name in SETS for c in questions(name)}
+def asker(
+    arm: str, name: str
+) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]:
+    """The runner's `ask` on one set (328_mcp_live.py passes `--set`)."""
+    by_case = recorded(arm, name)
+    by_turns = {tuple(c["turns"]): c["id"] for c in questions(name)}
 
     async def ask(qs: Sequence[str]) -> list[dict[str, Any]]:
         rows = by_case.get(by_turns.get(tuple(qs), ""), [])

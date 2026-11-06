@@ -91,7 +91,11 @@ DECLARED: dict[str, frozenset[str]] = {
 }
 
 # What a harness answers when a model calls a tool it does not have.
-REFUSED = ("no tool with that name is available", "is not found in the tools_dict")
+REFUSED = (
+    "no tool with that name is available",
+    "is not found in the tools_dict",
+    "No such tool available",  # Claude Code's answer to a tool it was not given
+)
 FAULTS = "faults.jsonl"
 
 

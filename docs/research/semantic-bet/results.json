@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T19:35Z",
+ "written": "2026-11-06T19:51Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -2965,6 +2965,54 @@
     "declined": 13,
     "wrong": 39,
     "confident-wrong": 2
+   },
+   "model_calls": 135
+  },
+  {
+   "set": "hard",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (sonnet)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 41,
+   "of_cases": 41,
+   "runs": 123,
+   "accuracy": [
+    0.853658536585,
+    0.747967479675,
+    0.951219512195
+   ],
+   "confident_wrong": [
+    0.016260162602,
+    0.0,
+    0.048780487805
+   ],
+   "groups": {
+    "conversation": [
+     0.5833333333333334,
+     8
+    ],
+    "covered": [
+     0.8030303030303031,
+     22
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.9122807017543859,
+     19
+    ]
+   },
+   "pass_all": 0.8292682926829268,
+   "outcomes": {
+    "right": 105,
+    "wrong": 10,
+    "confident-wrong": 2,
+    "unclear": 4,
+    "declined": 2
    },
    "model_calls": 135
   },
@@ -6390,6 +6438,24 @@
    "worth": false
   },
   {
+   "set": "hard",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (sonnet)",
+   "cases": 41,
+   "runs": 123,
+   "accuracy": [
+    -0.089430894309,
+    -0.19512195122,
+    -0.0
+   ],
+   "confident_wrong": [
+    0.016260162602,
+    0.0,
+    0.048780487805
+   ],
+   "worth": false
+  },
+  {
    "set": "hard-v2",
    "arm": "custom-metricflow",
    "model": "claude-haiku-5-5",
@@ -6803,6 +6869,7 @@
    "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ],
   "hard": [
+   "cc-native-mcp on claude-code-strict (sonnet)",
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",

@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import importlib.util
+import inspect
 import os
 import sys
 import time
@@ -134,7 +135,11 @@ async def main() -> int:
         return await converse(agent.build_agent(), questions)
 
     # A data-agent probe answers through its own chat API; an ADK probe through bet_live.converse.
-    ask = agent.asker(arm) if hasattr(agent, "asker") else converse_fresh
+    # A recorded-answer module that takes the set (387_cc_strict.py) answers only from that set's recordings.
+    if hasattr(agent, "asker") and "name" in inspect.signature(agent.asker).parameters:
+        ask = agent.asker(arm, name=args.which)
+    else:
+        ask = agent.asker(arm) if hasattr(agent, "asker") else converse_fresh
 
     if claude:
         spend.METER.start(
