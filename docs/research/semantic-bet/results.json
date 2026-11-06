@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T22:28Z",
+ "written": "2026-11-06T22:56Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -977,6 +977,172 @@
   },
   {
    "set": "frozen",
+   "arm": "cc-metricflow-compute",
+   "model": "claude-code-strict (sonnet)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.859649122807,
+    0.780701754386,
+    0.929824561404
+   ],
+   "confident_wrong": [
+    0.008771929825,
+    0.0,
+    0.021929824561
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9508196721311475,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.75,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.4888888888888889,
+     15
+    ]
+   },
+   "pass_all": 0.8289473684210527,
+   "outcomes": {
+    "right": 196,
+    "unclear": 8,
+    "confident-wrong": 2,
+    "declined": 15,
+    "wrong": 7
+   },
+   "model_calls": 246
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (sonnet)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.789473684211,
+    0.701754385965,
+    0.872807017544
+   ],
+   "confident_wrong": [
+    0.035087719298,
+    0.008771929825,
+    0.074561403509
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9180327868852459,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.75,
+     4
+    ],
+    "trap": [
+     0.9666666666666666,
+     10
+    ],
+    "uncovered": [
+     0.26666666666666666,
+     15
+    ]
+   },
+   "pass_all": 0.7368421052631579,
+   "outcomes": {
+    "right": 180,
+    "confident-wrong": 8,
+    "unclear": 7,
+    "declined": 20,
+    "wrong": 13
+   },
+   "model_calls": 246
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (sonnet)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.925438596491,
+    0.868421052632,
+    0.973684210526
+   ],
+   "confident_wrong": [
+    0.008771929825,
+    0.0,
+    0.026315789474
+   ],
+   "groups": {
+    "conversation": [
+     0.7142857142857143,
+     7
+    ],
+    "covered": [
+     0.9562841530054645,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.8333333333333334,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.8,
+     15
+    ]
+   },
+   "pass_all": 0.8947368421052632,
+   "outcomes": {
+    "right": 211,
+    "unclear": 15,
+    "confident-wrong": 2
+   },
+   "model_calls": 246
+  },
+  {
+   "set": "frozen",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "harness": "claude-code-subagent",
@@ -1359,116 +1525,6 @@
     "wrong": 6
    },
    "model_calls": 82
-  },
-  {
-   "set": "frozen",
-   "arm": "cc-metricflow",
-   "model": "claude-code-strict (sonnet)",
-   "harness": "claude-code-headless",
-   "session": "fresh per run",
-   "rung": 4,
-   "cases": 76,
-   "of_cases": 76,
-   "runs": 228,
-   "accuracy": [
-    0.789473684211,
-    0.701754385965,
-    0.872807017544
-   ],
-   "confident_wrong": [
-    0.035087719298,
-    0.008771929825,
-    0.074561403509
-   ],
-   "groups": {
-    "conversation": [
-     1.0,
-     7
-    ],
-    "covered": [
-     0.9180327868852459,
-     61
-    ],
-    "distractor": [
-     1.0,
-     1
-    ],
-    "planted": [
-     0.75,
-     4
-    ],
-    "trap": [
-     0.9666666666666666,
-     10
-    ],
-    "uncovered": [
-     0.26666666666666666,
-     15
-    ]
-   },
-   "pass_all": 0.7368421052631579,
-   "outcomes": {
-    "right": 180,
-    "confident-wrong": 8,
-    "unclear": 7,
-    "declined": 20,
-    "wrong": 13
-   },
-   "model_calls": 246
-  },
-  {
-   "set": "frozen",
-   "arm": "cc-native-mcp",
-   "model": "claude-code-strict (sonnet)",
-   "harness": "claude-code-headless",
-   "session": "fresh per run",
-   "rung": 3,
-   "cases": 76,
-   "of_cases": 76,
-   "runs": 228,
-   "accuracy": [
-    0.925438596491,
-    0.868421052632,
-    0.973684210526
-   ],
-   "confident_wrong": [
-    0.008771929825,
-    0.0,
-    0.026315789474
-   ],
-   "groups": {
-    "conversation": [
-     0.7142857142857143,
-     7
-    ],
-    "covered": [
-     0.9562841530054645,
-     61
-    ],
-    "distractor": [
-     1.0,
-     1
-    ],
-    "planted": [
-     0.8333333333333334,
-     4
-    ],
-    "trap": [
-     1.0,
-     10
-    ],
-    "uncovered": [
-     0.8,
-     15
-    ]
-   },
-   "pass_all": 0.8947368421052632,
-   "outcomes": {
-    "right": 211,
-    "unclear": 15,
-    "confident-wrong": 2
-   },
-   "model_calls": 246
   },
   {
    "set": "frozen",
@@ -2701,6 +2757,148 @@
   },
   {
    "set": "hard",
+   "arm": "cc-metricflow-compute",
+   "model": "claude-code-strict (haiku)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 41,
+   "of_cases": 41,
+   "runs": 123,
+   "accuracy": [
+    0.79674796748,
+    0.674796747967,
+    0.90243902439
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "conversation": [
+     0.7083333333333334,
+     8
+    ],
+    "covered": [
+     0.8333333333333333,
+     22
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.7543859649122807,
+     19
+    ]
+   },
+   "pass_all": 0.7317073170731707,
+   "outcomes": {
+    "right": 98,
+    "unclear": 7,
+    "wrong": 17,
+    "declined": 1
+   },
+   "model_calls": 135
+  },
+  {
+   "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (haiku)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 41,
+   "of_cases": 41,
+   "runs": 123,
+   "accuracy": [
+    0.682926829268,
+    0.544715447154,
+    0.80487804878
+   ],
+   "confident_wrong": [
+    0.024390243902,
+    0.0,
+    0.065040650407
+   ],
+   "groups": {
+    "conversation": [
+     0.7083333333333334,
+     8
+    ],
+    "covered": [
+     0.7878787878787878,
+     22
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.5614035087719298,
+     19
+    ]
+   },
+   "pass_all": 0.6097560975609756,
+   "outcomes": {
+    "right": 84,
+    "unclear": 6,
+    "wrong": 25,
+    "declined": 5,
+    "confident-wrong": 3
+   },
+   "model_calls": 135
+  },
+  {
+   "set": "hard",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (haiku)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 3,
+   "cases": 41,
+   "of_cases": 41,
+   "runs": 123,
+   "accuracy": [
+    0.837398373984,
+    0.731707317073,
+    0.934959349593
+   ],
+   "confident_wrong": [
+    0.016260162602,
+    0.0,
+    0.040650406504
+   ],
+   "groups": {
+    "conversation": [
+     0.4583333333333333,
+     8
+    ],
+    "covered": [
+     0.7727272727272727,
+     22
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.9122807017543859,
+     19
+    ]
+   },
+   "pass_all": 0.7804878048780488,
+   "outcomes": {
+    "right": 103,
+    "unclear": 5,
+    "wrong": 13,
+    "confident-wrong": 2
+   },
+   "model_calls": 135
+  },
+  {
+   "set": "hard",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "harness": "claude-code-subagent",
@@ -2981,101 +3179,6 @@
     "unclear": 1
    },
    "model_calls": 45
-  },
-  {
-   "set": "hard",
-   "arm": "cc-metricflow",
-   "model": "claude-code-strict (haiku)",
-   "harness": "claude-code-headless",
-   "session": "fresh per run",
-   "rung": 4,
-   "cases": 41,
-   "of_cases": 41,
-   "runs": 123,
-   "accuracy": [
-    0.682926829268,
-    0.544715447154,
-    0.80487804878
-   ],
-   "confident_wrong": [
-    0.024390243902,
-    0.0,
-    0.065040650407
-   ],
-   "groups": {
-    "conversation": [
-     0.7083333333333334,
-     8
-    ],
-    "covered": [
-     0.7878787878787878,
-     22
-    ],
-    "trap": [
-     1.0,
-     5
-    ],
-    "uncovered": [
-     0.5614035087719298,
-     19
-    ]
-   },
-   "pass_all": 0.6097560975609756,
-   "outcomes": {
-    "right": 84,
-    "unclear": 6,
-    "wrong": 25,
-    "declined": 5,
-    "confident-wrong": 3
-   },
-   "model_calls": 135
-  },
-  {
-   "set": "hard",
-   "arm": "cc-native-mcp",
-   "model": "claude-code-strict (haiku)",
-   "harness": "claude-code-headless",
-   "session": "fresh per run",
-   "rung": 3,
-   "cases": 41,
-   "of_cases": 41,
-   "runs": 123,
-   "accuracy": [
-    0.837398373984,
-    0.731707317073,
-    0.934959349593
-   ],
-   "confident_wrong": [
-    0.016260162602,
-    0.0,
-    0.040650406504
-   ],
-   "groups": {
-    "conversation": [
-     0.4583333333333333,
-     8
-    ],
-    "covered": [
-     0.7727272727272727,
-     22
-    ],
-    "trap": [
-     1.0,
-     5
-    ],
-    "uncovered": [
-     0.9122807017543859,
-     19
-    ]
-   },
-   "pass_all": 0.7804878048780488,
-   "outcomes": {
-    "right": 103,
-    "unclear": 5,
-    "wrong": 13,
-    "confident-wrong": 2
-   },
-   "model_calls": 135
   },
   {
    "set": "hard",
@@ -6408,6 +6511,60 @@
   },
   {
    "set": "frozen",
+   "arm": "cc-metricflow-compute",
+   "model": "claude-code-strict (sonnet)",
+   "cases": 76,
+   "runs": 228,
+   "accuracy": [
+    -0.061403508772,
+    -0.140350877193,
+    0.017543859649
+   ],
+   "confident_wrong": [
+    -0.004385964912,
+    -0.035087719298,
+    0.017543859649
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (sonnet)",
+   "cases": 76,
+   "runs": 228,
+   "accuracy": [
+    -0.131578947368,
+    -0.223684210526,
+    -0.039473684211
+   ],
+   "confident_wrong": [
+    0.021929824561,
+    -0.021929824561,
+    0.065789473684
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (sonnet)",
+   "cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.004385964912,
+    -0.035087719298,
+    0.043859649123
+   ],
+   "confident_wrong": [
+    -0.004385964912,
+    -0.013157894737,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "cases": 76,
@@ -6529,42 +6686,6 @@
     0.026315789474,
     -0.026315789474,
     0.078947368421
-   ],
-   "worth": false
-  },
-  {
-   "set": "frozen",
-   "arm": "cc-metricflow",
-   "model": "claude-code-strict (sonnet)",
-   "cases": 76,
-   "runs": 228,
-   "accuracy": [
-    -0.131578947368,
-    -0.223684210526,
-    -0.039473684211
-   ],
-   "confident_wrong": [
-    0.021929824561,
-    -0.021929824561,
-    0.065789473684
-   ],
-   "worth": false
-  },
-  {
-   "set": "frozen",
-   "arm": "cc-native-mcp",
-   "model": "claude-code-strict (sonnet)",
-   "cases": 76,
-   "runs": 228,
-   "accuracy": [
-    0.004385964912,
-    -0.035087719298,
-    0.043859649123
-   ],
-   "confident_wrong": [
-    -0.004385964912,
-    -0.013157894737,
-    0.0
    ],
    "worth": false
   },
@@ -6768,6 +6889,60 @@
   },
   {
    "set": "hard",
+   "arm": "cc-metricflow-compute",
+   "model": "claude-code-strict (haiku)",
+   "cases": 41,
+   "runs": 123,
+   "accuracy": [
+    -0.146341463415,
+    -0.260162601626,
+    -0.048780487805
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (haiku)",
+   "cases": 41,
+   "runs": 123,
+   "accuracy": [
+    -0.260162601626,
+    -0.390243902439,
+    -0.138211382114
+   ],
+   "confident_wrong": [
+    0.024390243902,
+    0.0,
+    0.065040650407
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
+   "arm": "cc-native-mcp",
+   "model": "claude-code-strict (haiku)",
+   "cases": 41,
+   "runs": 123,
+   "accuracy": [
+    -0.105691056911,
+    -0.20325203252,
+    -0.024390243902
+   ],
+   "confident_wrong": [
+    0.016260162602,
+    0.0,
+    0.040650406504
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard",
    "arm": "cc-metricflow",
    "model": "claude-code (haiku)",
    "cases": 41,
@@ -6871,42 +7046,6 @@
     0.0,
     0.0,
     0.0
-   ],
-   "worth": false
-  },
-  {
-   "set": "hard",
-   "arm": "cc-metricflow",
-   "model": "claude-code-strict (haiku)",
-   "cases": 41,
-   "runs": 123,
-   "accuracy": [
-    -0.260162601626,
-    -0.390243902439,
-    -0.138211382114
-   ],
-   "confident_wrong": [
-    0.024390243902,
-    0.0,
-    0.065040650407
-   ],
-   "worth": false
-  },
-  {
-   "set": "hard",
-   "arm": "cc-native-mcp",
-   "model": "claude-code-strict (haiku)",
-   "cases": 41,
-   "runs": 123,
-   "accuracy": [
-    -0.105691056911,
-    -0.20325203252,
-    -0.024390243902
-   ],
-   "confident_wrong": [
-    0.016260162602,
-    0.0,
-    0.040650406504
    ],
    "worth": false
   },
@@ -7419,6 +7558,7 @@
   "frozen": [
    "cc-metricflow on claude-code-strict (haiku)",
    "cc-metricflow-compute on claude-code-strict (haiku)",
+   "cc-metricflow-compute on claude-code-strict (sonnet)",
    "cc-native-mcp on claude-code-strict (haiku)",
    "cc-native-mcp on claude-code-strict (sonnet)",
    "custom-hybrid on claude-haiku-5-5",

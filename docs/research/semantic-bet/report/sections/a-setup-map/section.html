@@ -105,9 +105,9 @@
    so the map keeps close to its size. Narrower screens keep the stacked layout. */
 @media (min-width: 1180px) {
   .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: 0 16px; align-items: start; }
-  .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
   .sm .sm-rungs:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-  .sm .sm-side { position: sticky; top: 8px; display: flex; flex-direction: column; min-width: 0; }
+  .sm .sm-side { position: sticky; top: calc(var(--tabh, 0px) + 8px); display: flex; flex-direction: column; min-width: 0; }
   .sm .sm-scroll { order: 1; overflow: visible; }
   .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
   .sm .sm-read .sm-rt { margin-bottom: 4px; }
@@ -203,6 +203,10 @@
         p: ["adk", "e-adk-mft", ...MFT],
         tools: "list_metrics, then describe_metric, then query_metrics", ctx: "the semantic layer itself: each metric's definition and dimensions, the glossary, saved queries",
         reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; the agent never writes SQL." },
+      "custom-metricflow-compute": { asks: "adk", delta: "the three MetricFlow tools, with arithmetic over their results",
+        p: ["adk", "e-adk-mft", ...MFT],
+        tools: "list_metrics, then describe_metric, then query_metrics", ctx: "the semantic layer; an instruction that allows sums, differences and ratios of the metric results it fetched, naming the figures used",
+        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; the agent never writes SQL, only combines the results." },
       "custom-lightdash": { asks: "adk", delta: "one tool on Lightdash's free metric query API",
         p: ["adk", "e-adk-ldt", "ldt", "e-ldt-ld", "ld", "ld.sql", "e-ld-lw", "lw"],
         tools: "one tool that sends a metric query, never SQL, to Lightdash's free API", ctx: "the explores and metrics Lightdash serves, with their descriptions",
@@ -214,6 +218,10 @@
       "cc-metricflow": { asks: "cc", delta: "the same three tools in another harness",
         p: ["cc", "e-cc-mft", ...MFT],
         tools: "the same three MetricFlow tools, and no other tool: no shell, file or web access", ctx: "the semantic layer and custom-metricflow's instruction, word for word",
+        reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; Claude Code has no tool that runs SQL." },
+      "cc-metricflow-compute": { asks: "cc", delta: "the same tools, with arithmetic over their results, in another harness",
+        p: ["cc", "e-cc-mft", ...MFT],
+        tools: "the same three MetricFlow tools, and no other tool: no shell, file or web access", ctx: "the semantic layer and custom-metricflow-compute's instruction, word for word",
         reach: "only what MetricFlow's semantic models read; no legacy tables", sql: "MetricFlow writes it; Claude Code has no tool that runs SQL." },
       "cc-native-mcp": { asks: "cc", delta: "Google's MCP servers in another harness",
         p: ["cc", "e-cc-mcp", "mcp", "mcp.sql", "e-mcp-kc", "kc", "kc.import", "e-mcp-bq", "bq", ...BQ_ALL],
@@ -565,7 +573,8 @@
 
     // Wide layout: the map and its readout fit the viewport together. The readout keeps the height of its
     // longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves.
-    // The map takes the rest of the height, never under 78% of the 1148 px it has in the page column and
+    // The map takes the rest of the height under the part strip, never under 66% of the 1148 px it has in the page
+    // column (the size at which the longest readout still fits a 1280 x 800 screen below the strip) and
     // never over its column's width; the legend comes last, the first to go below the fold.
     const wide = window.matchMedia("(min-width: 1180px)"), scroller = svg.parentElement, side = scroller.parentElement;
     function readMax() {
@@ -579,15 +588,17 @@
       probe.remove();
       return m;
     }
+    // the room under the page's sticky part strip (--tabh, its height; 0 on a page without one)
+    const room = () => window.innerHeight - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0);
     function fit() {
       syncVw(); svg.style.width = ""; listEl.style.maxHeight = ""; read.style.minHeight = "";
       if (!wide.matches) return;
       const rh = readMax(); read.style.minHeight = rh + "px";
-      const vb = svg.viewBox.baseVal, col = scroller.clientWidth;
-      const w = Math.min(col, Math.max((window.innerHeight - 16 - 8 - rh) * vb.width / vb.height, 0.78 * 1148));
+      const vb = svg.viewBox.baseVal, col = scroller.clientWidth, h = room();
+      const w = Math.min(col, Math.max((h - 16 - 8 - rh) * vb.width / vb.height, 0.66 * 1148));
       if (w < col - 0.5) svg.style.width = Math.floor(w) + "px";
       // the list's own column is as tall as the map and its readout, within the viewport
-      listEl.style.maxHeight = Math.min(window.innerHeight - 16, scroller.offsetHeight + 8 + rh) + "px";
+      listEl.style.maxHeight = Math.min(h - 16, scroller.offsetHeight + 8 + rh) + "px";
     }
     let ft = 0;
     window.addEventListener("resize", () => { clearTimeout(ft); ft = setTimeout(fit, 100); });

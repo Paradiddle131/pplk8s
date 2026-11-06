@@ -158,3 +158,61 @@ Measured from the page's data (results.json at d37d3bf, the logs scored as the e
 - The owner's expectation about MetricFlow holds: the ratio questions are composable from two metric queries, so MetricFlow on the free model answers more of the hard set's uncovered questions than the frozen set's (61% of 57 runs against 38% of 29 runs; the hybrid 84% of 19 against 52% of 29).
   The cost: on the hard set's uncovered questions MetricFlow was confidently wrong on 6 of 57 runs, against 0 of 29 on the frozen set, where it mostly declines.
 - The page also said MetricFlow "declines them by design" next to its 61%: that sentence now reads "which no single metric answers", and the setup's description says it is told to answer only through the metrics.
+
+## Revision 3 (2026-11-06): the tab strip, a structured glossary, structured tooltips, an audit of the text-heavy parts
+
+### What changed
+
+- The page is in seven parts with a tab strip, ported from design A (`variants/396/a-tabs/`): Summary, Decision map, MetricFlow agent, Every run, Setups, Question sets, Method & glossary.
+  The tabs show titles only (the owner: "There's no need to show the figure numbers on the tabs. titles are enough"); everything A verified is kept: a hash per part, `#term-*`, `#map-*`, `#setup-*` and `#other-set-versions` opening their part, Back, Forward and reload with the scroll position, the tooltip jumps and "↑ Back" across parts, figures at real width in closed parts, the WAI-ARIA tabs keyboard pattern, and the sticky heads of Figures 1 and 6 under the strip.
+- A's known gaps, closed:
+  - The setup map's sticky columns stop under the strip in the section's own CSS, and its `fit()` takes the strip's height (`--tabh`) off the viewport's.
+    Subtracting it alone left the longest readout (the Claude Code rung) 73 px below the fold at 1280 × 800, because the map's floor (78% of 1148 px) held; the floor is now 66%, the size at which every readout fits there.
+    Map width and the worst readout line against the viewport's bottom, over all 99 setups, rungs and parts: 1280 × 900 906 px, 19 px to spare; 1280 × 800 765 px, 20 px; 1366 × 768 757 px, 13 px; 1440 × 900 932 px, 20 px; 1920 × 1080 1185 px, 20 px.
+    The cost: at 1280 × 800 the map draws at 67% of its column, so its labels are smaller than before.
+  - `build.py` puts the appendix at its own placeholder, `<!--APPENDIX-->`, in the Question sets part (a template without one still gets it after the sections), so the page no longer moves it at run time; `tests/test_report_build.py` checks both.
+  - `tools/clipcheck.js` opens each part before checking it, and opens a control's part before using that control (A's `clipcheck-views.js`, now the tool itself); `--selftest` still finds all six kinds.
+- The glossary (#401) is a lookup table: 44 terms grouped by their type (`REPORT.terms[i].type`, in `REPORT.termTypes` order) under sticky group headings that fold, with a search box (matches marked, every word must match, the count announced politely), a type filter whose counts follow the search, and an empty state with a reset; it sits in its own scroll box (at most 40rem, and short enough to keep the search and filter in view) with a sticky column head.
+  On a phone each term stacks over its meaning, the filter is one row that scrolls sideways, and each group's heading sticks while its terms pass.
+  A `#term-<key>` jump (from a tooltip or a URL) undoes whatever hides its row (the search, the filter or a fold), lands on the row inside the box and the viewport, and flashes it.
+- Tooltips (#401) share one anatomy: a small-capital kicker saying what kind of thing it is (a term's glossary type, "Setup" and its family, a row's set and model role, a square's question group), a title (no longer an `h4`, so tooltips stay out of the page's outline), a line of what it is, and sections under small-capital labels whose facts are label | value rows, labels muted in one column, values in ink with the key number bold and its interval lighter.
+  A row's tooltip reads Score (with "differences paired by question" said once), How it ran (outcomes as the plate's own glyphs) and An example answer; a plate square's reads its question, then Run k of 3.
+  A pinned tooltip's sections run its full width; only the kicker and title make room for the close mark.
+  A tooltip hidden by a scroll while the pointer rests on its mark comes back when the pointer moves.
+- The audit's fixes to the other text-heavy parts:
+  - Method is one fact per row (Runs, Scoring, Exclusions, Intervals, Comparisons, Models, Claude Code) in a label column, its words unchanged, with its terms marked for their tooltips.
+  - The winners band lists the setups tied with the leader one per row, name left and figure right, so the figures line up; "Against it" reads the same way; setup names no longer break at their hyphens.
+  - The decision map's group columns carry F and H over their two chips, so a reader need not reach the caption to tell the sets apart.
+  - Line lengths of figure titles, the abstract's lead, Method and the glossary are held near 80 characters, and reading text avoids a lone last word.
+
+### How I checked
+
+Chromium with Playwright, on the built page, light and dark (the scripts lived in the session's scratch space, as A's did):
+- The parts (A's 90 checks, rerun on this page: 69 plus 21, 0 failures): each of the seven parts by click, by arrow keys, Home and End, and by URL; Back, Forward and reload with the scroll position; `#term-*`, `#map-*`, `#setup-*`, `#setup-map` and `#other-set-versions` opening their part; both tooltip jumps and "↑ Back" across parts at 1280 and 390 px; figures drawn at the one-page report's sizes after a resize while hidden (900, 1180 and 390 px); the sticky heads of Figures 1 and 6 under the strip; the strip's contrast; no panel fade or bar transition under reduced motion.
+  Each part also loaded by URL at 1280 × 900, 1280 × 800 and 390 × 844 in both themes (42 loads): no console errors, no sideways page scroll.
+- The glossary (30 checks, 0 failures, at 1280 light and 390 dark): 44 rows in 6 groups; a typed search ("join": 3 rows, marks, "3 of 44"); the filter (one group, "8 of 44"); a heading folding its group; tooltip jumps into a row hidden by the search, into a folded group and into a row the filter hides, each lands inside the box and the viewport, flashes, and "↑ Back" returns; a `#term-` hash change into a filtered-out row; a load on `#term-ratio-of-sums`; the sticky head and group heading; the empty state and its reset.
+- Tooltips and dimming (134 checks, 0 failures): every kind (a term, a row in Figures 2 to 5 and in the decision map, a setup in the plate, the setup map and the explorer, a plate square) by hover and pinned by click or tap, at 1280 and 390 px, light and dark: kicker, title, sections, labels coloured apart from values, no heading inside, inside the viewport, every text at least 5.62:1 on the tooltip's ground; Escape closes each.
+  Figures 2 to 5: hover focuses and leaving clears; a click locks the focus and a second mark's hover adds nothing while it holds; Escape clears both; in Figure 2 a glider off home drops a lock and its pin, hover and click add no focus dimming while it is off home, and Home returns it and lets hover focus again.
+- The setup map's readout against the fold: the table above.
+- `node tools/clipcheck.js --quick`: 0 findings, no console errors, no sideways page scroll, at 1280, 1024, 768, 400 and 360 px in light, dark and the dark button, each part opened in turn; `--selftest` finds all six kinds.
+- `tests/test_report_build.py`: 8 passed (one new test: the appendix's placement).
+- Screenshots at device scale 2 in `shots/rev3/`: the strip (desktop light, phone light), the glossary (desktop light, phone dark, each with a search applied too), a pinned row tooltip and a pinned term tooltip in light and dark.
+
+### The impeccable audit and critique (text-heavy parts)
+
+Its detector (`impeccable detect`, the skill's bundled binary, telemetry off) scanned the template, both sections and fourteen static snapshots of the built page per viewport (Summary, Decision map, Method & glossary with and without a search, a pinned term, row and setup tooltip; light and dark; 1280 × 800 and 390 × 844).
+The critique ran in one context (no sub-agent tool was available), so it is a degraded run by the skill's own rule, and it was not saved under `.impeccable/` (outside the files this revision may change).
+- Fixed:
+  - Line length: 22 findings at 1280 (figure titles at 112 to 115 characters a line, Method at 98 to 101, the glossary's meanings at 91 to 92, the abstract's lead at 92), now 0: titles at 40rem, the lead at 42rem, Method and the glossary narrower.
+  - Undersized text: 54 findings of setup names at 10.8 px (the winners band, tooltips) and 10.5 px (the abstract table on a phone), now 0 (12 px and 11 px).
+  - Skipped headings: tooltips' `h4` titles under an `h2`, 6 findings, now 0 (titles are no longer headings).
+  - Stragglers at 390 px: 26 lone last words (byline, captions, glossary, Method), now 0 (`text-wrap: pretty` on reading text).
+  - From the critique, beyond the detector: Method's three paragraphs mixed seven facts (now one per row); the winners band's tied setups ran on as one sentence with setup names broken at their hyphens (now one per row, figures aligned); the decision map's paired chips named their sets only in the caption below a long table (now F and H over the chips); tooltips had no separation of title, sections, labels and values (above).
+- Left, and why:
+  - Text under a pinned tooltip (32 findings at 1280, 36 at 390): a pinned tooltip covers what it sits on by design.
+  - 11.5 px text in the figures' SVG (18 at 1280, 46 at 390): axis and tick labels of the plots, not text-heavy components, and sized to fit their panels; outside this revision's scope.
+  - The template's static scan pairs the dark theme's `--ink-3` with the light tooltip ground (2.7:1); the two never meet on the page, where every tooltip text is at least 5.62:1.
+  - A row tooltip stays tall (about 470 to 510 px at 1280): it keeps every fact it had; it fits a 390 × 844 screen.
+  - The glossary's type filter is seven choices, more than the critique's four at a glance; the counts and "All types" carry it, and it wraps to two rows at desktop width.
+  - Trade-offs kept from A: find-in-page searches only the open part; seven parts.
+- Not verified: Safari and Firefox, real touch devices, screen-reader output.

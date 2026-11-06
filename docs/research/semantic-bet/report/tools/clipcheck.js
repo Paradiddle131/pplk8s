@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Clipped-text detector for the semantic-bet report page.
+// The page is in parts (tabs): the detector opens each part before checking it, and opens a control's part
+// before using that control.
 // Usage: node clipcheck.js [--url file:///...index.html] [--widths 1280,1024,768,400,360] [--themes light,dark,dark-button]
 //                          [--json out.json] [--quick] [--selftest] [--font-delay ms]
 // For every width and theme it loads the page and checks, in these states:
-//   rest; every question set selected in every set switch; every setup in the setup explorer;
+//   rest (each part, opened in turn); every question set selected in every set switch; every setup in the setup explorer;
 //   every setup and rung in the setup map; each Figure 2 glider at 0 and at its end.
 // A finding is text a reader cannot see in full:
 //   clip      a text box reaching past the padding box of an ancestor that clips it (overflow hidden/clip,
@@ -355,22 +357,27 @@ async function selftest(browser) {
       const h = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
       if (h.sw > h.cw) pageIssues.push(`${tag} ${state}: horizontal page scroll ${h.sw} > ${h.cw}`);
     };
+    // every state is checked from the page's top, as the rest state is: the stuck tab strip paints over text
+    // scrolled beneath it, which the overlap test (geometry only) would report; the covered test handles it
     const run = async (state, rootSel, occl) => {
+      await page.evaluate(() => window.scrollTo(0, 0)); await settle(page);
       const f = await page.evaluate(inPage, { rootSel, occl });
       f.forEach((x) => all.push(Object.assign({ width: w, theme, state }, x)));
       await hs(state);
     };
-    await run("rest", null, true);
+    const openView = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const v = el && el.closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, sel); await settle(page); };
+    const viewNames = await page.$$eval(".view", (vs) => vs.map((v) => v.dataset.view));
+    if (!viewNames.length) await run("rest", null, true);
+    for (const vn of viewNames) { await page.evaluate((vn) => window.__reportViews.show(vn), vn); await settle(page); await run("rest view=" + vn, null, true); }
     // set switches: every set in every switch
     const sets = await page.$$eval(".seg button[data-set]", (bs) => [...new Set(bs.map((b) => b.dataset.set))]);
     for (const s of sets) {
       const n = await page.$$eval(".seg", (x) => x.length);
-      for (let i = 0; i < n; i++) { const b = page.locator(".seg").nth(i).locator(`button[data-set="${s}"]`); if (await b.count()) await b.click(); }
-      await settle(page);
-      await run("set=" + s, null, !QUICK);
+      for (let i = 0; i < n; i++) { const b = page.locator(".seg").nth(i).locator(`button[data-set="${s}"]`); if (await b.count()) { await page.evaluate((i) => { const v = document.querySelectorAll(".seg")[i].closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, i); await settle(page); await b.click(); await settle(page); await run("set=" + s + " seg" + i, null, !QUICK); } }
     }
     // the setup explorer: every setup
     const chips = await page.$$eval(".sxb .sxb-chip", (cs) => cs.map((c) => c.dataset.arm));
+    if (chips.length) await openView(".sxb");
     for (const a of chips) {
       await page.click(`.sxb .sxb-chip[data-arm="${a}"]`); await settle(page);
       await run("explorer=" + a, "section.sxb", !QUICK);
@@ -383,6 +390,7 @@ async function selftest(browser) {
       await page.click(sel); await settle(page); // let go
     }
     // Figure 2's gliders at 0 and at the end
+    await openView("#forest");
     const gl = await page.$$("#forest .glider");
     for (let i = 0; i < gl.length; i++) {
       for (const key of ["End", "Home"]) {
