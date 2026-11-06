@@ -344,6 +344,7 @@ window.REPORT = D;
   <div class="col notes">
     <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code subagents run in another harness, one fresh subagent per question, so they are shown for comparison and never decide. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
     <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
+    <p>Every answer is scored by the current rule, and only questions that passed a blind audit of the test itself count: a question whose expected number was wrong, had no unique answer on the data, or could be matched by chance is left out (RULE.md, the register of retired questions).</p>
   </div>
 
   <h2>Glossary</h2>

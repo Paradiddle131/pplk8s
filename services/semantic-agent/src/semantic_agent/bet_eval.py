@@ -215,6 +215,10 @@ def load_bet(
     return BetSet(questions, groups, spec["hedges"], name, new)
 
 
+def yaml_ids(path: Path) -> set[str]:
+    return {case["id"] for case in yaml.safe_load(path.read_text())["questions"]}
+
+
 def load_set(name: str = FROZEN, ids: Sequence[str] = (), overlay: Path = RESEARCH) -> BetSet:
     """A set by its name in SETS (`frozen`, `hard`, `hard-v2`), as scored: without the cases the
     overlay beside the logs (`overlay`) retires, with its corrected labels."""
@@ -1371,6 +1375,38 @@ def write_every_arm(directory: Path = RESEARCH, runs: int = RUNS) -> Path:
     (directory / RESULTS.name).write_text(
         json.dumps(results(directory, runs), indent=1, ensure_ascii=False) + "\n"
     )
+    write_scored_runs(directory)
+    return path
+
+
+SCORED_RUNS = "scored-runs.jsonl"
+EXAMPLE_TEXT = 400
+
+
+def write_scored_runs(directory: Path = RESEARCH) -> Path:
+    """Every run of every set as it is scored now (the overlay applied, every turn scored again,
+    the judge's verdicts in), for the report: it reads its squares and examples from here, never
+    from the logs, so it shows only the current data (#382; owner, 2026-11-06: "uses the latest
+    the freshest data points only"). One row per run: its key, its outcome, and per turn the
+    outcome, the head of the answer and the tools it called."""
+    rows = []
+    for name in SETS:
+        bet = load_set(name, overlay=directory)
+        for e in judged_logs(bet, directory):
+            if e.get("case") not in bet.groups:
+                continue
+            turns = [
+                {
+                    "outcome": t.get("outcome"),
+                    "text": (t.get("text") or "")[:EXAMPLE_TEXT],
+                    "tools": sorted({c.get("tool") for c in t.get("calls") or [] if c.get("tool")}),
+                }
+                for t in e.get("turns") or []
+            ]
+            keep = ("arm", "model", "case", "run", "at", "outcome", "carried_from")
+            rows.append({"set": name, **{k: e[k] for k in keep if k in e}, "turns": turns})
+    path = directory / SCORED_RUNS
+    path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
     return path
 
 
@@ -1483,8 +1519,16 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
             for name, files in SETS.items()
         },
     }
+    out["sets"] = {}
+    retired, _ = read_overlay(directory)
     for name in SETS:
         bet = load_set(name, overlay=directory)
+        out["sets"][name] = {
+            "cases": [q.id for q in bet.questions],
+            "groups": bet.groups,
+            "new": list(bet.new),
+            "retired": sorted(c for c in retired if c in yaml_ids(SETS[name].questions)),
+        }
         entries = judged_logs(bet, directory)
         for model in dict.fromkeys(e["model"] for e in entries):
             for arm in arms_of(entries, model):

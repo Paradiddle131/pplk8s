@@ -129,12 +129,12 @@ TERMS = [
     ("partial", "Partial pass", "A pass with fewer questions than the set, or fewer than three runs per question."),
     ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
     ("exact", "Exact bound", "When every run of every question is right, or none is, the bootstrap has no spread; the page then gives the exact two-sided 95% (Clopper-Pearson) bound over the questions instead."),
-    ("frozen", "Frozen set", "The first question set, fixed before any setup was scored; its uncovered questions are medians, percentiles, times between events and weather."),
+    ("frozen", "Frozen set", "The first question set, fixed before any setup was scored; its uncovered questions are medians, times between events, peaks, and ratios of two measures."),
     ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it: hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), and its uncovered questions are mostly ratios and differences of two measures. It detects only larger gaps."),
 ]
 # What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
 UNCOVERED_KIND = {
-    "frozen": "Its uncovered questions: medians, percentiles, times between events, weather.",
+    "frozen": "Its uncovered questions: medians, times between events, peaks, ratios of two measures.",
     "hard": "Its uncovered questions: mostly ratios and differences of two measures.",
     "hard-v2": "Its uncovered questions need row-level SQL (medians, rankings, first orders, anti-joins, date spines, time zones); its composable ones are arithmetic over metric results.",
 }
@@ -351,6 +351,16 @@ def pick_order(r):
             -r["cases"])
 
 
+def load_scored(path):
+    """scored-runs.jsonl (bet_eval.write_scored_runs) by (set, arm, model), as load_logs gives."""
+    raw = defaultdict(list)
+    for line in open(path, encoding="utf-8"):
+        if line.strip():
+            r = json.loads(line)
+            raw[(r["set"], r.get("arm"), r.get("model"))].append(r)
+    return raw
+
+
 def load_logs(log_dir):
     raw = defaultdict(list)
     for path in sorted(glob.glob(os.path.join(log_dir, "eval-*.jsonl"))):
@@ -435,8 +445,19 @@ def build(results_path, log_dir, sets_dir, out_path, show=None):
             qsets[st] = parse_set(os.path.join(sets_dir, setfiles.get(st, "semantic_bet_%s.yaml" % st)))
         except (OSError, ValueError):
             qsets[st] = {"groups": {}, "questions": {}}
-    verdicts = read_judge(os.path.join(log_dir, "judge.jsonl"))
-    raw = load_logs(log_dir)
+    # The runs as bet_eval scores them now (#382): retired cases, redacted runs and the judge's
+    # verdicts already applied, every turn scored by the current rule, so the page shows only the
+    # current data. Without that file (an older results.json), the logs are read and judged here.
+    scored = os.path.join(log_dir, "scored-runs.jsonl")
+    fresh = os.path.exists(scored)
+    verdicts = {} if fresh else read_judge(os.path.join(log_dir, "judge.jsonl"))
+    raw = load_scored(scored) if fresh else load_logs(log_dir)
+    # Each set's cases and groups as scored (the overlay's retirements and labels), from results.json.
+    for st, spec in (R.get("sets") or {}).items():
+        if st in qsets:
+            keep = set(spec.get("cases") or [])
+            qsets[st]["questions"] = {c: t for c, t in qsets[st]["questions"].items() if c in keep}
+            qsets[st]["groups"] = {c: g for c, g in (spec.get("groups") or {}).items() if c in keep}
     step2 = {(x.get("set"), x.get("arm"), x.get("model")): x for x in R.get("step_two", [])}
     rank = {"confident-wrong": 0, "declined": 1, "wrong": 2, "unclear": 3, "right": 4}
     known = {a for _, _, arms in LADDER for a in arms}
@@ -472,7 +493,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None):
             pc = defaultdict(list)
             example = None
             for e in entries:
-                oc = judged_outcome(e, st, verdicts)
+                oc = e.get("outcome") if fresh else judged_outcome(e, st, verdicts)
                 if e.get("case") not in cidx or oc not in OUTCODE:
                     continue
                 pc[e["case"]].append(oc)
@@ -482,7 +503,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None):
                     text = strip_md(turn["text"])
                     if len(text) > 240:
                         text = text[:237].rsplit(" ", 1)[0] + "..."
-                    tools = sorted({c.get("tool") for c in (turn.get("calls") or []) if c.get("tool")})
+                    tools = turn.get("tools") or sorted({c.get("tool") for c in (turn.get("calls") or []) if c.get("tool")})
                     example = {"case": e["case"], "outcome": oc, "text": text, "tools": tools}
             units = "".join("".join(OUTCODE[o] for o in pc.get(c, [])[:3]).ljust(3, ".") for c in ids)
             rows.append({
