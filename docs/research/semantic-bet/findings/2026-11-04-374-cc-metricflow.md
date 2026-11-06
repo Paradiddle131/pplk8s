@@ -140,6 +140,7 @@ The first pass put about 12 cases in one subagent session, where every API run s
 ### Still unknown
 
 - Whether typed function calls are what lets Haiku compose metrics for `uncovered` questions: the same three tools offered to a subagent as typed tools (an MCP server over `tool_cli`) would test it; not run, since it needs a new harness.
+  Answered 2026-11-06 by [the strict headless runner](2026-11-06-387-cc-strict.md): with the same three tools as typed MCP tools in a fresh headless session, Haiku answers 67% of hard-v2's `composable` questions against 27% here, mostly by computing from metric results.
 
 ## Opus to 50 frozen cases (owner, 2026-11-05T19:50Z: "let's do 50 for now")
 
