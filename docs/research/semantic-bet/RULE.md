@@ -27,6 +27,44 @@ Every case keeps `questions.yaml`'s shape, so `services/semantic-agent`'s eval c
 2026-11-03, [#356](../../../../../issues/356): a second set, [`services/semantic-agent/evals/semantic_bet_hard.yaml`](../../../services/semantic-agent/evals/semantic_bet_hard.yaml) (43 cases, 44% `uncovered`; SHA-256 in [its finding](findings/2026-11-03-356-hard-set.md)), is an addition the owner asked for, not a correction: "were the agents asked such hard questions, difficult to measure and easy to fail due to the complexity of the business query, as well as the lack of knowledge around the terms? If not, I would really like to … add hard queries and measure accordingly" (owner, 2026-11-03).
 It is scored beside the first set under this same rule (outcomes, the two numbers, the paired comparison, the ladder), each set reported on its own, and it is frozen from now on, before any arm runs on it, as § What freezing means says of the first.
 
+### Set versions
+
+2026-11-06T09:18Z, [#376](../../../../../issues/376) (epic [#375](../../../../../issues/375)), written before any `hard-v2` case is drafted.
+The owner, 2026-11-06, in a session: "I wish the hard set was indeed harder, not only on the business side ... but also on the writing the SQL part"; "I don't want to lose the version 1 ... on the report ... I would show only the latest version"; "before replacing the version 1 with the version 2 on the report, you need to first prove it to me".
+
+- A set version is a new set name and a new file, never an edit of a frozen one: `hard` is the hard set's v1 (`semantic_bet_hard.yaml`), `hard-v2` its v2 (`semantic_bet_hard_v2.yaml`).
+  Each version keeps its own logs (`eval-hard-*.jsonl`, `eval-hard-v2-*.jsonl`) and its own rows in `results.json`; a superseded version's file, logs and rows are never edited or deleted.
+- A version's file names what it supersedes (`supersedes: hard`) and why; this section gets one dated line per version.
+- A version is frozen, as § What freezing means says, before any arm runs on it; its drafting never reads any arm's result, and no arm's result ever edits it.
+  A criterion below that fails is a result, reported as one, never a reason to change the frozen set; a later version may follow, under this same rule.
+- Carried runs: at a version's freeze, a script copies the superseded version's runs of each case whose scoring inputs are byte-identical (its question turns, expected SQL, hedges and tolerance) into the new version's logs.
+  Each copied run carries `carried_from: <the superseded set>` and the SHA-256 of those scoring inputs; the copy is refused for any case whose hash differs, so only new or changed cases need new runs.
+- The report shows one version of each set family by default: the superseded one until the owner says go on the new one's comparison, then the newest.
+  The other stays in the data and in an appendix (or a set switch labelled superseded), with the same numbers as before.
+
+#### `hard-v2` (2026-11-06)
+
+`hard-v2` supersedes `hard`: v1 was hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), but most of its `uncovered` cases are a ratio or difference of two measures, arithmetic over metric results, so the set never tested writing SQL.
+It holds v1's 43 cases byte-identical in their scoring inputs, relabelled under its groups, plus about 20 new cases drafted blind in a business user's words.
+
+- Its groups: `covered` (one metric query answers it, unchanged); `composable` (no single metric does, but arithmetic over at most three metric query results does: a ratio, a difference, a share of two metric totals); `uncovered` (needs row-level SQL that no metric composition gives: a median, a percentile, time between events, a cohort, a ranking with ties, an anti-join, a date spine).
+  At least 30% of its cases are `composable` or `uncovered`, and § The rule's "`uncovered` case" reads, on this set, as either of the two.
+- Its kind `sql_hard` (a kind, not a group): the obvious SQL gives another number for a reason in the rubric below; it can sit on a `covered`, `composable` or `uncovered` case.
+  `trap`, `conversation` and v1's kinds keep their v1 meaning.
+- The SQL-difficulty rubric, fixed before drafting; every new case carries at least one: a join that fans out (orders to returns, sessions to events) and double counts; a distinct count across a join; a ratio of sums against a mean of ratios; a window (rank with ties, running totals, lag between events, the first event per customer); a median or a percentile; sessionization or gaps and islands; a cohort or retention over two periods; an anti-join ("customers who never ..."); a date spine (days with no orders count as zero); a fiscal calendar or a timezone boundary combined with any of the above.
+- Hardness is shown without any agent: each new case's `naive_sql` (the obvious query) must give a number outside the tolerance from its `expected_sql`, checked by `probes/325_check_set.py`, as v1's traps were.
+
+The pre-registered criteria, written 2026-11-06T09:18Z before any run on `hard-v2` and before its drafting; v2 is "harder on SQL" when all of these hold on its new cases at k = 3:
+
+1. Agent-independent: every new case's naive SQL misses its expected number, and each case carries a rubric kind (the checker's output in the freeze finding).
+2. The best SQL writer is off the ceiling: the managed best (`native-context-bare`, Gemini, thinking) is right on at most 85% of v2's new `uncovered` cases (it was 100% on v1's).
+3. The inversion is gone: `custom-metricflow` on the free model answers fewer of v2's `uncovered` cases than of the frozen set's (38%).
+4. The floor feels it: the bare data agent (`native-bare`) is at least 15 points below the managed best on v2's new cases.
+
+Exploratory, reported with no pass or fail, since it is the hypothesis rather than a property of the set: whether context and tools (MetricFlow, the hybrid, catalog context) beat the floor on the `sql_hard` cases.
+What to expect, written before any run: pure MetricFlow (`custom-metricflow`) should decline most of the `uncovered` group by design, its value showing on `covered` and `sql_hard` cases where the metric hides the tricky SQL; the hybrid and the SQL-writing arms are what the `uncovered` group tests.
+The comparison of v1 and v2 on these criteria ([#380](../../../../../issues/380)) comes before the report shows `hard-v2` in v1's place ([#381](../../../../../issues/381)).
+
 ## The arms
 
 The arms of [the register](README.md#the-arms), each built by its own issue: `native-context`, `native-governed`, `native-kc`, `native-shaped`, `native-graph`, `native-mcp`, `custom-metricflow`, `custom-toolbox`, and `baseline` (the reference, text-to-SQL that reads the generated docs).
