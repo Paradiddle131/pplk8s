@@ -860,6 +860,8 @@ def test_each_row_names_the_harness_that_ran_its_model():
 def test_each_row_says_how_many_questions_shared_a_session():
     assert bet_eval.session_kind("claude-code (haiku)") == "shared per batch"
     assert bet_eval.session_kind("claude-code (fresh-haiku)") == "fresh per case"
+    # The Bash-and-Read-only agent type ran one fresh subagent per case too (#374, 2026-11-05).
+    assert bet_eval.session_kind("claude-code (subject-haiku)") == "fresh per case"
     assert bet_eval.session_kind("claude-haiku-5-5") == "fresh per run"
 
 

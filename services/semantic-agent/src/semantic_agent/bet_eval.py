@@ -1433,8 +1433,9 @@ def harness(model: str) -> str:
 def session_kind(model: str) -> str:
     """How many questions shared a session: one run per fresh session (RULE.md, every harness but
     the batched subagents), or one batch of about 12 cases per Claude Code subagent (#374's first
-    pass, 2026-11-04), or one case per fresh subagent (`fresh-<model>`, the matched rerun)."""
-    if model.startswith("claude-code (fresh-"):
+    pass, 2026-11-04), or one case per fresh subagent (`fresh-<model>`, the matched rerun, and
+    `subject-<model>`, the Bash-and-Read-only agent type, also one fresh subagent per case)."""
+    if model.startswith(("claude-code (fresh-", "claude-code (subject-")):
         return "fresh per case"
     if model.startswith("claude-code"):
         return "shared per batch"
