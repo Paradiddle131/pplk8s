@@ -1,0 +1,28 @@
+# Brief: build the tab layout into the report, then make its long text structured (#396, #401)
+
+The report (`docs/research/semantic-bet/report/`, built by `build.py` from `template.html`, `sections/*/section.html` and `../results.json`) is a research memo for a reader who sees only the page.
+Read `NOTES.md` first: its "The reader rule" section is binding (no hashes, freeze dates, set versions, retired questions, issue numbers, file names or run bookkeeping on the page).
+
+## The owner's words (2026-11-06)
+
+- On #396's three designs: "A, a tab strip makes sense keep it." and "There's no need to show the figure numbers on the tabs. titles are enough".
+- On the glossary: "we should use the opportunity to show very long things more structurally. For instance, in the glossary, I see long list of terms and explanations. This could have been a scrollable sort of data table. Find the best component to show these in more structured way. You can also add a field like type so that the user will not look at list of glossary without any grouping."
+- On tooltips: "I think there's lots of missed opportunities to show text. For instance, in tooltips, where we currently don't have much distinction between the sections, the labels on the left-hand side, and the corresponding text for that label on the right-hand side. Nothing that visually separates them, which would have made things easier to spot on and differentiate between each other. It is just plain text with not a lot of nice way of increasing the readability. I feel like running impeccable auditing on such components, starting with text-heavy components, would help".
+
+## The work, in order
+
+1. **Tabs into the page.** Port design A (`variants/396/a-tabs/template.html` and its `NOTE.md`) into `template.html`, with the tabs showing titles only (no "Fig. 1", "Figs. 2–5" tags). Keep everything A verified: a hash per tab, `#term-*`, `#map-*`, `#setup-*`, `#other-set-versions` opening their tab, Back/Forward/reload with scroll, the tooltip jumps and "↑ Back" across tabs, figures at real width in closed tabs, the WAI-ARIA tabs keyboard pattern, the sticky heads of Figure 1 and Figure 6 stopping under the strip.
+   Fix A's known gaps: the setup map's sticky readout must fit under the strip at 1280 × 800 (its `fit()` in `sections/a-setup-map/section.html` should subtract the strip's height); `build.py` may get its own placeholder for the appendix so the template does not have to move it at run time (your call).
+   Port A's view-aware clipped-text check into `tools/clipcheck.js` itself, so `node tools/clipcheck.js --quick` opens each tab before checking what is in it, and keep its self-test passing (`--selftest`).
+2. **The glossary as a structured table** (#401). Each term now carries a `type` (`REPORT.terms[i].type`, the order in `REPORT.termTypes`). Choose the best component for 44 terms a reader scans or looks up (for example a table grouped by type with group headings, a type filter and a search box, in its own scroll box with a sticky head); every `#term-<key>` jump must still land on its row, open its group if it is folded or filtered out, and flash.
+3. **Tooltips with structure** (#401). Every tooltip kind (a term, a setup, a row of a figure, a unit-plate square, the setup sections' own) should separate its title, its sections and its labels from their values, so a reader spots each at a glance; keep them compact, both themes, pinned and hover, 390 px.
+4. **An impeccable audit and critique of the text-heavy components**: the tooltips, the glossary, Method, the winners band, the abstract table and the decision map. The skill is installed at `/tmp/claude-0/-home-user/8d2fad16-91aa-5e87-85e5-00b59f5777d2/scratchpad/imp/.claude/skills/impeccable/` (read `SKILL.md`, `reference/audit.md` and `reference/critique.md`, and use its `detect` command, `npx -y impeccable detect <file>`, telemetry is off). Fix what it finds that the reader would notice; list what you left and why in your note.
+
+## Rules
+
+- Files you may change: `template.html`, `build.py` (rendering only: never a number, a score or what is shown as data), `sections/*/section.html`, `tools/clipcheck.js`, `NOTES.md` (add a dated "Revision 3" section: what changed and how you checked it), and `../../../../services/semantic-agent/tests/test_report_build.py` if a test must follow a change. Nothing else; don't run git (the session commits).
+- Style only through the page's tokens; no external script, font or image; one sentence per line in Markdown.
+- After every change: `cd docs/research/semantic-bet/report && python3 build.py ../results.json`; the tests: `cd services/semantic-agent && uv run --frozen pytest -q tests/test_report_build.py`.
+- Checks before you finish, in Chromium with Playwright (`require('playwright')`, already installed): no console errors; every tab by click, keyboard and URL; Back/Forward; both jumps and "↑ Back"; the glossary search, filter and a `#term-` jump into a filtered-out row; tooltips hover and pinned; the focus and dimming rules of Figures 2 to 5 (one dimming source at a time: the glider off home, else a clicked lock, else hover); 1280 × 900, 1280 × 800 and 390 × 844, light and dark; `node tools/clipcheck.js --quick` with 0 findings.
+- Screenshots at `deviceScaleFactor: 2` in `report/shots/rev3/`: the tab strip (desktop and phone), the glossary (desktop light, phone dark, a search applied), a pinned row tooltip and a term tooltip (light and dark).
+- Reply with a short summary: what changed, what you checked (with counts), the impeccable findings you fixed and left, and anything you could not verify.

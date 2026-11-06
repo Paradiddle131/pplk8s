@@ -47,11 +47,12 @@ span[data-setup] { text-decoration: underline dotted var(--ink-3); text-underlin
 
 .page { max-width: 1180px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)); }
 .col { max-width: 41rem; }
-header.memo { border-bottom: 1px solid var(--ink); padding-bottom: 18px; margin-bottom: 22px; }
+header.memo { padding-bottom: 14px; }
 h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
 .byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
 .byline b { font-weight: 600; color: var(--ink); }
 .abstract { margin: 0 0 26px; max-width: 46rem; }
+.abstract .lead { max-width: 42rem; text-wrap: pretty; }
 .runin { font-weight: 700; }
 h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
 p { margin: 0 0 1em; }
@@ -77,10 +78,20 @@ p { margin: 0 0 1em; }
 .pset .kind { color: var(--ink-3); font-size: 13px; }
 #w-diff { margin: 0 0 8px; color: var(--ink-2); }
 .pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
+/* the setups tied with the leader, and the setup it is set against: a small label, then one row per setup,
+   its name on the left and its figure on the right, so the figures line up in one column */
+.pset .id { white-space: nowrap; }
+.pset .tied .id, .pset .ctr .id { font-size: 12px; }
+.pset .plab { display: block; color: var(--ink-3); font-size: 13px; margin: 6px 0 1px; }
+.pset ul.prows { list-style: none; margin: 0; padding: 0; }
+.pset .prow2 { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 12px; padding: 1px 0; border-top: 1px dotted var(--grid-major); }
+.pset .prow2:first-child { border-top: 0; }
+.pset .prow2 .m { color: var(--ink-3); }
+.pset .prow2 .n { flex: none; }
 .winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
 
 figure { margin: 22px 0 8px; }
-.figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 54rem; text-wrap: pretty; }
+.figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 40rem; text-wrap: pretty; }
 .figtitle .fignum { font-weight: 700; margin-right: .35em; }
 .figtitle .take { font-weight: 500; }
 figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); max-width: 46rem; margin-top: 10px; }
@@ -165,7 +176,9 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .pm { transition: opacity .12s ease-out; }
 .pm.gdim, .lab.gdim { opacity: .15; }
 .lab { transition: opacity .12s ease-out; }
-.tip.pinned { pointer-events: auto; user-select: text; -webkit-user-select: text; padding-right: 30px; border-color: var(--ink-2); }
+.tip.pinned { pointer-events: auto; user-select: text; -webkit-user-select: text; border-color: var(--ink-2); }
+/* only the kicker and the title make room for the close mark; the sections' rules run the full width */
+.tip.pinned .tk, .tip.pinned .th, .tip.pinned .tq { padding-right: 20px; }
 .tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
 .tip.pinned .tipclose { display: block; }
 .tipclose:hover { background: var(--band); }
@@ -173,14 +186,14 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .tip.pinned .tipjump { display: block; }
 .tipjump a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .tipjump a:focus-visible, .jumpback:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
-.jumped:not(tr), tr.jumped > td { animation: jumpflash 1.8s ease-out; }
+.jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: jumpflash 1.8s ease-out; }
 @keyframes jumpflash { 0%, 35% { background: var(--sel); } 100% { background: transparent; } }
 .jumpback { margin-left: 8px; padding: 1px 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink-2); font: 500 12.5px var(--label); cursor: pointer; vertical-align: 1px; }
 .jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
 /* decision map */
-.maphead { position: sticky; top: 0; z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
+.maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
 .maphead table.map { margin: 0; }
 .mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
 table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
@@ -190,6 +203,8 @@ table.map thead th small { display: block; font-weight: 400; color: var(--ink-3)
 table.map th.num, table.map td.num { text-align: right; }
 table.map td.g { text-align: center; padding: 3px 4px; white-space: nowrap; }
 table.map th.g { text-align: center; }
+table.map th.g small.fh { display: flex; justify-content: center; gap: 3px; margin-top: 2px; letter-spacing: .02em; }
+table.map th.g small.fh span { width: 34px; text-align: center; border-top: 1px solid var(--rule); padding-top: 1px; }
 .ch { display: inline-block; width: 34px; border-radius: 2px; padding: 3px 0; color: var(--ink); text-align: center; }
 .ch + .ch { margin-left: 3px; }
 .ch.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
@@ -217,7 +232,7 @@ table.map tr.sub[hidden] { display: none; }
 
 /* unit plate */
 .plate { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; }
-.plate-head { position: sticky; top: 0; z-index: 3; background: var(--paper); overflow: hidden; border-bottom: 1px solid var(--ink-2); }
+.plate-head { position: sticky; top: var(--tabh, 0px); z-index: 3; background: var(--paper); overflow: hidden; border-bottom: 1px solid var(--ink-2); }
 .plate-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .prow { display: flex; align-items: stretch; border-bottom: 1px solid var(--grid-major); }
 .prow:nth-child(even of .prow.r) { background: var(--row-band); }
@@ -243,31 +258,152 @@ table.map tr.sub[hidden] { display: none; }
 
 .tip { position: fixed; z-index: 20; max-width: min(340px, calc(100vw - 16px)); background: var(--tip); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 9px 11px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; pointer-events: none; opacity: 0; transition: opacity .12s ease-out; left: 0; top: 0; }
 .tip.on { opacity: 1; }
-.tip h4 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
-.tip h4 .id { font-size: 12.5px; }
-.tip dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
-.tip dt { color: var(--ink-3); } .tip dd { margin: 0; }
-.tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; margin-top: 6px; quotes: none; }
-.tip .src { font-size: 12px; color: var(--ink-3); }
+/* the title is not a heading: a tooltip stays out of the page's outline */
+.tip .th { margin: 0; font-size: 14.5px; line-height: 1.3; font-weight: 600; color: var(--ink); }
+.tip .th .id { font-size: 12.5px; font-weight: 600; }
+.tip .th .h-on { font-weight: 500; color: var(--ink-2); }
+/* the kicker: what kind of thing this is, in the strip's small capitals */
+.tip .tk { margin: 0 0 3px; font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); line-height: 1.3; }
+.tip .tk .id { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--ink-2); font-size: 11.5px; }
+.tip .tk-sep { margin: 0 6px; font-weight: 400; }
+.tip .td { margin: 3px 0 0; color: var(--ink-2); }
+.tip .tq { margin: 0; font-family: var(--serif); font-size: 14.5px; line-height: 1.38; color: var(--ink); }
+.tip .qid { margin: 2px 0 0; color: var(--ink-3); } .tip .qid .id { color: var(--ink-2); font-size: 11.5px; }
+/* a section: a hairline, its small-capital label, then label | value rows */
+.tip .ts { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--rule); }
+.tip .tsh { margin: 0 0 3px; font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.tip .tsn { margin-left: 8px; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 12px; }
+.tip dl { display: grid; grid-template-columns: 7.4em minmax(0, 1fr); gap: 3px 12px; margin: 0; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.tip dd { margin: 0; color: var(--ink); min-width: 0; }
+.tip dd b { font-weight: 600; }
+.tip dd .id { font-size: 12px; }
+.tip .iv { color: var(--ink-3); font-size: 12.5px; }
+.tip .nt { display: block; color: var(--ink-3); font-size: 12px; line-height: 1.3; }
+.tip .ocs { display: flex; flex-wrap: wrap; gap: 0 10px; }
+.tip .oc { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.tip .oc b { margin-right: -1px; }
+.tip .oc svg { flex: none; }
+.tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); margin: 0 0 6px; padding-left: 9px; border-left: 2px solid var(--rule); quotes: none; }
 .tip p { margin: 2px 0 0; color: var(--ink-2); }
 
-.notes { font-size: 15.5px; }
-dl.gloss { display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: 6px 22px; margin: 8px 0 0; font-size: 15.5px; }
-dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); }
+/* Method: one fact per row, its name in the label column, so a reader finds "how is it scored" at a glance */
+dl.meth { display: grid; grid-template-columns: 9rem minmax(0, 1fr); max-width: 42rem; margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; border-top: 1px solid var(--ink); }
+dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid-major); }
+dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
+dl.meth dd { margin: 0; color: var(--ink-2); }
+/* no word left alone on the last line of a paragraph of reading text */
+.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq, .abnote, .winners-note { text-wrap: pretty; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
+.gl { max-width: 46rem; margin-top: 10px; }
+.gl-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.gl-find { position: relative; flex: 1 1 18rem; max-width: 24rem; display: block; }
+.gl-find svg { position: absolute; left: 10px; top: 50%; margin-top: -8px; color: var(--ink-3); pointer-events: none; }
+.gl-find input { width: 100%; min-height: 36px; padding: 6px 10px 6px 32px; border: 1px solid var(--ink-3); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 14.5px var(--label); }
+.gl-find input::placeholder { color: var(--ink-3); opacity: 1; }
+.gl-find input:focus-visible { outline: 2px solid var(--mf); outline-offset: 1px; border-color: var(--ink-2); }
+.gl-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.gl-types button { appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); font: 500 13.5px var(--label); line-height: 1.2; padding: 5px 9px; min-height: 32px; border-radius: 3px; cursor: pointer; }
+.gl-types button .c { color: var(--ink-3); font-variant-numeric: tabular-nums; margin-left: 5px; font-weight: 400; }
+.gl-types button:hover { border-color: var(--ink-3); color: var(--ink); }
+.gl-types button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.gl-types button[aria-pressed="true"] .c { color: inherit; opacity: .8; }
+.gl-count { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 10px 0 6px; min-height: 1.4em; }
+.gl-count b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-count button { appearance: none; border: 0; background: none; padding: 0 2px; margin-left: 4px; color: var(--ink); font: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--ink-3); cursor: pointer; }
+.gl-box { max-height: min(40rem, calc(100vh - var(--tabh, 0px) - 150px)); min-height: 14rem; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+.gl-box:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 15.5px; line-height: 1.45; }
+.gl-t thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); text-align: left; font: 600 13px var(--label); letter-spacing: .02em; color: var(--ink); padding: 8px 12px 6px 0; border-bottom: 1px solid var(--ink-2); }
+.gl-t th, .gl-t td { padding: 7px 18px 7px 0; vertical-align: baseline; text-align: left; border-bottom: 1px solid var(--grid-major); }
+.gl-t tbody th[scope="row"] { width: 13rem; font-weight: 600; color: var(--ink); }
+.gl-t tbody td { color: var(--ink-2); }
+.gl-t tr.gl-g th { position: sticky; top: var(--gl-hh, 0px); z-index: 1; padding: 0; background: var(--paper-2); border-bottom: 1px solid var(--grid-major); }
+.gl-g button { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; border: 0; background: transparent; padding: 6px 8px 6px 4px; text-align: left; font: 600 13.5px var(--label); color: var(--ink); cursor: pointer; }
+.gl-g button:hover:not(:disabled) { background: var(--band); }
+.gl-g button:disabled { cursor: default; }
+.gl-g button:disabled svg { visibility: hidden; }
+.gl-g button:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+.gl-g button svg { flex: none; color: var(--ink-3); transition: transform .12s ease-out; }
+.gl-g button[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.gl-g .c { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.gl-t mark { background: var(--sel); color: var(--ink); border-radius: 2px; padding: 0 1px; margin: 0 -1px; }
+.gl-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 0; margin: 0; }
+.gl-empty button { appearance: none; border: 1px solid var(--ink-3); background: transparent; color: var(--ink); font: 500 13.5px var(--label); padding: 4px 10px; min-height: 32px; border-radius: 3px; margin-left: 8px; cursor: pointer; }
+
+/* ---------- the section strip: the report's parts as tabs (#396) ---------- */
+/* A running head, not a toolbar: small capitals on one ink rule, the open part marked by a heavier
+   stretch of that rule. It sticks under the viewport's top edge; its paper fill runs to both screen
+   edges (shadow, clipped to the strip's own height) so nothing that leaves the column shows beside it. */
+.tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--ink);
+  box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax -1px); }
+.tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tabs-in::-webkit-scrollbar { display: none; }
+.tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+.tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+.tab { flex: none; position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 12px 0 10px; min-height: 44px;
+  font-family: var(--label); font-size: 13.5px; font-weight: 500; letter-spacing: .075em; text-transform: uppercase; line-height: 1.2;
+  color: var(--ink-2); text-decoration: none; white-space: nowrap; cursor: pointer; }
+/* the label keeps the open tab's bolder width, so choosing a tab never shifts its neighbours */
+.tab .tl { display: inline-grid; }
+.tab .tl::after { content: attr(data-l); font-weight: 600; height: 0; overflow: hidden; visibility: hidden; }
+.tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0; background: var(--ink); transition: height .12s ease-out; }
+.tab:hover { color: var(--ink); }
+.tab:hover::after { height: 1px; background: var(--ink-3); }
+.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+.tab[aria-selected="true"]::after { height: 3px; background: var(--ink); }
+.tab:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; border-radius: 2px; }
+/* the parts: every one laid out at the column's width, the closed ones folded to nothing, so a figure
+   measures its real width whether or not its part is open (and redraws on a resize either way) */
+.view { padding-top: 26px; }
+.view:not(.on) { height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
+.view:focus { outline: none; }
+.view.on { animation: viewin .16s ease-out; }
+@keyframes viewin { from { opacity: 0; } to { opacity: 1; } }
+.view > :first-child, .view > section:first-child > h2:first-of-type, .view > section:first-child > style:first-child + h2 { margin-top: 0; }
+.view [id] { scroll-margin-top: calc(var(--tabh, 0px) + 12px); }
+.view tr[id] { scroll-margin-top: calc(var(--tabh, 0px) + 56px); }
+.view-next { margin: 44px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-family: var(--label); font-size: 14px; color: var(--ink-3); }
+.view-next a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--ink-3); }
+.view-next a:hover { text-decoration-color: var(--ink); }
+@media (max-width: 640px) {
+  .tabs-in { gap: 0 20px; }
+  .tab { font-size: 13px; letter-spacing: .06em; }
+  .view { padding-top: 20px; }
+}
 @media (max-width: 760px) {
   .winners { grid-template-columns: 1fr; gap: 18px; }
 }
 @media (max-width: 640px) {
   table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
   table.ab tbody th { padding-left: 6px; white-space: normal; }
-  table.ab .id { font-size: 10.5px; }
+  table.ab .id { font-size: 11px; }
   table.ab .sub { font-size: 11.5px; }
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
-  dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
+  /* the glossary stacks each term over its meaning; a group's heading sticks while its terms pass */
+  .gl-t, .gl-t tbody, .gl-t tr, .gl-t th, .gl-t td { display: block; }
+  .gl-t thead, .gl-t [hidden] { display: none; }
+  .gl-t tr.gl-g { position: sticky; top: 0; z-index: 1; }
+  .gl-t tr.gl-g th { position: static; }
+  .gl-t tbody tr:not(.gl-g) { padding: 7px 0 8px; border-bottom: 1px solid var(--grid-major); }
+  .gl-t tbody tr:not(.gl-g) > * { width: auto; padding: 0; border: 0; }
+  .gl-t tbody th[scope="row"] { width: auto; margin-bottom: 1px; }
+  dl.meth { grid-template-columns: minmax(0, 1fr); }
+  dl.meth dt { border-bottom: 0; padding: 9px 0 0; }
+  dl.meth dd { padding-top: 0; }
+  .gl-find { flex-basis: 100%; max-width: none; }
+  /* the type filter is one row that scrolls sideways, out to the screen's edges */
+  .gl-tools { gap: 8px; }
+  .gl-types { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
+  .gl-types::-webkit-scrollbar { display: none; }
+  .gl-types button { flex: none; }
   table.map td.setup { min-width: 158px; }
 }
-@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab { transition: none; } .jumped:not(tr), tr.jumped > td { animation: none; } .jumped { outline: 2px solid var(--sel); } }
+@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab, .tab::after { transition: none; } .view.on { animation: none; } .jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: none; } .jumped { outline: 2px solid var(--sel); } }
 </style>
 
 <script>
@@ -296,6 +432,20 @@ window.REPORT = D;
     </div>
     <p class="byline" id="byline"></p>
   </header>
+  <nav class="tabs" id="tabs" aria-label="Parts of the report">
+    <div class="tabs-in" role="tablist" aria-label="Parts of the report">
+      <a class="tab" role="tab" id="tab-summary" href="#summary" aria-controls="view-summary" aria-selected="true" tabindex="0"><span class="tl" data-l="Summary">Summary</span></a>
+      <a class="tab" role="tab" id="tab-decision-map" href="#decision-map" aria-controls="view-decision-map" aria-selected="false" tabindex="-1"><span class="tl" data-l="Decision map">Decision map</span></a>
+      <a class="tab" role="tab" id="tab-metricflow" href="#metricflow" aria-controls="view-metricflow" aria-selected="false" tabindex="-1"><span class="tl" data-l="MetricFlow agent">MetricFlow agent</span></a>
+      <a class="tab" role="tab" id="tab-every-run" href="#every-run" aria-controls="view-every-run" aria-selected="false" tabindex="-1"><span class="tl" data-l="Every run">Every run</span></a>
+      <a class="tab" role="tab" id="tab-setups" href="#setups" aria-controls="view-setups" aria-selected="false" tabindex="-1"><span class="tl" data-l="Setups">Setups</span></a>
+      <a class="tab" role="tab" id="tab-question-sets" href="#question-sets" aria-controls="view-question-sets" aria-selected="false" tabindex="-1"><span class="tl" data-l="Question sets">Question sets</span></a>
+      <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="view-method" aria-selected="false" tabindex="-1"><span class="tl" data-l="Method &amp; glossary">Method &amp; glossary</span></a>
+    </div>
+  </nav>
+
+  <div class="views" id="views">
+  <section class="view on" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
 
   <section class="abstract"><p class="lead"><span class="runin">Abstract.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
 
@@ -305,7 +455,9 @@ window.REPORT = D;
     <div class="winners" id="winners"></div>
     <p class="winners-note">Each setup enters on the model that decides for it; a setup with runs on Claude only waits, tagged pending in the tables.</p>
   </section>
+  </section>
 
+  <section class="view" id="view-decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
   <figure id="fig1">
     <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
     <div class="twin" id="twin1"></div>
@@ -314,6 +466,9 @@ window.REPORT = D;
     <figcaption>Each cell holds the frozen set first and the hard set second; a boxed number is the best in its column for that set.</figcaption>
   </figure>
 
+  </section>
+
+  <section class="view" id="view-metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
   <h2>Where the ADK agent on MetricFlow stands</h2>
   <figure id="fig2" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
@@ -345,6 +500,9 @@ window.REPORT = D;
     <figcaption>Hover a line or a label to follow one setup.</figcaption>
   </figure>
 
+  </section>
+
+  <section class="view" id="view-every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
   <h2>Every run, from the cheapest setup to the most custom</h2>
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
@@ -353,19 +511,216 @@ window.REPORT = D;
     <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
   </figure>
 
+  </section>
+
+  <section class="view" id="view-setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
 <!--SECTIONS-->
+  </section>
 
+  <section class="view" id="view-question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
+<!--APPENDIX-->
+  </section>
+
+
+  <section class="view" id="view-method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
   <h2>Method, briefly</h2>
-  <div class="col notes">
-    <p>Each question is asked up to three times per setup and model, each run in a fresh session. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
-    <p>Claude Code is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</p>
-    <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
-  </div>
+  <dl class="meth" id="method-list">
+    <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
+    <dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd>
+    <dt>Exclusions</dt><dd>Runs that failed for infrastructure reasons are excluded, never scored.</dd>
+    <dt>Intervals</dt><dd>Accuracy and confident-wrong are means over questions with a <span class="term" data-term="interval" tabindex="0">95% percentile bootstrap interval</span> over questions.</dd>
+    <dt>Comparisons</dt><dd>Comparisons against the <span class="term" data-term="managed-best" tabindex="0">managed best</span> and <span class="term" data-term="floor" tabindex="0">the floor</span> are paired by question; an interval that includes zero is a tie.</dd>
+    <dt>Models</dt><dd>Our setups <span class="term" data-term="decides" tabindex="0">decide</span> on a free model and Claude repeats them as a <span class="term" data-term="check" tabindex="0">check</span>; Google's data agents run on Gemini only.</dd>
+    <dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd>
+  </dl>
 
-  <h2>Glossary</h2>
-  <dl class="gloss col" id="gloss"></dl>
+  <h2 id="gloss-h">Glossary</h2>
+  <div class="gl" id="gloss">
+    <div class="gl-tools">
+      <label class="gl-find"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="vh">Find a term</span><input type="search" id="gl-q" placeholder="Find a term or a word in its meaning" autocomplete="off" spellcheck="false" aria-controls="gl-box"></label>
+      <div class="gl-types" id="gl-types" role="group" aria-label="Show one type of term"></div>
+    </div>
+    <p class="gl-count" id="gl-count" aria-live="polite"></p>
+    <div class="gl-box" id="gl-box" tabindex="0" role="region" aria-labelledby="gloss-h">
+      <table class="gl-t" id="gl-t"><thead><tr><th scope="col">Term</th><th scope="col">What it means</th></tr></thead></table>
+      <p class="gl-empty" id="gl-empty" hidden></p>
+    </div>
+  </div>
+  </section>
+  </div>
 </div>
 <div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+<script>
+/* ---------- the report's parts as tabs: one open at a time, each with its own URL (#396) ---------- */
+// The hash names the open part (#summary, #decision-map, ...) or an element inside one (#term-<key>,
+// #map-<arm>, #setup-<arm>, #other-set-versions), which opens its part. Every switch is a history entry
+// that remembers its scroll position, so Back and Forward return to the part and the place.
+(function () {
+  "use strict";
+  const strip = document.getElementById("tabs"), rail = strip.querySelector(".tabs-in");
+  let views = [...document.querySelectorAll(".view")];
+  // a part with nothing in it (no other set to show) has no tab
+  views.filter((v) => !v.children.length).forEach((v) => { const t = document.getElementById(v.getAttribute("aria-labelledby")); if (t) t.remove(); v.remove(); });
+  views = [...document.querySelectorAll(".view")];
+  const tabs = [...rail.querySelectorAll('[role="tab"]')];
+  const tabOf = (v) => document.getElementById(v.getAttribute("aria-labelledby"));
+  const byName = (n) => views.find((v) => v.dataset.view === n);
+  const reduce = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  // each part ends by pointing on to the next, as a printed report would
+  views.forEach((v, i) => {
+    const nx = views[i + 1]; if (!nx) return;
+    const p = document.createElement("p"); p.className = "view-next";
+    p.innerHTML = `Next: <a href="#${nx.dataset.view}" data-view-link="${nx.dataset.view}"></a>`;
+    p.querySelector("a").textContent = tabOf(nx).firstChild.textContent.replace(/\s+$/, "") + " →";
+    v.appendChild(p);
+  });
+
+  /* the strip's height, for the sticky heads below it and for scroll targets */
+  const setH = () => document.documentElement.style.setProperty("--tabh", strip.offsetHeight + "px");
+  setH(); if (window.ResizeObserver) new ResizeObserver(setH).observe(strip);
+  /* on a narrow screen the strip scrolls inside itself; a soft edge shows where more tabs hide */
+  function edges() {
+    const max = rail.scrollWidth - rail.clientWidth;
+    strip.classList.toggle("fade-l", rail.scrollLeft > 2);
+    strip.classList.toggle("fade-r", rail.scrollLeft < max - 2);
+  }
+  rail.addEventListener("scroll", edges, { passive: true }); window.addEventListener("resize", edges);
+  function keepTabInView(t, instant) {
+    const max = rail.scrollWidth - rail.clientWidth; if (max <= 0) return edges();
+    const pad = 40, l = t.offsetLeft - rail.offsetLeft, r = l + t.offsetWidth;
+    let x = rail.scrollLeft;
+    if (l - pad < x) x = l - pad; else if (r + pad > x + rail.clientWidth) x = r + pad - rail.clientWidth;
+    x = Math.max(0, Math.min(max, x));
+    if (Math.abs(x - rail.scrollLeft) > 1) rail.scrollTo({ left: x, behavior: instant || reduce() ? "auto" : "smooth" });
+    edges();
+  }
+
+  let current = views.find((v) => v.classList.contains("on")) || views[0];
+  function show(v) {
+    if (!v) return;
+    const was = current; current = v;
+    views.forEach((p) => { const on = p === v; p.classList.toggle("on", on); p.inert = !on; });
+    tabs.forEach((t) => { const on = t.getAttribute("aria-controls") === v.id; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; });
+    keepTabInView(tabOf(v), was === v);
+    if (was !== v) {
+      if (window.__reportUnpin) window.__reportUnpin(false);
+      document.dispatchEvent(new CustomEvent("report-view", { detail: v.dataset.view }));
+    }
+  }
+  // the hash -> [part, element to bring into view or null]
+  function resolve(hash) {
+    let h = (hash || "").replace(/^#/, ""); try { h = decodeURIComponent(h); } catch (e) {}
+    if (!h) return [views[0], null];
+    const v = byName(h); if (v) return [v, null];
+    const el = document.getElementById(h);
+    if (el && el.closest(".view")) return [el.closest(".view"), el];
+    // targets the page's script draws later: glossary entries and the decision map's rows
+    const home = /^term-/.test(h) ? document.getElementById("gloss") : /^map-/.test(h) ? document.getElementById("map") : /^setup-/.test(h) ? byName("setups") : null;
+    if (home && home.closest(".view")) return [home.closest(".view"), null];
+    return [views[0], null];
+  }
+  // the scroll position at which a part starts right under the stuck strip
+  const partTop = () => Math.max(0, document.getElementById("views").getBoundingClientRect().top + window.scrollY - strip.offsetHeight);
+  const toPartTop = () => { if (window.scrollY > partTop()) window.scrollTo(0, partTop()); };
+
+  /* history: each entry holds its part and its scroll position */
+  try { history.scrollRestoration = "manual"; } catch (e) {}
+  const state = () => (history.state && typeof history.state === "object" ? history.state : {});
+  const saveY = () => { try { history.replaceState(Object.assign({}, state(), { view: current.dataset.view, y: Math.round(window.scrollY) }), ""); } catch (e) {} };
+  let st = 0; window.addEventListener("scroll", () => { clearTimeout(st); st = setTimeout(saveY, 160); }, { passive: true });
+  window.addEventListener("pagehide", saveY);
+  let seq = 0;
+  // open part v; hash: what the URL names (the part by default); kbd: an arrow-key move, which replaces
+  // the entry of an arrow-key move before it, so arrowing along the strip leaves one step in the history
+  function go(v, opt) {
+    opt = opt || {};
+    clearTimeout(st); saveY();
+    const s = { view: v.dataset.view, y: null, kbd: !!opt.kbd, jump: opt.jump || null, n: ++seq };
+    const url = "#" + (opt.hash || v.dataset.view);
+    try { if (opt.kbd && state().kbd) history.replaceState(s, "", url); else history.pushState(s, "", url); } catch (e) {}
+    show(v);
+    if (!opt.keepScroll) toPartTop();
+  }
+  let afterPop = null;
+  function route(fromPop) {
+    const [v, el] = resolve(location.hash), s = state();
+    const ae = document.activeElement, old = current;
+    const tabFocused = !!(ae && ae.getAttribute && ae.getAttribute("role") === "tab");
+    // focus left in the part that closes moves to the part that opens
+    const lost = v !== old && (!ae || ae === document.body || old.contains(ae));
+    show(v);
+    if (el && window.__reportReveal) window.__reportReveal(el, typeof s.y !== "number");
+    if (typeof s.y === "number") window.scrollTo(0, s.y);
+    else if (el) el.scrollIntoView({ block: el.matches("tr") ? "center" : "start" });
+    else if (fromPop) toPartTop();
+    if (fromPop) {
+      if (afterPop) { const f = afterPop; afterPop = null; f(); }
+      else if (tabFocused) tabOf(v).focus({ preventScroll: true });
+      else if (lost) v.focus({ preventScroll: true });
+    }
+  }
+  window.addEventListener("popstate", () => route(true));
+
+  /* the strip, by pointer and by keys (the WAI-ARIA tabs pattern, activation follows focus) */
+  rail.addEventListener("click", (e) => {
+    const t = e.target.closest('[role="tab"]'); if (!t) return;
+    if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // a new tab or window keeps the link
+    e.preventDefault();
+    const v = document.getElementById(t.getAttribute("aria-controls"));
+    if (v === current) { toPartTop(); return; }
+    go(v); t.focus({ preventScroll: true });
+  });
+  rail.addEventListener("keydown", (e) => {
+    const t = e.target.closest('[role="tab"]'); if (!t) return;
+    const i = tabs.indexOf(t); let j = null;
+    if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
+    else if (e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
+    else if (e.key === "Home") j = 0;
+    else if (e.key === "End") j = tabs.length - 1;
+    else if (e.key === " ") { e.preventDefault(); t.click(); return; }
+    if (j == null) return;
+    e.preventDefault();
+    const n = tabs[j]; n.focus({ preventScroll: true });
+    go(document.getElementById(n.getAttribute("aria-controls")), { kbd: true });
+  });
+  // "Next: ..." at a part's foot opens that part at its top, focus on its tab
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("a[data-view-link]"); if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault(); const v = byName(a.dataset.viewLink); go(v); tabOf(v).focus({ preventScroll: true });
+  });
+
+  /* for the page's own script: a pinned tooltip's jump into another part, and its way back */
+  window.__reportViews = {
+    viewOf: (el) => (el && el.closest ? el.closest(".view") : null),
+    // opens the part holding target, the URL naming the target; returns a token for back()
+    jumpTo(target) {
+      const v = target.closest(".view"); if (!v) return null;
+      const tok = "j" + (++seq);
+      go(v, { hash: target.id, jump: tok, keepScroll: true });
+      return tok;
+    },
+    // returns to where the jump started: Back in the history when the jump's entry is the current one
+    back(tok, done) {
+      if (tok && state().jump === tok) { afterPop = done; history.back(); return true; }
+      return false;
+    },
+    show: (name) => { const v = byName(name); if (v) go(v); },
+  };
+
+  /* the first view: the URL's part, or the first; scrolled once the figures are drawn */
+  show(resolve(location.hash)[0]);
+  try { history.replaceState(Object.assign({}, state(), { view: current.dataset.view }), ""); } catch (e) {}
+  edges();
+  const settle = () => {
+    const [v, el] = resolve(location.hash), s = state();
+    show(v);
+    if (el && window.__reportReveal) window.__reportReveal(el, typeof s.y !== "number");
+    if (typeof s.y === "number") window.scrollTo(0, s.y);
+    else if (el) el.scrollIntoView({ block: el.matches("tr") ? "center" : "start" });
+  };
+  if (window.reportReady) window.reportReady(() => requestAnimationFrame(settle));
+})();
+</script>
 <!--VENDOR-->
 
 <script>
@@ -421,24 +776,43 @@ window.REPORT = D;
   const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
   // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (#395)
   const TK = (k) => { const t = (D.termAlias || {})[k] || String(k).replace(/_/g, "-"); return TERM[t] ? t : null; };
-  function termTip(key) { const t = TERM[key]; return t ? `<h4>${esc(t.label)}</h4><p>${esc(t.text)}</p>` : `<h4>${esc(key)}</h4><p>Not yet defined.</p>`; }
-  function setupTip(arm) { return `<h4><span class="id">${esc(arm)}</span></h4><p>${esc(descOf(arm))}</p>`; }
+  /* Every tooltip has the same anatomy (#401): a kicker naming what kind of thing it is, a title, a line of
+     what it is, then sections, each under a small-capital label, whose facts read as label | value rows:
+     the labels muted and aligned in one column, the values in ink with the key number bold. */
+  const tKick = (...parts) => `<p class="tk">${parts.filter(Boolean).join('<span class="tk-sep" aria-hidden="true">·</span>')}</p>`;
+  const tSec = (label, body, note) => body ? `<div class="ts"><p class="tsh">${label}${note ? `<span class="tsn">${note}</span>` : ""}</p>${body}</div>` : "";
+  const tRows = (rows) => { const r = rows.filter(Boolean); return r.length ? `<dl>${r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""; };
+  const tPct = (v, ex) => `<b>${P(v[0])}%</b> <span class="iv">${ivTxt(v, ex)}</span>`;
+  const tPts = (d) => `<b>${sg(d[0])}</b> points <span class="iv">[${sg(d[1])}, ${sg(d[2])}]</span>`;
+  const OUTCH = { right: "0", declined: "1", wrong: "2", unclear: "3", "confident-wrong": "4" };
+  const tOut = (k, n) => `<span class="oc">${swatch(OUTCH[k] || ".")}${n == null ? "" : `<b>${n}</b> `}${esc(k)}</span>`;
+  const ARMFAM = {}; Object.values(ALL).forEach((r) => { if (!ARMFAM[r.arm]) ARMFAM[r.arm] = r.family; });
+  const famName = (f) => (f && D.familyLabel[f]) || "";
+  function termTip(key) {
+    const t = TERM[key];
+    return t ? tKick(t.type ? esc(t.type) : "Term") + `<p class="th">${esc(t.label)}</p><p class="td">${esc(t.text)}</p>` : tKick("Term") + `<p class="th">${esc(key)}</p><p class="td">Not yet defined.</p>`;
+  }
+  function setupTip(arm) { return tKick("Setup", esc(famName(ARMFAM[arm]))) + `<p class="th"><span class="id">${esc(arm)}</span></p><p class="td">${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
     if (!r) return "";
     const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
-    const out = order.filter((k) => o[k]).map((k) => `${o[k]} ${k}`).join(", ");
-    const ex = r.example ? `<q>${esc(r.example.text)}</q><div class="src">Example: question <span class="id">${esc(r.example.case)}</span>, scored ${esc(r.example.outcome)}${r.example.tools && r.example.tools.length ? "; tools called: " + esc(r.example.tools.join(", ")) : ""}</div>` : "";
-    let gl = "";
-    if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = `<dt>${esc(gg ? gg.label : g)}</dt><dd>${P(r.groups[g][0])}% right over ${r.groups[g][1]} questions</dd>`; }
-    let s2 = "";
-    if (r.step2) { const a = r.step2.accuracy; s2 = `<dt>vs managed best</dt><dd>${sg(a[0])} points [${sg(a[1])}, ${sg(a[2])}], paired</dd>`; }
-    const vf = r.vsFloor && r.vsFloor.acc ? `<dt>vs the floor</dt><dd>${sg(r.vsFloor.acc[0])} points [${sg(r.vsFloor.acc[1])}, ${sg(r.vsFloor.acc[2])}], paired</dd>` : "";
-    return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}, ${esc(S(r.set).label.toLowerCase())}</h4>
-      <p>${esc(r.desc)}</p>
-      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% ${ivTxt(r.acc, r.exact && r.exact.acc)}${r.exact && r.exact.acc ? `, exact bound over ${r.cases} questions` : ""}</dd>
-      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% ${ivTxt(r.cw, r.exact && r.exact.cw)}${r.exact && r.exact.cw ? `, exact bound over ${r.cases} questions` : ""}</dd>${s2}${vf}
-      <dt>Ran</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${r.expected} runs${r.status === "pending" ? "; pending: deciding run" : ""}</dd>
-      <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
+    let gl = null;
+    if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = [esc(gg ? gg.label : g), `<b>${P(r.groups[g][0])}%</b> right <span class="iv">over ${r.groups[g][1]} questions</span>`]; }
+    const exA = r.exact && r.exact.acc, exC = r.exact && r.exact.cw;
+    const score = tRows([gl,
+      ["Right", tPct(r.acc, exA) + (exA ? `<span class="nt">exact bound over ${r.cases} questions</span>` : "")],
+      ["Confident-wrong", tPct(r.cw, exC) + (exC ? `<span class="nt">exact bound over ${r.cases} questions</span>` : "")],
+      r.step2 ? ["vs managed best", tPts(r.step2.accuracy)] : null,
+      r.vsFloor && r.vsFloor.acc ? ["vs the floor", tPts(r.vsFloor.acc)] : null]);
+    const runs = tRows([
+      ["Ran", `<b>${r.cases}</b> of ${r.of} questions, <b>${r.runs}</b> of ${r.expected} runs${r.status === "pending" ? `<span class="nt">pending: deciding run</span>` : ""}`],
+      ["Outcomes", `<span class="ocs">${order.filter((k) => o[k]).map((k) => tOut(k, o[k])).join("")}</span>`],
+      ["Harness", esc(r.harness)]]);
+    const ex = r.example ? `<q>${esc(r.example.text)}</q>` + tRows([["Scored", tOut(r.example.outcome)], ["Question", esc(((S(r.set).cases || []).find((c) => c.id === r.example.case) || {}).q || "one question of the set")],
+      r.example.tools && r.example.tools.length ? ["Tools called", r.example.tools.map((t) => `<span class="id">${esc(t)}</span>`).join(", ")] : null]) : "";
+    return tKick(esc(S(r.set).label), esc(ROLE[r.role] || "")) +
+      `<p class="th"><span class="id">${esc(r.arm)}</span> <span class="h-on">on ${esc(r.modelLabel)}</span></p><p class="td">${esc(r.desc)}</p>` +
+      tSec("Score", score, r.step2 || (r.vsFloor && r.vsFloor.acc) ? "differences paired by question" : "") + tSec("How it ran", runs) + tSec("An example answer", ex);
   }
   function htmlFor(el) {
     if (el.dataset.term != null) return termTip(el.dataset.term);
@@ -486,6 +860,9 @@ window.REPORT = D;
     const target = j[0], backY = window.scrollY, backX = window.scrollX;
     unpin(false);
     document.querySelectorAll(".jumpback").forEach((b) => b.remove());
+    // the target may sit in another part of the report: open it (a history entry, so Back returns too)
+    const V = window.__reportViews, fromView = V && V.viewOf(from), tok = V ? V.jumpTo(target) : null;
+    glReveal(target); // a glossary row hidden by the search, the type filter or a fold is shown first
     // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
     target.scrollIntoView({ block: "center" });
     target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
@@ -495,12 +872,16 @@ window.REPORT = D;
     back.setAttribute("aria-label", "Back to where you were reading");
     back.addEventListener("click", (e) => {
       e.stopPropagation(); back.remove();
-      window.scrollTo(backX, backY);
-      if (from && from.focus && document.contains(from)) { quietFocus = true; from.focus({ preventScroll: true }); quietFocus = false; }
+      const refocus = () => { if (from && from.focus && document.contains(from)) { quietFocus = true; from.focus({ preventScroll: true }); quietFocus = false; } };
+      if (V && V.back(tok, refocus)) return; // the history's Back restores the part and its scroll position
+      if (V && fromView && V.viewOf(target) !== fromView) V.show(fromView.dataset.view);
+      window.scrollTo(backX, backY); refocus();
     });
-    (target.matches("tr") ? target.querySelector("td") : target).appendChild(back);
+    (target.matches("tr") ? target.querySelector("th, td") : target).appendChild(back);
     quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
   }
+  // a "↑ Back" left in a part the reader has since left by other means goes with it
+  document.addEventListener("report-view", () => document.querySelectorAll(".jumpback").forEach((b) => b.remove()));
   function unpin(returnFocus) {
     if (!pinned) return;
     const el = pinEl; pinned = false; pinEl = null;
@@ -524,7 +905,12 @@ window.REPORT = D;
     if (!el) { if (tipEl && !tipEl.contains(e.target)) hideTip(); return; }
     if (el !== tipEl) { tipEl = el; tipByFocus = false; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
   });
-  document.addEventListener("pointermove", (e) => { if (!pinned && tipEl && tipEl.contains(e.target)) place(e.clientX, e.clientY); });
+  document.addEventListener("pointermove", (e) => {
+    if (pinned) return;
+    if (tipEl && tipEl.contains(e.target)) { place(e.clientX, e.clientY); return; }
+    // a scroll hides the tooltip while the pointer rests on a mark; moving on that mark shows it again
+    const el = !tipEl && closestTip(e.target); if (el) { tipEl = el; tipByFocus = false; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
+  });
   document.addEventListener("pointerout", (e) => { if (pinned) return; if (tipEl && (!e.relatedTarget || !tipEl.contains(e.relatedTarget))) { if (!closestTip(e.relatedTarget)) hideTip(); } });
   document.addEventListener("focusin", (e) => {
     if (pinned || quietFocus) return;
@@ -682,8 +1068,86 @@ window.REPORT = D;
     $("#twin4").innerHTML = (tw.strip || []).length ? `<table class="tw"><thead><tr><th>% of runs right</th><th class="num">MetricFlow, ${term("covered")}</th><th class="num">${term("hidden-rule")}</th><th class="num">${term("uncovered")}</th><th class="num">${term("managed-best", "Managed best")}, uncovered</th></tr></thead><tbody>` +
       tw.strip.map((r) => `<tr><td>${setTerm(r.set)}</td><td class="num"><span class="n">${r.cov}%</span></td><td class="num"><span class="n">${r.trap == null ? "n/a" : r.trap + "%"}</span></td><td class="num"><span class="n">${r.unc}%</span></td><td class="num"><span class="n">${r.mbUnc == null ? "n/a" : r.mbUnc + "%"}</span></td></tr>`).join("") +
       `</tbody></table>${tw.stripNote ? `<div class="note" style="font-family:var(--label);font-size:13px;color:var(--ink-3);margin-top:4px">${esc(tw.stripNote)}</div>` : ""}` : "";
-    $("#gloss").innerHTML = (D.terms || []).map((t) => `<dt id="term-${esc(t.key)}">${esc(t.label)}</dt><dd>${esc(t.text)}</dd>`).join("");
+    renderGloss();
   }
+
+  /* ---------- the glossary: grouped by type, a type filter, a search, its own scroll box ---------- */
+  // State lives here, so a term jump can undo whatever hides its row: the search, the filter or a folded group.
+  const GS = { q: "", type: null, folded: new Set() };
+  const glTypes = () => (D.termTypes || []).filter((ty) => (D.terms || []).some((t) => t.type === ty));
+  const glNorm = (x) => String(x).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // the search's matches marked in a text: each word of the query, wherever it starts
+  function glMark(text, words) {
+    if (!words.length) return esc(text);
+    const re = new RegExp("(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+    return String(text).split(re).map((p, i) => (i % 2 ? `<mark>${esc(p)}</mark>` : esc(p))).join("");
+  }
+  const CHEV = `<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  function renderGloss() {
+    const terms = D.terms || [], types = glTypes();
+    $("#gl-types").innerHTML = [[null, "All types", terms.length]].concat(types.map((ty) => [ty, ty, terms.filter((t) => t.type === ty).length]))
+      .map(([ty, l, n]) => `<button type="button" data-type="${ty == null ? "" : esc(ty)}" aria-pressed="${GS.type === ty}">${esc(l)}<span class="c">${n}</span></button>`).join("");
+    const tb = types.map((ty, i) => `<tbody data-type="${esc(ty)}"><tr class="gl-g"><th colspan="2" scope="rowgroup" id="gl-g${i}"><button type="button" aria-expanded="true">${CHEV}<span>${esc(ty)}</span><span class="c"></span></button></th></tr>` +
+      terms.filter((t) => t.type === ty).map((t) => `<tr id="term-${esc(t.key)}" data-key="${esc(t.key)}"><th scope="row">${esc(t.label)}</th><td>${esc(t.text)}</td></tr>`).join("") + `</tbody>`).join("");
+    const tbl = $("#gl-t"); tbl.querySelectorAll("tbody").forEach((b) => b.remove()); tbl.insertAdjacentHTML("beforeend", tb);
+    glApply();
+  }
+  function glApply() {
+    const terms = D.terms || [], words = glNorm(GS.q).split(/\s+/).filter(Boolean);
+    const byKey = {}; terms.forEach((t) => (byKey[t.key] = t));
+    let shown = 0, matched = 0;
+    $("#gl-t").querySelectorAll("tbody").forEach((tb) => {
+      const ty = tb.dataset.type, inType = GS.type == null || GS.type === ty, folded = GS.folded.has(ty) && !words.length;
+      let n = 0;
+      tb.querySelectorAll("tr[data-key]").forEach((tr) => {
+        const t = byKey[tr.dataset.key], hay = glNorm(t.label + " " + t.text);
+        const hit = words.every((w) => hay.includes(w));
+        tr.cells[0].innerHTML = glMark(t.label, hit ? words : []); tr.cells[1].innerHTML = glMark(t.text, hit ? words : []);
+        if (hit && inType) n++;
+        tr.hidden = !(hit && inType) || folded;
+      });
+      tb.hidden = !inType || n === 0;
+      // during a search every group shows its matches, so a heading does not fold
+      const b = tb.querySelector(".gl-g button"); b.setAttribute("aria-expanded", String(!folded)); b.disabled = !!words.length;
+      b.querySelector(".c").textContent = words.length ? `${n} of ${tb.querySelectorAll("tr[data-key]").length}` : String(n);
+      if (!tb.hidden) { matched += n; if (!folded) shown += n; }
+    });
+    // each type's count follows the search, so a reader sees where the matches are before choosing a type
+    const hits = terms.filter((t) => { const hay = glNorm(t.label + " " + t.text); return words.every((w) => hay.includes(w)); });
+    $("#gl-types").querySelectorAll("button").forEach((b) => {
+      const ty = b.dataset.type || null; b.setAttribute("aria-pressed", String(ty === GS.type));
+      b.querySelector(".c").textContent = hits.filter((t) => ty == null || t.type === ty).length;
+    });
+    const any = words.length || GS.type != null, q = esc(GS.q.trim());
+    $("#gl-count").innerHTML = any ? `<b>${matched}</b> of ${terms.length} terms${words.length ? ` match “${q}”` : ""}${GS.type != null ? ` in ${esc(GS.type)}` : ""}<button type="button" data-gl-reset="1">Show every term</button>`
+      : `<b>${terms.length}</b> terms in ${glTypes().length} types; a type's heading folds it.`;
+    const empty = $("#gl-empty"); empty.hidden = matched > 0;
+    empty.innerHTML = matched ? "" : `No term${GS.type != null ? ` in ${esc(GS.type)}` : ""} matches “${q}”.<button type="button" data-gl-reset="1">Show every term</button>`;
+    const thead = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (thead ? thead.offsetHeight : 0) + "px");
+  }
+  function glReset() { GS.q = ""; GS.type = null; GS.folded.clear(); $("#gl-q").value = ""; glApply(); }
+  $("#gl-q").addEventListener("input", (e) => { GS.q = e.target.value; glApply(); $("#gl-box").scrollTop = 0; });
+  $("#gl-types").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const ty = b.dataset.type || null; GS.type = GS.type === ty ? null : ty; glApply(); $("#gl-box").scrollTop = 0; });
+  $("#gl-t").addEventListener("click", (e) => { const b = e.target.closest(".gl-g button"); if (!b || GS.q.trim()) return; const ty = b.closest("tbody").dataset.type; if (GS.folded.has(ty)) GS.folded.delete(ty); else GS.folded.add(ty); glApply(); });
+  $("#gloss").addEventListener("click", (e) => { if (e.target.closest("[data-gl-reset]")) { glReset(); $("#gl-q").focus(); } });
+  window.addEventListener("resize", () => { const th = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (th ? th.offsetHeight : 0) + "px"); });
+  // A term's row made visible: the search, the type filter or a fold that hides it is undone (#401).
+  function glReveal(row) {
+    const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
+    const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
+    const hay = glNorm(t.label + " " + t.text), words = glNorm(GS.q).split(/\s+/).filter(Boolean);
+    if (!words.every((w) => hay.includes(w))) { GS.q = ""; $("#gl-q").value = ""; }
+    if (GS.type != null && GS.type !== tb.dataset.type) GS.type = null;
+    GS.folded.delete(tb.dataset.type);
+    glApply();
+    return true;
+  }
+  // for the parts' router: an element named by the URL is revealed (and a glossary row flashed) before it is scrolled to
+  window.__reportReveal = (el, flash) => {
+    if (!glReveal(el) || !flash) return;
+    el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");
+    setTimeout(() => el.classList.remove("jumped"), 1900);
+  };
   const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
   // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
   function pillarFig(p) {
@@ -712,8 +1176,8 @@ window.REPORT = D;
         if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
         why = p.why;
         const L = p.lead; leads.add(L.id.split("|").slice(1).join("|")); nSets++;
-        const tied = p.tied.length ? `${term("interval", "Tied within the interval")}: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} <span class="n">${P(x.v)}%</span>`).join(", ")}.` : `No setup ties it within the ${term("interval", "interval")}.`;
-        const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, <span class="n">${P(p.contrast[1])}%</span>.</div>` : "";
+        const tied = p.tied.length ? `<span class="plab">${term("interval", "Tied within the interval")}</span><ul class="prows">${p.tied.map((x) => `<li class="prow2"><span><span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> <span class="m">on ${esc(x.model)}</span></span><span class="n">${P(x.v)}%</span></li>`).join("")}</ul>` : `<span class="plab">No setup ties it within the ${term("interval", "interval")}.</span>`;
+        const ctr = p.contrast ? `<div class="ctr"><span class="plab">Against it</span><div class="prow2"><span>${esc(p.contrast[0])}</span><span class="n">${P(p.contrast[1])}%</span></div></div>` : "";
         const f = pillarFig(p);
         return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
           <div class="lead"><span class="num">${f.fig}</span></div>
@@ -750,7 +1214,9 @@ window.REPORT = D;
     const setsSub = SETS.map((s) => short(s)).join(", then ");
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
     const GT = new Proxy({}, { get: (_, k) => TK(k) });
-    D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
+    // under a group's name, its questions per set, and the set keys over the two chips they head
+    const fh = SETS.length > 1 ? `<small class="fh" aria-hidden="true">${SETS.map((s) => `<span>${sKey(s)}</span>`).join("")}</small>` : "";
+    D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small>${fh}</th>`));
     h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">${term("confident-wrong")}<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
     const ncol = 4 + D.groups.length;
     D.ladder.forEach((L) => {
@@ -1435,7 +1901,8 @@ window.REPORT = D;
         const right = [...u].filter((q) => q === "0").length, ran = [...u].filter((q) => q !== ".").length;
         const bk = D.buckets.find((x) => x.key === c.b);
         if (plateState.hover !== ci) { plateState.hover = ci; bandAt(ci); }
-        tipEl = sv; showTipHTML(`<h4><span class="id">${esc(c.id)}</span>, ${esc(bk ? bk.label.toLowerCase() : c.b)}</h4><p>${esc(c.q || "")}</p><dl><dt>This run</dt><dd>${ch === "." ? "not run yet" : esc(OUTN[+ch])}</dd><dt>This question</dt><dd>${right} of ${ran} runs right</dd><dt>Setup</dt><dd>${esc(label(r))}</dd></dl>`, cx, cy);
+        tipEl = sv; showTipHTML(tKick(esc(bk ? bk.label : c.b) + " question") + `<p class="tq">${esc(c.q || "")}</p><p class="qid"><span class="id">${esc(c.id)}</span></p>` +
+          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[+ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])), cx, cy);
       };
       const hit = (ev) => { const b = sv.getBoundingClientRect(); const x = ev.clientX - b.left, y = ev.clientY - b.top; let ci = null; for (const [k, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) { ci = k; break; } const k = Math.max(0, Math.min(2, Math.floor((G.h - y) / G.pitch))); return { ci, k }; };
       sv.onpointermove = (ev) => { const h = hit(ev); if (h.ci == null) return; at(h.ci, h.k, ev.clientX, ev.clientY); };

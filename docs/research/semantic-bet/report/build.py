@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
-Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, after Figure 6 and before "Method, briefly"; a missing directory inserts nothing.
+Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing. The appendix of other question sets goes at <!--APPENDIX-->.
 The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
 
 Usage: python3 build.py [--show SET] [--template FILE] [--section FILE ...] [--out FILE] RESULTS_JSON [LOG_DIR] [SETS_DIR]
@@ -76,9 +76,11 @@ DESC = {
     "native-mcp": "Our ADK agent calling Google's Knowledge Catalog and BigQuery MCP servers.",
     "custom-toolbox": "Our ADK agent on generated MCP Toolbox tools over table functions.",
     "custom-metricflow": "Our ADK agent on MetricFlow tools, told to answer only through the metrics.",
+    "custom-metricflow-compute": "Our ADK agent on MetricFlow tools, allowed sums, differences and ratios of the metric results it fetched, as Google's agents compute in their SQL.",
     "custom-lightdash": "Our ADK agent with one tool on Lightdash's free metric query API.",
     "custom-hybrid": "MetricFlow tools first, then a read-only SQL fallback that says so.",
     "cc-metricflow": "The same MetricFlow tools called from Claude Code; another harness, shown for comparison only.",
+    "cc-metricflow-compute": "The MetricFlow tools with arithmetic over their results, called from headless Claude Code; another harness, shown for comparison only.",
     "cc-native-mcp": "Google's BigQuery and Knowledge Catalog MCP tools called from headless Claude Code, behind the same cost guard; another harness, shown for comparison only.",
     "baseline": "Plain text-to-SQL that reads the generated docs.",
 }
@@ -88,12 +90,13 @@ FAMILY = {
     "native-shaped": "da", "native-graph": "da",
     "native-mcp": "gt", "custom-toolbox": "gt",
     "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf", "cc-native-mcp": "gt",
+    "custom-metricflow-compute": "mf", "cc-metricflow-compute": "mf",
     "baseline": "ref",
 }
 FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our agent on Google's tools",
                 "mf": "Our agent on a semantic-layer server", "ref": "Text-to-SQL baseline", "other": "Another setup"}
 UNDESCRIBED = "Not yet described."
-COMPARISON_ONLY = {"cc-metricflow", "cc-native-mcp"}  # another harness: shown, never deciding
+COMPARISON_ONLY = {"cc-metricflow", "cc-native-mcp", "cc-metricflow-compute"}  # another harness: shown, never deciding
 HARNESS = {"adk-openrouter": "ADK runner, model through OpenRouter",
            "adk-anthropic-api": "ADK runner, model through the Anthropic API",
            "claude-code-subagent": "Claude Code subagent (a different harness)",
@@ -107,12 +110,12 @@ LADDER = [
     ("L3", "Plus context generated from MetricFlow", ["native-context-bare", "native-context"]),
     ("L4", "Plus warehouse objects: governed tables, table functions, graph", ["native-governed", "native-shaped", "native-graph"]),
     ("L5", "Our ADK agent on Google's MCP servers or generated tools", ["native-mcp", "custom-toolbox"]),
-    ("L6", "Our ADK agent on a semantic-layer server", ["custom-metricflow", "custom-lightdash"]),
+    ("L6", "Our ADK agent on a semantic-layer server", ["custom-metricflow", "custom-metricflow-compute", "custom-lightdash"]),
     ("L7", "The hybrid: MetricFlow first, SQL fallback", ["custom-hybrid"]),
     ("L8", "A data agent running the imported metrics itself: not measurable yet, the tool fails in Google's backend", []),
-    ("cc", "Another harness: Claude Code on the same tools", ["cc-metricflow", "cc-native-mcp"]),
+    ("cc", "Another harness: Claude Code on the same tools", ["cc-metricflow", "cc-metricflow-compute", "cc-native-mcp"]),
 ]
-PILLAR_EXCLUDE = {"baseline", "cc-metricflow", "cc-native-mcp"}  # references outside the decision
+PILLAR_EXCLUDE = {"baseline", "cc-metricflow", "cc-native-mcp", "cc-metricflow-compute"}  # references outside the decision
 SET_ORDER = ["frozen", "hard", "hard-v2"]
 # Glossary terms: one short sentence each, the glossary and every term tooltip read these.
 TERMS = [
@@ -679,7 +682,12 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
         sections.append(open(path, encoding="utf-8").read())
     for path in extra_sections:  # a design variant previewed beside the page's own sections (#390)
         sections.append(open(path, encoding="utf-8").read())
-    page = page.replace("<!--SECTIONS-->", "\n".join(sections + [appendix_html(R, appendix)]))
+    # The appendix goes at <!--APPENDIX--> (the template's question-sets part); a template without one gets it after the sections.
+    apx = appendix_html(R, appendix)
+    if "<!--APPENDIX-->" in page:
+        page = page.replace("<!--SECTIONS-->", "\n".join(sections)).replace("<!--APPENDIX-->", apx)
+    else:
+        page = page.replace("<!--SECTIONS-->", "\n".join(sections + [apx]))
     page = page.replace("<!--VENDOR-->", vendor_scripts())
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)

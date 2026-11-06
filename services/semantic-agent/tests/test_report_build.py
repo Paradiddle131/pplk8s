@@ -92,3 +92,17 @@ def test_every_group_bucket_kind_rubric_family_and_role_the_page_can_show_has_a_
 def test_every_glossary_term_has_a_type():
     untyped = [k for k, _, _ in build.TERMS if k not in build.TERM_TYPE]
     assert not untyped, f"glossary terms with no type: {untyped}"
+
+
+def test_the_appendix_goes_to_its_own_part_or_after_the_sections(tmp_path):
+    out = tmp_path / "index.html"
+    build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out))
+    page = out.read_text(encoding="utf-8")
+    at = page.index('id="other-set-versions"')
+    assert page.index('id="view-question-sets"') < at < page.index('id="view-method"')
+    assert page.index('id="view-setups"') < page.index('id="setup-map"') < page.index('id="view-question-sets"')
+    bare = tmp_path / "bare.html"
+    bare.write_text("<script>const D = /*__DATA__*/null;</script><main><!--SECTIONS--></main><!--VENDOR-->", encoding="utf-8")
+    build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out), template=str(bare))
+    page = out.read_text(encoding="utf-8")
+    assert page.index('id="setup-map"') < page.index('id="other-set-versions"') < page.index("</main>")
