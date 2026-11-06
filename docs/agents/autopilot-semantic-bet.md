@@ -58,6 +58,7 @@ Then keep working on whatever the blocker doesn't touch.
 - Each issue's evidence is one file, `docs/research/semantic-bet/findings/<YYYY-MM-DD>-<issue>-<slug>.md`: the question, what was run (commands, calls, model, dates), what was observed (raw excerpts), what it means for the verdict, what stays unknown, sources.
 - The register in `docs/research/semantic-bet/README.md`: change only your rows (status and finding link).
 - Mark each fact `measured` (with its run) or `stated` (with its URL and the date read).
+- A case that looks defective (owner, 2026-11-06): write the evidence on its own issue and propose retiring it under RULE.md § Retiring a defective case; it leaves the scores only once the owner confirms, and never because of which arm passes or fails it.
 - A `ledger.d/` fragment per finished issue; lessons for work go to `semantic/PLAN.md` § 6 only with the final report.
 
 ## Gates

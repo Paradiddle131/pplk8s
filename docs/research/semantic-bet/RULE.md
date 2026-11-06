@@ -7,8 +7,23 @@ The set is [`services/semantic-agent/evals/semantic_bet.yaml`](../../../services
 ## What freezing means
 
 - From the first scored run on, nobody edits the set's questions, expected SQL or groups, this rubric or this rule.
-- A defect found later (an expected SQL that answers another question, a fixture row that makes a question unanswerable) gets a new dated set beside this one; the report scores both and says which it decides on and why.
+- A defect found later (an expected SQL that answers another question, a fixture row that makes a question unanswerable) retires the case, as § Retiring a defective case says (2026-11-06; before then it got a new dated set beside this one).
 - A new arm may join later (Claude variants, an arm a register question adds); it is scored on this set under this rule, and the arms already scored are not rerun to suit it.
+
+## Retiring a defective case
+
+2026-11-06T13:09Z, the owner, in a session: "if you notice any errors on the questions, I'd rather them gone instead of claiming something that has flaws in the way we conduct these tests ... even if we collected a lot of data points on a given faulty test or question, together with your confirmation and agreement, I believe we would get rid of them if we're certain that otherwise we would have a dirty data points collected from faulty test situations".
+
+- A case is defective when the test itself is wrong, whatever any arm does: its expected SQL answers another question than the one asked; its question has more than one reasonable reading and the case does not accept each; the fixture cannot support it (no rows, or an answer fixed by construction); or the scorer misjudges answers to it (a right answer it cannot read, or a wrong one it passes, such as a small whole number any answer may carry).
+- Not a defect: an arm failing it, every arm passing it (a ceiling is a result), a setup that cannot reach its tables (a reach limit, reported and labelled as one), or a result that goes against what we expected.
+- Each defect is written down with its evidence (the case, what is wrong, a reproduction on the fixture), judged on the case alone, by a reviewer who has not read the arms' results on it where that can be arranged, and retired only when the agent and the owner both confirm it.
+- A retired case is listed in the register below with its date and evidence, and every set and version stops scoring it from then on: the two numbers, the groups, the comparisons, the criteria and the report.
+  Its runs stay in the logs, never edited or deleted, so the retirement can be audited or undone; the report says how many cases are retired and links the register, and says so beside any verdict a retirement moved.
+- A set's file stays frozen: retiring is an entry in the register, not an edit of the set; a defect that a corrected case would fix goes into the next version as a new case.
+
+| Case | Set(s) | Retired | Defect and evidence |
+|---|---|---|---|
+| none yet | | | |
 
 ## The set
 
