@@ -461,7 +461,7 @@ def appendix_html(R, appendix):
            " .apx th { color: var(--ink-3); font-weight: 500; } .apx td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }"
            " .apx td:first-child { white-space: nowrap; } .apx .apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .apx h3 { margin: 18px 0 6px; }</style>",
            '<h2 id="apx-h">Appendix: more question sets</h2>',
-           '<p class="col">Sets the figures above do not draw, with each setup\'s numbers from the same runs.</p>']
+           '<p class="col">More question sets, with each setup\'s numbers from the same runs; the figures draw the frozen and hard sets only.</p>']
     glabel = dict(GROUPS_ALL)
     for st, label in appendix:
         rows = [a for a in strict_view(R.get("arms", [])) if a["set"] == st]
