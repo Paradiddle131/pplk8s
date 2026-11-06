@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T10:37Z",
+ "written": "2026-11-06T10:45Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4341,7 +4341,7 @@
    "rung": 1,
    "cases": 58,
    "of_cases": 58,
-   "runs": 144,
+   "runs": 174,
    "accuracy": [
     0.942528735632,
     0.879310344828,
@@ -4376,10 +4376,10 @@
    },
    "pass_all": 0.9310344827586207,
    "outcomes": {
-    "right": 134,
+    "right": 164,
     "wrong": 10
    },
-   "model_calls": 157,
+   "model_calls": 187,
    "new": {
     "all": [
      1.0,
