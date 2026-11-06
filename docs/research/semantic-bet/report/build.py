@@ -4,7 +4,7 @@
 Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, after Figure 6 and before "Method, briefly"; a missing directory inserts nothing.
 The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
 
-Usage: python3 build.py [--show SET] RESULTS_JSON [LOG_DIR] [SETS_DIR]
+Usage: python3 build.py [--show SET] [--template FILE] [--section FILE ...] [--out FILE] RESULTS_JSON [LOG_DIR] [SETS_DIR]
 
 RESULTS_JSON  docs/research/semantic-bet/results.json (or a snapshot of it): every summary number.
 LOG_DIR       directory holding eval-*.jsonl and judge.jsonl; default: beside RESULTS_JSON, else
@@ -510,7 +510,7 @@ def strict_view(arms):
     return out
 
 
-def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=()):
+def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(), template=None):
     R = json.load(open(results_path, encoding="utf-8"))
     arms_all = strict_view(R.get("arms", []))
     every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
@@ -657,7 +657,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                              for st, spec in (R.get("sets") or {}).items()},
             "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-    page = open(os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
+    page = open(template or os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
     sections = []
     for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
         sections.append(open(path, encoding="utf-8").read())
@@ -925,6 +925,11 @@ if __name__ == "__main__":
         i = args.index("--section")
         extra.append(args[i + 1])
         del args[i:i + 2]
+    template = None
+    if "--template" in args:  # a design variant's copy of template.html (#396)
+        i = args.index("--template")
+        template = args[i + 1]
+        del args[i:i + 2]
     if "--out" in args:
         i = args.index("--out")
         out = args[i + 1]
@@ -941,4 +946,4 @@ if __name__ == "__main__":
     if not glob.glob(os.path.join(logs, "eval-*.jsonl")):
         logs = FALLBACK_LOGS
     sets_dir = sys.argv[3] if len(sys.argv) > 3 else os.path.normpath(os.path.join(logs, "../../../services/semantic-agent/evals"))
-    build(res, logs, sets_dir, out, show, extra)
+    build(res, logs, sets_dir, out, show, extra, template)
