@@ -156,3 +156,21 @@ The first pass put about 12 cases in one subagent session, where every API run s
 
 - Opus answers every `covered`, `trap`, `conversation`, `planted` and `distractor` case right (35 of 35 `covered`) and declines or misses 13 of 15 `uncovered` ones; the three models tie on the same cases, so the decline habit is the harness's, not the model's, now on 50 Opus cases instead of 20.
 - Its five wrong answers are `uncovered` questions answered with the nearest metrics' raw figures instead of the asked ratio or gap (one subagent said so itself: the rules forbid computing the gap); none is confidently wrong.
+
+## hard-v2's new cases (2026-11-06, 16:03Z to about 16:40Z)
+
+- Why: `hard-v2` (RULE.md § Set versions, #375) carries v1's runs of its 41 unchanged cases into every setup, so each Claude Code setup needed only the 14 new cases (15 drafted, `hv2_first_order_value_october` retired by #382) for its hard-v2 row; #380 compares v1 and v2 per arm.
+- Batches from `374_cc_agent.py --batches hard-v2 R 1 DIR fresh-<model>` (and size 20 for the batched setups), the retired case's batch dropped, then `--render`; the same one-line brief (read the rendered prompt, use only Read and Bash); one test case per model read before the rest (all three answered `hv2_net_revenue_on_september_orders` with the metric's figure and named its definition).
+- Runs: Haiku and Sonnet fresh per case at k = 3 (42 subagents each), Opus fresh per case at k = 1 (14, within the owner's 50 a setup), and one batched session each for Haiku, Sonnet and Opus (14 cases, k = 1, as their v1 rows); at most 11 at once, the answers pushed after every wave; scored with `328_mcp_live.py --agent 374_cc_agent.py --set hard-v2 --no-canary`.
+- No session deny rule held the remote-session and docs tools this time, unlike the 2026-11-05 waves: about a dozen Haiku subagents called the environment's read-only documentation tool once or twice, one Haiku subagent tried a remote `send_message` (refused by the session's classifier, nothing sent), and a few ran `cat`, `date` or `mkdir -p` beside the tool command; each reported it, none read a repository file or touched the answers of another case, and the answers are scored as given.
+
+| hard-v2's 14 new cases (`measured`, results.json at this commit) | Right | Confident-wrong | New `composable` right | New `uncovered` right | All of hard-v2 right |
+|---|---|---|---|---|---|
+| Haiku, fresh per case, k = 3 | 23.8% [7.1, 42.9] | 21.4% [4.8, 40.5] | 33% | 0% | 45.5% |
+| Sonnet, fresh per case, k = 3 | 7.1% [0.0, 21.4] | 23.8% [2.4, 45.2] | 0% | 0% | 37.0% |
+| Opus, fresh per case, k = 1 | 7.1% [0.0, 21.4] | 14.3% [0.0, 35.7] | 0% | 0% | 38.2% |
+
+- Pure MetricFlow through Claude Code answers none of the new `uncovered` cases on any model, as RULE.md's note written before any run expected ("pure MetricFlow should decline most of the `uncovered` group by design"); the subagents decline the medians and the unreturned-orders share every time and answer the rest with the nearest metric's figure.
+- Confident-wrong rises on the new cases (14 to 24% against 7 to 12% on v1): almost all of it is two cases where the nearest metric gives a close but different number, `hv2_net_revenue_on_september_orders` (net revenue counts returns on their return date, 12,582.75 against the asked 12,547.75; 7 of 7 fresh runs) and `hv2_september_revenue_amsterdam_days` (UTC days against Amsterdam days; 6 of 7).
+  Most of those answers name the difference ("not strictly September orders minus their own returns", "on UTC days, not the Amsterdam-day figure"), a hedge outside the scorer's list, so they wait for the blind judge (#366), which runs on the free quota with the lane's `backlog` step; the table above is before the judge.
+- The batched rows are in `results.json`, labelled, and never used as the harness comparison (as on v1).
