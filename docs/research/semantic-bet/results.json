@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T18:58Z",
+ "written": "2026-11-06T19:08Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1192,6 +1192,118 @@
     "wrong": 6
    },
    "model_calls": 82
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (haiku)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.864035087719,
+    0.789473684211,
+    0.929824561404
+   ],
+   "confident_wrong": [
+    0.017543859649,
+    0.004385964912,
+    0.035087719298
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9726775956284154,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.8333333333333334,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.4222222222222222,
+     15
+    ]
+   },
+   "pass_all": 0.8157894736842105,
+   "outcomes": {
+    "right": 197,
+    "wrong": 13,
+    "unclear": 3,
+    "declined": 11,
+    "confident-wrong": 4
+   },
+   "model_calls": 246
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (sonnet)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.789473684211,
+    0.701754385965,
+    0.872807017544
+   ],
+   "confident_wrong": [
+    0.035087719298,
+    0.008771929825,
+    0.074561403509
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9180327868852459,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.75,
+     4
+    ],
+    "trap": [
+     0.9666666666666666,
+     10
+    ],
+    "uncovered": [
+     0.26666666666666666,
+     15
+    ]
+   },
+   "pass_all": 0.7368421052631579,
+   "outcomes": {
+    "right": 180,
+    "confident-wrong": 8,
+    "unclear": 7,
+    "declined": 20,
+    "wrong": 13
+   },
+   "model_calls": 246
   },
   {
    "set": "frozen",
@@ -5523,6 +5635,42 @@
    "worth": false
   },
   {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (haiku)",
+   "cases": 76,
+   "runs": 228,
+   "accuracy": [
+    -0.05701754386,
+    -0.131578947368,
+    0.017543859649
+   ],
+   "confident_wrong": [
+    0.004385964912,
+    -0.030701754386,
+    0.030701754386
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (sonnet)",
+   "cases": 76,
+   "runs": 228,
+   "accuracy": [
+    -0.131578947368,
+    -0.223684210526,
+    -0.039473684211
+   ],
+   "confident_wrong": [
+    0.021929824561,
+    -0.021929824561,
+    0.065789473684
+   ],
+   "worth": false
+  },
+  {
    "set": "hard",
    "arm": "custom-metricflow",
    "model": "claude-haiku-5-5",
@@ -6173,6 +6321,7 @@
  ],
  "step_three": {
   "frozen": [
+   "cc-metricflow on claude-code-strict (haiku)",
    "custom-hybrid on claude-haiku-5-5",
    "custom-hybrid on nvidia/nemotron-3.5-super-vl:free",
    "custom-metricflow on nvidia/nemotron-3.5-super-vl:free",

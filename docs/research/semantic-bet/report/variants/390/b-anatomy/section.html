@@ -1,0 +1,594 @@
+<section class="qs" id="question-sets" aria-labelledby="qs-h">
+<style>
+.qs { --qs-gut: 0px; }
+.qs .qs-lede { max-width: 46rem; margin: 0 0 10px; }
+.qs .qs-take { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; font-weight: 500; margin: 0 0 14px; max-width: 54rem; }
+
+/* group colours: one token per group, shared by marks, chips and the legend */
+.qs .g-covered { --c: var(--ink-2); }
+.qs .g-trap { --c: var(--gt); }
+.qs .g-conversation { --c: var(--mf); }
+.qs .g-distractor, .qs .g-planted { --c: var(--ref); }
+.qs .g-composable, .qs .g-uncovered { --c: var(--da); }
+
+/* tools: find, chips, count */
+.qs .qs-tools { border-top: 1px solid var(--ink); padding: 10px 0 8px; display: grid; gap: 8px; font-family: var(--label); font-size: 14px; }
+.qs .qs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 6px; }
+.qs .qs-cl { color: var(--ink-3); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; min-width: 4.4em; }
+.qs .qs-find { display: inline-flex; align-items: center; gap: 8px; }
+.qs .qs-find input { font: inherit; font-size: 14.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 4px 8px; min-height: 32px; width: min(19rem, calc(100vw - 100px)); }
+.qs .qs-find input::placeholder { color: var(--ink-3); opacity: 1; }
+.qs .qs-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; line-height: 1.2; padding: 3px 9px; border-radius: 14px; cursor: pointer; min-height: 30px; }
+.qs .qs-chip:hover { border-color: var(--ink-2); background: var(--paper-2); }
+.qs .qs-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.qs .qs-chip .sw { width: 9px; height: 13px; border-radius: 1px; background: var(--c); flex: none; }
+.qs .qs-chip .sw.g-composable { background: color-mix(in srgb, var(--c) 35%, var(--paper)); box-shadow: inset 0 0 0 1.5px var(--c); }
+.qs .qs-chip[aria-pressed="true"] .sw { box-shadow: 0 0 0 1px var(--paper); }
+.qs .qs-chip .sw.ret { background: linear-gradient(to top right, transparent calc(50% - 1px), var(--ink-2) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)), var(--paper); box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+.qs .qs-chip .sw.nv { background: linear-gradient(var(--ink-2), var(--ink-2)) bottom / 100% 2px no-repeat; }
+.qs .qs-chip .sw.nw { background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--ink-2); border-top: 3px solid var(--ink-2); }
+.qs .qs-kinds > summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; min-height: 28px; display: list-item; padding: 3px 0; }
+.qs .qs-kinds > summary::marker { color: var(--ink-3); }
+.qs .qs-kinds[open] > summary { margin-bottom: 6px; }
+.qs .qs-count { margin: 0; color: var(--ink-2); font-size: 13.5px; min-height: 1.4em; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.qs .qs-count b { color: var(--ink); font-weight: 600; }
+.qs .qs-clear { appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 13.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
+
+/* legend */
+.qs .qs-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--label); font-size: 13px; color: var(--ink-2); margin: 0 0 4px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.qs .qs-legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.qs .qs-legend svg { display: block; flex: none; }
+
+/* a set block: facts beside the band */
+.qs .qs-blk { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 0 24px; border-top: 1px solid var(--ink); padding: 12px 0 14px; }
+.qs .qs-factcol { position: relative; display: grid; align-content: start; gap: 16px; }
+.qs .qs-facts { font-family: var(--label); font-size: 13.5px; line-height: 1.38; color: var(--ink-2); scroll-margin-top: 16px; min-width: 0; }
+.qs .qs-facts h3 { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; line-height: 1.25; margin: 0 0 3px; color: var(--ink); }
+.qs .qs-facts h3 .qs-ver { font-family: var(--label); font-size: 12.5px; font-weight: 500; color: var(--ink-3); margin-left: 6px; letter-spacing: .02em; }
+.qs .qs-facts p { margin: 0 0 4px; }
+.qs .qs-facts .qs-what { font-family: var(--serif); font-size: 14.5px; line-height: 1.42; color: var(--ink-2); margin-bottom: 6px; }
+.qs .qs-facts .qs-n { color: var(--ink); font-variant-numeric: tabular-nums; }
+.qs .qs-facts .qs-n b { font-size: 1.2rem; font-weight: 600; }
+.qs .qs-facts .qs-n span { white-space: nowrap; }
+.qs .qs-facts .qs-sub { color: var(--ink-3); font-size: 12.5px; }
+.qs .qs-facts .qs-mix .term { white-space: nowrap; }
+.qs .qs-facts .qs-where { color: var(--ink); }
+.qs .qs-facts .qs-where a { color: var(--mf); }
+.qs .qs-hash { appearance: none; background: none; border: 0; border-bottom: 1px dotted var(--ink-3); padding: 0; font-family: var(--code); font-size: 12px; color: var(--ink); cursor: pointer; min-height: 22px; }
+.qs .qs-hashfull[hidden] { display: none; }
+.qs .qs-hashfull { display: block; font-family: var(--code); font-size: 11.5px; color: var(--ink); word-break: break-all; user-select: all; margin-top: 2px; }
+.qs .qs-fig { min-width: 0; }
+
+/* the band: marks positioned by script, labels and threads beside them */
+.qs .qs-plot { position: relative; }
+.qs .qs-m { position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; border-radius: 2px; transition: opacity .12s ease-out; -webkit-tap-highlight-color: transparent; }
+.qs .qs-m::before { content: ""; position: absolute; left: 2px; right: 2px; top: 0; bottom: 5px; border-radius: 1px; background: var(--c); box-shadow: var(--inset, 0 0 #0000), var(--ring, 0 0 #0000); }
+.qs .qs-m.nv::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: 0; height: 2px; background: var(--ink); }
+.qs .qs-m.g-composable::before { background: color-mix(in srgb, var(--c) 35%, var(--paper)); --inset: inset 0 0 0 1.5px var(--c); }
+.qs .qs-m.ret::before { background: linear-gradient(to top right, transparent calc(50% - .9px), var(--c) calc(50% - .9px) calc(50% + .9px), transparent calc(50% + .9px)), var(--paper); --inset: inset 0 0 0 1.5px var(--c); }
+.qs .qs-m:hover::before { --ring: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink-2); }
+.qs .qs-m.twin::before { --ring: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink-3); }
+.qs .qs-m[aria-expanded="true"]::before { --ring: 0 0 0 1.5px var(--paper), 0 0 0 3px var(--ink); }
+.qs .qs-m:focus { outline: none; }
+.qs .qs-m:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.qs .filtering .qs-m:not(.hit) { opacity: .16; }
+.qs .qs-lab { position: absolute; white-space: nowrap; font-family: var(--label); font-size: 12.5px; line-height: 14px; color: var(--ink-2); padding-left: 5px; border-left: 1px solid var(--rule); }
+.qs .qs-lab.top { padding-top: 0; }
+.qs .qs-lane { position: absolute; left: 0; width: 22px; font-family: var(--label); font-size: 12px; font-weight: 600; color: var(--ink-3); text-align: left; line-height: 1; }
+.qs .qs-newcap { position: absolute; font-family: var(--label); font-size: 12.5px; line-height: 1.25; color: var(--ink); font-weight: 600; white-space: normal; }
+.qs svg.qs-threads { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.qs .qs-th { stroke: var(--grid-major); stroke-width: 1.25; transition: opacity .12s ease-out; }
+.qs .qs-th.chg { stroke: var(--ink-3); stroke-dasharray: 2 2.5; }
+.qs .qs-th.on { stroke: var(--ink); stroke-width: 2; stroke-dasharray: none; }
+.qs .filtering .qs-th:not(.hit) { opacity: .25; }
+.qs .qs-brk { stroke: var(--ink-2); stroke-width: 1.25; fill: none; }
+.qs .qs-read { font-family: var(--label); font-size: 13.5px; line-height: 1.38; color: var(--ink-3); margin: 6px 0 0; min-height: 2.76em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.qs .qs-read b { color: var(--ink); font-weight: 600; }
+.qs .qs-read .id { font-size: 12px; }
+.qs .qs-read q { color: var(--ink-2); font-family: var(--serif); font-size: 14.5px; quotes: "\201C" "\201D"; }
+.qs .qs-why { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 8px 0 0; max-width: 46rem; }
+.qs .qs-why b { color: var(--ink); font-weight: 600; }
+
+/* the question card, opened in place under its band */
+.qs .qs-slot { min-width: 0; }
+.qs .qs-card { position: relative; margin: 12px 0 2px; border-top: 2px solid var(--ink); background: var(--paper-2); padding: 12px 14px 12px; font-family: var(--label); font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+.qs .qs-caret { position: absolute; top: -9px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 7px solid var(--ink); transform: translateX(-7px); }
+.qs .qs-chead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding-right: 40px; margin: 0 0 8px; }
+.qs .qs-chead .id { font-size: 13px; font-weight: 600; }
+.qs .qs-chead .qs-in { color: var(--ink-3); font-size: 13px; }
+.qs .qs-tag { display: inline-block; font-size: 12px; color: var(--ink); border: 1px solid var(--ink-2); border-radius: 2px; padding: 0 5px; line-height: 1.4; white-space: nowrap; }
+.qs .qs-tag.ret { border-style: dashed; }
+.qs .qs-x { position: absolute; top: 6px; right: 6px; appearance: none; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 3px; width: 32px; height: 32px; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.qs .qs-x:hover { border-color: var(--ink-2); }
+.qs .qs-turns { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.qs .qs-turns li { display: grid; grid-template-columns: 4.6em minmax(0, 1fr); gap: 0 10px; }
+.qs .qs-turns.one li { grid-template-columns: minmax(0, 1fr); }
+.qs .qs-tn { font-size: 12.5px; color: var(--ink-3); padding-top: 3px; letter-spacing: .02em; }
+.qs .qs-qt { font-family: var(--serif); font-size: 16px; line-height: 1.45; color: var(--ink); margin: 0; }
+.qs .qs-exp { margin: 2px 0 0; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.qs .qs-exp b { color: var(--ink); font-weight: 600; font-size: 15px; }
+.qs .qs-exp .alt { color: var(--ink-3); font-size: 12.5px; }
+.qs dl.qs-meta { display: grid; grid-template-columns: 8.5em minmax(0, 1fr); gap: 3px 12px; margin: 0 0 10px; padding-top: 8px; border-top: 1px solid var(--rule); }
+.qs dl.qs-meta dt { color: var(--ink-3); font-size: 13px; padding-top: 1px; }
+.qs dl.qs-meta dd { margin: 0; color: var(--ink); }
+.qs dl.qs-meta dd small { color: var(--ink-2); font-size: 13px; }
+.qs .qs-go { appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
+.qs .qs-runs { border-top: 1px solid var(--rule); padding-top: 8px; }
+.qs .qs-rsum { margin: 0 0 6px; color: var(--ink); display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: center; font-variant-numeric: tabular-nums; }
+.qs .qs-rsum .k { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.qs .qs-rsum .lead { color: var(--ink-2); }
+.qs .qs-rlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 0 22px; }
+.qs .qs-rlist li { display: flex; align-items: center; gap: 8px; min-height: 24px; border-bottom: 1px solid var(--grid-major); font-size: 13px; min-width: 0; }
+.qs .qs-rlist .u { display: inline-flex; gap: 0; flex: none; }
+.qs .qs-rlist .u svg { display: block; }
+.qs .qs-rlist .id { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.qs .qs-rlist .ml { color: var(--ink-3); white-space: nowrap; margin-left: auto; }
+.qs .qs-note { margin: 0; color: var(--ink-2); }
+.qs .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* the text list, collapsed */
+.qs details.qs-list { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); margin-top: 0; font-family: var(--label); }
+.qs details.qs-list > summary { cursor: pointer; padding: 8px 0; font-size: 14.5px; color: var(--ink); min-height: 32px; }
+.qs details.qs-list h4 { font-family: var(--serif); font-size: 1rem; font-weight: 600; margin: 10px 0 4px; color: var(--ink); }
+.qs details.qs-list ol { margin: 0 0 10px; padding: 0; list-style: none; columns: 2 26rem; column-gap: 28px; }
+.qs details.qs-list li { break-inside: avoid; }
+.qs details.qs-list li[hidden] { display: none; }
+.qs .qs-li { appearance: none; background: none; border: 0; text-align: left; width: 100%; padding: 4px 0 4px 14px; font: inherit; font-size: 13.5px; line-height: 1.35; color: var(--ink-2); cursor: pointer; position: relative; border-bottom: 1px solid var(--grid); }
+.qs .qs-li::before { content: ""; position: absolute; left: 0; top: 7px; width: 6px; height: 11px; border-radius: 1px; background: var(--c); }
+.qs .qs-li.ret::before { background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--c); }
+.qs .qs-li:hover { color: var(--ink); background: var(--paper-2); }
+.qs .qs-li .id { display: block; font-size: 11.5px; color: var(--ink-3); }
+
+@media (max-width: 760px) {
+  .qs .qs-blk { grid-template-columns: minmax(0, 1fr); gap: 10px 0; }
+  .qs .qs-factcol.pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 16px; }
+  .qs .qs-facts .qs-what { font-size: 14px; }
+  .qs dl.qs-meta { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .qs dl.qs-meta dd { margin-bottom: 6px; }
+  .qs .qs-turns li { grid-template-columns: minmax(0, 1fr); }
+  .qs .qs-card { padding: 10px 10px 10px; }
+  .qs .qs-cl { min-width: 0; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .qs .qs-m, .qs .qs-th { transition: none; } }
+</style>
+
+<h2 id="qs-h">What the question sets hold</h2>
+<p class="qs-lede">Every question the setups were asked, one mark each, set by set. A mark's colour is its group, a hollow struck mark is a question retired from scoring, and a bar under a mark means its obvious SQL gives another number. The two versions of the hard set are drawn as one: a thread joins each of v1's questions to its copy in v2.</p>
+<p class="qs-take">Open a mark to read its question, the numbers its answer must carry, and every setup's runs on it.</p>
+
+<div class="qs-tools">
+  <div class="qs-row"><div class="qs-find"><label for="qs-find" class="qs-cl">Find</label><input id="qs-find" type="search" placeholder="a word or an id in a question" autocomplete="off" spellcheck="false"></div></div>
+  <div class="qs-row" role="group" aria-label="Highlight by group" id="qs-gchips"><span class="qs-cl" aria-hidden="true">Group</span></div>
+  <div class="qs-row" role="group" aria-label="Highlight by mark" id="qs-fchips"><span class="qs-cl" aria-hidden="true">Mark</span></div>
+  <details class="qs-kinds"><summary>Highlight by what makes it hard</summary><div class="qs-row" role="group" aria-label="Highlight by kind" id="qs-kchips"></div></details>
+  <p class="qs-count" id="qs-count" aria-live="polite"></p>
+</div>
+<div class="qs-legend" id="qs-legend"></div>
+<div id="qs-blocks"></div>
+<details class="qs-list" id="qs-list"><summary>Every question as text</summary><div id="qs-listbody"></div></details>
+
+<script>
+window.reportReady(() => {
+  const D = window.REPORT, root = document.getElementById("question-sets");
+  if (!D || !D.questionSets || !root) return;
+  const QS = D.questionSets, SETS = D.sets || {};
+  const $ = (s) => root.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const TERMS = new Set((D.terms || []).map((t) => t.key));
+  const term = (key, text) => TERMS.has(key) ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text}</span>` : text;
+
+  /* ---------- words ---------- */
+  const GL = {}; (D.groupsAll || []).forEach((g) => (GL[g.key] = g));
+  if (!GL.composable) GL.composable = { key: "composable", label: "Composable", help: "No single metric answers it; arithmetic over a few metric results does." };
+  const GTERM = { covered: "covered", trap: "hidden-rule", uncovered: "uncovered", conversation: "conversation" };
+  const gName = (g) => (GL[g] ? GL[g].label : g).toLowerCase();
+  const PREC = ["uncovered", "composable", "trap", "distractor", "planted", "conversation", "covered"]; // a mark's colour: its most telling group
+  const CORDER = ["covered", "trap", "conversation", "distractor", "planted", "composable", "uncovered"]; // clusters, left to right
+  const KIND = { sql_hard: "hard in SQL", period: "a relative or fiscal period", segment: "a segment, comparison or ranking", jargon: "business jargon", multi_metric: "several metrics at once", implicit: "an implicit definition", multi_step: "several steps", ambiguous_followup: "an ambiguous term or follow-up" };
+  const KSHORT = { sql_hard: "hard in SQL", period: "period", segment: "segment or ranking", jargon: "jargon", multi_metric: "several metrics", implicit: "implicit definition", multi_step: "several steps", ambiguous_followup: "ambiguous or follow-up" };
+  const RUB = { fan_out_join: "a join that fans out and counts twice", distinct_across_join: "a distinct count across a join", ratio_of_sums: "a ratio of sums, not a mean of ratios", window: "a window: a rank, a lag or a first per customer", median_percentile: "a median or a percentile", sessions_gaps_islands: "sessions, gaps and islands", cohort_retention: "a cohort over two periods", anti_join: "an anti-join: rows that never happened", date_spine: "a date spine: days with nothing count as zero", fiscal_timezone: "a fiscal calendar or a timezone boundary" };
+  const RCLASS = { expected_sql: "wrong expected SQL", fixture: "the fixture fixes the answer", readings: "more than one reasonable reading", scorer: "the scorer misjudges it" };
+  const WHAT = {
+    frozen: "Everyday questions about the shop: ones a metric answers (some with a hidden rule, a legacy table or planted text in the way), ones no metric answers, and follow-ups in a chat.",
+    hard: "Questions business users find hard: jargon, relative and fiscal periods, several metrics at once, segments and rankings, several steps, implicit definitions, ambiguous terms and follow-ups.",
+    "hard-v2": "The hard set made hard on writing SQL too: v1's questions word for word, plus new ones whose obvious SQL gives another number.",
+  };
+  const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  const MONTH = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const day = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? `${+m[3]} ${MONTH[+m[2] - 1]} ${m[1]}` : (iso || "not recorded"); };
+  // the register's reasons, without tracker numbers or file names (the page's content rules)
+  const clean = (s) => String(s || "").replace(/\s*\(#\d+\)/g, "").replace(/\b[\w-]+\.(sql|ya?ml|py|jsonl?|md)\b/g, "the fixture").replace(/\bdbt_dev\b/g, "the fixture warehouse");
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
+  const nf = (v, d) => v.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const num = (v) => Number.isInteger(v) ? nf(v, 0) : nf(v, Math.abs(v) < 1 ? 4 : 2);
+  function meaning(forms) { // one expected number in the forms the scorer accepts; a rate is a fraction and its percentage
+    if (!forms || !forms.length) return "";
+    if (forms.length === 2 && Math.abs(forms[1] - forms[0] * 100) < 1e-6) return `<b>${nf(forms[1], 2)}%</b> <span class="alt">(${nf(forms[0], 4)})</span>`;
+    return forms.map((f, i) => i ? `<span class="alt">or ${num(f)}</span>` : `<b>${num(f)}</b>`).join(" ");
+  }
+  function swatch(ch) { // the unit plate's outcome squares, drawn the same way
+    const s = ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`;
+    return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${s}</svg>`;
+  }
+
+  /* ---------- the model: sets, families, questions ---------- */
+  const keys = Object.keys(QS);
+  const groupsOf = (s, q) => (QS[s].groups && QS[s].groups[q.id]) || q.groups || [];
+  const prim = (gs) => PREC.find((g) => gs.includes(g)) || gs[0] || "covered";
+  const Q = {}; // "set|id" -> record
+  keys.forEach((s) => (QS[s].questions || []).forEach((q, i) => {
+    const gs = groupsOf(s, q);
+    Q[s + "|" + q.id] = { s, q, i, gs, col: prim(gs), written: q.groups || [], scored: !!(QS[s].groups && QS[s].groups[q.id]) };
+  }));
+  const rec = (s, id) => Q[s + "|" + id];
+  const families = keys.filter((s) => QS[s].supersedes && QS[QS[s].supersedes]).map((s) => ({ old: QS[s].supersedes, nu: s }));
+  const famOf = (s) => families.find((f) => f.old === s || f.nu === s);
+  const twinOf = (r) => { const f = famOf(r.s); if (!f) return null; return rec(r.s === f.old ? f.nu : f.old, r.q.id) || null; };
+  const sameList = (a, b) => [...a].sort().join() === [...b].sort().join();
+  const changeOf = (a, b) => { // how v2 changed a carried question's labels
+    const out = [];
+    if (!sameList(a.gs, b.gs)) out.push(`relabelled ${a.col !== b.col ? `from ${gName(a.col)} to ${gName(b.col)}` : `as ${b.gs.map(gName).join(", ")}`}`);
+    const added = (b.q.kinds || []).filter((k) => !(a.q.kinds || []).includes(k));
+    if (added.length) out.push(`now also ${added.map((k) => KIND[k] || k).join(", ")}${(b.q.rubric || []).length ? ` (${b.q.rubric.map((k) => (RUB[k] || k).split(":")[0]).join(", ")})` : ""}`);
+    return out;
+  };
+  const blocks = [];
+  keys.forEach((s) => { const f = famOf(s); if (!f) blocks.push({ kind: "one", sets: [s] }); else if (f.old === s) blocks.push({ kind: "fam", sets: [f.old, f.nu] }); });
+
+  /* ---------- filters ---------- */
+  const F = { text: "", g: new Set(), k: new Set(), f: new Set() };
+  const active = () => F.text || F.g.size || F.k.size || F.f.size;
+  function hits(r) {
+    if (F.text) { const t = F.text.toLowerCase(); if (!(r.q.id.toLowerCase().includes(t) || (r.q.turns || []).some((x) => x.toLowerCase().includes(t)))) return false; }
+    if (F.g.size && ![...F.g].some((g) => r.gs.includes(g))) return false;
+    if (F.k.size && ![...F.k].some((k) => (r.q.kinds || []).includes(k))) return false;
+    if (F.f.has("new") && !r.q.new) return false;
+    if (F.f.has("ret") && !r.q.retired) return false;
+    if (F.f.has("nv") && !r.q.naive) return false;
+    return true;
+  }
+  const allRecs = Object.values(Q);
+  const present = (fn) => allRecs.some(fn);
+  const chip = (f, label, sw) => `<button type="button" class="qs-chip" aria-pressed="false" data-f="${f}">${sw}<span>${label}</span></button>`;
+  $("#qs-gchips").insertAdjacentHTML("beforeend", CORDER.filter((g) => present((r) => r.gs.includes(g))).map((g) => chip("g:" + g, esc(GL[g] ? GL[g].label : g), `<i class="sw g-${g}" aria-hidden="true"></i>`)).join(""));
+  const kinds = Object.keys(KIND).filter((k) => present((r) => (r.q.kinds || []).includes(k)));
+  allRecs.forEach((r) => (r.q.kinds || []).forEach((k) => { if (!kinds.includes(k)) kinds.push(k); }));
+  $("#qs-kchips").innerHTML = kinds.map((k) => chip("k:" + k, esc(KSHORT[k] || k), "")).join("");
+  if (!kinds.length) $(".qs-kinds").hidden = true;
+  $("#qs-fchips").insertAdjacentHTML("beforeend", [
+    present((r) => r.q.new) ? chip("f:new", "new in v2", `<i class="sw nw" aria-hidden="true"></i>`) : "",
+    present((r) => r.q.retired) ? chip("f:ret", "retired", `<i class="sw ret" aria-hidden="true"></i>`) : "",
+    present((r) => r.q.naive) ? chip("f:nv", "obvious SQL misses", `<i class="sw nv" aria-hidden="true"></i>`) : "",
+  ].join(""));
+  root.querySelectorAll(".qs-chip").forEach((b) => b.addEventListener("click", () => {
+    const [t, v] = b.dataset.f.split(":"); const set = F[t];
+    if (set.has(v)) set.delete(v); else set.add(v);
+    b.setAttribute("aria-pressed", set.has(v) ? "true" : "false"); applyFilter();
+  }));
+  let ft; $("#qs-find").addEventListener("input", (e) => { clearTimeout(ft); ft = setTimeout(() => { F.text = e.target.value.trim(); applyFilter(); }, 90); });
+  function clearAll() { F.text = ""; F.g.clear(); F.k.clear(); F.f.clear(); $("#qs-find").value = ""; root.querySelectorAll(".qs-chip").forEach((b) => b.setAttribute("aria-pressed", "false")); applyFilter(); }
+  function applyFilter() {
+    const on = !!active();
+    root.querySelectorAll(".qs-plot").forEach((p) => p.classList.toggle("filtering", on));
+    root.querySelectorAll(".qs-m").forEach((m) => m.classList.toggle("hit", on && hits(rec(m.dataset.set, m.dataset.id))));
+    root.querySelectorAll(".qs-plot .qs-th").forEach((t) => t.classList.toggle("hit", on && (hits(rec(t.dataset.a, t.dataset.id)) || hits(rec(t.dataset.b, t.dataset.id)))));
+    root.querySelectorAll(".qs-list li[data-id]").forEach((li) => (li.hidden = on && !hits(rec(li.dataset.set, li.dataset.id))));
+    const c = $("#qs-count");
+    if (!on) { c.innerHTML = `<span>Pick a group, a mark or a kind to pick out its questions; pick several to widen a group or kind, narrow across them.</span>`; return; }
+    const per = keys.map((s) => { const all = allRecs.filter((r) => r.s === s); return [s, all.filter(hits).length, all.length]; });
+    const tot = per.reduce((a, p) => a + p[1], 0);
+    c.innerHTML = `<span><b>${tot}</b> ${tot === 1 ? "question matches" : "questions match"}: ${per.map(([s, n, of]) => `${n} of ${of} in the ${esc(QS[s].label.toLowerCase())}`).join(", ")}.</span><button type="button" class="qs-clear">Clear</button>`;
+    c.querySelector(".qs-clear").onclick = () => { clearAll(); $("#qs-find").focus(); };
+  }
+
+  /* ---------- legend ---------- */
+  const usedG = CORDER.filter((g) => present((r) => r.col === g));
+  $("#qs-legend").innerHTML = usedG.map((g) => `<span class="k"><svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true" class="g-${g}"><rect x="1" y="1" width="10" height="15" rx="1" style="fill:${g === "composable" ? "color-mix(in srgb, var(--da) 35%, var(--paper))" : "var(--c)"};stroke:${g === "composable" ? "var(--c)" : "none"};stroke-width:1.5"/></svg>${GTERM[g] ? term(GTERM[g], esc(gName(g))) : esc(gName(g))}</span>`).join("")
+    + `<span class="k"><svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><rect x="1.75" y="1.75" width="8.5" height="13.5" fill="var(--paper)" stroke="var(--ink-2)" stroke-width="1.5"/><line x1="2" y1="15" x2="10" y2="2" stroke="var(--ink-2)" stroke-width="1.5"/></svg>retired</span>`
+    + `<span class="k"><svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><rect x="1" y="1" width="10" height="13" fill="var(--ink-3)"/><rect x="1" y="17" width="10" height="2" fill="var(--ink)"/></svg>obvious SQL gives another number</span>`
+    + (families.length ? `<span class="k"><svg width="22" height="20" viewBox="0 0 22 20" aria-hidden="true"><line x1="5" y1="0" x2="5" y2="20" class="qs-th"/><line x1="16" y1="0" x2="16" y2="20" class="qs-th chg"/></svg>thread: the same question in both versions; dotted where v2 relabels it</span>` : "");
+
+  /* ---------- facts beside each band ---------- */
+  function facts(s) {
+    const S = QS[s], qs = S.questions || [], ret = qs.filter((q) => q.retired);
+    const scored = Object.keys(S.groups || {}).length || qs.length - ret.length;
+    const f = famOf(s), nNew = qs.filter((q) => q.new).length;
+    const byClass = {}; ret.forEach((q) => { const c = q.retired.class || "other"; byClass[c] = (byClass[c] || 0) + 1; });
+    const mix = CORDER.map((g) => [g, Object.values(S.groups || {}).filter((gs) => gs.includes(g)).length]).filter(([, n]) => n);
+    const label = TERMS.has(s) ? term(s, esc(S.label)) : esc(S.label);
+    const ver = f ? (f.old === s ? "v1" : "v2") : "";
+    const where = S.shown ? "In the figures above." : S.appendix ? `Not in the figures yet; its numbers are in the <a href="#other-set-versions">appendix</a>.` : "Not shown in the figures.";
+    const sha = S.sha256 || "";
+    return `<div class="qs-facts" id="qs-${esc(s)}">
+      <h3>${label}${ver ? `<span class="qs-ver">${ver}${f && f.old === s ? ", superseded" : ""}</span>` : ""}</h3>
+      ${WHAT[s] ? `<p class="qs-what">${esc(WHAT[s])}</p>` : ""}
+      <p class="qs-n"><span><b>${qs.length}</b> written</span> &middot; <span><b>${scored}</b> scored</span> &middot; <span><b>${ret.length}</b> retired</span></p>
+      ${f && f.nu === s ? `<p class="qs-sub">${qs.length - nNew} carried from v1, ${nNew} new</p>` : ""}
+      ${ret.length ? `<p class="qs-sub">Retired: ${Object.entries(byClass).map(([c, n]) => `${esc(RCLASS[c] || c)} (${n})`).join("; ")}</p>` : ""}
+      ${mix.length ? `<p class="qs-mix qs-sub">Scored by group: ${mix.map(([g, n]) => `${GTERM[g] ? term(GTERM[g], esc(gName(g))) : esc(gName(g))}&nbsp;${n}`).join(" &middot; ")}</p>` : ""}
+      <p>Frozen ${esc(day(S.frozen))}${sha ? ` &middot; <button type="button" class="qs-hash" aria-expanded="false" title="Show the full SHA-256">${esc(sha.slice(0, 8))}</button><span class="qs-hashfull" hidden>${esc(sha)}</span>` : ""}</p>
+      <p class="qs-where">${where}</p>
+    </div>`;
+  }
+
+  /* ---------- layout: slots in order, wrapped into rows ---------- */
+  const clusterSort = (list) => list.slice().sort((a, b) => CORDER.indexOf(a.col) - CORDER.indexOf(b.col) || a.i - b.i);
+  function slotsFor(b) {
+    if (b.kind === "one") return clusterSort((QS[b.sets[0]].questions || []).map((q) => rec(b.sets[0], q.id))).map((r) => ({ a: r, b: null, cl: r.col, seg: 0 }));
+    const [o, n] = b.sets;
+    const carried = clusterSort((QS[o].questions || []).map((q) => rec(o, q.id))).map((r) => ({ a: r, b: rec(n, r.q.id) || null, cl: r.col, seg: 0 }));
+    const fresh = clusterSort((QS[n].questions || []).filter((q) => !rec(o, q.id)).map((q) => rec(n, q.id))).map((r) => ({ a: null, b: r, cl: r.col, seg: 1 }));
+    return carried.concat(fresh);
+  }
+  function place(slots, W, P, CG, SG) {
+    let x = 0, row = 0, prev = null;
+    slots.forEach((sl) => {
+      let gap = prev ? (sl.seg !== prev.seg ? SG : sl.cl !== prev.cl ? CG : 0) : 0;
+      if (prev && sl.seg !== prev.seg && W - (x + gap) < 7 * P) { row++; x = 0; gap = 0; }
+      else if (x > 0 && x + gap + P > W) { row++; x = 0; gap = 0; }
+      x += gap; sl.x = x; sl.row = row; x += P; prev = sl;
+    });
+    return row + 1;
+  }
+  const geo = () => ({ phone: root.clientWidth < 560, wide: !window.matchMedia("(max-width: 760px)").matches });
+
+  const state = { open: null, focus: {} }; // open: {blk, s, id}
+  const host = $("#qs-blocks");
+  host.innerHTML = blocks.map((b, bi) => {
+    const fc = b.sets.map(facts).join("");
+    const why = b.kind === "fam" ? whyLine(b) : "";
+    return `<article class="qs-blk" data-blk="${bi}">
+      <div class="qs-factcol${b.sets.length > 1 ? " pair" : ""}">${fc}</div>
+      <div class="qs-fig"><div class="qs-plot" role="group" aria-label="${esc(b.sets.map((s) => QS[s].label).join(" and "))}: one mark per question; arrow keys move, Enter opens"></div>
+        <p class="qs-read" aria-hidden="true"></p><div class="qs-slot"></div>${why}</div></article>`;
+  }).join("");
+  function whyLine(b) {
+    const [o, n] = b.sets; const S = QS[n];
+    const carried = (QS[o].questions || []).filter((q) => rec(n, q.id)).map((q) => [rec(o, q.id), rec(n, q.id)]);
+    const moves = {}; let kindOnly = 0, sqlOnly = 0;
+    carried.forEach(([a, c]) => {
+      if (!sameList(a.gs, c.gs)) { const k = `${gName(a.col)}|${gName(c.col)}`; moves[k] = (moves[k] || 0) + 1; }
+      else if (!sameList(a.q.kinds || [], c.q.kinds || [])) { kindOnly++; if ((c.q.kinds || []).includes("sql_hard") && !(a.q.kinds || []).includes("sql_hard")) sqlOnly++; }
+    });
+    const fresh = (S.questions || []).filter((q) => !rec(o, q.id));
+    const allSql = fresh.length && fresh.every((q) => (q.kinds || []).includes("sql_hard"));
+    const mv = Object.entries(moves).map(([k, v]) => { const [x, y] = k.split("|"); return `${v} from ${x} to ${y}`; });
+    const parts = [`<b>v2 carries all ${carried.length} of v1's questions word for word</b>, each tied to its copy by a thread`];
+    if (mv.length) parts.push(`relabels ${mv.join(" and ")}`);
+    if (kindOnly) parts.push(sqlOnly === kindOnly ? `marks ${kindOnly} more as hard in SQL` : `changes the kinds of ${kindOnly} more`);
+    parts.push(`and adds <b>${fresh.length} new questions${allSql ? ", every one hard in SQL" : ""}</b>`);
+    return `<p class="qs-why">${parts.join("; ").replace(/; and adds/, ", and adds")}. ${S.supersedes_why ? `Why a v2: ${esc(S.supersedes_why.charAt(0).toUpperCase() + S.supersedes_why.slice(1))}` : ""}</p>`;
+  }
+  root.querySelectorAll(".qs-hash").forEach((b) => b.addEventListener("click", () => { const full = b.nextElementSibling; const on = full.hidden; full.hidden = !on; b.setAttribute("aria-expanded", on ? "true" : "false"); }));
+
+  const ariaOf = (r) => `${r.q.id}${r.q.new ? ", new in v2" : ""}${r.q.retired ? ", retired" : ""}: ${r.gs.map(gName).join(", ")}. ${(r.q.turns || []).join(" Then: ")}`;
+  function render() {
+    const g = geo();
+    // the hard family first: the other bands take its pitch, so a question is the same width everywhere
+    [...host.querySelectorAll(".qs-blk")].sort((a, c) => (blocks[+c.dataset.blk].kind === "fam") - (blocks[+a.dataset.blk].kind === "fam")).forEach((art) => {
+      const b = blocks[+art.dataset.blk]; const plot = art.querySelector(".qs-plot");
+      const fam = b.kind === "fam"; const GUT = fam ? 24 : 0;
+      const W = Math.max(120, plot.clientWidth - GUT);
+      const slots = slotsFor(b); b.slots = slots;
+      const CG = g.phone ? 6 : 8, SG = g.phone ? 10 : 18;
+      // the widest pitch (16 down to 12) that keeps a hard family on one row; else a phone's 20 or a desk's 14, wrapped
+      let P = g.phone ? 18 : 14, rows;
+      if (!g.phone) { for (let p = 16; p >= 12; p--) { if (place(slots, W, p, CG, SG) === 1) { P = p; break; } } }
+      if (b.kind === "one") { const fb = blocks.find((x) => x.kind === "fam"); if (fb && fb.P && !g.phone) P = fb.P; }
+      b.P = P; rows = place(slots, W, P, CG, SG);
+      const MH = g.phone ? 26 : 24, T = 32;
+      let C = 18;
+      if (fam && rows === 1 && g.wide) { const fs = art.querySelectorAll(".qs-facts"); const dy = fs[1].offsetTop - fs[0].offsetTop; C = Math.max(18, dy - MH); }
+      const newLab = (r) => slots.some((sl, i) => sl.seg === 1 && sl.row === r && (i === 0 || slots[i - 1].cl !== sl.cl || slots[i - 1].seg !== 1));
+      const tops = []; let y = 0;
+      for (let r = 0; r < rows; r++) {
+        const hasA = slots.some((sl) => sl.row === r && sl.a);
+        const top = y + T; const laneA = top, laneB = fam ? (hasA ? top + MH + C : top) : null;
+        tops.push({ laneA, laneB, hasA });
+        y = (fam ? laneB : laneA) + MH + (fam && newLab(r) ? 34 : 10);
+      }
+      let h = "";
+      const markHTML = (r, x, yy, extra) => `<button type="button" class="qs-m g-${r.col}${r.q.retired ? " ret" : ""}${r.q.naive ? " nv" : ""}${extra || ""}" style="left:${GUT + x}px;top:${yy}px;width:${P}px;height:${MH}px" data-set="${esc(r.s)}" data-id="${esc(r.q.id)}" tabindex="-1" aria-expanded="false" aria-label="${esc(ariaOf(r))}"></button>`;
+      let lines = "";
+      slots.forEach((sl) => {
+        const t = tops[sl.row];
+        if (sl.a) h += markHTML(sl.a, sl.x, t.laneA);
+        if (sl.b) h += markHTML(sl.b, sl.x, fam ? t.laneB : t.laneA);
+        if (fam && sl.a && sl.b) {
+          const cx = GUT + sl.x + P / 2, chg = changeOf(sl.a, sl.b).length;
+          lines += `<line class="qs-th${chg ? " chg" : ""}" data-a="${esc(sl.a.s)}" data-b="${esc(sl.b.s)}" data-id="${esc(sl.a.q.id)}" x1="${cx}" x2="${cx}" y1="${t.laneA + MH + 2}" y2="${t.laneB - 2}"/>`;
+        }
+      });
+      // cluster labels: v1's (or the set's) above the lane, v2's new clusters below its lane
+      const labs = [];
+      slots.forEach((sl, i) => {
+        const p = slots[i - 1]; const start = !p || p.cl !== sl.cl || p.seg !== sl.seg;
+        if (!start) return;
+        const r = sl.a || sl.b; const n = slots.filter((x) => x.seg === sl.seg && x.cl === sl.cl).length;
+        const txt = esc(gName(sl.cl));
+        if (sl.seg === 0) labs.push({ row: sl.row, x: sl.x, txt, n, where: "top" });
+        else labs.push({ row: sl.row, x: sl.x, txt, n, where: "bot" });
+      });
+      labs.forEach((l) => { h += `<span class="qs-lab" data-row="${l.row}" data-where="${l.where}" data-x="${GUT + l.x}">${l.txt}</span>`; });
+      if (fam) {
+        tops.forEach((t, r) => {
+          if (t.hasA) h += `<span class="qs-lane" style="top:${t.laneA + 6}px">v1</span>`;
+          h += `<span class="qs-lane" style="top:${t.laneB + 6}px">v2</span>`;
+        });
+        const first = slots.find((sl) => sl.seg === 1);
+        if (first) {
+          const nNew = slots.filter((sl) => sl.seg === 1).length; const t = tops[first.row];
+          const lastOnRow = slots.filter((sl) => sl.seg === 1 && sl.row === first.row).pop();
+          const x0 = GUT + first.x, x1 = GUT + lastOnRow.x + P, yb = t.hasA ? t.laneB - 7 : t.laneB - 7;
+          const allSql = slots.filter((sl) => sl.seg === 1).every((sl) => (sl.b.q.kinds || []).includes("sql_hard"));
+          h += `<span class="qs-newcap" data-bottom="${yb - 3}" style="left:${x0}px;max-width:${Math.max(120, GUT + W - x0)}px">${nNew} new in v2${allSql ? ", all hard in SQL" : ""}</span>`;
+          lines += `<path class="qs-brk" d="M${x0 + 1} ${yb + 4}V${yb}H${x1 - 1}V${yb + 4}"/>`;
+        }
+      }
+      plot.style.height = y + "px";
+      h = h.replace(/data-bottom="([\d.]+)" style="/g, (all, v) => `style="bottom:${y - +v}px;`);
+      plot.innerHTML = h + `<svg class="qs-threads" width="${GUT + W}" height="${y}" aria-hidden="true">${lines}</svg>`;
+      // labels: two tiers, a label that would run into the one before it moves up a tier, then right
+      const ends = {};
+      plot.querySelectorAll(".qs-lab").forEach((el) => {
+        const r = +el.dataset.row, t = tops[r], x = +el.dataset.x, w = el.offsetWidth;
+        const base = el.dataset.where === "top" ? (fam && !t.hasA ? t.laneB : t.laneA) : (fam ? t.laneB : t.laneA) + MH;
+        const tierY = (k) => el.dataset.where === "top" ? base - 15 - k * 15 : base + 4 + k * 15;
+        let k = 0, left = x; const key = (kk) => `${r}${el.dataset.where}${kk}`;
+        if (ends[key(0)] != null && left < ends[key(0)] + 4) { k = 1; if (ends[key(1)] != null && left < ends[key(1)] + 4) left = ends[key(1)] + 4; }
+        left = Math.min(left, GUT + W - w);
+        el.style.left = left + "px"; el.style.top = tierY(k) + "px"; el.style.height = (k ? 29 : 14) + "px";
+        if (k) { el.style.paddingTop = el.dataset.where === "top" ? "0" : "15px"; if (el.dataset.where === "bot") el.style.top = tierY(0) + "px"; }
+        ends[key(k)] = left + w;
+      });
+      // roving tab stop
+      const marks = [...plot.querySelectorAll(".qs-m")];
+      const keep = state.focus[art.dataset.blk];
+      const tab = marks.find((m) => keep && m.dataset.set === keep.s && m.dataset.id === keep.id) || marks[0];
+      if (tab) tab.tabIndex = 0;
+    });
+    applyFilter(); syncOpen();
+  }
+
+  /* ---------- interaction: hover readout, keyboard, the card ---------- */
+  const markEl = (s, id) => root.querySelector(`.qs-m[data-set="${CSS.escape(s)}"][data-id="${CSS.escape(id)}"]`);
+  function readout(art, r) {
+    const p = art.querySelector(".qs-read");
+    if (!r) { p.innerHTML = idleText(art); return; }
+    p.innerHTML = `<b><span class="id">${esc(r.q.id)}</span></b> ${r.q.new ? "&middot; new in v2 " : ""}${r.q.retired ? "&middot; retired " : ""}&middot; ${esc(r.gs.map(gName).join(", "))} <q>${esc((r.q.turns || [])[0] || "")}</q>${(r.q.turns || []).length > 1 ? ` <span>(+${r.q.turns.length - 1} more ${r.q.turns.length > 2 ? "turns" : "turn"})</span>` : ""}`;
+  }
+  const idleText = (art) => blocks[+art.dataset.blk].kind === "fam" ? "Hover or focus a mark to read its question; click it, or press Enter, to open it. Up and down cross a thread between v1 and v2." : "Hover or focus a mark to read its question; click it, or press Enter, to open it.";
+  host.querySelectorAll(".qs-blk").forEach((art) => readout(art, null));
+  host.addEventListener("pointerover", (e) => { const m = e.target.closest(".qs-m"); if (m) readout(m.closest(".qs-blk"), rec(m.dataset.set, m.dataset.id)); });
+  host.addEventListener("pointerout", (e) => { const m = e.target.closest(".qs-m"); if (m && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".qs-m"))) { const art = m.closest(".qs-blk"); const f = document.activeElement; readout(art, f && f.classList && f.classList.contains("qs-m") && art.contains(f) ? rec(f.dataset.set, f.dataset.id) : null); } });
+  host.addEventListener("focusin", (e) => { const m = e.target.closest(".qs-m"); if (!m) return; const art = m.closest(".qs-blk"); readout(art, rec(m.dataset.set, m.dataset.id)); art.querySelectorAll(".qs-m").forEach((x) => (x.tabIndex = x === m ? 0 : -1)); state.focus[art.dataset.blk] = { s: m.dataset.set, id: m.dataset.id }; });
+  host.addEventListener("focusout", (e) => { const m = e.target.closest(".qs-m"); if (!m) return; const art = m.closest(".qs-blk"); if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".qs-m") && art.contains(e.relatedTarget))) readout(art, null); });
+  host.addEventListener("click", (e) => {
+    const m = e.target.closest(".qs-m"); if (!m) return;
+    const art = m.closest(".qs-blk"); const o = state.open;
+    if (o && o.s === m.dataset.set && o.id === m.dataset.id) closeCard(false); else openCard(art, m.dataset.set, m.dataset.id);
+  });
+  host.addEventListener("keydown", (e) => {
+    const m = e.target.closest(".qs-m");
+    if (e.key === "Escape" && state.open && e.target.closest(".qs-blk")) { e.stopPropagation(); closeCard(true); return; }
+    if (!m) return;
+    const art = m.closest(".qs-blk"); const b = blocks[+art.dataset.blk];
+    const marks = [...art.querySelectorAll(".qs-m")];
+    const lane = (el) => (b.kind === "fam" && el.dataset.set === b.sets[1]) ? 1 : 0;
+    const pos = (el) => ({ x: parseFloat(el.style.left), y: parseFloat(el.style.top) });
+    const seq = marks.filter((x) => lane(x) === lane(m)); // reading order within this set's lane
+    seq.sort((a, c) => pos(a).y - pos(c).y || pos(a).x - pos(c).x);
+    let to = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const i = seq.indexOf(m) + (e.key === "ArrowRight" ? 1 : -1); to = seq[Math.max(0, Math.min(seq.length - 1, i))]; }
+    else if (e.key === "Home") to = seq[0];
+    else if (e.key === "End") to = seq[seq.length - 1];
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const p = pos(m); const down = e.key === "ArrowDown";
+      const ys = [...new Set(marks.map((x) => pos(x).y))].sort((a, c) => a - c);
+      const ny = ys[ys.indexOf(p.y) + (down ? 1 : -1)];
+      if (ny != null) { const cand = marks.filter((x) => pos(x).y === ny); to = cand.reduce((best, x) => Math.abs(pos(x).x - p.x) < Math.abs(pos(best).x - p.x) ? x : best, cand[0]); }
+    } else return;
+    e.preventDefault();
+    if (to && to !== m) { to.focus(); if (state.open && art.contains(m)) openCard(art, to.dataset.set, to.dataset.id, true); }
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.open && !root.contains(document.activeElement)) closeCard(false); });
+
+  function syncOpen() {
+    root.querySelectorAll(".qs-m").forEach((m) => { m.setAttribute("aria-expanded", "false"); m.classList.remove("twin"); m.removeAttribute("aria-controls"); });
+    root.querySelectorAll(".qs-th").forEach((t) => t.classList.remove("on"));
+    host.querySelectorAll(".qs-slot").forEach((sl) => { if (!state.open || sl.closest(".qs-blk").dataset.blk !== String(state.open.blk)) sl.innerHTML = ""; });
+    if (!state.open) return;
+    const { s, id, blk } = state.open; const m = markEl(s, id); if (!m) return;
+    m.setAttribute("aria-expanded", "true"); m.setAttribute("aria-controls", "qs-card");
+    const tw = twinOf(rec(s, id)); if (tw) { const t = markEl(tw.s, id); if (t) t.classList.add("twin"); }
+    root.querySelectorAll(`.qs-th[data-id="${CSS.escape(id)}"]`).forEach((t) => t.classList.add("on"));
+    const art = host.querySelector(`.qs-blk[data-blk="${blk}"]`); const slot = art.querySelector(".qs-slot");
+    const caret = slot.querySelector(".qs-caret");
+    if (caret) { const x = m.getBoundingClientRect().left - slot.getBoundingClientRect().left + m.offsetWidth / 2; caret.style.left = Math.max(10, Math.min(slot.clientWidth - 10, x)) + "px"; }
+  }
+  function openCard(art, s, id, keepFocus) {
+    state.open = { blk: art.dataset.blk, s, id };
+    art.querySelector(".qs-slot").innerHTML = cardHTML(rec(s, id));
+    const card = art.querySelector(".qs-card");
+    card.querySelector(".qs-x").onclick = () => closeCard(true);
+    card.querySelectorAll(".qs-go").forEach((g) => (g.onclick = () => { const t = markEl(g.dataset.set, g.dataset.id); if (t) { t.focus(); openCard(t.closest(".qs-blk"), g.dataset.set, g.dataset.id); } }));
+    syncOpen();
+    if (!keepFocus) { const m = markEl(s, id); if (m && document.activeElement !== m) m.focus({ preventScroll: true }); }
+  }
+  function closeCard(refocus) {
+    if (!state.open) return; const { s, id } = state.open; state.open = null; syncOpen();
+    if (refocus) { const m = markEl(s, id); if (m) m.focus(); }
+  }
+
+  function runsHTML(r) {
+    const S = SETS[r.s];
+    let src = r.s, note = "";
+    if (!S || !QS[r.s].shown) {
+      const tw = twinOf(r);
+      if (tw && SETS[tw.s] && QS[tw.s].shown) { src = tw.s; note = `Its runs on the ${esc(QS[tw.s].label.toLowerCase())} (v1), where the figures show it; the same question, word for word.`; }
+      else return `<p class="qs-note">${QS[r.s].appendix ? "This set is not in the figures yet, so its runs are not drawn here; its setups' numbers are in the appendix." : "No runs drawn for this set."}</p>`;
+    }
+    const SS = SETS[src]; const ci = SS.cases.findIndex((c) => c.id === r.q.id);
+    if (ci < 0) return `<p class="qs-note">${r.q.retired ? "Retired, so it is no longer scored: the figures leave its runs out." : "Not scored in this set."}</p>`;
+    const rows = [];
+    (D.ladder || []).forEach((L) => SS.rows.filter((x) => L.arms.includes(x.arm)).sort((a, b) => L.arms.indexOf(a.arm) - L.arms.indexOf(b.arm) || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs).forEach((x) => rows.push(x)));
+    SS.rows.forEach((x) => { if (!rows.includes(x)) rows.push(x); });
+    const tally = [0, 0, 0, 0, 0]; let ran = 0;
+    const items = rows.map((x) => {
+      const u = (x.units || "").slice(ci * 3, ci * 3 + 3).padEnd(3, ".");
+      [...u].forEach((ch) => { if (ch !== ".") { tally[+ch]++; ran++; } });
+      const said = [...u].map((ch) => ch === "." ? "not run" : OUTN[+ch]).join(", ");
+      return `<li><span class="u">${[...u].map(swatch).join("")}</span><span class="id" data-setup="${esc(x.arm)}">${esc(x.arm)}</span><span class="ml">${esc(x.modelLabel)}</span><span class="vh">: ${esc(said)}</span></li>`;
+    }).join("");
+    const sum = tally.map((n, k) => n ? `<span class="k">${swatch(String(k))}${n} ${OUTN[k]}</span>` : "").join("");
+    return `${note ? `<p class="qs-note" style="margin-bottom:6px">${note}</p>` : ""}<p class="qs-rsum"><span class="lead">${ran} runs across ${rows.length} setups and models:</span>${sum}</p>
+      <ul class="qs-rlist" aria-label="Every setup's runs on this question, in the unit plate's order">${items}</ul>`;
+  }
+  function cardHTML(r) {
+    const q = r.q, turns = q.turns || [], exp = q.expected || [];
+    const one = turns.length < 2;
+    const tl = turns.map((t, i) => {
+      const e = exp[i];
+      const ex = e == null || !e.length ? null : e.map(meaning).join(e.length > 1 ? " <span class=\"alt\">and</span> " : "");
+      return `<li>${one ? "" : `<span class="qs-tn">Turn ${i + 1}</span>`}<div><p class="qs-qt">${esc(t)}</p><p class="qs-exp">${ex == null ? "No expected number on this turn." : "Must carry " + ex}</p></div></li>`;
+    }).join("");
+    const multi = exp.some((e) => e && e.length > 1);
+    const tw = twinOf(r); const f = famOf(r.s);
+    const meta = [];
+    meta.push(["Groups", `${r.gs.map((g) => GTERM[g] ? term(GTERM[g], esc(gName(g))) : esc(gName(g))).join(", ")}${!sameList(r.written, r.gs) ? ` <small>(written as ${r.written.map(gName).join(", ")}; relabelled when scored)</small>` : ""}${GL[r.col] && GL[r.col].help ? `<br><small>${esc(GL[r.col].help)}</small>` : ""}`]);
+    if ((q.kinds || []).length) meta.push(["What makes it hard", esc(q.kinds.map((k) => KIND[k] || k).join("; "))]);
+    if ((q.rubric || []).length) meta.push(["Hard in SQL by", esc(q.rubric.map((k) => RUB[k] || k).join("; "))]);
+    if (q.naive) meta.push(["Obvious SQL", "gives another number than the expected one, checked on the data before any setup ran"]);
+    if (f) {
+      if (q.new) meta.push(["Version", "new in v2"]);
+      else if (tw) { const [a, c] = r.s === f.old ? [r, tw] : [tw, r]; const ch = changeOf(a, c); const other = r.s === f.old ? "v2" : "v1";
+        meta.push(["Version", `${r.s === f.old ? "carried into v2" : "carried from v1"} word for word${ch.length ? `; v2 ${esc(ch.join("; "))}` : ", labels unchanged"}. <button type="button" class="qs-go" data-set="${esc(tw.s)}" data-id="${esc(q.id)}">Open it in ${other}</button>`]); }
+    }
+    if (q.retired) meta.push(["Retired", `${esc(RCLASS[q.retired.class] || q.retired.class || "")}${q.retired.date ? `, ${esc(day(q.retired.date))}` : ""}<br><small>${esc(clean(q.retired.reason))}</small>`]);
+    return `<div class="qs-card" id="qs-card" role="region" aria-label="Question ${esc(q.id)}"><span class="qs-caret" aria-hidden="true"></span>
+      <button type="button" class="qs-x" aria-label="Close the question"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="qs-chead"><span class="id">${esc(q.id)}</span><span class="qs-in">in the ${esc(QS[r.s].label.toLowerCase())}</span>${q.new ? `<span class="qs-tag">new in v2</span>` : ""}${q.retired ? `<span class="qs-tag ret">retired</span>` : ""}</div>
+      <ol class="qs-turns${one ? " one" : ""}">${tl}</ol>
+      ${multi ? `<p class="qs-note" style="margin:-4px 0 10px;font-size:13px">A turn with several numbers needs each of them; on an ambiguous turn, asking which is meant also counts. A rate counts as a fraction or a percentage.</p>` : ""}
+      <dl class="qs-meta">${meta.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+      <div class="qs-runs">${runsHTML(r)}</div></div>`;
+  }
+
+  /* ---------- the text list, built when first opened ---------- */
+  const list = $("#qs-list");
+  list.addEventListener("toggle", () => {
+    if (!list.open || list.dataset.built) return; list.dataset.built = "1";
+    $("#qs-listbody").innerHTML = keys.map((s) => `<h4>${esc(QS[s].label)}</h4><ol>${(QS[s].questions || []).map((q) => { const r = rec(s, q.id); return `<li data-set="${esc(s)}" data-id="${esc(q.id)}"><button type="button" class="qs-li g-${r.col}${q.retired ? " ret" : ""}"><span class="id">${esc(q.id)}${q.new ? " &middot; new" : ""}${q.retired ? " &middot; retired" : ""}</span>${esc(q.turns.join(" / "))}</button></li>`; }).join("")}</ol>`).join("");
+    list.querySelectorAll(".qs-li").forEach((b) => b.addEventListener("click", () => { const li = b.closest("li"); const m = markEl(li.dataset.set, li.dataset.id); if (!m) return; openCard(m.closest(".qs-blk"), li.dataset.set, li.dataset.id); m.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }));
+    applyFilter();
+  });
+
+  render();
+  let lastW = root.clientWidth, rt;
+  const relayout = () => { if (root.clientWidth !== lastW) { lastW = root.clientWidth; render(); } };
+  if (window.ResizeObserver) new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(relayout, 80); }).observe(root);
+  else window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(relayout, 80); });
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(render);
+});
+</script>
+</section>
