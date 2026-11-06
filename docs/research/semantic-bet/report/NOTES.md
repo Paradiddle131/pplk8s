@@ -126,6 +126,14 @@ Build: `python3 build.py ../results.json`.
   Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
 - Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
 
+### Review, two rounds (an independent reviewer with its own Playwright scripts, old page d37d3bf against new)
+
+- Round 1, "fix first": at 400 px a row's text in one stacked panel dimmed for the other panel's glider; with both gliders moved, marks (per panel) and texts (joint) followed two rules; the setup map's readout fell below the fold at laptop heights (up to 145 px at 1366 by 768); the winners' figures did not line up across columns, and "a different setup leads" repeated in every pillar.
+  Decided: one joint filter everywhere, the readout's height reserved beside the list, the figures on shared grid rows and the repeated line said once.
+- Round 2, "ship": 0 violations of the joint filter in every SVG at every keyboard value and six two-glider pairs at 1280 and 400 px; every value reached by keyboard and by real mouse drag on both panels at both widths (the old page missed 92, 93, 95 and 96 on % right and 0, 2 and 3 on confident-wrong); 0 overlapping text boxes; the tab stops of Figures 2 to 6 unchanged (624, 600 and 717); numbers differ from the old page only in the exact bounds and the winners' new lines; no console errors, no horizontal scroll from 360 to 1920 px, classic 15 px scrollbars included; transitions 0 s under reduced motion; new text at least 5.56:1 (light) and 6.49:1 (dark).
+- Left as P3: near 97 to 100% right the readout's halo still covers a few pixels of the managed-best rules (it must sit left of the handle there); Home returns to the managed best, not 0 (the reset the owner asked for); at 1366 by 768 the map sits at its 78% floor and 4 of 95 hovered targets end up to 14 px below the fold; at 1440 by 900 the map is 89% where it was full size, to keep the readout in view.
+- The live line no longer says "the others are dimmed" when no row is.
+
 ### The owner's question: why "Uncovered questions" reads 93% [83, 100] on the frozen set but 100% [100, 100] on the hard set
 
 Measured from the page's data (results.json at d37d3bf, the logs scored as the eval scores them), 2026-11-06.

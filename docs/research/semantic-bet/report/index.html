@@ -2297,7 +2297,8 @@ window.reportReady(() => {
     if (GL.acc == null && GL.cw == null) { live.textContent = `Both thresholds sit at the managed best (${gVal("acc")}% right, ${gVal("cw")}% confidently wrong); drag a handle or press on the axis, or focus a handle and use the arrow keys, to dim the rows beyond it.`; return; }
     const conds = [GL.acc != null ? `at or above ${GL.acc}% right` : null, GL.cw != null ? `at or below ${GL.cw}% confidently wrong` : null].filter(Boolean).join(" and ");
     const count = SETS.map((s) => { const rs = S(s).rows.filter((r) => r.plotted); return `${rs.filter((r) => !isOut(r)).length} of ${rs.length} setup rows on the ${short(s)} set`; }).join(", ");
-    live.textContent = `${conds.charAt(0).toUpperCase() + conds.slice(1)}: ${count}; the others are dimmed in both panels.`;
+    const anyOut = SETS.some((s) => S(s).rows.some((r) => r.plotted && isOut(r)));
+    live.textContent = `${conds.charAt(0).toUpperCase() + conds.slice(1)}: ${count}${anyOut ? "; the others are dimmed in both panels" : "; none is dimmed"}.`;
   }
   function setGlide(k, v) {
     v = Math.max(0, Math.min(gMax(k), Math.round(v)));
