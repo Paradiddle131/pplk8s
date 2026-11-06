@@ -7,7 +7,9 @@ Checks, against free-path.yaml:
   {api, source, until} has an https source and is not declared past its `until` (alerting policies);
 - every `*.googleapis.com` host the root names (resources, workflow sources) is an enabled API;
 - every API GCP enables by itself (`implicit`) has an https source and is not paid;
-- the daily query cap, every day of a 31-day month, stays inside BigQuery's free 1 TiB of queries;
+- the daily query fence is a per-day brake that fits the month: the month's free 1 TiB of queries is the limit,
+  guarded by `make gcp-usage-check` before every live step (it fails past half of it), so one day's fence must fit
+  in the other half, and a day started just under the gate cannot bill (#370);
 - Cloud Run (#209): no public invoker, no service with a minimum instance, a maximum above
   `caps.cloud_run_max_instances` or CPU outside requests, one task and one attempt per Job run;
   workloads.yaml's scheduled Jobs, each run for its whole timeout, inside the Jobs' free vCPU- and
@@ -31,6 +33,8 @@ import yaml
 FREE_QUERY_MIB_PER_MONTH = (
     1024 * 1024
 )  # 1 TiB: https://cloud.google.com/bigquery/pricing#free-tier
+# `make gcp-usage-check` fails past this percent of a monthly free tier (its USAGE_SHARE default, #313).
+USAGE_GATE_PERCENT = 50
 # Cloud Run (https://cloud.google.com/run/pricing), per billing account a month: Jobs bill each instance's
 # whole life, at least a minute; Cloud Scheduler (https://cloud.google.com/scheduler/pricing): 3 jobs.
 FREE_JOB_VCPU_SECONDS = 240_000
@@ -101,11 +105,12 @@ def problems(gcp: Path, today: dt.date | None = None) -> list[str]:
     daily = caps.get("bigquery_query_mib_per_day")
     if not isinstance(daily, int) or daily <= 0:
         out.append(
-            "caps.bigquery_query_mib_per_day: missing; the query quota is the hard stop"
+            "caps.bigquery_query_mib_per_day: missing; the daily query fence is the per-day brake"
         )
-    elif daily * 31 > FREE_QUERY_MIB_PER_MONTH:
+    elif daily > FREE_QUERY_MIB_PER_MONTH * (100 - USAGE_GATE_PERCENT) // 100:
         out.append(
-            f"caps.bigquery_query_mib_per_day: {daily} MiB a day can bill past the free 1 TiB in a month"
+            f"caps.bigquery_query_mib_per_day: {daily} MiB in one day after the usage gate's "
+            f"{USAGE_GATE_PERCENT}% can bill past the free 1 TiB in a month"
         )
     per_job = caps.get("bigquery_maximum_bytes_billed")
     if not isinstance(per_job, int) or per_job <= 0:

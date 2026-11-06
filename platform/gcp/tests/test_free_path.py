@@ -67,14 +67,32 @@ def test_a_dated_exception_expires(copy: Path) -> None:
     assert any("free window" in p for p in problems(copy, dt.date(2027, 1, 1)))
 
 
-def test_a_raised_query_cap_fails(copy: Path) -> None:
+def with_daily_fence(copy: Path, mib: int) -> Path:
     spec = copy / "free-path.yaml"
     spec.write_text(
         spec.read_text().replace(
-            "bigquery_query_mib_per_day: 31457", "bigquery_query_mib_per_day: 40000"
+            "bigquery_query_mib_per_day: 209715", f"bigquery_query_mib_per_day: {mib}"
         )
     )
-    assert any("past the free 1 TiB" in p for p in problems(copy))
+    return copy
+
+
+def test_the_owners_daily_fence_is_a_per_day_brake(copy: Path) -> None:
+    # The owner's 0.2 TiB a day (#370) is past 1 TiB over 31 days, which the old rule refused; the month's TiB is
+    # the limit, held by the usage gate at half of it, and one day's fence fits in the other half.
+    assert 209715 * 31 > 1024 * 1024
+    assert problems(copy) == []
+    assert problems(with_daily_fence(copy, 512 * 1024)) == []
+
+
+def test_a_daily_fence_past_half_the_free_tib_fails(copy: Path) -> None:
+    found = problems(with_daily_fence(copy, 512 * 1024 + 1))
+    assert any("past the free 1 TiB" in p for p in found)
+
+
+def test_a_missing_daily_fence_fails(copy: Path) -> None:
+    found = problems(with_daily_fence(copy, 0))
+    assert any("bigquery_query_mib_per_day: missing" in p for p in found)
 
 
 def test_a_paid_api_cannot_hide_as_implicit(copy: Path) -> None:
