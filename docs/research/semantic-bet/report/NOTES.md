@@ -3,6 +3,7 @@
 Direction kept: a research memo in a scientific-paper register (STIX Two Text, Barlow Semi Condensed labels, graph-paper plots, blue-black ink), with B's scatter and strip plot and C's unit plate.
 Build: `python3 build.py ../results.json`.
 Set versions (RULE.md § Set versions, #378): the page shows one version of each set family, `hard` (v1) until the owner's go on #380, then `hard-v2` with `--show hard-v2` (or `BET_REPORT_SHOW=hard-v2`, and #381 flips `SHOWN`); the other version goes to the appendix, "Appendix: other versions of a question set", labelled not yet adopted or superseded, with its numbers from `results.json`.
+Clipped text (2026-11-06, the owner's report of "Claude Code subagent" losing its first letters in the setup explorer): `tools/clipcheck.js` (Playwright) checks text clipped by a container, past the page, outside an SVG's viewBox, overflowing, overlapping or covered, at 1280, 1024, 768, 400 and 360 px in light, dark and the dark button, over every set switch, explorer setup, map target and Figure 2 glider; it found 26 problems from 6 causes (the explorer's lane heads and narrow side titles, Figure 2's two-panel and phone labels, Figure 5's right labels, Figure 4's axis title), now 0. Lane heads, model labels, family headers and slope labels wrap instead of clipping, and Figures 2 and 5 redraw once the label font loads. Run it from `report/` with `node tools/clipcheck.js --quick` after any change to the page.
 
 ## What changed in revision 2
 

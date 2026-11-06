@@ -303,11 +303,11 @@ window.reportReady(() => {
   }
   function frameNode(key, x, y, w, h, title, opt) {
     opt = opt || {};
-    const tx = 10 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
+    const x0 = opt.tx || 10; const tx = x0 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
     let s = `<rect class="s-f${opt.screen ? " scr" : ""}${opt.ph ? " ph" : ""}" data-r="1" x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="2"/>`;
     const by = opt.bottom ? h : 0;
-    s += `<rect class="s-k" x="6" y="${by - 8}" width="${tx + ttw + nw - 2}" height="16"/>`;
-    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="10" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
+    s += `<rect class="s-k" x="${x0 - 4}" y="${by - 8}" width="${tx - x0 + ttw + nw + 8}" height="16"/>`;
+    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="${x0}" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
     s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="${by + 4}">${esc(title)}</text>`;
     if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="${by + 4}">${esc(opt.note)}</text>`;
     return { key, kind: "f", x, y, w, h, html: s };
@@ -474,7 +474,8 @@ window.reportReady(() => {
     marks.forEach((m, j) => {
       const endRow = j + 1 < marks.length ? marks[j + 1].i - 1 : rowsV.length - 1;
       const top = m.top; const bottom = rowsV[endRow].bottom + 12;
-      F.unshift(frameNode("loc:" + m.side, 2, top, W - 4, bottom - top, sideName[m.side]));
+      // the side's name starts right of the spine the rows' arrows run down (x = GX), which crosses the frame's top edge
+      F.unshift(frameNode("loc:" + m.side, 2, top, W - 4, bottom - top, sideName[m.side], { tx: GX + 8 }));
       H = Math.max(H, bottom);
     });
     H += 4;
@@ -622,8 +623,11 @@ window.reportReady(() => {
   function drawSeq(Q) {
     const W = 360; const n = Q.lanes.length; const xs = n === 2 ? [44, 300] : [44, 178, 312];
     let o = ""; let y = 8;
-    const heads = Q.lanes.map((l) => wrap(l, 112, "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
-    heads.forEach((ls, i) => ls.forEach((t, j) => { o += `<text class="s-lh" x="${xs[i]}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
+    // a lane's name is centred on its lifeline, so it wraps to the room on its narrower side, and a word too long
+    // for that room moves inward rather than running past the sheet's edge
+    const heads = Q.lanes.map((l, i) => wrap(l, Math.min(112, 2 * Math.min(xs[i], W - xs[i]) - 4), "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
+    heads.forEach((ls, i) => ls.forEach((t, j) => { const half = tw(t, "lh") / 2 + 2; const cx = Math.max(half, Math.min(W - half, xs[i]));
+      o += `<text class="s-lh" x="${+cx.toFixed(1)}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
     y += hh + 8; const top = y; let body = ""; let k = 0;
     Q.steps.forEach((s) => {
       const self = s.a === s.b; const l = Math.min(xs[s.a], xs[s.b]); const r = Math.max(xs[s.a], xs[s.b]);

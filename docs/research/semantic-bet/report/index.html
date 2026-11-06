@@ -1237,11 +1237,11 @@ window.reportReady(() => {
   }
   function frameNode(key, x, y, w, h, title, opt) {
     opt = opt || {};
-    const tx = 10 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
+    const x0 = opt.tx || 10; const tx = x0 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
     let s = `<rect class="s-f${opt.screen ? " scr" : ""}${opt.ph ? " ph" : ""}" data-r="1" x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="2"/>`;
     const by = opt.bottom ? h : 0;
-    s += `<rect class="s-k" x="6" y="${by - 8}" width="${tx + ttw + nw - 2}" height="16"/>`;
-    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="10" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
+    s += `<rect class="s-k" x="${x0 - 4}" y="${by - 8}" width="${tx - x0 + ttw + nw + 8}" height="16"/>`;
+    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="${x0}" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
     s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="${by + 4}">${esc(title)}</text>`;
     if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="${by + 4}">${esc(opt.note)}</text>`;
     return { key, kind: "f", x, y, w, h, html: s };
@@ -1408,7 +1408,8 @@ window.reportReady(() => {
     marks.forEach((m, j) => {
       const endRow = j + 1 < marks.length ? marks[j + 1].i - 1 : rowsV.length - 1;
       const top = m.top; const bottom = rowsV[endRow].bottom + 12;
-      F.unshift(frameNode("loc:" + m.side, 2, top, W - 4, bottom - top, sideName[m.side]));
+      // the side's name starts right of the spine the rows' arrows run down (x = GX), which crosses the frame's top edge
+      F.unshift(frameNode("loc:" + m.side, 2, top, W - 4, bottom - top, sideName[m.side], { tx: GX + 8 }));
       H = Math.max(H, bottom);
     });
     H += 4;
@@ -1556,8 +1557,11 @@ window.reportReady(() => {
   function drawSeq(Q) {
     const W = 360; const n = Q.lanes.length; const xs = n === 2 ? [44, 300] : [44, 178, 312];
     let o = ""; let y = 8;
-    const heads = Q.lanes.map((l) => wrap(l, 112, "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
-    heads.forEach((ls, i) => ls.forEach((t, j) => { o += `<text class="s-lh" x="${xs[i]}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
+    // a lane's name is centred on its lifeline, so it wraps to the room on its narrower side, and a word too long
+    // for that room moves inward rather than running past the sheet's edge
+    const heads = Q.lanes.map((l, i) => wrap(l, Math.min(112, 2 * Math.min(xs[i], W - xs[i]) - 4), "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
+    heads.forEach((ls, i) => ls.forEach((t, j) => { const half = tw(t, "lh") / 2 + 2; const cx = Math.max(half, Math.min(W - half, xs[i]));
+      o += `<text class="s-lh" x="${+cx.toFixed(1)}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
     y += hh + 8; const top = y; let body = ""; let k = 0;
     Q.steps.forEach((s) => {
       const self = s.a === s.b; const l = Math.min(xs[s.a], xs[s.b]); const r = Math.max(xs[s.a], xs[s.b]);
@@ -2129,6 +2133,26 @@ window.reportReady(() => {
   const lin = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
   const mid = (baseline, fs) => baseline - 0.32 * fs; // Plot centres text on y (dy .32em); the old drawing set baselines
   const famRows = (rows) => famsPresent(rows).map((f) => ({ f, rows: rows.filter((r) => r.family === f) }));
+  // Text that must fit a column is measured in the label font (the figures' font) and wrapped between words.
+  // The figures that wrap are drawn again once the web font is in, so the measure is the font's own.
+  const measure = (() => { const c = document.createElement("canvas").getContext("2d");
+    return (s, size, weight) => { c.font = `${weight || 400} ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--label").trim() || "sans-serif"}`; return c.measureText(s).width; }; })();
+  // runs: [{t, c}] (c, an optional class); a run starting with punctuation stays on the previous word's line.
+  // Returns lines of runs, each line within room unless a single word is wider.
+  function wrapRuns(runs, room, size, weight) {
+    const words = [];
+    runs.forEach((r) => (String(r.t).match(/\S+\s*|\s+/g) || []).forEach((t, i) => {
+      if (i === 0 && words.length && /^[,;.]/.test(t) && !/\s$/.test(words[words.length - 1].map((s) => s.t).join(""))) words[words.length - 1].push({ t, c: r.c || "" });
+      else words.push([{ t, c: r.c || "" }]);
+    }));
+    const lines = []; let cur = [];
+    const width = (ws) => measure(ws.flat().map((s) => s.t).join("").trimEnd(), size, weight);
+    words.forEach((w) => { if (cur.length && width(cur.concat([w])) > room) { lines.push(cur); cur = [w]; } else cur.push(w); });
+    if (cur.length) lines.push(cur);
+    return lines.map((ws) => { const out = []; ws.flat().forEach((s) => { const last = out[out.length - 1]; if (last && last.c === s.c) last.t += s.t; else out.push({ t: s.t, c: s.c }); }); out[out.length - 1].t = out[out.length - 1].t.trimEnd(); return out; });
+  }
+  // Wrapped lines as tspans under one <text> at its own origin, step px apart.
+  const linesHTML = (lines, step) => lines.map((ln, i) => `<tspan x="0"${i ? ` dy="${step}"` : ""}>${ln.map((r) => (r.c ? `<tspan class="${r.c}">${esc(r.t)}</tspan>` : esc(r.t))).join("")}</tspan>`).join("");
   function steps(a, b, minor, major) { // minor and major grid values from a to b
     const mi = [], ma = [];
     for (let v = a; v <= b + 1e-9; v += minor) { const vv = +v.toFixed(4); (Math.abs(vv / major - Math.round(vv / major)) < 1e-6 ? ma : mi).push(vv); }
@@ -2192,37 +2216,49 @@ window.reportReady(() => {
     const panels = [{ k: "acc", title: "Right, % of runs", axis: "% of runs right, mean and 95% interval", max: 1, minor: 0.02, major: 0.1, ticks: narrow ? [0, .5, 1] : [0, .2, .4, .6, .8, 1] },
                     { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, ticks: [] }];
     for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : 0.05) panels[1].ticks.push(+v.toFixed(2));
-    const rh = narrow ? 36 : 30, gh = 28, top = narrow ? 62 : 46;
+    const rh = narrow ? 36 : 30, gh = 28;
     const L = narrow ? 132 : 330, gap = 40;
+    const pw = (W - L - gap - 10) / 2, plotW = narrow ? W - L - 26 : pw - 16; // a panel's plot width
+    const mbLines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
+    const mbText = `managed best: ${mbLines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`;
+    // A panel too narrow for its title and the managed best on one line takes the stacked head (title, then
+    // the managed best below it), and the short axis captions when the long ones would run past the panel.
+    const stackHead = narrow || measure(panels[0].title, 12.5, 600) + 16 + measure(mbText, 11.5) > plotW;
+    const shortAxis = narrow || panels.some((p) => measure(p.axis, 11.5) > plotW + 8);
+    const top = stackHead ? 62 : 46;
+    // The setup's model and the family names wrap within the label column; a row or header takes a line per wrap.
+    const modelRoom = narrow ? L - 6 : L - 150 - 6, modelSize = narrow ? 11.5 : 12.5, modelStep = narrow ? 13 : 15;
+    const modelLines = (u) => { const t = tgOf({ u }); return wrapRuns([{ t: u.any.modelLabel }].concat(t ? [{ t: ", " + (narrow ? t.replace("pending: deciding run", "pending") : t), c: "t-mute" }] : []), modelRoom, modelSize); };
     // rows on a pixel layout (Plot's identity y): a header per family, then its setups
     let y = top + (narrow ? 4 : 0); const heads = [], rows = [], seq = []; // narrow: room for the glider's value above the first header
-    groups.forEach((g) => { const h = { f: g.f, y: y + 18 }; heads.push(h); seq.push(h); y += gh; g.keys.forEach((u) => { const q = { u, y: y + rh / 2 }; rows.push(q); seq.push(q); y += rh; }); });
+    groups.forEach((g) => { const hl = wrapRuns([{ t: D.familyLabel[g.f] || g.f }], L - 28, 12.5, 600); const h = { f: g.f, y: y + 18, lines: hl }; heads.push(h); seq.push(h); y += gh + (hl.length - 1) * 15;
+      g.keys.forEach((u) => { const ml = modelLines(u); const q = { u, y: y + rh / 2, lines: ml }; rows.push(q); seq.push(q); y += rh + (ml.length - 1) * modelStep; }); });
     const H = y + 44;
     const pts = [];
     rows.forEach((q) => SETS.forEach((s, si) => { const r = rowOf(s, q.u.key); if (r && r.plotted) pts.push({ r, u: q.u, si, y: q.y + (SETS.length > 1 ? (si ? 6 : -6) : 0) }); }));
-    const tgOf = (q) => { const rs = SETS.map((s) => rowOf(s, q.u.key)); return [rs.some((r) => r && r.partial) ? "partial" : null, q.u.any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", "); };
+    function tgOf(q) { const rs = SETS.map((s) => rowOf(s, q.u.key)); return [rs.some((r) => r && r.partial) ? "partial" : null, q.u.any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", "); }
     // one panel as a Plot; its row elements stay in the collector until assemble() orders them
     function panel(p, width, ml, mr, labels) {
       const C = collector(), m = [];
-      m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -(narrow ? 42 : 26), insetBottom: -12, ariaHidden: true }));
+      m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -(stackHead ? 42 : 26), insetBottom: -12, ariaHidden: true }));
       const [mi, ma] = steps(0, p.max, p.minor, p.major);
       m.push(Plot.gridX({ ticks: mi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ma, stroke: "var(--grid-major)", strokeOpacity: 1 }));
       m.push(Plot.axisX({ ticks: p.ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }));
-      m.push(one(narrow ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis, { frameAnchor: "bottom-left", dy: mid(H - 8, 11.5) - (H - 40), textAnchor: "start", className: "t-mute f11" }));
-      m.push(one(p.title, { frameAnchor: "top-left", dy: mid(top - (narrow ? 30 : 13), 12.5) - (top - 4), textAnchor: "start", className: "t-strong", render: p.k === "cw" ? tag([0], (t) => attrs(t, { "data-term": "confident-wrong", tabindex: 0 })) : undefined }));
+      m.push(one(shortAxis ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis, { frameAnchor: "bottom-left", dy: mid(H - 8, 11.5) - (H - 40), textAnchor: "start", className: "t-mute f11" }));
+      m.push(one(p.title, { frameAnchor: "top-left", dy: mid(top - (stackHead ? 30 : 13), 12.5) - (top - 4), textAnchor: "start", className: "t-strong", render: p.k === "cw" ? tag([0], (t) => attrs(t, { "data-term": "confident-wrong", tabindex: 0 })) : undefined }));
       if (p.k === "acc") {
-        const lines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
+        const lines = mbLines;
         m.push(Plot.ruleX(lines.filter((q) => !q.si), { x: "v", stroke: "var(--ink-2)", strokeWidth: 1 }));
         m.push(Plot.ruleX(lines.filter((q) => q.si), { x: "v", stroke: "var(--ink-3)", strokeWidth: 1, strokeDasharray: "1 3" }));
-        if (lines.length) m.push(one(`managed best: ${lines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`, { frameAnchor: narrow ? "top-left" : "top-right", textAnchor: narrow ? "start" : "end", dy: mid(top - 13, 11.5) - (top - 4), className: "t-mute f11", render: tag([0], (t) => attrs(t, { "data-term": "managed-best", tabindex: 0 })) }));
+        if (lines.length) m.push(one(mbText, { frameAnchor: stackHead ? "top-left" : "top-right", textAnchor: stackHead ? "start" : "end", dy: mid(top - 13, 11.5) - (top - 4), className: "t-mute f11", render: tag([0], (t) => attrs(t, { "data-term": "managed-best", tabindex: 0 })) }));
       }
       if (labels) {
         m.push(Plot.ruleY(heads, { y: (h) => h.y - 4, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
-        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
+        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => { if (h.lines.length > 1) e.innerHTML = linesHTML(h.lines, 15); C.put("h" + h.f)(e); }) }));
         m.push(txt(rows, { y: (q) => (narrow ? mid(q.y - 3, 11.5) : mid(q.y + 4, 11.5)), text: (q) => q.u.arm, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-id",
           render: tag(rows, (e, q) => { attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); C.put("l" + q.u.key)(e); }) }));
         m.push(txt(rows, { y: (q) => (narrow ? mid(q.y + 11, 11.5) : mid(q.y + 4, 12.5)), text: (q) => q.u.any.modelLabel, frameAnchor: "left", dx: -ml + (narrow ? 0 : 150), textAnchor: "start", className: narrow ? "f11" : undefined,
-          render: tag(rows, (e, q) => { const t = tgOf(q); if (t) e.innerHTML = `${esc(q.u.any.modelLabel)}<tspan class="t-mute">, ${esc(narrow ? t.replace("pending: deciding run", "pending") : t)}</tspan>`; C.put("l" + q.u.key)(e); }) }));
+          render: tag(rows, (e, q) => { if (q.lines.length > 1 || q.lines[0].length > 1) e.innerHTML = linesHTML(q.lines, modelStep); C.put("l" + q.u.key)(e); }) }));
       }
       // per row and set: the hit band, then each interval and its glyph
       m.push(Plot.rect(pts, { y1: (d) => d.y - 6, y2: (d) => d.y + 6, fill: "transparent", insetLeft: labels ? -12 : -ml, insetRight: -mr, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.r.id)(e); }) }));
@@ -2274,7 +2310,7 @@ window.reportReady(() => {
     });
     else {
       // two Plots, one per panel (their x scales differ), joined into one SVG as the page had it
-      const pw = (W - L - gap - 10) / 2, A = panel(panels[0], L + pw, L + 8, 8, true), B = panel(panels[1], gap + pw + 10, gap + 8, 18, false);
+      const A = panel(panels[0], L + pw, L + 8, 8, true), B = panel(panels[1], gap + pw + 10, gap + 8, 18, false);
       B.dx = L + pw;
       const svg = A.svg; svg.setAttribute("width", W); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
       const rowsG = rowsOf([A, B]); prune(A.svg); prune(B.svg);
@@ -2504,7 +2540,7 @@ window.reportReady(() => {
       Plot.gridX({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
       Plot.axisX({ anchor: "bottom", ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
       Plot.axisX({ anchor: "top", ticks, tickFormat: P, tickSize: 0, tickPadding: 2, label: null, className: "t-mute" }),
-      one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - 2, 12.5) - (H - 34), textAnchor: "end", className: "t-ink" }),
+      one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - 4, 12.5) - (H - 34), textAnchor: "end", className: "t-ink" }), // baseline 4 px up: the comma's descender stays inside the SVG
       Plot.ruleY(blocks, { y: (b) => b.y0 - 4, stroke: "var(--rule)", insetLeft: -ml, insetRight: -mr, render: tag(blocks, (e, b) => C.put("b" + b.i)(e)) }),
       txt(blocks, { y: (b) => mid(b.y0 + 10, 12.5), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); C.put("b" + b.i)(e); }) }),
       txt(subs, { y: (sb) => mid(sb.y0 + (sb.fams.length * lane) / 2 + 4, 12), text: (sb) => `${short(sb.s)}, ${S(sb.s).groupCases[sb.b.g.key] || 0} q`, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12", render: tag(subs, (e, sb) => C.put("s" + sb.i)(e)) }),
@@ -2549,11 +2585,13 @@ window.reportReady(() => {
       const lw = Math.min(200, pw * 0.4); const ml = 34, mr = lw + 10, t = 44, b = ph - 36;
       const yv = (py) => (b - py) / (b - t); // pixel to share right, the inverse of Plot's y scale here
       const ypx = (v) => b - v * (b - t);
-      const lab = p.rows.map((r) => ({ r, y: ypx(r.groups.uncovered[0]) }));
+      // a label wider than the label column wraps, its lines running down from its mark's height
+      const labText = (r) => `${shortArm(r.arm)} ${shortModel(r)} ${P(r.groups.uncovered[0])}${r.status === "pending" ? " (pending)" : ""}`;
+      const lab = p.rows.map((r) => ({ r, y: ypx(r.groups.uncovered[0]), lines: wrapRuns([{ t: labText(r) }], lw - 4, 11.5) }));
       const ghost = mb && p.f !== mb.family && mb.groups.uncovered;
-      if (ghost) lab.push({ ghost: true, y: ypx(mb.groups.uncovered[0]) });
+      if (ghost) lab.push({ ghost: true, y: ypx(mb.groups.uncovered[0]), lines: [[{ t: "" }]] });
       lab.sort((a, c) => c.y - a.y);
-      for (let k = 1; k < lab.length; k++) if (lab[k - 1].y - lab[k].y < 13) lab[k].y = lab[k - 1].y - 13;
+      for (let k = 1; k < lab.length; k++) { const need = 13 * lab[k].lines.length; if (lab[k - 1].y - lab[k].y < need) lab[k].y = lab[k - 1].y - need; }
       const over = lab.length ? Math.min(0, lab[lab.length - 1].y - (t - 6)) : 0; if (over < 0) lab.forEach((l) => (l.y -= over));
       const [gi, ga] = steps(0, 1, 0.05, 0.25);
       const ord = p.rows.slice().sort((a, c) => a.primary - c.primary);
@@ -2580,8 +2618,8 @@ window.reportReady(() => {
       });
       mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: put }));
       const lr = lab.filter((l) => !l.ghost);
-      mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, dy: 4 - 0.32 * 11.5, text: (l) => `${shortArm(l.r.arm)} ${shortModel(l.r)} ${P(l.r.groups.uncovered[0])}${l.r.status === "pending" ? " (pending)" : ""}`, textAnchor: "start",
-        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
+      mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, dy: 4 - 0.32 * 11.5, text: (l) => labText(l.r), textAnchor: "start",
+        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, 13); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
       const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
       // per setup, as before: its line, marks and hit area in one focusable group, then its label
       const rowsG = G();
@@ -2740,6 +2778,8 @@ window.reportReady(() => {
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
+  // Figures 2 and 5 wrap labels to a measured width: once the web font is in, they are drawn again with its measure.
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); });
 
   window.__reportMarkReady();
 })();
