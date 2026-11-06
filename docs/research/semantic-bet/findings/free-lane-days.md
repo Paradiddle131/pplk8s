@@ -45,3 +45,10 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none.
 - Next: the 00:07Z wake on 2026-11-07 (if its setup starts; else a session runs `probes/lanes/free_lane.sh` by hand): `baseline` frozen from case 57, `baseline` hard, `custom-lightdash`, then the carry and `hard-v2` k = 1 (`custom-hybrid` 15 new cases, `custom-metricflow` 15, `native-mcp` 15, `baseline` 58).
   `hard-v2` at k = 3 then asks runs 2 and 3 of every case an arm ran only once on v1 (`custom-hybrid`, `native-mcp`, `baseline`: 43 × 2 each) besides the new cases' (15 × 2), about 440 case-runs, more than the plan's estimate of about 2,400 requests: about four daily quotas.
+
+## 2026-11-06, later (#382: the audit, the retirements and the scorer fix)
+
+- 23 defective cases retired and 122 misleading runs redacted (`redacted.jsonl`, RULE.md § Retiring a defective case); the bet's scorer fixed and every log rescored on read from `expected.json`; the report reads only `scored-runs.jsonl` and `results.json` (`findings/2026-11-06-382-defect-audit.md`).
+- Sets as scored: frozen 76 cases, hard 41, hard-v2 55 (each log's totals are now against these).
+- GCP: the data agents' 4 redacted runs rerun (native-governed 2, native-kc 1, native-context-bare thinking 1), $0.000010 at each gate.
+- Next: the 00:07Z lane on 2026-11-07 starts with `backlog`: the judge on about 265 unclear turns (frozen, then hard, about 530 requests), the carry, and a push; then `baseline` frozen (now against 76 cases, its 3 redacted free-model runs included), `baseline` hard, `custom-lightdash`, then `hard-v2` k = 1.
