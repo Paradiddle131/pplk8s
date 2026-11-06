@@ -78,7 +78,8 @@ DESC = {
     "custom-metricflow": "Our ADK agent on MetricFlow tools, told to answer only through the metrics.",
     "custom-lightdash": "Our ADK agent with one tool on Lightdash's free metric query API.",
     "custom-hybrid": "MetricFlow tools first, then a read-only SQL fallback that says so.",
-    "cc-metricflow": "The same MetricFlow tools called by a Claude Code subagent; another harness, shown for comparison only.",
+    "cc-metricflow": "The same MetricFlow tools called from Claude Code; another harness, shown for comparison only.",
+    "cc-native-mcp": "Google's BigQuery and Knowledge Catalog MCP tools called from headless Claude Code, behind the same cost guard; another harness, shown for comparison only.",
     "baseline": "Plain text-to-SQL that reads the generated docs.",
 }
 FAMILY = {
@@ -86,16 +87,17 @@ FAMILY = {
     "native-context-bare": "da", "native-context": "da", "native-governed": "da",
     "native-shaped": "da", "native-graph": "da",
     "native-mcp": "gt", "custom-toolbox": "gt",
-    "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf",
+    "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf", "cc-native-mcp": "gt",
     "baseline": "ref",
 }
 FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our ADK agent on Google's tools",
                 "mf": "Our agent on a semantic-layer server", "ref": "Text-to-SQL baseline", "other": "Another setup"}
 UNDESCRIBED = "Not yet described."
-COMPARISON_ONLY = {"cc-metricflow"}  # another harness: shown, never deciding
+COMPARISON_ONLY = {"cc-metricflow", "cc-native-mcp"}  # another harness: shown, never deciding
 HARNESS = {"adk-openrouter": "ADK runner, model through OpenRouter",
            "adk-anthropic-api": "ADK runner, model through the Anthropic API",
            "claude-code-subagent": "Claude Code subagent (a different harness)",
+           "claude-code-headless": "Claude Code headless, one fresh session a run, only the setup's MCP tools (strict)",
            "google-data-agent": "Google's data agent, Google's harness"}
 # The cost ladder in plain words, cheapest first.
 LADDER = [
@@ -108,9 +110,9 @@ LADDER = [
     ("L6", "Our ADK agent on a semantic-layer server", ["custom-metricflow", "custom-lightdash"]),
     ("L7", "The hybrid: MetricFlow first, SQL fallback", ["custom-hybrid"]),
     ("L8", "A data agent running the imported metrics itself: not measurable yet, the tool fails in Google's backend", []),
-    ("cc", "Another harness: Claude Code subagents on MetricFlow", ["cc-metricflow"]),
+    ("cc", "Another harness: Claude Code on the same tools", ["cc-metricflow", "cc-native-mcp"]),
 ]
-PILLAR_EXCLUDE = {"baseline", "cc-metricflow"}  # references outside the decision
+PILLAR_EXCLUDE = {"baseline", "cc-metricflow", "cc-native-mcp"}  # references outside the decision
 SET_ORDER = ["frozen", "hard", "hard-v2"]
 # Glossary terms: one short sentence each, the glossary and every term tooltip read these.
 TERMS = [
@@ -153,6 +155,9 @@ def model_info(model):
     m = re.match(r"claude-(haiku|sonnet|opus)-", model)
     if m:
         return m.group(1).capitalize(), "check"
+    m = re.match(r"claude-code-strict \((.+)\)", model)
+    if m:  # the strict headless runner (#387): one fresh session a run, only the setup's MCP tools
+        return "Claude Code " + m.group(1).capitalize() + ", strict", "cc"
     m = re.match(r"claude-code \((.+)\)", model)
     if m:
         name = m.group(1)
@@ -433,9 +438,33 @@ def html_escape(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+STRICT_WHOLE = ("claude-code-strict (haiku)", "claude-code-strict (sonnet)")
+
+
+def strict_view(arms):
+    """The Claude Code rows the page shows (#387; owner, 2026-11-06: replace the old rows only when the new
+    numbers are ready). A setup's strict rows (`claude-code-strict (...)`) show on a set once its Haiku and
+    Sonnet rows are whole there at k = 3; from then the setup's subagent rows (batched, fresh, shell tools)
+    leave that set's page. Until then the strict rows stay off the page and the old rows stand. Every row
+    stays in results.json."""
+    def whole(a):
+        of = a.get("of_cases") or a["cases"]
+        return a["cases"] >= of and a["runs"] >= 3 * of
+    ready = {(a["set"], a["arm"]) for a in arms if a["model"] == STRICT_WHOLE[0] and whole(a)}
+    ready &= {(a["set"], a["arm"]) for a in arms if a["model"] == STRICT_WHOLE[1] and whole(a)}
+    out = []
+    for a in arms:
+        if a["model"].startswith("claude-code-strict") and (a["set"], a["arm"]) not in ready:
+            continue
+        if a["model"].startswith("claude-code (") and (a["set"], a["arm"]) in ready:
+            continue
+        out.append(a)
+    return out
+
+
 def build(results_path, log_dir, sets_dir, out_path, show=None):
     R = json.load(open(results_path, encoding="utf-8"))
-    arms_all = R.get("arms", [])
+    arms_all = strict_view(R.get("arms", []))
     every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
     present, appendix = shown_sets(every, show or {})
     setfiles = SET_FILE

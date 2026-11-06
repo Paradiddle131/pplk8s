@@ -350,7 +350,7 @@ window.REPORT = D;
 
   <h2>Method, briefly</h2>
   <div class="col notes">
-    <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code subagents run in another harness, one fresh subagent per question, so they are shown for comparison and never decide. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
+    <p>Each question is asked up to three times per setup and model, each run in a fresh session; Claude Code runs in another harness, so it is shown for comparison and never decides: its strict rows run one headless process a run with only the setup's MCP tools and no shell, file or web tool, every transcript audited; until those are whole on a set, the earlier subagent rows stand there, which also had a shell. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
     <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
     <p>Every answer is scored by the current rule, and only questions that passed a blind audit of the test itself count: a question whose expected number was wrong, had no unique answer on the data, or could be matched by chance is left out (RULE.md, the register of retired questions).</p>
   </div>
@@ -376,7 +376,7 @@ window.REPORT = D;
   const SETS = D.setOrder;
   const FAMS = ["da", "gt", "mf", "ref", "other"];
   const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
-  const ROLE = { decides: "free model, decides", check: "Claude through the API, the check", gemini: "Gemini in Google's agent", cc: "Claude Code subagent, comparison only", other: "model not yet classified" };
+  const ROLE = { decides: "free model, decides", check: "Claude through the API, the check", gemini: "Gemini in Google's agent", cc: "Claude Code, comparison only", other: "model not yet classified" };
   const ALL = {}; SETS.forEach((s) => D.sets[s].rows.forEach((r) => (ALL[r.id] = r)));
   const byId = (id) => ALL[id];
   const S = (s) => D.sets[s];
@@ -401,7 +401,7 @@ window.REPORT = D;
   }
   const shapeKey = (role, color) => `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`;
   const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
-  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code subagent"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
+  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
   const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;

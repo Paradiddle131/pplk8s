@@ -147,6 +147,9 @@ RUNG = {
     # The same MetricFlow tools through a Claude Code subagent on the subscription (#374): another
     # agent harness, not the rule's arm; the report names it apart.
     "cc-metricflow": 4,
+    # Google's MCP tools through a headless Claude Code run (#387, #388), mirroring native-mcp:
+    # another harness, descriptive like cc-metricflow.
+    "cc-native-mcp": 3,
 }
 
 
