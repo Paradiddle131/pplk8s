@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T09:40Z",
+ "written": "2026-11-06T09:55Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4737,12 +4737,12 @@
    "harness": "google-data-agent",
    "session": "fresh per run",
    "rung": 1,
-   "cases": 43,
+   "cases": 58,
    "of_cases": 58,
-   "runs": 128,
+   "runs": 143,
    "accuracy": [
-    0.945736434109,
-    0.875968992248,
+    0.959770114943,
+    0.908045977011,
     1.0
    ],
    "confident_wrong": [
@@ -4753,32 +4753,53 @@
    "groups": {
     "composable": [
      1.0,
-     14
+     20
     ],
     "conversation": [
      0.7083333333333334,
      8
     ],
     "covered": [
-     0.9027777777777778,
-     24
+     0.9066666666666667,
+     25
     ],
     "trap": [
      1.0,
-     6
+     7
     ],
     "uncovered": [
      1.0,
-     5
+     13
     ]
    },
-   "pass_all": 0.9302325581395349,
+   "pass_all": 0.9482758620689655,
    "outcomes": {
-    "right": 121,
+    "right": 136,
     "wrong": 7
    },
-   "model_calls": 140,
-   "new": {},
+   "model_calls": 155,
+   "new": {
+    "all": [
+     1.0,
+     15
+    ],
+    "composable": [
+     1.0,
+     6
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "trap": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     1.0,
+     8
+    ]
+   },
    "carried_runs": 128
   },
   {
@@ -5825,7 +5846,9 @@
    "native-mcp on claude-sonnet-5-5",
    "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ],
-  "hard-v2": null
+  "hard-v2": [
+   "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)"
+  ]
  },
  "managed_best": {
   "frozen": [
@@ -5841,7 +5864,7 @@
   "hard-v2": [
    "native-context-bare",
    "google-data-agent (MODEL_UNSPECIFIED, THINKING)",
-   0.945736434108527
+   0.9597701149425287
   ]
  },
  "deciding_sets": [
