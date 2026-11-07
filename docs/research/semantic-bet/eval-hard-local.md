@@ -1,10 +1,10 @@
 # The bet's local arms on the hard set
 
-Written 2026-11-07T00:58Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-07T01:14Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-121 of `baseline`'s 121 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+162 of `baseline`'s 162 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `claude-haiku-5-5`
 
@@ -64,18 +64,25 @@ Turns still unclear after judging (counted as wrong):
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 41 of 41 cases; runs finished: custom-metricflow 123 of 123, custom-hybrid 41 of 123; model responses spent: custom-metricflow 480, custom-hybrid 180.
+Scored on partial: 1 run(s) of 41 of 41 cases; runs finished: baseline 41 of 123, custom-metricflow 123 of 123, custom-hybrid 41 of 123; model responses spent: baseline 195, custom-metricflow 480, custom-hybrid 180.
 
-| | `custom-metricflow` | `custom-hybrid` |
-|---|---|---|
-| Accuracy | 70.7% | 85.4% |
-| Confident-wrong | 9.8% | 0.0% |
-| pass^1 | 70.7% | 85.4% |
-| `conversation` (8) accuracy | 62.5% | 62.5% |
-| `covered` (22) accuracy | 81.8% | 86.4% |
-| `trap` (5) accuracy | 100.0% | 100.0% |
-| `uncovered` (19) accuracy | 57.9% | 84.2% |
+| | `baseline` | `custom-metricflow` | `custom-hybrid` |
+|---|---|---|---|
+| Accuracy | 48.8% | 70.7% | 85.4% |
+| Confident-wrong | 22.0% | 9.8% | 0.0% |
+| pass^1 | 48.8% | 70.7% | 85.4% |
+| `conversation` (8) accuracy | 12.5% | 62.5% | 62.5% |
+| `covered` (22) accuracy | 50.0% | 81.8% | 86.4% |
+| `trap` (5) accuracy | 60.0% | 100.0% | 100.0% |
+| `uncovered` (19) accuracy | 47.4% | 57.9% | 84.2% |
 
-Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 1 (`custom-hybrid` 1 wrong to declined).
+Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
+
+- Accuracy: +0.220 [+0.024, +0.415]: a difference.
+- Confident-wrong: -0.122 [-0.293, +0.049]: no difference.
+
+Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
+
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`baseline` 1 unclear to confident-wrong; `custom-hybrid` 1 wrong to declined).
 
 Turns judged: 1 (1 the code left unclear, 0 confident-wrong with a hedge outside the list); verdicts that stood: 1.
