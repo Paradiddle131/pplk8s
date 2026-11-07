@@ -1,5 +1,5 @@
 {
- "written": "2026-11-07T10:19Z",
+ "written": "2026-11-07T10:51Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1653,6 +1653,60 @@
     "confident-wrong": 9
    },
    "model_calls": 246
+  },
+  {
+   "set": "frozen",
+   "arm": "native-context-python",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 76,
+   "accuracy": [
+    0.907894736842,
+    0.842105263158,
+    0.960526315789
+   ],
+   "confident_wrong": [
+    0.026315789474,
+    0.0,
+    0.065789473684
+   ],
+   "groups": {
+    "conversation": [
+     0.7142857142857143,
+     7
+    ],
+    "covered": [
+     0.9344262295081968,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     0.75,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.8,
+     15
+    ]
+   },
+   "pass_all": 0.9078947368421053,
+   "outcomes": {
+    "right": 69,
+    "unclear": 5,
+    "confident-wrong": 2
+   },
+   "model_calls": 82
   },
   {
    "set": "frozen",
@@ -4618,6 +4672,76 @@
   },
   {
    "set": "hard-v2",
+   "arm": "custom-metricflow-compute",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 55,
+   "of_cases": 55,
+   "runs": 55,
+   "accuracy": [
+    0.745454545455,
+    0.636363636364,
+    0.854545454545
+   ],
+   "confident_wrong": [
+    0.054545454545,
+    0.0,
+    0.127272727273
+   ],
+   "groups": {
+    "composable": [
+     0.9047619047619048,
+     21
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8695652173913043,
+     23
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.18181818181818182,
+     11
+    ]
+   },
+   "pass_all": 0.7454545454545455,
+   "outcomes": {
+    "right": 41,
+    "wrong": 3,
+    "declined": 7,
+    "unclear": 1,
+    "confident-wrong": 3
+   },
+   "model_calls": 204,
+   "new": {
+    "all": [
+     0.5,
+     14
+    ],
+    "composable": [
+     0.8571428571428571,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.0,
+     6
+    ]
+   }
+  },
+  {
+   "set": "hard-v2",
    "arm": "custom-lightdash",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "harness": "adk-openrouter",
@@ -5947,6 +6071,74 @@
    "model_calls": 135,
    "new": {},
    "carried_runs": 123
+  },
+  {
+   "set": "hard-v2",
+   "arm": "native-context-python",
+   "model": "google-data-agent (MODEL_UNSPECIFIED)",
+   "harness": "google-data-agent",
+   "session": "fresh per run",
+   "rung": 1,
+   "cases": 55,
+   "of_cases": 55,
+   "runs": 55,
+   "accuracy": [
+    0.927272727273,
+    0.854545454545,
+    0.981818181818
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "composable": [
+     1.0,
+     21
+    ],
+    "conversation": [
+     0.625,
+     8
+    ],
+    "covered": [
+     0.8695652173913043,
+     23
+    ],
+    "trap": [
+     1.0,
+     5
+    ],
+    "uncovered": [
+     0.9090909090909091,
+     11
+    ]
+   },
+   "pass_all": 0.9272727272727272,
+   "outcomes": {
+    "right": 51,
+    "wrong": 3,
+    "unclear": 1
+   },
+   "model_calls": 59,
+   "new": {
+    "all": [
+     0.9285714285714286,
+     14
+    ],
+    "composable": [
+     1.0,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.8333333333333334,
+     6
+    ]
+   }
   },
   {
    "set": "hard-v2",
@@ -7590,6 +7782,24 @@
   },
   {
    "set": "hard-v2",
+   "arm": "custom-metricflow-compute",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 55,
+   "runs": 55,
+   "accuracy": [
+    -0.193939393939,
+    -0.309090909091,
+    -0.090909090909
+   ],
+   "confident_wrong": [
+    0.054545454545,
+    0.0,
+    0.127272727273
+   ],
+   "worth": false
+  },
+  {
+   "set": "hard-v2",
    "arm": "custom-lightdash",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 41,
@@ -7926,6 +8136,7 @@
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, FAST)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   "native-context-python on google-data-agent (MODEL_UNSPECIFIED)",
    "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)",
    "native-mcp on claude-haiku-5-5",
    "native-mcp on claude-sonnet-5-5",
@@ -7945,6 +8156,7 @@
    "cc-native-mcp on claude-code-strict (haiku)",
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
+   "native-context-python on google-data-agent (MODEL_UNSPECIFIED)",
    "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)"
   ]
  },
