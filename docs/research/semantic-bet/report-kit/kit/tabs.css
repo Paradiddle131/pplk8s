@@ -1,0 +1,14 @@
+/* report-kit tabs: the page's parts, one open at a time. Words in ink; the open tab stands on a 3px ink bar;
+   the strip scrolls inside itself when the tabs outrun a narrow screen. */
+.rk-tabs { margin: 0 0 var(--s6); border-bottom: 1px solid var(--hair) }
+.rk-tabs [role="tablist"] { display: flex; gap: var(--s5); overflow-x: auto; scrollbar-width: thin; padding: 0 2px }
+.rk-tabs [role="tab"] { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px;
+  font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); text-decoration: none; border-radius: 4px 4px 0 0;
+  box-shadow: inset 0 -3px 0 transparent; transition: box-shadow var(--t-fast) ease-out }
+.rk-tabs [role="tab"]:hover { box-shadow: inset 0 -3px 0 var(--hair) }
+.rk-tabs [role="tab"][aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--ink) }
+.rk-tabs [role="tab"]:focus-visible { outline-offset: -2.5px }
+.rk-tabs[hidden], [role="tabpanel"][hidden] { display: none !important }
+.rk-flash { animation: rk-flash 1.6s ease-out }
+@keyframes rk-flash { from { background: color-mix(in srgb, var(--line) 22%, transparent) } to { background: transparent } }
+@media (prefers-reduced-motion: reduce) { .rk-tabs [role="tab"] { transition: none } .rk-flash { animation: none; outline: 2px solid var(--line) } }

@@ -1,0 +1,17 @@
+/* report-kit base: the page ground, its one type family, the browser surfaces themed from the tokens
+   (selection, focus ring, scrollbar, underline), the screen-reader-only class and the page column. */
+* { box-sizing: border-box }
+html { scrollbar-color: var(--line) var(--paper); -webkit-text-size-adjust: 100%; text-size-adjust: 100% }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-word)/var(--lh-word) var(--sans);
+  letter-spacing: var(--track-word); font-variant-numeric: tabular-nums }
+::selection { background: var(--line); color: var(--paper) }
+:focus-visible { outline: 2.5px solid var(--line); outline-offset: 3px; border-radius: 4px }
+a { color: inherit; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+a:hover { text-decoration-thickness: 2.5px }
+h1, h2, h3 { text-wrap: balance }
+p { text-wrap: pretty }
+.rk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
+.rk-wrap { max-width: var(--page); margin: 0 auto; padding: var(--s6) var(--gutter-r) var(--s7) var(--gutter-l) }
+.rk-title { margin: 0 0 var(--s2); font-family: var(--sans); font-size: var(--t-title); font-weight: var(--w-head); line-height: 1.15 }
+.rk-lede { margin: 0 0 var(--s6); max-width: var(--measure) }
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { scroll-behavior: auto !important } }

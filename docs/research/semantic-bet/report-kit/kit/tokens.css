@@ -1,0 +1,64 @@
+/* report-kit tokens. Two layers: primitives (raw values, named for what they are) and semantic tokens
+   (named for their job), which components use alone. Light is the default; dark follows the system unless
+   the page says data-theme="light", and data-theme="dark" forces it. bin/build.cjs inlines this file
+   between the report-kit:css markers; edit it here, never in a copy. */
+:root {
+  /* primitives */
+  --porcelain: #f4f6fa; --navy: #0d1b3e; --cobalt: #2447c9; --green: #0b7d4b; --amber: #a35f00;
+  --scarlet: #cf2a1f; --petrol: #1d6f8c; --vermilion: #b83d16; --teal: #0f7480; --plum: #7a3b69;
+  --midnight: #0a1430; --cloud: #edf1f8; --cobalt-lt: #86a4ff; --green-lt: #3fcf8e; --amber-lt: #f2b23e;
+  --scarlet-lt: #ff6a5c; --petrol-lt: #6cc4e0; --vermilion-lt: #ff8f6b; --teal-lt: #4fd1c5; --plum-lt: #e39ad0;
+  --slate: #6f778a; --cobalt-md: #5b7de8; --slate-dk: #666e82; --vermilion-md: #e0663c;
+
+  /* semantic: surfaces and ink (no muted ink: every word is read at full contrast) */
+  --paper: var(--porcelain); --ink: var(--navy); --line: var(--cobalt);
+  --hair: color-mix(in srgb, var(--ink) 16%, transparent);
+  --row: color-mix(in srgb, var(--line) 6%, transparent);
+  --tip: var(--ink); --tip-ink: var(--paper);
+  --shadow: 0 6px 18px color-mix(in srgb, var(--navy) 22%, transparent); /* none on dark grounds, where a shadow reads as a glow */
+  /* status: each is also a mark shape (marks.css), never a colour alone */
+  --ok: var(--green); --warn: var(--amber); --bad: var(--scarlet); --info: var(--petrol);
+  /* chart series, after the line colour */
+  --viz-1: var(--line); --viz-2: var(--vermilion); --viz-3: var(--teal); --viz-4: var(--plum);
+  /* value grades, opt-in (grade.css): a diverging pair, blue for the good end and vermilion for the poor end, through
+     a neutral middle; checked for colour-blind separation on both grounds, and never alone (the number and the bar's
+     length carry the value) */
+  --grade-hi: var(--cobalt); --grade-mid: var(--slate); --grade-lo: var(--vermilion);
+
+  /* type: one family, a fixed scale; numbers are tabular */
+  --sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --t-word: 1rem; --t-num: 1.375rem; --t-find: 1.1875rem; --t-head: 1.5rem; --t-title: 2rem; --t-tip: .9375rem; --t-chart: .875rem;
+  /* hierarchy without a paler body: a heading is a size step above its text and two weight steps heavier; on a dark
+     ground light strokes spread (the irradiation illusion), so headings go one weight further and words get a touch
+     more tracking and leading, keeping the gap the light theme shows */
+  --w-head: 700; --lh-word: 1.45; --track-word: 0em;
+
+  /* space, on a 4px step */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px)); --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --measure: 40rem; --page: 80rem;
+
+  /* motion */
+  --t-fast: .15s;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+    --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
+    --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
+    --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
+    --shadow: none;
+    --w-head: 800; --lh-word: 1.5; --track-word: .01em;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+  --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
+  --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
+  --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
+  --shadow: none;
+  --w-head: 800; --lh-word: 1.5; --track-word: .01em;
+  color-scheme: dark;
+}

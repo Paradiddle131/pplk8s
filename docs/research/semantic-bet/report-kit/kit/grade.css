@@ -1,0 +1,10 @@
+/* report-kit grade, opt-in: a value coloured by where it falls on its scale, for dense grids where many numbers
+   sit side by side to be compared. data-g="hi" (the good end), "mid" or "lo" on a bar's fill, a range's span or
+   a key's swatch; grade.js sets it from the value and the cut points on a data-rk-grade container. The colour
+   only repeats what the number and the bar's length already say. */
+[data-g="hi"] { --g: var(--grade-hi) } [data-g="mid"] { --g: var(--grade-mid) } [data-g="lo"] { --g: var(--grade-lo) }
+.rk-fill[data-g], .rk-swatch[data-g] { background: var(--g) }
+.rk-span[data-g] { --c: var(--g) }
+.rk-swatch { display: inline-block; flex: none; width: 18px; height: 10px; border-radius: 5px; background: var(--line) }
+/* a lighter track under graded bars, so every grade, the neutral middle included, keeps 3:1 against it */
+[data-rk-grade] .rk-track { background: color-mix(in srgb, var(--ink) 7%, transparent) }

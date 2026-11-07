@@ -1,0 +1,25 @@
+/* report-kit section head: every section's heading in one style, 1.375rem bold over a 2px ink rule, with the
+   one control that changes only this section (a switch) beside it, wrapping under it when narrow. Headings rank
+   above their text by size, weight and space, never by a paler body: a finding's headline is a size step above
+   its sentence (--t-find), both heading levels are --w-head (heavier on a dark ground), and a headline sits
+   closer to its own sentence than to the row above. */
+.rk-section + .rk-section { margin-top: calc(var(--s7) + var(--s4)) }
+.rk-head { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; justify-content: space-between;
+  padding-bottom: var(--s3); border-bottom: 2px solid var(--ink); margin-bottom: var(--s5) }
+/* more than one control beside a head (a switch and a filter) sit together, wrapping as one group */
+.rk-head-tools { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); align-items: center }
+.rk-head h2 { margin: 0; font-family: var(--sans); font-size: var(--t-head); font-weight: var(--w-head); line-height: 1.2 }
+.rk-section h3 { margin: 0 0 6px; font-family: var(--sans); font-size: var(--t-find); font-weight: var(--w-head); line-height: 1.25 }
+/* a list of findings under a head: text left, one small picture right, dropping under it when narrow */
+.rk-rows { list-style: none; margin: 0; padding: 0; container-type: inline-size }
+.rk-rows > li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 30rem); gap: var(--s4) var(--s7); align-items: start;
+  padding: var(--s5) 0; border-bottom: 1px solid var(--hair) }
+.rk-rows > li p { margin: 0; max-width: 36rem }
+@container (max-width: 52rem) { .rk-rows > li { grid-template-columns: minmax(0, 1fr) } }
+/* right under a head, the head's own space is the gap: the first row adds none above it */
+.rk-head + .rk-rows > li:first-child { padding-top: 0 }
+/* a glossary: each term an anchor the bubble's "more" link can open */
+.rk-glossary { margin: 0; max-width: var(--measure) }
+.rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
+.rk-glossary dt { font-weight: 700 }
+.rk-glossary dd { margin: var(--s1) 0 0 }

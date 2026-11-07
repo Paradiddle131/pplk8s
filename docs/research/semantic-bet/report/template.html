@@ -2,9 +2,11 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+  --report-paper: var(--paper);
   --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
   --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
   --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
@@ -51,44 +53,9 @@ header.memo { padding-bottom: 14px; }
 h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
 .byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
 .byline b { font-weight: 600; color: var(--ink); }
-.abstract { margin: 0 0 26px; max-width: 46rem; }
-.abstract .lead { max-width: 42rem; text-wrap: pretty; }
-.runin { font-weight: 700; }
 h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
 p { margin: 0 0 1em; }
 
-/* winners band */
-.winners { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 6px; }
-.pillar { border-top: 2px solid var(--ink); padding-top: 10px; }
-/* the pillars share rows (title, why, one per set), so each set's figure sits on one line across the band */
-@supports (grid-template-rows: subgrid) { .pillar { display: grid; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
-.pillar h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; }
-.pillar .why { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
-.pset { border-top: 1px solid var(--rule); padding: 8px 0 8px; font-family: var(--label); font-size: 14px; line-height: 1.4; }
-.pset .sl { color: var(--ink-3); font-size: 13px; }
-.pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
-.pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
-.pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
-.pset .who { font-size: 14.5px; color: var(--ink); margin: 1px 0 1px; }
-.pset .who .by { color: var(--ink-3); font-size: 13px; margin-right: 2px; }
-.pset .who .id { font-size: 13px; font-weight: 600; }
-.pset .pn { color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.pset .pn .few { color: var(--ink-3); }
-.pillar .lchg { display: block; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
-.pset .kind { color: var(--ink-3); font-size: 13px; }
-#w-diff { margin: 0 0 8px; color: var(--ink-2); }
-.pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
-/* the setups tied with the leader, and the setup it is set against: a small label, then one row per setup,
-   its name on the left and its figure on the right, so the figures line up in one column */
-.pset .id { white-space: nowrap; }
-.pset .tied .id, .pset .ctr .id { font-size: 12px; }
-.pset .plab { display: block; color: var(--ink-3); font-size: 13px; margin: 6px 0 1px; }
-.pset ul.prows { list-style: none; margin: 0; padding: 0; }
-.pset .prow2 { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 12px; padding: 1px 0; border-top: 1px dotted var(--grid-major); }
-.pset .prow2:first-child { border-top: 0; }
-.pset .prow2 .m { color: var(--ink-3); }
-.pset .prow2 .n { flex: none; }
-.winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
 
 figure { margin: 22px 0 8px; }
 .figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 40rem; text-wrap: pretty; }
@@ -140,29 +107,8 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .themebtn svg { display: block; padding: 4px; width: 26px; height: 26px; border-radius: 50%; }
 .themebtn[aria-pressed="false"] .sun, .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper); }
 .lead { margin: 0 0 12px; }
-.abwrap { overflow-x: auto; margin: 4px 0 0; }
-table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
-table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; white-space: nowrap; }
-table.ab tr.grp th, table.ab tr.diff th { white-space: normal; }
-table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
-table.ab tr.grp td { padding-top: 10px; }
-table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
-table.ab tr.diff th, table.ab tr.diff td { border-top: 1px solid var(--ink-2); padding-top: 7px; }
-table.ab thead th .sub { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-.abnote { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 6px 0 0; }
-table.ab th, table.ab td { padding: 5px 10px 5px 0; text-align: left; border-bottom: 1px solid var(--grid-major); vertical-align: baseline; }
-table.ab thead th { font-weight: 600; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink-2); vertical-align: bottom; }
-table.ab thead tr.grp th { border-bottom: 1px solid var(--rule); font-weight: 600; }
-table.ab td.num, table.ab th.num { text-align: right; white-space: nowrap; }
-table.ab td .sub { display: block; color: var(--ink-3); font-size: 12.5px; }
 .n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
 .ivs { font-size: .82em; color: var(--ink-3); font-weight: 400; margin-left: 3px; white-space: nowrap; }
-.twin { overflow-x: auto; margin: -2px 0 10px; }
-table.tw { border-collapse: collapse; font-family: var(--label); font-size: 14px; font-variant-numeric: tabular-nums; }
-table.tw th, table.tw td { padding: 3px 18px 3px 0; text-align: left; border-bottom: 1px solid var(--grid-major); white-space: nowrap; }
-table.tw thead th { font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--ink-2); }
-table.tw td.num, table.tw th.num { text-align: right; }
-.tw .note { color: var(--ink-3); font-size: 13px; }
 .live { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 8px 0 0; min-height: 1.4em; }
 .glider { cursor: ew-resize; outline: none; touch-action: none; }
 .glider .gl { stroke: var(--ink-2); stroke-width: 1.5; }
@@ -198,69 +144,6 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
-/* decision map */
-.maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
-.maphead table.map { margin: 0; }
-.mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
-table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
-table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
-table.map thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); background: var(--paper); }
-table.map thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-table.map th.num, table.map td.num { text-align: right; }
-table.map td.g { text-align: center; padding: 3px 4px; white-space: nowrap; }
-table.map th.g { text-align: center; }
-table.map th.g small.fh { display: flex; justify-content: center; gap: 3px; margin-top: 2px; letter-spacing: .02em; }
-table.map th.g small.fh span { width: 34px; text-align: center; border-top: 1px solid var(--rule); padding-top: 1px; }
-.ch { display: inline-block; width: 34px; border-radius: 2px; padding: 3px 0; color: var(--ink); text-align: center; }
-.ch + .ch { margin-left: 3px; }
-.ch.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
-.ch.none { color: var(--ink-3); }
-.b1 { background: transparent; } .b2 { background: var(--s2); } .b3 { background: var(--s3); } .b4 { background: var(--s4); } .b5 { background: var(--s5); }
-table.map tr.rung th { background: var(--paper-2); font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 6px 8px; border-bottom: 1px solid var(--grid-major); }
-table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 190px; z-index: 1; }
-table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1; }
-table.map tbody tr.main:hover td, table.map tbody tr.sub:hover td { background: var(--row-band); }
-table.map td.setup .id { display: inline-block; font-size: 12.5px; }
-table.map td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
-table.map td.what { color: var(--ink-2); max-width: 270px; min-width: 200px; font-size: 13.5px; }
-table.map tr.sub td.setup { padding-left: 22px; }
-table.map tr.sub[hidden] { display: none; }
-.tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
-.flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
-.flag[data-term] { cursor: help; text-decoration: underline dotted var(--ink-3); text-underline-offset: 2px; }
-.flag.pend { border-style: dashed; border-color: var(--ink-3); }
-.flag.mb { border-color: var(--ink-2); }
-.ivl { white-space: nowrap; line-height: 1.45; }
-.ivl small { color: var(--ink-3); font-size: 12.5px; }
-.ivl .sk { color: var(--ink-3); font-size: 11.5px; margin-right: 4px; }
-/* Figure 1's set switch, filters and sortable heads */
-.mtools { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: flex-start; margin: 10px 0 6px; font-family: var(--label); font-size: 13.5px; }
-.mseg { max-width: 100%; }
-.mseg button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.2; padding: 4px 11px 5px; }
-.mseg button small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
-.mseg button[aria-pressed="true"] small { color: var(--paper); opacity: .85; }
-.mf { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.mf legend { float: left; padding: 0; margin-right: 2px; color: var(--ink-3); font-weight: 500; }
-.mchk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 9px 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); cursor: pointer; background: var(--paper); }
-.mchk:hover { border-color: var(--ink-3); }
-.mchk input { margin: 0; width: 15px; height: 15px; accent-color: var(--ink-2); cursor: pointer; }
-.mchk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
-.mchk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.mlive { margin: 0 0 6px; font-size: 13px; }
-table.map th.sortable { padding: 0; height: 1px; user-select: none; -webkit-user-select: none; }
-.msort { appearance: none; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: 5px 8px; text-align: inherit; user-select: none; -webkit-user-select: none; }
-.msort:hover { background: var(--band); }
-.msort .ml { display: inline-flex; align-items: center; gap: 5px; }
-.msort .tl { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.msort small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-.msort .ar { flex: none; color: var(--ink-3); }
-th[aria-sort="descending"] .msort .ar, th[aria-sort="ascending"] .msort .ar { color: var(--ink); }
-.msort:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
-table.map th.g .msort { align-items: center; text-align: center; }
-table.map th.num .msort { align-items: flex-end; text-align: right; }
-
-table.map td.num .mv { white-space: nowrap; }
-table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 /* glossary rows: the longer explanation as labelled lines */
 .gl-t td .gl-txt { margin: 0; }
 .gl-more { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 5px 0 1px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; }
@@ -292,8 +175,6 @@ table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 .pclear:hover { background: var(--band); }
 .pclear:focus-visible, .pqs:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
 .pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
-.cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
-.more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
 
 /* unit plate */
 .plate { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; }
@@ -358,7 +239,7 @@ dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid
 dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
 dl.meth dd { margin: 0; color: var(--ink-2); }
 /* no word left alone on the last line of a paragraph of reading text */
-.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq, .abnote, .winners-note { text-wrap: pretty; }
+.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
@@ -398,32 +279,19 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .gl-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 0; margin: 0; }
 .gl-empty button { appearance: none; border: 1px solid var(--ink-3); background: transparent; color: var(--ink); font: 500 13.5px var(--label); padding: 4px 10px; min-height: 32px; border-radius: 3px; margin-left: 8px; cursor: pointer; }
 
-/* ---------- the section strip: the report's parts as tabs (#396) ---------- */
-/* A running head, not a toolbar: small capitals on one ink rule, the open part marked by a heavier
-   stretch of that rule. It sticks under the viewport's top edge; its paper fill runs to both screen
-   edges (shadow, clipped to the strip's own height) so nothing that leaves the column shows beside it. */
-.tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--ink);
-  box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax -1px); }
+/* ---------- the section strip: the report's parts as tabs ---------- */
+/* The kit's tabs (report-kit tabs.css): words in ink, the open part on a 3px ink bar. It sticks under the viewport's top edge; its paper fill runs to both screen
+   edges (a pseudo-element under it, its shadow clipped to the strip's height; the strip itself clips nothing) so nothing that leaves the column shows beside it. */
+.tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--hair, var(--rule)); }
+.tabs::before { content: ""; position: absolute; z-index: -1; inset: 0 0 -1px; background: var(--paper); box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax); pointer-events: none; }
 .tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .tabs-in::-webkit-scrollbar { display: none; }
-.tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
-.tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
-.tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
-.tab { flex: none; position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 12px 0 10px; min-height: 44px;
-  font-family: var(--label); font-size: 13.5px; font-weight: 500; letter-spacing: .075em; text-transform: uppercase; line-height: 1.2;
-  color: var(--ink-2); text-decoration: none; white-space: nowrap; cursor: pointer; }
-/* the label keeps the open tab's bolder width, so choosing a tab never shifts its neighbours */
-.tab .tl { display: inline-grid; }
-.tab .tl::after { content: attr(data-l); font-weight: 600; height: 0; overflow: hidden; visibility: hidden; }
-.tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0; background: var(--ink); transition: height .12s ease-out; }
-.tab:hover { color: var(--ink); }
-.tab:hover::after { height: 1px; background: var(--ink-3); }
-.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; }
-.tab[aria-selected="true"]::after { height: 3px; background: var(--ink); }
-.tab:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; border-radius: 2px; }
+.tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); }
+.tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); }
+.tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); }
 /* the parts: every one laid out at the column's width, the closed ones folded to nothing, so a figure
    measures its real width whether or not its part is open (and redraws on a resize either way) */
-.view { padding-top: 26px; }
+.view { padding-top: 26px; scroll-margin-top: var(--tabh, 0px); }
 .view:not(.on) { height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
 .view:focus { outline: none; }
 .view.on { animation: viewin .16s ease-out; }
@@ -436,17 +304,9 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .view-next a:hover { text-decoration-color: var(--ink); }
 @media (max-width: 640px) {
   .tabs-in { gap: 0 20px; }
-  .tab { font-size: 13px; letter-spacing: .06em; }
   .view { padding-top: 20px; }
 }
-@media (max-width: 760px) {
-  .winners { grid-template-columns: 1fr; gap: 18px; }
-}
 @media (max-width: 640px) {
-  table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
-  table.ab tbody th { padding-left: 6px; white-space: normal; }
-  table.ab .id { font-size: 11px; }
-  table.ab .sub { font-size: 11.5px; }
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
   /* the glossary stacks each term over its meaning; a group's heading sticks while its terms pass */
@@ -466,9 +326,151 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
   .gl-types { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
   .gl-types::-webkit-scrollbar { display: none; }
   .gl-types button { flex: none; }
-  table.map td.setup { min-width: 158px; }
 }
 @media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab, .tab::after { transition: none; } .view.on { animation: none; } .jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: none; } .jumped { outline: 2px solid var(--sel); } }
+
+/* ---------- On report-kit: the header, the tab strip and the Decision map ----------
+   Each carries .rk-kit, so the kit's tokens and base (scoped in the Summary's style block) reach it; the rules
+   below are the report's own parts the kit has no component for. Every colour is a kit token. */
+.memo.rk-kit { padding-bottom: var(--s5); background: transparent }
+.memo.rk-kit h1 { font: 700 var(--t-title)/1.15 var(--sans); letter-spacing: 0; max-width: 24em }
+.memo.rk-kit .byline { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin-top: var(--s3); max-width: 36rem }
+.memo.rk-kit .byline b { font-weight: 700; color: var(--ink) }
+.memo.rk-kit .term, .rk-kit .term { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px; cursor: help }
+.memo.rk-kit .themebtn { border: 1px solid var(--hair); border-radius: 10px; padding: 3px; gap: 3px; color: var(--ink); min-height: 44px }
+.memo.rk-kit .themebtn svg { width: 36px; height: 36px; padding: 9px; border-radius: 7px }
+.memo.rk-kit .themebtn[aria-pressed="false"] .sun, .memo.rk-kit .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper) }
+
+.tabs.rk-kit .tabs-in { gap: 0 var(--s5) }
+.tabs.rk-kit .tab { flex: none; display: inline-flex; align-items: center; min-height: 48px; padding: 0 2px;
+  font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); text-decoration: none; white-space: nowrap; cursor: pointer;
+  box-shadow: inset 0 -3px 0 transparent; transition: box-shadow var(--t-fast) ease-out }
+.tabs.rk-kit .tab:hover { box-shadow: inset 0 -3px 0 var(--hair) }
+.tabs.rk-kit .tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--ink) }
+.tabs.rk-kit .tab:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px; border-radius: 4px }
+.tabs.rk-kit .tab .tl::after { display: none }
+@media (prefers-reduced-motion: reduce) { .tabs.rk-kit .tab { transition: none } }
+
+/* the Decision map: the kit's section head with the set switch and the filter beside it, the lead, the key,
+   then one table of every setup and model; group cells on the kit's tint (the right-answer green, none at 0,
+   half strength at 100), sorted from each column's head; the filters fold behind the kit's filter beside the switch */
+.dm .rk-head { margin-bottom: var(--s4) }
+.dm-lead { margin: 0 0 var(--s4); max-width: 36rem; font-weight: 600 }
+.dm-filter { display: inline-block }
+.dm .rk-filter-panel .term, .dm .rk-check .tt { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm .rk-filter-panel svg { flex: none }
+.dm-key { margin: 0 0 var(--s2) }
+.dm-key .rk-mark { margin-right: 2px }
+.dm-live { margin: 0 0 var(--s2) }
+.dm-note { margin: var(--s3) 0 0; max-width: 36rem }
+
+.dm .maphead:not(.on) { visibility: hidden }
+.dm .maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; background: var(--paper); pointer-events: auto }
+.dm .maphead table.map { margin: 0 }
+.dm .mapwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--hair) }
+.dm table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 60rem; font: 400 .875rem/1.35 var(--sans);
+  font-variant-numeric: tabular-nums; color: var(--ink) }
+.dm table.map th, .dm table.map td { padding: var(--s2) 6px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--hair) }
+.dm table.map thead th { font-weight: 700; vertical-align: bottom; border-bottom: 2px solid var(--ink); background: var(--paper) }
+.dm table.map thead th small { display: block; font-weight: 400; font-size: .8125rem; max-width: 6.5rem; margin-left: auto; text-wrap: balance }
+.dm table.map thead th:not(.sortable) small { margin-left: 0 }
+.dm table.map th.num, .dm table.map td.num { text-align: right }
+.dm table.map th.g, .dm table.map td.g { text-align: right }
+.dm table.map td.g { padding: 3px }
+.dm table.map th.sortable { padding: 0; height: 1px; user-select: none; -webkit-user-select: none }
+.dm .msort { appearance: none; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: flex;
+  flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right; width: 100%; height: 100%;
+  padding: var(--s2) 6px; border-radius: 6px }
+.dm .msort:hover { background: var(--row) }
+.dm .msort:hover .tl { text-decoration-style: solid }
+.dm .msort .ml { display: inline-flex; align-items: center; gap: 6px }
+.dm .msort .rk-sort-mark { margin-left: 0; flex: none }
+.dm .msort .tl { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm .msort:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px }
+.dm th[aria-sort="descending"] .rk-sort-mark .up, .dm th[aria-sort="ascending"] .rk-sort-mark .dn { display: none }
+.dm th[aria-sort="descending"] .rk-sort-mark, .dm th[aria-sort="ascending"] .rk-sort-mark { stroke-width: 2.4 }
+.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); text-align: right; font-weight: 700; font-size: .9375rem }
+.dm .ch.none { background: none; font-weight: 400 }
+.dm table.map tr.rung th { font-weight: 700; padding: var(--s4) var(--s2) var(--s2); border-bottom: 2px solid var(--ink); background: var(--paper) }
+.dm table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 10rem; z-index: 1 }
+.dm table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1 }
+.dm table.map tbody tr.main:hover > td, .dm table.map tbody tr.sub:hover > td { background-color: var(--row) }
+.dm table.map tbody tr:hover > td.setup { background: linear-gradient(var(--row), var(--row)), var(--paper) }
+.dm table.map td.setup .id { display: inline-block; font-size: .8125rem; font-weight: 700 }
+.dm table.map td.setup .mdl { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px }
+.dm table.map td.setup .mdl > :not(svg):not(.more) { flex: 1 1 0; min-width: 0 }
+.dm table.map td.setup .mdl > .more { flex-basis: 100%; text-align: left; margin-left: 14px }
+.dm table.map td.what { max-width: 13rem; min-width: 9rem }
+.dm table.map tr.sub td.setup { padding-left: var(--s5) }
+.dm table.map tr.sub[hidden] { display: none }
+.dm .tags { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1) }
+.dm .flag { display: inline-block; font-size: .8125rem; border: 1px solid var(--hair); border-radius: 4px; padding: 0 6px; line-height: 1.5; white-space: nowrap }
+.dm .flag[data-term] { cursor: help; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+.dm .flag.pend { border-style: dashed }
+.dm .ivl { white-space: nowrap; line-height: 1.35 }
+.dm .ivl > span:first-child { font-weight: 700; font-size: .9375rem }
+.dm .ivl small { font-size: .875rem }
+.dm .ivl .rk-mark { margin-right: 6px; vertical-align: 1px }
+.dm table.map td.num .mv { white-space: nowrap; font-weight: 700; font-size: .9375rem }
+.dm table.map tr.mnone td { padding: var(--s4) var(--s2) }
+.dm .more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 var(--s1); min-height: 32px; border-radius: 4px;
+  color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.dm .more:hover { text-decoration-thickness: 2.5px }
+/* setup families on the kit's chart series (one hue each, the line colour first), wherever the kit reaches: the
+   MetricFlow agent's charts and legends, and the Decision map's family filter */
+.rk-kit { --mf: var(--viz-1); --gt: var(--viz-2); --da: var(--viz-3); --ref: var(--viz-4); --other: var(--ink) }
+
+/* the MetricFlow agent tab: two kit sections, each chart's title the kit's finding headline (with its set switch, the
+   kit's, beside it), an HTML key, then the report's Plot figure in the kit's chart type (ReportKit.plotTheme sets the
+   size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
+   tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
+   the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
+.mfa { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+#metricflow figure { margin: 0 }
+/* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
+#metricflow .rk-head h2 { line-height: 1.4 }
+#metricflow figure + figure { margin-top: var(--s7) }
+#metricflow .figtitle { margin: 0 0 var(--s3); max-width: 40rem; font: var(--w-head) var(--t-find)/1.3 var(--sans); text-wrap: balance }
+#metricflow .mfa-fighead { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; justify-content: space-between; margin: 0 0 var(--s3) }
+#metricflow .mfa-fighead .figtitle { margin: 0; flex: 1 1 24rem }
+#metricflow .legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s5); margin: 0 0 var(--s3);
+  font: 400 var(--t-chart)/1.35 var(--sans); color: var(--ink) }
+#metricflow .legend .k { min-height: 28px; gap: var(--s2) }
+#metricflow .focusable .legend .k[data-fam] { font-weight: 700; border-radius: 6px; padding: 2px 6px; margin: -2px -6px }
+#metricflow .focusable .legend .k[data-fam]:hover, #metricflow .focusable .legend .k.locked { background: var(--row); color: var(--ink) }
+#metricflow .focusable .legend .k.locked { box-shadow: inset 0 0 0 1.5px var(--ink) }
+#metricflow .f3key { margin: var(--s3) 0 0 }
+#metricflow .f3key .k { font-weight: 600 }
+#metricflow .plot { font-size: var(--t-chart) }
+#metricflow .plot svg { font-family: var(--sans) }
+#metricflow .plot text, #metricflow .plot .f11, #metricflow .plot .f11 text, #metricflow .plot .f12, #metricflow .plot .f12 text { font-size: var(--t-chart) }
+#metricflow .plot .t-strong, #metricflow .plot .t-strong text { font-weight: 700 }
+#metricflow .plot .t-id, #metricflow .plot .t-id text { font-size: calc(var(--t-chart) - 1px); font-weight: 600 }
+#metricflow .plot .t-mute, #metricflow .plot .t-mute text { font-weight: 400 }
+/* every focusable mark group, label and glider wears the kit's focus ring */
+#metricflow .plot [tabindex]:focus-visible, #metricflow .glider:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 2px }
+#metricflow .plot text[tabindex]:focus-visible { text-decoration: none }
+#metricflow .legend .k:focus-visible, #metricflow .f3key .k:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+#metricflow .glider:focus-visible .gh { stroke: var(--line) }
+#metricflow .glider .gv { font-weight: 700 }
+#metricflow .live { margin: var(--s3) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
+#metricflow figcaption { margin: var(--s2) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
+@media (max-width: 640px) { #metricflow figure + figure { margin-top: var(--s6) } }
+
+/* the report's own tooltip, shared by every tab, in the kit's type and ink: a light plate (the outcome glyphs inside
+   it are drawn in the report's own colours, made for a light ground), every word at full ink, no small capitals */
+.tip.rk-kit { background: var(--paper); color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; box-shadow: var(--shadow);
+  padding: 10px 12px; font: 400 var(--t-tip)/1.4 var(--sans) }
+.tip.rk-kit.pinned { border-color: var(--ink) }
+.tip.rk-kit :is(.th, .td, .tq, .tk, .tsh, .tsn, .qid, dt, dd, .iv, .nt, p, q, .h-on, .tgrip, .tipclose, .tipjump a, .tcalc) { color: var(--ink); font-family: var(--sans) }
+.tip.rk-kit .tk, .tip.rk-kit .tsh { text-transform: none; letter-spacing: 0; font-size: .875rem; font-weight: 700 }
+.tip.rk-kit .tk .id, .tip.rk-kit .th .id { color: var(--ink) }
+.tip.rk-kit .th { font-size: 1rem; font-weight: 700 }
+.tip.rk-kit .ts, .tip.rk-kit .tipjump { border-top-color: var(--hair) }
+.tip.rk-kit q { border-left-color: var(--hair) }
+.tip.rk-kit .thandle:hover, .tip.rk-kit .tipclose:hover { background: var(--row) }
+.tip.rk-kit :focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+@media (max-width: 640px) { .dm table.map td.setup { min-width: 9rem } .memo.rk-kit h1 { font-size: 1.625rem } }
 </style>
 
 <script>
@@ -490,7 +492,7 @@ window.REPORT = D;
 })();
 </script>
 <div class="page">
-  <header class="memo">
+  <header class="memo rk-kit">
     <div class="mhead">
       <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
       <button type="button" class="themebtn" id="themebtn" aria-label="Dark theme" aria-pressed="false">
@@ -500,83 +502,92 @@ window.REPORT = D;
     </div>
     <p class="byline" id="byline"></p>
   </header>
-  <nav class="tabs" id="tabs" aria-label="Parts of the report">
+  <nav class="tabs rk-kit" id="tabs" aria-label="Parts of the report">
     <div class="tabs-in" role="tablist" aria-label="Parts of the report">
-      <a class="tab" role="tab" id="tab-summary" href="#summary" aria-controls="view-summary" aria-selected="true" tabindex="0"><span class="tl" data-l="Summary">Summary</span></a>
-      <a class="tab" role="tab" id="tab-decision-map" href="#decision-map" aria-controls="view-decision-map" aria-selected="false" tabindex="-1"><span class="tl" data-l="Decision map">Decision map</span></a>
-      <a class="tab" role="tab" id="tab-metricflow" href="#metricflow" aria-controls="view-metricflow" aria-selected="false" tabindex="-1"><span class="tl" data-l="MetricFlow agent">MetricFlow agent</span></a>
-      <a class="tab" role="tab" id="tab-every-run" href="#every-run" aria-controls="view-every-run" aria-selected="false" tabindex="-1"><span class="tl" data-l="Every run">Every run</span></a>
-      <a class="tab" role="tab" id="tab-setups" href="#setups" aria-controls="view-setups" aria-selected="false" tabindex="-1"><span class="tl" data-l="Setups">Setups</span></a>
-      <a class="tab" role="tab" id="tab-question-sets" href="#question-sets" aria-controls="view-question-sets" aria-selected="false" tabindex="-1"><span class="tl" data-l="Question sets">Question sets</span></a>
-      <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="view-method" aria-selected="false" tabindex="-1"><span class="tl" data-l="Method &amp; glossary">Method &amp; glossary</span></a>
+      <a class="tab" role="tab" id="tab-summary" href="#summary" aria-controls="summary" aria-selected="true" tabindex="0"><span class="tl" data-l="Summary">Summary</span></a>
+      <a class="tab" role="tab" id="tab-decision-map" href="#decision-map" aria-controls="decision-map" aria-selected="false" tabindex="-1"><span class="tl" data-l="Decision map">Decision map</span></a>
+      <a class="tab" role="tab" id="tab-metricflow" href="#metricflow" aria-controls="metricflow" aria-selected="false" tabindex="-1"><span class="tl" data-l="MetricFlow agent">MetricFlow agent</span></a>
+      <a class="tab" role="tab" id="tab-every-run" href="#every-run" aria-controls="every-run" aria-selected="false" tabindex="-1"><span class="tl" data-l="Every run">Every run</span></a>
+      <a class="tab" role="tab" id="tab-setups" href="#setups" aria-controls="setups" aria-selected="false" tabindex="-1"><span class="tl" data-l="Setups">Setups</span></a>
+      <a class="tab" role="tab" id="tab-question-sets" href="#question-sets" aria-controls="question-sets" aria-selected="false" tabindex="-1"><span class="tl" data-l="Question sets">Question sets</span></a>
+      <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="method" aria-selected="false" tabindex="-1"><span class="tl" data-l="Method &amp; glossary">Method &amp; glossary</span></a>
     </div>
   </nav>
 
   <div class="views" id="views">
-  <section class="view on" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
-
-  <section class="abstract"><p class="lead"><span class="runin">In short.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
-
-  <section aria-labelledby="w-h">
-    <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
-    <p class="winners-note" id="w-diff" hidden></p>
-    <div class="winners" id="winners"></div>
-    <p class="winners-note">Each setup enters on the model that decides for it<span id="w-pend">; a setup with runs on Claude only waits, tagged pending in the tables</span>.</p>
+  <section class="view on rk-kit rk-js" id="summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
+  <style>
+  /* The parts on report-kit (the Summary, the Decision map, the header, the tab strip, the tooltip): the kit's own
+     scope nests its CSS under every element carrying .rk-kit, so the tabs not yet moved keep the report's look; then
+     the Approaches sections' own styles, nested the same way by build.py (scope_to_panel). */
+  /* report-kit:css tokens base section marks dots bar range tint slope switch filter table-sort tip highlight plot-theme scope=.rk-kit */
+  .rk-kit {
+  /*SUMMARY_CSS*/
+  /* every part on the kit keeps the page's ground */
+  :root & , :root[data-theme] & { --paper: var(--report-paper) }
+  }
+  </style>
+<!--SUMMARY-->
+  <div class="rk-tip" id="rk-tip" hidden></div>
   </section>
-  </section>
 
-  <section class="view" id="view-decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
-  <figure id="fig1">
-    <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
-    <div class="twin" id="twin1"></div>
-    <div class="mtools">
-      <div class="seg mseg" role="group" aria-label="Question set for Figure 1" id="map-seg"></div>
-      <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
-      <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
-    </div>
-    <div class="figtools"><div class="legend" id="leg1"></div></div>
-    <p class="live mlive" id="map-live" aria-live="polite"></p>
+  <section class="view rk-kit" id="decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
+  <section class="rk-section dm" id="fig1" aria-labelledby="dm-h">
+    <div class="rk-head"><h2 id="dm-h">Decision map</h2>
+      <div class="rk-head-tools"><div class="rk-switch" role="group" aria-label="Question set" id="map-seg"></div>
+        <div class="rk-js dm-filter"><details class="rk-filter" data-rk-filter>
+          <summary><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M4.5 8h7M7 12h2"/></svg>Filter <span class="rk-filter-count"></span></summary>
+          <div class="rk-filter-panel">
+            <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
+            <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
+            <div class="rk-filter-foot"><button type="button" class="rk-filter-reset">Show all</button></div>
+          </div>
+        </details></div></div></div>
+    <p class="dm-lead" id="t1"></p>
+    <ul class="rk-key dm-key" id="leg1"></ul>
+    <p class="dm-live" id="map-live" aria-live="polite"></p>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
-    <figcaption>One question set at a time; a boxed number is the best in its column. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</figcaption>
-  </figure>
-
+    <p class="dm-note">One question set at a time. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</p>
+  </section>
   </section>
 
-  <section class="view" id="view-metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
-  <h2>Where the <span class="term" data-term="adk" tabindex="0">ADK</span> agent on <span class="term" data-term="metricflow" tabindex="0">MetricFlow</span> stands</h2>
-  <figure id="fig2" class="focusable">
-    <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
-    <div class="figtools"><div class="legend" id="leg2"></div></div>
+  <section class="view rk-kit mfa" id="metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
+  <section class="rk-section" aria-labelledby="mfa-h1">
+  <div class="rk-head"><h2 id="mfa-h1">Where the <span class="term" data-term="adk" tabindex="0">ADK</span> agent on <span class="term" data-term="metricflow" tabindex="0">MetricFlow</span> stands</h2></div>
+  <figure id="fig2" class="focusable" aria-labelledby="t2">
+    <h3 class="figtitle" id="t2"></h3>
+    <div class="legend" id="leg2"></div>
     <div class="plot" id="forest"></div>
     <p class="live" id="glide-live" aria-live="polite"></p>
     <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals rest on fewer questions or runs.</figcaption>
   </figure>
-  <figure id="fig3" class="focusable">
-    <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
-    <div class="figtools"><div class="legend" id="leg3"></div><div class="seg" role="group" aria-label="Question set for Figure 3" data-view="scatter"></div></div>
+  <figure id="fig3" class="focusable" aria-labelledby="t3">
+    <div class="mfa-fighead"><h3 class="figtitle" id="t3"></h3><div class="rk-switch" role="group" aria-label="Question set for the accuracy against confident-wrong chart" data-view="scatter"></div></div>
+    <div class="legend" id="leg3"></div>
     <div class="plot" id="scatter"></div>
     <div class="legend f3key" id="key3"></div>
     <figcaption>Up and to the right is better; the lines through each mark are its 95% intervals on both axes.</figcaption>
   </figure>
+  </section>
 
-  <h2>Why: <span class="term" data-term="covered" tabindex="0">covered</span> questions against <span class="term" data-term="uncovered" tabindex="0">uncovered</span> ones</h2>
-  <figure id="fig4" class="focusable">
-    <p class="figtitle"><span class="fignum">Figure 4.</span><span class="take" id="t4"></span></p>
-    <div class="twin" id="twin4"></div>
-    <div class="figtools"><div class="legend" id="leg4"></div></div>
+  <section class="rk-section" aria-labelledby="mfa-h2">
+  <div class="rk-head"><h2 id="mfa-h2">Why: <span class="term" data-term="covered" tabindex="0">covered</span> questions against <span class="term" data-term="uncovered" tabindex="0">uncovered</span> ones</h2></div>
+  <figure id="fig4" class="focusable" aria-labelledby="t4">
+    <h3 class="figtitle" id="t4"></h3>
+    <div class="legend" id="leg4"></div>
     <div class="plot" id="strip"></div>
     <figcaption>Each mark is one setup on one model; question groups under ten questions are drawn faint, since one answer moves them by many points.</figcaption>
   </figure>
-  <figure id="fig5" class="focusable">
-    <p class="figtitle"><span class="fignum">Figure 5.</span><span class="take" id="t5"></span></p>
-    <div class="figtools"><div class="legend" id="leg5"></div><div class="seg" role="group" aria-label="Question set for Figure 5" data-view="slopes"></div></div>
+  <figure id="fig5" class="focusable" aria-labelledby="t5">
+    <div class="mfa-fighead"><h3 class="figtitle" id="t5"></h3><div class="rk-switch" role="group" aria-label="Question set for the covered to uncovered chart" data-view="slopes"></div></div>
+    <div class="legend" id="leg5"></div>
     <div class="plot" id="slopes"></div>
     <figcaption>Hover a line or a label to follow one setup.</figcaption>
   </figure>
-
+  </section>
   </section>
 
-  <section class="view" id="view-every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
+  <section class="view" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
   <h2>Every run, from the cheapest setup to the most custom</h2>
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
@@ -591,16 +602,16 @@ window.REPORT = D;
 
   </section>
 
-  <section class="view" id="view-setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
+  <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
 <!--SECTIONS-->
   </section>
 
-  <section class="view" id="view-question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
+  <section class="view" id="question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
 <!--QUESTIONS-->
   </section>
 
 
-  <section class="view" id="view-method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
+  <section class="view" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
   <h2>Method, briefly</h2>
   <dl class="meth" id="method-list">
     <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
@@ -627,9 +638,9 @@ window.REPORT = D;
   </section>
   </div>
 </div>
-<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+<div class="tip rk-kit" id="tip" role="tooltip" aria-hidden="true"></div>
 <script>
-/* ---------- the report's parts as tabs: one open at a time, each with its own URL (#396) ---------- */
+/* ---------- the report's parts as tabs: one open at a time, each with its own URL (issue 396) ---------- */
 // The hash names the open part (#summary, #decision-map, ...) or an element inside one (#term-<key>,
 // #map-<arm>, #map-set-<set>, #setup-<arm>), which opens its part. Every switch is a history entry
 // that remembers its scroll position, so Back and Forward return to the part and the place.
@@ -799,7 +810,13 @@ window.REPORT = D;
   if (window.reportReady) window.reportReady(() => requestAnimationFrame(settle));
 })();
 </script>
-<!--VENDOR-->
+<!-- report-kit:vendor plot -->
+<script>
+/* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel and the Decision map's filter): the
+   Decision map's cells and the other tabs keep the report's own tooltip on their data-tip. plot-theme only defines
+   ReportKit.plotTheme, which the MetricFlow agent's figures read for their type as they draw, so it runs before them. */
+/* report-kit:js switch filter table-sort tip highlight plot-theme scope=.rk-js */
+</script>
 
 <script>
 (function () {
@@ -845,9 +862,9 @@ window.REPORT = D;
   const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
   const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "<span class=\"term\" data-term=\"claude-code\" tabindex=\"0\">Claude Code</span>"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
-  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
+  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
-  // A model's name with its glossary tooltip: the free model, Gemini, Claude by name, or Claude Code (#395).
+  // A model's name with its glossary tooltip: the free model, Gemini, Claude by name, or Claude Code (issue 395).
   const MODEL_TERM = [[/^Nemotron/, "nemotron"], [/^Gemini/, "gemini"], [/^Claude Code/, "claude-code"], [/^(CC )?(Haiku|Sonnet|Opus)/, "claude-models"]];
   const modelTerm = (m) => { const k = (MODEL_TERM.find(([re]) => re.test(m)) || [])[1]; return k ? term(k, esc(m)) : esc(m); };
   const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
@@ -857,9 +874,9 @@ window.REPORT = D;
   let lockFor = () => {}, unlockFocus = () => {}; // set by the focus code below
   const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
   const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
-  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (#395)
+  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (issue 395)
   const TK = (k) => { const t = (D.termAlias || {})[k] || String(k).replace(/_/g, "-"); return TERM[t] ? t : null; };
-  /* Every tooltip has the same anatomy (#401): a kicker naming what kind of thing it is, a title, a line of
+  /* Every tooltip has the same anatomy (issue 401): a kicker naming what kind of thing it is, a title, a line of
      what it is, then sections, each under a small-capital label, whose facts read as label | value rows:
      the labels muted and aligned in one column, the values in ink with the key number bold. */
   const tKick = (...parts) => `<p class="tk">${parts.filter(Boolean).join('<span class="tk-sep" aria-hidden="true">·</span>')}</p>`;
@@ -969,11 +986,11 @@ window.REPORT = D;
     const hd = tip.querySelector(".thandle"); if (!hd) return;
     e.preventDefault(); hd.focus({ preventScroll: true });
   });
-  /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
+  /* ---------- a pinned tooltip's jump to the fuller entry behind it (issue 389) ---------- */
   // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
   function jumpTarget(el) {
     if (!el || !el.dataset) return null;
-    // a question set's name jumps to what the set holds (#390), any other term to its glossary entry
+    // a question set's name jumps to what the set holds (issue 390), any other term to its glossary entry
     if (el.dataset.term != null) { const q = document.getElementById("qs-" + el.dataset.term); if (q) return [q, "What the set holds ↓"]; const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
     if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
     return null;
@@ -1023,6 +1040,7 @@ window.REPORT = D;
   // A key ring in Figure 3 stands for its setup's own focusable group, whose hit area may lie under another's.
   const closestTip = (t) => {
     if (!t || !t.closest) return null;
+    if (t.closest("#summary")) return null; // the Summary tab: the kit's bubble shows its definitions
     const ring = t.closest("[data-tip-for]");
     if (ring) { const svg = ring.ownerSVGElement; return [...svg.querySelectorAll("[data-tip]")].find((g) => g.dataset.tip === ring.dataset.tipFor) || null; }
     return t.closest(TIPSEL);
@@ -1062,7 +1080,7 @@ window.REPORT = D;
     if (e.key === "Escape") { if (pinned) unpin(true); else hideTip(); return; }
     if ((e.key === "Enter" || e.key === " ") && document.activeElement) {
       const el = document.activeElement;
-      if (el.matches && el.matches(TIPSEL)) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
+      if (el.matches && el.matches(TIPSEL) && !el.closest("#summary")) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
     }
   });
   window.addEventListener("scroll", () => {
@@ -1151,14 +1169,20 @@ window.REPORT = D;
     });
   } catch (e) {}
   // The figures take their colours from CSS tokens (var(--token)), so a theme change restyles them with no redraw.
-  document.addEventListener("report-theme", () => { unpin(false); hideTip(); });
+  document.addEventListener("report-theme", () => { unpin(false); hideTip();
+    // the kit tracks words a touch wider on a dark ground: the figures that wrap labels to a measured width (2 and 5)
+    // are drawn again when the tracking changes, so a label measured on one ground still fits on the other
+    const tr = parseFloat(getComputedStyle($("#metricflow")).letterSpacing) || 0;
+    if (MFONT && tr !== MFONT.track) { renderForest(); renderSlopes(); } });
 
   /* ---------- per-view set switches ---------- */
   function renderSwitches() {
-    document.querySelectorAll(".seg[data-view]").forEach((seg) => {
+    document.querySelectorAll(".seg[data-view], .rk-switch[data-view]").forEach((seg) => {
       const v = seg.dataset.view;
       if (SETS.length < 2) { seg.hidden = true; return; }
-      seg.innerHTML = SETS.map((s) => `<button type="button" data-set="${s}" aria-pressed="${view[v] === s}">${esc(S(s).label)}, ${S(s).nCases} questions</button>`).join("");
+      // on the kit (the kit's switch, as the Decision map's): the set's name, then its count in bold
+      const kit = seg.classList.contains("rk-switch");
+      seg.innerHTML = SETS.map((s) => `<button type="button" data-set="${s}" aria-pressed="${view[v] === s}">${esc(S(s).label)}${kit ? ` <b>${S(s).nCases}<span class="vh"> questions</span></b>` : `, ${S(s).nCases} questions`}</button>`).join("");
       seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
         view[v] = b.dataset.set; try { localStorage.setItem("semantic-bet-views-2", JSON.stringify(view)); } catch (e) {}
         renderSwitches(); hideTip(); ({ scatter: renderScatter, slopes: renderSlopes, plate: renderPlate })[v]();
@@ -1166,36 +1190,15 @@ window.REPORT = D;
     });
   }
 
-  /* ---------- text, winners ---------- */
+  /* ---------- text ---------- */
   const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
   const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
-  const num = (v, ex) => `<span class="n">${P(v[0])}%</span><span class="ivs">${exIv(v, ex)}</span>`;
-  const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
   function renderText() {
     $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
-    const A = D.abstract || { lead: "", rows: [] };
-    $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
-    const ab = A.rows;
-    const lines = [
-      [`The ${term("managed-best", "managed best")}`, null, "grp"],
-      ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
-      ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
-      [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
-      ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
-      [`Gap: MetricFlow against the managed best, in ${term("points", "points")} right`, (r) => dnum(r.d), "diff"],
-    ];
-    $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
-      lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
-      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set. The gap is paired question by question; an interval that includes 0 is a tie.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
-    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the ${term("managed-best", "managed best")}</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
-      tw.map.map((r) => `<tr><td>${setTerm(r.set)}</td>${r.cells.map((c) => `<td>${esc(c).replace(/^(\d+)/, '<span class="n">$1</span>')}</td>`).join("")}</tr>`).join("") + `</tbody></table>` : "";
     $("#t2").textContent = D.sentences.forest || "";
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
-    $("#twin4").innerHTML = (tw.strip || []).length ? `<table class="tw"><thead><tr><th>% of runs right</th><th class="num">MetricFlow, ${term("covered")}</th><th class="num">${term("hidden-rule")}</th><th class="num">${term("uncovered")}</th><th class="num">${term("managed-best", "Managed best")}, uncovered</th></tr></thead><tbody>` +
-      tw.strip.map((r) => `<tr><td>${setTerm(r.set)}</td><td class="num"><span class="n">${r.cov}%</span></td><td class="num"><span class="n">${r.trap == null ? "n/a" : r.trap + "%"}</span></td><td class="num"><span class="n">${r.unc}%</span></td><td class="num"><span class="n">${r.mbUnc == null ? "n/a" : r.mbUnc + "%"}</span></td></tr>`).join("") +
-      `</tbody></table>${tw.stripNote ? `<div class="note" style="font-family:var(--label);font-size:13px;color:var(--ink-3);margin-top:4px">${esc(tw.stripNote)}</div>` : ""}` : "";
     renderGloss();
   }
 
@@ -1263,7 +1266,7 @@ window.REPORT = D;
   $("#gl-t").addEventListener("click", (e) => { const b = e.target.closest(".gl-g button"); if (!b || GS.q.trim()) return; const ty = b.closest("tbody").dataset.type; if (GS.folded.has(ty)) GS.folded.delete(ty); else GS.folded.add(ty); glApply(); });
   $("#gloss").addEventListener("click", (e) => { if (e.target.closest("[data-gl-reset]")) { glReset(); $("#gl-q").focus(); } });
   window.addEventListener("resize", () => { const th = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (th ? th.offsetHeight : 0) + "px"); });
-  // A term's row made visible: the search, the type filter or a fold that hides it is undone (#401).
+  // A term's row made visible: the search, the type filter or a fold that hides it is undone (issue 401).
   function glReveal(row) {
     const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
     const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
@@ -1280,58 +1283,7 @@ window.REPORT = D;
     el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");
     setTimeout(() => el.classList.remove("jumped"), 1900);
   };
-  const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
-  // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
-  function pillarFig(p) {
-    // A leader that ran only some of the set's questions says so, and runs that are not one per question are counted beside them.
-    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = L.q < p.n ? `the ${L.q} of ${p.n} questions it ran` : `${L.q} question${L.q === 1 ? "" : "s"}`;
-    const what = p.what === "right" ? "right" : "confidently wrong";
-    let fig, nl;
-    if (L.exact) {
-      const b = ivB(iv, L.exact), all = iv[0] === 1;
-      fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
-      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}${L.runs !== L.q ? `, ${runs} in all` : ""}`;
-    } else {
-      fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
-      nl = `${qs}, ${runs}`;
-    }
-    if (L.few) nl += `<span class="few"> · few questions, so only a large gap shows</span>`;
-    return { fig, nl };
-  }
-  function renderWinners() {
-    const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
-    const differs = [];
-    const html = titles.map((t) => {
-      let why = "";
-      const leads = new Set(); let nSets = 0;
-      const blocks = SETS.map((s) => {
-        const p = S(s).pillars.find((x) => x.title === t);
-        if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
-        why = p.why;
-        const L = p.lead; leads.add(L.id.split("|").slice(1).join("|")); nSets++;
-        const tied = p.tied.length ? `<span class="plab">${term("interval", "Tied within the interval")}</span><ul class="prows">${p.tied.map((x) => `<li class="prow2"><span><span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> <span class="m">on ${esc(x.model)}</span></span><span class="n">${P(x.v)}%</span></li>`).join("")}</ul>` : `<span class="plab">No setup ties it within the ${term("interval", "interval")}.</span>`;
-        const ctr = p.contrast ? `<div class="ctr"><span class="plab">Against it</span><div class="prow2"><span>${esc(p.contrast[0])}</span><span class="n">${P(p.contrast[1])}%</span></div></div>` : "";
-        const f = pillarFig(p);
-        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
-          <div class="lead"><span class="num">${f.fig}</span></div>
-          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)} so far</span>` : ""}</div>
-          <div class="pn">${f.nl}</div>${p.kind ? `<div class="kind">${esc(p.kind)}</div>` : ""}
-          <div class="tied">${tied}</div>${ctr}</div>`;
-      }).join("");
-      const pt = PILLAR_TERM[t];
-      const differ = nSets > 1 && leads.size > 1; differs.push(nSets > 1 ? differ : null);
-      return `<div class="pillar" style="grid-row:span ${2 + SETS.length}"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}@@DIFF${titles.indexOf(t)}@@</p>${blocks}</div>`;
-    }).join("");
-    // "a different setup leads on each set": once for the band when it holds in every pillar, else per pillar
-    const multi = differs.filter((d) => d !== null), all = multi.length > 1 && multi.every(Boolean);
-    $("#winners").innerHTML = html.replace(/@@DIFF(\d+)@@/g, (m, i) => (!all && differs[+i] ? `<span class="lchg">A different setup leads on each set.</span>` : ""));
-    // The pending clause only where a table shows a pending row (#409)
-    $("#w-pend").hidden = !Object.values(D.sets).some((x) => (x.rows || []).some((r) => r.status === "pending"));
-    const wd = $("#w-diff"); wd.hidden = !all; wd.textContent = all ? "In every pillar, a different setup leads on each set." : "";
-  }
-
-  /* ---------- Figure 1: decision map, both sets ---------- */
-  function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
+  /* ---------- the Decision map, every set ---------- */
   function unionKeys() {
     const keys = new Map();
     SETS.forEach((s) => S(s).rows.filter((r) => r.plotted).forEach((r) => { if (!keys.has(r.key)) keys.set(r.key, { key: r.key, arm: r.arm, any: r }); }));
@@ -1367,21 +1319,23 @@ window.REPORT = D;
   }
   function renderMapTools() {
     const s = MS.set;
-    $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)}<small>${S(x).nCases} questions${setNote(x) ? ` · ${setNote(x)}` : ""}</small></button>`).join("");
+    $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)} <b>${S(x).nCases}<span class="vh"> questions</span></b>${setNote(x) ? `<span class="vh">, ${setNote(x)}</span>` : ""}</button>`).join("");
     const rows = S(s).rows.filter((r) => r.plotted);
-    const box = (name, val, inner, t) => `<label class="mchk"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
+    const box = (name, val, inner, t) => `<label class="rk-check"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
     $("#map-fam").innerHTML = `<legend>Setup family</legend>` + famsPresent(rows).map((f) => box("fam", f, `${famKey(f)}<span${TERM["family-" + f] ? ' class="tt"' : ""}>${esc(D.familyLabel[f] || f)}</span>`, TERM["family-" + f] ? "family-" + f : null)).join("");
     $("#map-role").innerHTML = `<legend>Model</legend>` + MROLES.filter(([k]) => rows.some((r) => r.role === k)).map(([k, l]) => box("role", k, `${shapeKey(k)}<span>${l()}</span>`)).join("");
+    // the kit's filter counts what is off on its button
+    const fd = $("#fig1 details[data-rk-filter]"); if (fd && window.ReportKit && ReportKit.filter) ReportKit.filter.count(fd);
   }
   function renderMap() {
     const s = MS.set, groups = S(s).mapGroups || D.groups.map((g) => g.key);
     const glab = (k) => { const g = D.groupsAll.find((x) => x.key === k) || D.groups.find((x) => x.key === k); return g ? g.label : (TERM[TK(k)] ? TERM[TK(k)].label : k); };
-    const best = {}; groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g]).map((r) => r.groups[g][0]); best[g] = v.length ? Math.max(...v) : null; });
     const aria = (c) => (MS.col === c ? MS.dir : "none");
     // the whole head cell is the button: the label, its sort mark and its line under it are one hit area. The mark is
     // the usual data-table one: a neutral up-down pair on a sortable column, one arrow on the sorted one.
-    const SORTMARK = { none: `<path d="M4 1.5L7 5H1z M4 10.5L1 7h6z" fill="currentColor"/>`, descending: `<path d="M4 10.5L.8 6.2h6.4z M3.3 1.5h1.4v5H3.3z" fill="currentColor"/>`, ascending: `<path d="M4 1.5L.8 5.8h6.4z M3.3 5.5h1.4v5H3.3z" fill="currentColor"/>` };
-    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span><svg class="ar" width="8" height="12" viewBox="0 0 8 12" aria-hidden="true">${SORTMARK[aria(c)]}</svg></span><small>${sub}</small></button>`;
+    // the kit's sort mark: an up-down pair on a sortable column, one arrow on the sorted one (CSS reads aria-sort)
+    const SORTMARK = `<svg class="rk-sort-mark" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/><path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>`;
+    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span>${SORTMARK}</span><small>${sub}</small></button>`;
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
     groups.forEach((g) => (h += `<th scope="col" class="g sortable" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)), `${S(s).groupCases[g] || 0} questions`)}</th>`));
     MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num sortable" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab), sub)}</th>`));
@@ -1403,10 +1357,10 @@ window.REPORT = D;
       groups.forEach((g) => {
         const v = r.groups[g];
         x += `<td class="g">` + (!v ? `<span class="ch none" role="img" aria-label="no question of this group in these runs">–</span>`
-          : `<span class="ch b${bin(v[0])}${r.primary && r.family !== "ref" && v[0] === best[g] ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
+          : `<span class="ch rk-tint" style="--v:${P(v[0])}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
       });
       MNUM.forEach(([c]) => {
-        if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span class="${c === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
+        if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span>${c === "cw" && r.cw[0] >= 0.1 ? `<i class="rk-mark" data-k="bad" role="img" aria-label="10% or more"></i>` : ""}${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
         else x += `<td class="num"><span class="mv" data-tip="${esc(r.id)}">${pctOr(r[c])}</span></td>`;
       });
       return x + `</tr>`;
@@ -1431,7 +1385,7 @@ window.REPORT = D;
     const lab = MS.col ? (MNUM.find((m) => m[0] === MS.col) || [0, 0, glab(MS.col.slice(2))])[2] : "";
     $("#map-live").textContent = `${S(s).label}${setNote(s) ? ", " + setNote(s) : ""}: ${shown.length} of ${total} setups and models shown, ` +
       (MS.col ? `sorted by ${lab}, ${MS.dir === "descending" ? "highest" : "lowest"} first; empty cells last.` : "in the map's order, cheapest rung first.");
-    $("#leg1").innerHTML = `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span><span class="k"><span class="nm" aria-hidden="true">–</span>not measured</span>`;
+    $("#leg1").innerHTML = `<li><i class="rk-mark" data-k="bad" aria-hidden="true"></i>Confident-wrong 10% or more</li><li><span aria-hidden="true">–</span>Not measured</li>`;
   }
   function redrawMap(focusCol) {
     renderMap(); stickMapHead();
@@ -1476,7 +1430,7 @@ window.REPORT = D;
   })();
 
   /* ---------- Observable Plot: shared pieces ---------- */
-  // Every figure below is drawn by Observable Plot (inlined from vendor/). Colours are the page's
+  // Every figure below is drawn by Observable Plot (inlined by the kit's build). Colours are the page's
   // CSS tokens passed as var(--token) strings, so a theme change restyles the figures without a redraw.
   // Plot binds each element to its datum's index (el.__data__); tag() reads it to add the data-*
   // attributes the page's delegated tooltip, pinning and hover-to-focus handlers rely on.
@@ -1484,26 +1438,55 @@ window.REPORT = D;
   const lin = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
   const mid = (baseline, fs) => baseline - 0.32 * fs; // Plot centres text on y (dy .32em); the old drawing set baselines
   const famRows = (rows) => famsPresent(rows).map((f) => ({ f, rows: rows.filter((r) => r.family === f) }));
-  // Text that must fit a column is measured in the label font (the figures' font) and wrapped between words.
-  // The figures that wrap are drawn again once the web font is in, so the measure is the font's own.
+  // The MetricFlow agent's figures (2 to 5) are on report-kit: their type comes from the kit's chart theme
+  // (ReportKit.plotTheme on the figure's box: the kit's family at the chart size, .875rem, so a larger text size
+  // scales every label and the layout built around it), merged into each Plot's style. Colours stay var(--token)
+  // strings, which a theme switch restyles with no redraw; inside the tab the report's tokens map onto the kit's.
+  // fs: the chart size in px; sc: that size against the 12.5 px the layouts were first drawn at; lh: a wrapped line.
+  function chartType(el) {
+    const t = window.ReportKit && window.ReportKit.plotTheme ? window.ReportKit.plotTheme(el) : null;
+    const fs = t ? t.fontPx : 14;
+    const cs = getComputedStyle($("#metricflow")); MFONT = { sans: cs.getPropertyValue("--sans").trim() || "sans-serif", code: cs.getPropertyValue("--code").trim() || "monospace", track: parseFloat(cs.letterSpacing) || 0 }; // track: the kit's dark-ground tracking, in px
+    return { fs, sc: fs / 12.5, lh: Math.ceil(fs * 1.3), style: Object.assign({}, t ? t.options.style : {}, { color: "var(--ink)", background: "transparent", overflow: "visible" }) };
+  }
+  // Text that must fit a column is measured in the figures' font (the kit's, or the mono face for setup ids) and
+  // wrapped between words. The figures that wrap are drawn again once the web font is in, so the measure is its own.
+  let MFONT = null; // the figures' two faces, read once per drawing by chartType()
   const measure = (() => { const c = document.createElement("canvas").getContext("2d");
-    return (s, size, weight) => { c.font = `${weight || 400} ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--label").trim() || "sans-serif"}`; return c.measureText(s).width; }; })();
+    // the tracking, set in em on the tab, reaches the figures' text as the tab's computed px, whatever the text's size
+    return (s, size, weight, mono) => { c.font = `${weight || 400} ${size}px ${MFONT ? MFONT[mono ? "code" : "sans"] : "sans-serif"}`;
+      c.letterSpacing = (MFONT ? MFONT.track : 0) + "px"; return c.measureText(s).width; }; })();
   // runs: [{t, c}] (c, an optional class); a run starting with punctuation stays on the previous word's line.
   // Returns lines of runs, each line within room unless a single word is wider.
-  function wrapRuns(runs, room, size, weight) {
+  // A word wider than the room (a long setup id at a large text size) breaks after its hyphens, else between letters.
+  function wrapRuns(runs, room, size, weight, mono) {
     const words = [];
     runs.forEach((r) => (String(r.t).match(/\S+\s*|\s+/g) || []).forEach((t, i) => {
       if (i === 0 && words.length && /^[,;.]/.test(t) && !/\s$/.test(words[words.length - 1].map((s) => s.t).join(""))) words[words.length - 1].push({ t, c: r.c || "" });
       else words.push([{ t, c: r.c || "" }]);
     }));
+    const width = (ws) => measure(ws.flat().map((s) => s.t).join("").trimEnd(), size, weight, mono);
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i]; if (w.length !== 1 || width([w]) <= room) continue;
+      const pieces = [];
+      w[0].t.split(/(?<=-)/).forEach((h) => { if (width([[{ t: h }]]) <= room) pieces.push(h); else { let cur = ""; [...h].forEach((ch) => { if (cur && width([[{ t: cur + ch }]]) > room) { pieces.push(cur); cur = ch; } else cur += ch; }); if (cur) pieces.push(cur); } });
+      words.splice(i, 1, ...pieces.map((t) => [{ t, c: w[0].c }])); i += pieces.length - 1;
+    }
     const lines = []; let cur = [];
-    const width = (ws) => measure(ws.flat().map((s) => s.t).join("").trimEnd(), size, weight);
     words.forEach((w) => { if (cur.length && width(cur.concat([w])) > room) { lines.push(cur); cur = [w]; } else cur.push(w); });
     if (cur.length) lines.push(cur);
     return lines.map((ws) => { const out = []; ws.flat().forEach((s) => { const last = out[out.length - 1]; if (last && last.c === s.c) last.t += s.t; else out.push({ t: s.t, c: s.c }); }); out[out.length - 1].t = out[out.length - 1].t.trimEnd(); return out; });
   }
   // Wrapped lines as tspans under one <text> at its own origin, step px apart.
   const linesHTML = (lines, step) => lines.map((ln, i) => `<tspan x="0"${i ? ` dy="${step}"` : ""}>${ln.map((r) => (r.c ? `<tspan class="${r.c}">${esc(r.t)}</tspan>` : esc(r.t))).join("")}</tspan>`).join("");
+  // An axis's tick values from a to b: the finest of the candidate steps whose labels ("100" at the chart size) stand
+  // at least half a character apart over the axis' length in px, so a large text size takes fewer ticks.
+  function tickSteps(a, b, cands, len, fs, room) { // room: the px a label needs along the axis (a vertical axis: a line)
+    room = room || measure("100", fs) + fs * 0.6;
+    const st = cands.find((c) => (len * c) / (b - a) >= room) || cands[cands.length - 1];
+    const out = []; for (let v = Math.ceil(a / st - 1e-9) * st; v <= b + 1e-9; v += st) out.push(+v.toFixed(4));
+    return out;
+  }
   function steps(a, b, minor, major) { // minor and major grid values from a to b
     const mi = [], ma = [];
     for (let v = a; v <= b + 1e-9; v += minor) { const vv = +v.toFixed(4); (Math.abs(vv / major - Math.round(vv / major)) < 1e-6 ? ma : mi).push(vv); }
@@ -1535,7 +1518,7 @@ window.REPORT = D;
     };
   }
   function raw(fn) { return (index, scales, values, dims) => { const g = document.createElementNS(SVGNS, "g"); g.innerHTML = fn(scales, dims); return g; }; }
-  function plot(o) { return Plot.plot(Object.assign({ axis: null, style: "background:transparent;overflow:visible", r: { type: "identity" } }, o)); }
+  function plot(o) { return Plot.plot(Object.assign({ axis: null, style: "background:transparent;overflow:visible", r: { type: "identity" } }, o)); } // o.style: a figure's chartType().style
   // Plot's text centres on y (lineAnchor middle) here: a top or bottom frameAnchor would otherwise hang or seat the text.
   const txt = (data, o) => Plot.text(data, Object.assign({ lineAnchor: "middle" }, o));
   const one = (text, o) => txt([0], Object.assign({ text: () => text }, o));
@@ -1559,57 +1542,74 @@ window.REPORT = D;
   }
   /* ---------- Figure 2: forest, both sets, two framed panels ---------- */
   function renderForest() {
-    const el = $("#forest"); const W = Math.max(320, el.clientWidth); const narrow = W < 700;
+    const el = $("#forest"); const W = Math.max(320, el.clientWidth);
+    const { fs, sc, lh, style } = chartType(el), idFs = fs - 1, px = (v) => Math.round(v * sc);
+    const narrow = W < 50 * fs; // the stacked layout: a phone, or a large text size (700 px at the chart's 14 px)
     const U = unionKeys();
     const repr = (u) => SETS.map((s) => rowOf(s, u.key)).filter((r) => r && r.plotted);
     const groups = famRows(U.map((u) => u.any)).map((g) => ({ f: g.f, keys: U.filter((u) => u.any.family === g.f).sort((a, b) => { const ra = repr(a)[0], rb = repr(b)[0]; return rb.acc[0] - ra.acc[0]; }) }));
     const cwMax = Math.min(1, Math.ceil(Math.max(...Object.values(ALL).filter((r) => r.plotted).map((r) => r.cw[2])) * 10 + 0.5) / 10);
-    const panels = [{ k: "acc", title: "Right, % of runs", axis: "% of runs right, mean and 95% interval", max: 1, minor: 0.02, major: 0.1, ticks: narrow ? [0, .5, 1] : [0, .2, .4, .6, .8, 1] },
-                    { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, ticks: [] }];
-    for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : 0.05) panels[1].ticks.push(+v.toFixed(2));
-    const rh = narrow ? 36 : 30, gh = 28;
-    // narrow: the label column fits the longest setup name (11.5 px monospace, about 0.62 em a character)
-    const L = narrow ? Math.min(Math.round(W * 0.48), Math.max(132, Math.ceil(Math.max(...U.map((u) => u.any.arm.length)) * 11.5 * 0.62) + 8)) : 330, gap = 40;
-    const pw = (W - L - gap - 10) / 2, plotW = narrow ? W - L - 26 : pw - 16; // a panel's plot width
+    const panels = [{ k: "acc", title: "Right, % of runs", axis: "% of runs right, mean and 95% interval", max: 1, minor: 0.02, major: 0.1, steps: [0.2, 0.25, 0.5, 1] },
+                    { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, steps: [0.05, 0.1, 0.2, 0.25, 0.5] }];
+    const rh = px(narrow ? 36 : 30), gh = px(28);
+    // the label column: the longest setup name (mono, measured), then on wide screens the model beside it
+    const idW = Math.ceil(Math.max(...U.map((u) => measure(u.any.arm, idFs, 600, true))));
+    const modelX = narrow ? 0 : idW + 14;
+    const L = narrow ? Math.min(Math.round(W * 0.48), Math.max(132, idW + 8)) : modelX + px(180), gap = 40;
+    const rEdge = Math.max(18, Math.ceil(measure("100", fs) / 2 + fs * 0.25)); // a panel's right margin: half its last tick label
+    const pw = (W - L - gap - 10) / 2, plotW = narrow ? W - L - 8 - rEdge : pw - 16; // a panel's plot width
+    // each axis takes the finest of its steps whose labels stand apart at this text size
+    panels.forEach((p) => { p.ticks = tickSteps(0, p.max, p.steps, plotW, fs); });
     const mbLines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
     const mbText = `managed best: ${mbLines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`;
     // A panel too narrow for its title and the managed best on one line takes the stacked head (title, then
     // the managed best below it), and the short axis captions when the long ones would run past the panel.
-    const stackHead = narrow || measure(panels[0].title, 12.5, 600) + 16 + measure(mbText, 11.5) > plotW;
-    const shortAxis = narrow || panels.some((p) => measure(p.axis, 11.5) > plotW + 8);
-    const top = stackHead ? 62 : 46;
+    const stackHead = narrow || measure(panels[0].title, fs, 700) + 16 + measure(mbText, fs) > plotW;
+    const shortAxis = narrow || panels.some((p) => measure(p.axis, fs) > plotW + 8);
+    // stacked, the titles and the managed best's note wrap within the panel; each extra line lowers the plot by a
+    // line, and so does each extra line of the axis captions under it
+    panels.forEach((p) => { p.tWrap = stackHead ? wrapRuns([{ t: p.title }], plotW + 12, fs, 700) : [[{ t: p.title }]];
+      p.cap = shortAxis ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis; p.cWrap = wrapRuns([{ t: p.cap }], plotW + 14, fs); });
+    const mbWrap = stackHead ? wrapRuns([{ t: mbText }], plotW + 12, fs) : [[{ t: mbText }]], mbX = (mbWrap.length - 1) * lh;
+    const tX = Math.max(...panels.map((p) => p.tWrap.length - 1)) * lh, capX = Math.max(...panels.map((p) => p.cWrap.length - 1)) * lh;
+    const top = px(stackHead ? 62 : 46) + mbX + tX, mB = px(40) + capX; // mB: the plot's bottom margin, the axis and its caption
     // The setup's model and the family names wrap within the label column; a row or header takes a line per wrap.
-    const modelRoom = narrow ? L - 6 : L - 150 - 6, modelSize = narrow ? 11.5 : 12.5, modelStep = narrow ? 13 : 15;
+    const modelRoom = L - modelX - 6, modelSize = fs, modelStep = lh;
     const modelLines = (u) => { const t = tgOf({ u }); return wrapRuns([{ t: u.any.modelLabel }].concat(t ? [{ t: ", " + (narrow ? t.replace("pending: deciding run", "pending") : t), c: "t-mute" }] : []), modelRoom, modelSize); };
     // rows on a pixel layout (Plot's identity y): a header per family, then its setups
-    let y = top + (narrow ? 4 : 0); const heads = [], rows = [], seq = []; // narrow: room for the glider's value above the first header
-    groups.forEach((g) => { const hl = wrapRuns([{ t: D.familyLabel[g.f] || g.f }], L - 28, 12.5, 600); const h = { f: g.f, y: y + 18, lines: hl }; heads.push(h); seq.push(h); y += gh + (hl.length - 1) * 15;
-      g.keys.forEach((u) => { const ml = modelLines(u); const q = { u, y: y + rh / 2, lines: ml }; rows.push(q); seq.push(q); y += rh + (ml.length - 1) * modelStep; }); });
-    const H = y + 44;
+    let y = top + (narrow ? px(4) : 0); const heads = [], rows = [], seq = []; // narrow: room for the glider's value above the first header
+    groups.forEach((g) => { const hl = wrapRuns([{ t: D.familyLabel[g.f] || g.f }], L - 28, fs, 700); const h = { f: g.f, y: y + px(18), lines: hl }; heads.push(h); seq.push(h); y += gh + (hl.length - 1) * lh;
+      g.keys.forEach((u) => {
+        const ml = modelLines(u), il = narrow ? wrapRuns([{ t: u.arm }], L - 6, idFs, 600, true) : [[{ t: u.arm }]];
+        // narrow: the id's lines, then the model's, centred on the row's marks; wide: id and model side by side
+        const textH = narrow ? (il.length + ml.length) * lh : ml.length * lh, hgt = narrow ? Math.max(rh, textH + px(6)) : rh + (ml.length - 1) * modelStep;
+        const q = { u, y: y + (narrow ? hgt / 2 : rh / 2), lines: ml, idLines: il, textTop: narrow ? y + (hgt - textH) / 2 + lh / 2 : 0 };
+        rows.push(q); seq.push(q); y += hgt; }); });
+    const H = y + px(44) + capX;
     const pts = [];
     rows.forEach((q) => SETS.forEach((s, si) => { const r = rowOf(s, q.u.key); if (r && r.plotted) pts.push({ r, u: q.u, si, y: q.y + (SETS.length > 1 ? (si ? 6 : -6) : 0) }); }));
     function tgOf(q) { const rs = SETS.map((s) => rowOf(s, q.u.key)); return [rs.some((r) => r && r.partial) ? "partial" : null, q.u.any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", "); }
     // one panel as a Plot; its row elements stay in the collector until assemble() orders them
     function panel(p, width, ml, mr, labels) {
       const C = collector(), m = [];
-      m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -(stackHead ? 42 : 26), insetBottom: -12, ariaHidden: true }));
-      const [mi, ma] = steps(0, p.max, p.minor, p.major);
-      m.push(Plot.gridX({ ticks: mi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ma, stroke: "var(--grid-major)", strokeOpacity: 1 }));
+      m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -px(stackHead ? 42 : 26) - mbX - tX, insetBottom: -12, ariaHidden: true }));
+      const [, ma] = steps(0, p.max, p.minor, p.major); // the kit's quiet grid: the major steps only, on --hair
+      m.push(Plot.gridX({ ticks: ma, stroke: "var(--grid-major)", strokeOpacity: 1 }));
       m.push(Plot.axisX({ ticks: p.ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }));
-      m.push(one(shortAxis ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis, { frameAnchor: "bottom-left", dy: mid(H - 8, 11.5) - (H - 40), textAnchor: "start", className: "t-mute f11" }));
-      m.push(one(p.title, { frameAnchor: "top-left", dy: mid(top - (stackHead ? 30 : 13), 12.5) - (top - 4), textAnchor: "start", className: "t-strong", render: p.k === "cw" ? tag([0], (t) => attrs(t, { "data-term": "confident-wrong", tabindex: 0 })) : undefined }));
+      m.push(one(p.cap, { frameAnchor: "bottom-left", dy: mid(H - px(8) - capX, fs) - (H - mB), textAnchor: "start", className: "t-mute f11", render: p.cWrap.length > 1 ? tag([0], (t) => { t.innerHTML = linesHTML(p.cWrap, lh); }) : undefined }));
+      m.push(one(p.title, { frameAnchor: "top-left", dy: mid(top - mbX - tX - px(stackHead ? 30 : 13), fs) - (top - 4), textAnchor: "start", className: "t-strong", render: tag([0], (t) => { if (p.tWrap.length > 1) t.innerHTML = linesHTML(p.tWrap, lh); if (p.k === "cw") attrs(t, { "data-term": "confident-wrong", tabindex: 0 }); }) }));
       if (p.k === "acc") {
         const lines = mbLines;
         m.push(Plot.ruleX(lines.filter((q) => !q.si), { x: "v", stroke: "var(--ink-2)", strokeWidth: 1 }));
         m.push(Plot.ruleX(lines.filter((q) => q.si), { x: "v", stroke: "var(--ink-3)", strokeWidth: 1, strokeDasharray: "1 3" }));
-        if (lines.length) m.push(one(mbText, { frameAnchor: stackHead ? "top-left" : "top-right", textAnchor: stackHead ? "start" : "end", dy: mid(top - 13, 11.5) - (top - 4), className: "t-mute f11", render: tag([0], (t) => attrs(t, { "data-term": "managed-best", tabindex: 0 })) }));
+        if (lines.length) m.push(one(mbText, { frameAnchor: stackHead ? "top-left" : "top-right", textAnchor: stackHead ? "start" : "end", dy: mid(top - mbX - px(13), fs) - (top - 4), className: "t-mute f11", render: tag([0], (t) => { if (mbWrap.length > 1) t.innerHTML = linesHTML(mbWrap, lh); attrs(t, { "data-term": "managed-best", tabindex: 0 }); }) }));
       }
       if (labels) {
-        m.push(Plot.ruleY(heads, { y: (h) => h.y - 4, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
-        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => { if (h.lines.length > 1) e.innerHTML = linesHTML(h.lines, 15); C.put("h" + h.f)(e); }) }));
-        m.push(txt(rows, { y: (q) => (narrow ? mid(q.y - 3, 11.5) : mid(q.y + 4, 11.5)), text: (q) => q.u.arm, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-id",
-          render: tag(rows, (e, q) => { attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); C.put("l" + q.u.key)(e); }) }));
-        m.push(txt(rows, { y: (q) => (narrow ? mid(q.y + 11, 11.5) : mid(q.y + 4, 12.5)), text: (q) => q.u.any.modelLabel, frameAnchor: "left", dx: -ml + (narrow ? 0 : 150), textAnchor: "start", className: narrow ? "f11" : undefined,
+        m.push(Plot.ruleY(heads, { y: (h) => h.y, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
+        m.push(txt(heads, { y: (h) => h.y, text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => { if (h.lines.length > 1) e.innerHTML = linesHTML(h.lines, lh); C.put("h" + h.f)(e); }) }));
+        m.push(txt(rows, { y: (q) => (narrow ? q.textTop : q.y), text: (q) => q.u.arm, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-id",
+          render: tag(rows, (e, q) => { if (q.idLines.length > 1) e.innerHTML = linesHTML(q.idLines, lh); attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); C.put("l" + q.u.key)(e); }) }));
+        m.push(txt(rows, { y: (q) => (narrow ? q.textTop + q.idLines.length * lh : q.y), text: (q) => q.u.any.modelLabel, frameAnchor: "left", dx: -ml + modelX, textAnchor: "start",
           render: tag(rows, (e, q) => { if (q.lines.length > 1 || q.lines[0].length > 1) e.innerHTML = linesHTML(q.lines, modelStep); C.put("l" + q.u.key)(e); }) }));
       }
       // per row and set: the hit band, then each interval and its glyph
@@ -1621,7 +1621,7 @@ window.REPORT = D;
       });
       m.push(glyphs(pts, { x: (d) => d.r[p.k][0], y: "y", r: (d) => (d.si ? 3.5 : 4.2), role: (d) => d.r.role, color: (d) => famC(d.u.any.family), hollow: (d) => d.si > 0, tag: pm }));
       if (p.k === "cw" && gHome("cw") != null) m.push(Plot.ruleX([gHome("cw") / 100], { x: (v) => v, stroke: "var(--ink-2)", strokeWidth: 1, className: "over-rows" }));
-      const svg = plot({ width, height: H, marginLeft: ml, marginRight: mr, marginTop: top - 4, marginBottom: 40, x: { domain: [0, p.max] }, y: { type: "identity" }, marks: m });
+      const svg = plot({ width, height: H, marginLeft: ml, marginRight: mr, marginTop: top - 4, marginBottom: mB, style, x: { domain: [0, p.max] }, y: { type: "identity" }, marks: m });
       return { p, svg, C, x: svg.scale("x") };
     }
     // The rows in the old order, label then one focusable group per set; a second panel's parts join the
@@ -1649,14 +1649,15 @@ window.REPORT = D;
       const p = pt.p, mx = Math.round(p.max * 100), x0 = (pt.dx || 0) + pt.x.apply(0), x1 = (pt.dx || 0) + pt.x.apply(p.max);
       const strip = (y, h) => `<rect class="gtrack" data-panel="${p.k}" x="${x0 - 8}" y="${y}" width="${x1 - x0 + 16}" height="${h}" fill="transparent"/>`;
       const rules = p.k === "acc" ? SETS.map((s) => byId(S(s).managedBest)).filter(Boolean).map((r) => r.acc[0] * 100) : [gHome("cw")];
-      return strip(top - 8, 18) + strip(H - 49, 30) + `<g class="glider" data-panel="${p.k}" data-rules="${rules.join(",")}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
-        <rect class="ghit" x="0" y="${top + 10}" width="28" height="${H - 49 - top - 10}" fill="transparent"/><rect class="ghit" x="5" y="${top - 10}" width="18" height="22" fill="transparent"/><rect class="ghit" x="5" y="${H - 51}" width="18" height="22" fill="transparent"/><line class="gl" x1="14" x2="14" y1="${top - 4}" y2="${H - 40}"/>
-        <rect class="gh top" x="8" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="8" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="24" y="${top + 5}" style="font-size:12px"></text></g>`;
+      const bot = H - mB; // the axis line, where the bottom handle sits
+      return strip(top - 8, 18) + strip(bot - 9, 30) + `<g class="glider" data-panel="${p.k}" data-rules="${rules.join(",")}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${bot}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+        <rect class="ghit" x="0" y="${top + 10}" width="28" height="${bot - 9 - top - 10}" fill="transparent"/><rect class="ghit" x="5" y="${top - 10}" width="18" height="22" fill="transparent"/><rect class="ghit" x="5" y="${bot - 11}" width="18" height="22" fill="transparent"/><line class="gl" x1="14" x2="14" y1="${top - 4}" y2="${bot}"/>
+        <rect class="gh top" x="8" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="8" y="${bot - 9}" width="12" height="18" rx="3"/><text class="gv" x="24" y="${top + 1 + fs * 0.35}" style="font-size:${fs}px"></text></g>`;
     }
     const finish = (svg, label) => { svg.setAttribute("aria-label", `${label} per setup and model, both question sets`); svg.style.width = "100%"; };
     el.innerHTML = "";
     if (narrow) panels.forEach((p) => {
-      const pt = panel(p, W, L + 8, 18, true); settle(pt.svg, rowsOf([pt]));
+      const pt = panel(p, W, L + 8, rEdge, true); settle(pt.svg, rowsOf([pt]));
       pt.svg.append(G(null, [])); pt.svg.lastChild.innerHTML = glider(pt); finish(pt.svg, p.title);
       const d = document.createElement("div"); d.className = "stack"; d.append(pt.svg); el.append(d);
     });
@@ -1764,24 +1765,26 @@ window.REPORT = D;
   /* ---------- Figure 3: scatter (one set) ---------- */
   function renderScatter() {
     const s = view.scatter; const el = $("#scatter"); const W = Math.max(320, el.clientWidth);
+    const { fs, sc, style } = chartType(el), px = (v) => Math.round(v * sc);
     const rows = S(s).rows.filter((r) => r.plotted);
     const H = Math.round(W < 640 ? W * 1.0 : Math.min(560, W * 0.48));
-    const m = { t: 14, r: 16, b: 46, l: 54 };
+    const m = { t: px(14), r: Math.max(16, Math.ceil(measure("100", fs) / 2 + fs * 0.25)), b: px(46), l: px(54) }; // r: room for half the last x label
     const xmin = Math.max(0, Math.floor(Math.min(...rows.map((r) => r.acc[1])) * 10) / 10);
     const ymax = Math.max(0.1, Math.ceil(Math.max(...rows.map((r) => r.cw[2])) * 20) / 20);
     const x = lin(xmin, 1, m.l, W - m.r), y = lin(0, ymax, m.t, H - m.b); // the same mapping as Plot's scales, for label placement
     $("#t3").textContent = (D.sentences.scatter || {})[s] || "Accuracy against confident-wrong per setup and model.";
-    const [gxi, gxa] = steps(xmin, 1, 0.02, 0.1), [gyi, gya] = steps(0, ymax, 0.01, 0.05);
-    const xt = []; for (let v = Math.ceil(xmin * 10) / 10; v <= 1 + 1e-9; v += W < 640 ? 0.2 : 0.1) xt.push(+v.toFixed(2));
-    const yt = []; for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.25 ? 0.1 : 0.05) yt.push(+v.toFixed(2));
+    const [, gxa] = steps(xmin, 1, 0.02, 0.1), [, gya] = steps(0, ymax, 0.01, 0.05); // the kit's quiet grid: major steps only
+    const xt = tickSteps(xmin, 1, [0.1, 0.2, 0.5], W - m.l - m.r, fs);
+    const yt = tickSteps(0, ymax, [0.05, 0.1, 0.2, 0.25, 0.5].filter((c) => ymax <= 0.25 || c >= 0.1), H - m.t - m.b, fs);
+    // the rotated y title: the longest wording that fits the plot's height
+    const yTitle = ["Confident-wrong, % of runs (lower is safer)", "Confident-wrong, % of runs", "Confident-wrong, %"].find((t) => measure(t, fs, 700) <= H - m.t - m.b) || "Confident-wrong, %";
     const C = collector();
     const mk = [
-      Plot.gridX({ ticks: gxi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: gxa, stroke: "var(--grid-major)", strokeOpacity: 1 }),
-      Plot.gridY({ ticks: gyi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridY({ ticks: gya, stroke: "var(--grid-major)", strokeOpacity: 1 }),
-      Plot.axisX({ ticks: xt, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
+      Plot.gridX({ ticks: gxa, stroke: "var(--grid-major)", strokeOpacity: 1 }), Plot.gridY({ ticks: gya, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+      Plot.axisX({ ticks: xt, tickFormat: P, tickSize: 0, tickPadding: Math.round(fs * 0.9), label: null, className: "t-mute" }), // below the lowest y label's box
       Plot.axisY({ ticks: yt, tickFormat: P, tickSize: 0, tickPadding: 6, label: null, className: "t-mute" }),
-      one("Right, % of runs", { frameAnchor: "bottom-right", dy: mid(H - 6, 12.5) - (H - m.b), textAnchor: "end", className: "t-ink" }),
-      one("Confident-wrong, % of runs (lower is safer)", { frameAnchor: "left", dx: -(m.l - 14) - 4, rotate: -90, textAnchor: "middle", className: "t-ink" }),
+      one("Right, % of runs", { frameAnchor: "bottom-right", dy: mid(H - px(6), fs) - (H - m.b), textAnchor: "end", className: "t-strong" }),
+      one(yTitle, { frameAnchor: "left", dx: -(m.l - px(14)) - 4, rotate: -90, textAnchor: "middle", className: "t-strong" }),
     ];
     const mb = byId(S(s).managedBest);
     if (mb) mk.push(Plot.ruleX([mb.acc[0]], { x: (v) => v, stroke: "var(--ink-3)", strokeDasharray: "1 3" }));
@@ -1803,7 +1806,7 @@ window.REPORT = D;
       mk.push(txt([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
         stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([K.r], (e, q) => { e.classList.add("direct"); attrs(e, { "data-setup": q.arm, "data-arm": q.arm }); C.put("l" + K.i)(e); }) }));
     });
-    const svg = plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk });
+    const svg = plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, style, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk });
     const rowsG = G();
     order.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, C.take("t" + r.id))])));
     keys.forEach((K) => { K.g = G(mkOf(K.r), [...C.take("r" + K.i), ...C.take("l" + K.i)]); K.text = K.g.querySelector("text"); K.px = x(K.r.acc[0]); K.py = y(K.r.cw[0]); rowsG.append(K.g); }); // above every other mark
@@ -1865,16 +1868,21 @@ window.REPORT = D;
   /* ---------- Figure 4: strip plot by question group, both sets ---------- */
   function renderStrip() {
     const el = $("#strip"); const W = Math.max(320, el.clientWidth); const narrow = W < 640;
-    const Lw = narrow ? 104 : 150, lane = 11, ml = Lw + 10, mr = 20;
-    let y = 22; const blocks = [];
+    const { fs, sc, style } = chartType(el), px = (v) => Math.round(v * sc);
+    const lane = 11, mr = Math.max(20, Math.ceil(measure("100", fs) / 2 + fs * 0.25)); // mr: room for half the last tick label
+    // the label column fits the longest group name (bold) and set label, measured in the figure's font
+    const subText = (s, g) => `${short(s)}, ${S(s).groupCases[g] || 0} q`;
+    const Lw = Math.ceil(Math.max(narrow ? 96 : 140, ...D.groupsAll.map((g) => measure(g.label, fs, 700)), ...SETS.flatMap((s) => D.groupsAll.map((g) => measure(subText(s, g.key), fs))))) + 4, ml = Lw + 10;
+    let y = px(26); const blocks = [];
     D.groupsAll.forEach((g) => {
       const subs = SETS.filter((s) => S(s).rows.some((r) => r.plotted && r.groups[g.key]));
       if (!subs.length) return;
-      const b = { g, y0: y, subs: [] }; y += 18;
-      subs.forEach((s) => { const fams = famsPresent(S(s).rows.filter((r) => r.plotted && r.groups[g.key])); b.subs.push({ s, y0: y, fams }); y += fams.length * lane + 10; });
+      const b = { g, y0: y, subs: [] }; y += px(20);
+      // a set's lanes stand at least a line of text tall, so its label never meets the next set's
+      subs.forEach((s) => { const fams = famsPresent(S(s).rows.filter((r) => r.plotted && r.groups[g.key])); const hgt = Math.max(fams.length * lane, Math.ceil(fs * 1.3)); b.subs.push({ s, y0: y, fams, hgt }); y += hgt + 10; });
       b.y1 = y; y += 10; blocks.push(b);
     });
-    const H = y + 34;
+    const H = y + px(34);
     const GT = new Proxy({}, { get: (_, k) => TK(k) });
     blocks.forEach((b, bi) => (b.i = bi));
     const subs = blocks.flatMap((b) => b.subs.map((sb) => Object.assign({ b }, sb)));
@@ -1883,25 +1891,25 @@ window.REPORT = D;
     subs.forEach((sb) => {
       const thin = (S(sb.s).groupCases[sb.b.g.key] || 0) < 10; sb.lanes = [];
       sb.fams.forEach((f, fi) => {
-        const ln = { y: sb.y0 + fi * lane + lane / 2, i: lanes.length, pts: [] }; lanes.push(ln); sb.lanes.push(ln);
+        const ln = { y: sb.y0 + (sb.hgt - sb.fams.length * lane) / 2 + fi * lane + lane / 2, i: lanes.length, pts: [] }; lanes.push(ln); sb.lanes.push(ln);
         S(sb.s).rows.filter((r) => r.plotted && r.family === f && r.groups[sb.b.g.key]).sort((a, c) => a.primary - c.primary).forEach((r) => { const d = { r, g: sb.b.g, y: ln.y, thin, i: pts.length }; pts.push(d); ln.pts.push(d); });
       });
     });
-    const [gi, ga] = steps(0, 1, 0.05, 0.25), ticks = [0, .25, .5, .75, 1];
+    const ticks = tickSteps(0, 1, [0.25, 0.5, 1], W - ml - mr, fs), ga = ticks;
     const C = collector();
     const mk = [
-      Plot.gridX({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+      Plot.gridX({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
       Plot.axisX({ anchor: "bottom", ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
       Plot.axisX({ anchor: "top", ticks, tickFormat: P, tickSize: 0, tickPadding: 2, label: null, className: "t-mute" }),
-      one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - 4, 12.5) - (H - 34), textAnchor: "end", className: "t-ink" }), // baseline 4 px up: the comma's descender stays inside the SVG
+      one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - px(4), fs) - (H - px(34)), textAnchor: "end", className: "t-strong" }), // baseline 4 px up: the comma's descender stays inside the SVG
       Plot.ruleY(blocks, { y: (b) => b.y0 - 4, stroke: "var(--rule)", insetLeft: -ml, insetRight: -mr, render: tag(blocks, (e, b) => C.put("b" + b.i)(e)) }),
-      txt(blocks, { y: (b) => mid(b.y0 + 10, 12.5), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); C.put("b" + b.i)(e); }) }),
-      txt(subs, { y: (sb) => mid(sb.y0 + (sb.fams.length * lane) / 2 + 4, 12), text: (sb) => `${short(sb.s)}, ${S(sb.s).groupCases[sb.b.g.key] || 0} q`, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12", render: tag(subs, (e, sb) => C.put("s" + sb.i)(e)) }),
+      txt(blocks, { y: (b) => b.y0 + px(8), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); C.put("b" + b.i)(e); }) }),
+      txt(subs, { y: (sb) => sb.y0 + sb.hgt / 2, text: (sb) => subText(sb.s, sb.b.g.key), frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12", render: tag(subs, (e, sb) => C.put("s" + sb.i)(e)) }),
       Plot.ruleY(lanes, { y: (l) => l.y, stroke: "var(--grid)", render: tag(lanes, (e, l) => C.put("n" + l.i)(e)) }),
       Plot.dot(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 7, fill: "transparent", sort: null, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.i)(e); }) }),
       glyphs(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 3.6, role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: (e, d) => C.put("t" + d.i)(e) }),
     ];
-    const svg = plot({ width: W, height: H, marginTop: 14, marginRight: mr, marginBottom: 34, marginLeft: ml, x: { domain: [0, 1] }, y: { type: "identity" }, ariaLabel: "Share right by question group, both question sets", marks: mk });
+    const svg = plot({ width: W, height: H, marginTop: px(16), marginRight: mr, marginBottom: px(34), marginLeft: ml, style, x: { domain: [0, 1] }, y: { type: "identity" }, ariaLabel: "Share right by question group, both question sets", marks: mk });
     // reading order: each block's rule and heading, then per set its label, then each lane and its marks
     const rowsG = G();
     blocks.forEach((b) => {
@@ -1924,8 +1932,9 @@ window.REPORT = D;
   const shortModel = (r) => r.modelLabel.replace("Nemotron free", "free").replace("Claude Code ", "CC ").replace("Gemini ", "").replace(", fresh sessions", " fresh");
   function renderSlopes() {
     const s = view.slopes; const el = $("#slopes"); const W = Math.max(320, el.clientWidth);
+    const { fs, sc, lh, style } = chartType(el), px = (v) => Math.round(v * sc);
     const cols = W >= 760 ? 2 : 1; const gapX = 36, gapY = 40;
-    const pw = (W - gapX * (cols - 1)) / cols, ph = cols === 2 ? 360 : 330;
+    const pw = (W - gapX * (cols - 1)) / cols, ph0 = px(cols === 2 ? 360 : 330);
     const keys = ["covered", "trap", "uncovered"], names = ["Covered", "Hidden-rule", "Uncovered"], terms = ["covered", "hidden-rule", "uncovered"];
     const rows = S(s).rows.filter((r) => r.plotted && keys.every((k) => r.groups[k]));
     const mb = byId(S(s).managedBest);
@@ -1935,34 +1944,53 @@ window.REPORT = D;
     el.innerHTML = ""; el.classList.add("panels"); el.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`; el.style.gap = `${gapY}px ${gapX}px`; el.style.paddingBottom = `${gapY}px`;
     el.setAttribute("role", "group"); el.setAttribute("aria-label", `Share right on covered, hidden-rule and uncovered questions, ${S(s).label}`);
     panels.forEach((p) => {
-      const lw = Math.min(200, pw * 0.4); const ml = 34, mr = lw + 10, t = 44, b = ph - 36;
-      const yv = (py) => (b - py) / (b - t); // pixel to share right, the inverse of Plot's y scale here
-      const ypx = (v) => b - v * (b - t);
+      const lw = Math.min(px(220), pw * 0.42), ml = Math.ceil(measure("100", fs)) + 12, mr = lw + 10;
+      // the family's name (wrapping in the panel) and "% of runs right" over the plot
+      const hl = wrapRuns([{ t: D.familyLabel[p.f] || p.f }], pw - 4, fs, 700), hy = Math.round(fs * 0.8), t = hy + hl.length * lh + Math.ceil(fs * 1.4);
+      // the three kinds under the plot: Covered and Uncovered on the first row, Hidden-rule on the second, and
+      // Uncovered on a third when it would meet Covered (a narrow panel at a large text size)
+      const x0 = ml, x2 = pw - mr, cw = names.map((n) => measure(n, fs));
+      const uRow = x0 - 8 + cw[0] + fs * 0.5 > x2 + 8 - cw[2] ? 2 : 0, rowY = (k) => Math.round(fs * 1.4) + k * lh; // the first row clears the "0" tick's box
+      const mBot = rowY(Math.max(1, uRow)) + Math.ceil(fs * 0.6) + 2;
       // a label wider than the label column wraps, its lines running down from its mark's height
       const labText = (r) => `${shortArm(r.arm)} ${shortModel(r)} ${P(r.groups.uncovered[0])}${r.status === "pending" ? " (pending)" : ""}`;
-      const lab = p.rows.map((r) => ({ r, y: ypx(r.groups.uncovered[0]), lines: wrapRuns([{ t: labText(r) }], lw - 4, 11.5) }));
+      const wrapped = p.rows.map((r) => ({ r, lines: wrapRuns([{ t: labText(r) }], lw - 4, fs, r.primary ? 700 : 400) }));
       const ghost = mb && p.f !== mb.family && mb.groups.uncovered;
-      if (ghost) lab.push({ ghost: true, y: ypx(mb.groups.uncovered[0]), lines: [[{ t: "" }]] });
+      const ghostLines = ghost ? wrapRuns([{ t: `managed best ${P(mb.groups.uncovered[0])}` }], lw - 4, fs) : [];
+      // labels stack a full line apart (lh, the rendered line box), so none can meet another; a panel whose labels
+      // need more height than its plot grows to hold them
+      const need = (wrapped.reduce((n, l) => n + l.lines.length, 0) + ghostLines.length) * lh;
+      const ph = Math.max(ph0, Math.ceil(need + t + mBot - 6)), b = ph - mBot;
+      const yv = (py) => (b - py) / (b - t); // pixel to share right, the inverse of Plot's y scale here
+      const ypx = (v) => b - v * (b - t);
+      const lab = wrapped.map((l) => Object.assign(l, { y: ypx(l.r.groups.uncovered[0]) }));
+      if (ghost) lab.push({ ghost: true, y: ypx(mb.groups.uncovered[0]), lines: ghostLines });
       lab.sort((a, c) => c.y - a.y);
-      for (let k = 1; k < lab.length; k++) { const need = 13 * lab[k].lines.length; if (lab[k - 1].y - lab[k].y < need) lab[k].y = lab[k - 1].y - need; }
-      const over = lab.length ? Math.min(0, lab[lab.length - 1].y - (t - 6)) : 0; if (over < 0) lab.forEach((l) => (l.y -= over));
-      const [gi, ga] = steps(0, 1, 0.05, 0.25);
+      // bottom up: each label sits at least its own lines' height above the one below (its lines run downward)
+      for (let k = 1; k < lab.length; k++) { const gap = lh * lab[k].lines.length; if (lab[k - 1].y - lab[k].y < gap) lab[k].y = lab[k - 1].y - gap; }
+      // a stack that rose past the top starts at the top and runs down again, moving only the labels it must,
+      // so the low labels stay beside their marks
+      if (lab.length && lab[lab.length - 1].y < t - 6) {
+        lab[lab.length - 1].y = t - 6;
+        for (let k = lab.length - 2; k >= 0; k--) { const gap = lh * lab[k + 1].lines.length; if (lab[k].y - lab[k + 1].y < gap) lab[k].y = lab[k + 1].y + gap; }
+      }
+      const ga = tickSteps(0, 1, [0.25, 0.5, 1], b - t, fs, lh);
       const ord = p.rows.slice().sort((a, c) => a.primary - c.primary);
       const line = ord.flatMap((r) => keys.map((k) => ({ r, k, v: r.groups[k][0] })));
       const aria = (r) => label(r) + ": covered " + P(r.groups.covered[0]) + "%, hidden-rule " + P(r.groups.trap[0]) + "%, uncovered " + P(r.groups.uncovered[0]) + "%";
       const C = collector(), put = (e, d) => C.put("t" + d.r.key)(e);
       const mk = [
-        one(D.familyLabel[p.f] || p.f, { frameAnchor: "top-left", dx: -ml, dy: mid(14, 12.5) - t, textAnchor: "start", className: "t-strong", render: tag([0], (e) => attrs(e, { "data-fam": p.f })) }),
-        one("% of runs right", { frameAnchor: "top-left", dx: -ml, dy: mid(30, 11.5) - t, textAnchor: "start", className: "t-mute f11" }),
-        Plot.gridY({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridY({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
-        Plot.axisY({ ticks: [0, .25, .5, .75, 1], tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
+        one(D.familyLabel[p.f] || p.f, { frameAnchor: "top-left", dx: -ml, dy: hy - t, textAnchor: "start", className: "t-strong", render: tag([0], (e) => { if (hl.length > 1) e.innerHTML = linesHTML(hl, lh); attrs(e, { "data-fam": p.f }); }) }),
+        one("% of runs right", { frameAnchor: "top-left", dx: -ml, dy: hy + hl.length * lh - t, textAnchor: "start", className: "t-mute f11" }),
+        Plot.gridY({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+        Plot.axisY({ ticks: ga, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
         Plot.ruleX(keys, { x: (k) => k, stroke: "var(--ink-3)", insetTop: -4 }),
-        ...keys.map((k, j) => one(names[j], { x: () => k, frameAnchor: "bottom", dy: mid(b + (j === 1 ? 30 : 16), 12.5) - b, dx: j === 0 ? -8 : j === 2 ? 8 : 0, textAnchor: j === 0 ? "start" : j === 2 ? "end" : "middle", className: "t-ink", render: tag([0], (e) => attrs(e, { "data-term": terms[j], tabindex: 0 })) })),
+        ...keys.map((k, j) => one(names[j], { x: () => k, frameAnchor: "bottom", dy: rowY(j === 1 ? 1 : j === 2 ? uRow : 0), dx: j === 0 ? -8 : j === 2 ? 8 : 0, textAnchor: j === 0 ? "start" : j === 2 ? "end" : "middle", className: "t-ink", render: tag([0], (e) => attrs(e, { "data-term": terms[j], tabindex: 0 })) })),
       ];
       if (ghost) {
         mk.push(Plot.line(keys.map((k) => ({ k, v: mb.groups[k][0] })), { x: "k", y: "v", stroke: "var(--ink-3)", strokeWidth: 1.25, strokeDasharray: "1 3" }));
         const gl = lab.find((l) => l.ghost);
-        mk.push(one(`managed best ${P(mb.groups.uncovered[0])}`, { x: () => "uncovered", y: () => yv(gl.y), dx: 10, dy: 4 - 0.32 * 11.5, textAnchor: "start", className: "t-mute f11" }));
+        mk.push(one(`managed best ${P(mb.groups.uncovered[0])}`, { x: () => "uncovered", y: () => yv(gl.y), dx: 10, textAnchor: "start", className: "t-mute f11", render: ghostLines.length > 1 ? tag([0], (e) => { e.innerHTML = linesHTML(ghostLines, lh); }) : undefined }));
       }
       mk.push(Plot.line(line, { x: "k", y: "v", z: (d) => d.r.key, stroke: "transparent", strokeWidth: 12, render: tag(line, (e, d) => { e.style.pointerEvents = "stroke"; put(e, d); }) }));
       [false, true].forEach((dash) => {
@@ -1971,9 +1999,9 @@ window.REPORT = D;
       });
       mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: put }));
       const lr = lab.filter((l) => !l.ghost);
-      mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, dy: 4 - 0.32 * 11.5, text: (l) => labText(l.r), textAnchor: "start",
-        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, 13); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
-      const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
+      mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, text: (l) => labText(l.r), textAnchor: "start",
+        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-strong" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, lh); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
+      const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, style, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
       // per setup, as before: its line, marks and hit area in one focusable group, then its label
       const rowsG = G();
       ord.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": aria(r) }, C.take("t" + r.key)), ...C.take("l" + r.key)])));
@@ -2248,10 +2276,11 @@ window.REPORT = D;
     $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
   }
 
-  /* ---------- Figure 1's column heads stay on screen while its rows scroll by ---------- */
+  /* ---------- the Decision map's column heads stay on screen while its rows scroll by ---------- */
   // The map scrolls sideways inside its box on narrow screens, which stops a sticky thead at the page's top;
   // so a copy of the head (aria-hidden, no tab stops) sits sticky above the box, laid exactly over the real
-  // head, with each column's width copied and its sideways scroll kept in step.
+  // head, with each column's width copied and its sideways scroll kept in step. The copy shows only once the
+  // real head has gone under the tab strip, so the two are never drawn on top of each other.
   let mapHeadRO = null;
   function stickMapHead() {
     const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
@@ -2260,12 +2289,18 @@ window.REPORT = D;
       head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true"); head.dataset.mirror = "#map thead";
       wrap.parentNode.insertBefore(head, wrap);
       wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
+      const stuck = () => { const th = $("#map") && $("#map").tHead; if (!th) return;
+        const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+        head.classList.toggle("on", th.getBoundingClientRect().top < top - 0.5); };
+      window.addEventListener("scroll", stuck, { passive: true }); window.addEventListener("resize", stuck);
+      head._stuck = stuck;
     }
     const t = document.createElement("table"); t.className = "map"; t.appendChild(thead.cloneNode(true));
     t.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
     t.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
     t.querySelectorAll("button").forEach((b) => (b.tabIndex = -1)); // the copy's sort buttons work by pointer; the keyboard uses the real head
     head.replaceChildren(t);
+    if (head._stuck) requestAnimationFrame(head._stuck);
     const fit = () => {
       const W = tbl.getBoundingClientRect().width; t.style.width = W + "px"; t.style.minWidth = W + "px"; t.style.tableLayout = "fixed";
       const src = [...thead.rows[0].cells], dst = [...t.tHead.rows[0].cells];
@@ -2276,7 +2311,7 @@ window.REPORT = D;
     if (mapHeadRO) mapHeadRO.disconnect();
     if (window.ResizeObserver) { mapHeadRO = new ResizeObserver(() => fit()); mapHeadRO.observe(tbl); [...thead.rows[0].cells].forEach((c) => mapHeadRO.observe(c)); }
   }
-  function renderAll() { hideTip(); renderText(); renderWinners(); renderMapTools(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  function renderAll() { hideTip(); renderText(); renderMapTools(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
@@ -2286,4 +2321,7 @@ window.REPORT = D;
 
   window.__reportMarkReady();
 })();
+</script>
+<script>
+/*SUMMARY_JS*/
 </script>
