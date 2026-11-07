@@ -2159,7 +2159,7 @@ window.REPORT = D;
       + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
       + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 700);
     const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: Math.round(46 * k), marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
-      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink)" : "var(--hair)" }), raw(body)] });
+      Plot.ruleX([0], { stroke: "var(--ink)" }), raw(body)] }); // both charts' zero in full ink (owner, 2026-11-07)
     svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
