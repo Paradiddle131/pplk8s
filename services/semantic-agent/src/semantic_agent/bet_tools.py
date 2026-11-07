@@ -74,7 +74,10 @@ DATA_AGENT_ARMS = (
     "native-bare",
     "native-kc-reach",
     "native-context-bare",
+    "native-context-python",
 )
+# bet-context with Python analysis on: its loop may also run Python on its query results.
+PYTHON_ANALYSIS = frozenset({"python_analysis"})
 
 DECLARED: dict[str, frozenset[str]] = {
     "baseline": frozenset({"execute_sql"}),
@@ -85,6 +88,7 @@ DECLARED: dict[str, frozenset[str]] = {
     "custom-lightdash": frozenset({"query_metrics"}),
     "native-mcp": GOOGLE_MCP,
     **{arm: DATA_AGENT for arm in DATA_AGENT_ARMS},
+    "native-context-python": DATA_AGENT | PYTHON_ANALYSIS,
     # The Claude Code setups: the shell-tool subagents (#374, calls self-reported) and the two
     # variants the strict headless runner gives exactly these tools (#387).
     "cc-metricflow": METRICFLOW,

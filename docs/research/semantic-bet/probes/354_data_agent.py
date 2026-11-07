@@ -71,6 +71,8 @@ AGENTS = {
     # #357's equal-reach arms, published by `--copy`.
     "native-kc-reach": "bet-kc-reach",
     "native-context-bare": "bet-context-bare",
+    # bet-context with Python analysis on (owner, 2026-11-07), published by `--copy`.
+    "native-context-python": "bet-context-python",
 }
 
 
@@ -120,6 +122,10 @@ def turn_of(question: str, summary: dict[str, Any]) -> dict[str, Any]:
     calls += [
         {"tool": "matched_query", "args": {"query": q}}
         for q in summary["matched_query"]
+    ]
+    calls += [
+        {"tool": "python_analysis", "args": {"code": code}}
+        for code in summary.get("python_code") or []
     ]
     return {
         "question": question,
@@ -275,6 +281,7 @@ SOURCES = {
 DERIVED = {
     "native-kc-reach": ("bet-kc", "bet-context"),
     "native-context-bare": ("bet-context",),
+    "native-context-python": ("bet-context",),
 }
 
 
@@ -292,6 +299,12 @@ def derived_context(arm: str, published: dict[str, dict[str, Any]]) -> dict[str,
     if arm == "native-context-bare":
         context = json.loads(json.dumps(published["bet-context"]))
         context.pop("exampleQueries", None)
+        return context
+    if arm == "native-context-python":
+        # bet-context's context with one change: the agent may run Python on its query results.
+        context = json.loads(json.dumps(published["bet-context"]))
+        options = context.setdefault("options", {})
+        options.setdefault("analysis", {})["python"] = {"enabled": True}
         return context
     if arm == "native-kc-reach":
         context = json.loads(json.dumps(published["bet-kc"]))

@@ -41,6 +41,7 @@ Named and frozen by #325 before any is scored; each is built by its own issue.
 | `native-graph` | the data agent with a graph and its measures beside the tables | #331 |
 | `native-kc-reach` | `native-kc` on `native-context`'s tables and legacy schema (joined later, RULE.md § What freezing means) | `bet-kc-reach` #357 |
 | `native-context-bare` | `native-context` without its verified queries (joined later) | `bet-context-bare` #357 |
+| `native-context-python` | `native-context` with Python analysis on (owner, 2026-11-07) | `bet-context-python` |
 | `native-mcp` | an ADK agent on Google's Knowledge Catalog and BigQuery MCP servers | #328 |
 | `custom-metricflow` | the semantic agent's MetricFlow tools | done |
 | `custom-toolbox` | generated MCP Toolbox tools over the table functions | #330 |
