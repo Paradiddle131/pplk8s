@@ -19,8 +19,8 @@ SETS_DIR      directory holding semantic_bet.yaml and semantic_bet_hard.yaml (qu
               default until the owner's go on #380) or `hard-v2`; the family's other version is drawn in
               the decision map only, labelled as not counted in the findings yet. Also BET_REPORT_SHOW.
 
-Writes index.html beside this script, from template.html, with the vendored Observable Plot and d3
-(vendor/, checked by sha256) inlined. Standard library only.
+Writes index.html beside this script, from template.html; the vendored report kit's build (../report-kit/) then inlines
+its components and its Observable Plot and d3, each checked by sha256. Standard library only.
 Every number on the page comes from RESULTS_JSON or from the logs; prose that cites a number is a
 template filled here. Intervals computed here (paired against the floor, per question group) are percentile bootstraps over questions, seeded.
 """
@@ -42,11 +42,8 @@ FALLBACK_LOGS = "/home/user/pplk8s/docs/research/semantic-bet"
 _spec = importlib.util.spec_from_file_location("semantic_bet_brief", os.path.join(HERE, "..", "brief", "build.py"))
 brief = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(brief)
-# The vendored report kit (../report-kit/SOURCE.md); its build inlines the components the Summary tab names.
+# The vendored report kit (../report-kit/SOURCE.md); its build inlines the components the page's markers name, and Plot and d3.
 KIT_BUILD = os.path.join(HERE, "..", "report-kit", "bin", "build.cjs")
-# Observable Plot and its d3, inlined at <!--VENDOR--> so the page stays one file; see vendor/README.md.
-VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"),
-          ("vendor/plot-0.6.17.umd.min.js", "4358086467740777dd788d6b27a95cebdbaefdd50c730a3060117073bd7134cb")]
 
 SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set", "hard-v2": "Extended hard set"}
 # Set families (RULE.md § Set versions): each family's versions, oldest first. The page shows one
@@ -1127,7 +1124,6 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
     if "<!--QUESTIONS-->" in page:  # the section's markup, then its own style and script (questions.html)
         page = page.replace("<!--QUESTIONS-->", qs_html + "\n" + open(os.path.join(HERE, "questions.html"), encoding="utf-8").read())
     page = page.replace("<!--SECTIONS-->", "\n".join(sections))
-    page = page.replace("<!--VENDOR-->", vendor_scripts())
     # The Summary tab: the Approaches page's two sections, on report-kit, scoped to the tab (summary_kit)
     page = page.replace("<!--SUMMARY-->", brief.summary(results_path))
     page = page.replace("/*SUMMARY_CSS*/", scope_to_panel(brief.PAGE_CSS.read_text()))
@@ -1151,21 +1147,6 @@ def summary_kit(path):
     kit's look on what carries .rk-kit and its scripts on what carries .rk-js. Returns the page."""
     subprocess.run(["node", KIT_BUILD, path], check=True, capture_output=True)
     return open(path, encoding="utf-8").read()
-
-
-def vendor_scripts():
-    """The vendored libraries as inline scripts, each checked against its pinned sha256."""
-    out = []
-    for rel, want in VENDOR:
-        raw = open(os.path.join(HERE, rel), "rb").read()
-        got = hashlib.sha256(raw).hexdigest()
-        if got != want:
-            sys.exit("%s: sha256 %s, expected %s (see vendor/README.md)" % (rel, got, want))
-        text = raw.decode("utf-8")
-        if "</script" in text.lower():
-            sys.exit("%s holds a closing script tag; it cannot be inlined" % rel)
-        out.append("<script>\n%s\n</script>" % text.rstrip("\n"))
-    return "\n".join(out)
 
 
 def make_parts(st, rows, mb, floor, mf):
@@ -1234,8 +1215,6 @@ def make_twins(sets, order):
         gap = all(r["unc"] < r["cov"] - 15 for r in st)
         T["stripLead"] = ("On every set, MetricFlow on the free model answers far fewer uncovered questions than covered ones, while the managed best answers most of both." if gap and all((r["mbUnc"] or 0) >= 75 for r in st)
                           else "MetricFlow on the free model, covered against uncovered questions, beside the managed best.")
-    chk = [sets[s]["parts"]["mfCheckUnc"] for s in order if "mfCheckUnc" in sets[s]["parts"]]
-    T["stripNote"] = ("Claude, the check, answers %d to %d%% of uncovered ones." % (min(c[0] for c in chk), max(c[1] for c in chk))) if chk else ""
     return T
 
 

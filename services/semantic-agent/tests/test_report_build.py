@@ -424,11 +424,12 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     css = page[page.index("/* report-kit:css ") : page.index("/* /report-kit:css */")]
     assert '<section class="view on rk-kit rk-js" id="summary"' in page
     assert '<section class="view rk-kit" id="decision-map"' in page
+    assert '<section class="view rk-kit mfa" id="metricflow"' in page
     # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
     for part in moved:
         assert part in page, part
-    for part in ("metricflow", "every-run", "setups", "question-sets", "method"):
+    for part in ("every-run", "setups", "question-sets", "method"):
         assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
@@ -451,7 +452,7 @@ def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):
 def test_the_decision_map_is_on_the_kit_and_marks_no_best(tmp_path):
     page, _ = _built(tmp_path)
     start = page.index('id="decision-map" data-view')
-    panel = page[start : page.index('<section class="view" id="metricflow"')]
+    panel = page[start : page.index('id="metricflow" data-view')]
     assert 'class="rk-head"' in panel and 'class="rk-switch"' in panel and 'id="map-seg"' in panel
     # no table comparing the sets; the filters fold behind the kit's filter beside the switch
     assert 'id="twin1"' not in panel and "MetricFlow against the" not in panel
@@ -464,4 +465,41 @@ def test_the_decision_map_is_on_the_kit_and_marks_no_best(tmp_path):
     assert "dm-ramp" not in page
     assert 'class="rk-sort-mark"' in script and 'data-k="bad"' in script
     plain = re.sub(r"managed[ -]?[bB]est", "", script)
+    assert "best" not in plain
+
+
+def test_the_metricflow_tab_is_on_the_kit_its_charts_on_the_kits_type_and_tokens(tmp_path):
+    """The MetricFlow agent tab on the kit (2026-11-07): the kit's heads and set switches, no table
+    comparing the question sets, no figure numbers, a focus ring on its marks, and charts on the
+    kit's chart theme and tokens with no colour of their own."""
+    page, _ = _built(tmp_path)
+    start = page.index('id="metricflow" data-view')
+    panel = page[page.rindex("<section", 0, start) : page.index('id="every-run" data-view')]
+    assert 'class="view rk-kit mfa"' in panel
+    assert panel.count('class="rk-head"') == 2 and panel.count('class="rk-section"') == 2
+    for view in ("scatter", "slopes"):
+        assert 'class="rk-switch" role="group"' in panel and f'data-view="{view}"' in panel
+    # no twin table comparing the sets, no "Figure N." (owner: as on the Decision map)
+    assert 'id="twin4"' not in panel and "table.tw" not in page and "fignum" not in panel
+    assert not re.search(r"Figure \d", panel)
+    # the kit's chart theme in both markers; Plot and d3 from the kit's vendor marker
+    assert re.search(r"report-kit:css [^*]*plot-theme[^*]*scope=\.rk-kit", page)
+    assert re.search(r"report-kit:js [^*]*plot-theme[^*]*scope=\.rk-js", page)
+    assert "<!-- report-kit:vendor plot -->" in page and "<!--VENDOR-->" not in page
+    assert not (BUILD.parent / "vendor").exists()
+    script = page[page.index("Observable Plot: shared pieces") : page.index("Figure 6: unit plate")]
+    assert "window.ReportKit.plotTheme(el)" in script
+    for fig in ("renderForest", "renderScatter", "renderStrip", "renderSlopes"):
+        body = script[script.index(f"function {fig}()") :]
+        assert "chartType(el)" in body[: body.index("\n  }\n")], fig
+    raw = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
+    assert not raw.search(script), "a raw colour in the figures' code"
+    # the tab's own rules: kit tokens only; a focus ring on every focusable mark, label and glider
+    css = page[page.index("/* the MetricFlow agent tab:") :]
+    css = css[: css.index("/* the report's own tooltip")]
+    assert not raw.search(css), "a raw colour in the tab's rules"
+    ring = "#metricflow .glider:focus-visible { outline: 2.5px solid var(--line)"
+    assert "#metricflow .plot [tabindex]:focus-visible, " + ring in css
+    # no winner marks: the only "best" is the managed best, the bar every setup is paired against
+    plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
     assert "best" not in plain

@@ -1,6 +1,6 @@
 # report-kit, vendored
 
-A copy of the report kit the semantic-bet pages are built with: claude-dotfiles `skills/report-kit` at commit 79b6348 (its PR 52, not yet merged: re-vendor at the merge commit once it lands).
+A copy of the report kit the semantic-bet pages are built with: claude-dotfiles `skills/report-kit` at commit a7587e5 (the merge of its PR 52).
 Only what the pages need is here: the components (`kit/`), the build that inlines them (`bin/build.cjs`) and the checker (`bin/check.cjs`).
 The kit's docs (`SKILL.md`, `STANDARDS.md`, `REFERENCE.md`) stay upstream; read them there.
 
