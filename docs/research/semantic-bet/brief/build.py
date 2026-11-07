@@ -111,6 +111,26 @@ COLUMNS = [  # key, header, the kit's mark kind, tooltip
     ("wrong", "Wrong", "warn", "A wrong number it flagged as uncertain, or an answer with no clear number."),
     ("sure_wrong", "Wrong & sure", "bad", "A wrong number stated as fact, with no warning."),
 ]
+# Four kinds of question, as the evaluation groups them: key in results.json, the column head, its definition, and how
+# the takeaway's sentence says it.  The heads use the glossary's words, so the report's glossary defines them too.
+KINDS = [
+    ("covered", "Covered", "A metric we defined answers it.", "where a metric covers the question"),
+    (
+        "trap",
+        "Hidden rule",
+        "A metric answers it, but the obvious query gives another number: a business rule the table does not show.",
+        "where a hidden business rule applies",
+    ),
+    ("uncovered", "Uncovered", "No metric answers it; only a query over the tables can.", "where no metric covers it"),
+    (
+        "conversation",
+        "Follow-ups",
+        "A follow-up or an unclear word inside a chat; right only when every turn is right.",
+        "on follow-ups",
+    ),
+]
+# How a sentence names each set's questions.
+SET_WORDS = {"frozen": "everyday", "hard": "hard-to-interpret"}
 
 ICON_NAMES = {
     "bq": "BigQuery",
@@ -404,7 +424,49 @@ def takeaways(data, runs=()):
             }
         )
 
+    by_set = [kinds_on(every, setname, label) for setname, label, _ in SETS]
+    if all(by_set):
+        out.append({"key": "kinds", "sets": by_set})
     return out
+
+
+def kinds_on(arms, setname, label):
+    """Right answers in 100 of each approach (the setup its table row stands for) on each kind of question, or None.
+
+    Neutral by construction: the headline says whether the approaches that score highest differ from kind to kind,
+    and the sentence gives each kind's range; nothing names or marks a best approach.
+    """
+    rows = []
+    for name, _, names, _ in APPROACHES:
+        arm = stands_for(arms, names, setname)
+        groups = (arm or {}).get("groups") or {}
+        rows.append({"name": name, "v": {k: round(100 * groups[k][0]) if k in groups else None for k, *_ in KINDS}})
+    n = {}
+    for k, *_ in KINDS:
+        sizes = [a["groups"][k][1] for a in arms if a["set"] == setname and k in (a.get("groups") or {})]
+        n[k] = max(sizes, default=0)
+    ranges = {}
+    for k, *_ in KINDS:
+        vals = [r["v"][k] for r in rows if r["v"][k] is not None]
+        if not vals:
+            return None
+        ranges[k] = (min(vals), max(vals))
+    tops = {frozenset(r["name"] for r in rows if r["v"][k] == ranges[k][1]) for k, *_ in KINDS}
+    headline = (
+        "Each approach is strong on different kinds of question"
+        if len(tops) > 1
+        else "Every approach scores differently by kind of question"
+    )
+    # the first range names its unit, as the other takeaways do; the rest follow it
+    parts = [
+        f"{ranges[k][0]} to {ranges[k][1]}{' right answers in 100' if i == 0 else ''} {say}"
+        for i, (k, _, _, say) in enumerate(KINDS)
+    ]
+    body = (
+        f"On {SET_WORDS.get(setname, label.lower())} questions, the approaches ranged from "
+        f"{', '.join(parts[:-1])}, and {parts[-1]}."
+    )
+    return {"set": setname, "label": label, "headline": headline, "body": body, "rows": rows, "n": n, "ranges": ranges}
 
 
 SR = '<span class="rk-sr">{}</span>'.format
@@ -527,16 +589,56 @@ def pic_harness(t):
     return f'<div class="rk-pic"><ul>{rows}</ul></div>'
 
 
+def pic_kinds(s, hidden):
+    """A grid of approaches (rows, native to custom) by kinds of question (columns): right answers in 100 in each cell,
+    the number over a bar on the 0-100 scale, every cell alike, so no cell stands out as a best."""
+    words = SET_WORDS.get(s["set"], s["label"].lower())
+    heads = "".join(
+        f'<th scope="col">{tipped(f"{s["n"][k]} {words} questions. {text}", html.escape(head).replace("Uncovered", "Un&shy;covered"))}</th>'
+        for k, head, text, _ in KINDS
+    )
+    body = "".join(
+        f'<tr><th scope="row">{html.escape(r["name"])}</th>'
+        + "".join(
+            (
+                f'<td><b>{v}</b>{SR(" right in 100")}<span class="rk-track" aria-hidden="true">'
+                f'<span class="rk-fill" data-k="ok" style="--v:{v}"></span></span></td>'
+            )
+            if v is not None
+            else '<td><b>–</b><span class="rk-sr">not run</span></td>'
+            for v in (r["v"][k] for k, *_ in KINDS)
+        )
+        + "</tr>"
+        for r in s["rows"]
+    )
+    return (
+        f'<div class="rk-pic ap-kinds" data-rk-when="set={s["set"]}"{" hidden" if hidden else ""}><table>'
+        f'<caption class="rk-sr">Right answers in 100 of each approach on four kinds of {words} question</caption>'
+        f'<thead><tr><th scope="col"><span class="rk-sr">Approach</span></th>{heads}</tr></thead>'
+        f"<tbody>{body}</tbody></table></div>"
+    )
+
+
 def render_takeaways(items):
     """Each takeaway as one of the kit's finding rows: its headline and sentence, and one small picture of its figures.
 
     Every picture is drawn on the same 0-100 scale as the table; text stays HTML so it keeps the page's two sizes.
+    The kinds takeaway follows the question-set switch, so it holds one text and one picture per set.
     """
     if not items:
         return ""
     rows = []
     for t in items:
         k = t["key"]
+        if k == "kinds":
+            text = "".join(
+                f'<div data-rk-when="set={s["set"]}"{" hidden" if i else ""}><h3>{html.escape(s["headline"])}</h3>'
+                f"<p>{html.escape(s['body'])}</p></div>"
+                for i, s in enumerate(t["sets"])
+            )
+            pics = "".join(pic_kinds(s, i > 0) for i, s in enumerate(t["sets"]))
+            rows.append(f'<li data-key="kinds" class="ap-wide"><div>{text}</div>{pics}</li>')
+            continue
         pic = {"setup": pic_setup, "definitions": pic_definitions, "rules": pic_rules}.get(k, pic_harness)(t)
         rows.append(
             f'<li data-key="{k}"><div><h3>{html.escape(t["headline"])}</h3>'

@@ -98,6 +98,32 @@ def test_a_covered_score_under_100_explains_its_unclear_answers_on_hover():
     )
 
 
+def test_the_kinds_takeaway_draws_each_rows_setup_by_kind_and_names_no_winner():
+    data = json.loads(RESULTS.read_text())
+    kinds = next(t for t in build.takeaways(data) if t["key"] == "kinds")
+    assert [s["set"] for s in kinds["sets"]] == [s for s, *_ in build.SETS]
+    for s in kinds["sets"]:
+        assert [r["name"] for r in s["rows"]] == [name for name, *_ in build.APPROACHES]
+        for r, (_, _, names, _) in zip(s["rows"], build.APPROACHES, strict=True):
+            arm = build.stands_for(data["arms"], names, s["set"])
+            for k, *_ in build.KINDS:
+                assert r["v"][k] == round(100 * arm["groups"][k][0])
+        for k, *_ in build.KINDS:
+            lo, hi = s["ranges"][k]
+            assert f"{lo} to {hi}" in s["body"]
+        words = (s["headline"] + " " + s["body"]).lower()
+        for ranking in ("best", "winner", "leads", "top", "highest", "most accurate", "recommend"):
+            assert ranking not in words, ranking
+    page = build.build(RESULTS)
+    grids = page.count('class="rk-pic ap-kinds"')
+    assert grids == len(build.SETS)
+    # every cell alike: one fill colour and no emphasis on any cell
+    grid = page[page.index('class="rk-pic ap-kinds"') :]
+    grid = grid[: grid.index("</table>")]
+    assert grid.count('data-k="ok"') == len(build.APPROACHES) * len(build.KINDS)
+    assert "data-k=" not in grid.replace('data-k="ok"', "")
+
+
 def test_the_page_is_built_on_the_vendored_kit():
     page = build.build(RESULTS)
     assert "/* /report-kit:css */" in page and "/* /report-kit:js */" in page

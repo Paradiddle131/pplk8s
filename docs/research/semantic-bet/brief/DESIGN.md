@@ -3,7 +3,7 @@
 World: enamel transit signage. The approaches are stations on one line, most native to most custom.
 Mode: Operate (a table a person scans). One family: Atkinson Hyperlegible Next 400/600/700, tabular numerals.
 Built on report-kit (vendored in `../report-kit/`): its tokens, section heads, dot arrays, bars, ranges, slopes, switch, sortable table, bubble and highlight.
-`approaches.css` and `approaches.js` hold only what the kit has no part for: the route, the table's column widths and narrow layout, the logos and the rules' bar pairs.
+`approaches.css` and `approaches.js` hold only what the kit has no part for: the route, the table's column widths and narrow layout, the logos, the rules' bar pairs and the kinds grid.
 The same sections are the report's Summary tab (`summary()` in `build.py`).
 
 ## Tokens
@@ -33,5 +33,7 @@ The same sections are the report's Summary tab (`summary()` in `build.py`).
 - Rules: one bar pair per model, cheapest to priciest, under two column heads with the ink rule (questions a metric covers, questions none covers); the track is the whole 100, the green fill the share right.
 - Definitions: one slope panel per setup, everyday questions to hard-to-interpret ones, right answers as a green line with circles and wrong-and-sure ones as a red line with diamonds; numbers are pushed apart when close; a two-mark key (Right, Wrong & sure) carries the column definitions in the bubble.
 - Program: three bars, one per program, in the data's order.
+- Kinds: a grid of the approaches (rows, native to custom) by four kinds of question (covered, hidden rule, uncovered, follow-ups), each cell the right answers in 100 over a thin green bar; every cell alike, no best marked.
+  It follows the question-set switch, text and grid, the only takeaway that does; its picture column is 40rem, and in a container under 30rem each approach heads its row over four cells (two by two at a large text size).
 - Words in a bubble wear a dotted underline in the line colour; screen readers get each picture as plain sentences (hidden text), its drawing hidden.
 - No eyebrows, section numbers, cards, verdicts or muted text; no motion beyond the bubble.
