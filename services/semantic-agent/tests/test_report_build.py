@@ -223,6 +223,22 @@ def test_the_maps_scores_match_the_runs_they_come_from(tmp_path):
                 assert abs(r["cov"] - (r["nRuns"] - o.get("declined", 0)) / r["nRuns"]) < 0.1
 
 
+def test_each_setup_leads_with_its_default_model_never_its_best_one(tmp_path):
+    """A setup's main row is the model it would ship on, fixed before any score: Gemini's default for
+    Google's agent even where another mode holds the managed best (the owner saw 67 in a chart and
+    80 in the map for one setup, 2026-11-07)."""
+    _, data = _built(tmp_path)
+    for st in data["mapOrder"]:
+        rows = data["sets"][st]["rows"]
+        for arm in {r["arm"] for r in rows if r["family"] == "da"}:
+            mine = [r for r in rows if r["arm"] == arm and r["plotted"]]
+            default = [r for r in mine if r["model"].endswith("(MODEL_UNSPECIFIED)")]
+            if default:
+                assert [r["model"] for r in mine if r["primary"]] == [default[0]["model"]], (st, arm)
+        assert any(r["managedBest"] for r in rows) or not any(r["family"] == "da" for r in rows)
+    assert "main-model" in {k for k, _, _ in build.TERMS}
+
+
 def test_the_new_measures_are_typed_terms_with_a_calculation_and_the_map_shows_them(tmp_path):
     page, data = _built(tmp_path)
     terms = {t["key"]: t for t in data["terms"]}

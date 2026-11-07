@@ -1,0 +1,6 @@
+## 2026-11-07 — Semantic track — each setup leads with the model it ships on, and a chart's label jumps to its own row
+
+- Done: `report/build.py` `pick_order` picks a setup's main model by rule (the free model for ours, Gemini's default for Google's agent), no longer the managed best first, so native-context-bare leads with Gemini default like every other Google setup; the managed best stays tagged on its model, and the folded models' button names it; a glossary term, Main model.
+  `report/template.html`: a slope label or scatter key names one model and its set, and its pinned jump opens that model's row on that set; in a sorted map, a row that is not its setup's main model is flagged.
+- Why: the owner saw native-context-bare at 67 on uncovered in the slopes and 80 in the map, the chart's line being Gemini default and the map's row Gemini thinking, the managed best.
+- Evidence: the ladder headline now reads native-context-bare on Gemini default (+16 points on the frozen set, +29 on the hard set), where it read the thinking mode (+18, +31); `tests/test_report_build.py` 34 passed, the new test failing on the old rule; a Playwright run lands the frozen and hard "default, fast" labels on their own rows; `tools/clipcheck.js --quick` CLIP.

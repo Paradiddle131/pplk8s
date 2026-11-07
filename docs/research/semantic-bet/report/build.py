@@ -142,6 +142,7 @@ TERMS = [
     ("over-the-floor", "Over the floor", "How many points more often a setup is right than the bare agent with the tables only, on the same questions."),
     ("managed-best", "Managed best", "The most accurate of Google's managed setups, the bar each of ours is paired against."),
     ("decides", "Decides", "Our setups run on a free model, which decides; Google's agents run on Gemini only."),
+    ("main-model", "Main model", "The one model a setup is compared on, fixed before any score: the free model for ours, Gemini's default for Google's agent. Its other models are variants, never averaged in."),
     ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
     ("partial", "Partial", "Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider."),
@@ -227,7 +228,7 @@ TERM_TYPE = {
     "multi-step": 2, "sql-hard": 2, "hard-to-interpret": 2,
     "fan-out-join": 3, "distinct-across-join": 3, "ratio-of-sums": 3, "window": 3, "median-percentile": 3,
     "obvious-sql": 3, "sessions-gaps-islands": 3, "cohort-retention": 3, "anti-join": 3, "date-spine": 3, "fiscal-timezone": 3,
-    "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "check": 4, "pending": 4, "family-da": 4,
+    "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "main-model": 4, "check": 4, "pending": 4, "family-da": 4,
     "family-gt": 4, "family-mf": 4, "family-ref": 4, "claude-code": 4,
     "accuracy": 5, "coverage": 5, "selective-accuracy": 5, "pass-3": 5,
     "confident-wrong": 5, "declined": 5, "unclear": 5, "over-the-floor": 5, "partial": 5, "interval": 5, "exact": 5,
@@ -284,6 +285,10 @@ TERM_MORE = {
                        ("Reading", "an interval that includes 0 shows no clear gain over the floor.")],
     "managed-best": [("Chosen", "on each question set, the Google-managed setup with the highest accuracy."),
                      ("Used for", "each of our setups is compared with it question by question.")],
+    "main-model": [("Ours", "the free model; a setup not yet run on it leads with a Claude model until it is."),
+                   ("Google's agent", "Gemini's default; the thinking, fast and latest-GA modes are variants."),
+                   ("Why one", "the modes are different setups, so their mean or best would describe none; the best of four is also the luckiest run."),
+                   ("In the map", "the setup's first row; its other models open under “+N models”.")],
     "decides": [("Our setups", "a free model through OpenRouter, Nemotron free."),
                 ("Google's agents", "Gemini, the only model they run on.")],
     "check": [("Models", "Claude Haiku, Sonnet and Opus, through the Anthropic API."),
@@ -609,7 +614,11 @@ def decides(r):
 
 
 def pick_order(r):
-    return (0 if r["role"] == "decides" else 0 if r["managedBest"] else
+    """A setup's main model, fixed by rule before any score: the model it would ship on (the free model
+    for ours, Gemini's default for Google's agent), then the Claude checks. Never by accuracy: leading a
+    setup with its best model of several is a pick of the luckiest run, and the managed best stays tagged
+    on whichever model holds it."""
+    return (0 if r["role"] == "decides" else
             1 if r["model"].endswith("(MODEL_UNSPECIFIED)") else
             2 if "haiku" in r["model"] and r["role"] == "check" else
             3 if "sonnet" in r["model"] else 4 if "opus" in r["model"] else 5 if r["role"] == "gemini" else 6,
