@@ -247,15 +247,18 @@ table.map tr.sub[hidden] { display: none; }
 .mchk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
 .mchk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
 .mlive { margin: 0 0 6px; font-size: 13px; }
-.msort { appearance: none; background: none; border: 0; padding: 2px 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 4px; min-height: 24px; text-align: inherit; }
-.msort .ar { display: inline-block; width: 10px; color: var(--ink-3); font-weight: 400; }
-.msort .ar::after { content: "\2195"; }
-th[aria-sort="descending"] .msort .ar::after { content: "\2193"; }
-th[aria-sort="ascending"] .msort .ar::after { content: "\2191"; }
+table.map th.sortable { padding: 0; height: 1px; user-select: none; -webkit-user-select: none; }
+.msort { appearance: none; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: 5px 8px; text-align: inherit; user-select: none; -webkit-user-select: none; }
+.msort:hover { background: var(--band); }
+.msort .ml { display: inline-flex; align-items: center; gap: 5px; }
+.msort .tl { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+.msort small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+.msort .ar { flex: none; color: var(--ink-3); }
 th[aria-sort="descending"] .msort .ar, th[aria-sort="ascending"] .msort .ar { color: var(--ink); }
-.msort.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.msort:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
-table.map th.num .msort { justify-content: flex-end; }
+.msort:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
+table.map th.g .msort { align-items: center; text-align: center; }
+table.map th.num .msort { align-items: flex-end; text-align: right; }
+
 table.map td.num .mv { white-space: nowrap; }
 table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 /* glossary rows: the longer explanation as labelled lines */
@@ -269,6 +272,21 @@ table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 .plive { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 6px; }
 .plive .live { margin: 0; flex: 1 1 22rem; line-height: 1.4; min-height: 2.8em; display: flex; align-items: center; }
 .pclear.off { visibility: hidden; }
+.pstrip { border-top: 1px solid var(--rule); margin: 0 0 8px; padding-top: 6px; }
+.ps-q { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); gap: 6px 28px; align-items: start; }
+.ps-q.empty { display: block; }
+.ps-q .qs-turns > li + li { margin-top: 3px; }
+.ps-q .qs-turns > li > div > p { display: inline; }
+.ps-q .qs-q { font-size: 15px; line-height: 1.4; }
+.ps-q .qs-exp { margin: 0 0 0 8px; font-size: 13.5px; white-space: nowrap; }
+.ps-q .qs-turns.conv > li > .k { padding-top: 1px; }
+.ps-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 0; font-family: var(--label); font-size: 13px; align-items: baseline; }
+.ps-dl dt { color: var(--ink-3); font-weight: 500; }
+.ps-dl dd { margin: 0; }
+.ps-dl .qs-chip { min-height: 24px; font-size: 13px; cursor: help; }
+.ps-open { display: inline-block; margin-top: 8px; font-family: var(--label); font-size: 13.5px; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.ps-open:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+@media (max-width: 640px) { .ps-q { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .plive .live { min-height: 5.6em; } }
 .pclear { appearance: none; font: 500 13px var(--label); color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 3px 10px; min-height: 30px; cursor: pointer; }
 .pclear:hover { background: var(--band); }
@@ -560,7 +578,10 @@ window.REPORT = D;
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
     <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
-    <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear off" id="plate-clear">Show every question</button></div>
+    <div class="pstrip" id="pstrip">
+      <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear off" id="plate-clear">Show every question</button></div>
+      <div class="ps-q qs" id="ps-q"></div>
+    </div>
     <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
     <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome, and click a square or a question's tick in the head to highlight that question on every row.</figcaption>
   </figure>
@@ -886,7 +907,8 @@ window.REPORT = D;
     const sx = pinned ? window.scrollX : 0, sy = pinned ? window.scrollY : 0;
     tip.style.transform = `translate(${Math.round(left + sx)}px, ${Math.round(top + sy)}px)`;
   }
-  function showTipHTML(html, x, y) { if (!html) return hideTip(); tip.innerHTML = CLOSE + html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
+  // while a tooltip is pinned no hover, focus or plate square replaces it: only a click (pin) moves it
+  function showTipHTML(html, x, y) { if (pinned) return; if (!html) return hideTip(); tip.innerHTML = CLOSE + html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
   function hideTip() { if (pinned) return; tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); tipEl = null; tipByFocus = false; }
   function pin(el, x, y, html) {
     pinned = false; tip.classList.remove("pinned"); tip.style.position = "";
@@ -1347,10 +1369,13 @@ window.REPORT = D;
     const glab = (k) => { const g = D.groupsAll.find((x) => x.key === k) || D.groups.find((x) => x.key === k); return g ? g.label : (TERM[TK(k)] ? TERM[TK(k)].label : k); };
     const best = {}; groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g]).map((r) => r.groups[g][0]); best[g] = v.length ? Math.max(...v) : null; });
     const aria = (c) => (MS.col === c ? MS.dir : "none");
-    const sortBtn = (c, t, lab) => `<button type="button" class="msort${t ? " term" : ""}" data-col="${c}"${t ? ` data-term="${t}"` : ""}>${lab}<span class="ar" aria-hidden="true"></span></button>`;
+    // the whole head cell is the button: the label, its sort mark and its line under it are one hit area. The mark is
+    // the usual data-table one: a neutral up-down pair on a sortable column, one arrow on the sorted one.
+    const SORTMARK = { none: `<path d="M4 1.5L7 5H1z M4 10.5L1 7h6z" fill="currentColor"/>`, descending: `<path d="M4 10.5L.8 6.2h6.4z M3.3 1.5h1.4v5H3.3z" fill="currentColor"/>`, ascending: `<path d="M4 1.5L.8 5.8h6.4z M3.3 5.5h1.4v5H3.3z" fill="currentColor"/>` };
+    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span><svg class="ar" width="8" height="12" viewBox="0 0 8 12" aria-hidden="true">${SORTMARK[aria(c)]}</svg></span><small>${sub}</small></button>`;
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
-    groups.forEach((g) => (h += `<th scope="col" class="g" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)))}<small>${S(s).groupCases[g] || 0} questions</small></th>`));
-    MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab))}<small>${sub}</small></th>`));
+    groups.forEach((g) => (h += `<th scope="col" class="g sortable" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)), `${S(s).groupCases[g] || 0} questions`)}</th>`));
+    MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num sortable" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab), sub)}</th>`));
     h += `</tr></thead><tbody>`;
     const ncol = 2 + groups.length + MNUM.length;
     const ordered = mapRowsInOrder(s), total = ordered.length, shown = ordered.filter(mpass);
@@ -2033,6 +2058,32 @@ window.REPORT = D;
     return { q: c.q || c.id, g: bk ? bk.label : c.b, name: qg ? qg.name : c.id };
   }
   const PLATE_IDLE = "Click a square, or a question's tick above the rows, to highlight that question on every row.";
+  // The strip above the plate: the highlighted question as the question guide's card shows it (its turns with the
+  // expected answers, its groups and what makes it hard, the same terms), and a link to it in the guide. It keeps the
+  // height of the set's tallest question at its width, so moving between questions never moves the plate.
+  const stripHTML = (id) => {
+    const R = window.__qsRender; if (!R || !id) return "";
+    const asked = R("asked", id); if (!asked) return "";
+    return `<div class="ps-asked">${asked}</div><div class="ps-side"><dl class="ps-dl"><dt>${term("groups", "Groups")}</dt><dd>${R("groups", id, plateState && plateState.s)}</dd><dt>What makes it hard</dt><dd>${R("hard", id)}</dd></dl>` +
+      `<a class="ps-open" href="#question-guide" data-qid="${esc(id)}">Open in the question guide</a></div>`;
+  };
+  function fillStrip(id) { const box = $("#ps-q"); const h = stripHTML(id); box.innerHTML = h; box.classList.toggle("empty", !h); }
+  function reserveStrip() {
+    const box = $("#ps-q"); if (!plateState || !window.__qsRender) return;
+    const w = box.getBoundingClientRect().width; if (!w) return;
+    const probe = box.cloneNode(false); probe.removeAttribute("id"); probe.setAttribute("aria-hidden", "true"); probe.inert = true;
+    Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: w + "px", minHeight: "0", pointerEvents: "none" });
+    probe.classList.remove("empty"); box.parentNode.appendChild(probe);
+    let max = 0; S(plateState.s).cases.forEach((c) => { probe.innerHTML = stripHTML(c.id); max = Math.max(max, probe.getBoundingClientRect().height); });
+    probe.remove(); box.style.minHeight = Math.ceil(max) + "px";
+  }
+  $("#ps-q").addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("a.ps-open"); if (!a) return;
+    e.preventDefault(); e.stopPropagation(); unpin(false);
+    if (window.__qsOpen) window.__qsOpen(a.dataset.qid);
+  });
+  // the guide's chips open their kind inside the guide; here they are terms, so Enter pins their tooltip like any term
+  $("#ps-q").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest(".qs-chip")) { e.preventDefault(); const b = e.target.getBoundingClientRect(); pin(e.target, b.left, b.bottom - 8); } });
   function drawTicks() {
     const G = plateState.G, strip = $("#pqs"); if (!strip) return;
     let h = "";
@@ -2056,6 +2107,7 @@ window.REPORT = D;
         `<rect x="${x + 0.5}" y="0.5" width="${w - 1}" height="${G.h - 1}" fill="none" stroke="var(--ink)" stroke-width="1"/>`;
     });
     drawTicks();
+    fillStrip(on ? S(plateState.s).cases[ci].id : null);
     $("#plate-clear").classList.toggle("off", !on);
     if (quiet && !on) { $("#plate-live").textContent = PLATE_IDLE; return; }
     if (on) {
@@ -2143,17 +2195,21 @@ window.REPORT = D;
     head.scrollLeft = body.scrollLeft;
     svgs.forEach((sv) => {
       const r = byId(sv.dataset.row);
-      const at = (ci, k, cx, cy) => {
+      const squareHTML = (ci, k) => {
         const c = S(s).cases[ci]; const u = r.units.slice(ci * 3, ci * 3 + 3); const ch = u[k] || ".";
         const right = [...u].filter((q) => q === "0").length, ran = [...u].filter((q) => q !== ".").length;
         const bk = D.buckets.find((x) => x.key === c.b);
+        return tKick(esc(bk ? bk.label : c.b) + " question") + `<p class="tq">${esc(c.q || "")}</p><p class="qid"><span class="id">${esc(c.id)}</span></p>` +
+          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[+ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]]));
+      };
+      const at = (ci, k, cx, cy) => {
+        if (pinned) return; // a pinned square stays as it is while the pointer moves over others
         if (plateState.hover !== ci) { plateState.hover = ci; bandAt(ci); }
-        tipEl = sv; showTipHTML(tKick(esc(bk ? bk.label : c.b) + " question") + `<p class="tq">${esc(c.q || "")}</p><p class="qid"><span class="id">${esc(c.id)}</span></p>` +
-          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[+ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])), cx, cy);
+        tipEl = sv; showTipHTML(squareHTML(ci, k), cx, cy);
       };
       const hit = (ev) => { const b = sv.getBoundingClientRect(); const x = ev.clientX - b.left, y = ev.clientY - b.top; let ci = null; for (const [k, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) { ci = k; break; } const k = Math.max(0, Math.min(2, Math.floor((G.h - y) / G.pitch))); return { ci, k }; };
       sv.onpointermove = (ev) => { const h = hit(ev); if (h.ci == null) return; at(h.ci, h.k, ev.clientX, ev.clientY); };
-      sv.onpointerleave = () => { plateState.hover = null; bandAt(null); hideTip(); };
+      sv.onpointerleave = () => { if (pinned) return; plateState.hover = null; bandAt(null); hideTip(); };
       sv.onkeydown = (ev) => {
         if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return; ev.preventDefault();
         const i = plateState.hover == null ? 0 : G.order.indexOf(plateState.hover) + (ev.key === "ArrowRight" ? 1 : -1);
@@ -2164,11 +2220,15 @@ window.REPORT = D;
       sv.addEventListener("keydown", (ev) => { if (ev.key !== "Enter") return; ev.preventDefault(); toggleQ(plateState.hover == null ? G.order[0] : plateState.hover); });
       sv.addEventListener("click", (ev) => {
         const h = hit(ev); if (h.ci == null) return;
-        if (plateState.sel === h.ci) { ev.stopPropagation(); unpin(false); selectQ(null); return; }
-        selectQ(h.ci); // the page's own click then pins the square's tooltip, as before
+        ev.stopPropagation(); // this handler pins; the page's delegated click would pin whatever the tooltip last showed
+        if (plateState.sel === h.ci) { unpin(false); selectQ(null); return; }
+        unpin(false); selectQ(h.ci);
+        plateState.hover = h.ci; bandAt(h.ci); tipEl = sv;
+        pin(sv, ev.clientX, ev.clientY, squareHTML(h.ci, h.k));
       });
     });
     drawTicks(); selectQ(keepSel, true);
+    window.reportReady(() => requestAnimationFrame(reserveStrip));
     $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
   }
 
@@ -2205,7 +2265,8 @@ window.REPORT = D;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
   // Figures 2 and 5 wrap labels to a measured width: once the web font is in, they are drawn again with its measure.
-  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); });
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); reserveStrip(); });
+  document.addEventListener("report-view", (e) => { if (e.detail === "every-run") requestAnimationFrame(reserveStrip); });
 
   window.__reportMarkReady();
 })();

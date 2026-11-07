@@ -247,3 +247,29 @@ def test_every_terms_longer_explanation_is_structured_and_not_its_short_text(tmp
         assert all(
             len(pair) == 2 and pair[1] != t["text"] and len(pair[1]) < 200 for pair in t["more"]
         ), t["key"]
+
+
+def test_the_build_refuses_a_longer_text_that_repeats_its_one_liner():
+    one = {
+        "key": "x",
+        "text": "How often a setup is right, on every run.",
+        "more": [["Example", "1 of 2"]],
+    }
+    assert build.check_longer_lines([one]) == []
+    same = dict(one, more=[["Again", "How often a setup is right on every run"]])
+    holds = dict(one, key="y", calc="how often a setup is right, on every run. Then more.")
+    assert build.check_longer_lines([same, holds]) == ["x", "y"]
+    terms = build.glossary({"cats": [], "q": {}}, {}, [])
+    assert build.check_longer_lines(terms) == []
+    one_liners = {k: t for k, _, t in build.TERMS}
+    assert one_liners["accuracy"].startswith("How often a setup is right")
+
+
+def test_a_hidden_setup_is_nowhere_on_the_page(tmp_path):
+    page, data = _built(tmp_path)
+    assert "native-context-python" in build.HIDDEN_ARMS
+    assert "native-context-python" not in page
+    results = json.loads(RESULTS.read_text(encoding="utf-8"))
+    assert any(
+        a["arm"] == "native-context-python" for a in results["arms"]
+    )  # its runs stay in the results
