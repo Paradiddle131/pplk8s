@@ -114,24 +114,39 @@ def dots(c):
     return f'<span class="dots" role="img" aria-label="{label}, out of 100">{marks}</span>'
 
 
+SORT_ICON = ('<svg class="sort" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" '
+             'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/>'
+             '<path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>')
+
+
+def tip(tid, text):
+    """The definition shown on hover or focus: the visible bubble is drawn by the page script from data-tip;
+    this hidden copy is what assistive technology reads (aria-describedby)."""
+    return f'<span class="sr" id="{tid}">{html.escape(text)}</span>'
+
+
 def render_table(rows, setname, hidden):
+    order_tip = "From the most native (Google's own data agent) to the most custom (an agent the team builds)."
     heads = "".join(
-        f'<th scope="col" class="num" aria-sort="none"><button type="button" data-key="{k}" title="{html.escape(tip)}">'
-        f'<i class="{cls}"></i>{html.escape(h)}</button></th>' for k, h, cls, tip in COLUMNS)
+        f'<th scope="col" class="num" data-key="{k}" aria-sort="none"><button type="button" data-key="{k}" '
+        f'data-tip="{html.escape(t)}" aria-describedby="t-{setname}-{k}"><i class="{cls}"></i>{html.escape(h)}{SORT_ICON}</button>'
+        f'{tip(f"t-{setname}-{k}", t)}</th>' for k, h, cls, t in COLUMNS)
     body = []
     for r in rows:
         c = r["counts"]
         cells = (f'<td class="dots-cell">{dots(c)}</td>' + "".join(f'<td class="num k-{k}">{c[k]}</td>' for k, *_ in COLUMNS)
                  if c else '<td class="dots-cell">Not run on this set</td>' + "".join(f'<td class="num k-{k}">–</td>' for k, *_ in COLUMNS))
         data = " ".join(f'data-{k.replace("_", "-")}="{c[k] if c else -1}"' for k, *_ in COLUMNS)
+        rid = f'd-{setname}-{r["rank"]}'
         body.append(
-            f'<tr data-rank="{r["rank"]}" {data}><th scope="row"><span class="cell" title="{html.escape(r["plain"])}">'
+            f'<tr data-rank="{r["rank"]}" {data}><th scope="row"><span class="stop" aria-hidden="true"></span>'
+            f'<span class="cell" tabindex="0" data-tip="{html.escape(r["plain"])}" aria-describedby="{rid}">'
             f'<span class="icons">{"".join(icon(i) for i in r["icons"])}</span>'
-            f'<span class="name">{html.escape(r["name"])}<span class="sr">. {html.escape(r["plain"])}</span></span>'
-            f'</span></th>{cells}</tr>')
-    return (f'<table class="approaches" data-set="{setname}"{" hidden" if hidden else ""}>'
-            f'<thead><tr><th scope="col" aria-sort="none"><button type="button" data-key="rank" '
-            f'title="Most native first">Approach</button></th><th scope="col" class="dots-head"><span class="hd">100 answers</span></th>{heads}</tr></thead>'
+            f'<span class="name">{html.escape(r["name"])}</span></span>{tip(rid, r["plain"])}</th>{cells}</tr>')
+    return (f'<table class="approaches" data-set="{setname}" data-route="on"{" hidden" if hidden else ""}>'
+            f'<thead><tr><th scope="col" class="name-head" data-key="rank" aria-sort="ascending"><button type="button" data-key="rank" '
+            f'data-tip="{html.escape(order_tip)}" aria-describedby="t-{setname}-rank">Approach{SORT_ICON}</button>'
+            f'{tip(f"t-{setname}-rank", order_tip)}</th><th scope="col" class="dots-head">100 answers</th>{heads}</tr></thead>'
             f'<tbody>{"".join(body)}</tbody></table>')
 
 
@@ -144,8 +159,9 @@ def build(results):
         raise SystemExit(f"setups with no approach on the page: {', '.join(unmapped)}")
     sets = [(s, label, tip, len(data["sets"][s]["cases"])) for s, label, tip in SETS]
     toggle = "".join(
-        f'<button type="button" data-set="{s}" aria-pressed="{"true" if i == 0 else "false"}" title="{html.escape(tip)}">'
-        f'{html.escape(label)} <b>{n}</b></button>' for i, (s, label, tip, n) in enumerate(sets))
+        f'<button type="button" data-set="{s}" aria-pressed="{"true" if i == 0 else "false"}" data-tip="{html.escape(f"{n} questions. {t}")}" '
+        f'aria-describedby="t-set-{s}">{html.escape(label)} <b>{n}<span class="sr"> questions</span></b></button>'
+        f'{tip(f"t-set-{s}", f"{n} questions. {t}")}' for i, (s, label, t, n) in enumerate(sets))
     tables = "".join(render_table(table_rows(arms, s), s, i > 0) for i, (s, *_) in enumerate(sets))
     page = (HERE / "template.html").read_text()
     return page.replace("@@TOGGLE@@", toggle).replace("@@TABLES@@", tables)
