@@ -20,3 +20,14 @@ Mode: Operate (a table a person scans). One family: Atkinson Hyperlegible Next 4
 - Pointing at an outcome header, or focusing it from the keyboard, lights that outcome's marks in every row (others to 14%); leaving the header, Escape or a click elsewhere resets them, and sorting never lights them.
 - Definitions: one reversed bubble on hover or keyboard focus, 2.6 s on tap, Esc dismisses; screen readers get them via aria-describedby from a hidden block.
 - Layout: fixed table above 75rem; below, stacked rows (max 40rem) with a 2x2 sort bar and marked numbers. Gutters max(16px, safe-area).
+
+## Takeaways
+- Below the table, on the page ground (no second band): the heading at 1.375rem bold wears the table head's 2px ink rule and sits on the route indent.
+- Each takeaway is one row, separated by the table's hairline: headline (1rem bold) and its one sentence on the left, one small picture on the right (30rem max); below 60rem the picture drops under the text.
+- Every picture uses the table's 0-100 scale, its marks and its two data sizes; text stays HTML so it never scales with a drawing.
+- Setup: two rails from 0 to 100, a green span between the lowest and highest score with filled circles at its ends, each end numbered under it (pushed apart when close); the end's name shows in the bubble.
+- Rules: one bar pair per model, cheapest to priciest, under two column heads with the ink rule (questions a metric covers, questions none covers); the track is the whole 100, the green fill the share right.
+- Definitions: one slope panel per setup, everyday questions to hard-to-interpret ones, right answers as a green line with circles and wrong-and-sure ones as a red line with diamonds; numbers are pushed apart when close; a two-mark key (Right, Wrong & sure) carries the column definitions in the bubble.
+- Program: three bars, one per program, in the data's order.
+- Words in a bubble wear a dotted underline in the line colour; screen readers get each picture as plain sentences (hidden text), its drawing hidden.
+- No eyebrows, section numbers, cards, verdicts or muted text; no motion beyond the bubble.

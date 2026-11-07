@@ -22,15 +22,19 @@ SETS = [
     (
         "frozen",
         "Everyday",
-        "Plain business questions across the domains: totals, shares, rates, "
-        "trends, follow-ups, and some no defined metric answers.",
+        (
+            "Plain business questions across the domains: totals, shares, rates, "
+            "trends, follow-ups, and some no defined metric answers."
+        ),
     ),
     (
         "hard",
         "Hard to interpret",
-        "Questions hard to read without knowing the business: jargon, "
-        "periods, unstated filters, ambiguous follow-ups. Hard for an AI that lacks our definitions, "
-        "not necessarily harder SQL.",
+        (
+            "Questions hard to read without knowing the business: jargon, "
+            "periods, unstated filters, ambiguous follow-ups. Hard for an AI that lacks our definitions, "
+            "not necessarily harder SQL."
+        ),
     ),
 ]
 
@@ -378,15 +382,150 @@ def takeaways(data):
     return out
 
 
-def render_takeaways(items):
-    """A plain first rendering; the design pass owns its look."""
-    rows = "".join(
-        f'<li data-key="{t["key"]}"><h3>{html.escape(t["headline"])}</h3><p>{html.escape(t["body"])}</p></li>'
-        for t in items
+SR = '<span class="sr">{}</span>'.format
+
+
+def tipped(tid, text, inner, cls="tipped"):
+    """A focusable word or number that shows its definition in the page's bubble (data-tip + aria-describedby)."""
+    return (
+        f'<span class="{cls}" tabindex="0" data-tip="{html.escape(text)}" aria-describedby="{tid}">{inner}</span>',
+        tip(tid, text),
     )
+
+
+def spread(values, gap=18):
+    """Label heights on a 0-100 scale, pushed at least `gap` apart and kept inside 0-100.
+
+    Two numbers drawn this close never overlap.
+    """
+    order = sorted(range(len(values)), key=lambda i: values[i])
+    at = [float(values[i]) for i in order]
+    for i in range(1, len(at)):
+        at[i] = max(at[i], at[i - 1] + gap)
+    if at and at[-1] > 100:
+        at[-1] = 100.0
+        for i in range(len(at) - 2, -1, -1):
+            at[i] = min(at[i], at[i + 1] - gap)
+    out = [0.0] * len(values)
+    for i, v in zip(order, at, strict=True):
+        out[i] = round(v, 1)
+    return out
+
+
+def bar(v, sr_before=""):
+    """One right-answers-in-100 bar: the track is the whole 100, the fill is the share right."""
+    return (
+        f'<span class="bar">{SR(html.escape(sr_before)) if sr_before else ""}'
+        f'<span class="track" aria-hidden="true"><span class="fill" style="--v:{v}"></span></span>'
+        f"<b>{v}</b>{SR(' right in 100')}</span>"
+    )
+
+
+def pic_setup(t, descs):
+    rows = []
+    for i, r in enumerate(t["ranges"]):
+        at_lo, at_hi = spread([r["lo"], r["hi"]], gap=16)
+        lo, d1 = tipped(f"t-tk-setup-{i}-lo", r["lo_name"], str(r["lo"]), "end tipped")
+        hi, d2 = tipped(f"t-tk-setup-{i}-hi", r["hi_name"], str(r["hi"]), "end tipped")
+        descs += [d1, d2]
+        rows.append(
+            f'<div class="rng"><span class="pl">{html.escape(r["label"])}</span>'
+            '<span class="ruler"><span class="axis" aria-hidden="true">0</span>'
+            f'<span class="scale" style="--lo:{r["lo"]};--hi:{r["hi"]}"><span class="span" aria-hidden="true"></span>'
+            f'{SR(" ranged from ")}<span class="at" style="--p:{at_lo}">{lo}</span>{SR(" to ")}'
+            f'<span class="at" style="--p:{at_hi}">{hi}</span>{SR(" right in 100")}</span>'
+            '<span class="axis" aria-hidden="true">100</span></span></div>'
+        )
+    return f'<div class="pic pic-setup">{"".join(rows)}</div>'
+
+
+def pic_rules(t):
+    heads = ("Questions a metric covers", "Questions no metric covers")
+    rows = "".join(
+        f'<li><span class="pl">{html.escape(m["model"])}</span>'
+        f"{bar(m['covered'], heads[0] + ': ')}{bar(m['uncovered'], heads[1] + ': ')}</li>"
+        for m in t["models"]
+    )
+    cols = "".join(f"<span>{h}</span>" for h in heads)
+    return f'<div class="pic pic-rules"><div class="heads" aria-hidden="true">{cols}</div><ul>{rows}</ul></div>'
+
+
+def pic_definitions(t, descs):
+    panels, said = [], []
+    for line in t["lines"]:
+        e, h = line["everyday"], line["hard"]
+        left, right = spread([e["right"], e["sure_wrong"]]), spread([h["right"], h["sure_wrong"]])
+        lines = "".join(
+            f'<line class="ln {cls}" x1="0" y1="{100 - a}" x2="100" y2="{100 - b}" vector-effect="non-scaling-stroke"/>'
+            for cls, a, b in (("ln-bad", e["sure_wrong"], h["sure_wrong"]), ("ln-ok", e["right"], h["right"]))
+        )
+        marks = "".join(
+            f'<i class="pt {cls}" style="--x:{x};--y:{v[k]}"></i>'
+            for k, cls in (("sure_wrong", "d-bad"), ("right", "d-ok"))
+            for x, v in ((0, e), (100, h))
+        )
+        nums = "".join(
+            f'<b class="n {side}" style="--y:{y}">{v}</b>'
+            for side, vals, ys in (
+                ("l", (e["right"], e["sure_wrong"]), left),
+                ("r", (h["right"], h["sure_wrong"]), right),
+            )
+            for v, y in zip(vals, ys, strict=True)
+        )
+        panels.append(
+            f'<div class="slope"><span class="pl" aria-hidden="true">{html.escape(line["label"])}</span>'
+            '<div class="plot" aria-hidden="true">'
+            '<svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">'
+            f"{lines}</svg>{marks}{nums}</div>"
+            f'<div class="xl" aria-hidden="true"><span>{SETS[0][1]}</span><span>{SETS[1][1]}</span></div></div>'
+        )
+        said.append(
+            f"{line['label']}: {SETS[0][1].lower()} questions {e['right']} right and {e['sure_wrong']} wrong and sure; "
+            f"{SETS[1][1].lower()} questions {h['right']} right and {h['sure_wrong']} wrong and sure, in 100."
+        )
+    key = []
+    for k, head, cls, text in COLUMNS:
+        if k in ("right", "sure_wrong"):
+            el, d = tipped(f"t-tk-def-{k}", text, f'<i class="{cls}" aria-hidden="true"></i>{html.escape(head)}')
+            key.append(el)
+            descs.append(d)
+    return (
+        f'<div class="pic pic-definitions"><div class="slopes">{"".join(panels)}</div>'
+        f'<p class="sr">{html.escape(" ".join(said))}</p><p class="key">{"".join(key)}</p></div>'
+    )
+
+
+def pic_harness(t):
+    rows = "".join(
+        f'<li><span class="pl">{html.escape(r["label"])}</span>{bar(r["right"])}</li>' for r in t["programs"]
+    )
+    return f'<div class="pic pic-harness"><ul>{rows}</ul></div>'
+
+
+def render_takeaways(items):
+    """Each takeaway as one row under the table: its headline and sentence, and one small picture of its figures.
+
+    Every picture is drawn on the same 0-100 scale as the table; text stays HTML so it keeps the page's two sizes.
+    """
+    if not items:
+        return ""
+    descs, rows = [], []
+    for t in items:
+        k = t["key"]
+        if k == "setup":
+            pic = pic_setup(t, descs)
+        elif k == "definitions":
+            pic = pic_definitions(t, descs)
+        else:
+            pic = {"rules": pic_rules, "harness": pic_harness}[k](t)
+        rows.append(
+            f'<li data-key="{k}"><div class="tk-text"><h3>{html.escape(t["headline"])}</h3>'
+            f"<p>{html.escape(t['body'])}</p></div>{pic}</li>"
+        )
     return (
         '<section class="takeaways" aria-labelledby="takeaways-h">'
-        f'<h2 id="takeaways-h">Takeaways</h2><ul>{rows}</ul></section>'
+        f'<h2 id="takeaways-h">Takeaways</h2><ul class="tk">{"".join(rows)}</ul>'
+        f"<div hidden>{''.join(descs)}</div></section>"
     )
 
 
