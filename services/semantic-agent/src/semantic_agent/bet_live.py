@@ -142,9 +142,11 @@ async def run_live(
     (its Claude dollars)."""
     log = log or log_path(arm)
     spent = 0
-    from semantic_agent.bet_eval import CANARY_TRIES, canary_case
+    from semantic_agent.bet_eval import CANARY_TRIES, arm_canary
 
-    probe = canary_case(bet) if canary else None
+    probe, probe_set, probe_expected, probe_described = (
+        arm_canary(bet, arm, expected, described) if canary else (None, bet, expected, described)
+    )
     entries = [{"arm": arm, **e} for e in read_log(log)]
     pending = any(
         (arm, run, q.id) not in finished(entries, model)
@@ -161,7 +163,11 @@ async def run_live(
         if failed and failed["kind"] in (*FATAL, "budget"):
             return "budget" if failed["kind"] == "budget" else "quota"
         scored = score_case(
-            probe, expected[probe.id], [_invocation(t) for t in turns], bet.hedges, described
+            probe,
+            probe_expected[probe.id],
+            [_invocation(t) for t in turns],
+            probe_set.hedges,
+            probe_described,
         )
         if not failed and run_outcome([o for _, o in scored]) is Outcome.RIGHT:
             break

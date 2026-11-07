@@ -1017,6 +1017,31 @@ CANARIES = {
 }
 
 
+# A setup whose tools cannot reach a set's canary by design takes another set's canary: the canary
+# checks the warehouse, the agent and the model, and a miss of reach stops a healthy pass.
+# Lightdash serves one explore per model with no joins, and the 2026-11-07 lane's custom-lightdash
+# answered the hard sets' canary by campaign ("channel is not a dimension on slv_bookings"), twice,
+# minutes after passing the frozen canary. The hard case is still asked and scored like any other.
+CANARY_SET = {"custom-lightdash": FROZEN}
+
+
+def arm_canary(
+    bet: BetSet, arm: str, expected: Mapping[str, Expected], described: Mapping[str, str]
+) -> tuple[Question | None, BetSet, Mapping[str, Expected], Mapping[str, str]]:
+    """The canary `arm` answers before a pass on `bet`, with the set, expected numbers and
+    definitions it is scored against: the set's own (canary_case), unless CANARY_SET names
+    another set for the arm, whose canary and recorded expected numbers it then takes."""
+    other = CANARY_SET.get(arm)
+    if other is None or other == bet.name:
+        return canary_case(bet), bet, expected, described
+    probe_set = load_set(other)
+    probe = canary_case(probe_set)
+    recorded = read_expected(other) or {}
+    if probe is None or probe.id not in recorded:
+        return canary_case(bet), bet, expected, described
+    return probe, probe_set, recorded, evaluation.definitions([probe])
+
+
 def canary_case(bet: BetSet) -> Question | None:
     """The set's canary (CANARIES), else its first single-turn case in the `covered` group."""
     by_id = {q.id: q for q in bet.questions}

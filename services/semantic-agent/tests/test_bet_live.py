@@ -199,3 +199,41 @@ def test_a_canary_answered_right_lets_the_pass_run(tmp_path):
     probe = Probe([[RIGHT], [RIGHT], [RIGHT, DEFINED]])
     assert run_with_canary(probe, log) == "done"
     assert len(bet_eval.read_log(log)) == 2  # the canary is never logged
+
+
+def test_a_setup_named_in_canary_set_takes_that_sets_canary(monkeypatch, tmp_path):
+    # custom-lightdash cannot reach the hard sets' canary (no channel on its bookings explore),
+    # so its hard pass checks health on the frozen canary; the hard case is still asked and scored.
+    frozen = BetSet([REVENUE], {"revenue_one_day": ["covered"]}, ["approximately"])
+    orders = Question.single("orders_one_day", "Orders on 2 October 2026?", "", ["orders_total"])
+    hard = BetSet([orders], {"orders_one_day": ["covered"]}, ["approximately"], name="hard")
+    monkeypatch.setattr(bet_eval, "load_set", lambda name: frozen)
+    monkeypatch.setattr(
+        bet_eval, "read_expected", lambda name: {"revenue_one_day": [[as_expected(868.65)]]}
+    )
+    monkeypatch.setattr(bet_eval.evaluation, "definitions", lambda questions: {})
+    log = tmp_path / "eval-hard-custom-lightdash.jsonl"
+    probe = Probe([[RIGHT], ["We got 41 orders on 2 October 2026."]])
+    why = asyncio.run(
+        bet_live.run_live(
+            hard,
+            {"orders_one_day": [[as_expected(41)]]},
+            {},
+            "custom-lightdash",
+            probe,
+            "m",
+            1,
+            log,
+            say=lambda line: None,
+            canary=True,
+        )
+    )
+    assert why == "done"
+    # The frozen canary first, then the hard set's own case (the scripted probe's calls are
+    # native-mcp's, so the run goes to faults rather than the log; the order is what is tested).
+    assert probe.asked == [["Revenue on 2 October 2026?"], ["Orders on 2 October 2026?"]]
+
+
+def test_other_setups_keep_their_sets_canary():
+    probe, probe_set, _, _ = bet_eval.arm_canary(BET, "native-mcp", EXPECTED, DESCRIBED)
+    assert probe is REVENUE and probe_set is BET
