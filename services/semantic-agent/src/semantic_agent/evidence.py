@@ -6,7 +6,8 @@ whether the trace shows it:
 - a figure is `cited` when a tool result of the turn, or of an earlier turn of the conversation,
   holds it at the answer's precision, a rate also as a percentage (0.1667 cites 16.67%); `derived`
   when it equals the sum, difference, product, ratio or percentage change of two such figures (the
-  question's own numbers count as operands), within the answer's rounding; `untraced` otherwise.
+  question's own numbers and the answer's traced figures count as operands, so a share of a total
+  the answer derived is derived too), within the answer's rounding; `untraced` otherwise.
   Dates, clock times, years, ordinals, numbered-list markers, a quoted freshness statement and the
   question's own numbers are not figures. A scale word scales the figure and its precision
   (`€1.85k` is 1850 to the nearest 10).
@@ -97,7 +98,8 @@ class Verdict:
 
 _MONTH = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?"
 _DAY = r"\d{1,2}(?:st|nd|rd|th)?"
-_DAYS = rf"{_DAY}(?:\s*(?:,|and|to|&|-|–|—|through)\s*{_DAY})*"
+_WEEKDAY = r"(?:(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\.?,?\s+)?"
+_DAYS = rf"{_DAY}(?:\s*(?:,|and|to|&|-|–|—|through)\s*{_WEEKDAY}{_DAY})*"
 _NOT_FIGURES = re.compile(
     "|".join(
         [
@@ -311,22 +313,25 @@ def check_turn(
     turns, whose results the answer may also cite (their methods do not count for this turn)."""
     pool = [v for c in [*earlier, *calls] if c.result for v in result_numbers(c.result)]
     given = [n.value for n in _answer_numbers(question)]
-    figures: list[Figure] = []
-    table: list[tuple[float, str]] | None = None
-    for n in _answer_numbers(answer):
-        if any(abs(n.value - g) <= _EPS for g in given):
-            continue
+    numbers = [n for n in _answer_numbers(answer) if all(abs(n.value - g) > _EPS for g in given)]
+    found: dict[int, Figure] = {}
+    for i, n in enumerate(numbers):
         hit = _cited(n, pool)
         if hit is not None:
-            figures.append(Figure(n.text, n.value, "cited", f"{hit:g}"))
-            continue
-        if table is None:
-            table = _derivations([*pool, *given])
-        how = _derived(n, table)
-        if how is not None:
-            figures.append(Figure(n.text, n.value, "derived", how))
-        else:
-            figures.append(Figure(n.text, n.value, "untraced"))
+            found[i] = Figure(n.text, n.value, "cited", f"{hit:g}")
+    # Derivations chain: a figure the answer derived (a total, then its share) is an operand too.
+    while True:
+        rest = [i for i in range(len(numbers)) if i not in found]
+        if not rest:
+            break
+        traced = [f.value for f in found.values()]
+        table = _derivations([*traced, *given, *pool])
+        new = {i: how for i in rest if (how := _derived(numbers[i], table)) is not None}
+        if not new:
+            break
+        for i, how in new.items():
+            found[i] = Figure(numbers[i].text, numbers[i].value, "derived", how)
+    figures = [found.get(i) or Figure(n.text, n.value, "untraced") for i, n in enumerate(numbers)]
     return Verdict(figures, _claims(answer, calls))
 
 

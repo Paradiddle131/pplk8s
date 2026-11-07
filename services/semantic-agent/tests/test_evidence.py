@@ -39,6 +39,15 @@ def test_a_ratio_and_a_percentage_of_two_cited_figures_are_derived():
     assert statuses("The cancellation rate was 33.3%.") == {"33.3": "derived"}
 
 
+def test_a_share_of_a_total_the_answer_derived_is_derived():
+    call = Call("query_metrics", {}, '{"damaged": 12.5, "late": 7.25}')
+    # 19.75 = 12.5 + 7.25, then 12.5 / 19.75 = 63.3%
+    assert statuses("Damaged was 63.3% of €19.75.", [call]) == {
+        "63.3": "derived",
+        "19.75": "derived",
+    }
+
+
 def test_a_rate_in_a_result_cites_its_percentage():
     call = Call("query_metrics", {}, '{"cancellation_rate": 0.16666666666666666}')
     assert statuses("16.67% of orders were cancelled.", [call]) == {"16.67": "cited"}
@@ -47,6 +56,7 @@ def test_a_rate_in_a_result_cites_its_percentage():
 def test_dates_years_ordinals_list_markers_and_the_questions_numbers_are_not_figures():
     answer = (
         "On 1 and 2 October 2026 (2026-10-01T00:00Z, at 10:30) the 3rd campaign led.\n"
+        "Monday 21 to Sunday 27 September was the best week.\n"
         "1. Top 5 customers spent €1,850.34."
     )
     assert statuses(answer, question="Who were the top 5 customers in 2026?") == {
