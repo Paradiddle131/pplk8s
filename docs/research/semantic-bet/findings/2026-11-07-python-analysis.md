@@ -14,3 +14,15 @@
 - Not run: k = 3 (RULE.md's entry runs it only when the first round shows a difference worth its runs; with no Python step taken there is none).
 - For the work platform: enabling Python analysis on a data agent over well-described tables did not make its loop use Python for single-figure business questions; its figures still come from one SQL query a turn, so the controls that matter stay on SQL (byte caps, table reach, verified queries).
 - Finished: 2026-11-07T10:52Z.
+
+## Why no Python step (the owner's question, 2026-11-07)
+
+- The setup is as intended: the published context reads `options.analysis.python.enabled: true` (GET), and the same context sent three ways gave the same stream: by reference (as the eval runs), by reference with `contextVersion: PUBLISHED`, inline in the chat request, and on `v1alpha`.
+- Seven targeted chats (unlogged, raw streams in the session's scratch), none streamed an `analysis` message:
+  - "Use Python to fit a linear trend to daily revenue for September 2026 and forecast 1 October": one SQL query (30 daily rows), then slope 5.1544, intercept 339.53, forecast €499.32, each exact against the warehouse's `regr_slope` / `regr_intercept`; the agent with Python off gave the same exact figures, so Gemini computed them from the 30 rows itself, though the answer says "Using Python".
+  - An ARIMA forecast for October's first week: BigQuery's own forecast in SQL (two queries and a chart), no Python.
+  - A Pearson correlation and z-score anomalies: SQL.
+  - k-means clustering of customers by spend and orders (read-only SQL cannot fit a model), Python on and off: one SQL query, then the model clustered the 10 active customers itself.
+- `stated` ([known limitations](https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/known-limitations), read 2026-11-07): Python-based reasoning handles "time complexities of up to `O(100k)` rows".
+- Reading, `inferred`: the lab's warehouse is small (every result in these chats was at most a few dozen rows), so every result fits in the model's context and the agent computes there or pushes the work into BigQuery's SQL; Python would be the step for results too large to reason over, which this lab does not produce. Not separable here from "the switch is not honoured in this API surface"; both stay possible.
+- So the 131 runs measured `native-context` again (a second sample of the same setup, which agrees with it), not Python analysis; the pass should have stopped after its first runs showed no Python step (now a rule in claude-dotfiles' cloud notes).
