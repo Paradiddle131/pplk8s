@@ -1,0 +1,10 @@
+/* report-kit switch: a segmented control of two to four views of the same data, sitting beside the heading
+   of the section it changes. The chosen segment is a reversed ink plate. */
+.rk-switch { display: inline-flex; flex-wrap: wrap; max-width: 100%; padding: 3px; gap: 3px; border: 1px solid var(--hair); border-radius: 10px }
+.rk-switch button { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: transparent; border: 0; border-radius: 7px;
+  min-height: 44px; padding: 0 var(--s4); cursor: pointer; display: inline-flex; gap: var(--s2); align-items: center;
+  transition: background-color var(--t-fast) ease-out, color var(--t-fast) ease-out }
+.rk-switch button:hover { background: var(--row) }
+.rk-switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); cursor: default }
+[data-rk-when][hidden] { display: none !important }
+@media (prefers-reduced-motion: reduce) { .rk-switch button { transition: none } }
