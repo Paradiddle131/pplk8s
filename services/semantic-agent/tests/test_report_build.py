@@ -154,15 +154,19 @@ def test_no_retired_question_reaches_the_section_or_its_data(tmp_path):
     assert all(set(c["ids"]) <= scored for c in guide["cats"])
 
 
-def test_the_see_all_buttons_exist_one_per_category_and_stay_hidden(tmp_path):
+def test_the_see_all_buttons_exist_one_per_category_visible_and_wired_to_the_browser(tmp_path):
     page, data = _built(tmp_path)
     buttons = re.findall(r'<button[^>]*class="qs-seeall"[^>]*>', page)
     cats = data["questionGuide"]["cats"]
     assert len(buttons) == len(cats) > 0
-    assert all(re.search(r"\shidden(\s|>|$)", b) for b in buttons)
+    assert not [b for b in buttons if re.search(r"\shidden(\s|=|>|$)", b)]
     assert {re.search(r'data-category="([^"]+)"', b).group(1) for b in buttons} == {
         c["key"] for c in cats
     }
+    # a click dispatches qs:see-all; the question browser listens for it and opens a modal
+    assert 'new CustomEvent("qs:see-all"' in page
+    assert 'document.addEventListener("qs:see-all"' in page
+    assert "dlg.showModal()" in page
 
 
 def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(tmp_path):

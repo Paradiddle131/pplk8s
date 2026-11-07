@@ -135,6 +135,7 @@ RUNG = {
     # without its verified queries; both configuration only.
     "native-kc-reach": 1,
     "native-context-bare": 1,
+    "native-context-python": 1,
     "native-governed": 2,
     "native-shaped": 2,
     "native-graph": 2,
