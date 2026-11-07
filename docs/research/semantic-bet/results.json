@@ -1,5 +1,5 @@
 {
- "written": "2026-11-06T23:02Z",
+ "written": "2026-11-07T00:20Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -819,70 +819,14 @@
    "of_cases": 76,
    "runs": 228,
    "accuracy": [
-    0.859649122807,
-    0.776315789474,
-    0.934210526316
+    0.872807017544,
+    0.793859649123,
+    0.94298245614
    ],
    "confident_wrong": [
     0.017543859649,
     0.0,
     0.048245614035
-   ],
-   "groups": {
-    "conversation": [
-     1.0,
-     7
-    ],
-    "covered": [
-     0.9562841530054645,
-     61
-    ],
-    "distractor": [
-     1.0,
-     1
-    ],
-    "planted": [
-     0.75,
-     4
-    ],
-    "trap": [
-     1.0,
-     10
-    ],
-    "uncovered": [
-     0.4666666666666667,
-     15
-    ]
-   },
-   "pass_all": 0.8552631578947368,
-   "outcomes": {
-    "right": 196,
-    "confident-wrong": 4,
-    "wrong": 14,
-    "unclear": 10,
-    "declined": 4
-   },
-   "model_calls": 246
-  },
-  {
-   "set": "frozen",
-   "arm": "cc-metricflow",
-   "model": "claude-code-strict (haiku)",
-   "harness": "claude-code-headless",
-   "session": "fresh per run",
-   "rung": 4,
-   "cases": 76,
-   "of_cases": 76,
-   "runs": 228,
-   "accuracy": [
-    0.864035087719,
-    0.789473684211,
-    0.929824561404
-   ],
-   "confident_wrong": [
-    0.017543859649,
-    0.004385964912,
-    0.035087719298
    ],
    "groups": {
     "conversation": [
@@ -898,7 +842,63 @@
      1
     ],
     "planted": [
-     0.8333333333333334,
+     1.0,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.4666666666666667,
+     15
+    ]
+   },
+   "pass_all": 0.868421052631579,
+   "outcomes": {
+    "right": 199,
+    "confident-wrong": 4,
+    "wrong": 14,
+    "declined": 4,
+    "unclear": 7
+   },
+   "model_calls": 246
+  },
+  {
+   "set": "frozen",
+   "arm": "cc-metricflow",
+   "model": "claude-code-strict (haiku)",
+   "harness": "claude-code-headless",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 228,
+   "accuracy": [
+    0.872807017544,
+    0.802631578947,
+    0.938596491228
+   ],
+   "confident_wrong": [
+    0.013157894737,
+    0.0,
+    0.030701754386
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     0.9836065573770492,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     1.0,
      4
     ],
     "trap": [
@@ -910,13 +910,13 @@
      15
     ]
    },
-   "pass_all": 0.8157894736842105,
+   "pass_all": 0.8289473684210527,
    "outcomes": {
-    "right": 197,
-    "wrong": 13,
-    "unclear": 3,
+    "right": 199,
+    "wrong": 14,
     "declined": 11,
-    "confident-wrong": 4
+    "confident-wrong": 3,
+    "unclear": 1
    },
    "model_calls": 246
   },
@@ -931,9 +931,9 @@
    "of_cases": 76,
    "runs": 228,
    "accuracy": [
-    0.934210526316,
-    0.877192982456,
-    0.978070175439
+    0.973684210526,
+    0.938596491228,
+    0.995614035088
    ],
    "confident_wrong": [
     0.004385964912,
@@ -942,11 +942,11 @@
    ],
    "groups": {
     "conversation": [
-     0.6666666666666667,
+     0.9523809523809524,
      7
     ],
     "covered": [
-     0.9344262295081968,
+     0.9836065573770492,
      61
     ],
     "distractor": [
@@ -954,7 +954,7 @@
      1
     ],
     "planted": [
-     0.75,
+     1.0,
      4
     ],
     "trap": [
@@ -966,10 +966,10 @@
      15
     ]
    },
-   "pass_all": 0.9078947368421053,
+   "pass_all": 0.9473684210526315,
    "outcomes": {
-    "right": 213,
-    "unclear": 13,
+    "right": 222,
+    "unclear": 4,
     "confident-wrong": 1,
     "wrong": 1
    },
@@ -986,14 +986,14 @@
    "of_cases": 76,
    "runs": 228,
    "accuracy": [
-    0.859649122807,
-    0.780701754386,
-    0.929824561404
+    0.872807017544,
+    0.798245614035,
+    0.938596491228
    ],
    "confident_wrong": [
-    0.008771929825,
     0.0,
-    0.021929824561
+    0.0,
+    0.0
    ],
    "groups": {
     "conversation": [
@@ -1001,7 +1001,7 @@
      7
     ],
     "covered": [
-     0.9508196721311475,
+     0.9672131147540983,
      61
     ],
     "distractor": [
@@ -1009,7 +1009,7 @@
      1
     ],
     "planted": [
-     0.75,
+     1.0,
      4
     ],
     "trap": [
@@ -1021,13 +1021,12 @@
      15
     ]
    },
-   "pass_all": 0.8289473684210527,
+   "pass_all": 0.8421052631578947,
    "outcomes": {
-    "right": 196,
-    "unclear": 8,
-    "confident-wrong": 2,
-    "declined": 15,
-    "wrong": 7
+    "right": 199,
+    "declined": 19,
+    "wrong": 9,
+    "unclear": 1
    },
    "model_calls": 246
   },
@@ -1042,9 +1041,9 @@
    "of_cases": 76,
    "runs": 228,
    "accuracy": [
-    0.789473684211,
-    0.701754385965,
-    0.872807017544
+    0.802631578947,
+    0.714912280702,
+    0.881578947368
    ],
    "confident_wrong": [
     0.035087719298,
@@ -1057,7 +1056,7 @@
      7
     ],
     "covered": [
-     0.9180327868852459,
+     0.9344262295081968,
      61
     ],
     "distractor": [
@@ -1065,7 +1064,7 @@
      1
     ],
     "planted": [
-     0.75,
+     1.0,
      4
     ],
     "trap": [
@@ -1077,13 +1076,13 @@
      15
     ]
    },
-   "pass_all": 0.7368421052631579,
+   "pass_all": 0.75,
    "outcomes": {
-    "right": 180,
+    "right": 183,
     "confident-wrong": 8,
-    "unclear": 7,
-    "declined": 20,
-    "wrong": 13
+    "declined": 23,
+    "wrong": 13,
+    "unclear": 1
    },
    "model_calls": 246
   },
@@ -1098,9 +1097,9 @@
    "of_cases": 76,
    "runs": 228,
    "accuracy": [
-    0.925438596491,
-    0.868421052632,
-    0.973684210526
+    0.960526315789,
+    0.921052631579,
+    0.991228070175
    ],
    "confident_wrong": [
     0.008771929825,
@@ -1109,11 +1108,11 @@
    ],
    "groups": {
     "conversation": [
-     0.7142857142857143,
+     1.0,
      7
     ],
     "covered": [
-     0.9562841530054645,
+     1.0,
      61
     ],
     "distractor": [
@@ -1121,7 +1120,7 @@
      1
     ],
     "planted": [
-     0.8333333333333334,
+     1.0,
      4
     ],
     "trap": [
@@ -1133,10 +1132,10 @@
      15
     ]
    },
-   "pass_all": 0.8947368421052632,
+   "pass_all": 0.9342105263157895,
    "outcomes": {
-    "right": 211,
-    "unclear": 15,
+    "right": 219,
+    "unclear": 7,
     "confident-wrong": 2
    },
    "model_calls": 246
@@ -2796,9 +2795,9 @@
    "pass_all": 0.7317073170731707,
    "outcomes": {
     "right": 98,
-    "unclear": 7,
-    "wrong": 17,
-    "declined": 1
+    "unclear": 6,
+    "declined": 2,
+    "wrong": 17
    },
    "model_calls": 135
   },
@@ -2843,9 +2842,9 @@
    "pass_all": 0.6097560975609756,
    "outcomes": {
     "right": 84,
-    "unclear": 6,
+    "unclear": 4,
+    "declined": 7,
     "wrong": 25,
-    "declined": 5,
     "confident-wrong": 3
    },
    "model_calls": 135
@@ -2866,9 +2865,9 @@
     0.934959349593
    ],
    "confident_wrong": [
-    0.016260162602,
+    0.008130081301,
     0.0,
-    0.040650406504
+    0.024390243902
    ],
    "groups": {
     "conversation": [
@@ -2891,9 +2890,9 @@
    "pass_all": 0.7804878048780488,
    "outcomes": {
     "right": 103,
-    "unclear": 5,
+    "unclear": 6,
     "wrong": 13,
-    "confident-wrong": 2
+    "confident-wrong": 1
    },
    "model_calls": 135
   },
@@ -2938,9 +2937,9 @@
    "pass_all": 0.6585365853658537,
    "outcomes": {
     "right": 94,
-    "declined": 8,
-    "unclear": 4,
+    "declined": 10,
     "wrong": 14,
+    "unclear": 2,
     "confident-wrong": 3
    },
    "model_calls": 135
@@ -2961,9 +2960,9 @@
     0.650406504065
    ],
    "confident_wrong": [
-    0.016260162602,
+    0.008130081301,
     0.0,
-    0.040650406504
+    0.024390243902
    ],
    "groups": {
     "conversation": [
@@ -2986,10 +2985,10 @@
    "pass_all": 0.4146341463414634,
    "outcomes": {
     "right": 63,
-    "unclear": 6,
-    "declined": 13,
-    "wrong": 39,
-    "confident-wrong": 2
+    "declined": 16,
+    "wrong": 40,
+    "unclear": 3,
+    "confident-wrong": 1
    },
    "model_calls": 135
   },
@@ -6510,9 +6509,9 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    -0.061403508772,
-    -0.144736842105,
-    0.017543859649
+    -0.048245614035,
+    -0.127192982456,
+    0.026315789474
    ],
    "confident_wrong": [
     0.004385964912,
@@ -6528,14 +6527,14 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    -0.05701754386,
-    -0.131578947368,
-    0.017543859649
+    -0.048245614035,
+    -0.118421052632,
+    0.026315789474
    ],
    "confident_wrong": [
-    0.004385964912,
-    -0.030701754386,
-    0.030701754386
+    -0.0,
+    -0.035087719298,
+    0.026315789474
    ],
    "worth": false
   },
@@ -6546,16 +6545,16 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    0.013157894737,
-    -0.039473684211,
-    0.065789473684
+    0.052631578947,
+    0.004385964912,
+    0.114035087719
    ],
    "confident_wrong": [
     -0.008771929825,
     -0.039473684211,
     0.013157894737
    ],
-   "worth": false
+   "worth": true
   },
   {
    "set": "frozen",
@@ -6564,14 +6563,14 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    -0.061403508772,
-    -0.140350877193,
-    0.017543859649
+    -0.048245614035,
+    -0.122807017544,
+    0.026315789474
    ],
    "confident_wrong": [
-    -0.004385964912,
-    -0.035087719298,
-    0.017543859649
+    -0.013157894737,
+    -0.039473684211,
+    0.0
    ],
    "worth": false
   },
@@ -6582,9 +6581,9 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    -0.131578947368,
-    -0.223684210526,
-    -0.039473684211
+    -0.118421052632,
+    -0.206140350877,
+    -0.030701754386
    ],
    "confident_wrong": [
     0.021929824561,
@@ -6600,9 +6599,9 @@
    "cases": 76,
    "runs": 228,
    "accuracy": [
-    0.004385964912,
-    -0.035087719298,
-    0.043859649123
+    0.039473684211,
+    -0.004385964912,
+    0.092105263158
    ],
    "confident_wrong": [
     -0.004385964912,
@@ -6983,9 +6982,9 @@
     -0.024390243902
    ],
    "confident_wrong": [
-    0.016260162602,
+    0.008130081301,
     0.0,
-    0.040650406504
+    0.024390243902
    ],
    "worth": false
   },
@@ -7019,9 +7018,9 @@
     -0.30081300813
    ],
    "confident_wrong": [
-    0.016260162602,
+    0.008130081301,
     0.0,
-    0.040650406504
+    0.024390243902
    ],
    "worth": false
   },
@@ -7625,7 +7624,6 @@
    "cc-metricflow on claude-code-strict (haiku)",
    "cc-metricflow-compute on claude-code-strict (haiku)",
    "cc-metricflow-compute on claude-code-strict (sonnet)",
-   "cc-native-mcp on claude-code-strict (haiku)",
    "cc-native-mcp on claude-code-strict (sonnet)",
    "custom-hybrid on claude-haiku-5-5",
    "custom-hybrid on nvidia/nemotron-3.5-super-vl:free",
