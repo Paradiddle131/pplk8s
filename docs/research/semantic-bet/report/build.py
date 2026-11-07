@@ -1239,7 +1239,7 @@ def make_abstract(sets, order):
         return "both sets" if len(xs) == 2 and len(order) == 2 else " and the ".join(xs)
     parts = []
     if below:
-        parts.append("on %s%s the best managed setup is right more often than our ADK agent on MetricFlow on the free model that decides" % ("" if names(below) == "both sets" else "the ", names(below)))
+        parts.append("on %s%s Google's best managed setup is right more often than MetricFlow, our agent on the free model" % ("" if names(below) == "both sets" else "the ", names(below)))
     if tie:
         parts.append("on the %s the two tie" % names(tie))
     if above:
@@ -1323,8 +1323,9 @@ def combine(sets, order):
     for s in order:
         P = sets[s]["parts"]
         if "mf" in P and "mb" in P:
-            sc[s] = "MetricFlow on the free model is right on %d%% of runs and confidently wrong on %d%%; the managed best is right on %d%% and confidently wrong on %d%%." % (
-                pct(P["mf"]["acc"][0]), pct(P["mf"]["cw"][0]), pct(P["mb"]["acc"][0]), pct(P["mb"]["cw"][0]))
+            # Each per-set caption names its set, since the figure's switch changes the numbers under it (#409).
+            sc[s] = "On the %s, MetricFlow on the free model is right on %d%% of runs and confidently wrong on %d%%; the managed best is right on %d%% and confidently wrong on %d%%." % (
+                P["label"].lower(), pct(P["mf"]["acc"][0]), pct(P["mf"]["cw"][0]), pct(P["mb"]["acc"][0]), pct(P["mb"]["cw"][0]))
     S["scatter"] = sc
     st = []
     for P in parts:
@@ -1339,16 +1340,16 @@ def combine(sets, order):
         P = sets[s]["parts"]
         if "drop" in P and "mb" in P and P["mb"]["unc"] is not None:
             d = P["drop"]
-            sl[s] = "On the free model, %s loses %s points from covered to uncovered questions; the managed best changes by %s." % (
-                "every semantic-layer setup" if d[2] > 1 else "MetricFlow", ("%d to %d" % (d[0], d[1])) if d[0] != d[1] else str(d[0]),
+            sl[s] = "On the %s, %s on the free model loses %s points from covered to uncovered questions; the managed best changes by %s points." % (
+                P["label"].lower(), "every semantic-layer setup" if d[2] > 1 else "MetricFlow", ("%d to %d" % (d[0], d[1])) if d[0] != d[1] else str(d[0]),
                 pts((P["mb"]["unc"] - P["mb"]["cov"]) / 100))
     S["slope"] = sl
     ld = {}
     for s in order:
         L = sets[s]["parts"].get("ladder")
         if L:
-            ld[s] = "Over the bare agent's %d%%, the largest lift is %s points [%s, %s], from %s on %s, which cuts confident-wrong from %d%% to %d%%%s." % (
-                pct(L["floor"]), pts(L["d"][0]), pts(L["d"][1]), pts(L["d"][2]), L["arm"], L["model"], pct(L["floorCw"]), pct(L["cw"]),
+            ld[s] = "On the %s, over the bare agent's %d%% right, the largest lift is %s points [%s, %s], from %s on %s, which cuts confident-wrong from %d%% to %d%%%s." % (
+                sets[s]["parts"]["label"].lower(), pct(L["floor"]), pts(L["d"][0]), pts(L["d"][1]), pts(L["d"][2]), L["arm"], L["model"], pct(L["floorCw"]), pct(L["cw"]),
                 "; no setup further up the ladder adds more" if L["higher"] else "")
     S["ladder"] = ld
     return S

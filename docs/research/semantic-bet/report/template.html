@@ -521,7 +521,7 @@ window.REPORT = D;
     <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
     <p class="winners-note" id="w-diff" hidden></p>
     <div class="winners" id="winners"></div>
-    <p class="winners-note">Each setup enters on the model that decides for it; a setup with runs on Claude only waits, tagged pending in the tables.</p>
+    <p class="winners-note">Each setup enters on the model that decides for it<span id="w-pend">; a setup with runs on Claude only waits, tagged pending in the tables</span>.</p>
   </section>
   </section>
 
@@ -1182,11 +1182,11 @@ window.REPORT = D;
       ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
       [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
       ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
-      [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
+      [`Gap: MetricFlow against the managed best, in ${term("points", "points")} right`, (r) => dnum(r.d), "diff"],
     ];
     $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
       lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
-      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set.</p>` : "";
+      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set. The gap is paired question by question; an interval that includes 0 is a tie.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
     $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the ${term("managed-best", "managed best")}</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
@@ -1283,18 +1283,19 @@ window.REPORT = D;
   const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
   // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
   function pillarFig(p) {
-    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = `${L.q} question${L.q === 1 ? "" : "s"}`;
+    // A leader that ran only some of the set's questions says so, and runs that are not one per question are counted beside them.
+    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = L.q < p.n ? `the ${L.q} of ${p.n} questions it ran` : `${L.q} question${L.q === 1 ? "" : "s"}`;
     const what = p.what === "right" ? "right" : "confidently wrong";
     let fig, nl;
     if (L.exact) {
       const b = ivB(iv, L.exact), all = iv[0] === 1;
       fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
-      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}`;
+      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}${L.runs !== L.q ? `, ${runs} in all` : ""}`;
     } else {
       fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
       nl = `${qs}, ${runs}`;
     }
-    if (L.few) nl += `<span class="few"> · few questions: reads only large gaps</span>`;
+    if (L.few) nl += `<span class="few"> · few questions, so only a large gap shows</span>`;
     return { fig, nl };
   }
   function renderWinners() {
@@ -1313,7 +1314,7 @@ window.REPORT = D;
         const f = pillarFig(p);
         return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
           <div class="lead"><span class="num">${f.fig}</span></div>
-          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">partial: ${esc(L.partial)} over the whole set</span>` : ""}</div>
+          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)} so far</span>` : ""}</div>
           <div class="pn">${f.nl}</div>${p.kind ? `<div class="kind">${esc(p.kind)}</div>` : ""}
           <div class="tied">${tied}</div>${ctr}</div>`;
       }).join("");
@@ -1324,6 +1325,8 @@ window.REPORT = D;
     // "a different setup leads on each set": once for the band when it holds in every pillar, else per pillar
     const multi = differs.filter((d) => d !== null), all = multi.length > 1 && multi.every(Boolean);
     $("#winners").innerHTML = html.replace(/@@DIFF(\d+)@@/g, (m, i) => (!all && differs[+i] ? `<span class="lchg">A different setup leads on each set.</span>` : ""));
+    // The pending clause only where a table shows a pending row (#409)
+    $("#w-pend").hidden = !Object.values(D.sets).some((x) => (x.rows || []).some((r) => r.status === "pending"));
     const wd = $("#w-diff"); wd.hidden = !all; wd.textContent = all ? "In every pillar, a different setup leads on each set." : "";
   }
 

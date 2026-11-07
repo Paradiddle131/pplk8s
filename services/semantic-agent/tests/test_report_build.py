@@ -310,3 +310,20 @@ def test_figure_one_and_figure_four_compare_with_the_same_managed_best(tmp_path)
             assert cell == "level with", (row["set"], cell, gap)
         else:
             assert cell.startswith(f"{abs(gap)} points"), (row["set"], cell, gap)
+
+
+def test_every_per_set_caption_names_its_set(tmp_path):
+    """#409: a caption that follows a figure's set switch says which set its numbers are from."""
+    _, data = _built(tmp_path)
+    labels = {s: v["label"].lower() for s, v in data["sets"].items()}
+    for fig in ("scatter", "slope", "ladder"):
+        for s, text in (data["sentences"].get(fig) or {}).items():
+            assert text.startswith(f"On the {labels[s]},"), (fig, s, text)
+
+
+def test_the_summary_says_who_is_compared_and_how_to_read_the_gap(tmp_path):
+    page, data = _built(tmp_path)
+    assert "free model that decides" not in data["abstract"]["lead"]
+    assert "an interval that includes 0 is a tie" in page
+    assert "few questions: reads only large gaps" not in page
+    assert 'id="w-pend"' in page
