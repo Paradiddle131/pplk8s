@@ -659,11 +659,11 @@ def questions_html(guide, qsets, sts, drawn):
                '<span class="qs-pos" id="qs-pos" aria-live="polite"></span>'
                '<button type="button" class="qs-btn" data-step="1" aria-label="Next example">Next'
                '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>')
-    # One "See all N" per category opens the full list of its questions. That browser is not built yet (#397):
-    # the buttons stay hidden until it lands, and each dispatches CustomEvent("qs:see-all", {detail: {category}}).
+    # One "See all N" per category opens every question of it in the question browser (#397); the guide shows the
+    # current category's button only, and each dispatches CustomEvent("qs:see-all", {detail: {category}}).
     out.append('<span class="qs-seeall-set">')
     for c in guide["cats"]:
-        out.append('<button type="button" class="qs-seeall" data-category="%s" hidden>See all %d</button>' % (e(c["key"]), len(c["ids"])))
+        out.append('<button type="button" class="qs-seeall" data-category="%s">See all %d</button>' % (e(c["key"]), len(c["ids"])))
     out.append('</span></div>')
     fields = [("asked", "Asked"), ("groups", term("groups", "Groups")), ("hard", "What makes it hard"),
               ("sql", term("obvious-sql", "Obvious SQL")), ("runs", "How each setup did")]
