@@ -96,6 +96,9 @@ FAMILY = {
 FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our agent on Google's tools",
                 "mf": "Our agent on a semantic-layer server", "ref": "Text-to-SQL baseline", "other": "Another setup"}
 UNDESCRIBED = "Not yet described."
+# The setup "MetricFlow on the free model" reads (owner, 2026-11-06, #400: "yes"): the MetricFlow
+# setup allowed arithmetic over its metric results once its free-model runs cover the set, else the first.
+HEADLINE_MF = ("custom-metricflow-compute", "custom-metricflow")
 COMPARISON_ONLY = {"cc-metricflow", "cc-native-mcp", "cc-metricflow-compute"}  # another harness: shown, never deciding
 HARNESS = {"adk-openrouter": "ADK runner, model through OpenRouter",
            "adk-anthropic-api": "ADK runner, model through the Anthropic API",
@@ -640,7 +643,8 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
             if mb:
                 mb["managedBest"] = True
         floor = next((r for r in rows if r["arm"] == "native-bare" and r["deciding"]), None)
-        mf = next((r for r in rows if r["arm"] == "custom-metricflow" and r["deciding"]), None)
+        mf = next((r for a in HEADLINE_MF for r in rows if r["arm"] == a and r["deciding"]
+                   and (a == HEADLINE_MF[-1] or not r["partial"])), None)
         for r in rows:
             sd = seed_of(st, r["arm"], r["model"])
             r["vsFloor"] = None if (floor is None or r is floor) else {
@@ -781,7 +785,7 @@ def make_parts(st, rows, mb, floor, mf):
             bv = g(max(da, key=lambda r: r["groups"][k][0]), k)
             rel.append("level with" if abs(v - bv) <= 5 else ("%d points above" % (v - bv) if v > bv else "%d points below" % (bv - v)))
         P["rel"] = rel
-        checks = [r for r in rows if r["arm"] == "custom-metricflow" and r["role"] == "check" and "uncovered" in r["groups"]]
+        checks = [r for r in rows if r["arm"] == mf["arm"] and r["role"] == "check" and "uncovered" in r["groups"]]
         if checks:
             P["mfCheckUnc"] = [min(g(r, "uncovered") for r in checks), max(g(r, "uncovered") for r in checks)]
     sl = [r for r in rows if r["family"] == "mf" and r["deciding"] and r["plotted"] and g(r, "covered") is not None and g(r, "uncovered") is not None]
