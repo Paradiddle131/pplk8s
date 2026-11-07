@@ -1367,14 +1367,15 @@ window.reportReady(() => {
   }
 
   /* ---------- drawing primitives (each node: key, kind, geometry, inner markup) ---------- */
-  const LH = { t: 16, l: 14, m: 14 };
+  // line steps for the report's one family (Atkinson Hyperlegible Next): its line box is taller than a condensed face's
+  const LH = { t: 17, l: 16, m: 16 };
   function cardBox(p, w, opt) {
     opt = opt || {};
     const padR = p.logo ? 30 : 10; const inner = w - 10 - padR;
     const tl = wrap((opt.gone ? "dropped: " : "") + p.title, inner, p.mono ? "m" : "t");
     const ls = []; (p.lines || []).forEach((ln) => { const mono = typeof ln === "object"; wrap(mono ? ln.m : ln, w - 20, mono ? "m" : "l").forEach((t) => ls.push({ t, c: mono ? "m" : "l" })); });
     const ml = opt.model ? wrap(opt.model.t, w - 32, "t").map((t) => ({ t, c: "t" })).concat(opt.model.extra ? wrap(opt.model.extra, w - 32, "l").map((t) => ({ t, c: "l" })) : []) : [];
-    let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 10 + ml.length * 14 : 0) + 8;
+    let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 10 + ml.length * LH.l : 0) + 8;
     h = Math.max(h, opt.min || 0);
     return { tl, ls, ml, h: Math.ceil(h / 2) * 2 };
   }
@@ -1388,7 +1389,7 @@ window.reportReady(() => {
     if (opt.model) {
       const my = yy + 8; const mh = 10 + b.ml.length * 14;
       s += `<rect class="s-hb" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/><rect class="s-c${opt.modelAdd ? " add" : ""}" style="fill:none" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/>`;
-      b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 16 + i * 14}"${l.c === "t" ? ' style="font-size:12px"' : ""}>${esc(l.t)}</text>`; });
+      b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 16 + i * LH.l}"${l.c === "t" ? ' style="font-size:12px"' : ""}>${esc(l.t)}</text>`; });
     }
     if (p.logo && LOGOS[p.logo]) s += `<svg x="${w - 22}" y="${8 + LH.t / 2 - 9}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[p.logo]}</svg>`;
     return { key, kind: "g", x, y, w, h: b.h, html: s, cls: opt.gone ? "s-gone" : "" };
