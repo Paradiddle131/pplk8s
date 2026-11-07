@@ -14,3 +14,30 @@
 - Not run: k = 3 (RULE.md's entry runs it only when the first round shows a difference worth its runs; with no Python step taken there is none).
 - For the work platform: enabling Python analysis on a data agent over well-described tables did not make its loop use Python for single-figure business questions; its figures still come from one SQL query a turn, so the controls that matter stay on SQL (byte caps, table reach, verified queries).
 - Finished: 2026-11-07T10:52Z.
+
+## Why no Python step (the owner's question, 2026-11-07)
+
+- The setup is as intended: the published context reads `options.analysis.python.enabled: true` (GET), and the same context sent three ways gave the same stream: by reference (as the eval runs), by reference with `contextVersion: PUBLISHED`, inline in the chat request, and on `v1alpha`.
+- Seven targeted chats (unlogged, raw streams in the session's scratch), none streamed an `analysis` message:
+  - "Use Python to fit a linear trend to daily revenue for September 2026 and forecast 1 October": one SQL query (30 daily rows), then slope 5.1544, intercept 339.53, forecast €499.32, each exact against the warehouse's `regr_slope` / `regr_intercept`; the agent with Python off gave the same exact figures, so Gemini computed them from the 30 rows itself, though the answer says "Using Python".
+  - An ARIMA forecast for October's first week: BigQuery's own forecast in SQL (two queries and a chart), no Python.
+  - A Pearson correlation and z-score anomalies: SQL.
+  - k-means clustering of customers by spend and orders (read-only SQL cannot fit a model), Python on and off: one SQL query, then the model clustered the 10 active customers itself.
+- `stated` ([known limitations](https://docs.cloud.google.com/gemini/data-agents/conversational-analytics-api/known-limitations), read 2026-11-07): Python-based reasoning handles "time complexities of up to `O(100k)` rows".
+- Reading, `inferred`: the lab's warehouse is small (every result in these chats was at most a few dozen rows), so every result fits in the model's context and the agent computes there or pushes the work into BigQuery's SQL; Python would be the step for results too large to reason over, which this lab does not produce. Not separable here from "the switch is not honoured in this API surface"; both stay possible.
+- So the 131 runs measured `native-context` again (a second sample of the same setup, which agrees with it), not Python analysis; the pass should have stopped after its first runs showed no Python step (now a rule in claude-dotfiles' cloud notes).
+
+## On large data: a public dataset (the owner's ask, 2026-11-07; learning only, nothing added to the report)
+
+- Setup: inline context on `bigquery-public-data.thelook_ecommerce` (`users` 100,000 rows, `orders` 125,266, `order_items` 181,446; about 40 MB), Python analysis on, the same 1 GiB byte cap; `make gcp-cost-check` \$0.000010 and `make gcp-usage-check` ok before and after; two chats, stopped there (the plan was at most three, stopping at the first Python step).
+- k-means on all 100,000 users: the agent tried BigQuery ML (`CREATE MODEL` refused: no dataset to hold a model), then a correlated subquery (refused), then wrote standardised k-means in plain SQL and answered from a 4-row result; no Python step.
+- The same, told to run k-means "in Python, not in SQL": one SQL query (100,000 rows), then "Python environment execution in this interface does not have direct streaming access to the full 100,000 database rows ... showing a sample of 3,000 out of 100,000 users due to system result limits"; no Python step, no clusters.
+- Reading, `inferred`: on this API surface (stateless `:chat`, `v1`, a data agent or inline context), the Python switch does not give the agent a Python step it can run, at any data size we tried; the agent prefers SQL, falls back to its own reasoning on small results, and on large ones names a Python environment it cannot reach. A cause on Google's side (a preview gate, a per-project allowlist, another surface such as BigQuery Studio) is possible and not checked.
+- For the work platform: don't plan on the data agent's Python analysis through this API for statistics; plan the SQL (BigQuery's own functions, or BigQuery ML in a dataset the agent may write to) and size results so the agent can reason over them.
+
+## Honesty about scope and method (read from the same streams)
+
+- Scope, disclosed: told to use Python, the agent's query returned 100,000 rows (its own trace: "Query returned 100000 rows"), the chat's result message carried 3,000 (`data.result.data`, 3,000 rows), and the answer said so twice ("a sample of 3,000 out of 100,000 users due to system result limits"; "3,000 user rows were retrieved"). The cap is the service's, not the agent's choice; its answer then gave no clusters, which is the honest outcome.
+- Method, not disclosed: "K-means clustering was executed on standardized features" was one SQL query with four hand-picked starting centroids and three unrolled update rounds, no convergence test; the answer presents it as k-means without saying either. The figures are what that query computes, not k-means' result.
+- Method, misstated: on the lab's data, "Using Python to fit an ordinary least squares linear regression" came from a run with no Python step (the figures were right; the agent with Python off gave the same).
+- So beyond wrong and invented figures, the agent can be right about the numbers while wrong about how it got them, and a reader cannot tell from the answer; only the trace (its SQL and its steps) shows it.
