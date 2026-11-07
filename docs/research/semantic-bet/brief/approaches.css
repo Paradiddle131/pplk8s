@@ -1,0 +1,83 @@
+/* The Approaches sections' own styles over report-kit, for what the kit has no part for: enamel transit signage, the
+   approaches as stations on one line from the most native to the most custom. The route threads the stations and
+   lifts off when a number sorts the table; the table keeps its column widths and its own narrow layout (a 2x2 sort bar
+   and marked numbers); the approaches carry their logos; one takeaway picture is the page's own (the rules' bar
+   pairs). Every colour is a kit token or a page token below. */
+:root { --route: 40px; --brand-lightdash: #7262FF }
+
+.ap .rk-head { padding-left: var(--route) }
+.ap-takeaways .rk-head { margin-bottom: 0 }
+
+/* The table: words at 1rem, numbers at 1.375rem; fixed columns, the approach taking what is left. */
+.ap-table { table-layout: fixed }
+.ap-table thead th { padding: 0 0 var(--s2); white-space: nowrap }
+.ap-table thead th.ap-name-head { padding-left: var(--route) }
+.ap-table thead th.rk-wide { width: 17.5rem; padding-left: var(--s4) }
+.ap-table thead th.rk-num { width: 7.5rem; padding-left: var(--s5); white-space: normal }
+/* a number's head flows its mark, words and sort mark as one balanced line, so the mark stays with its first word */
+.ap-table thead th.rk-num button { display: inline-block; width: auto; max-width: 7.25rem; line-height: 1.25; text-wrap: balance }
+.ap-table thead th.rk-num .rk-mark { margin-right: 6px }
+.ap-table thead th.rk-num .rk-sort-mark { display: inline-block; margin-left: 6px; vertical-align: -1px }
+.ap-table tbody th { position: relative; padding: 10px var(--s5) 10px var(--route) }
+.ap-table td.rk-wide { padding: 10px var(--s4) }
+.ap-table td.rk-num { padding: 10px 0 10px var(--s5) }
+.ap-table td.rk-num .ap-nmark { display: none }
+.ap-cell { display: flex; gap: var(--s3); align-items: center; border-radius: 6px }
+.ap-icons { display: inline-flex; gap: 6px; flex: 0 0 4.75rem }
+.ap-logo { width: 20px; height: 20px; flex: none }
+
+/* The route: a line threads every station in the native-to-custom order. Sorting by a number lifts it away. */
+.ap-stop { position: absolute; top: -1px; bottom: -1px; left: 12px; width: 14px }
+.ap-stop::before { content: ""; position: absolute; left: 5px; width: 4px; top: 0; bottom: 0; background: var(--line);
+  transform-origin: 50% 0; transition: transform .24s cubic-bezier(.2, .8, .2, 1), opacity .24s ease-out }
+.ap-stop::after { content: ""; position: absolute; left: 0; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;
+  background: var(--paper); box-shadow: inset 0 0 0 3.5px var(--line) }
+.ap-table tbody tr:first-child .ap-stop::before { top: 50% }
+.ap-table tbody tr:last-child .ap-stop::before { bottom: 50% }
+.ap-table[data-route="off"] .ap-stop::before { transform: scaleY(0); opacity: 0 }
+
+/* Narrow: each approach stacks; the header becomes a 2x2 sort bar and each number wears its outcome's mark. */
+@media (max-width: 75rem) {
+  .ap-table, .ap-table thead, .ap-table tbody, .ap-table tr, .ap-table th, .ap-table td { display: block }
+  .ap-table { max-width: 40rem }
+  .ap-table thead tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s4); padding-bottom: var(--s1);
+    border-bottom: 2px solid var(--ink) }
+  .ap-table thead th { border: 0; padding: 0; width: auto }
+  .ap-table thead th.ap-name-head { grid-column: 1 / -1; padding-left: 0 }
+  .ap-table thead th.rk-wide { display: none }
+  .ap-table thead th.rk-num { padding-left: 0; width: auto; text-align: left }
+  .ap-table thead th.rk-num button { max-width: none; text-align: left; padding-block: 12px }
+  .ap-table thead button { min-height: 44px }
+  .ap-table tbody tr { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3);
+    padding: var(--s4) 0 var(--s4) var(--route) }
+  .ap-table tbody th { position: static; grid-column: 1 / -1; min-width: 0; padding: 0 }
+  .ap-icons { flex-basis: auto }
+  .ap-table td.rk-wide { grid-column: 1 / -1; padding: 0; container-type: inline-size }
+  .ap-table td.rk-num { padding: 0; text-align: left; display: flex; gap: var(--s2); align-items: center }
+  .ap-table td.rk-num .ap-nmark { display: block }
+  .ap-stop::after { top: calc(var(--s4) + 12px) }
+  .ap-table tbody tr:first-child .ap-stop::before { top: calc(var(--s4) + 12px) }
+  .ap-table tbody tr:last-child .ap-stop::before { bottom: auto; height: calc(var(--s4) + 13px) }
+}
+
+/* Takeaways: each row on the route indent; the ranges' span is green, as right answers are. */
+.ap-takeaways .rk-rows > li { padding-left: var(--route) }
+.ap .rk-span, .ap .rk-span::before, .ap .rk-span::after { background: var(--ok) }
+/* At a large text size the two end numbers of a range outgrow the rail: each then stands outward of its end, low to the
+   left and high to the right, so they never meet; the slope's room above and below grows with the text. */
+.ap-setup { container-type: inline-size }
+@container (max-width: 20rem) {
+  .ap-setup .rk-at.ap-lo { left: calc(var(--lo) * 1%); transform: translateX(-100%) }
+  .ap-setup .rk-at.ap-hi { left: calc(var(--hi) * 1%); transform: none }
+}
+.ap .rk-slope-plot { margin-block: 1.25rem 1.5rem }
+
+/* Rules: one bar pair per model under two column heads with the ink rule. */
+.ap-rules .ap-heads, .ap-rules li { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s5); align-items: end }
+.ap-rules .ap-heads { padding-bottom: var(--s2); border-bottom: 2px solid var(--ink); font-weight: 700; line-height: 1.25; text-wrap: balance }
+.ap-rules .ap-heads span { overflow-wrap: break-word; min-width: 0 }
+.ap-rules li { padding-top: var(--s3) }
+.rk-pic.ap-rules ul > li + li { margin-top: 0 }
+.ap-rules li .rk-pl { grid-column: 1 / -1 }
+
+@media (prefers-reduced-motion: reduce) { .ap-stop::before { transition: none } }

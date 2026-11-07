@@ -7,12 +7,18 @@ answers.  It recommends nothing; every number comes from `results.json`, so reru
 pass refreshes it.
 
     python3 build.py ../results.json            # writes index.html beside this file
+
+The page is built on the vendored report kit (`../report-kit/`): the generator writes the kit's markup and markers,
+and the kit's build inlines its components; `approaches.css` and `approaches.js` hold what the kit has no part for.
+`summary()` gives the page's two sections to the report, whose Summary tab shows them.
 """
 
 import argparse
 import html
 import json
 import re
+import subprocess
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -99,11 +105,11 @@ APPROACHES = [
 # Another harness (Claude Code) and a setup that repeats another: in results.json, not on the page.
 LEFT_OUT = {"cc-metricflow", "cc-metricflow-compute", "cc-native-mcp", "native-context-python"}
 
-COLUMNS = [  # key, header, mark class, tooltip
-    ("right", "Right", "d-ok", "The number matches the warehouse."),
-    ("declined", "Couldn't answer", "d-no", "No number: it said it cannot answer, or asked which meaning."),
-    ("wrong", "Wrong", "d-warn", "A wrong number it flagged as uncertain, or an answer with no clear number."),
-    ("sure_wrong", "Wrong & sure", "d-bad", "A wrong number stated as fact, with no warning."),
+COLUMNS = [  # key, header, the kit's mark kind, tooltip
+    ("right", "Right", "ok", "The number matches the warehouse."),
+    ("declined", "Couldn't answer", "no", "No number: it said it cannot answer, or asked which meaning."),
+    ("wrong", "Wrong", "warn", "A wrong number it flagged as uncertain, or an answer with no clear number."),
+    ("sure_wrong", "Wrong & sure", "bad", "A wrong number stated as fact, with no warning."),
 ]
 
 ICON_NAMES = {
@@ -167,72 +173,64 @@ def table_rows(arms, setname):
     return rows
 
 
+# A brand colour inside an official mark, carried as a page token (approaches.css) so the page keeps its colours as tokens.
+BRAND_FILLS = {'fill="#7262FF"': 'style="fill: var(--brand-lightdash)"'}
+
+
 def icon(key):
     label = ICON_NAMES[key]
     if key in LOGO_FILES:
-        svg = (HERE / "logos" / LOGO_FILES[key]).read_text().strip()
-        svg = svg.replace("<svg ", f'<svg class="logo" role="img" aria-label="{label}" fill="currentColor" ', 1)
+        svg = " ".join((HERE / "logos" / LOGO_FILES[key]).read_text().split())
+        for raw, token in BRAND_FILLS.items():
+            svg = svg.replace(raw, token)
+        svg = svg.replace("<svg ", f'<svg class="ap-logo" role="img" aria-label="{label}" fill="currentColor" ', 1)
         return re.sub(r'\s(width|height)="\d+"', "", svg, count=2)
     return (
-        f'<svg class="logo glyph" role="img" aria-label="{label}" viewBox="0 0 24 24" fill="none" '
+        f'<svg class="ap-logo" role="img" aria-label="{label}" viewBox="0 0 24 24" fill="none" '
         f'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{GLYPHS[key]}</svg>'
     )
 
 
 def dots(c):
-    marks = "".join(f'<i class="{cls}"></i>' * c[key] for key, _, cls, _ in COLUMNS)
+    """100 marks in the columns' order (the kit's dot array), read out as one sentence."""
+    marks = "".join(f'<i data-k="{k}"></i>' * c[key] for key, _, k, _ in COLUMNS)
     label = ", ".join(f"{c[key]} {head.lower()}" for key, head, _, _ in COLUMNS)
-    return f'<span class="dots" role="img" aria-label="{label}, out of 100">{marks}</span>'
+    return f'<span class="rk-dots" role="img" aria-label="{label}, out of 100">{marks}</span>'
 
 
-SORT_ICON = (
-    '<svg class="sort" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" '
-    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/>'
-    '<path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>'
-)
+ORDER_TIP = "From the most native (Google's own data agent) to the most custom (an agent the team builds)."
 
 
-def tip(tid, text):
-    """The definition shown on hover or focus: the visible bubble is drawn by the page script from data-tip;
-    this copy, kept in a hidden block outside the table, is what assistive technology reads (aria-describedby)."""
-    return f'<span id="{tid}">{html.escape(text)}</span>'
-
-
-def render_table(rows, setname, hidden):
-    order_tip = "From the most native (Google's own data agent) to the most custom (an agent the team builds)."
+def render_table(rows, setname, label, hidden):
+    """One set's approaches as the kit's sortable table; the switch beside the heading shows one set's table at a time."""
     heads = "".join(
-        f'<th scope="col" class="num" data-key="{k}" aria-sort="none"><button type="button" data-key="{k}" '
-        f'data-tip="{html.escape(t)}" aria-describedby="t-{setname}-{k}">'
-        f'<i class="{cls}"></i>{html.escape(h)}{SORT_ICON}</button>'
-        "</th>"
-        for k, h, cls, t in COLUMNS
+        f'<th scope="col" class="rk-num" data-sort="number"><button type="button" data-lit="{k}" data-tip="{html.escape(t)}">'
+        f'<i class="rk-mark" data-k="{k}"></i><span class="rk-label">{html.escape(h)}</span></button></th>'
+        for _, h, k, t in COLUMNS
     )
-    descs = [tip(f"t-{setname}-rank", order_tip)] + [tip(f"t-{setname}-{k}", t) for k, _, _, t in COLUMNS]
     body = []
     for r in rows:
         c = r["counts"]
-        cells = (
-            f'<td class="dots-cell">{dots(c)}</td>' + "".join(f'<td class="num k-{k}">{c[k]}</td>' for k, *_ in COLUMNS)
-            if c
-            else '<td class="dots-cell">Not run on this set</td>'
-            + "".join(f'<td class="num k-{k}">–</td>' for k, *_ in COLUMNS)
+        nums = "".join(
+            f'<td class="rk-num" data-v="{c[key] if c else -1}"><i class="rk-mark ap-nmark" data-k="{k}" aria-hidden="true"></i>'
+            f"{c[key] if c else '–'}</td>"
+            for key, _, k, _ in COLUMNS
         )
-        data = " ".join(f'data-{k.replace("_", "-")}="{c[k] if c else -1}"' for k, *_ in COLUMNS)
-        rid = f"d-{setname}-{r['rank']}"
+        pic = dots(c) if c else "Not run on this set"
         body.append(
-            f'<tr data-rank="{r["rank"]}" {data}><th scope="row"><span class="stop" aria-hidden="true"></span>'
-            f'<span class="cell" tabindex="0" data-tip="{html.escape(r["plain"])}" aria-describedby="{rid}">'
-            f'<span class="icons">{"".join(icon(i) for i in r["icons"])}</span>'
-            f'<span class="name">{html.escape(r["name"])}</span></span></th>{cells}</tr>'
+            f'<tr><th scope="row"><span class="ap-stop" aria-hidden="true"></span>'
+            f'<span class="ap-cell" data-tip="{html.escape(r["plain"])}">'
+            f'<span class="ap-icons">{"".join(icon(i) for i in r["icons"])}</span>'
+            f'<span class="ap-name">{html.escape(r["name"])}</span></span></th><td class="rk-wide">{pic}</td>{nums}</tr>'
         )
-        descs.append(tip(rid, r["plain"]))
     return (
-        f'<table class="approaches" data-set="{setname}" data-route="on"{" hidden" if hidden else ""}>'
-        f'<thead><tr><th scope="col" class="name-head" data-key="rank" aria-sort="ascending">'
-        f'<button type="button" data-key="rank" '
-        f'data-tip="{html.escape(order_tip)}" aria-describedby="t-{setname}-rank">Approach{SORT_ICON}</button>'
-        f'</th><th scope="col" class="dots-head">100 answers</th>{heads}</tr></thead>'
-        f"<tbody>{''.join(body)}</tbody></table><div hidden>{''.join(descs)}</div>"
+        f'<table class="rk-table ap-table" data-rk-sort data-rk-flip data-route="on" data-set="{setname}" '
+        f'data-rk-when="set={setname}"{" hidden" if hidden else ""}>'
+        f'<caption class="rk-sr">{html.escape(label)} questions: 100 answers of each approach</caption>'
+        f'<thead><tr><th scope="col" class="ap-name-head" data-sort="default">'
+        f'<button type="button" data-tip="{html.escape(ORDER_TIP)}"><span class="rk-label">Approach</span></button></th>'
+        f'<th scope="col" class="rk-wide">100 answers</th>{heads}</tr></thead>'
+        f"<tbody>{''.join(body)}</tbody></table>"
     )
 
 
@@ -405,18 +403,16 @@ def takeaways(data, runs=()):
                 "programs": runs,
             }
         )
+
     return out
 
 
-SR = '<span class="sr">{}</span>'.format
+SR = '<span class="rk-sr">{}</span>'.format
 
 
-def tipped(tid, text, inner, cls="tipped"):
-    """A focusable word or number that shows its definition in the page's bubble (data-tip + aria-describedby)."""
-    return (
-        f'<span class="{cls}" tabindex="0" data-tip="{html.escape(text)}" aria-describedby="{tid}">{inner}</span>',
-        tip(tid, text),
-    )
+def tipped(text, inner, cls="rk-term"):
+    """A word or number that shows its definition in the kit's bubble; the kit gives it focus and aria-describedby."""
+    return f'<span class="{cls}" data-tip="{html.escape(text)}">{inner}</span>'
 
 
 def spread(values, gap=18):
@@ -439,132 +435,116 @@ def spread(values, gap=18):
 
 
 def bar(v, sr_before="", note=None):
-    """One right-answers-in-100 bar: the track is the whole 100, the fill is the share right.
+    """One right-answers-in-100 bar (the kit's bar): the track is the whole 100, the green fill the share right.
 
-    `note` is (id, text, descs): the number then shows `text` in the page's bubble on hover, focus or tap.
+    `note`: the number then shows this text in the bubble on hover, focus or tap.
     """
     num = f"<b>{v}</b>"
     if note:
-        tid, text, descs = note
-        num, d = tipped(tid, text, num, "tipped num-tip")
-        descs.append(d)
+        num = tipped(note, num, "rk-term ap-num-tip")
     return (
-        f'<span class="bar">{SR(html.escape(sr_before)) if sr_before else ""}'
-        f'<span class="track" aria-hidden="true"><span class="fill" style="--v:{v}"></span></span>'
+        f'<span class="rk-bar">{SR(html.escape(sr_before)) if sr_before else ""}'
+        f'<span class="rk-track" aria-hidden="true"><span class="rk-fill" data-k="ok" style="--v:{v}"></span></span>'
         f"{num}{SR(' right in 100')}</span>"
     )
 
 
-def pic_setup(t, descs):
+def pic_setup(t):
     rows = []
-    for i, r in enumerate(t["ranges"]):
+    for r in t["ranges"]:
         at_lo, at_hi = spread([r["lo"], r["hi"]], gap=16)
-        lo, d1 = tipped(f"t-tk-setup-{i}-lo", r["lo_name"], str(r["lo"]), "end tipped")
-        hi, d2 = tipped(f"t-tk-setup-{i}-hi", r["hi_name"], str(r["hi"]), "end tipped")
-        descs += [d1, d2]
         rows.append(
-            f'<div class="rng"><span class="pl">{html.escape(r["label"])}</span>'
-            '<span class="ruler"><span class="axis" aria-hidden="true">0</span>'
-            f'<span class="scale" style="--lo:{r["lo"]};--hi:{r["hi"]}"><span class="span" aria-hidden="true"></span>'
-            f'{SR(" ranged from ")}<span class="at" style="--p:{at_lo}">{lo}</span>{SR(" to ")}'
-            f'<span class="at" style="--p:{at_hi}">{hi}</span>{SR(" right in 100")}</span>'
-            '<span class="axis" aria-hidden="true">100</span></span></div>'
+            f'<div class="rk-range"><span class="rk-pl">{html.escape(r["label"])}</span>'
+            '<span class="rk-ruler"><span aria-hidden="true">0</span>'
+            f'<span class="rk-scale" style="--lo:{r["lo"]};--hi:{r["hi"]}"><span class="rk-span" aria-hidden="true"></span>'
+            f'{SR(" ranged from ")}<span class="rk-at ap-lo" style="--p:{at_lo}">'
+            f'{tipped(r["lo_name"], str(r["lo"]), "rk-end rk-term")}</span>{SR(" to ")}'
+            f'<span class="rk-at ap-hi" style="--p:{at_hi}">{tipped(r["hi_name"], str(r["hi"]), "rk-end rk-term")}</span>'
+            f'{SR(" right in 100")}</span><span aria-hidden="true">100</span></span></div>'
         )
-    return f'<div class="pic pic-setup">{"".join(rows)}</div>'
+    return f'<div class="rk-pic ap-setup">{"".join(rows)}</div>'
 
 
-def pic_rules(t, descs):
+def pic_rules(t):
     heads = ("Questions a metric covers", "Questions no metric covers")
-    rows = []
-    for i, m in enumerate(t["models"]):
-        note = (f"t-tk-rules-{i}", m["covered_note"], descs) if m.get("covered_note") else None
-        rows.append(
-            f'<li><span class="pl">{html.escape(m["model"])}</span>'
-            f"{bar(m['covered'], heads[0] + ': ', note)}{bar(m['uncovered'], heads[1] + ': ')}</li>"
-        )
-    rows = "".join(rows)
+    rows = "".join(
+        f'<li><span class="rk-pl">{html.escape(m["model"])}</span>'
+        f"{bar(m['covered'], heads[0] + ': ', m.get('covered_note'))}{bar(m['uncovered'], heads[1] + ': ')}</li>"
+        for m in t["models"]
+    )
     cols = "".join(f"<span>{h}</span>" for h in heads)
-    return f'<div class="pic pic-rules"><div class="heads" aria-hidden="true">{cols}</div><ul>{rows}</ul></div>'
+    return f'<div class="rk-pic ap-rules"><div class="ap-heads" aria-hidden="true">{cols}</div><ul>{rows}</ul></div>'
 
 
-def pic_definitions(t, descs):
+def pic_definitions(t):
     panels, said = [], []
     for line in t["lines"]:
         e, h = line["everyday"], line["hard"]
         left, right = spread([e["right"], e["sure_wrong"]]), spread([h["right"], h["sure_wrong"]])
         lines = "".join(
-            f'<line class="ln {cls}" x1="0" y1="{100 - a}" x2="100" y2="{100 - b}" vector-effect="non-scaling-stroke"/>'
-            for cls, a, b in (("ln-bad", e["sure_wrong"], h["sure_wrong"]), ("ln-ok", e["right"], h["right"]))
+            f'<line class="rk-ln" data-k="{k}" x1="0" y1="{100 - a}" x2="100" y2="{100 - b}" vector-effect="non-scaling-stroke"/>'
+            for k, a, b in (("bad", e["sure_wrong"], h["sure_wrong"]), ("ok", e["right"], h["right"]))
         )
         marks = "".join(
-            f'<i class="pt {cls}" style="--x:{x};--y:{v[k]}"></i>'
-            for k, cls in (("sure_wrong", "d-bad"), ("right", "d-ok"))
+            f'<i class="rk-pt" data-k="{k}" style="--x:{x};--y:{v[key]}"></i>'
+            for key, k in (("sure_wrong", "bad"), ("right", "ok"))
             for x, v in ((0, e), (100, h))
         )
         nums = "".join(
-            f'<b class="n {side}" style="--y:{y}">{v}</b>'
+            f'<b class="rk-n {side}" style="--y:{y}">{v}</b>'
             for side, vals, ys in (
-                ("l", (e["right"], e["sure_wrong"]), left),
-                ("r", (h["right"], h["sure_wrong"]), right),
+                ("rk-l", (e["right"], e["sure_wrong"]), left),
+                ("rk-r", (h["right"], h["sure_wrong"]), right),
             )
             for v, y in zip(vals, ys, strict=True)
         )
         panels.append(
-            f'<div class="slope"><span class="pl" aria-hidden="true">{html.escape(line["label"])}</span>'
-            '<div class="plot" aria-hidden="true">'
+            f'<div class="rk-slope"><span class="rk-pl" aria-hidden="true">{html.escape(line["label"])}</span>'
+            '<div class="rk-slope-plot" aria-hidden="true">'
             '<svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">'
             f"{lines}</svg>{marks}{nums}</div>"
-            f'<div class="xl" aria-hidden="true"><span>{SETS[0][1]}</span><span>{SETS[1][1]}</span></div></div>'
+            f'<div class="rk-xl" aria-hidden="true"><span>{SETS[0][1]}</span><span>{SETS[1][1]}</span></div></div>'
         )
         said.append(
             f"{line['label']}: {SETS[0][1].lower()} questions {e['right']} right and {e['sure_wrong']} wrong and sure; "
             f"{SETS[1][1].lower()} questions {h['right']} right and {h['sure_wrong']} wrong and sure, in 100."
         )
-    key = []
-    for k, head, cls, text in COLUMNS:
-        if k in ("right", "sure_wrong"):
-            el, d = tipped(f"t-tk-def-{k}", text, f'<i class="{cls}" aria-hidden="true"></i>{html.escape(head)}')
-            key.append(el)
-            descs.append(d)
+    key = "".join(
+        f"<li>{tipped(text, f'<i class="rk-mark" data-k="{k}" aria-hidden="true"></i>{html.escape(head)}')}</li>"
+        for key, head, k, text in COLUMNS
+        if key in ("right", "sure_wrong")
+    )
     return (
-        f'<div class="pic pic-definitions"><div class="slopes">{"".join(panels)}</div>'
-        f'<p class="sr">{html.escape(" ".join(said))}</p><p class="key">{"".join(key)}</p></div>'
+        f'<div class="rk-pic"><div class="rk-slopes">{"".join(panels)}</div>'
+        f'<p class="rk-sr">{html.escape(" ".join(said))}</p><ul class="rk-key">{key}</ul></div>'
     )
 
 
 def pic_harness(t):
     rows = "".join(
-        f'<li><span class="pl">{html.escape(r["label"])}</span>{bar(r["right"])}</li>' for r in t["programs"]
+        f'<li><span class="rk-pl">{html.escape(r["label"])}</span>{bar(r["right"])}</li>' for r in t["programs"]
     )
-    return f'<div class="pic pic-harness"><ul>{rows}</ul></div>'
+    return f'<div class="rk-pic"><ul>{rows}</ul></div>'
 
 
 def render_takeaways(items):
-    """Each takeaway as one row under the table: its headline and sentence, and one small picture of its figures.
+    """Each takeaway as one of the kit's finding rows: its headline and sentence, and one small picture of its figures.
 
     Every picture is drawn on the same 0-100 scale as the table; text stays HTML so it keeps the page's two sizes.
     """
     if not items:
         return ""
-    descs, rows = [], []
+    rows = []
     for t in items:
         k = t["key"]
-        if k == "setup":
-            pic = pic_setup(t, descs)
-        elif k == "definitions":
-            pic = pic_definitions(t, descs)
-        elif k == "rules":
-            pic = pic_rules(t, descs)
-        else:
-            pic = pic_harness(t)
+        pic = {"setup": pic_setup, "definitions": pic_definitions, "rules": pic_rules}.get(k, pic_harness)(t)
         rows.append(
-            f'<li data-key="{k}"><div class="tk-text"><h3>{html.escape(t["headline"])}</h3>'
+            f'<li data-key="{k}"><div><h3>{html.escape(t["headline"])}</h3>'
             f"<p>{html.escape(t['body'])}</p></div>{pic}</li>"
         )
     return (
-        '<section class="takeaways" aria-labelledby="takeaways-h">'
-        f'<h2 id="takeaways-h">Takeaways</h2><ul class="tk">{"".join(rows)}</ul>'
-        f"<div hidden>{''.join(descs)}</div></section>"
+        '<section class="rk-section ap ap-takeaways" aria-labelledby="takeaways-h">'
+        f'<div class="rk-head"><h2 id="takeaways-h">Takeaways</h2></div><ul class="rk-rows">{"".join(rows)}</ul></section>'
     )
 
 
@@ -581,7 +561,8 @@ def scored_runs(results, data):
     return out
 
 
-def build(results):
+def summary(results):
+    """The two sections, Approaches and Takeaways, as kit markup: the brief page's body and the report's Summary tab."""
     data = json.loads(Path(results).read_text())
     arms = [a for a in data["arms"] if a["arm"] not in LEFT_OUT]
     pooled = {n for _, _, names, _ in APPROACHES for n in names}
@@ -589,19 +570,50 @@ def build(results):
     if unmapped:
         raise SystemExit(f"setups with no approach on the page: {', '.join(unmapped)}")
     sets = [(s, label, tip, len(data["sets"][s]["cases"])) for s, label, tip in SETS]
-    toggle = "".join(
-        f'<button type="button" data-set="{s}" aria-pressed="{"true" if i == 0 else "false"}" '
-        f'data-tip="{html.escape(f"{n} questions. {t}")}" '
-        f'aria-describedby="t-set-{s}">{html.escape(label)} <b>{n}<span class="sr"> questions</span></b></button>'
+    switch = "".join(
+        f'<button type="button" data-value="{s}" aria-pressed="{"true" if i == 0 else "false"}" '
+        f'data-tip="{html.escape(f"{n} questions. {t}")}">{html.escape(label)} <b>{n}{SR(" questions")}</b></button>'
         for i, (s, label, t, n) in enumerate(sets)
-    ) + (f"<div hidden>{''.join(tip(f't-set-{s}', f'{n} questions. {t}') for s, _, t, n in sets)}</div>")
-    tables = "".join(render_table(table_rows(arms, s), s, i > 0) for i, (s, *_) in enumerate(sets))
-    page = (HERE / "template.html").read_text()
-    return (
-        page.replace("@@TOGGLE@@", toggle)
-        .replace("@@TABLES@@", tables)
-        .replace("@@TAKEAWAYS@@", render_takeaways(takeaways(data, scored_runs(results, data))))
     )
+    tables = "".join(render_table(table_rows(arms, s), s, label, i > 0) for i, (s, label, *_) in enumerate(sets))
+    approaches = (
+        '<section class="rk-section ap" aria-labelledby="approaches-h">'
+        '<div class="rk-head"><h2 id="approaches-h">Approaches</h2>'
+        f'<div class="rk-switch" role="group" aria-label="Question set" data-rk-switch="set">{switch}</div></div>'
+        f"{tables}</section>"
+    )
+    return approaches + render_takeaways(takeaways(data, scored_runs(results, data)))
+
+
+# The page's own styles and behaviour over the kit, shared with the report's Summary tab.
+PAGE_CSS = HERE / "approaches.css"
+PAGE_JS = HERE / "approaches.js"
+# The vendored report kit (../report-kit/SOURCE.md), and the components these sections use.
+KIT_BUILD = HERE.parent / "report-kit" / "bin" / "build.cjs"
+KIT_CSS = "tokens base section marks dots bar range slope switch table-sort tip highlight"
+KIT_JS = "switch table-sort tip highlight"
+
+
+def inline_kit(page):
+    """The page with the kit inlined at its markers, by the kit's own build."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "page.html"
+        path.write_text(page)
+        subprocess.run(["node", str(KIT_BUILD), str(path)], check=True, capture_output=True)
+        return path.read_text()
+
+
+def build(results):
+    page = (HERE / "template.html").read_text()
+    for marker, value in (
+        ("@@KIT_CSS@@", KIT_CSS),
+        ("@@KIT_JS@@", KIT_JS),
+        ("@@CSS@@", PAGE_CSS.read_text().strip()),
+        ("@@JS@@", PAGE_JS.read_text().strip()),
+        ("@@SUMMARY@@", summary(results)),
+    ):
+        page = page.replace(marker, value)
+    return inline_kit(page)
 
 
 def main():

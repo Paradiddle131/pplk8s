@@ -96,3 +96,12 @@ def test_a_covered_score_under_100_explains_its_unclear_answers_on_hover():
         for m in rules["models"]
         if m["covered_note"]
     )
+
+
+def test_the_page_is_built_on_the_vendored_kit():
+    page = build.build(RESULTS)
+    assert "/* /report-kit:css */" in page and "/* /report-kit:js */" in page
+    assert "window.ReportKit" in page
+    assert 'data-rk-switch="set"' in page and page.count(
+        '<table class="rk-table ap-table" data-rk-sort'
+    ) == len(build.SETS)

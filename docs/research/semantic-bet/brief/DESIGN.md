@@ -2,6 +2,9 @@
 
 World: enamel transit signage. The approaches are stations on one line, most native to most custom.
 Mode: Operate (a table a person scans). One family: Atkinson Hyperlegible Next 400/600/700, tabular numerals.
+Built on report-kit (vendored in `../report-kit/`): its tokens, section heads, dot arrays, bars, ranges, slopes, switch, sortable table, bubble and highlight.
+`approaches.css` and `approaches.js` hold only what the kit has no part for: the route, the table's column widths and narrow layout, the logos and the rules' bar pairs.
+The same sections are the report's Summary tab (`summary()` in `build.py`).
 
 ## Tokens
 | Token | Light | Dark | Job |
@@ -9,12 +12,13 @@ Mode: Operate (a table a person scans). One family: Atkinson Hyperlegible Next 4
 | --paper | #f4f6fa porcelain | #0a1430 midnight | page ground |
 | --ink | #0d1b3e | #edf1f8 | every word and number (no muted text) |
 | --line | #2447c9 | #86a4ff | route line, station rings, focus ring, selection |
-| --ok / --warn / --bad | #0b7d4b / #b56f00 / #cf2a1f | #3fcf8e / #f2b23e / #ff6a5c | right / wrong / wrong and sure marks |
-| --rule / --row | ink 16% / line 5% | ink 20% / line 8% | row hairlines / row hover |
+| --ok / --warn / --bad | #0b7d4b / #a35f00 / #cf2a1f | #3fcf8e / #f2b23e / #ff6a5c | right / wrong / wrong and sure marks (the kit's) |
+| --hair / --row | ink 16% / line 6% | ink 16% / line 6% | row hairlines / row hover (the kit's) |
 
 ## Rules
 - Two data sizes: words 1rem, numbers 1.375rem bold; rank by weight and reversal, not size. Title 2rem.
-- Marks: filled circle right, full-ink ring couldn't answer, amber circle wrong, scarlet diamond wrong and sure; the header marks are the only legend.
+- Marks: filled circle right, full-ink ring couldn't answer, amber square wrong, scarlet diamond wrong and sure; the header marks are the only legend.
+  Wrong was an amber circle, told from the green circle by colour alone; it takes the kit's square, so no outcome rests on colour.
 - Signature: the route line exists only in the native-to-custom order; sorting by a number lifts it (240 ms), "Approach" redraws it.
 - Pointing at an outcome header, or focusing it from the keyboard, lights that outcome's marks in every row (others to 14%); leaving the header, Escape or a click elsewhere resets them, and sorting never lights them.
 - Definitions: one reversed bubble on hover or keyboard focus, 2.6 s on tap, Esc dismisses; screen readers get them via aria-describedby from a hidden block.
