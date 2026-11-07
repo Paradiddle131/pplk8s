@@ -180,3 +180,7 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none; no GCP work, so no cost check was run.
 - Nothing left running.
 - Next: tonight's 00:07Z wake runs the lane (`native-mcp` and `baseline` hard-v2 k = 1, then the k = 3 round); after the MetricFlow arms' hard-v2 k = 3, merge #410; once #379's arms are whole at k = 3, #380.
+- Addendum, 2026-11-07T13:03Z: the owner answered all three questions ("#392 and #383 as recommended; #409 use managed best everywhere").
+  #392's fix is PR #411, with its RULE.md entry; like #410, it merges once `native-mcp`'s extended-hard-set k = 3 pass is whole.
+  #383 waits for the frozen k = 3 round.
+  #409's Figure 1 now compares with the managed best (page version 40; #336's artifact 4 has the same SHA-256); #409's other items remain.
