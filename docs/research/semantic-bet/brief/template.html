@@ -1,0 +1,165 @@
+<title>Approaches</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
+<style>
+/* Layout: one quiet column; a title row with the set switch, then one table whose dot rows are the only picture. */
+:root {
+  --paper: #f7f8f6; --ink: #121a21; --rule: #d9ded8; --row: #eef1ec;
+  --focus: #1f4fd1;
+  --ok: #17804f; --no: #8d969b; --warn: #b87a06; --bad: #c4352a;
+  --f: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #11161a; --ink: #e9eef0; --rule: #2a3339; --row: #182026; --focus: #8ab0ff;
+  --ok: #3fbf83; --no: #7a868d; --warn: #e4a93a; --bad: #f2685b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #11161a; --ink: #e9eef0; --rule: #2a3339; --row: #182026; --focus: #8ab0ff;
+  --ok: #3fbf83; --no: #7a868d; --warn: #e4a93a; --bad: #f2685b; color-scheme: dark }
+
+* { box-sizing: border-box }
+html { scrollbar-color: var(--rule) var(--paper) }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.5 var(--f);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: var(--s7) var(--s7) }
+::selection { background: var(--focus); color: var(--paper) }
+main { max-width: 66rem; margin: 0 auto; display: grid; gap: var(--s5) }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px }
+
+.top { display: flex; flex-wrap: wrap; gap: var(--s4); align-items: center; justify-content: space-between }
+h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em }
+
+.sets { display: inline-flex; padding: var(--s1); gap: var(--s1); border: 1px solid var(--rule); border-radius: 10px }
+.sets button { font: 600 0.9375rem/1 var(--f); color: var(--ink); background: transparent; border: 0; border-radius: 7px;
+  min-height: 36px; padding: 0 var(--s3); cursor: pointer; display: inline-flex; gap: var(--s2); align-items: center }
+.sets button b { font-weight: 700; font-variant-numeric: tabular-nums }
+.sets button:hover { background: var(--row) }
+.sets button[aria-pressed="true"] { background: var(--ink); color: var(--paper) }
+
+.frame { overflow-x: auto; -webkit-overflow-scrolling: touch }
+table.approaches { width: 100%; min-width: 50rem; border-collapse: collapse; font-variant-numeric: tabular-nums }
+thead th { font: 600 0.8125rem/1.2 var(--f); text-align: left; padding: 0 0 var(--s2); border-bottom: 1px solid var(--ink); white-space: nowrap; vertical-align: bottom }
+thead th.num { text-align: right }
+thead .hd { display: inline-flex; align-items: center; min-height: 28px; padding: var(--s1) 0 }
+thead button { font: inherit; color: inherit; background: none; border: 0; padding: var(--s1) 0; min-height: 28px; cursor: pointer;
+  display: inline-flex; gap: 6px; align-items: center }
+thead th.num button { margin-left: auto }
+thead button::after { content: ""; width: 8px; height: 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; opacity: 0; transform: rotate(45deg) translate(-2px, -2px); transition: opacity .15s, transform .2s }
+thead th[aria-sort="descending"] button::after { opacity: 1 }
+thead th[aria-sort="ascending"] button::after { opacity: 1; transform: rotate(225deg) translate(-2px, -2px) }
+thead th[data-key="rank"] button::after { display: none }
+thead th[aria-sort="ascending"][data-key="rank"] button { text-decoration: underline 1.5px; text-underline-offset: 4px }
+thead button:hover { text-decoration: underline 1.5px; text-underline-offset: 4px }
+thead button i { width: 9px; height: 9px }
+
+tbody tr { border-bottom: 1px solid var(--rule) }
+tbody tr:hover { background: var(--row) }
+tbody th, tbody td { padding: var(--s3) 0; vertical-align: middle }
+tbody th { text-align: left; font-weight: 600; font-size: 1rem; padding-right: var(--s5); min-width: 17rem }
+tbody th .cell { display: flex; gap: var(--s3); align-items: center; cursor: help }
+.icons { display: inline-flex; gap: 6px; flex: 0 0 4.25rem }
+.logo { width: 18px; height: 18px; flex: none }
+td.num { text-align: right; font-size: 1.375rem; font-weight: 700; padding-left: var(--s4); padding-right: 14px; white-space: nowrap }
+td.dots-cell { padding-left: var(--s2); width: 1% }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
+
+/* 100 answers, one mark each: filled circle right, ring couldn't answer, amber wrong, red diamond wrong and sure */
+.dots { display: grid; grid-template-columns: repeat(20, 8px); gap: 3px }
+.dots i, thead i { display: block; width: 8px; height: 8px; border-radius: 50%; transition: opacity .2s ease-out }
+.d-ok { background: var(--ok) }
+.d-no { box-shadow: inset 0 0 0 1.5px var(--no) }
+.d-warn { background: var(--warn) }
+.d-bad { background: var(--bad); border-radius: 1px !important; transform: rotate(45deg) scale(.86) }
+/* Pointing at or sorting by an outcome lights its marks in every row and quiets the rest. */
+table[data-lit="right"] .dots i:not(.d-ok),
+table[data-lit="declined"] .dots i:not(.d-no),
+table[data-lit="wrong"] .dots i:not(.d-warn),
+table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .16 }
+
+/* Phone: each approach stacks; the header becomes the sort bar and each number wears its outcome's mark. */
+@media (max-width: 44rem) {
+  table.approaches { min-width: 0 }
+  table.approaches, thead, tbody, thead tr, th, td { display: block }
+  thead tr { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); padding-bottom: var(--s2); border-bottom: 1px solid var(--ink) }
+  thead th { border: 0; padding: 0 } thead th.dots-head { display: none }
+  thead th.num button { margin-left: 0 }
+  tbody tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2) var(--s3); padding: var(--s4) 0 }
+  tbody th { grid-column: 1 / -1; min-width: 0; padding: 0 }
+  tbody th, tbody td { padding: 0 }
+  .icons { flex-basis: auto }
+  td.dots-cell { grid-column: 1 / -1; width: auto; padding: var(--s1) 0 }
+  td.num { text-align: left; padding: 0; font-size: 1.25rem; display: flex; gap: var(--s2); align-items: center }
+  td.num::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex: none }
+  td.k-right::before { background: var(--ok) } td.k-declined::before { box-shadow: inset 0 0 0 1.5px var(--no) }
+  td.k-wrong::before { background: var(--warn) } td.k-sure_wrong::before { background: var(--bad); border-radius: 1px; transform: rotate(45deg) scale(.86) }
+}
+@media (prefers-reduced-motion: reduce) { .dots i, thead button::after { transition: none } }
+</style>
+
+<main>
+  <div class="top">
+    <h1>Approaches</h1>
+    <div class="sets" role="group" aria-label="Question set">@@TOGGLE@@</div>
+  </div>
+  <div class="frame">@@TABLES@@</div>
+</main>
+
+<script>
+(() => {
+  const tables = [...document.querySelectorAll("table.approaches")];
+  const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let sortKey = "rank", sortDir = "ascending", lit = null;
+
+  const value = (tr, key) => Number(tr.dataset[key === "sure_wrong" ? "sureWrong" : key]);
+  function apply(animate) {
+    for (const table of tables) {
+      const body = table.tBodies[0];
+      const rows = [...body.rows];
+      const before = new Map(rows.map(r => [r, r.getBoundingClientRect().top]));
+      rows.sort((a, b) => {
+        const d = sortDir === "ascending" ? value(a, sortKey) - value(b, sortKey) : value(b, sortKey) - value(a, sortKey);
+        return d || value(a, "rank") - value(b, "rank");
+      }).forEach(r => body.appendChild(r));
+      for (const th of table.tHead.rows[0].cells) {
+        const k = th.dataset.key;
+        if (k) th.setAttribute("aria-sort", k === sortKey ? sortDir : "none");
+      }
+      table.dataset.lit = lit || (sortKey === "rank" ? "" : sortKey);
+      if (animate && motion && !table.hidden) {
+        for (const r of rows) {
+          const dy = before.get(r) - r.getBoundingClientRect().top;
+          if (dy) r.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" });
+        }
+      }
+    }
+  }
+  for (const table of tables) {
+    for (const th of table.tHead.rows[0].cells) {
+      const btn = th.querySelector("button");
+      if (!btn) continue;
+      th.dataset.key = btn.dataset.key;
+      btn.addEventListener("click", () => {
+        const k = btn.dataset.key;
+        if (k === "rank") { sortKey = "rank"; sortDir = "ascending"; }
+        else if (sortKey === k) sortDir = sortDir === "descending" ? "ascending" : "descending";
+        else { sortKey = k; sortDir = "descending"; }
+        apply(true);
+      });
+      if (btn.dataset.key !== "rank") {
+        const on = () => { lit = btn.dataset.key; apply(false); };
+        const off = () => { lit = null; apply(false); };
+        btn.addEventListener("pointerenter", on); btn.addEventListener("pointerleave", off);
+        btn.addEventListener("focus", on); btn.addEventListener("blur", off);
+      }
+    }
+  }
+  for (const btn of document.querySelectorAll(".sets button")) {
+    btn.addEventListener("click", () => {
+      for (const b of document.querySelectorAll(".sets button")) b.setAttribute("aria-pressed", String(b === btn));
+      for (const t of tables) t.hidden = t.dataset.set !== btn.dataset.set;
+      apply(false);
+    });
+  }
+})();
+</script>
