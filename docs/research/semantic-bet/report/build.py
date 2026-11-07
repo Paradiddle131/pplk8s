@@ -532,7 +532,7 @@ QS_RUBRIC_ORDER = ["fan_out_join", "distinct_across_join", "ratio_of_sums", "win
                    "sessions_gaps_islands", "cohort_retention", "anti_join", "date_spine", "fiscal_timezone"]
 # A question's id as a short name: the set prefixes go, business acronyms and proper names are spelled out.
 NAME_PREFIX = ("hard_", "hv2_", "bet_")
-NAME_WORD = {"aov": "AOV", "cpa": "CPA", "cpl": "CPL", "mqls": "MQLs", "roas": "ROAS", "gmv": "GMV", "q3": "Q3",
+NAME_WORD = {"followup": "follow-up", "aov": "AOV", "cpa": "CPA", "cpl": "CPL", "mqls": "MQLs", "roas": "ROAS", "gmv": "GMV", "q3": "Q3",
              "wow": "week on week", "mtd": "month to date", "ytd": "year to date", "vs": "vs",
              "germany": "Germany", "turkey": "Turkey", "turkish": "Turkish", "dutch": "Dutch",
              "amsterdam": "Amsterdam", "august": "August", "september": "September", "october": "October"}
@@ -639,8 +639,8 @@ def questions_html(guide, qsets, sts, drawn):
         out.append(where + '</article>')
     out.append('</div>')
     out.append('<h3 class="qs-gh" id="qs-guide-h">Questions by kind</h3>')
-    out.append('<p class="qs-sub">Pick a kind of question; an example opens beside it. '
-               'Step through the others with Previous and Next, or the arrow keys.</p>')
+    out.append('<p class="qs-sub">Pick a kind of question to see a real one of that kind; '
+               'Previous and Next, or the arrow keys, step through the others.</p>')
     out.append('<div class="qs-guide">')
     out.append('<nav class="qs-nav" id="qs-nav" aria-labelledby="qs-guide-h">')
     for li, (lk, ll) in enumerate(QS_LISTS):

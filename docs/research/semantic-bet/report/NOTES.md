@@ -216,3 +216,41 @@ The critique ran in one context (no sub-agent tool was available), so it is a de
   - The glossary's type filter is seven choices, more than the critique's four at a glance; the counts and "All types" carry it, and it wraps to two rows at desktop width.
   - Trade-offs kept from A: find-in-page searches only the open part; seven parts.
 - Not verified: Safari and Firefox, real touch devices, screen-reader output.
+
+## Revision 3: question section (#390)
+
+The Question sets part opens with "The questions", before the appendix: design C, the field guide, with the owner's changes of 2026-11-06.
+`build.py` (`question_guide`) writes its markup at `<!--QUESTIONS-->` and its data as `REPORT.questionGuide`; `questions.html` holds its style and script.
+
+### What it shows
+
+- Three set profiles side by side (stacked on a phone), each with the anchor `#qs-<set>`: what the set holds, its number of questions, its group mix as bars, and whether the figures draw it or its totals sit in the appendix.
+  A set's name elsewhere on the page now jumps there from its pinned tooltip ("What the set holds"); other terms still jump to the glossary.
+- "Questions by kind": three lists shown at once on the left, titled Groups, Hard to interpret and Hard in SQL, each title a glossary term; on a phone they wrap as chips.
+  Picking a kind shows its definition and one real question; Previous and Next, or the arrow keys, step through the others, ordered with questions the figures have runs on first, then the plainest.
+  A kind counts each question once across the sets: Jargon has 13.
+- The card has one fixed layout: a name and the sets that hold it, then Asked (every turn with its expected number), Groups, What makes it hard, Obvious SQL and How each setup did, always in that order.
+  Every field reserves the height of its tallest content over all 131 questions, measured at the card's width (again on resize and once the fonts load), and the kind's heading reserves the tallest definition, so stepping or switching kinds never moves a field; a field a question lacks reads "None listed" or "No known trap" in muted ink.
+  The cost is empty space under a one-turn question, sized by the three-turn conversations.
+- Chips in the card are the kinds' own terms: hover or focus shows the definition, a click or Enter opens that kind and moves focus to its heading.
+- How each setup did is a table, not hover text: each setup once, on the row the figures read it on, cheapest first, its three runs as the plate's squares with a key, and a plain summary ("Right on every run: 9 of 18 setups · Confidently wrong at least once: 5"); two columns of rows on a wide card, one on a narrow one.
+  A question asked only in the extended hard set says that set is not drawn and points to the appendix.
+- Set versions show only where a question needs them: a question uncovered in the hard set and composable in the extended hard set shows both groups, each with its set, and one sentence on why.
+- Gone, as the owner asked: the "Every question" list and its filters, freeze dates, hashes, "new in" tags, retirement counts and unlabelled expected numbers; retired questions are absent from the markup and the data.
+- "See all N": one button per kind, hidden (the `hidden` attribute) until the question browser (#397) lands; a click dispatches `CustomEvent("qs:see-all", {detail: {category}})` on `document`, the category being the kind's glossary key.
+- New glossary terms, each typed: Extended hard set, Groups, Hard to interpret, Obvious SQL, Declined, Unclear.
+
+### How I checked
+
+- Playwright, Chromium, at 1280 × 900 and 390 × 844, light and dark: 97 checks, 0 failures.
+  Every example of every kind stepped through (287 steps, all 131 questions reached): the card's height and every field's box stay the same to the pixel, no field overflows its box, the card never scrolls sideways, and a full cycle returns to the first example.
+  Keyboard: Tab reaches the open kind (one tab stop for the lists), arrows, Home and End move and select with wrap-around, Tab goes on to the kind's term, Previous and Next; arrows and Enter step; focus rings show.
+  A chip opens its kind by click and by Enter without pinning a tooltip; Jargon shows 13; the see-all buttons are hidden, one per kind, and dispatch their event; every text node in the section has at least 4.5:1 contrast on its ground; no console errors, no sideways page scroll.
+  A hard-set term on the Summary jumps to `#qs-hard` and "↑ Back" returns; a URL to `#qs-hard-v2` opens the part there; the theme button repaints the card.
+- `node tools/clipcheck.js --quick`: 0 findings.
+  It had one before this revision: on a 400 or 360 px screen Figure 2's label column (132 px) was narrower than `cc-metricflow-compute`, so a glyph near 0% covered it; the narrow column now fits the longest setup name.
+- `tests/test_report_build.py`: 13 passed (five new: the section's place before the appendix, every set's anchor, no retired question in the section or its data, the hidden see-all buttons, a typed term for every list title and kind); `ruff check tests` clean.
+- The impeccable detector (0.1.18, telemetry off) on six static snapshots of the part (a kind at rest, a question whose groups differ by set, a three-turn conversation; light and dark) at 1280 × 800 and 390 × 844, and on `questions.html`: it first found the lead paragraph at 93 characters a line and a flat heading scale (the card's name larger than the profiles' headings); both fixed, now 0 findings and 0 advisories.
+- The critique ran in one context (no sub-agent tool), so it is a degraded run by the skill's rule; from it: the kind's heading had an outline the width of the panel (now hugs the text), the profile counts were pushed right on a phone (fixed), setup names wrapped in the run table at desktop width (columns rebalanced), and the guide's lead said "beside" where a phone puts the example below (reworded).
+- Screenshots at device scale 1 in `shots/rev3/390/`: the section, a question whose groups differ by set, and a three-turn conversation, each at desktop and phone width in light and dark.
+- Not verified: the page's Google fonts are blocked in this sandbox, so every check ran on the fallback faces (the reservation re-measures once the real fonts load); Safari and Firefox, real touch devices and screen-reader output.
