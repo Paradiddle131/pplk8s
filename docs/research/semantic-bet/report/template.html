@@ -515,7 +515,7 @@ window.REPORT = D;
   <div class="views" id="views">
   <section class="view on" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
 
-  <section class="abstract"><p class="lead"><span class="runin">Abstract.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
+  <section class="abstract"><p class="lead"><span class="runin">In short.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
 
   <section aria-labelledby="w-h">
     <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
@@ -543,7 +543,7 @@ window.REPORT = D;
   </section>
 
   <section class="view" id="view-metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
-  <h2>Where the ADK agent on MetricFlow stands</h2>
+  <h2>Where the <span class="term" data-term="adk" tabindex="0">ADK</span> agent on <span class="term" data-term="metricflow" tabindex="0">MetricFlow</span> stands</h2>
   <figure id="fig2" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
     <div class="figtools"><div class="legend" id="leg2"></div></div>
@@ -847,6 +847,9 @@ window.REPORT = D;
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
   const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
+  // A model's name with its glossary tooltip: the free model, Gemini, Claude by name, or Claude Code (#395).
+  const MODEL_TERM = [[/^Nemotron/, "nemotron"], [/^Gemini/, "gemini"], [/^Claude Code/, "claude-code"], [/^(CC )?(Haiku|Sonnet|Opus)/, "claude-models"]];
+  const modelTerm = (m) => { const k = (MODEL_TERM.find(([re]) => re.test(m)) || [])[1]; return k ? term(k, esc(m)) : esc(m); };
   const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
 
   /* ---------- one tooltip, delegated: hover shows, click or Enter pins ---------- */
@@ -1392,7 +1395,7 @@ window.REPORT = D;
       const idAttr = !sub && !idDone.has(r.arm) ? ` id="map-${esc(r.arm)}"` : ""; if (idAttr) idDone.add(r.arm);
       const open = MS.open.has(r.arm);
       let x = `<tr class="${sub ? "sub" : "main"}"${sub ? ` data-arm-row="${esc(r.arm)}"${open ? "" : " hidden"}` : idAttr}>`;
-      x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${esc(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
+      x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${modelTerm(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
       x += `<td class="what">${sub ? "" : esc(descOf(r.arm))}</td>`;
       groups.forEach((g) => {
         const v = r.groups[g];

@@ -273,3 +273,23 @@ def test_a_hidden_setup_is_nowhere_on_the_page(tmp_path):
     assert any(
         a["arm"] == "native-context-python" for a in results["arms"]
     )  # its runs stay in the results
+
+
+def test_every_model_name_the_page_shows_has_a_glossary_term_and_the_tools_are_defined():
+    """#395's newcomer read: the models, tools and products a setup names are explained."""
+    keys = {k for k, _, _ in build.TERMS}
+    for k in (
+        *("metricflow", "semantic-layer", "dbt", "adk", "mcp", "knowledge-catalog", "lightdash"),
+        *("nemotron", "gemini", "claude-models", "harness", "points", "tolerance", "hedge"),
+        *("judge", "rung"),
+    ):
+        assert k in keys and k in build.TERM_TYPE, k
+    template = (BUILD.parent / "template.html").read_text()
+    for k in re.findall(r'\[/\^[^/]+/, "([a-z-]+)"\]', template):
+        assert k in keys, k
+
+
+def test_the_no_arithmetic_metricflow_setups_say_why_obeying_scores_lower():
+    """#400: the old setups stay on the page; their description explains the model order."""
+    for arm in ("custom-metricflow", "cc-metricflow"):
+        assert re.search(r"never (to )?compute", build.DESC[arm]), arm

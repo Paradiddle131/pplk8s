@@ -1,0 +1,6 @@
+## 2026-11-07 — Semantic track — the report's newcomer read: tools, products and models get glossary terms (#395, #400)
+
+- Done: `report/build.py` TERMS gains a "Tools and products" type (semantic layer, dbt, MetricFlow, Lightdash, Knowledge Catalog, ADK, MCP) and model and method terms (harness, Nemotron free, Gemini, Haiku/Sonnet/Opus, rung, points, tolerance, hedge, blind judge), each with its structured longer lines; the bootstrap and Clopper-Pearson entries read in plain words; every model name in the decision map carries its term's tooltip; "Abstract." reads "In short."; `custom-metricflow` and `cc-metricflow` say they are told never to compute a figure, so a model that obeys scores lower (#400's last clause).
+- Evidence: a fresh reader's pass over every tab's visible text listed the undefined words; `tests/test_report_build.py` 23 passed (two new: the terms exist and are typed, the template's model map names only real terms; the no-arithmetic setups say why); Playwright: 27 model tooltips in the decision map, no page errors; `tools/clipcheck.js --quick` 0 findings.
+- Not done here: the reader's caption and count mismatches, code names in prose and the partial leader, filed as #409.
+- Closed with it: #390, #393, #394, #396, #397, #398, #401 (each checked against its "Done when").
