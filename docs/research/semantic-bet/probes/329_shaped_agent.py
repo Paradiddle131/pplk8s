@@ -288,7 +288,7 @@ def summarise(stream: object) -> dict:
     """What the stream says the agent did: its SQL, the functions and tables it names, a matched verified query,
     and its final text."""
     messages = stream if isinstance(stream, list) else [stream]
-    sql, matched, texts, final = [], [], [], []
+    sql, matched, texts, final, python = [], [], [], [], []
     for message in messages:
         system = (message or {}).get("systemMessage") or {}
         data = system.get("data") or {}
@@ -296,6 +296,10 @@ def summarise(stream: object) -> dict:
             sql.append(data["generatedSql"])
         if data.get("matchedQuery") or data.get("matchedExampleQuery"):
             matched.append(data.get("matchedQuery") or data.get("matchedExampleQuery"))
+        # A Python analysis step (options.analysis.python.enabled): its code, as the agent ran it.
+        event = (system.get("analysis") or {}).get("progressEvent") or {}
+        if event.get("code"):
+            python.append(event["code"])
         text = system.get("text") or {}
         parts = "".join(text.get("parts") or [])
         if parts:
@@ -305,6 +309,7 @@ def summarise(stream: object) -> dict:
     joined = "\n".join(sql)
     return {
         "generated_sql": sql,
+        "python_code": python,
         "functions_called": sorted(
             set(re.findall(rf"{DATASET}`?\.`?(\w+)`?\s*\(", joined))
         ),

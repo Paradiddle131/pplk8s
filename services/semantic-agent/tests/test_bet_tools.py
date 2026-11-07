@@ -139,3 +139,25 @@ def test_the_compute_setup_differs_from_metricflow_only_in_allowing_arithmetic_o
         and bet_eval.RUNG["custom-metricflow-compute"] == 4
     )
     assert probe("387_cc_strict.py").instruction("cc-metricflow-compute") == INSTRUCTION_COMPUTE
+
+
+def test_the_python_setup_differs_from_its_source_only_in_python_analysis():
+    data_agent = probe("354_data_agent.py")
+    extra = bet_tools.DECLARED["native-context-python"] - bet_tools.DECLARED["native-context"]
+    assert extra == {"python_analysis"}
+    source = {"systemInstruction": "x", "options": {"datasource": {"bigQueryMaxBilledBytes": "1"}}}
+    derived = data_agent.derived_context("native-context-python", {"bet-context": source})
+    assert derived.pop("options")["analysis"] == {"python": {"enabled": True}}
+    assert derived == {"systemInstruction": "x"}
+    assert source["options"] == {"datasource": {"bigQueryMaxBilledBytes": "1"}}  # source untouched
+    turn = data_agent.turn_of(
+        "q?",
+        {
+            "generated_sql": ["select 1"],
+            "matched_query": [],
+            "python_code": ["print(1)"],
+            "final_response": ["1"],
+            "texts": [],
+        },
+    )
+    assert [c["tool"] for c in turn["calls"]] == ["generated_sql", "python_analysis"]
