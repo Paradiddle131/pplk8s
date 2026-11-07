@@ -39,6 +39,15 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
 - The sticky copy of the head shows only once the real head has gone under the tab strip; before that the two were drawn on top of each other, which the kit checker reported as overlapping and clipped labels.
 - The table is 60rem at least (words .875rem, numbers .9375rem bold) and fits the 1180 px column; narrower, it scrolls sideways inside its box, as before.
 
+### One main model per setup (owner, 2026-11-07)
+
+- A setup's main row (its first row in the map, its bold line in the charts, the row its headlines read) is the model it would ship on, fixed by rule before any score: the free model for ours, Gemini's default for Google's agent, then the Claude checks (`build.py` `pick_order`).
+  It used to put the managed best first, so native-context-bare led with Gemini's thinking mode while every other Google setup led with its default, and a chart's "default 67" jumped to a map row reading 80.
+- The other models stay as variants, never averaged, medianed or maxed in: the modes are different setups, and the best of four is the luckiest run.
+  The managed best stays tagged on whichever model holds it; a setup whose folded models hold it says so on its button ("+3 models, one the managed best").
+- A label in a chart that names one model (the slopes' labels, the scatter's key) jumps to that model's row in the map, on the set the chart shows, opening the setup's other models when it is one of them.
+- A sort lays every model out flat; a row that is not its setup's main model wears "not its main model" (glossary: Main model), so a Claude check scoring 100 never reads as a setup's own figure.
+
 ### The MetricFlow agent on the kit
 
 - Two kit sections ("Where the ADK agent on MetricFlow stands", "Why: covered questions against uncovered ones"), each chart's title the kit's finding headline (an `h3`), with the chart's set switch (the kit's switch, as the map's) beside the titles of the scatter and the slopes; then the key, the chart, its caption.
