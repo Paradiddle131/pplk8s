@@ -68,3 +68,16 @@ def test_the_page_runs_from_most_native_to_most_custom_and_recommends_nothing():
         assert word not in page
     for setname, *_ in build.SETS:
         assert f'data-set="{setname}"' in page
+
+
+def test_takeaways_quote_the_figures_their_pictures_draw():
+    items = {t["key"]: t for t in build.takeaways(json.loads(RESULTS.read_text()))}
+    assert {"setup", "rules", "definitions", "harness"} <= set(items)
+    for r in items["setup"]["ranges"]:
+        assert f"{r['lo']} to {r['hi']}" in items["setup"]["body"]
+    assert all(str(p["right"]) in items["harness"]["body"] for p in items["harness"]["programs"])
+    names = [name for name, *_ in build.APPROACHES]
+    assert (
+        items["setup"]["ranges"][0]["lo_name"] in names
+        and items["setup"]["ranges"][0]["hi_name"] in names
+    )

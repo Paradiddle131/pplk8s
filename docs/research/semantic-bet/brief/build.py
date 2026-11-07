@@ -232,6 +232,164 @@ def render_table(rows, setname, hidden):
     )
 
 
+MODEL_NAMES = [
+    (":free", "A free model"),
+    ("haiku", "Claude Haiku"),
+    ("sonnet", "Claude Sonnet"),
+    ("opus", "Claude Opus"),
+]
+# The programs that run the same agent, in plain words (Takeaway: the program running the AI matters too).
+HARNESSES = [
+    ("custom-metricflow", "adk-anthropic-api", "claude-haiku-5-5", "Google's agent kit (ADK)"),
+    ("cc-metricflow", "claude-code-headless", "claude-code-strict (haiku)", "Claude Code, run as a script"),
+    ("cc-metricflow", "claude-code-subagent", "claude-code (fresh-haiku)", "Claude Code, started by another agent"),
+]
+
+
+def model_name(model):
+    return next((name for key, name in MODEL_NAMES if key in model), model)
+
+
+def right100(arm):
+    return round(100 * arm["outcomes"].get("right", 0) / arm["runs"])
+
+
+def whole(arms, setname):
+    return [a for a in arms if a["set"] == setname and a["cases"] == a["of_cases"]]
+
+
+def takeaways(data):
+    """Plain-language observations over results.json; each is left out when its runs are missing.
+
+    Each entry: key, headline, body, and the figures its picture draws.
+    """
+    every, out = data["arms"], []
+    arm_name = {n: name for name, _, names, _ in APPROACHES for n in names}
+    everyday = whole(every, "frozen")
+
+    # The free model's best setup within each approach, so each figure matches a row's name on the table.
+    best_free = {}
+    for a in everyday:
+        if a["model"].endswith(":free") and a["arm"] in arm_name:
+            name = arm_name[a["arm"]]
+            if name not in best_free or right100(a) > right100(best_free[name]):
+                best_free[name] = a
+    free = list(best_free.values())
+    one_setup = sorted(
+        (a for a in everyday if a["arm"] == "native-mcp" and a["harness"].startswith("adk")), key=lambda a: right100(a)
+    )
+    if len(free) > 1 and len(one_setup) > 1:
+        lo, hi = min(free, key=right100), max(free, key=right100)
+        out.append(
+            {
+                "key": "setup",
+                "headline": "The setup moves the score more than the AI model",
+                "body": f"With one free model, the setups ranged from {right100(lo)} to {right100(hi)} "
+                f"right answers in 100. "
+                f"With one setup, {len(one_setup)} models ranged from {right100(one_setup[0])} "
+                f"to {right100(one_setup[-1])}.",
+                "ranges": [
+                    {
+                        "label": "Same AI model, different setups",
+                        "lo": right100(lo),
+                        "hi": right100(hi),
+                        "lo_name": arm_name[lo["arm"]],
+                        "hi_name": arm_name[hi["arm"]],
+                    },
+                    {
+                        "label": "Same setup, different AI models",
+                        "lo": right100(one_setup[0]),
+                        "hi": right100(one_setup[-1]),
+                        "lo_name": model_name(one_setup[0]["model"]),
+                        "hi_name": model_name(one_setup[-1]["model"]),
+                    },
+                ],
+            }
+        )
+
+    strict = {
+        model_name(a["model"]): a
+        for a in everyday
+        if a["arm"] == "custom-metricflow" and a["harness"].startswith("adk")
+    }
+    order = [name for _, name in MODEL_NAMES if name in strict]
+    if len(order) > 1:
+        rows = [
+            {
+                "model": m,
+                "covered": round(100 * strict[m]["groups"]["covered"][0]),
+                "uncovered": round(100 * strict[m]["groups"]["uncovered"][0]),
+            }
+            for m in order
+        ]
+        n = strict[order[0]]["groups"]["uncovered"][1]
+        cov = [r["covered"] for r in rows]
+        out.append(
+            {
+                "key": "rules",
+                "headline": "A pricier model can score lower by following the rules",
+                "body": f"Told to answer only through our metrics, every model got the questions a metric covers right "
+                f"({min(cov)} to {max(cov)} in 100). On the {n} questions no metric covers, the pricier models "
+                f"declined, as told, and so scored lower.",
+                "models": rows,
+            }
+        )
+
+    pair = {}
+    for key, names in (("without", ["native-bare"]), ("with", ["native-context-bare", "native-context"])):
+        got = [stands_for(every, names, s) for s, *_ in SETS]
+        if all(got):
+            pair[key] = [per100(a["outcomes"], a["runs"]) for a in got]
+    if len(pair) == 2:
+        (wo_e, wo_h), (w_e, w_h) = pair["without"], pair["with"]
+        out.append(
+            {
+                "key": "definitions",
+                "headline": "Questions are hard to interpret only without our definitions",
+                "body": f"Without definitions, Google's data agent fell from {wo_e['right']} to {wo_h['right']} "
+                f"right in 100 "
+                f"on hard-to-interpret questions, and wrong and sure rose from {wo_e['sure_wrong']} to "
+                f"{wo_h['sure_wrong']}. With them it held at {w_e['right']} and {w_h['right']}.",
+                "lines": [
+                    {"label": "Without definitions", "everyday": wo_e, "hard": wo_h},
+                    {"label": "With generated definitions", "everyday": w_e, "hard": w_h},
+                ],
+            }
+        )
+
+    hard = whole(every, "hard")
+    runs = []
+    for arm, harness, model, label in HARNESSES:
+        a = next((a for a in hard if a["arm"] == arm and a["harness"] == harness and a["model"] == model), None)
+        if a:
+            runs.append({"label": label, "right": right100(a)})
+    if len(runs) == len(HARNESSES):
+        out.append(
+            {
+                "key": "harness",
+                "headline": "The program running the AI matters too",
+                "body": "Same tools, same rule, same model (Claude Haiku): on hard-to-interpret questions it got "
+                + ", ".join(str(r["right"]) for r in runs[:-1])
+                + f" or {runs[-1]['right']} right in 100, "
+                "depending on the program running it.",
+                "programs": runs,
+            }
+        )
+    return out
+
+
+def render_takeaways(items):
+    """A plain first rendering; the design pass owns its look."""
+    rows = "".join(
+        f'<li data-key="{t["key"]}"><h3>{html.escape(t["headline"])}</h3><p>{html.escape(t["body"])}</p></li>'
+        for t in items
+    )
+    return (
+        '<section class="takeaways" aria-labelledby="takeaways-h">'
+        f'<h2 id="takeaways-h">Takeaways</h2><ul>{rows}</ul></section>'
+    )
+
+
 def build(results):
     data = json.loads(Path(results).read_text())
     arms = [a for a in data["arms"] if a["arm"] not in LEFT_OUT]
@@ -248,7 +406,11 @@ def build(results):
     ) + (f"<div hidden>{''.join(tip(f't-set-{s}', f'{n} questions. {t}') for s, _, t, n in sets)}</div>")
     tables = "".join(render_table(table_rows(arms, s), s, i > 0) for i, (s, *_) in enumerate(sets))
     page = (HERE / "template.html").read_text()
-    return page.replace("@@TOGGLE@@", toggle).replace("@@TABLES@@", tables)
+    return (
+        page.replace("@@TOGGLE@@", toggle)
+        .replace("@@TABLES@@", tables)
+        .replace("@@TAKEAWAYS@@", render_takeaways(takeaways(data)))
+    )
 
 
 def main():
