@@ -1,11 +1,11 @@
 /* report-kit tabs. Markup: a .rk-tabs <nav> holding a [role=tablist] of <a role=tab href="#part" aria-controls="part">,
    and each part a [role=tabpanel] with that id. A part with nothing in it loses its tab; one part left hides
    the strip. The URL's hash names the open part, or an element inside one, which opens its part and comes into
-   view; Back and Forward walk the parts. API: ReportKit.tabs.open(id); event rk:tab {detail: id} on document. */
+   view; Back and Forward walk the parts; one strip per page (the first in the kit's root). API: ReportKit.tabs.open(id); event rk:tab {detail: id} on document. */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
-  function init() {
-    const strip = document.querySelector(".rk-tabs");
+  function init(root) {
+    const strip = root.querySelector(".rk-tabs");
     if (!strip) return;
     const list = strip.querySelector('[role="tablist"]');
     const panelOf = t => document.getElementById(t.getAttribute("aria-controls"));
@@ -75,5 +75,5 @@
     RK.tabs = { open: id => { const i = panels.findIndex(p => p.id === id); if (i >= 0) go(i, false); } };
     route();
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+  (RK.inits = RK.inits || []).push(init);
 })();

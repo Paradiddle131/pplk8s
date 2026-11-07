@@ -422,7 +422,7 @@ def test_every_term_the_summary_defines_has_a_glossary_entry(tmp_path):
 def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     page, _ = _built(tmp_path)
     css = page[page.index("/* report-kit:css ") : page.index("/* /report-kit:css */")]
-    assert '<section class="view on rk-kit" id="summary"' in page
+    assert '<section class="view on rk-kit rk-js" id="summary"' in page
     assert '<section class="view rk-kit" id="decision-map"' in page
     # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
@@ -432,8 +432,10 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
         assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
-    script = page[page.rindex("/* report-kit:js ") - 400 :]
-    assert 'getElementById("summary")' in script
+    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter)
+    assert "/* report-kit:css " in page and "scope=.rk-kit */" in page
+    assert "scope=.rk-js */" in page and '.root = ".rk-js";' in page
+    assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 2
 
 
 def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):
@@ -451,10 +453,15 @@ def test_the_decision_map_is_on_the_kit_and_marks_no_best(tmp_path):
     start = page.index('id="decision-map" data-view')
     panel = page[start : page.index('<section class="view" id="metricflow"')]
     assert 'class="rk-head"' in panel and 'class="rk-switch"' in panel and 'id="map-seg"' in panel
+    # no table comparing the sets; the filters fold behind the kit's filter beside the switch
+    assert 'id="twin1"' not in panel and "MetricFlow against the" not in panel
+    filt = panel[panel.index("<details") : panel.index("</details>")]
+    assert "data-rk-filter" in filt and 'id="map-fam"' in filt and 'id="map-role"' in filt
     start = page.index("the Decision map, every set")
     script = page[start : page.index("Observable Plot: shared pieces")]
-    # cells on the kit's value scale, the kit's sort and wrong-and-sure marks; no best-in-column box
-    assert '<span class="ch" style="--v:${P(v[0])}"' in script
+    # cells on the kit's tint, its sort and wrong-and-sure marks; no best box, no key for the tint
+    assert '<span class="ch rk-tint" style="--v:${P(v[0])}"' in script
+    assert "dm-ramp" not in page
     assert 'class="rk-sort-mark"' in script and 'data-k="bad"' in script
     plain = re.sub(r"managed[ -]?[bB]est", "", script)
     assert "best" not in plain

@@ -244,7 +244,7 @@ def render_table(rows, setname, label, hidden):
             f'<span class="ap-name">{html.escape(r["name"])}</span></span></th><td class="rk-wide">{pic}</td>{nums}</tr>'
         )
     return (
-        f'<table class="rk-table ap-table" data-rk-sort data-rk-flip data-route="on" data-set="{setname}" '
+        f'<table class="rk-table ap-table" data-rk-sort data-rk-flip data-rk-sort-group="approaches" data-route="on" data-set="{setname}" '
         f'data-rk-when="set={setname}"{" hidden" if hidden else ""}>'
         f'<caption class="rk-sr">{html.escape(label)} questions: 100 answers of each approach</caption>'
         f'<thead><tr><th scope="col" class="ap-name-head" data-sort="default">'
@@ -589,36 +589,29 @@ def pic_harness(t):
     return f'<div class="rk-pic"><ul>{rows}</ul></div>'
 
 
-# The kit's sort mark (table-sort.js draws the same one into the kit's own sortable tables).
-SORT_MARK = (
-    '<svg class="rk-sort-mark" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" '
-    'stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/><path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>'
-)
-
-
 def pic_kinds(s, hidden):
     """A grid of approaches (rows, native to custom) by kinds of question (columns): right answers in 100 in each cell,
-    the cell tinted on one value scale from 0 to 100, so no cell is singled out as a best; every kind sorts its rows,
-    highest first, then lowest first (approaches.js)."""
+    the cell tinted by its own value (the kit's tint), so no cell is singled out as a best; every kind sorts its rows,
+    highest first, then lowest first, and both sets' grids keep one sort (the kit's two-state, grouped sort)."""
     words = SET_WORDS.get(s["set"], s["label"].lower())
     heads = "".join(
-        f'<th scope="col" aria-sort="none"><button type="button" data-tip="{html.escape(f"{s["n"][k]} {words} questions. {text}")}">'
-        f'<span class="rk-label">{html.escape(head).replace("Uncovered", "Un&shy;covered")}</span>{SORT_MARK}</button></th>'
+        f'<th scope="col" class="rk-num" data-sort="number"><button type="button" data-tip="{html.escape(f"{s["n"][k]} {words} questions. {text}")}">'
+        f'<span class="rk-label">{html.escape(head).replace("Uncovered", "Un&shy;covered")}</span></button></th>'
         for k, head, text, _ in KINDS
     )
     body = "".join(
         f'<tr><th scope="row">{html.escape(r["name"])}</th>'
         + "".join(
-            f'<td data-v="{v}" style="--v:{v}"><b>{v}</b>{SR(" right in 100")}</td>'
+            f'<td class="rk-num" data-v="{v}"><span class="rk-tint" style="--v:{v}"><b>{v}</b>{SR(" right in 100")}</span></td>'
             if v is not None
-            else '<td data-v="-1"><b>–</b><span class="rk-sr">not run</span></td>'
+            else '<td class="rk-num" data-v="-1"><b>–</b><span class="rk-sr">not run</span></td>'
             for v in (r["v"][k] for k, *_ in KINDS)
         )
         + "</tr>"
         for r in s["rows"]
     )
     return (
-        f'<div class="rk-pic ap-kinds" data-rk-when="set={s["set"]}"{" hidden" if hidden else ""}><table data-ap-sort>'
+        f'<div class="rk-pic ap-kinds" data-rk-when="set={s["set"]}"{" hidden" if hidden else ""}><table data-rk-sort="toggle" data-rk-sort-group="kinds">'
         f'<caption class="rk-sr">Right answers in 100 of each approach on four kinds of {words} question</caption>'
         f'<thead><tr><th scope="col"><span class="rk-sr">Approach</span></th>{heads}</tr></thead>'
         f"<tbody>{body}</tbody></table></div>"
@@ -698,7 +691,7 @@ PAGE_CSS = HERE / "approaches.css"
 PAGE_JS = HERE / "approaches.js"
 # The vendored report kit (../report-kit/SOURCE.md), and the components these sections use.
 KIT_BUILD = HERE.parent / "report-kit" / "bin" / "build.cjs"
-KIT_CSS = "tokens base section marks dots bar range slope switch table-sort tip highlight"
+KIT_CSS = "tokens base section marks dots bar range tint slope switch table-sort tip highlight"
 KIT_JS = "switch table-sort tip highlight"
 
 

@@ -13,13 +13,16 @@
     scope.setAttribute("data-rk-lit", t.dataset.lit);
     lit = scope;
   }
-  function init() {
-    for (const t of document.querySelectorAll("[data-lit]")) {
+  let global = false;
+  function init(root) {
+    for (const t of root.querySelectorAll("[data-lit]")) {
       t.addEventListener("pointerenter", e => { if (e.pointerType !== "touch") on(t); });
       t.addEventListener("pointerleave", off);
       t.addEventListener("focus", () => { if (t.matches(":focus-visible")) on(t); });
       t.addEventListener("blur", off);
     }
+    if (global) return;
+    global = true;
     document.documentElement.addEventListener("pointerleave", off);
     addEventListener("blur", off);
     addEventListener("keydown", e => { if (e.key === "Escape") off(); });
@@ -27,5 +30,5 @@
     document.addEventListener("rk:tab", off);
   }
   RK.highlight = { off };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+  (RK.inits = RK.inits || []).push(init);
 })();

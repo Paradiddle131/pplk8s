@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -340,7 +340,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    below are the report's own parts the kit has no component for. Every colour is a kit token. */
 .memo.rk-kit { padding-bottom: var(--s5); background: transparent }
 .memo.rk-kit h1 { font: 700 var(--t-title)/1.15 var(--sans); letter-spacing: 0; max-width: 24em }
-.memo.rk-kit .byline { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin-top: var(--s3); max-width: var(--measure) }
+.memo.rk-kit .byline { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin-top: var(--s3); max-width: 36rem }
 .memo.rk-kit .byline b { font-weight: 700; color: var(--ink) }
 .memo.rk-kit .term, .rk-kit .term { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px; cursor: help }
 .memo.rk-kit .themebtn { border: 1px solid var(--hair); border-radius: 10px; padding: 3px; gap: 3px; color: var(--ink); min-height: 44px }
@@ -357,30 +357,16 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .tabs.rk-kit .tab .tl::after { display: none }
 @media (prefers-reduced-motion: reduce) { .tabs.rk-kit .tab { transition: none } }
 
-/* the Decision map: the kit's section head with the set switch beside it, the lead, the twin table, the filters,
-   then one table of every setup and model; group cells on the kit's value scale (the right-answer green, none
-   at 0, half strength at 100), sorted from each column's head */
+/* the Decision map: the kit's section head with the set switch and the filter beside it, the lead, the key,
+   then one table of every setup and model; group cells on the kit's tint (the right-answer green, none at 0,
+   half strength at 100), sorted from each column's head; the filters fold behind the kit's filter beside the switch */
 .dm .rk-head { margin-bottom: var(--s4) }
 .dm-lead { margin: 0 0 var(--s4); max-width: 36rem; font-weight: 600 }
-.dm-twin { overflow-x: auto; margin: 0 0 var(--s5) }
-.dm-twin table.tw { border-collapse: collapse; font: 400 var(--t-word)/1.35 var(--sans) }
-.dm-twin table.tw th, .dm-twin table.tw td { padding: var(--s2) var(--s5) var(--s2) 0; border-bottom: 1px solid var(--hair); white-space: nowrap; text-align: left }
-.dm-twin table.tw thead th { font-size: inherit; font-weight: 700; border-bottom: 2px solid var(--ink); vertical-align: bottom }
-.dm-twin table.tw .n { font-weight: 700; color: var(--ink) }
-.dm-twin table.tw .num { text-align: right }
-.dm-tools { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s6); align-items: flex-start; margin: 0 0 var(--s3) }
-.dm .mf { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) }
-.dm .mf legend { float: left; padding: 0; margin-right: var(--s1); font-weight: 700 }
-.dm .mchk { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3) 0 var(--s2);
-  border: 1px solid var(--hair); border-radius: 8px; color: var(--ink); cursor: pointer; background: transparent }
-.dm .mchk:hover { background: var(--row) }
-.dm .mchk input { margin: 0; width: 18px; height: 18px; accent-color: var(--ink); cursor: pointer }
-.dm .mchk:has(input:not(:checked)) { border-style: dashed }
-.dm .mchk .tt { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm-filter { display: inline-block }
+.dm .rk-filter-panel .term, .dm .rk-check .tt { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm .rk-filter-panel svg { flex: none }
 .dm-key { margin: 0 0 var(--s2) }
 .dm-key .rk-mark { margin-right: 2px }
-.dm-key .dm-ramp { display: inline-block; width: 4.5rem; height: 14px; border-radius: 3px;
-  background: linear-gradient(to right, transparent, color-mix(in oklab, var(--ok) 50%, transparent)); box-shadow: inset 0 0 0 1px var(--hair) }
 .dm-live { margin: 0 0 var(--s2) }
 .dm-note { margin: var(--s3) 0 0; max-width: 36rem }
 
@@ -404,12 +390,12 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .dm .msort:hover { background: var(--row) }
 .dm .msort:hover .tl { text-decoration-style: solid }
 .dm .msort .ml { display: inline-flex; align-items: center; gap: 6px }
+.dm .msort .rk-sort-mark { margin-left: 0; flex: none }
 .dm .msort .tl { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
 .dm .msort:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px }
 .dm th[aria-sort="descending"] .rk-sort-mark .up, .dm th[aria-sort="ascending"] .rk-sort-mark .dn { display: none }
 .dm th[aria-sort="descending"] .rk-sort-mark, .dm th[aria-sort="ascending"] .rk-sort-mark { stroke-width: 2.4 }
-.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); border-radius: 4px; text-align: right; font-weight: 700; font-size: .9375rem;
-  background: color-mix(in oklab, var(--ok) calc(var(--v, 0) * .5%), transparent) }
+.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); text-align: right; font-weight: 700; font-size: .9375rem }
 .dm .ch.none { background: none; font-weight: 400 }
 .dm table.map tr.rung th { font-weight: 700; padding: var(--s4) var(--s2) var(--s2); border-bottom: 2px solid var(--ink); background: var(--paper) }
 .dm table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 10rem; z-index: 1 }
@@ -494,15 +480,15 @@ window.REPORT = D;
   </nav>
 
   <div class="views" id="views">
-  <section class="view on rk-kit" id="summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
+  <section class="view on rk-kit rk-js" id="summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
   <style>
-  /* The Summary tab on report-kit, a trial ahead of the other tabs: the kit and the Approaches sections' own styles,
-     nested under .rk-kit so nothing reaches the header, the tab strip or the other tabs (build.py scopes the kit's
-     :root and body rules to the panel, and keeps the page's ground under it). */
+  /* The parts on report-kit (the Summary, the Decision map, the header, the tab strip, the tooltip): the kit's own
+     scope nests its CSS under every element carrying .rk-kit, so the tabs not yet moved keep the report's look; then
+     the Approaches sections' own styles, nested the same way by build.py (scope_to_panel). */
+  /* report-kit:css tokens base section marks dots bar range tint slope switch filter table-sort tip highlight scope=.rk-kit */
   .rk-kit {
-  /* report-kit:css tokens base section marks dots bar range slope switch table-sort tip highlight */
   /*SUMMARY_CSS*/
-  /* the panel keeps the page's ground, so the trial tab sits on the same paper as the rest */
+  /* every part on the kit keeps the page's ground */
   :root & , :root[data-theme] & { --paper: var(--report-paper) }
   }
   </style>
@@ -512,17 +498,21 @@ window.REPORT = D;
 
   <section class="view rk-kit" id="decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
   <section class="rk-section dm" id="fig1" aria-labelledby="dm-h">
-    <div class="rk-head"><h2 id="dm-h">Decision map</h2><div class="rk-switch" role="group" aria-label="Question set" id="map-seg"></div></div>
+    <div class="rk-head"><h2 id="dm-h">Decision map</h2>
+      <div class="rk-head-tools"><div class="rk-switch" role="group" aria-label="Question set" id="map-seg"></div>
+        <div class="rk-js dm-filter"><details class="rk-filter" data-rk-filter>
+          <summary><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M4.5 8h7M7 12h2"/></svg>Filter <span class="rk-filter-count"></span></summary>
+          <div class="rk-filter-panel">
+            <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
+            <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
+            <div class="rk-filter-foot"><button type="button" class="rk-filter-reset">Show all</button></div>
+          </div>
+        </details></div></div></div>
     <p class="dm-lead" id="t1"></p>
-    <div class="dm-twin" id="twin1"></div>
-    <div class="dm-tools">
-      <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
-      <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
-    </div>
     <ul class="rk-key dm-key" id="leg1"></ul>
     <p class="dm-live" id="map-live" aria-live="polite"></p>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
-    <p class="dm-note">One question set at a time. Each cell is tinted on one scale, from none at 0 to the strongest at 100. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</p>
+    <p class="dm-note">One question set at a time. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</p>
   </section>
   </section>
 
@@ -613,7 +603,7 @@ window.REPORT = D;
 </div>
 <div class="tip rk-kit" id="tip" role="tooltip" aria-hidden="true"></div>
 <script>
-/* ---------- the report's parts as tabs: one open at a time, each with its own URL (#396) ---------- */
+/* ---------- the report's parts as tabs: one open at a time, each with its own URL (issue 396) ---------- */
 // The hash names the open part (#summary, #decision-map, ...) or an element inside one (#term-<key>,
 // #map-<arm>, #map-set-<set>, #setup-<arm>), which opens its part. Every switch is a history entry
 // that remembers its scroll position, so Back and Forward return to the part and the place.
@@ -831,7 +821,7 @@ window.REPORT = D;
   const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
   const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
   const label = (r) => `${r.arm} on ${r.modelLabel}`;
-  // A model's name with its glossary tooltip: the free model, Gemini, Claude by name, or Claude Code (#395).
+  // A model's name with its glossary tooltip: the free model, Gemini, Claude by name, or Claude Code (issue 395).
   const MODEL_TERM = [[/^Nemotron/, "nemotron"], [/^Gemini/, "gemini"], [/^Claude Code/, "claude-code"], [/^(CC )?(Haiku|Sonnet|Opus)/, "claude-models"]];
   const modelTerm = (m) => { const k = (MODEL_TERM.find(([re]) => re.test(m)) || [])[1]; return k ? term(k, esc(m)) : esc(m); };
   const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
@@ -841,9 +831,9 @@ window.REPORT = D;
   let lockFor = () => {}, unlockFocus = () => {}; // set by the focus code below
   const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
   const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
-  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (#395)
+  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (issue 395)
   const TK = (k) => { const t = (D.termAlias || {})[k] || String(k).replace(/_/g, "-"); return TERM[t] ? t : null; };
-  /* Every tooltip has the same anatomy (#401): a kicker naming what kind of thing it is, a title, a line of
+  /* Every tooltip has the same anatomy (issue 401): a kicker naming what kind of thing it is, a title, a line of
      what it is, then sections, each under a small-capital label, whose facts read as label | value rows:
      the labels muted and aligned in one column, the values in ink with the key number bold. */
   const tKick = (...parts) => `<p class="tk">${parts.filter(Boolean).join('<span class="tk-sep" aria-hidden="true">·</span>')}</p>`;
@@ -953,11 +943,11 @@ window.REPORT = D;
     const hd = tip.querySelector(".thandle"); if (!hd) return;
     e.preventDefault(); hd.focus({ preventScroll: true });
   });
-  /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
+  /* ---------- a pinned tooltip's jump to the fuller entry behind it (issue 389) ---------- */
   // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
   function jumpTarget(el) {
     if (!el || !el.dataset) return null;
-    // a question set's name jumps to what the set holds (#390), any other term to its glossary entry
+    // a question set's name jumps to what the set holds (issue 390), any other term to its glossary entry
     if (el.dataset.term != null) { const q = document.getElementById("qs-" + el.dataset.term); if (q) return [q, "What the set holds ↓"]; const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
     if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
     return null;
@@ -1158,8 +1148,6 @@ window.REPORT = D;
     $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
-    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the ${term("managed-best", "managed best")}</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
-      tw.map.map((r) => `<tr><td>${setTerm(r.set)}</td>${r.cells.map((c) => `<td>${esc(c).replace(/^(\d+)/, '<span class="n">$1</span>')}</td>`).join("")}</tr>`).join("") + `</tbody></table>` : "";
     $("#t2").textContent = D.sentences.forest || "";
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
     $("#twin4").innerHTML = (tw.strip || []).length ? `<table class="tw"><thead><tr><th>% of runs right</th><th class="num">MetricFlow, ${term("covered")}</th><th class="num">${term("hidden-rule")}</th><th class="num">${term("uncovered")}</th><th class="num">${term("managed-best", "Managed best")}, uncovered</th></tr></thead><tbody>` +
@@ -1232,7 +1220,7 @@ window.REPORT = D;
   $("#gl-t").addEventListener("click", (e) => { const b = e.target.closest(".gl-g button"); if (!b || GS.q.trim()) return; const ty = b.closest("tbody").dataset.type; if (GS.folded.has(ty)) GS.folded.delete(ty); else GS.folded.add(ty); glApply(); });
   $("#gloss").addEventListener("click", (e) => { if (e.target.closest("[data-gl-reset]")) { glReset(); $("#gl-q").focus(); } });
   window.addEventListener("resize", () => { const th = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (th ? th.offsetHeight : 0) + "px"); });
-  // A term's row made visible: the search, the type filter or a fold that hides it is undone (#401).
+  // A term's row made visible: the search, the type filter or a fold that hides it is undone (issue 401).
   function glReveal(row) {
     const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
     const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
@@ -1287,9 +1275,11 @@ window.REPORT = D;
     const s = MS.set;
     $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)} <b>${S(x).nCases}<span class="vh"> questions</span></b>${setNote(x) ? `<span class="vh">, ${setNote(x)}</span>` : ""}</button>`).join("");
     const rows = S(s).rows.filter((r) => r.plotted);
-    const box = (name, val, inner, t) => `<label class="mchk"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
+    const box = (name, val, inner, t) => `<label class="rk-check"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
     $("#map-fam").innerHTML = `<legend>Setup family</legend>` + famsPresent(rows).map((f) => box("fam", f, `${famKey(f)}<span${TERM["family-" + f] ? ' class="tt"' : ""}>${esc(D.familyLabel[f] || f)}</span>`, TERM["family-" + f] ? "family-" + f : null)).join("");
     $("#map-role").innerHTML = `<legend>Model</legend>` + MROLES.filter(([k]) => rows.some((r) => r.role === k)).map(([k, l]) => box("role", k, `${shapeKey(k)}<span>${l()}</span>`)).join("");
+    // the kit's filter counts what is off on its button
+    const fd = $("#fig1 details[data-rk-filter]"); if (fd && window.ReportKit && ReportKit.filter) ReportKit.filter.count(fd);
   }
   function renderMap() {
     const s = MS.set, groups = S(s).mapGroups || D.groups.map((g) => g.key);
@@ -1321,7 +1311,7 @@ window.REPORT = D;
       groups.forEach((g) => {
         const v = r.groups[g];
         x += `<td class="g">` + (!v ? `<span class="ch none" role="img" aria-label="no question of this group in these runs">–</span>`
-          : `<span class="ch" style="--v:${P(v[0])}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
+          : `<span class="ch rk-tint" style="--v:${P(v[0])}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
       });
       MNUM.forEach(([c]) => {
         if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span>${c === "cw" && r.cw[0] >= 0.1 ? `<i class="rk-mark" data-k="bad" role="img" aria-label="10% or more"></i>` : ""}${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
@@ -1349,7 +1339,7 @@ window.REPORT = D;
     const lab = MS.col ? (MNUM.find((m) => m[0] === MS.col) || [0, 0, glab(MS.col.slice(2))])[2] : "";
     $("#map-live").textContent = `${S(s).label}${setNote(s) ? ", " + setNote(s) : ""}: ${shown.length} of ${total} setups and models shown, ` +
       (MS.col ? `sorted by ${lab}, ${MS.dir === "descending" ? "highest" : "lowest"} first; empty cells last.` : "in the map's order, cheapest rung first.");
-    $("#leg1").innerHTML = `<li><span>0</span><span class="dm-ramp" aria-hidden="true"></span><span>100% right on a kind of question</span></li><li><i class="rk-mark" data-k="bad" aria-hidden="true"></i>Confident-wrong 10% or more</li><li><span aria-hidden="true">–</span>Not measured</li>`;
+    $("#leg1").innerHTML = `<li><i class="rk-mark" data-k="bad" aria-hidden="true"></i>Confident-wrong 10% or more</li><li><span aria-hidden="true">–</span>Not measured</li>`;
   }
   function redrawMap(focusCol) {
     renderMap(); stickMapHead();
@@ -2213,19 +2203,10 @@ window.REPORT = D;
 })();
 </script>
 <script>
-/* The Summary tab's scripts: report-kit's and the Approaches sections' own. The report's other tabs use data-tip for
-   their own tooltips, so these run with `document` narrowed to the Summary panel for their lookups (querySelector,
-   querySelectorAll); everything else is the real document. A stopgap while only this tab is on the kit. */
-(function (document) {
-/* report-kit:js switch table-sort tip highlight */
+/* report-kit's scripts, run only inside what carries .rk-js (the Summary panel and the Decision map's filter): the
+   Decision map's cells and the tabs not yet moved keep the report's own tooltip on their data-tip. */
+/* report-kit:js switch filter table-sort tip highlight scope=.rk-js */
+</script>
+<script>
 /*SUMMARY_JS*/
-})((function (doc, root) {
-  return new Proxy(doc, {
-    get(t, k) {
-      if (k === "querySelector" || k === "querySelectorAll") return (sel) => root[k](sel);
-      const v = Reflect.get(t, k, t);
-      return typeof v === "function" ? v.bind(t) : v;
-    },
-  });
-})(window.document, window.document.getElementById("summary")));
 </script>

@@ -1,0 +1,9 @@
+/* report-kit tint, opt-in: a cell's ground tinted by its own value, for a dense grid of numbers on one 0-100 scale
+   where no cut point means anything to the reader (otherwise grade). An element with class rk-tint and its value in
+   --v takes one hue (--tint, the right-answer green unless the page sets another) from none at 0 to half strength
+   at 100; data-rk-tint="down" on it or a container says lower is better, so the strong end is 0. Ink keeps 4.5:1 on
+   the strongest step on both grounds. The number stays in the cell, so the tint needs no key. Markup: a block in its cell,
+   <td class="rk-num" data-v="66"><span class="rk-tint" style="--v:66">66</span></td>. */
+.rk-tint { --tint-v: var(--v, 0); display: block; padding: 6px var(--s2); border-radius: 4px;
+  background: color-mix(in oklab, var(--tint, var(--ok)) calc(var(--tint-v) * .5%), transparent) }
+[data-rk-tint="down"] .rk-tint, .rk-tint[data-rk-tint="down"] { --tint-v: calc(100 - var(--v, 100)) }

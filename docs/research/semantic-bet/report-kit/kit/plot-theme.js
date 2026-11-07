@@ -9,7 +9,8 @@
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   function plotTheme(el) {
-    const root = getComputedStyle(document.documentElement);
+    // tokens as they reach el: from :root on a whole page, from the scope when the kit runs in part of one
+    const root = getComputedStyle(el || document.documentElement);
     const v = n => root.getPropertyValue(n).trim();
     const fontPx = parseFloat(getComputedStyle(el || document.body).fontSize) || 14;
     const t = {

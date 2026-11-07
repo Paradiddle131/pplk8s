@@ -6,12 +6,14 @@
 //   clip      text cut by a box that clips it, or out of the page's reach
 //   overflow  a box with hidden overflow or an ellipsis that holds more text than it shows
 //   viewbox   SVG text outside its <svg>'s viewBox
-//   overlap   two text boxes on top of each other
+//   overlap   two text boxes on top of each other (each cut to what its clipping and scrolling boxes show)
 //   contrast  text under 4.5:1 against what is behind it (3:1 at 24px, or 18.66px bold)
 //   focus     a focusable element whose focus changes nothing visible
 //   tabs, switch, sort, highlight, bubble   a control that does not do what it claims
-//   console   a console or page error
-//   static    raw hex outside token blocks, gradient text, emoji as icons, a banned font, a theme block missing
+//   console   a console or page error; the kit's web font (on its first section, else the body) not loaded
+//   control   a control the checker could not reach or press in time
+//   static    raw hex outside token blocks (a drawing's own colours inside <svg> are exempt), gradient text, emoji
+//             as icons, a banned font, a theme block missing
 // Usage: node bin/check.cjs <page.html>... [--quick] [--shots <dir>]   (--quick: 400 and 1280 only)
 //        node bin/check.cjs --selftest <page.html>     (plants one case of each geometry kind; each must be found)
 // Prints each finding with where it happened, then "N problems"; exit 1 when there is any.
@@ -31,7 +33,9 @@ const FOCUS_WIDTH = 1280;
 // ---------- static checks, on the page's source without the vendored libraries
 function staticChecks(src) {
   const out = [];
-  const lines = src.replace(/<!-- report-kit:vendor[\s\S]*?<!-- \/report-kit:vendor -->/g, m => m.replace(/[^\n]/g, '')).split('\n');
+  // the vendored libraries are left out, and so are a drawing's own colours: a brand mark inside an <svg> keeps them
+  const lines = src.replace(/<!-- report-kit:vendor[\s\S]*?<!-- \/report-kit:vendor -->/g, m => m.replace(/[^\n]/g, ''))
+    .replace(/<svg\b[\s\S]*?<\/svg>/gi, m => m.replace(/#[0-9a-fA-F]{3,8}\b/g, x => ' '.repeat(x.length))).split('\n');
   let inRoot = false, depth = 0;
   const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
   lines.forEach((ln, i) => {
@@ -59,7 +63,7 @@ function staticChecks(src) {
 async function inspect() {
   const TX = 0.5, TY = 1;
   const out = [];
-  const visible = el => el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
+  const visible = el => el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
   const isSvg = el => el instanceof SVGElement;
   const where = el => {
     const s = el.closest('section, [role=tabpanel], figure, main');
@@ -117,9 +121,19 @@ async function inspect() {
       for (const r of it.rects) if (r.left + scrollX < -TX || r.right + scrollX > docW + TX) { found = 'outside the page'; break; }
     }
     if (found) out.push({ kind: 'clip', text: `"${it.text.slice(0, 60)}" ${found}`, where: where(it.el) });
+    // what a reader can see of the text: its boxes cut to every ancestor that clips or scrolls it, so text scrolled
+    // out of sight inside a scroll box is not taken for text drawn over what lies beyond the box
+    let L = -Infinity, T = -Infinity, R = Infinity, B = Infinity;
+    for (const { a, cs, r: b } of cl) {
+      const clipX = cs.overflowX !== 'visible' || cs.clipPath !== 'none', clipY = cs.overflowY !== 'visible' || cs.clipPath !== 'none';
+      if (clipX) { L = Math.max(L, b.left + a.clientLeft); R = Math.min(R, b.left + a.clientLeft + a.clientWidth); }
+      if (clipY) { T = Math.max(T, b.top + a.clientTop); B = Math.min(B, b.top + a.clientTop + a.clientHeight); }
+    }
+    it.seen = it.rects.map(r => ({ left: Math.max(r.left, L), right: Math.min(r.right, R), top: Math.max(r.top, T), bottom: Math.min(r.bottom, B) }))
+      .filter(r => r.right - r.left > 0.5 && r.bottom - r.top > 0.5);
   }
   // text over text
-  const boxes = items.filter(it => !it.sr).flatMap(it => it.rects.map(r => ({ it, r })));
+  const boxes = items.filter(it => !it.sr).flatMap(it => (it.seen || it.rects).map(r => ({ it, r })));
   boxes.sort((p, q) => p.r.top - q.r.top);
   const seen = new Set();
   for (let i = 0; i < boxes.length; i++) {
@@ -211,7 +225,7 @@ async function focusCheck() {
   const sel = 'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
   const look = el => { const s = getComputedStyle(el); return [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow, s.backgroundColor, s.color, s.textDecorationLine, s.borderColor].join('|'); };
   for (const el of document.querySelectorAll(sel)) {
-    if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || el.closest('.rk-tip')) continue;
+    if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) || el.closest('.rk-tip')) continue;
     el.blur();
     const before = look(el);
     el.focus({ preventScroll: true });
@@ -239,7 +253,7 @@ async function states(page) {
   const out = [];
   for (const p of ps.length ? ps : [null]) {
     await openPanel(page, p);
-    const sw = await page.$$eval('[data-rk-switch]', gs => gs.filter(g => g.checkVisibility()).map(g => ({ name: g.dataset.rkSwitch, values: [...g.querySelectorAll('button[data-value]')].map(b => b.dataset.value) })));
+    const sw = await page.$$eval('[data-rk-switch]', gs => gs.filter(g => g.checkVisibility({ visibilityProperty: true })).map(g => ({ name: g.dataset.rkSwitch, values: [...g.querySelectorAll('button[data-value]')].map(b => b.dataset.value) })));
     if (!sw.length) out.push({ p, label: p ? `#${p.panel}` : 'page' });
     for (const s of sw) for (const v of s.values) out.push({ p, sw: [s.name, v], label: `${p ? `#${p.panel} ` : ''}${s.name}=${v}` });
   }
@@ -255,15 +269,26 @@ async function enter(page, st) {
 async function behaviour(page) {
   const out = [];
   const fail = (kind, text, where = 'page') => out.push({ kind, text, where });
+  // a control the checker cannot reach or press in time is a finding, not a crash
+  const act = async (what, fn) => {
+    try { await fn(); await settle(page); return true; } catch (e) {
+      if (!/timeout/i.test(`${e.name} ${e.message}`)) throw e;
+      fail('control', `${what}: timed out (${e.message.split('\n')[0].slice(0, 120)})`);
+      return false;
+    }
+  };
+  // bring the target into view and let the layout settle before the pointer acts on it
+  const reach = async sel => { await page.locator(sel).first().scrollIntoViewIfNeeded(); await settle(page); };
+  const click = (sel, what = `pressing ${sel}`) => act(what, async () => { await reach(sel); await page.click(sel); });
+  const hover = (sel, what = `pointing at ${sel}`) => act(what, async () => { await reach(sel); await page.hover(sel); });
   const ps = await panels(page);
   for (const p of ps) {
-    await page.click(`#${p.tab}`);
-    await settle(page);
+    await click(`#${p.tab}`, `tab ${p.tab}`);
     const r = await page.evaluate(p => {
       const all = [...document.querySelectorAll('[role=tabpanel]')];
       const me = document.getElementById(p.panel);
-      return { sel: document.getElementById(p.tab).getAttribute('aria-selected'), shown: !!me && me.checkVisibility(), empty: !me || !me.textContent.trim(),
-        others: all.filter(x => x !== me && x.checkVisibility()).map(x => x.id), hash: location.hash };
+      return { sel: document.getElementById(p.tab).getAttribute('aria-selected'), shown: !!me && me.checkVisibility({ visibilityProperty: true }), empty: !me || !me.textContent.trim(),
+        others: all.filter(x => x !== me && x.checkVisibility({ visibilityProperty: true })).map(x => x.id), hash: location.hash };
     }, p);
     if (r.sel !== 'true' || !r.shown || r.others.length) fail('tabs', `tab ${p.tab} does not open only its part (shown ${r.shown}, also open: ${r.others.join(', ') || 'none'})`);
     if (r.hash !== `#${p.panel}`) fail('tabs', `tab ${p.tab} leaves the URL at "${r.hash}", not #${p.panel}`);
@@ -272,70 +297,85 @@ async function behaviour(page) {
   for (const p of ps.length ? ps : [null]) {
     await openPanel(page, p);
     // switches: each segment shows its views alone
-    const groups = await page.$$eval('[data-rk-switch]', gs => gs.filter(g => g.checkVisibility()).map(g => g.dataset.rkSwitch));
+    const groups = await page.$$eval('[data-rk-switch]', gs => gs.filter(g => g.checkVisibility({ visibilityProperty: true })).map(g => g.dataset.rkSwitch));
     for (const name of groups) {
       const values = await page.$$eval(`[data-rk-switch="${name}"] button[data-value]`, bs => bs.map(b => b.dataset.value));
       for (const v of values) {
-        await page.click(`[data-rk-switch="${name}"] button[data-value="${v}"]`);
-        await settle(page);
+        await click(`[data-rk-switch="${name}"] button[data-value="${v}"]`, `switch ${name}=${v}`);
         const r = await page.evaluate(([n, v]) => ({
           pressed: document.querySelector(`[data-rk-switch="${n}"] button[data-value="${v}"]`).getAttribute('aria-pressed'),
           wrong: [...document.querySelectorAll('[data-rk-when]')].filter(el => el.dataset.rkWhen.startsWith(n + '=')).filter(el => (el.dataset.rkWhen === `${n}=${v}`) === el.hidden).length,
         }), [name, v]);
         if (r.pressed !== 'true' || r.wrong) fail('switch', `switch ${name}=${v}: pressed ${r.pressed}, ${r.wrong} view(s) shown or hidden wrongly`);
       }
-      await page.click(`[data-rk-switch="${name}"] button[data-value="${values[0]}"]`);
-      await settle(page);
+      await click(`[data-rk-switch="${name}"] button[data-value="${values[0]}"]`, `switch ${name}=${values[0]}`);
     }
     // sortable tables: each column orders its rows as aria-sort says; the default column restores the order
-    const tables = await page.$$eval('table[data-rk-sort]', ts => ts.map((t, i) => (t.dataset.rkCheck = i, t.checkVisibility() ? i : -1)).filter(i => i >= 0));
+    const tables = await page.$$eval('table[data-rk-sort]', ts => ts.map((t, i) => (t.dataset.rkCheck = i, t.checkVisibility({ visibilityProperty: true }) ? i : -1)).filter(i => i >= 0));
     for (const ti of tables) {
       const T = `table[data-rk-check="${ti}"]`;
       const rowsNow = () => page.$$eval(`${T} tbody tr`, rs => rs.map(r => r.cells[0].textContent.trim()));
       const first = await rowsNow();
       const cols = await page.$$eval(`${T} thead th[data-sort]`, hs => hs.map(h => ({ i: h.cellIndex, kind: h.dataset.sort })));
-      for (const c of cols.filter(c => c.kind !== 'default')) {
-        for (let press = 0; press < 2; press++) {
-          await page.click(`${T} thead th:nth-child(${c.i + 1}) button`);
-          await settle(page);
+      const toggle = await page.$eval(T, t => t.dataset.rkSort === 'toggle');
+      // each column: three presses; the first goes to its first direction (numbers highest first, else A to Z), and
+      // every later press flips it; a table in a sort group leaves its group-mates sorted the same way
+      for (const c of cols.filter(c => toggle || c.kind !== 'default')) {
+        const firstDir = c.kind === 'number' ? 'descending' : 'ascending';
+        const flip = d => (d === 'ascending' ? 'descending' : 'ascending');
+        // the direction before the first press: a column already sorted flips; one that is not takes its first direction
+        let want = await page.$eval(`${T} thead th:nth-child(${c.i + 1})`, h => h.getAttribute('aria-sort'));
+        for (let press = 0; press < 3; press++) {
+          if (!await click(`${T} thead th:nth-child(${c.i + 1}) button`, `sorting column ${c.i + 1}`)) break;
           const r = await page.evaluate(([T, c]) => {
+            const ordered = (t, dir) => {
+              if (c.kind === 'default') { const o = [...t.tBodies[0].rows].map(r => +r.dataset.rkOrder); return o.every((x, k) => !k || (dir === 'ascending' ? o[k - 1] < x : o[k - 1] > x)); }
+              const val = row => { const x = row.cells[c.i]; const own = n => !(n.classList && n.classList.contains('rk-cell-label')); const raw = x.dataset.v ?? [...x.childNodes].filter(own).map(n => n.textContent).join('').trim(); return c.kind === 'text' ? raw : parseFloat(raw.replace(/[^\d.+-]/g, '')); };
+              const v = [...t.tBodies[0].rows].map(val);
+              return v.every((x, k) => !k || (dir === 'ascending' ? (c.kind === 'text' ? String(v[k - 1]).localeCompare(String(x)) <= 0 : v[k - 1] <= x) : (c.kind === 'text' ? String(v[k - 1]).localeCompare(String(x)) >= 0 : v[k - 1] >= x)));
+            };
             const t = document.querySelector(T);
             const dir = t.tHead.rows[0].cells[c.i].getAttribute('aria-sort');
-            const val = row => { const x = row.cells[c.i]; const own = n => !(n.classList && n.classList.contains('rk-cell-label')); const raw = x.dataset.v ?? [...x.childNodes].filter(own).map(n => n.textContent).join('').trim(); return c.kind === 'text' ? raw : parseFloat(raw.replace(/[^\d.+-]/g, '')); };
-            const v = [...t.tBodies[0].rows].map(val);
-            const ok = v.every((x, k) => !k || (dir === 'ascending' ? (c.kind === 'text' ? String(v[k - 1]).localeCompare(String(x)) <= 0 : v[k - 1] <= x) : (c.kind === 'text' ? String(v[k - 1]).localeCompare(String(x)) >= 0 : v[k - 1] >= x)));
-            return { dir, ok };
+            const g = t.dataset.rkSortGroup;
+            const mates = g ? [...document.querySelectorAll('table[data-rk-sort-group]')].filter(u => u !== t && u.dataset.rkSortGroup === g) : [];
+            const off = mates.filter(u => u.tHead.rows[0].cells[c.i].getAttribute('aria-sort') !== dir || !ordered(u, dir)).length;
+            return { dir, ok: ordered(t, dir), off, mates: mates.length };
           }, [T, c]);
           if (!['ascending', 'descending'].includes(r.dir) || !r.ok) fail('sort', `column ${c.i + 1}: aria-sort "${r.dir}" but the rows are ${r.ok ? 'in order' : 'not in that order'}`);
+          if (r.off) fail('sort', `column ${c.i + 1}: ${r.off} of ${r.mates} table(s) in its sort group not sorted the same way`);
+          const expect = !want || want === 'none' ? firstDir : toggle || want === firstDir ? flip(want) : firstDir;
+          if (r.dir !== expect) fail('sort', `column ${c.i + 1}, press ${press + 1}: aria-sort "${r.dir}", expected "${expect}"${toggle ? ' (a two-state table flips on every press)' : ''}`);
+          want = r.dir;
         }
       }
       const def = cols.find(c => c.kind === 'default');
       if (def) {
-        await page.click(`${T} thead th:nth-child(${def.i + 1}) button`);
-        await settle(page);
+        for (let press = 0; press < 2; press++) {
+          if (await page.$eval(`${T} thead th:nth-child(${def.i + 1})`, h => h.getAttribute('aria-sort')) === 'ascending' && press) break;
+          await click(`${T} thead th:nth-child(${def.i + 1}) button`, 'the default column');
+        }
         if ((await rowsNow()).join('|') !== first.join('|')) fail('sort', 'the default column does not restore the page\'s order');
-      } else fail('sort', 'a sortable table without a data-sort="default" column cannot return to its own order');
+      } else if (!toggle) fail('sort', 'a sortable table without a data-sort="default" column cannot return to its own order: add one, or make it data-rk-sort="toggle"');
     }
     // the highlight: pointing lights one kind, leaving resets it, a sort leaves nothing lit
-    const triggers = await page.$$eval('[data-lit]', ts => ts.map((t, i) => (t.dataset.rkCheckLit = i, t.checkVisibility() ? i : -1)).filter(i => i >= 0));
+    const triggers = await page.$$eval('[data-lit]', ts => ts.map((t, i) => (t.dataset.rkCheckLit = i, t.checkVisibility({ visibilityProperty: true }) ? i : -1)).filter(i => i >= 0));
     const litState = i => page.evaluate(i => {
       const t = document.querySelector(`[data-rk-check-lit="${i}"]`);
       const scope = t.closest('[data-rk-lit-scope]') || t.closest('table');
-      const marks = scope ? [...scope.querySelectorAll('[data-k]')].filter(m => !m.closest('[data-lit]') && m.checkVisibility()) : [];
+      const marks = scope ? [...scope.querySelectorAll('[data-k]')].filter(m => !m.closest('[data-lit]') && m.checkVisibility({ visibilityProperty: true })) : [];
       return { lit: scope && scope.getAttribute('data-rk-lit'), dim: marks.filter(m => +getComputedStyle(m).opacity < 0.5).length, key: t.dataset.lit,
         others: marks.filter(m => m.dataset.k !== t.dataset.lit).length };
     }, i);
     for (const i of triggers.slice(0, 8)) {
       const T = `[data-rk-check-lit="${i}"]`;
-      await page.hover(T);
-      await settle(page);
+      if (!await hover(T, `the highlight on "${i}"`)) continue;
       let s = await litState(i);
       if (s.lit !== s.key || (s.others && !s.dim)) fail('highlight', `pointing at "${s.key}" does not light its marks (lit "${s.lit}", ${s.dim} stepped back)`);
       await page.mouse.move(1, 1);
       await settle(page);
       s = await litState(i);
       if (s.lit || s.dim) fail('highlight', `the "${s.key}" highlight stays after the pointer leaves`);
-      await page.click(T);
+      await click(T, 'a highlight trigger');
       await page.mouse.move(1, 1);
       await settle(page);
       s = await litState(i);
@@ -343,24 +383,48 @@ async function behaviour(page) {
     }
     for (const ti of tables) {
       const def = await page.$(`table[data-rk-check="${ti}"] thead th[data-sort="default"] button`);
-      if (def && await def.isVisible()) { await def.click(); await page.mouse.move(1, 1); }
+      for (let press = 0; def && press < 2 && await def.isVisible(); press++) {
+        if (await def.evaluate(b => b.closest('th').getAttribute('aria-sort')) === 'ascending') break;
+        await def.click(); await page.mouse.move(1, 1); await settle(page);
+      }
+    }
+  }
+  // filters: the panel opens from its button, a box turned off is counted, "Show all" turns them on, Escape closes
+  for (const p of ps.length ? ps : [null]) {
+    await openPanel(page, p);
+    const fs = await page.$$eval('details[data-rk-filter]', ds => ds.map((d, i) => (d.dataset.rkCheckF = i, d.checkVisibility({ visibilityProperty: true }) ? i : -1)).filter(i => i >= 0));
+    for (const i of fs) {
+      const F = `details[data-rk-check-f="${i}"]`;
+      try {
+        await page.click(`${F} > summary`); await settle(page);
+        const box = `${F} .rk-filter-panel input[type=checkbox]`;
+        if (!(await page.$eval(F, d => d.open))) { fail('filter', 'its button does not open the panel'); continue; }
+        await page.click(box); await settle(page);
+        const n = await page.$eval(`${F} .rk-filter-count`, c => c.textContent);
+        if (!/1/.test(n)) fail('filter', `one box off, but the button says "${n}"`);
+        const reset = await page.$(`${F} .rk-filter-reset`);
+        if (reset) { await reset.click(); await settle(page); }
+        if (await page.$$eval(box, bs => bs.some(b => !b.checked))) fail('filter', '"Show all" leaves a box off');
+        await page.keyboard.press('Escape'); await settle(page);
+        if (await page.$eval(F, d => d.open)) fail('filter', 'Escape does not close the panel');
+      } catch (e) { fail('filter', `a filter could not be used: ${String(e.message).split('\n')[0]}`); }
     }
   }
   // the bubble: hover, Escape, focus, blur; pin, drag and close when the page allows pinning
   await openPanel(page, ps[0]);
   const tip = await page.evaluate(() => {
-    const els = [...document.querySelectorAll('[data-tip]')].filter(e => e.checkVisibility());
+    const els = [...document.querySelectorAll('[data-tip]')].filter(e => e.checkVisibility({ visibilityProperty: true }));
     const plain = els.find(e => !e.matches('a[href], button, [role=tab], [role=button], input, select, textarea, summary'));
     const el = plain || els[0];
     if (!el) return null;
     el.dataset.rkCheckTip = '1';
-    const box = document.getElementById('rk-tip');
+    const box = document.querySelector('.rk-tip');
     return { text: el.dataset.tip, pin: !!(box && box.hasAttribute('data-pin') && plain), more: el.dataset.tipMore || null };
   });
   if (tip) {
     const E = '[data-rk-check-tip="1"]';
-    const bubble = () => page.evaluate(() => { const b = document.getElementById('rk-tip'); return b ? { shown: !b.hidden && b.checkVisibility(), text: b.textContent, pinned: b.classList.contains('is-pinned'), x: b.getBoundingClientRect().left, y: b.getBoundingClientRect().top, inView: (() => { const r = b.getBoundingClientRect(); return b.hidden || (r.left >= 0 && r.right <= document.documentElement.clientWidth && r.top >= 0 && r.bottom <= innerHeight); })() } : null; });
-    await page.hover(E); await settle(page);
+    const bubble = () => page.evaluate(() => { const b = document.querySelector('.rk-tip'); return b ? { shown: !b.hidden && b.checkVisibility({ visibilityProperty: true }), text: b.textContent, pinned: b.classList.contains('is-pinned'), x: b.getBoundingClientRect().left, y: b.getBoundingClientRect().top, inView: (() => { const r = b.getBoundingClientRect(); return b.hidden || (r.left >= 0 && r.right <= document.documentElement.clientWidth && r.top >= 0 && r.bottom <= innerHeight); })() } : null; });
+    await hover(E, 'a definition');
     let b = await bubble();
     if (!b || !b.shown || !b.text.includes(tip.text)) fail('bubble', 'hovering a definition does not show it');
     else if (!b.inView) fail('bubble', 'the bubble opens partly outside the viewport');
@@ -372,11 +436,11 @@ async function behaviour(page) {
     await page.evaluate(E => document.querySelector(E).blur(), E); await settle(page);
     if ((b = await bubble()) && b.shown) fail('bubble', 'the bubble stays after focus leaves');
     if (tip.pin) {
-      await page.click(E); await settle(page);
+      await click(E, 'pinning a definition');
       b = await bubble();
       if (!b || !b.pinned) fail('bubble', 'a click does not pin the definition');
       else {
-        const h = await page.$('#rk-tip .rk-tip-handle');
+        const h = await page.$('.rk-tip .rk-tip-handle');
         const hb = await h.boundingBox();
         await page.mouse.move(hb.x + 10, hb.y + hb.height / 2);
         await page.mouse.down();
@@ -384,12 +448,12 @@ async function behaviour(page) {
         await page.mouse.up();
         const moved = await bubble();
         if (Math.abs(moved.x - b.x) < 5 && Math.abs(moved.y - b.y) < 5) fail('bubble', 'dragging the pinned bubble by its handle does not move it');
-        await page.click('#rk-tip .rk-tip-close'); await settle(page);
+        await click('.rk-tip .rk-tip-close', 'the bubble\'s close button');
         if ((b = await bubble()) && (b.shown || b.pinned)) fail('bubble', 'the close button does not close the pinned bubble');
         if (tip.more) {
-          await page.click(E); await settle(page);
-          await page.click('#rk-tip .rk-tip-more a'); await settle(page);
-          const r = await page.evaluate(id => { const t = document.querySelector(id); return !!t && t.checkVisibility(); }, tip.more);
+          await click(E, 'pinning a definition');
+          await click('.rk-tip .rk-tip-more a', 'the bubble\'s "more" link');
+          const r = await page.evaluate(id => { const t = document.querySelector(id); return !!t && t.checkVisibility({ visibilityProperty: true }); }, tip.more);
           if (!r) fail('bubble', `the bubble's "more" link does not bring ${tip.more} into view`);
           await openPanel(page, ps[0]);
         }
@@ -410,6 +474,7 @@ async function checkFile(browser, file) {
     const tag = `${run.w} ${run.theme}${run.big ? ' 200% text' : ''}`;
     const ctx = await browser.newContext({ viewport: { width: run.w, height: 900 }, colorScheme: run.theme, reducedMotion: 'reduce' });
     const page = await ctx.newPage();
+    page.setDefaultTimeout(8000);
     const errs = [];
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', e => errs.push(String(e)));
@@ -426,7 +491,7 @@ async function checkFile(browser, file) {
       if (fs2 !== '32px') add([{ kind: 'static', text: `the 200% text size did not take (root font ${fs2}); a root font-size in px blocks it`, where: 'page' }], tag);
     }
     if (runs.indexOf(run) === 0) {
-      const font = await page.evaluate(() => { const f = getComputedStyle(document.body).fontFamily.split(',')[0].trim().replace(/["']/g, ''); return { f, ok: document.fonts.check(`16px "${f}"`) && [...document.fonts].some(x => x.family.replace(/["']/g, '') === f && x.status === 'loaded') }; });
+      const font = await page.evaluate(() => { const f = getComputedStyle(document.querySelector('.rk-section, .rk-wrap, .rk-table') || document.body).fontFamily.split(',')[0].trim().replace(/["']/g, ''); return { f, ok: document.fonts.check(`16px "${f}"`) && [...document.fonts].some(x => x.family.replace(/["']/g, '') === f && x.status === 'loaded') }; });
       if (!font.ok) add([{ kind: 'static', text: `the web font "${font.f}" did not load (measured in a fallback, the geometry is wrong)`, where: 'page' }], tag);
     }
     if (SHOTS && !run.big) {
@@ -471,13 +536,15 @@ async function selftest(browser, file) {
       <svg viewBox="0 0 100 30" width="100" height="30"><text x="-20" y="20">past the viewBox</text></svg>
       <p><span>one</span><span style="margin-left:-20px">two on top</span></p>
       <button type="button" style="outline:none">no focus ring</button>
-      <div style="width:3000px">wider than the page</div>`;
+      <div style="width:3000px">wider than the page</div>
+      <div style="height:40px;overflow:auto;line-height:20px"><div>in view</div><div>in view too</div><div>scrolled out of sight</div></div><p style="margin-top:0;line-height:20px">just below the box</p>`;
     document.querySelector('main').prepend(s);
   });
   const found = await page.evaluate(inspect);
   await page.keyboard.press('Tab');
   found.push(...await page.evaluate(focusCheck));
   found.push(...staticChecks('<style>.x { color: #abcdef; background-clip: text; font-family: Arial }</style><p>\u{1F680}</p>'));
+  const brand = staticChecks('<svg viewBox="0 0 8 8"><path fill="#7262ff" d="M0 0h8v8z"/></svg>');
   const want = { clip: /cut by its box/, overflow: /ellipsis/, contrast: /faint words/, viewbox: /past the viewBox/, overlap: /one|two on top/, focus: /no focus ring/, hscroll: /sideways/, static: /raw colour/ };
   let missed = 0;
   for (const [kind, re] of Object.entries(want)) {
@@ -485,6 +552,11 @@ async function selftest(browser, file) {
     console.log(`selftest ${kind}: ${hit ? 'found' : 'MISSED'}`);
     if (!hit) missed++;
   }
+  console.log(`selftest brand mark: ${brand.length ? 'FLAGGED (an <svg>\'s own colours are exempt)' : 'exempt'}`);
+  if (brand.length) missed++;
+  const scrolled = found.some(f => f.kind === 'overlap' && /scrolled out of sight|just below the box/.test(f.text));
+  console.log(`selftest text scrolled out of a box: ${scrolled ? 'FLAGGED (what a scroll box hides overlaps nothing)' : 'not an overlap'}`);
+  if (scrolled) missed++;
   await ctx.close();
   return missed;
 }

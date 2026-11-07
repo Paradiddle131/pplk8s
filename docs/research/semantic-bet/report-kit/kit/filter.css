@@ -1,0 +1,26 @@
+/* report-kit filter: options a reader may never need, folded behind one button beside the section's head. The
+   button says how many choices are off; its panel opens over the page under it, never pushing the content down. */
+.rk-filter { position: relative; display: inline-block }
+.rk-filter > summary { list-style: none; display: inline-flex; gap: var(--s2); align-items: center; min-height: 44px; padding: 0 var(--s4);
+  border: 1px solid var(--hair); border-radius: 10px; font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); cursor: pointer;
+  transition: background-color var(--t-fast) ease-out }
+.rk-filter > summary::-webkit-details-marker { display: none }
+.rk-filter > summary:hover { background: var(--row) }
+.rk-filter[open] > summary { background: var(--ink); color: var(--paper); border-color: var(--ink) }
+.rk-filter > summary svg { width: 16px; height: 16px; flex: none }
+.rk-filter-count:empty { display: none }
+.rk-filter-count { font-weight: 700 }
+.rk-filter-panel { position: absolute; z-index: 15; top: calc(100% + 6px); right: 0; width: max-content; max-width: min(30rem, calc(100vw - 32px));
+  padding: var(--s4); border-radius: 10px; background: var(--paper); color: var(--ink); border: 1px solid var(--hair); box-shadow: var(--shadow) }
+.rk-filter[data-rk-align="start"] .rk-filter-panel { right: auto; left: 0 }
+.rk-filter-panel fieldset { border: 0; margin: 0 0 var(--s3); padding: 0; min-width: 0 }
+.rk-filter-panel legend { padding: 0; margin-bottom: var(--s1); font-weight: 700 }
+.rk-check { display: flex; gap: var(--s2); align-items: center; min-height: 40px; padding: 0 var(--s2); margin: 0 calc(-1 * var(--s2));
+  border-radius: 6px; cursor: pointer }
+.rk-check:hover { background: var(--row) }
+.rk-check input { margin: 0; width: 18px; height: 18px; flex: none; accent-color: var(--ink); cursor: pointer }
+.rk-filter-foot { display: flex; justify-content: flex-end; padding-top: var(--s2); border-top: 1px solid var(--hair) }
+.rk-filter-reset { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: none; border: 0; min-height: 40px; padding: 0 var(--s2);
+  border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.rk-filter-reset:disabled { cursor: default; text-decoration: none }
+@media (prefers-reduced-motion: reduce) { .rk-filter > summary { transition: none } }

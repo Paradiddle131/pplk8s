@@ -1,9 +1,11 @@
 /* report-kit slope: one panel per subject, a value at the left and at the right on the 0-100 scale; lines
-   are SVG (stretched, strokes unscaled), marks and numbers are HTML so text keeps the page's sizes. */
-.rk-slopes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s6) var(--s5); container-type: inline-size }
-@container (max-width: 27.5rem) { .rk-slopes { grid-template-columns: minmax(0, 1fr) } }
+   are SVG (stretched, strokes unscaled), marks and numbers are HTML so text keeps the page's sizes. Panels sit
+   side by side while each gets 13rem, else one under another (no container query, so it holds in any parent);
+   the plot's margins are in the number size, so its numbers keep clear of the labels at any text size. */
+.rk-slopes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--s6) var(--s5) }
 .rk-slope { display: grid; grid-template-rows: auto 1fr auto; min-width: 0 }
-.rk-slope-plot { position: relative; height: 9rem; margin: 20px 2.75rem 24px; border-block: 1px solid var(--hair) }
+.rk-slope-plot { position: relative; height: 9rem;
+  margin: calc(var(--t-num) * .8) calc(var(--t-num) * 2 + 12px) calc(var(--t-num) * .9); border-block: 1px solid var(--hair) }
 .rk-slope-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible }
 .rk-ln { fill: none; stroke: var(--line); stroke-width: 2.5; stroke-linecap: round }
 .rk-ln[data-k="ok"] { stroke: var(--ok) } .rk-ln[data-k="warn"] { stroke: var(--warn) }
