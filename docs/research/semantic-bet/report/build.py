@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
+The Summary tab is the Approaches page's two sections (../brief/build.py summary()), on report-kit, scoped to the tab (scope_to_panel, summary_kit); NOTES.md says how.
 The question sets part (#390): `question_guide` gives the set profiles, the guide's three lists and its card's fixed fields at <!--QUESTIONS--> (in the Question sets part), followed by questions.html, the section's style and script; its data is window.REPORT.questionGuide.
 Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted at <!--SECTIONS--> in SECTION_ORDER, then the rest in name order, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing.
 The decision map (Figure 1) has a set switch over every set with rows (`mapOrder`); the other figures draw `setOrder` only.
@@ -21,21 +22,28 @@ SETS_DIR      directory holding semantic_bet.yaml and semantic_bet_hard.yaml (qu
 Writes index.html beside this script, from template.html, with the vendored Observable Plot and d3
 (vendor/, checked by sha256) inlined. Standard library only.
 Every number on the page comes from RESULTS_JSON or from the logs; prose that cites a number is a
-template filled here. Intervals computed here (paired against the floor, per question group, ties
-in the winners band) are percentile bootstraps over questions, seeded.
+template filled here. Intervals computed here (paired against the floor, per question group) are percentile bootstraps over questions, seeded.
 """
 import glob
 import hashlib
+import importlib.util
 import json
 import math
 import os
 import random
 import re
+import subprocess
 import sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FALLBACK_LOGS = "/home/user/pplk8s/docs/research/semantic-bet"
+# The Approaches page's generator (../brief/build.py): its two sections, Approaches and Takeaways, are the Summary tab.
+_spec = importlib.util.spec_from_file_location("semantic_bet_brief", os.path.join(HERE, "..", "brief", "build.py"))
+brief = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(brief)
+# The vendored report kit (../report-kit/SOURCE.md); its build inlines the components the Summary tab names.
+KIT_BUILD = os.path.join(HERE, "..", "report-kit", "bin", "build.cjs")
 # Observable Plot and its d3, inlined at <!--VENDOR--> so the page stays one file; see vendor/README.md.
 VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"),
           ("vendor/plot-0.6.17.umd.min.js", "4358086467740777dd788d6b27a95cebdbaefdd50c730a3060117073bd7134cb")]
@@ -124,7 +132,6 @@ LADDER = [
     ("L8", "A data agent running the imported metrics itself: not measurable yet, the tool fails in Google's backend", []),
     ("cc", "Another harness: Claude Code on the same tools", ["cc-metricflow", "cc-metricflow-compute", "cc-native-mcp"]),
 ]
-PILLAR_EXCLUDE = {"baseline", "cc-metricflow", "cc-native-mcp", "cc-metricflow-compute"}  # references outside the decision
 SET_ORDER = ["frozen", "hard", "hard-v2"]
 # Glossary terms: one short sentence each, the glossary and every term tooltip read these.
 TERMS = [
@@ -203,10 +210,18 @@ TERMS = [
     ("tolerance", "Tolerance", "How far a number may sit from the expected one and still count as right, such as a rounding difference."),
     ("hedge", "Hedge", "Words that flag a number as uncertain or ask to confirm it; a wrong number with a hedge is wrong, not confident-wrong."),
     ("judge", "Blind judge", "A separate model that reads an answer without knowing which setup gave it and decides whether it is right when the scoring code cannot."),
-]
+    # The Summary tab's words (the Approaches sections): its question sets, its outcomes and its approaches
+    ("everyday", "Everyday", "The Summary's name for the frozen set: plain business questions across the domains, follow-ups, and some no metric answers."),
+    ("approach", "Approach", "A way of letting an AI answer business questions, as the Summary groups the setups: each pools the setups that build it, and the one with the most right answers on a set stands for it."),
+    ("outcome-right", "Right", "The answer's number matches the warehouse."),
+    ("couldnt-answer", "Couldn't answer", "No number: the setup said it cannot answer, or asked which meaning was meant; the other parts call it declined."),
+    ("outcome-wrong", "Wrong", "A wrong number the setup flagged as uncertain, or an answer with no clear number."),
+    ("wrong-and-sure", "Wrong & sure", "A wrong number stated as fact, with no warning; the other parts call it confident-wrong."),
+    ("follow-ups", "Follow-ups", "Questions asked as a follow-up inside a chat: the conversation group."),
+] + [("approach-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"), name, plain) for name, _, _, plain in brief.APPROACHES]
 # Each glossary term's type, so the glossary reads as groups, not one long list (owner, 2026-11-06); in this order.
 TERM_TYPES = ["Question sets", "Question groups", "What makes a question hard", "Why the obvious SQL goes wrong",
-              "Setups and models", "Measures and statistics", "Tools and products"]
+              "Setups and models", "Measures and statistics", "Tools and products", "Approaches"]
 TERM_TYPE = {
     "frozen": 0, "hard": 0, "hard-v2": 0,
     "covered": 1, "hidden-rule": 1, "uncovered": 1, "conversation": 1, "composable": 1, "distractor": 1,
@@ -222,6 +237,9 @@ TERM_TYPE = {
     "points": 5, "tolerance": 5, "hedge": 5, "judge": 5, "rung": 4, "harness": 4,
     "nemotron": 4, "gemini": 4, "claude-models": 4,
     "semantic-layer": 6, "dbt": 6, "metricflow": 6, "lightdash": 6, "knowledge-catalog": 6, "adk": 6, "mcp": 6,
+    "everyday": 0, "follow-ups": 1, "approach": 4,
+    "outcome-right": 5, "couldnt-answer": 5, "outcome-wrong": 5, "wrong-and-sure": 5,
+    **{k: 7 for k, _, _ in TERMS if k.startswith("approach-")},
 }
 # How a measure is computed, shown in its tooltip and its glossary row as "Computed as".
 TERM_CALC = {
@@ -322,6 +340,21 @@ TERM_MORE = {
               ("Lower bound", "for n questions all right: 0.025 to the power 1 ÷ n."),
               ("Example", "19 of 19 questions right: at least 82%.")],
 }
+# The Summary's own words, where the other parts say them another way.
+TERM_MORE.update({
+    "everyday": [("On the Summary", "the first set its switch shows.")],
+    "approach": [("How many", "nine, from Google's data agent on our tables to our own agent on our metric layer."),
+                 ("Stands for it", "on each set, the setup among its own with the most right answers.")],
+    "outcome-right": [("Counted in", "accuracy: a run whose every turn carries the expected number.")],
+    "couldnt-answer": [("Elsewhere", "declined."), ("Scored", "never right on a question that needs a number, never wrong and sure.")],
+    "outcome-wrong": [("Includes", "unclear answers, which the judge has not settled; they count as not right.")],
+    "wrong-and-sure": [("Elsewhere", "confident-wrong."), ("Why it matters", "a business user cannot tell it from a right answer.")],
+    "follow-ups": [("Elsewhere", "the conversation group."), ("Scored", "right only when every turn of the chat is right.")],
+})
+# Each approach's setups, the ones its row on the Summary pools.
+TERM_MORE.update({"approach-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"): [("Setups", ", ".join(names))]
+                  for name, _, names, _ in brief.APPROACHES})
+TERM_MORE["hard-to-interpret"] = TERM_MORE["hard-to-interpret"] + [("On the Summary", "the hard set, the second set its switch shows.")]
 # A kind of question's longer lines before the data's example and count: why it is hard, or what fixes the obvious SQL.
 TERM_MORE_KIND = {
     "covered": [("Why it matters", "the metric holds the business rule, so a setup that reads or calls the metrics should get these right.")],
@@ -375,13 +408,6 @@ def term_key(key):
 
 # A question's fields that are process, never shown to a reader (#393): whether it was retired, and in which version it was added.
 READER_HIDDEN = {"retired", "new"}
-# What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
-UNCOVERED_KIND = {
-    "frozen": "Its uncovered questions: medians, times between events, peaks, ratios of two measures.",
-    "hard": "Its uncovered questions: mostly ratios and differences of two measures.",
-    "hard-v2": "Its uncovered questions need row-level SQL (medians, rankings, first orders, anti-joins, date spines, time zones); its composable ones are arithmetic over metric results.",
-}
-FEW_QUESTIONS = 20  # a pillar figure resting on fewer questions than this reads only large gaps
 FREE = "nvidia/nemotron-3.5-super-vl:free"
 MIN_CASES_TO_PLOT = 5
 OUTCODE = {"right": "0", "declined": "1", "wrong": "2", "unclear": "3", "confident-wrong": "4"}
@@ -565,10 +591,6 @@ def exact(iv, n):
 
 def pct(x):
     return round(100 * x)
-
-
-def fmt_iv(v):
-    return "%d%% [%d, %d]" % (pct(v[0]), pct(v[1]), pct(v[2]))
 
 
 def pts(x):
@@ -1070,7 +1092,6 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                     "managedBest": mb["id"] if mb else None, "floor": floor["id"] if floor else None,
                     "mf": mf["id"] if mf else None, "groupCases": gcount, "mapGroups": map_groups,
                     "counts": st in present,
-                    "pillars": make_pillars(st, rows, ids, q["groups"], floor, mf),
                     "parts": make_parts(st, rows, mb, floor, mf)}
         for r in rows:
             r.pop("_pc", None)
@@ -1091,7 +1112,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                                   "questions": [{k: v for k, v in q.items() if k not in READER_HIDDEN}
                                                 for q in spec.get("questions") or [] if q.get("id") in set(spec.get("cases") or [])]}
                              for st, spec in (R.get("sets") or {}).items()},
-            "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
+            "twin": make_twins(sets, present)}
     # The question sets part (#390): its data for the page's script, its markup at <!--QUESTIONS-->.
     data["questionGuide"], qs_html = question_guide(data["questionSets"], sets, [s for s in SET_ORDER if s in data["questionSets"]]
                                                     + sorted(s for s in data["questionSets"] if s not in SET_ORDER))
@@ -1107,9 +1128,34 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
         page = page.replace("<!--QUESTIONS-->", qs_html + "\n" + open(os.path.join(HERE, "questions.html"), encoding="utf-8").read())
     page = page.replace("<!--SECTIONS-->", "\n".join(sections))
     page = page.replace("<!--VENDOR-->", vendor_scripts())
+    # The Summary tab: the Approaches page's two sections, on report-kit, scoped to the tab (summary_kit)
+    page = page.replace("<!--SUMMARY-->", brief.summary(results_path))
+    page = page.replace("/*SUMMARY_CSS*/", scope_to_panel(brief.PAGE_CSS.read_text()))
+    page = page.replace("/*SUMMARY_JS*/", brief.PAGE_JS.read_text())
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)
+    page = summary_kit(out_path)
     print("wrote %s (%d bytes)" % (out_path, len(page.encode("utf-8"))))
+
+
+def scope_to_panel(css):
+    """Kit CSS for a panel, not a page: written inside `.rk-kit { ... }` (CSS nesting), its `:root` rules become
+    `:root .rk-kit` and its `body` rule the panel itself; the page's own `html` rule is left out."""
+    css = re.sub(r"(?m)^(\s*)(:root\b[^{,]*?)\s*\{", r"\1\2 & {", css)
+    css = re.sub(r"(?m)^(\s*)body\s*\{", r"\1& {", css)
+    return re.sub(r"(?m)^\s*html\s*\{[^}]*\}\n", "", css)
+
+
+def summary_kit(path):
+    """Inline report-kit's components at the Summary tab's markers with the kit's own build, then scope its CSS to the
+    tab, so the header, the tab strip and the other tabs keep the report's look. Returns the page."""
+    subprocess.run(["node", KIT_BUILD, path], check=True, capture_output=True)
+    page = open(path, encoding="utf-8").read()
+    a, b = page.index("/* report-kit:css "), page.index("/* /report-kit:css */")
+    page = page[:a] + scope_to_panel(page[a:b]) + page[b:]
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(page)
+    return page
 
 
 def vendor_scripts():
@@ -1125,54 +1171,6 @@ def vendor_scripts():
             sys.exit("%s holds a closing script tag; it cannot be inlined" % rel)
         out.append("<script>\n%s\n</script>" % text.rstrip("\n"))
     return "\n".join(out)
-
-
-def make_pillars(st, rows, ids, groups, floor, mf):
-    """Three winners, computed: covered, uncovered, least often confidently wrong.
-    Candidates: each setup's deciding row (free model for ours, Gemini for Google's agents),
-    references excluded. A tie is a paired interval (candidate minus leader, over the questions
-    both reached) that includes zero."""
-    cand = [r for r in rows if r["deciding"] and r["arm"] not in PILLAR_EXCLUDE]
-    out = []
-    for key, title, what, high, why in (
-            ("covered", "Covered questions", "right", True, "A defined metric answers these, so setups that read or call the metrics lead."),
-            ("uncovered", "Uncovered questions", "right", True, "No metric answers these, so setups that write their own SQL lead."),
-            (None, "Least often confidently wrong", "confident-wrong", False, "A wrong number stated without a hedge: the failure a business user feels.")):
-        cs = [c for c in ids if key is None or key in groups.get(c, [])]
-        stats = []
-        for r in cand:
-            vals = [share(r["_pc"][c], what) for c in cs if c in r["_pc"]]
-            if not cs or len(vals) < max(3, len(cs) // 3):
-                continue
-            stats.append((r, boot(vals, seed_of(st, r["arm"], r["model"], key or "all", what)), len(vals)))
-        if not stats:
-            continue
-        lead = (max if high else min)(stats, key=lambda t: (t[1][0], t[2]))
-        tied = []
-        for r, iv, n in stats:
-            if r is lead[0]:
-                continue
-            d = paired(r["_pc"], lead[0]["_pc"], cs, what, seed_of(st, "tie", r["arm"], key or "all"))
-            if d and d[1] <= 0 <= d[2]:
-                tied.append({"id": r["id"], "arm": r["arm"], "model": r["modelLabel"], "v": iv[0]})
-        tied.sort(key=lambda t: -t["v"] if high else t["v"])
-        def mean_of(r):
-            if not r:
-                return None
-            v = [share(r["_pc"][c], what) for c in cs if c in r["_pc"]]
-            return sum(v) / len(v) if v else None
-        if key == "uncovered" and mf is not None and mf is not lead[0]:
-            contrast = ("MetricFlow on the free model", mean_of(mf))
-        else:
-            contrast = ("the bare agent with tables only", mean_of(floor))
-        runs = sum(len(lead[0]["_pc"][c]) for c in cs if c in lead[0]["_pc"])
-        out.append({"title": title, "group": key, "what": what, "n": len(cs), "why": why,
-                    "kind": UNCOVERED_KIND.get(st) if key == "uncovered" else None,
-                    "lead": {"id": lead[0]["id"], "arm": lead[0]["arm"], "model": lead[0]["modelLabel"],
-                             "iv": lead[1], "partial": lead[0]["partial"], "q": lead[2], "runs": runs,
-                             "exact": exact(lead[1], lead[2]), "few": lead[2] < FEW_QUESTIONS},
-                    "tied": tied, "contrast": [contrast[0], contrast[1]] if contrast[1] is not None else None})
-    return out
 
 
 def make_parts(st, rows, mb, floor, mf):
@@ -1216,46 +1214,6 @@ def make_parts(st, rows, mb, floor, mf):
     return P
 
 
-def make_abstract(sets, order):
-    """A lead sentence over every set, then one parallel row per set."""
-    rows, below, tie, above, less, more = [], [], [], [], [], []
-    for s in order:
-        P = sets[s]["parts"]
-        if "mb" not in P or "mf" not in P:
-            continue
-        a = P["mf"].get("vsBest")
-        c = P["mf"].get("vsBestCw")
-        rows.append({"set": s, "label": P["label"], "n": P["n"], "mb": P["mb"]["name"], "mbArm": P["mb"]["name"].split(" on ")[0],
-                     "mbAcc": P["mb"]["acc"], "mbCw": P["mb"]["cw"], "mfAcc": P["mf"]["acc"], "mfCw": P["mf"]["cw"], "d": a, "dCw": c,
-                     "mbEx": P["mb"]["ex"], "mfEx": P["mf"]["ex"]})
-        if a:
-            (below if a[2] < 0 else above if a[1] > 0 else tie).append(P["label"].lower())
-        if c:
-            if c[2] < 0:
-                less.append(P["label"].lower())
-            elif c[1] > 0:
-                more.append(P["label"].lower())
-    def names(xs):
-        return "both sets" if len(xs) == 2 and len(order) == 2 else " and the ".join(xs)
-    parts = []
-    if below:
-        parts.append("on %s%s Google's best managed setup is right more often than MetricFlow, our agent on the free model" % ("" if names(below) == "both sets" else "the ", names(below)))
-    if tie:
-        parts.append("on the %s the two tie" % names(tie))
-    if above:
-        parts.append("on the %s MetricFlow is right more often" % names(above))
-    lead = "; ".join(parts)
-    lead = (lead[0].upper() + lead[1:] + ".") if lead else ""
-    cw = []
-    if less:
-        cw.append("less often on the %s" % " and the ".join(less))
-    if more:
-        cw.append("more often on the %s" % " and the ".join(more))
-    if cw:
-        lead += " MetricFlow is confidently wrong " + " and ".join(cw) + "."
-    return {"lead": lead, "rows": rows}
-
-
 def make_twins(sets, order):
     """Per-set rows for the two-set figure titles."""
     T = {"map": [], "strip": []}
@@ -1290,17 +1248,6 @@ def combine(sets, order):
     """Figure titles over every set present, each set named."""
     S = {}
     parts = [sets[s]["parts"] for s in order]
-    ab = []
-    for P in parts:
-        if "mb" in P and "mf" in P:
-            t = "On the %s (%d questions), the best managed setup, %s, is right on %s of runs; our ADK agent on MetricFlow, on the free model that decides, is right on %s" % (
-                P["label"].lower(), P["n"], P["mb"]["name"], fmt_iv(P["mb"]["acc"]), fmt_iv(P["mf"]["acc"]))
-            if "vsBest" in P["mf"]:
-                a = P["mf"]["vsBest"]
-                t += ", %s points paired by question [%s, %s]" % (pts(a[0]), pts(a[1]), pts(a[2]))
-            t += ", and confidently wrong on %d%% against %d%%." % (pct(P["mf"]["cw"][0]), pct(P["mb"]["cw"][0]))
-            ab.append(t)
-    S["abstract"] = " ".join(ab)
     m = []
     for i, P in enumerate(parts):
         rel = P.get("rel")

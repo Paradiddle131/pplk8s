@@ -2,9 +2,11 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+  --report-paper: var(--paper);
   --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
   --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
   --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
@@ -51,44 +53,9 @@ header.memo { padding-bottom: 14px; }
 h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
 .byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
 .byline b { font-weight: 600; color: var(--ink); }
-.abstract { margin: 0 0 26px; max-width: 46rem; }
-.abstract .lead { max-width: 42rem; text-wrap: pretty; }
-.runin { font-weight: 700; }
 h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
 p { margin: 0 0 1em; }
 
-/* winners band */
-.winners { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 6px; }
-.pillar { border-top: 2px solid var(--ink); padding-top: 10px; }
-/* the pillars share rows (title, why, one per set), so each set's figure sits on one line across the band */
-@supports (grid-template-rows: subgrid) { .pillar { display: grid; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
-.pillar h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; }
-.pillar .why { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
-.pset { border-top: 1px solid var(--rule); padding: 8px 0 8px; font-family: var(--label); font-size: 14px; line-height: 1.4; }
-.pset .sl { color: var(--ink-3); font-size: 13px; }
-.pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
-.pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
-.pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
-.pset .who { font-size: 14.5px; color: var(--ink); margin: 1px 0 1px; }
-.pset .who .by { color: var(--ink-3); font-size: 13px; margin-right: 2px; }
-.pset .who .id { font-size: 13px; font-weight: 600; }
-.pset .pn { color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.pset .pn .few { color: var(--ink-3); }
-.pillar .lchg { display: block; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
-.pset .kind { color: var(--ink-3); font-size: 13px; }
-#w-diff { margin: 0 0 8px; color: var(--ink-2); }
-.pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
-/* the setups tied with the leader, and the setup it is set against: a small label, then one row per setup,
-   its name on the left and its figure on the right, so the figures line up in one column */
-.pset .id { white-space: nowrap; }
-.pset .tied .id, .pset .ctr .id { font-size: 12px; }
-.pset .plab { display: block; color: var(--ink-3); font-size: 13px; margin: 6px 0 1px; }
-.pset ul.prows { list-style: none; margin: 0; padding: 0; }
-.pset .prow2 { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 12px; padding: 1px 0; border-top: 1px dotted var(--grid-major); }
-.pset .prow2:first-child { border-top: 0; }
-.pset .prow2 .m { color: var(--ink-3); }
-.pset .prow2 .n { flex: none; }
-.winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
 
 figure { margin: 22px 0 8px; }
 .figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 40rem; text-wrap: pretty; }
@@ -140,21 +107,6 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .themebtn svg { display: block; padding: 4px; width: 26px; height: 26px; border-radius: 50%; }
 .themebtn[aria-pressed="false"] .sun, .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper); }
 .lead { margin: 0 0 12px; }
-.abwrap { overflow-x: auto; margin: 4px 0 0; }
-table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
-table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; white-space: nowrap; }
-table.ab tr.grp th, table.ab tr.diff th { white-space: normal; }
-table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
-table.ab tr.grp td { padding-top: 10px; }
-table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
-table.ab tr.diff th, table.ab tr.diff td { border-top: 1px solid var(--ink-2); padding-top: 7px; }
-table.ab thead th .sub { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-.abnote { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 6px 0 0; }
-table.ab th, table.ab td { padding: 5px 10px 5px 0; text-align: left; border-bottom: 1px solid var(--grid-major); vertical-align: baseline; }
-table.ab thead th { font-weight: 600; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink-2); vertical-align: bottom; }
-table.ab thead tr.grp th { border-bottom: 1px solid var(--rule); font-weight: 600; }
-table.ab td.num, table.ab th.num { text-align: right; white-space: nowrap; }
-table.ab td .sub { display: block; color: var(--ink-3); font-size: 12.5px; }
 .n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
 .ivs { font-size: .82em; color: var(--ink-3); font-weight: 400; margin-left: 3px; white-space: nowrap; }
 .twin { overflow-x: auto; margin: -2px 0 10px; }
@@ -358,7 +310,7 @@ dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid
 dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
 dl.meth dd { margin: 0; color: var(--ink-2); }
 /* no word left alone on the last line of a paragraph of reading text */
-.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq, .abnote, .winners-note { text-wrap: pretty; }
+.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
@@ -439,14 +391,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
   .tab { font-size: 13px; letter-spacing: .06em; }
   .view { padding-top: 20px; }
 }
-@media (max-width: 760px) {
-  .winners { grid-template-columns: 1fr; gap: 18px; }
-}
 @media (max-width: 640px) {
-  table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
-  table.ab tbody th { padding-left: 6px; white-space: normal; }
-  table.ab .id { font-size: 11px; }
-  table.ab .sub { font-size: 11.5px; }
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
   /* the glossary stacks each term over its meaning; a group's heading sticks while its terms pass */
@@ -513,16 +458,20 @@ window.REPORT = D;
   </nav>
 
   <div class="views" id="views">
-  <section class="view on" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
-
-  <section class="abstract"><p class="lead"><span class="runin">In short.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
-
-  <section aria-labelledby="w-h">
-    <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
-    <p class="winners-note" id="w-diff" hidden></p>
-    <div class="winners" id="winners"></div>
-    <p class="winners-note">Each setup enters on the model that decides for it<span id="w-pend">; a setup with runs on Claude only waits, tagged pending in the tables</span>.</p>
-  </section>
+  <section class="view on rk-kit" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
+  <style>
+  /* The Summary tab on report-kit, a trial ahead of the other tabs: the kit and the Approaches sections' own styles,
+     nested under .rk-kit so nothing reaches the header, the tab strip or the other tabs (build.py scopes the kit's
+     :root and body rules to the panel, and keeps the page's ground under it). */
+  .rk-kit {
+  /* report-kit:css tokens base section marks dots bar range slope switch table-sort tip highlight */
+  /*SUMMARY_CSS*/
+  /* the panel keeps the page's ground, so the trial tab sits on the same paper as the rest */
+  :root & , :root[data-theme] & { --paper: var(--report-paper) }
+  }
+  </style>
+<!--SUMMARY-->
+  <div class="rk-tip" id="rk-tip" hidden></div>
   </section>
 
   <section class="view" id="view-decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
@@ -1023,6 +972,7 @@ window.REPORT = D;
   // A key ring in Figure 3 stands for its setup's own focusable group, whose hit area may lie under another's.
   const closestTip = (t) => {
     if (!t || !t.closest) return null;
+    if (t.closest(".rk-kit")) return null; // the Summary tab: the kit's bubble shows its definitions
     const ring = t.closest("[data-tip-for]");
     if (ring) { const svg = ring.ownerSVGElement; return [...svg.querySelectorAll("[data-tip]")].find((g) => g.dataset.tip === ring.dataset.tipFor) || null; }
     return t.closest(TIPSEL);
@@ -1062,7 +1012,7 @@ window.REPORT = D;
     if (e.key === "Escape") { if (pinned) unpin(true); else hideTip(); return; }
     if ((e.key === "Enter" || e.key === " ") && document.activeElement) {
       const el = document.activeElement;
-      if (el.matches && el.matches(TIPSEL)) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
+      if (el.matches && el.matches(TIPSEL) && !el.closest(".rk-kit")) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
     }
   });
   window.addEventListener("scroll", () => {
@@ -1166,27 +1116,11 @@ window.REPORT = D;
     });
   }
 
-  /* ---------- text, winners ---------- */
+  /* ---------- text ---------- */
   const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
   const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
-  const num = (v, ex) => `<span class="n">${P(v[0])}%</span><span class="ivs">${exIv(v, ex)}</span>`;
-  const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
   function renderText() {
     $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
-    const A = D.abstract || { lead: "", rows: [] };
-    $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
-    const ab = A.rows;
-    const lines = [
-      [`The ${term("managed-best", "managed best")}`, null, "grp"],
-      ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
-      ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
-      [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
-      ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
-      [`Gap: MetricFlow against the managed best, in ${term("points", "points")} right`, (r) => dnum(r.d), "diff"],
-    ];
-    $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
-      lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
-      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set. The gap is paired question by question; an interval that includes 0 is a tie.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
     $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the ${term("managed-best", "managed best")}</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
@@ -1280,56 +1214,6 @@ window.REPORT = D;
     el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");
     setTimeout(() => el.classList.remove("jumped"), 1900);
   };
-  const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
-  // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
-  function pillarFig(p) {
-    // A leader that ran only some of the set's questions says so, and runs that are not one per question are counted beside them.
-    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = L.q < p.n ? `the ${L.q} of ${p.n} questions it ran` : `${L.q} question${L.q === 1 ? "" : "s"}`;
-    const what = p.what === "right" ? "right" : "confidently wrong";
-    let fig, nl;
-    if (L.exact) {
-      const b = ivB(iv, L.exact), all = iv[0] === 1;
-      fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
-      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}${L.runs !== L.q ? `, ${runs} in all` : ""}`;
-    } else {
-      fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
-      nl = `${qs}, ${runs}`;
-    }
-    if (L.few) nl += `<span class="few"> · few questions, so only a large gap shows</span>`;
-    return { fig, nl };
-  }
-  function renderWinners() {
-    const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
-    const differs = [];
-    const html = titles.map((t) => {
-      let why = "";
-      const leads = new Set(); let nSets = 0;
-      const blocks = SETS.map((s) => {
-        const p = S(s).pillars.find((x) => x.title === t);
-        if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
-        why = p.why;
-        const L = p.lead; leads.add(L.id.split("|").slice(1).join("|")); nSets++;
-        const tied = p.tied.length ? `<span class="plab">${term("interval", "Tied within the interval")}</span><ul class="prows">${p.tied.map((x) => `<li class="prow2"><span><span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> <span class="m">on ${esc(x.model)}</span></span><span class="n">${P(x.v)}%</span></li>`).join("")}</ul>` : `<span class="plab">No setup ties it within the ${term("interval", "interval")}.</span>`;
-        const ctr = p.contrast ? `<div class="ctr"><span class="plab">Against it</span><div class="prow2"><span>${esc(p.contrast[0])}</span><span class="n">${P(p.contrast[1])}%</span></div></div>` : "";
-        const f = pillarFig(p);
-        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
-          <div class="lead"><span class="num">${f.fig}</span></div>
-          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">${esc(L.partial)} so far</span>` : ""}</div>
-          <div class="pn">${f.nl}</div>${p.kind ? `<div class="kind">${esc(p.kind)}</div>` : ""}
-          <div class="tied">${tied}</div>${ctr}</div>`;
-      }).join("");
-      const pt = PILLAR_TERM[t];
-      const differ = nSets > 1 && leads.size > 1; differs.push(nSets > 1 ? differ : null);
-      return `<div class="pillar" style="grid-row:span ${2 + SETS.length}"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}@@DIFF${titles.indexOf(t)}@@</p>${blocks}</div>`;
-    }).join("");
-    // "a different setup leads on each set": once for the band when it holds in every pillar, else per pillar
-    const multi = differs.filter((d) => d !== null), all = multi.length > 1 && multi.every(Boolean);
-    $("#winners").innerHTML = html.replace(/@@DIFF(\d+)@@/g, (m, i) => (!all && differs[+i] ? `<span class="lchg">A different setup leads on each set.</span>` : ""));
-    // The pending clause only where a table shows a pending row (#409)
-    $("#w-pend").hidden = !Object.values(D.sets).some((x) => (x.rows || []).some((r) => r.status === "pending"));
-    const wd = $("#w-diff"); wd.hidden = !all; wd.textContent = all ? "In every pillar, a different setup leads on each set." : "";
-  }
-
   /* ---------- Figure 1: decision map, both sets ---------- */
   function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
   function unionKeys() {
@@ -2276,7 +2160,7 @@ window.REPORT = D;
     if (mapHeadRO) mapHeadRO.disconnect();
     if (window.ResizeObserver) { mapHeadRO = new ResizeObserver(() => fit()); mapHeadRO.observe(tbl); [...thead.rows[0].cells].forEach((c) => mapHeadRO.observe(c)); }
   }
-  function renderAll() { hideTip(); renderText(); renderWinners(); renderMapTools(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  function renderAll() { hideTip(); renderText(); renderMapTools(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
@@ -2286,4 +2170,21 @@ window.REPORT = D;
 
   window.__reportMarkReady();
 })();
+</script>
+<script>
+/* The Summary tab's scripts: report-kit's and the Approaches sections' own. The report's other tabs use data-tip for
+   their own tooltips, so these run with `document` narrowed to the Summary panel for their lookups (querySelector,
+   querySelectorAll); everything else is the real document. A stopgap while only this tab is on the kit. */
+(function (document) {
+/* report-kit:js switch table-sort tip highlight */
+/*SUMMARY_JS*/
+})((function (doc, root) {
+  return new Proxy(doc, {
+    get(t, k) {
+      if (k === "querySelector" || k === "querySelectorAll") return (sel) => root[k](sel);
+      const v = Reflect.get(t, k, t);
+      return typeof v === "function" ? v.bind(t) : v;
+    },
+  });
+})(window.document, window.document.getElementById("view-summary")));
 </script>
