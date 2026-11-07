@@ -4,10 +4,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
 <style>
-/* Enamel signage: a midnight band carries the title and the set switch; below it the approaches sit on one
-   line, most native to most custom, each station showing its 100 answers. Every word is set in full ink. */
+/* Enamel signage on a porcelain ground: two sections, Approaches and Takeaways, each under the same heading and
+   ink rule. The approaches sit on one line, most native to most custom, each station showing its 100 answers;
+   the question-set switch belongs to the Approaches heading. Every word is set in full ink. */
 :root {
-  --paper: #f4f6fa; --ink: #0d1b3e; --band: #0d1b3e; --band-ink: #f4f6fa; --band-line: rgba(244, 246, 250, .34);
+  --paper: #f4f6fa; --ink: #0d1b3e; 
   --rule: rgba(13, 27, 62, .16); --row: rgba(36, 71, 201, .05); --line: #2447c9;
   --ok: #0b7d4b; --warn: #b56f00; --bad: #cf2a1f;
   --tip: #0d1b3e; --tip-ink: #f4f6fa; --shadow: 0 6px 18px rgba(13, 27, 62, .22);
@@ -17,12 +18,12 @@
   --route: 40px; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --paper: #0a1430; --ink: #edf1f8; --band: #1b3373; --band-ink: #f3f6fb; --band-line: rgba(243, 246, 251, .34);
+  --paper: #0a1430; --ink: #edf1f8; 
   --rule: rgba(237, 241, 248, .2); --row: rgba(134, 164, 255, .08); --line: #86a4ff;
   --ok: #3fcf8e; --warn: #f2b23e; --bad: #ff6a5c;
   --tip: #edf1f8; --tip-ink: #0a1430; --shadow: 0 6px 18px rgba(0, 0, 0, .5); color-scheme: dark } }
 :root[data-theme="dark"] {
-  --paper: #0a1430; --ink: #edf1f8; --band: #1b3373; --band-ink: #f3f6fb; --band-line: rgba(243, 246, 251, .34);
+  --paper: #0a1430; --ink: #edf1f8; 
   --rule: rgba(237, 241, 248, .2); --row: rgba(134, 164, 255, .08); --line: #86a4ff;
   --ok: #3fcf8e; --warn: #f2b23e; --bad: #ff6a5c;
   --tip: #edf1f8; --tip-ink: #0a1430; --shadow: 0 6px 18px rgba(0, 0, 0, .5); color-scheme: dark }
@@ -35,20 +36,20 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
 .wrap { max-width: 80rem; margin: 0 auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r) }
 
-/* The band: the page's sign. Title left, the question-set switch right; the chosen set is a reversed plate. */
-.band { background: var(--band); color: var(--band-ink) }
-.band .wrap { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: center; justify-content: space-between; padding-block: 20px }
-.band :focus-visible { outline-color: var(--band-ink) }
-h1 { margin: 0; font-size: 2rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em }
-.sets { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--band-line); border-radius: 10px }
-.sets button { font: 600 1rem/1 var(--f); color: var(--band-ink); background: transparent; border: 0; border-radius: 7px;
+/* Section heads: the heading on the route indent with the question-set switch beside it, one 2px ink rule under
+   both, as the Takeaways heading wears it. The chosen set is a reversed ink plate. */
+.sec-head { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; justify-content: space-between;
+  padding: 0 0 var(--s3) var(--route); border-bottom: 2px solid var(--ink); margin-bottom: var(--s5) }
+.sec-head h2 { margin: 0; font: 700 1.375rem/1.2 var(--f) }
+.sets { display: inline-flex; flex-wrap: wrap; max-width: 100%; padding: 3px; gap: 3px; border: 1px solid var(--rule); border-radius: 10px }
+.sets button { font: 600 1rem/1 var(--f); color: var(--ink); background: transparent; border: 0; border-radius: 7px;
   min-height: 44px; padding: 0 var(--s4); cursor: pointer; display: inline-flex; gap: var(--s2); align-items: center;
   transition: background-color .15s ease-out, color .15s ease-out }
 .sets button b { font-weight: 700 }
-.sets button:hover { background: var(--band-line) }
-.sets button[aria-pressed="true"] { background: var(--band-ink); color: var(--band); cursor: default }
+.sets button:hover { background: var(--row) }
+.sets button[aria-pressed="true"] { background: var(--ink); color: var(--paper); cursor: default }
 
-main { padding-block: var(--s5) var(--s7) }
+main { padding-block: var(--s6) var(--s7) }
 
 /* The table. Two data sizes only: words at 1rem, numbers at 1.375rem; rank is carried by weight. */
 table.approaches { width: 100%; border-collapse: collapse; table-layout: fixed }
@@ -107,11 +108,11 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
   background: var(--tip); color: var(--tip-ink); font: 400 .9375rem/1.4 var(--f); box-shadow: var(--shadow); pointer-events: auto }
 .tipbox[hidden] { display: none }
 
-/* Takeaways: a sibling of the table on the page ground, not a second band. The heading wears the table head's
+/* Takeaways: a sibling of the Approaches section on the page ground. The heading wears the table head's
    ink rule; each takeaway is a row with its headline and sentence left and one small picture right, every picture on
    the table's own 0-100 scale and in its marks. Text stays HTML, so the pictures keep the page's two sizes. */
 .takeaways { margin-top: calc(var(--s7) + var(--s4)) }
-.takeaways h2 { margin: 0; padding: 0 0 var(--s2) var(--route); border-bottom: 2px solid var(--ink); font: 700 1.375rem/1.2 var(--f) }
+.takeaways h2 { margin: 0; padding: 0 0 var(--s3) var(--route); border-bottom: 2px solid var(--ink); font: 700 1.375rem/1.2 var(--f) }
 .tk, .pic ul { list-style: none; margin: 0; padding: 0 }
 .tk > li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 30rem); gap: var(--s4) var(--s7); align-items: start;
   padding: var(--s5) 0 var(--s5) var(--route); border-bottom: 1px solid var(--rule) }
@@ -193,13 +194,17 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
 @media (prefers-reduced-motion: reduce) { .dots i, .stop::before, .sets button { transition: none } }
 </style>
 
-<header class="band">
-  <div class="wrap">
-    <h1>Approaches</h1>
-    <div class="sets" role="group" aria-label="Question set">@@TOGGLE@@</div>
-  </div>
-</header>
-<main class="wrap">@@TABLES@@<p class="sr" id="status" aria-live="polite"></p>@@TAKEAWAYS@@</main>
+<main class="wrap">
+  <h1 class="sr">Approaches to AI answers from business data, and takeaways</h1>
+  <section aria-labelledby="approaches-h">
+    <div class="sec-head">
+      <h2 id="approaches-h">Approaches</h2>
+      <div class="sets" role="group" aria-label="Question set">@@TOGGLE@@</div>
+    </div>
+    @@TABLES@@<p class="sr" id="status" aria-live="polite"></p>
+  </section>
+  @@TAKEAWAYS@@
+</main>
 <div class="tipbox" id="tipbox" aria-hidden="true" hidden></div>
 
 <script>
