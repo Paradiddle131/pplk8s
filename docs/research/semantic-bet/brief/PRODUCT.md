@@ -20,7 +20,8 @@ Success: a reader can say, in their own words, what each option gets right and w
 ## Positioning
 
 The numbers are measured, not claimed: every approach answered the same business questions many times and every answer was checked against the warehouse.
-The page is a pitch-level companion to a separate technical report; it shares no style or vocabulary with that report.
+Approaches and Takeaways are becoming the Summary tab of the evaluation's report (owner, 2026-11-07: no separate pitch and report pages); the report's other tabs keep the detail for readers who want it, and adopt this page's style.
+Until the report carries them, this page stays published on its own link; it retires once the owner confirms the report's Summary tab.
 
 ## Operating Context
 
