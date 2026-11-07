@@ -1,0 +1,5 @@
+## 2026-11-07 — Semantic track — the report's captions name their set and say what each count covers (#409)
+
+- Done: the abstract names who is compared ("Google's best managed setup ... MetricFlow, our agent on the free model"); the gap row reads "Gap: MetricFlow against the managed best, in points right" and its note says the gap is paired and an interval holding 0 is a tie; a winner that ran fewer than the set's questions says so ("the 75 of 76 questions it ran"), and one whose runs are not one per question counts them ("74 runs in all"); a partial leader's tag reads "one run per question so far"; "few questions, so only a large gap shows"; the "tagged pending" clause shows only when a table has a pending row; Figures 3, 5 and 6 name the set their numbers come from.
+- Left by design: setup names stay their short ids, each with its tooltip and the Setups tab; tool names appear only in the setup explorer, which lists each setup's tools.
+- Evidence: `tests/test_report_build.py` 26 passed (two new: every per-set caption names its set; the summary's wording); Playwright: no page errors, the pending clause hidden; `tools/clipcheck.js --quick` 0 findings.
