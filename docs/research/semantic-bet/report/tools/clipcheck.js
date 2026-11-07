@@ -371,11 +371,12 @@ async function selftest(browser) {
     const viewNames = await page.$$eval(".view", (vs) => vs.map((v) => v.dataset.view));
     if (!viewNames.length) await run("rest", null, true);
     for (const vn of viewNames) { await page.evaluate((vn) => window.__reportViews.show(vn), vn); await settle(page); await run("rest view=" + vn, null, true); }
-    // set switches: every set in every switch
-    const sets = await page.$$eval(".seg button[data-set]", (bs) => [...new Set(bs.map((b) => b.dataset.set))]);
+    // every set switch, the report's own (.seg) and the kit's (.rk-switch) on the tabs moved onto report-kit
+    const SW = ".seg, .rk-switch";
+    const sets = await page.$$eval(".seg button[data-set], .rk-switch button[data-set]", (bs) => [...new Set(bs.map((b) => b.dataset.set))]);
     for (const s of sets) {
-      const n = await page.$$eval(".seg", (x) => x.length);
-      for (let i = 0; i < n; i++) { const b = page.locator(".seg").nth(i).locator(`button[data-set="${s}"]`); if (await b.count()) { await page.evaluate((i) => { const v = document.querySelectorAll(".seg")[i].closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, i); await settle(page); await b.click(); await settle(page); await run("set=" + s + " seg" + i, null, !QUICK); } }
+      const n = await page.$$eval(SW, (x) => x.length);
+      for (let i = 0; i < n; i++) { const b = page.locator(SW).nth(i).locator(`button[data-set="${s}"]`); if (await b.count()) { await page.evaluate(([i, SW]) => { const v = document.querySelectorAll(SW)[i].closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, [i, SW]); await settle(page); await b.click(); await settle(page); await run("set=" + s + " seg" + i, null, !QUICK); } }
     }
     // the setup explorer: every setup
     const chips = await page.$$eval(".sxb .sxb-chip", (cs) => cs.map((c) => c.dataset.arm));
