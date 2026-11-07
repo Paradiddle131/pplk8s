@@ -81,3 +81,18 @@ def test_takeaways_quote_the_figures_their_pictures_draw():
         items["setup"]["ranges"][0]["lo_name"] in names
         and items["setup"]["ranges"][0]["hi_name"] in names
     )
+
+
+def test_a_covered_score_under_100_explains_its_unclear_answers_on_hover():
+    data = json.loads(RESULTS.read_text())
+    rules = next(
+        t for t in build.takeaways(data, build.scored_runs(RESULTS, data)) if t["key"] == "rules"
+    )
+    for m in rules["models"]:
+        assert bool(m["covered_note"]) == (m["covered"] < 100)
+    page = build.build(RESULTS)
+    assert all(
+        f'data-tip="{html.escape(m["covered_note"])}"' in page
+        for m in rules["models"]
+        if m["covered_note"]
+    )

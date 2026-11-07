@@ -262,7 +262,32 @@ def whole(arms, setname):
     return [a for a in arms if a["set"] == setname and a["cases"] == a["of_cases"]]
 
 
-def takeaways(data):
+def unclear_note(runs, arm):
+    """Why a score on covered questions sits under 100, when the gap is answers still awaiting the judge."""
+    covered = [
+        r
+        for r in runs
+        if r["arm"] == arm["arm"]
+        and r["model"] == arm["model"]
+        and r["set"] == arm["set"]
+        and "covered" in r.get("groups", [])
+    ]
+    unclear = sum(r["outcome"] == "unclear" for r in covered)
+    missed = sum(r["outcome"] != "right" for r in covered)
+    if not unclear:
+        return ""
+    lead = (
+        f"{unclear} of {len(covered)} answers here"
+        if unclear == missed
+        else f"{unclear} of the {missed} answers not counted right"
+    )
+    return (
+        f"{lead} were scored unclear: the automatic check could not read them and the judging model has not "
+        "settled them yet, so they count as not right for now."
+    )
+
+
+def takeaways(data, runs=()):
     """Plain-language observations over results.json; each is left out when its runs are missing.
 
     Each entry: key, headline, body, and the figures its picture draws.
@@ -322,6 +347,7 @@ def takeaways(data):
             {
                 "model": m,
                 "covered": round(100 * strict[m]["groups"]["covered"][0]),
+                "covered_note": unclear_note(runs, strict[m]),
                 "uncovered": round(100 * strict[m]["groups"]["uncovered"][0]),
             }
             for m in order
@@ -412,12 +438,20 @@ def spread(values, gap=18):
     return out
 
 
-def bar(v, sr_before=""):
-    """One right-answers-in-100 bar: the track is the whole 100, the fill is the share right."""
+def bar(v, sr_before="", note=None):
+    """One right-answers-in-100 bar: the track is the whole 100, the fill is the share right.
+
+    `note` is (id, text, descs): the number then shows `text` in the page's bubble on hover, focus or tap.
+    """
+    num = f"<b>{v}</b>"
+    if note:
+        tid, text, descs = note
+        num, d = tipped(tid, text, num, "tipped num-tip")
+        descs.append(d)
     return (
         f'<span class="bar">{SR(html.escape(sr_before)) if sr_before else ""}'
         f'<span class="track" aria-hidden="true"><span class="fill" style="--v:{v}"></span></span>'
-        f"<b>{v}</b>{SR(' right in 100')}</span>"
+        f"{num}{SR(' right in 100')}</span>"
     )
 
 
@@ -439,13 +473,16 @@ def pic_setup(t, descs):
     return f'<div class="pic pic-setup">{"".join(rows)}</div>'
 
 
-def pic_rules(t):
+def pic_rules(t, descs):
     heads = ("Questions a metric covers", "Questions no metric covers")
-    rows = "".join(
-        f'<li><span class="pl">{html.escape(m["model"])}</span>'
-        f"{bar(m['covered'], heads[0] + ': ')}{bar(m['uncovered'], heads[1] + ': ')}</li>"
-        for m in t["models"]
-    )
+    rows = []
+    for i, m in enumerate(t["models"]):
+        note = (f"t-tk-rules-{i}", m["covered_note"], descs) if m.get("covered_note") else None
+        rows.append(
+            f'<li><span class="pl">{html.escape(m["model"])}</span>'
+            f"{bar(m['covered'], heads[0] + ': ', note)}{bar(m['uncovered'], heads[1] + ': ')}</li>"
+        )
+    rows = "".join(rows)
     cols = "".join(f"<span>{h}</span>" for h in heads)
     return f'<div class="pic pic-rules"><div class="heads" aria-hidden="true">{cols}</div><ul>{rows}</ul></div>'
 
@@ -516,8 +553,10 @@ def render_takeaways(items):
             pic = pic_setup(t, descs)
         elif k == "definitions":
             pic = pic_definitions(t, descs)
+        elif k == "rules":
+            pic = pic_rules(t, descs)
         else:
-            pic = {"rules": pic_rules, "harness": pic_harness}[k](t)
+            pic = pic_harness(t)
         rows.append(
             f'<li data-key="{k}"><div class="tk-text"><h3>{html.escape(t["headline"])}</h3>'
             f"<p>{html.escape(t['body'])}</p></div>{pic}</li>"
@@ -527,6 +566,19 @@ def render_takeaways(items):
         f'<h2 id="takeaways-h">Takeaways</h2><ul class="tk">{"".join(rows)}</ul>'
         f"<div hidden>{''.join(descs)}</div></section>"
     )
+
+
+def scored_runs(results, data):
+    """The per-run log beside results.json (scored-runs.jsonl), each run tagged with its question's groups."""
+    path = Path(results).parent / "scored-runs.jsonl"
+    if not path.exists():
+        return []
+    out = []
+    for line in path.read_text().splitlines():
+        r = json.loads(line)
+        r["groups"] = data["sets"].get(r["set"], {}).get("groups", {}).get(r["case"], [])
+        out.append(r)
+    return out
 
 
 def build(results):
@@ -548,7 +600,7 @@ def build(results):
     return (
         page.replace("@@TOGGLE@@", toggle)
         .replace("@@TABLES@@", tables)
-        .replace("@@TAKEAWAYS@@", render_takeaways(takeaways(data)))
+        .replace("@@TAKEAWAYS@@", render_takeaways(takeaways(data, scored_runs(results, data))))
     )
 
 
