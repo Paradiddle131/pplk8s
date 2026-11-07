@@ -88,6 +88,8 @@ async function inPage({ rootSel, occl }) {
       continue;
     }
     if (!visible(el)) continue;
+    // screen-reader text whose own box is the 1 px clip (the report kit's .rk-sr), not an ancestor's
+    if (clipsOf(getComputedStyle(el), el) && tiny(boxOf(el))) continue;
     const rg = document.createRange(); rg.selectNodeContents(n);
     const rects = [...rg.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0.5);
     if (rects.length) items.push({ el, rects, text: n.nodeValue.trim(), rectsNow: () => { const q = document.createRange(); q.selectNodeContents(n); return [...q.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0.5); } });
