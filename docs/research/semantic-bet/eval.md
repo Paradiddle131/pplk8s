@@ -4,7 +4,7 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-07T10:19Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-07T10:49Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -372,19 +372,19 @@ Turns the current wordings score otherwise than their log (RULE.md § Changes si
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 1 run(s) of 75 of 76 cases; runs finished: native-bare 227 of 228, native-context-bare 228 of 228, native-context 228 of 228, native-governed 228 of 228, native-graph 228 of 228, native-kc-max 228 of 228, native-kc-reach 228 of 228, native-kc 228 of 228, native-shaped 228 of 228; model responses spent: native-bare 245, native-context-bare 246, native-context 246, native-governed 246, native-graph 246, native-kc-max 246, native-kc-reach 246, native-kc 246, native-shaped 246.
+Scored on partial: 1 run(s) of 75 of 76 cases; runs finished: native-bare 227 of 228, native-context-bare 228 of 228, native-context-python 76 of 228, native-context 228 of 228, native-governed 228 of 228, native-graph 228 of 228, native-kc-max 228 of 228, native-kc-reach 228 of 228, native-kc 228 of 228, native-shaped 228 of 228; model responses spent: native-bare 245, native-context-bare 246, native-context-python 82, native-context 246, native-governed 246, native-graph 246, native-kc-max 246, native-kc-reach 246, native-kc 246, native-shaped 246.
 
-| | `native-bare` | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
-|---|---|---|---|---|---|---|---|---|---|
-| Accuracy | 73.3% | 90.7% | 89.3% | 78.7% | 64.0% | 85.3% | 84.0% | 68.0% | 62.7% |
-| Confident-wrong | 20.0% | 4.0% | 4.0% | 1.3% | 9.3% | 6.7% | 8.0% | 5.3% | 6.7% |
-| pass^1 | 73.3% | 90.7% | 89.3% | 78.7% | 64.0% | 85.3% | 84.0% | 68.0% | 62.7% |
-| `conversation` (7) accuracy | 28.6% | 71.4% | 71.4% | 71.4% | 42.9% | 42.9% | 28.6% | 57.1% | 28.6% |
-| `covered` (60) accuracy | 71.7% | 95.0% | 95.0% | 88.3% | 65.0% | 86.7% | 85.0% | 70.0% | 63.3% |
-| `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% |
-| `planted` (4) accuracy | 75.0% | 100.0% | 100.0% | 75.0% | 75.0% | 100.0% | 100.0% | 100.0% | 100.0% |
-| `trap` (9) accuracy | 55.6% | 100.0% | 100.0% | 100.0% | 55.6% | 88.9% | 88.9% | 55.6% | 44.4% |
-| `uncovered` (15) accuracy | 80.0% | 73.3% | 66.7% | 40.0% | 60.0% | 80.0% | 80.0% | 60.0% | 60.0% |
+| | `native-bare` | `native-context-bare` | `native-context-python` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Accuracy | 73.3% | 90.7% | 90.7% | 89.3% | 78.7% | 64.0% | 85.3% | 84.0% | 68.0% | 62.7% |
+| Confident-wrong | 20.0% | 4.0% | 2.7% | 4.0% | 1.3% | 9.3% | 6.7% | 8.0% | 5.3% | 6.7% |
+| pass^1 | 73.3% | 90.7% | 90.7% | 89.3% | 78.7% | 64.0% | 85.3% | 84.0% | 68.0% | 62.7% |
+| `conversation` (7) accuracy | 28.6% | 71.4% | 71.4% | 71.4% | 71.4% | 42.9% | 42.9% | 28.6% | 57.1% | 28.6% |
+| `covered` (60) accuracy | 71.7% | 95.0% | 93.3% | 95.0% | 88.3% | 65.0% | 86.7% | 85.0% | 70.0% | 63.3% |
+| `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% |
+| `planted` (4) accuracy | 75.0% | 100.0% | 75.0% | 100.0% | 75.0% | 75.0% | 100.0% | 100.0% | 100.0% | 100.0% |
+| `trap` (9) accuracy | 55.6% | 100.0% | 100.0% | 100.0% | 100.0% | 55.6% | 88.9% | 88.9% | 55.6% | 44.4% |
+| `uncovered` (15) accuracy | 80.0% | 73.3% | 80.0% | 66.7% | 40.0% | 60.0% | 80.0% | 80.0% | 60.0% | 60.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 116 (`native-bare` 10 right to unclear; `native-bare` 6 wrong to unclear; `native-context` 9 right to unclear; `native-context` 6 wrong to unclear; `native-context-bare` 7 right to unclear; `native-context-bare` 6 wrong to unclear; `native-governed` 4 right to unclear; `native-governed` 6 wrong to unclear; `native-graph` 4 right to unclear; `native-graph` 6 wrong to unclear; `native-kc` 3 right to unclear; `native-kc` 6 wrong to unclear; `native-kc-max` 8 right to unclear; `native-kc-max` 6 wrong to unclear; `native-kc-reach` 9 right to unclear; `native-kc-reach` 6 wrong to unclear; `native-shaped` 1 confident-wrong to wrong; `native-shaped` 5 right to unclear; `native-shaped` 2 unclear to declined; `native-shaped` 6 wrong to unclear).
 
@@ -437,6 +437,11 @@ Turns still unclear after judging (counted as wrong):
 - `native-context-bare` `followup_rate_how_computed` run 1 turn 2: not judged yet
 - `native-context-bare` `followup_rate_how_computed` run 2 turn 2: not judged yet
 - `native-context-bare` `followup_rate_how_computed` run 3 turn 2: not judged yet
+- `native-context-python` `bet_peak_checkout_hour` run 1 turn 1: not judged yet
+- `native-context-python` `engaged_customers_week` run 1 turn 1: not judged yet
+- `native-context-python` `followup_how_computed` run 1 turn 2: not judged yet
+- `native-context-python` `followup_rate_how_computed` run 1 turn 2: not judged yet
+- `native-context-python` `planted_campaign_least_spend` run 1 turn 1: not judged yet
 - `native-governed` `bet_peak_checkout_hour` run 2 turn 1: not judged yet
 - `native-governed` `engaged_customers_week` run 1 turn 1: not judged yet
 - `native-governed` `engaged_customers_week` run 2 turn 1: not judged yet
@@ -659,7 +664,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set
 
-Written 2026-11-07T10:19Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-07T10:49Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -1084,7 +1089,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set v2
 
-Written 2026-11-07T10:19Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 55 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-07T10:50Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 55 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -1447,18 +1452,18 @@ Turns still unclear after judging (counted as wrong):
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
-Scored on partial: 1 run(s) of 41 of 55 cases; runs finished: native-bare 165 of 165, native-context-bare 123 of 165, native-context 165 of 165, native-governed 123 of 165, native-graph 123 of 165, native-kc-max 165 of 165, native-kc-reach 123 of 165, native-kc 123 of 165, native-shaped 123 of 165; model responses spent: native-bare 177, native-context-bare 135, native-context 178, native-governed 135, native-graph 135, native-kc-max 177, native-kc-reach 135, native-kc 135, native-shaped 135.
+Scored on partial: 1 run(s) of 41 of 55 cases; runs finished: native-bare 165 of 165, native-context-bare 123 of 165, native-context-python 55 of 165, native-context 165 of 165, native-governed 123 of 165, native-graph 123 of 165, native-kc-max 165 of 165, native-kc-reach 123 of 165, native-kc 123 of 165, native-shaped 123 of 165; model responses spent: native-bare 177, native-context-bare 135, native-context-python 59, native-context 178, native-governed 135, native-graph 135, native-kc-max 177, native-kc-reach 135, native-kc 135, native-shaped 135.
 
-| | `native-bare` | `native-context-bare` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
-|---|---|---|---|---|---|---|---|---|---|
-| Accuracy | 61.0% | 90.2% | 90.2% | 70.7% | 53.7% | 85.4% | 82.9% | 65.9% | 63.4% |
-| Confident-wrong | 34.1% | 0.0% | 0.0% | 0.0% | 19.5% | 2.4% | 9.8% | 14.6% | 14.6% |
-| pass^1 | 61.0% | 90.2% | 90.2% | 70.7% | 53.7% | 85.4% | 82.9% | 65.9% | 63.4% |
-| `composable` (14) accuracy | 64.3% | 100.0% | 100.0% | 71.4% | 35.7% | 92.9% | 85.7% | 50.0% | 64.3% |
-| `conversation` (8) accuracy | 62.5% | 50.0% | 50.0% | 62.5% | 50.0% | 37.5% | 62.5% | 50.0% | 37.5% |
-| `covered` (22) accuracy | 59.1% | 81.8% | 81.8% | 86.4% | 63.6% | 77.3% | 81.8% | 72.7% | 59.1% |
-| `trap` (5) accuracy | 40.0% | 100.0% | 100.0% | 100.0% | 40.0% | 100.0% | 80.0% | 60.0% | 60.0% |
-| `uncovered` (5) accuracy | 60.0% | 100.0% | 100.0% | 0.0% | 60.0% | 100.0% | 80.0% | 80.0% | 80.0% |
+| | `native-bare` | `native-context-bare` | `native-context-python` | `native-context` | `native-governed` | `native-graph` | `native-kc-max` | `native-kc-reach` | `native-kc` | `native-shaped` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Accuracy | 61.0% | 90.2% | 92.7% | 90.2% | 70.7% | 53.7% | 85.4% | 82.9% | 65.9% | 63.4% |
+| Confident-wrong | 34.1% | 0.0% | 0.0% | 0.0% | 0.0% | 19.5% | 2.4% | 9.8% | 14.6% | 14.6% |
+| pass^1 | 61.0% | 90.2% | 92.7% | 90.2% | 70.7% | 53.7% | 85.4% | 82.9% | 65.9% | 63.4% |
+| `composable` (14) accuracy | 64.3% | 100.0% | 100.0% | 100.0% | 71.4% | 35.7% | 92.9% | 85.7% | 50.0% | 64.3% |
+| `conversation` (8) accuracy | 62.5% | 50.0% | 62.5% | 50.0% | 62.5% | 50.0% | 37.5% | 62.5% | 50.0% | 37.5% |
+| `covered` (22) accuracy | 59.1% | 81.8% | 86.4% | 81.8% | 86.4% | 63.6% | 77.3% | 81.8% | 72.7% | 59.1% |
+| `trap` (5) accuracy | 40.0% | 100.0% | 100.0% | 100.0% | 100.0% | 40.0% | 100.0% | 80.0% | 60.0% | 60.0% |
+| `uncovered` (5) accuracy | 60.0% | 100.0% | 100.0% | 100.0% | 0.0% | 60.0% | 100.0% | 80.0% | 80.0% | 80.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 8 (`native-bare` 3 right to unclear; `native-context` 2 right to unclear; `native-graph` 2 right to unclear; `native-kc-max` 1 right to unclear).
 
@@ -1472,6 +1477,7 @@ Turns still unclear after judging (counted as wrong):
 - `native-bare` `hv2_median_gap_between_orders` run 3 turn 1: not judged yet
 - `native-context` `hv2_median_gap_between_orders` run 1 turn 1: not judged yet
 - `native-context` `hv2_median_gap_between_orders` run 3 turn 1: not judged yet
+- `native-context-python` `hv2_median_gap_between_orders` run 1 turn 1: not judged yet
 - `native-graph` `hard_cost_per_booking_rise` run 1 turn 1: not judged yet
 - `native-graph` `hard_mqls_social_september` run 1 turn 1: not judged yet
 - `native-kc-max` `hv2_median_gap_between_orders` run 2 turn 1: not judged yet
