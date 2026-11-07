@@ -1,5 +1,5 @@
 {
- "written": "2026-11-07T00:39Z",
+ "written": "2026-11-07T00:44Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -208,18 +208,18 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 3,
-   "cases": 75,
+   "cases": 76,
    "of_cases": 76,
-   "runs": 75,
+   "runs": 76,
    "accuracy": [
-    0.44,
-    0.333333333333,
-    0.546666666667
+    0.434210526316,
+    0.328947368421,
+    0.539473684211
    ],
    "confident_wrong": [
-    0.053333333333,
-    0.013333333333,
-    0.106666666667
+    0.052631578947,
+    0.013157894737,
+    0.105263157895
    ],
    "groups": {
     "conversation": [
@@ -227,8 +227,8 @@
      7
     ],
     "covered": [
-     0.48333333333333334,
-     60
+     0.47540983606557374,
+     61
     ],
     "distractor": [
      0.0,
@@ -247,15 +247,15 @@
      15
     ]
    },
-   "pass_all": 0.44,
+   "pass_all": 0.4342105263157895,
    "outcomes": {
     "right": 33,
     "confident-wrong": 4,
-    "declined": 33,
+    "declined": 34,
     "unclear": 2,
     "wrong": 3
    },
-   "model_calls": 128
+   "model_calls": 129
   },
   {
    "set": "frozen",
@@ -6325,17 +6325,17 @@
    "set": "frozen",
    "arm": "custom-toolbox",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 75,
-   "runs": 75,
+   "cases": 76,
+   "runs": 76,
    "accuracy": [
-    -0.493333333333,
-    -0.604444444444,
-    -0.382222222222
+    -0.486842105263,
+    -0.600877192982,
+    -0.377192982456
    ],
    "confident_wrong": [
-    0.04,
-    -0.013333333333,
-    0.106666666667
+    0.039473684211,
+    -0.013157894737,
+    0.092105263158
    ],
    "worth": false
   },
