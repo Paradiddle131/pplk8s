@@ -26,6 +26,7 @@ in the winners band) are percentile bootstraps over questions, seeded.
 import glob
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -204,11 +205,11 @@ def term_key(key):
 
 # A question's fields that are process, never shown to a reader (#393): whether it was retired, and in which version it was added.
 READER_HIDDEN = {"retired", "new"}
-# What a set in the appendix tests, in a reader's words (what it holds, never its history: #393).
+# What a set in the appendix tests, in one line of a reader's words (what it holds, never its history: #393, #398);
+# markup, with {hard} the hard set's term.
 APPENDIX_ABOUT = {
-    "hard-v2": "The hard set's questions plus fifteen that are hard to write in SQL (joins that multiply rows, "
-               "ratios of sums, windows, medians, date spines); questions answered by arithmetic over two metrics "
-               "form their own group, composable.",
+    "hard-v2": "It tests the {hard}'s questions plus fifteen that are hard to write in SQL: joins that multiply rows, "
+               "ratios of sums, windows, medians and date spines.",
 }
 # What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
 UNCOVERED_KIND = {
@@ -477,35 +478,236 @@ def shown_sets(every, show):
     return present, appendix
 
 
+# The appendix table's controls (#398): the setup families and model kinds a reader can filter by, in the
+# decision map's order and words; each with the glossary term its tooltip reads (None: no term).
+APX_FAMS = ["da", "gt", "mf", "ref", "other"]
+APX_ROLES = [("decides", "Free model (%s)", "decides", "decides"), ("check", "Claude API (%s)", "check", "check"),
+             ("gemini", "Gemini in Google's agent", None, None), ("cc", "%s", "claude-code", "Claude Code"),
+             ("other", "Another model", None, None)]
+APX_CSS = """<style>
+.apx h3 { margin: 22px 0 4px; }
+.apx-tools { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 10px 0 8px; font-family: var(--label); font-size: 13.5px; }
+.apx-f { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.apx-f legend { float: left; padding: 0; margin-right: 2px; color: var(--ink-3); font-weight: 500; }
+.apx-chk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 9px 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); cursor: pointer; background: var(--paper); }
+.apx-chk:hover { border-color: var(--ink-3); }
+.apx-chk input { margin: 0; width: 15px; height: 15px; accent-color: var(--ink-2); cursor: pointer; }
+.apx-chk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
+.apx-chk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+.apx-status { margin: 0 0 6px; font-family: var(--label); font-size: 13px; color: var(--ink-2); }
+.apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.apx-t { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.apx-t th, .apx-t td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); background: var(--paper); }
+.apx-t thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); }
+.apx-t thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+.apx-t th.num, .apx-t td.num { text-align: right; }
+.apx-t th.g, .apx-t td.g { text-align: center; }
+.apx-t td.num, .apx-t td.g { white-space: nowrap; }
+.apx-t .setup { position: sticky; left: 0; z-index: 1; min-width: 180px; }
+.apx-t td.setup .id { display: inline-block; font-size: 12.5px; }
+.apx-t td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+.apx-t tbody tr:hover td { background: var(--row-band); }
+.apx-t tr[hidden] { display: none; }
+.apx-t td small { color: var(--ink-3); font-size: 12.5px; }
+.apx-t .apx-none td { color: var(--ink-3); text-align: left; padding: 14px 8px; }
+.apx-t .q-of { color: var(--ink-3); }
+.apx-sort { appearance: none; background: none; border: 0; padding: 2px 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 4px; min-height: 24px; text-align: inherit; }
+.apx-sort .ar { display: inline-block; width: 10px; color: var(--ink-3); font-weight: 400; }
+.apx-sort .ar::after { content: "\\2195"; }
+th[aria-sort="descending"] .apx-sort .ar::after { content: "\\2193"; color: var(--ink); }
+th[aria-sort="ascending"] .apx-sort .ar::after { content: "\\2191"; color: var(--ink); }
+th[aria-sort="descending"] .apx-sort .ar, th[aria-sort="ascending"] .apx-sort .ar { color: var(--ink); }
+.apx-sort.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+</style>"""
+# Sorting and filtering, per table; the page's tooltips stay on the headers and filters, which sort and filter
+# on a click, Enter or Space instead of pinning their tooltip.
+APX_JS = """<script>
+(function () {
+  "use strict";
+  document.querySelectorAll(".apx-set").forEach(function (box) {
+    var tb = box.querySelector("tbody"), rows = [].slice.call(tb.querySelectorAll("tr[data-i]")), none = tb.querySelector("tr.apx-none");
+    var heads = [].slice.call(box.querySelectorAll("th[data-col]")), status = box.querySelector(".apx-status");
+    var col = null, dir = null;
+    function val(tr, c) { var td = tr.querySelector('td[data-col="' + c + '"]'); return !td || td.dataset.v === "" ? null : +td.dataset.v; }
+    function picked(name) { var s = {}; box.querySelectorAll('input[name="' + name + '"]:checked').forEach(function (i) { s[i.value] = 1; }); return s; }
+    function apply() {
+      var fams = picked("fam"), roles = picked("role");
+      var order = rows.slice().sort(function (a, b) {
+        if (col) {
+          var x = val(a, col), y = val(b, col);
+          if (x === null || y === null) { if (x !== y) return x === null ? 1 : -1; }
+          else if (x !== y) return dir === "ascending" ? x - y : y - x;
+        }
+        return a.dataset.i - b.dataset.i;
+      });
+      var n = 0;
+      order.forEach(function (tr) { var on = !!(fams[tr.dataset.fam] && roles[tr.dataset.role]); tr.hidden = !on; if (on) n++; tb.appendChild(tr); });
+      none.hidden = n > 0; tb.appendChild(none);
+      var label = "";
+      heads.forEach(function (th) { var on = th.dataset.col === col; th.setAttribute("aria-sort", on ? dir : "none"); if (on) label = th.dataset.label; });
+      status.textContent = n + " of " + rows.length + " setups and models shown, " +
+        (col ? "sorted by " + label + ", " + (dir === "descending" ? "highest" : "lowest") + " first; empty cells last." : "in the decision map's order.");
+    }
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest && e.target.closest("button.apx-sort");
+      var f = e.target.closest && e.target.closest(".apx-f");
+      if (!b && !f) return;
+      e.stopPropagation(); // the page's delegated click would pin the term's tooltip
+      if (window.__reportUnpin) window.__reportUnpin(false);
+      if (!b) return;
+      var c = b.parentNode.dataset.col;
+      if (col !== c) { col = c; dir = "descending"; } else if (dir === "descending") dir = "ascending"; else { col = null; dir = null; }
+      apply();
+    });
+    box.addEventListener("change", function (e) { if (e.target.matches('input[type="checkbox"]')) apply(); });
+    box.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("button.apx-sort, .apx-f input")) e.stopPropagation();
+    });
+    apply();
+  });
+})();
+</script>"""
+
+
+def js_round(x):
+    """Math.round(100 * x), as the page's script rounds, so a number reads the same in the table and the map."""
+    return int(math.floor(100 * x + 0.5))
+
+
+def apx_shape(role, color):
+    """The role's glyph, as the page's script draws it beside a model's name (shapeKey)."""
+    if role == "decides":
+        g = '<circle cx="0" cy="0" r="4.5" fill="%s" stroke="var(--paper)" stroke-width="2"/>' % color
+    elif role == "check":
+        g = '<circle cx="0" cy="0" r="4" fill="var(--paper)" stroke="%s" stroke-width="2"/>' % color
+    elif role == "gemini":
+        g = '<rect x="-4" y="-4" width="8" height="8" fill="%s" stroke="var(--paper)" stroke-width="2"/>' % color
+    elif role == "cc":
+        g = '<path d="M0 -5L5 0L0 5L-5 0Z" fill="var(--paper)" stroke="%s" stroke-width="2"/>' % color
+    else:
+        g = '<path d="M0 -5L5 4L-5 4Z" fill="%s" stroke="var(--paper)" stroke-width="1.5"/>' % color
+    return '<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">%s</svg>' % g
+
+
+def apx_order(a, role):
+    """A row's place in the decision map: its rung, its setup within the rung, then the model the map reads it on first."""
+    flat = [arm for _, _, arms in LADDER for arm in arms]
+    rung = next((i for i, (_, _, arms) in enumerate(LADDER) if a["arm"] in arms), len(LADDER))
+    r = {"role": role, "managedBest": False, "model": a["model"], "cases": a["cases"]}
+    return (rung, flat.index(a["arm"]) if a["arm"] in flat else len(flat), a["arm"], pick_order(r))
+
+
+def apx_iv(v, n):
+    """A mean and its interval as the decision map writes them; an exact bound carries its term."""
+    ex = exact(v, n)
+    if ex:
+        lo, hi = math.floor(ex[0] * 100 + 1e-9), math.ceil(ex[1] * 100 - 1e-9)
+        return '<small><span class="term" data-term="exact" tabindex="0">[%d, %d]</span></small>' % (lo, hi)
+    return "<small>[%d, %d]</small>" % (js_round(v[1]), js_round(v[2]))
+
+
+def apx_bin(v):
+    return 5 if v >= 0.95 else 4 if v >= 0.85 else 3 if v >= 0.7 else 2 if v >= 0.5 else 1
+
+
+def apx_term(key, text):
+    return '<span class="term" data-term="%s" tabindex="0">%s</span>' % (key, html_escape(text))
+
+
 def appendix_html(R, appendix):
-    """The appendix: each set the page does not show, its setups' two numbers and group accuracies
-    as results.json has them, so a superseded or not yet adopted version is never lost."""
+    """The appendix: each set the page does not show, as one table of its setups and models (#398): right and
+    confident-wrong with their intervals, right per question group; sortable by each number, filterable by
+    setup family and model kind, in the decision map's order until sorted. Numbers as results.json has them."""
     if not appendix:
         return ""
-    pc = lambda v: "–" if v is None else "%d%%" % round(100 * v)
-    out = ['<section class="apx" id="other-set-versions" aria-labelledby="apx-h">',
-           "<style>.apx table { border-collapse: collapse; font-family: var(--label); font-size: 13.5px; width: 100%; }"
-           " .apx th, .apx td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }"
-           " .apx th { color: var(--ink-3); font-weight: 500; } .apx td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }"
-           " .apx td:first-child { white-space: nowrap; } .apx .apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; } .apx h3 { margin: 18px 0 6px; }</style>",
+    glabel = dict(GROUPS_ALL)
+    terms = {k for k, _, _ in TERMS}
+    out = ['<section class="apx" id="other-set-versions" aria-labelledby="apx-h">', APX_CSS,
            '<h2 id="apx-h">Appendix: more question sets</h2>',
            '<p class="col">More question sets, with each setup\'s numbers from the same runs; the figures draw the frozen and hard sets only.</p>']
-    glabel = dict(GROUPS_ALL)
     for st, label in appendix:
         rows = [a for a in strict_view(R.get("arms", [])) if a["set"] == st]
-        groups = [g for g in [k for k, _ in GROUPS_ALL] + sorted({g for a in rows for g in a.get("groups", {})}) if any(g in a.get("groups", {}) for a in rows)]
-        groups = list(dict.fromkeys(groups))
-        if APPENDIX_ABOUT.get(st):
-            out.append('<p class="col">%s</p>' % html_escape(APPENDIX_ABOUT[st]))
-        out.append('<h3>%s</h3><div class="apx-scroll"><table><thead><tr><th scope="col">Setup</th><th scope="col">Model</th>'
-                   '<th scope="col">Questions</th><th scope="col">Accuracy</th><th scope="col">Confident-wrong</th>%s</tr></thead><tbody>'
-                   % (html_escape(label), "".join('<th scope="col">%s</th>' % html_escape(glabel.get(g, g.capitalize())) for g in groups)))
-        for a in sorted(rows, key=lambda a: (a["arm"], a["model"])):
-            cells = "".join('<td class="n">%s</td>' % (pc(a["groups"][g][0]) if g in a.get("groups", {}) else "–") for g in groups)
-            out.append('<tr><td>%s</td><td>%s</td><td class="n">%d of %d</td><td class="n">%s</td><td class="n">%s</td>%s</tr>'
-                       % (html_escape(a["arm"]), html_escape(model_info(a["model"])[0]), a["cases"], a.get("of_cases") or a["cases"],
-                          pc(a["accuracy"][0]), pc(a["confident_wrong"][0]), cells))
-        out.append("</tbody></table></div>")
+        groups = [k for k, _ in GROUPS_ALL] + sorted({g for a in rows for g in a.get("groups", {})})
+        groups = [g for g in dict.fromkeys(groups) if any(g in a.get("groups", {}) for a in rows)]
+        info = {id(a): model_info(a["model"]) for a in rows}
+        rows.sort(key=lambda a: apx_order(a, info[id(a)][1]))
+        fams = [f for f in APX_FAMS if any(FAMILY.get(a["arm"], "other") == f for a in rows)]
+        roles = [r for r in APX_ROLES if any(info[id(a)][1] == r[0] for a in rows)]
+        out.append('<div class="apx-set" id="apx-%s">' % html_escape(st))
+        out.append('<h3>%s</h3>' % html_escape(label))
+        about = APPENDIX_ABOUT.get(st)
+        if about:
+            out.append('<p class="col">%s</p>' % about.format(hard=apx_term("hard", "hard set")))
+        elif SET_ABOUT.get(st) and "{" not in SET_ABOUT[st]:
+            out.append('<p class="col">%s</p>' % html_escape(SET_ABOUT[st]))
+        # the filters: every family and model kind of the set, all ticked
+        chk = []
+        for f in fams:
+            t = "family-" + f
+            attr = ' data-term="%s"' % t if t in terms else ""
+            chk.append('<label class="apx-chk"%s><input type="checkbox" name="fam" value="%s" checked%s>'
+                       '<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="var(--%s)" stroke-width="2.5" stroke-linecap="round"/></svg>'
+                       '<span%s>%s</span></label>' % (attr, f, attr, f, ' class="tt"' if attr else "", html_escape(FAMILY_LABEL.get(f, f))))
+        rchk = []
+        for key, text, t, word in roles:
+            attr = ' data-term="%s"' % t if t else ""
+            shown = text % ('<span class="tt">%s</span>' % html_escape(word)) if t else html_escape(text)
+            rchk.append('<label class="apx-chk"%s><input type="checkbox" name="role" value="%s" checked%s>%s<span>%s</span></label>'
+                        % (attr, key, attr, apx_shape(key, "var(--ink-2)"), shown))
+        out.append('<div class="apx-tools"><fieldset class="apx-f"><legend>Setup family</legend>%s</fieldset>'
+                   '<fieldset class="apx-f"><legend>Model</legend>%s</fieldset></div>' % ("".join(chk), "".join(rchk)))
+        out.append('<p class="apx-status" aria-live="polite">%d of %d setups and models shown, in the decision map\'s order.</p>' % (len(rows), len(rows)))
+        # the table: setup and model, then one sortable column per number
+        head = ['<th scope="col" class="setup">Setup<small>model it ran on</small></th>']
+
+        def sortable(col, label, cls, small, term=None):
+            inner = html_escape(label) + '<span class="ar" aria-hidden="true"></span>'
+            btn = ('<button type="button" class="apx-sort term" data-term="%s">%s</button>' % (term, inner) if term
+                   else '<button type="button" class="apx-sort">%s</button>' % inner)
+            return ('<th scope="col" class="%s" data-col="%s" data-label="%s" aria-sort="none">%s<small>%s</small></th>'
+                    % (cls, col, html_escape(label), btn, small))
+        head.append(sortable("q", "Questions", "num", "run, of the set"))
+        head.append(sortable("acc", "Right", "num", "mean [95%]"))
+        head.append(sortable("cw", "Confident-wrong", "num", "mean [95%]", "confident-wrong"))
+        for g in groups:
+            t = term_key(g)
+            head.append(sortable("g-" + g, glabel.get(g, g.capitalize()), "g", "% right", t if t in terms else None))
+        out.append('<div class="apx-scroll" tabindex="0" role="region" aria-label="%s, every setup and model; scrolls sideways on small screens">'
+                   '<table class="apx-t"><caption class="vh">%s: each setup and model\'s share of questions right and confidently wrong, '
+                   'and right per question group. The column buttons sort the rows.</caption><thead><tr>%s</tr></thead><tbody>'
+                   % (html_escape(label), html_escape(label), "".join(head)))
+        for i, a in enumerate(rows):
+            mlabel, role = info[id(a)]
+            fam = FAMILY.get(a["arm"], "other")
+            of = a.get("of_cases") or a["cases"]
+            n = a["cases"]
+            qs = '%d <span class="q-of">of %d</span>' % (n, of)
+            if n < of:
+                qs = '<span class="term" data-term="partial" tabindex="0">%d of %d</span>' % (n, of)
+            cells = ['<td class="setup"><span class="id" data-setup="%s" tabindex="0">%s</span><span class="mdl">%s%s</span></td>'
+                     % (html_escape(a["arm"]), html_escape(a["arm"]), apx_shape(role, "var(--%s)" % fam), html_escape(mlabel)),
+                     '<td class="num" data-col="q" data-v="%d">%s</td>' % (n, qs)]
+            for col, field in (("acc", "accuracy"), ("cw", "confident_wrong")):
+                v = a.get(field)
+                if not v:
+                    cells.append('<td class="num" data-col="%s" data-v=""><small>not run</small></td>' % col)
+                    continue
+                hot = ' class="cwhot"' if col == "cw" and v[0] >= 0.1 else ""
+                cells.append('<td class="num" data-col="%s" data-v="%r"><span%s>%d%%</span> %s</td>'
+                             % (col, v[0], hot, js_round(v[0]), apx_iv(v, n)))
+            for g in groups:
+                gv = (a.get("groups") or {}).get(g)
+                if not gv:
+                    cells.append('<td class="g" data-col="g-%s" data-v=""><span class="ch none" aria-hidden="true">–</span>'
+                                 '<span class="vh">no question of this group in these runs</span></td>' % g)
+                    continue
+                cells.append('<td class="g" data-col="g-%s" data-v="%r"><span class="ch b%d">%d</span><span class="vh">%% right over %d questions</span></td>'
+                             % (g, gv[0], apx_bin(gv[0]), js_round(gv[0]), gv[1]))
+            out.append('<tr data-i="%d" data-fam="%s" data-role="%s">%s</tr>' % (i, fam, role, "".join(cells)))
+        out.append('<tr class="apx-none" hidden><td colspan="%d">No setup and model match these filters; tick a family and a model.</td></tr>'
+                   % (4 + len(groups)))
+        out.append("</tbody></table></div></div>")
+    out.append(APX_JS)
     out.append("</section>")
     return "\n".join(out)
 
