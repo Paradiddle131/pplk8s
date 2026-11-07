@@ -992,7 +992,7 @@ window.REPORT = D;
     if (!el || !el.dataset) return null;
     // a question set's name jumps to what the set holds (issue 390), any other term to its glossary entry
     if (el.dataset.term != null) { const q = document.getElementById("qs-" + el.dataset.term); if (q) return [q, "What the set holds ↓"]; const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
-    if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
+    if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, el.dataset.key ? "See this model's row in the map ↓" : "See its row in the map ↓"] : null; }
     return null;
   }
   function jumpLine(el) {
@@ -1002,11 +1002,12 @@ window.REPORT = D;
   }
   function jump(from) {
     const j = jumpTarget(from); if (!j) return;
-    const target = j[0], backY = window.scrollY, backX = window.scrollX;
+    let target = j[0]; const backY = window.scrollY, backX = window.scrollX;
     unpin(false);
     document.querySelectorAll(".jumpback").forEach((b) => b.remove());
     // the target may sit in another part of the report: open it (a history entry, so Back returns too)
     const V = window.__reportViews, fromView = V && V.viewOf(from), tok = V ? V.jumpTo(target) : null;
+    if (target.id && target.id.startsWith("map-") && from.dataset.key) target = mapRowFor(from.dataset.key, from.dataset.set) || target;
     glReveal(target); // a glossary row hidden by the search, the type filter or a fold is shown first
     // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
     target.scrollIntoView({ block: "center" });
@@ -1327,6 +1328,22 @@ window.REPORT = D;
     // the kit's filter counts what is off on its button
     const fd = $("#fig1 details[data-rk-filter]"); if (fd && window.ReportKit && ReportKit.filter) ReportKit.filter.count(fd);
   }
+  // the map's row for one setup on one model, on the set the reader came from: the map switches to that set
+  // and opens the setup's other models when the row is one of them (a label in a figure names one model)
+  function mapRowFor(key, set) {
+    if (set && set !== MS.set && MAPSETS.includes(set)) setMapSet(set);
+    let tr = $("#map").querySelector(`tr[data-mkey="${CSS.escape(key)}"]`);
+    if (!tr && MS.col) { MS.col = null; MS.dir = null; redrawMap(); tr = $("#map").querySelector(`tr[data-mkey="${CSS.escape(key)}"]`); }
+    if (tr && tr.hidden) { const b = $("#map").querySelector(`button.more[data-arm="${CSS.escape(tr.dataset.armRow)}"]`); if (b) b.click(); }
+    return tr && !tr.hidden ? tr : null;
+  }
+  // "+N models", naming the managed best when it is one of the folded models
+  const moreLabel = (arm, n) => `+${n} ${n > 1 ? "models" : "model"}${S(MS.set).rows.some((r) => r.arm === arm && r.managedBest && !mainKeys(MS.set).has(r.key)) ? ", one the managed best" : ""}`;
+  function mainKeys(s) {
+    const pk = {}, rows = S(s).rows.filter((r) => r.plotted);
+    rows.forEach((r) => { if (r.deciding && !pk[r.arm]) pk[r.arm] = r.key; }); rows.forEach((r) => { if (r.primary && !pk[r.arm]) pk[r.arm] = r.key; });
+    return new Set(Object.values(pk));
+  }
   function renderMap() {
     const s = MS.set, groups = S(s).mapGroups || D.groups.map((g) => g.key);
     const glab = (k) => { const g = D.groupsAll.find((x) => x.key === k) || D.groups.find((x) => x.key === k); return g ? g.label : (TERM[TK(k)] ? TERM[TK(k)].label : k); };
@@ -1342,17 +1359,19 @@ window.REPORT = D;
     h += `</tr></thead><tbody>`;
     const ncol = 2 + groups.length + MNUM.length;
     const ordered = mapRowsInOrder(s), total = ordered.length, shown = ordered.filter(mpass);
-    const idDone = new Set();
+    const idDone = new Set(), mains = mainKeys(s);
     const rowHTML = (r, sub, others) => {
       const tags = [];
+      // a sort lays every model out flat: a model that is not its setup's main one says so
+      if (MS.col && !mains.has(r.key)) tags.push(`<span class="flag" data-term="main-model" tabindex="0">not its main model</span>`);
       if (r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${esc(r.partial)}</span>`);
       if (r.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
       if (r.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
       if (r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best</span>`);
       const idAttr = !sub && !idDone.has(r.arm) ? ` id="map-${esc(r.arm)}"` : ""; if (idAttr) idDone.add(r.arm);
       const open = MS.open.has(r.arm);
-      let x = `<tr class="${sub ? "sub" : "main"}"${sub ? ` data-arm-row="${esc(r.arm)}"${open ? "" : " hidden"}` : idAttr}>`;
-      x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${modelTerm(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
+      let x = `<tr class="${sub ? "sub" : "main"}" data-mkey="${esc(r.key)}"${sub ? ` data-arm-row="${esc(r.arm)}"${open ? "" : " hidden"}` : idAttr}>`;
+      x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${modelTerm(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : moreLabel(r.arm, others)}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
       x += `<td class="what">${sub ? "" : esc(descOf(r.arm))}</td>`;
       groups.forEach((g) => {
         const v = r.groups[g];
@@ -1414,7 +1433,7 @@ window.REPORT = D;
         const a = more.dataset.arm, open = !MS.open.has(a); if (open) MS.open.add(a); else MS.open.delete(a);
         const subs = $("#map").querySelectorAll(`tr.sub[data-arm-row="${CSS.escape(a)}"]`);
         subs.forEach((tr) => (tr.hidden = !open));
-        more.setAttribute("aria-expanded", String(open)); more.textContent = open ? "hide" : "+" + subs.length + (subs.length > 1 ? " models" : " model");
+        more.setAttribute("aria-expanded", String(open)); more.textContent = open ? "hide" : moreLabel(a, subs.length);
       }
     });
     fig.addEventListener("change", (e) => {
@@ -1813,7 +1832,7 @@ window.REPORT = D;
     settle(svg, rowsG);
     el.innerHTML = ""; el.append(svg);
     const ring = (style) => `<svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><circle r="7" fill="none" stroke="var(--ink)" stroke-width="2"${style === "dashed" ? ' stroke-dasharray="3 2.5"' : ""}/></svg>`;
-    $("#key3").innerHTML = keys.map((K) => `<span class="k" data-setup="${esc(K.r.arm)}" data-key="${esc(K.r.key)}" tabindex="0">${ring(K.style)}<span>${esc(K.r.arm)}, ${esc(K.r.modelLabel)} — ${K.role}</span></span>`).join("");
+    $("#key3").innerHTML = keys.map((K) => `<span class="k" data-setup="${esc(K.r.arm)}" data-key="${esc(K.r.key)}" data-set="${esc(K.r.set)}" tabindex="0">${ring(K.style)}<span>${esc(K.r.arm)}, ${esc(K.r.modelLabel)} — ${K.role}</span></span>`).join("");
     directLabels(svg, keys, { l: m.l, r: W - m.r, t: 0, b: H - m.b });
     $("#leg3").innerHTML = legendFams(rows) + legendRoles();
   }
@@ -2000,7 +2019,7 @@ window.REPORT = D;
       mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: put }));
       const lr = lab.filter((l) => !l.ghost);
       mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, text: (l) => labText(l.r), textAnchor: "start",
-        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-strong" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, lh); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
+        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-strong" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, lh); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, "data-set": l.r.set, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
       const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, style, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
       // per setup, as before: its line, marks and hit area in one focusable group, then its label
       const rowsG = G();
