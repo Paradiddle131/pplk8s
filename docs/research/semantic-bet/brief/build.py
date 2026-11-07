@@ -589,30 +589,36 @@ def pic_harness(t):
     return f'<div class="rk-pic"><ul>{rows}</ul></div>'
 
 
+# The kit's sort mark (table-sort.js draws the same one into the kit's own sortable tables).
+SORT_MARK = (
+    '<svg class="rk-sort-mark" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" '
+    'stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/><path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>'
+)
+
+
 def pic_kinds(s, hidden):
     """A grid of approaches (rows, native to custom) by kinds of question (columns): right answers in 100 in each cell,
-    the number over a bar on the 0-100 scale, every cell alike, so no cell stands out as a best."""
+    the cell tinted on one value scale from 0 to 100, so no cell is singled out as a best; every kind sorts its rows,
+    highest first, then lowest first (approaches.js)."""
     words = SET_WORDS.get(s["set"], s["label"].lower())
     heads = "".join(
-        f'<th scope="col">{tipped(f"{s["n"][k]} {words} questions. {text}", html.escape(head).replace("Uncovered", "Un&shy;covered"))}</th>'
+        f'<th scope="col" aria-sort="none"><button type="button" data-tip="{html.escape(f"{s["n"][k]} {words} questions. {text}")}">'
+        f'<span class="rk-label">{html.escape(head).replace("Uncovered", "Un&shy;covered")}</span>{SORT_MARK}</button></th>'
         for k, head, text, _ in KINDS
     )
     body = "".join(
         f'<tr><th scope="row">{html.escape(r["name"])}</th>'
         + "".join(
-            (
-                f'<td><b>{v}</b>{SR(" right in 100")}<span class="rk-track" aria-hidden="true">'
-                f'<span class="rk-fill" data-k="ok" style="--v:{v}"></span></span></td>'
-            )
+            f'<td data-v="{v}" style="--v:{v}"><b>{v}</b>{SR(" right in 100")}</td>'
             if v is not None
-            else '<td><b>–</b><span class="rk-sr">not run</span></td>'
+            else '<td data-v="-1"><b>–</b><span class="rk-sr">not run</span></td>'
             for v in (r["v"][k] for k, *_ in KINDS)
         )
         + "</tr>"
         for r in s["rows"]
     )
     return (
-        f'<div class="rk-pic ap-kinds" data-rk-when="set={s["set"]}"{" hidden" if hidden else ""}><table>'
+        f'<div class="rk-pic ap-kinds" data-rk-when="set={s["set"]}"{" hidden" if hidden else ""}><table data-ap-sort>'
         f'<caption class="rk-sr">Right answers in 100 of each approach on four kinds of {words} question</caption>'
         f'<thead><tr><th scope="col"><span class="rk-sr">Approach</span></th>{heads}</tr></thead>'
         f"<tbody>{body}</tbody></table></div>"

@@ -3,6 +3,7 @@
 import html
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 BUILD = Path(__file__).resolve().parents[3] / "docs/research/semantic-bet/brief/build.py"
@@ -117,11 +118,16 @@ def test_the_kinds_takeaway_draws_each_rows_setup_by_kind_and_names_no_winner():
     page = build.build(RESULTS)
     grids = page.count('class="rk-pic ap-kinds"')
     assert grids == len(build.SETS)
-    # every cell alike: one fill colour and no emphasis on any cell
+    # every cell on one value scale (its tint follows its own number) and no emphasis on any cell
     grid = page[page.index('class="rk-pic ap-kinds"') :]
     grid = grid[: grid.index("</table>")]
-    assert grid.count('data-k="ok"') == len(build.APPROACHES) * len(build.KINDS)
-    assert "data-k=" not in grid.replace('data-k="ok"', "")
+    cells = re.findall(r'<td data-v="(-?\d+)"(?: style="--v:(\d+)")?><b>([^<]+)</b>', grid)
+    assert len(cells) == len(build.APPROACHES) * len(build.KINDS)
+    for v, scale, shown in cells:
+        assert (scale, shown) == ((v, v) if v != "-1" else ("", "–"))
+    assert "data-k=" not in grid and "<strong" not in grid and "<mark" not in grid
+    # each kind's head sorts the rows (approaches.js); the approach column does not
+    assert grid.count('aria-sort="none"><button type="button"') == len(build.KINDS)
 
 
 def test_the_page_is_built_on_the_vendored_kit():
