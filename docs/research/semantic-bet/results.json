@@ -1,5 +1,5 @@
 {
- "written": "2026-11-07T00:20Z",
+ "written": "2026-11-07T00:26Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4632,10 +4632,10 @@
    "pass_all": 0.5818181818181818,
    "outcomes": {
     "right": 106,
-    "unclear": 5,
+    "unclear": 3,
     "confident-wrong": 6,
     "wrong": 37,
-    "declined": 11
+    "declined": 13
    },
    "model_calls": 177,
    "new": {
@@ -4742,9 +4742,9 @@
     0.818181818182
    ],
    "confident_wrong": [
-    0.078787878788,
-    0.036363636364,
-    0.133333333333
+    0.066666666667,
+    0.024242424242,
+    0.115151515152
    ],
    "groups": {
     "composable": [
@@ -4771,9 +4771,9 @@
    "pass_all": 0.6181818181818182,
    "outcomes": {
     "right": 118,
-    "declined": 14,
-    "wrong": 17,
-    "confident-wrong": 13,
+    "declined": 15,
+    "wrong": 18,
+    "confident-wrong": 11,
     "unclear": 3
    },
    "model_calls": 177,
@@ -4841,10 +4841,10 @@
    "pass_all": 0.43636363636363634,
    "outcomes": {
     "right": 85,
-    "declined": 19,
+    "declined": 20,
     "wrong": 43,
-    "unclear": 6,
-    "confident-wrong": 12
+    "confident-wrong": 12,
+    "unclear": 5
    },
    "model_calls": 177,
    "new": {
@@ -4952,9 +4952,9 @@
     0.86
    ],
    "confident_wrong": [
-    0.02,
     0.0,
-    0.06
+    0.0,
+    0.0
    ],
    "groups": {
     "composable": [
@@ -4982,8 +4982,7 @@
    "outcomes": {
     "right": 37,
     "unclear": 3,
-    "confident-wrong": 1,
-    "wrong": 7,
+    "wrong": 8,
     "declined": 2
    },
    "model_calls": 54,
@@ -5443,9 +5442,9 @@
     0.50303030303
    ],
    "confident_wrong": [
-    0.084848484848,
-    0.024242424242,
-    0.157575757576
+    0.066666666667,
+    0.018181818182,
+    0.127272727273
    ],
    "groups": {
     "composable": [
@@ -5473,8 +5472,8 @@
    "outcomes": {
     "right": 61,
     "declined": 24,
-    "wrong": 64,
-    "confident-wrong": 14,
+    "wrong": 67,
+    "confident-wrong": 11,
     "unclear": 2
    },
    "model_calls": 177,
@@ -7414,9 +7413,9 @@
     -0.133333333333
    ],
    "confident_wrong": [
-    0.078787878788,
-    0.036363636364,
-    0.133333333333
+    0.066666666667,
+    0.024242424242,
+    0.115151515152
    ],
    "worth": false
   },
@@ -7468,9 +7467,9 @@
     -0.073333333333
    ],
    "confident_wrong": [
-    0.02,
     0.0,
-    0.06
+    0.0,
+    0.0
    ],
    "worth": false
   },
@@ -7594,9 +7593,9 @@
     -0.442424242424
    ],
    "confident_wrong": [
-    0.084848484848,
-    0.024242424242,
-    0.157575757576
+    0.066666666667,
+    0.018181818182,
+    0.127272727273
    ],
    "worth": false
   },
