@@ -21,9 +21,12 @@ def test_every_vendored_file_matches_the_manifest():
     changed = [
         name
         for name, digest in listed.items()
-        if not (KIT / name).is_file() or hashlib.sha256((KIT / name).read_bytes()).hexdigest() != digest
+        if not (KIT / name).is_file()
+        or hashlib.sha256((KIT / name).read_bytes()).hexdigest() != digest
     ]
-    assert not changed, f"vendored files that differ from MANIFEST.sha256 (change them upstream): {changed}"
+    assert not changed, (
+        f"vendored files that differ from MANIFEST.sha256 (change them upstream): {changed}"
+    )
 
 
 def test_no_file_sits_in_the_copy_without_a_manifest_line():
