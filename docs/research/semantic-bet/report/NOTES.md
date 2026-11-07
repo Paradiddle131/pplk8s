@@ -50,7 +50,7 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
 - Every focusable mark group, label and glider shows the kit's focus ring (2.5 px in the line colour); the report's old rule took the outline away and lit only a faint band.
 - At a large text size: Figure 2 takes its stacked layout below 50 times the chart size (700 px at 14 px, so 1280 px at 200% stacks), wraps setup ids after their hyphens, wraps its panel titles, the managed best's note and the axis captions, and grows its rows to hold them; every axis takes the finest of its tick steps whose labels stand apart (`tickSteps`); right margins hold half the last tick label; the scatter's rotated title shortens to what fits; the slopes wrap family names and put "Uncovered" on its own row when it would meet "Covered".
 - Figure 5's labels stack a full rendered line apart (the old 13 px step under 11.5 px text let the boxes meet), the panel grows to hold its stack, and a stack that reaches the top runs down again from there, so the low labels stay beside their marks.
-- `measure()` reads the tab's font and its dark-ground tracking (.01em, inherited by the charts as px) once per drawing, so wrapped labels fit on both grounds (clipcheck found a slope label 1.3 px past its chart at 360 px dark before).
+- `measure()` reads the tab's font and its dark-ground tracking (.01em, inherited by the charts as px) once per drawing, so wrapped labels fit on both grounds (clipcheck found a slope label 1.3 px past its chart at 360 px dark before); a theme switch redraws Figures 2 and 5 only when the tracking changes, since a label measured on the light ground is wider on the dark one.
 
 ## What changed in revision 2
 

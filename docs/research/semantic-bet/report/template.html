@@ -1169,7 +1169,11 @@ window.REPORT = D;
     });
   } catch (e) {}
   // The figures take their colours from CSS tokens (var(--token)), so a theme change restyles them with no redraw.
-  document.addEventListener("report-theme", () => { unpin(false); hideTip(); });
+  document.addEventListener("report-theme", () => { unpin(false); hideTip();
+    // the kit tracks words a touch wider on a dark ground: the figures that wrap labels to a measured width (2 and 5)
+    // are drawn again when the tracking changes, so a label measured on one ground still fits on the other
+    const tr = parseFloat(getComputedStyle($("#metricflow")).letterSpacing) || 0;
+    if (MFONT && tr !== MFONT.track) { renderForest(); renderSlopes(); } });
 
   /* ---------- per-view set switches ---------- */
   function renderSwitches() {
