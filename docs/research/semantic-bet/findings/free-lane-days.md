@@ -124,3 +124,32 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - A container restart at about 22:45Z stopped the metrics MCP server and the lane mid-pass; the runner's init check refused the runs without tools, and the pass resumed from its answers file; nothing was mis-scored.
 - Nothing left running; the Compose services were up when the session ended (they do not survive a new session).
 - Next: #400's open question (should the headline "MetricFlow on the free model" read `custom-metricflow-compute` once the free lane has run it); then #390 (the question section, option C, inside the "Question sets" tab), #397, #398; the free lane carries #379 and the new setup nightly.
+
+## 2026-11-07, 2026-11-07T01:45Z (the 00:07Z wake; the lane stopped at an anomaly: `custom-lightdash` hard canary)
+
+- Free count 0 at the start, 544 of 1,000 at the end (read from `/api/v1/key`); 456 requests went unspent because the lane stopped.
+- Anomaly, first: `custom-lightdash` hard k = 1 missed its canary twice (exit 2, `hard_top_channel_bookings`): its answer was "campaign 1 brought the most bookings, 31; the bookings explore groups by campaign_id, channel is not a dimension on slv_bookings".
+  That reads as the arm's tool surface lacking a channel dimension, not a broken warehouse, agent or model (the frozen pass ran whole minutes earlier); suspected cause, not verified.
+  `--no-canary` was not used.
+  The lane never reached `bet_carry`, the `hard-v2` passes, `custom-metricflow-compute` or any k = 3 pass.
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU) and `gcp-usage-check` ok; the cost check after the lane was not re-run (the lane's own gate passed before `native-mcp`, no GCP work was done).
+- Passes (Nemotron free; cases of the set as scored, frozen 76, hard 41, hard-v2 55):
+
+| Pass | Logged today | Log's total now |
+|---|---|---|
+| backlog judge | the backlog after the #382 scorer fix | |
+| `custom-hybrid` frozen / hard k = 1 | none new (the first call hit an OpenRouter transfer error, exit 3, then the rest of the lane went on; the log was whole) | frozen 76 of 76, hard 41 of 41 |
+| `native-mcp` frozen / hard k = 1 | none new (log whole) | 76 of 76, 41 of 41 |
+| `custom-toolbox` frozen / hard k = 1 | 3 calls (log whole) | 76 of 76, 41 of 41 |
+| `baseline` frozen k = 1 | about 125 calls, the rest of the set | 76 of 76 |
+| `baseline` hard k = 1 | about 196 calls | 41 of 41 |
+| `custom-lightdash` frozen k = 1 | about 80 calls (the Lightdash image pulled and started) | 76 of 76 |
+| `custom-lightdash` hard k = 1 | none: stopped at the canary | not started |
+
+- Mid-way: `custom-lightdash` hard k = 1 (0 of 41); everything after it in the lane order is untouched today.
+- Figures that moved (Nemotron free, k = 1, right / confident-wrong): frozen `baseline` 59.2% / 7.9% (was 49 of 76 questions); frozen `custom-lightdash` 59.2% / 7.9% (was 38 of 76); hard `baseline` 48.8% / 19.5%.
+  Unchanged: frozen `custom-metricflow` 89.5% / 0.0%, `custom-hybrid` 89.5% / 0.0%, `native-mcp` 89.5% / 3.9%, `custom-toolbox` 43.4% / 5.3%; hard `native-mcp` 90.2% / 0.0%, `custom-hybrid` 82.9% / 0.0%, `custom-toolbox` 39.0% / 14.6%.
+- What the numbers say: with the whole frozen and hard sets at k = 1, the plain text-to-SQL `baseline` and Lightdash's metric API land well under the managed best (`native-mcp`) and the hybrid on the free model: 59% against 89.5% on frozen, 49% against 83% to 90% on hard, and `baseline` carries the most confident-wrong answers on hard (19.5%, against 0.0% for `native-mcp` and `custom-hybrid`).
+  One run a question, so the intervals still overlap for the close pairs.
+- Report: page version 32; #336's artifact 4 read back with the same SHA-256 after each rebuild.
+- Next: decide the canary for `custom-lightdash` hard (use a case the arm's explore can answer, or skip that pass; the owner's or the next session's call, never `--no-canary`), then start `free_lane.sh` again: it resumes at `bet_carry` and the `hard-v2` k = 1 round (`custom-hybrid`, `custom-metricflow`, `custom-metricflow-compute`, `native-mcp`, `baseline`), then k = 3.
