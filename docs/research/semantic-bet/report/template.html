@@ -1189,7 +1189,7 @@ window.REPORT = D;
       `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set.</p>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
-    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the best managed agent</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
+    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the ${term("managed-best", "managed best")}</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
       tw.map.map((r) => `<tr><td>${setTerm(r.set)}</td>${r.cells.map((c) => `<td>${esc(c).replace(/^(\d+)/, '<span class="n">$1</span>')}</td>`).join("")}</tr>`).join("") + `</tbody></table>` : "";
     $("#t2").textContent = D.sentences.forest || "";
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";

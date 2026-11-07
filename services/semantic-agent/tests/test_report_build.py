@@ -293,3 +293,20 @@ def test_the_no_arithmetic_metricflow_setups_say_why_obeying_scores_lower():
     """#400: the old setups stay on the page; their description explains the model order."""
     for arm in ("custom-metricflow", "cc-metricflow"):
         assert re.search(r"never (to )?compute", build.DESC[arm]), arm
+
+
+def test_figure_one_and_figure_four_compare_with_the_same_managed_best(tmp_path):
+    """#409 (owner, 2026-11-07): one bar for "the managed best", never the best per group."""
+    _, data = _built(tmp_path)
+    tw = data["twin"]
+    strip = {r["set"]: r for r in tw["strip"]}
+    for row in tw["map"]:
+        s = strip.get(row["set"])
+        if not s or s["mbUnc"] is None:
+            continue
+        gap = s["mbUnc"] - s["unc"]
+        cell = row["cells"][2]
+        if abs(gap) <= 5:
+            assert cell == "level with", (row["set"], cell, gap)
+        else:
+            assert cell.startswith(f"{abs(gap)} points"), (row["set"], cell, gap)

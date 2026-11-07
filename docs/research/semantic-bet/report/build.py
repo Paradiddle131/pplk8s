@@ -1191,12 +1191,12 @@ def make_parts(st, rows, mb, floor, mf):
             P["mf"]["vsBestCw"] = mf["step2"].get("confident_wrong")
         rel = []
         for k in ("covered", "trap", "uncovered"):
-            da = [r for r in rows if r["family"] == "da" and r["deciding"] and k in r["groups"]]
-            v = g(mf, k)
-            if not da or v is None:
+            # Against the managed best, the one Google setup every comparison on the page uses (owner, 2026-11-07, #409);
+            # never the best Google setup per group, which would pick a different bar for each column.
+            v, bv = g(mf, k), g(mb, k)
+            if v is None or bv is None:
                 rel.append(None)
                 continue
-            bv = g(max(da, key=lambda r: r["groups"][k][0]), k)
             rel.append("level with" if abs(v - bv) <= 5 else ("%d points above" % (v - bv) if v > bv else "%d points below" % (bv - v)))
         P["rel"] = rel
         checks = [r for r in rows if r["arm"] == mf["arm"] and r["role"] == "check" and "uncovered" in r["groups"]]
@@ -1270,9 +1270,9 @@ def make_twins(sets, order):
         lvl = all(r["cells"][0] == "level with" and r["cells"][1] == "level with" for r in rows)
         trap_lvl = all(r["cells"][1] == "level with" for r in rows)
         unc_below = all("below" in r["cells"][2] for r in rows)
-        head = ("keeps level with the best managed agent on covered and hidden-rule questions" if lvl else
-                "keeps level with the best managed agent on hidden-rule questions" if trap_lvl else
-                "trails or ties the best managed agent on covered and hidden-rule questions")
+        head = ("keeps level with the managed best on covered and hidden-rule questions" if lvl else
+                "keeps level with the managed best on hidden-rule questions" if trap_lvl else
+                "trails or ties the managed best on covered and hidden-rule questions")
         tail = (", and falls behind on uncovered ones, which no single metric answers, on every set." if unc_below else
                 ", and on uncovered questions, which no single metric answers, it is not behind on every set.")
         T["mapLead"] = "On the free model, MetricFlow " + head + tail
@@ -1307,7 +1307,7 @@ def combine(sets, order):
         if not rel or None in rel:
             continue
         if not m:
-            m.append("On the free model, MetricFlow is %s the best managed agent on covered questions, %s it on hidden-rule ones and %s on uncovered ones, which no single metric answers (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
+            m.append("On the free model, MetricFlow is %s the managed best on covered questions, %s it on hidden-rule ones and %s on uncovered ones, which no single metric answers (%s)" % (rel[0], rel[1], rel[2], P["label"].lower()))
         else:
             m.append("on the %s: %s, %s and %s" % (P["label"].lower(), rel[0], rel[1], rel[2]))
     S["map"] = "; ".join(m) + "." if m else "Share of runs right per question type, per setup."
