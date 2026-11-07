@@ -150,69 +150,6 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
-/* decision map */
-.maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
-.maphead table.map { margin: 0; }
-.mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
-table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
-table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
-table.map thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); background: var(--paper); }
-table.map thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-table.map th.num, table.map td.num { text-align: right; }
-table.map td.g { text-align: center; padding: 3px 4px; white-space: nowrap; }
-table.map th.g { text-align: center; }
-table.map th.g small.fh { display: flex; justify-content: center; gap: 3px; margin-top: 2px; letter-spacing: .02em; }
-table.map th.g small.fh span { width: 34px; text-align: center; border-top: 1px solid var(--rule); padding-top: 1px; }
-.ch { display: inline-block; width: 34px; border-radius: 2px; padding: 3px 0; color: var(--ink); text-align: center; }
-.ch + .ch { margin-left: 3px; }
-.ch.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
-.ch.none { color: var(--ink-3); }
-.b1 { background: transparent; } .b2 { background: var(--s2); } .b3 { background: var(--s3); } .b4 { background: var(--s4); } .b5 { background: var(--s5); }
-table.map tr.rung th { background: var(--paper-2); font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 6px 8px; border-bottom: 1px solid var(--grid-major); }
-table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 190px; z-index: 1; }
-table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1; }
-table.map tbody tr.main:hover td, table.map tbody tr.sub:hover td { background: var(--row-band); }
-table.map td.setup .id { display: inline-block; font-size: 12.5px; }
-table.map td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
-table.map td.what { color: var(--ink-2); max-width: 270px; min-width: 200px; font-size: 13.5px; }
-table.map tr.sub td.setup { padding-left: 22px; }
-table.map tr.sub[hidden] { display: none; }
-.tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
-.flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
-.flag[data-term] { cursor: help; text-decoration: underline dotted var(--ink-3); text-underline-offset: 2px; }
-.flag.pend { border-style: dashed; border-color: var(--ink-3); }
-.flag.mb { border-color: var(--ink-2); }
-.ivl { white-space: nowrap; line-height: 1.45; }
-.ivl small { color: var(--ink-3); font-size: 12.5px; }
-.ivl .sk { color: var(--ink-3); font-size: 11.5px; margin-right: 4px; }
-/* Figure 1's set switch, filters and sortable heads */
-.mtools { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: flex-start; margin: 10px 0 6px; font-family: var(--label); font-size: 13.5px; }
-.mseg { max-width: 100%; }
-.mseg button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.2; padding: 4px 11px 5px; }
-.mseg button small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
-.mseg button[aria-pressed="true"] small { color: var(--paper); opacity: .85; }
-.mf { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.mf legend { float: left; padding: 0; margin-right: 2px; color: var(--ink-3); font-weight: 500; }
-.mchk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 9px 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); cursor: pointer; background: var(--paper); }
-.mchk:hover { border-color: var(--ink-3); }
-.mchk input { margin: 0; width: 15px; height: 15px; accent-color: var(--ink-2); cursor: pointer; }
-.mchk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
-.mchk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.mlive { margin: 0 0 6px; font-size: 13px; }
-table.map th.sortable { padding: 0; height: 1px; user-select: none; -webkit-user-select: none; }
-.msort { appearance: none; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: 5px 8px; text-align: inherit; user-select: none; -webkit-user-select: none; }
-.msort:hover { background: var(--band); }
-.msort .ml { display: inline-flex; align-items: center; gap: 5px; }
-.msort .tl { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.msort small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-.msort .ar { flex: none; color: var(--ink-3); }
-th[aria-sort="descending"] .msort .ar, th[aria-sort="ascending"] .msort .ar { color: var(--ink); }
-.msort:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
-table.map th.g .msort { align-items: center; text-align: center; }
-table.map th.num .msort { align-items: flex-end; text-align: right; }
-
-table.map td.num .mv { white-space: nowrap; }
-table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 /* glossary rows: the longer explanation as labelled lines */
 .gl-t td .gl-txt { margin: 0; }
 .gl-more { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 5px 0 1px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; }
@@ -244,8 +181,6 @@ table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 .pclear:hover { background: var(--band); }
 .pclear:focus-visible, .pqs:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
 .pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
-.cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
-.more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
 
 /* unit plate */
 .plate { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; }
@@ -350,32 +285,19 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .gl-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 0; margin: 0; }
 .gl-empty button { appearance: none; border: 1px solid var(--ink-3); background: transparent; color: var(--ink); font: 500 13.5px var(--label); padding: 4px 10px; min-height: 32px; border-radius: 3px; margin-left: 8px; cursor: pointer; }
 
-/* ---------- the section strip: the report's parts as tabs (#396) ---------- */
-/* A running head, not a toolbar: small capitals on one ink rule, the open part marked by a heavier
-   stretch of that rule. It sticks under the viewport's top edge; its paper fill runs to both screen
-   edges (shadow, clipped to the strip's own height) so nothing that leaves the column shows beside it. */
-.tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--ink);
-  box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax -1px); }
+/* ---------- the section strip: the report's parts as tabs ---------- */
+/* The kit's tabs (report-kit tabs.css): words in ink, the open part on a 3px ink bar. It sticks under the viewport's top edge; its paper fill runs to both screen
+   edges (a pseudo-element under it, its shadow clipped to the strip's height; the strip itself clips nothing) so nothing that leaves the column shows beside it. */
+.tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--hair, var(--rule)); }
+.tabs::before { content: ""; position: absolute; z-index: -1; inset: 0 0 -1px; background: var(--paper); box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax); pointer-events: none; }
 .tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .tabs-in::-webkit-scrollbar { display: none; }
-.tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
-.tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
-.tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
-.tab { flex: none; position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 12px 0 10px; min-height: 44px;
-  font-family: var(--label); font-size: 13.5px; font-weight: 500; letter-spacing: .075em; text-transform: uppercase; line-height: 1.2;
-  color: var(--ink-2); text-decoration: none; white-space: nowrap; cursor: pointer; }
-/* the label keeps the open tab's bolder width, so choosing a tab never shifts its neighbours */
-.tab .tl { display: inline-grid; }
-.tab .tl::after { content: attr(data-l); font-weight: 600; height: 0; overflow: hidden; visibility: hidden; }
-.tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 0; background: var(--ink); transition: height .12s ease-out; }
-.tab:hover { color: var(--ink); }
-.tab:hover::after { height: 1px; background: var(--ink-3); }
-.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; }
-.tab[aria-selected="true"]::after { height: 3px; background: var(--ink); }
-.tab:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; border-radius: 2px; }
+.tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); }
+.tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); }
+.tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); }
 /* the parts: every one laid out at the column's width, the closed ones folded to nothing, so a figure
    measures its real width whether or not its part is open (and redraws on a resize either way) */
-.view { padding-top: 26px; }
+.view { padding-top: 26px; scroll-margin-top: var(--tabh, 0px); }
 .view:not(.on) { height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
 .view:focus { outline: none; }
 .view.on { animation: viewin .16s ease-out; }
@@ -388,7 +310,6 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .view-next a:hover { text-decoration-color: var(--ink); }
 @media (max-width: 640px) {
   .tabs-in { gap: 0 20px; }
-  .tab { font-size: 13px; letter-spacing: .06em; }
   .view { padding-top: 20px; }
 }
 @media (max-width: 640px) {
@@ -411,9 +332,124 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
   .gl-types { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
   .gl-types::-webkit-scrollbar { display: none; }
   .gl-types button { flex: none; }
-  table.map td.setup { min-width: 158px; }
 }
 @media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab, .tab::after { transition: none; } .view.on { animation: none; } .jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: none; } .jumped { outline: 2px solid var(--sel); } }
+
+/* ---------- On report-kit: the header, the tab strip and the Decision map ----------
+   Each carries .rk-kit, so the kit's tokens and base (scoped in the Summary's style block) reach it; the rules
+   below are the report's own parts the kit has no component for. Every colour is a kit token. */
+.memo.rk-kit { padding-bottom: var(--s5); background: transparent }
+.memo.rk-kit h1 { font: 700 var(--t-title)/1.15 var(--sans); letter-spacing: 0; max-width: 24em }
+.memo.rk-kit .byline { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin-top: var(--s3); max-width: var(--measure) }
+.memo.rk-kit .byline b { font-weight: 700; color: var(--ink) }
+.memo.rk-kit .term, .rk-kit .term { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px; cursor: help }
+.memo.rk-kit .themebtn { border: 1px solid var(--hair); border-radius: 10px; padding: 3px; gap: 3px; color: var(--ink); min-height: 44px }
+.memo.rk-kit .themebtn svg { width: 36px; height: 36px; padding: 9px; border-radius: 7px }
+.memo.rk-kit .themebtn[aria-pressed="false"] .sun, .memo.rk-kit .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper) }
+
+.tabs.rk-kit .tabs-in { gap: 0 var(--s5) }
+.tabs.rk-kit .tab { flex: none; display: inline-flex; align-items: center; min-height: 48px; padding: 0 2px;
+  font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); text-decoration: none; white-space: nowrap; cursor: pointer;
+  box-shadow: inset 0 -3px 0 transparent; transition: box-shadow var(--t-fast) ease-out }
+.tabs.rk-kit .tab:hover { box-shadow: inset 0 -3px 0 var(--hair) }
+.tabs.rk-kit .tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--ink) }
+.tabs.rk-kit .tab:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px; border-radius: 4px }
+.tabs.rk-kit .tab .tl::after { display: none }
+@media (prefers-reduced-motion: reduce) { .tabs.rk-kit .tab { transition: none } }
+
+/* the Decision map: the kit's section head with the set switch beside it, the lead, the twin table, the filters,
+   then one table of every setup and model; group cells on the kit's value scale (the right-answer green, none
+   at 0, half strength at 100), sorted from each column's head */
+.dm .rk-head { margin-bottom: var(--s4) }
+.dm-lead { margin: 0 0 var(--s4); max-width: 36rem; font-weight: 600 }
+.dm-twin { overflow-x: auto; margin: 0 0 var(--s5) }
+.dm-twin table.tw { border-collapse: collapse; font: 400 var(--t-word)/1.35 var(--sans) }
+.dm-twin table.tw th, .dm-twin table.tw td { padding: var(--s2) var(--s5) var(--s2) 0; border-bottom: 1px solid var(--hair); white-space: nowrap; text-align: left }
+.dm-twin table.tw thead th { font-size: inherit; font-weight: 700; border-bottom: 2px solid var(--ink); vertical-align: bottom }
+.dm-twin table.tw .n { font-weight: 700; color: var(--ink) }
+.dm-twin table.tw .num { text-align: right }
+.dm-tools { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s6); align-items: flex-start; margin: 0 0 var(--s3) }
+.dm .mf { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) }
+.dm .mf legend { float: left; padding: 0; margin-right: var(--s1); font-weight: 700 }
+.dm .mchk { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3) 0 var(--s2);
+  border: 1px solid var(--hair); border-radius: 8px; color: var(--ink); cursor: pointer; background: transparent }
+.dm .mchk:hover { background: var(--row) }
+.dm .mchk input { margin: 0; width: 18px; height: 18px; accent-color: var(--ink); cursor: pointer }
+.dm .mchk:has(input:not(:checked)) { border-style: dashed }
+.dm .mchk .tt { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm-key { margin: 0 0 var(--s2) }
+.dm-key .rk-mark { margin-right: 2px }
+.dm-key .dm-ramp { display: inline-block; width: 4.5rem; height: 14px; border-radius: 3px;
+  background: linear-gradient(to right, transparent, color-mix(in oklab, var(--ok) 50%, transparent)); box-shadow: inset 0 0 0 1px var(--hair) }
+.dm-live { margin: 0 0 var(--s2) }
+.dm-note { margin: var(--s3) 0 0; max-width: 36rem }
+
+.dm .maphead:not(.on) { visibility: hidden }
+.dm .maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; background: var(--paper); pointer-events: auto }
+.dm .maphead table.map { margin: 0 }
+.dm .mapwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--hair) }
+.dm table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 60rem; font: 400 .875rem/1.35 var(--sans);
+  font-variant-numeric: tabular-nums; color: var(--ink) }
+.dm table.map th, .dm table.map td { padding: var(--s2) 6px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--hair) }
+.dm table.map thead th { font-weight: 700; vertical-align: bottom; border-bottom: 2px solid var(--ink); background: var(--paper) }
+.dm table.map thead th small { display: block; font-weight: 400; font-size: .8125rem; max-width: 6.5rem; margin-left: auto; text-wrap: balance }
+.dm table.map thead th:not(.sortable) small { margin-left: 0 }
+.dm table.map th.num, .dm table.map td.num { text-align: right }
+.dm table.map th.g, .dm table.map td.g { text-align: right }
+.dm table.map td.g { padding: 3px }
+.dm table.map th.sortable { padding: 0; height: 1px; user-select: none; -webkit-user-select: none }
+.dm .msort { appearance: none; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: flex;
+  flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right; width: 100%; height: 100%;
+  padding: var(--s2) 6px; border-radius: 6px }
+.dm .msort:hover { background: var(--row) }
+.dm .msort:hover .tl { text-decoration-style: solid }
+.dm .msort .ml { display: inline-flex; align-items: center; gap: 6px }
+.dm .msort .tl { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+.dm .msort:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px }
+.dm th[aria-sort="descending"] .rk-sort-mark .up, .dm th[aria-sort="ascending"] .rk-sort-mark .dn { display: none }
+.dm th[aria-sort="descending"] .rk-sort-mark, .dm th[aria-sort="ascending"] .rk-sort-mark { stroke-width: 2.4 }
+.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); border-radius: 4px; text-align: right; font-weight: 700; font-size: .9375rem;
+  background: color-mix(in oklab, var(--ok) calc(var(--v, 0) * .5%), transparent) }
+.dm .ch.none { background: none; font-weight: 400 }
+.dm table.map tr.rung th { font-weight: 700; padding: var(--s4) var(--s2) var(--s2); border-bottom: 2px solid var(--ink); background: var(--paper) }
+.dm table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 10rem; z-index: 1 }
+.dm table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1 }
+.dm table.map tbody tr.main:hover > td, .dm table.map tbody tr.sub:hover > td { background-color: var(--row) }
+.dm table.map tbody tr:hover > td.setup { background: linear-gradient(var(--row), var(--row)), var(--paper) }
+.dm table.map td.setup .id { display: inline-block; font-size: .8125rem; font-weight: 700 }
+.dm table.map td.setup .mdl { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px }
+.dm table.map td.setup .mdl > :not(svg):not(.more) { flex: 1 1 0; min-width: 0 }
+.dm table.map td.setup .mdl > .more { flex-basis: 100%; text-align: left; margin-left: 14px }
+.dm table.map td.what { max-width: 13rem; min-width: 9rem }
+.dm table.map tr.sub td.setup { padding-left: var(--s5) }
+.dm table.map tr.sub[hidden] { display: none }
+.dm .tags { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1) }
+.dm .flag { display: inline-block; font-size: .8125rem; border: 1px solid var(--hair); border-radius: 4px; padding: 0 6px; line-height: 1.5; white-space: nowrap }
+.dm .flag[data-term] { cursor: help; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+.dm .flag.pend { border-style: dashed }
+.dm .ivl { white-space: nowrap; line-height: 1.35 }
+.dm .ivl > span:first-child { font-weight: 700; font-size: .9375rem }
+.dm .ivl small { font-size: .875rem }
+.dm .ivl .rk-mark { margin-right: 6px; vertical-align: 1px }
+.dm table.map td.num .mv { white-space: nowrap; font-weight: 700; font-size: .9375rem }
+.dm table.map tr.mnone td { padding: var(--s4) var(--s2) }
+.dm .more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 var(--s1); min-height: 32px; border-radius: 4px;
+  color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.dm .more:hover { text-decoration-thickness: 2.5px }
+/* the report's own tooltip, shared by every tab, in the kit's type and ink: a light plate (the outcome glyphs inside
+   it are drawn in the report's own colours, made for a light ground), every word at full ink, no small capitals */
+.tip.rk-kit { background: var(--paper); color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; box-shadow: var(--shadow);
+  padding: 10px 12px; font: 400 var(--t-tip)/1.4 var(--sans) }
+.tip.rk-kit.pinned { border-color: var(--ink) }
+.tip.rk-kit :is(.th, .td, .tq, .tk, .tsh, .tsn, .qid, dt, dd, .iv, .nt, p, q, .h-on, .tgrip, .tipclose, .tipjump a, .tcalc) { color: var(--ink); font-family: var(--sans) }
+.tip.rk-kit .tk, .tip.rk-kit .tsh { text-transform: none; letter-spacing: 0; font-size: .875rem; font-weight: 700 }
+.tip.rk-kit .tk .id, .tip.rk-kit .th .id { color: var(--ink) }
+.tip.rk-kit .th { font-size: 1rem; font-weight: 700 }
+.tip.rk-kit .ts, .tip.rk-kit .tipjump { border-top-color: var(--hair) }
+.tip.rk-kit q { border-left-color: var(--hair) }
+.tip.rk-kit .thandle:hover, .tip.rk-kit .tipclose:hover { background: var(--row) }
+.tip.rk-kit :focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+@media (max-width: 640px) { .dm table.map td.setup { min-width: 9rem } .memo.rk-kit h1 { font-size: 1.625rem } }
 </style>
 
 <script>
@@ -435,7 +471,7 @@ window.REPORT = D;
 })();
 </script>
 <div class="page">
-  <header class="memo">
+  <header class="memo rk-kit">
     <div class="mhead">
       <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
       <button type="button" class="themebtn" id="themebtn" aria-label="Dark theme" aria-pressed="false">
@@ -445,20 +481,20 @@ window.REPORT = D;
     </div>
     <p class="byline" id="byline"></p>
   </header>
-  <nav class="tabs" id="tabs" aria-label="Parts of the report">
+  <nav class="tabs rk-kit" id="tabs" aria-label="Parts of the report">
     <div class="tabs-in" role="tablist" aria-label="Parts of the report">
-      <a class="tab" role="tab" id="tab-summary" href="#summary" aria-controls="view-summary" aria-selected="true" tabindex="0"><span class="tl" data-l="Summary">Summary</span></a>
-      <a class="tab" role="tab" id="tab-decision-map" href="#decision-map" aria-controls="view-decision-map" aria-selected="false" tabindex="-1"><span class="tl" data-l="Decision map">Decision map</span></a>
-      <a class="tab" role="tab" id="tab-metricflow" href="#metricflow" aria-controls="view-metricflow" aria-selected="false" tabindex="-1"><span class="tl" data-l="MetricFlow agent">MetricFlow agent</span></a>
-      <a class="tab" role="tab" id="tab-every-run" href="#every-run" aria-controls="view-every-run" aria-selected="false" tabindex="-1"><span class="tl" data-l="Every run">Every run</span></a>
-      <a class="tab" role="tab" id="tab-setups" href="#setups" aria-controls="view-setups" aria-selected="false" tabindex="-1"><span class="tl" data-l="Setups">Setups</span></a>
-      <a class="tab" role="tab" id="tab-question-sets" href="#question-sets" aria-controls="view-question-sets" aria-selected="false" tabindex="-1"><span class="tl" data-l="Question sets">Question sets</span></a>
-      <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="view-method" aria-selected="false" tabindex="-1"><span class="tl" data-l="Method &amp; glossary">Method &amp; glossary</span></a>
+      <a class="tab" role="tab" id="tab-summary" href="#summary" aria-controls="summary" aria-selected="true" tabindex="0"><span class="tl" data-l="Summary">Summary</span></a>
+      <a class="tab" role="tab" id="tab-decision-map" href="#decision-map" aria-controls="decision-map" aria-selected="false" tabindex="-1"><span class="tl" data-l="Decision map">Decision map</span></a>
+      <a class="tab" role="tab" id="tab-metricflow" href="#metricflow" aria-controls="metricflow" aria-selected="false" tabindex="-1"><span class="tl" data-l="MetricFlow agent">MetricFlow agent</span></a>
+      <a class="tab" role="tab" id="tab-every-run" href="#every-run" aria-controls="every-run" aria-selected="false" tabindex="-1"><span class="tl" data-l="Every run">Every run</span></a>
+      <a class="tab" role="tab" id="tab-setups" href="#setups" aria-controls="setups" aria-selected="false" tabindex="-1"><span class="tl" data-l="Setups">Setups</span></a>
+      <a class="tab" role="tab" id="tab-question-sets" href="#question-sets" aria-controls="question-sets" aria-selected="false" tabindex="-1"><span class="tl" data-l="Question sets">Question sets</span></a>
+      <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="method" aria-selected="false" tabindex="-1"><span class="tl" data-l="Method &amp; glossary">Method &amp; glossary</span></a>
     </div>
   </nav>
 
   <div class="views" id="views">
-  <section class="view on rk-kit" id="view-summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
+  <section class="view on rk-kit" id="summary" data-view="summary" role="tabpanel" aria-labelledby="tab-summary" tabindex="-1">
   <style>
   /* The Summary tab on report-kit, a trial ahead of the other tabs: the kit and the Approaches sections' own styles,
      nested under .rk-kit so nothing reaches the header, the tab strip or the other tabs (build.py scopes the kit's
@@ -831,24 +867,23 @@ button[data-tip], a[data-tip] { cursor: pointer }
   <div class="rk-tip" id="rk-tip" hidden></div>
   </section>
 
-  <section class="view" id="view-decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
-  <figure id="fig1">
-    <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
-    <div class="twin" id="twin1"></div>
-    <div class="mtools">
-      <div class="seg mseg" role="group" aria-label="Question set for Figure 1" id="map-seg"></div>
+  <section class="view rk-kit" id="decision-map" data-view="decision-map" role="tabpanel" aria-labelledby="tab-decision-map" tabindex="-1">
+  <section class="rk-section dm" id="fig1" aria-labelledby="dm-h">
+    <div class="rk-head"><h2 id="dm-h">Decision map</h2><div class="rk-switch" role="group" aria-label="Question set" id="map-seg"></div></div>
+    <p class="dm-lead" id="t1"></p>
+    <div class="dm-twin" id="twin1"></div>
+    <div class="dm-tools">
       <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
       <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
     </div>
-    <div class="figtools"><div class="legend" id="leg1"></div></div>
-    <p class="live mlive" id="map-live" aria-live="polite"></p>
+    <ul class="rk-key dm-key" id="leg1"></ul>
+    <p class="dm-live" id="map-live" aria-live="polite"></p>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
-    <figcaption>One question set at a time; a boxed number is the best in its column. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</figcaption>
-  </figure>
-
+    <p class="dm-note">One question set at a time. Each cell is tinted on one scale, from none at 0 to the strongest at 100. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</p>
+  </section>
   </section>
 
-  <section class="view" id="view-metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
+  <section class="view" id="metricflow" data-view="metricflow" role="tabpanel" aria-labelledby="tab-metricflow" tabindex="-1">
   <h2>Where the <span class="term" data-term="adk" tabindex="0">ADK</span> agent on <span class="term" data-term="metricflow" tabindex="0">MetricFlow</span> stands</h2>
   <figure id="fig2" class="focusable">
     <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
@@ -882,7 +917,7 @@ button[data-tip], a[data-tip] { cursor: pointer }
 
   </section>
 
-  <section class="view" id="view-every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
+  <section class="view" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
   <h2>Every run, from the cheapest setup to the most custom</h2>
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
@@ -897,7 +932,7 @@ button[data-tip], a[data-tip] { cursor: pointer }
 
   </section>
 
-  <section class="view" id="view-setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
+  <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
 <section class="sxb" id="setups-b" aria-labelledby="sxb-h">
 <style>
 .sxb { --sxb-pencil: var(--mf); margin-top: 60px; }
@@ -2308,7 +2343,7 @@ window.reportReady(() => {
 
   </section>
 
-  <section class="view" id="view-question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
+  <section class="view" id="question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
 <section class="qs" id="question-guide" aria-labelledby="qs-h">
 <h2 id="qs-h">The questions</h2>
 <p class="qs-lede">Every setup answers the same questions about one test shop, in sets. Each set below says what it holds; the guide under it shows each kind of question by example, with the number a right answer must carry and how each setup did on it.</p>
@@ -3117,7 +3152,7 @@ window.reportReady(function () {
   </section>
 
 
-  <section class="view" id="view-method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
+  <section class="view" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
   <h2>Method, briefly</h2>
   <dl class="meth" id="method-list">
     <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
@@ -3144,7 +3179,7 @@ window.reportReady(function () {
   </section>
   </div>
 </div>
-<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+<div class="tip rk-kit" id="tip" role="tooltip" aria-hidden="true"></div>
 <script>
 /* ---------- the report's parts as tabs: one open at a time, each with its own URL (#396) ---------- */
 // The hash names the open part (#summary, #decision-map, ...) or an element inside one (#term-<key>,
@@ -3547,7 +3582,7 @@ window.reportReady(function () {
   // A key ring in Figure 3 stands for its setup's own focusable group, whose hit area may lie under another's.
   const closestTip = (t) => {
     if (!t || !t.closest) return null;
-    if (t.closest(".rk-kit")) return null; // the Summary tab: the kit's bubble shows its definitions
+    if (t.closest("#summary")) return null; // the Summary tab: the kit's bubble shows its definitions
     const ring = t.closest("[data-tip-for]");
     if (ring) { const svg = ring.ownerSVGElement; return [...svg.querySelectorAll("[data-tip]")].find((g) => g.dataset.tip === ring.dataset.tipFor) || null; }
     return t.closest(TIPSEL);
@@ -3587,7 +3622,7 @@ window.reportReady(function () {
     if (e.key === "Escape") { if (pinned) unpin(true); else hideTip(); return; }
     if ((e.key === "Enter" || e.key === " ") && document.activeElement) {
       const el = document.activeElement;
-      if (el.matches && el.matches(TIPSEL) && !el.closest(".rk-kit")) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
+      if (el.matches && el.matches(TIPSEL) && !el.closest("#summary")) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
     }
   });
   window.addEventListener("scroll", () => {
@@ -3789,8 +3824,7 @@ window.reportReady(function () {
     el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");
     setTimeout(() => el.classList.remove("jumped"), 1900);
   };
-  /* ---------- Figure 1: decision map, both sets ---------- */
-  function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
+  /* ---------- the Decision map, every set ---------- */
   function unionKeys() {
     const keys = new Map();
     SETS.forEach((s) => S(s).rows.filter((r) => r.plotted).forEach((r) => { if (!keys.has(r.key)) keys.set(r.key, { key: r.key, arm: r.arm, any: r }); }));
@@ -3826,7 +3860,7 @@ window.reportReady(function () {
   }
   function renderMapTools() {
     const s = MS.set;
-    $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)}<small>${S(x).nCases} questions${setNote(x) ? ` · ${setNote(x)}` : ""}</small></button>`).join("");
+    $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)} <b>${S(x).nCases}<span class="vh"> questions</span></b>${setNote(x) ? `<span class="vh">, ${setNote(x)}</span>` : ""}</button>`).join("");
     const rows = S(s).rows.filter((r) => r.plotted);
     const box = (name, val, inner, t) => `<label class="mchk"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
     $("#map-fam").innerHTML = `<legend>Setup family</legend>` + famsPresent(rows).map((f) => box("fam", f, `${famKey(f)}<span${TERM["family-" + f] ? ' class="tt"' : ""}>${esc(D.familyLabel[f] || f)}</span>`, TERM["family-" + f] ? "family-" + f : null)).join("");
@@ -3835,12 +3869,12 @@ window.reportReady(function () {
   function renderMap() {
     const s = MS.set, groups = S(s).mapGroups || D.groups.map((g) => g.key);
     const glab = (k) => { const g = D.groupsAll.find((x) => x.key === k) || D.groups.find((x) => x.key === k); return g ? g.label : (TERM[TK(k)] ? TERM[TK(k)].label : k); };
-    const best = {}; groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g]).map((r) => r.groups[g][0]); best[g] = v.length ? Math.max(...v) : null; });
     const aria = (c) => (MS.col === c ? MS.dir : "none");
     // the whole head cell is the button: the label, its sort mark and its line under it are one hit area. The mark is
     // the usual data-table one: a neutral up-down pair on a sortable column, one arrow on the sorted one.
-    const SORTMARK = { none: `<path d="M4 1.5L7 5H1z M4 10.5L1 7h6z" fill="currentColor"/>`, descending: `<path d="M4 10.5L.8 6.2h6.4z M3.3 1.5h1.4v5H3.3z" fill="currentColor"/>`, ascending: `<path d="M4 1.5L.8 5.8h6.4z M3.3 5.5h1.4v5H3.3z" fill="currentColor"/>` };
-    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span><svg class="ar" width="8" height="12" viewBox="0 0 8 12" aria-hidden="true">${SORTMARK[aria(c)]}</svg></span><small>${sub}</small></button>`;
+    // the kit's sort mark: an up-down pair on a sortable column, one arrow on the sorted one (CSS reads aria-sort)
+    const SORTMARK = `<svg class="rk-sort-mark" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/><path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>`;
+    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span>${SORTMARK}</span><small>${sub}</small></button>`;
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
     groups.forEach((g) => (h += `<th scope="col" class="g sortable" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)), `${S(s).groupCases[g] || 0} questions`)}</th>`));
     MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num sortable" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab), sub)}</th>`));
@@ -3862,10 +3896,10 @@ window.reportReady(function () {
       groups.forEach((g) => {
         const v = r.groups[g];
         x += `<td class="g">` + (!v ? `<span class="ch none" role="img" aria-label="no question of this group in these runs">–</span>`
-          : `<span class="ch b${bin(v[0])}${r.primary && r.family !== "ref" && v[0] === best[g] ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
+          : `<span class="ch" style="--v:${P(v[0])}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
       });
       MNUM.forEach(([c]) => {
-        if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span class="${c === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
+        if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span>${c === "cw" && r.cw[0] >= 0.1 ? `<i class="rk-mark" data-k="bad" role="img" aria-label="10% or more"></i>` : ""}${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
         else x += `<td class="num"><span class="mv" data-tip="${esc(r.id)}">${pctOr(r[c])}</span></td>`;
       });
       return x + `</tr>`;
@@ -3890,7 +3924,7 @@ window.reportReady(function () {
     const lab = MS.col ? (MNUM.find((m) => m[0] === MS.col) || [0, 0, glab(MS.col.slice(2))])[2] : "";
     $("#map-live").textContent = `${S(s).label}${setNote(s) ? ", " + setNote(s) : ""}: ${shown.length} of ${total} setups and models shown, ` +
       (MS.col ? `sorted by ${lab}, ${MS.dir === "descending" ? "highest" : "lowest"} first; empty cells last.` : "in the map's order, cheapest rung first.");
-    $("#leg1").innerHTML = `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span><span class="k"><span class="nm" aria-hidden="true">–</span>not measured</span>`;
+    $("#leg1").innerHTML = `<li><span>0</span><span class="dm-ramp" aria-hidden="true"></span><span>100% right on a kind of question</span></li><li><i class="rk-mark" data-k="bad" aria-hidden="true"></i>Confident-wrong 10% or more</li><li><span aria-hidden="true">–</span>Not measured</li>`;
   }
   function redrawMap(focusCol) {
     renderMap(); stickMapHead();
@@ -4707,10 +4741,11 @@ window.reportReady(function () {
     $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
   }
 
-  /* ---------- Figure 1's column heads stay on screen while its rows scroll by ---------- */
+  /* ---------- the Decision map's column heads stay on screen while its rows scroll by ---------- */
   // The map scrolls sideways inside its box on narrow screens, which stops a sticky thead at the page's top;
   // so a copy of the head (aria-hidden, no tab stops) sits sticky above the box, laid exactly over the real
-  // head, with each column's width copied and its sideways scroll kept in step.
+  // head, with each column's width copied and its sideways scroll kept in step. The copy shows only once the
+  // real head has gone under the tab strip, so the two are never drawn on top of each other.
   let mapHeadRO = null;
   function stickMapHead() {
     const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
@@ -4719,12 +4754,18 @@ window.reportReady(function () {
       head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true"); head.dataset.mirror = "#map thead";
       wrap.parentNode.insertBefore(head, wrap);
       wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
+      const stuck = () => { const th = $("#map") && $("#map").tHead; if (!th) return;
+        const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+        head.classList.toggle("on", th.getBoundingClientRect().top < top - 0.5); };
+      window.addEventListener("scroll", stuck, { passive: true }); window.addEventListener("resize", stuck);
+      head._stuck = stuck;
     }
     const t = document.createElement("table"); t.className = "map"; t.appendChild(thead.cloneNode(true));
     t.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
     t.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
     t.querySelectorAll("button").forEach((b) => (b.tabIndex = -1)); // the copy's sort buttons work by pointer; the keyboard uses the real head
     head.replaceChildren(t);
+    if (head._stuck) requestAnimationFrame(head._stuck);
     const fit = () => {
       const W = tbl.getBoundingClientRect().width; t.style.width = W + "px"; t.style.minWidth = W + "px"; t.style.tableLayout = "fixed";
       const src = [...thead.rows[0].cells], dst = [...t.tHead.rows[0].cells];
@@ -5126,5 +5167,5 @@ window.reportReady(function () {
       return typeof v === "function" ? v.bind(t) : v;
     },
   });
-})(window.document, window.document.getElementById("view-summary")));
+})(window.document, window.document.getElementById("summary")));
 </script>

@@ -98,13 +98,13 @@ def _built(tmp_path):
 def test_the_question_section_sits_in_its_part(tmp_path):
     page, _ = _built(tmp_path)
     at = page.index('id="question-guide"')
-    assert page.index('id="view-question-sets"') < at < page.index('id="view-method"')
-    assert at > page.index('id="view-setups"')
+    assert page.index('id="question-sets"') < at < page.index('id="method"')
+    assert at > page.index('id="setups"')
 
 
 def test_each_question_set_has_its_anchor_in_the_section(tmp_path):
     page, data = _built(tmp_path)
-    section = page[page.index('id="question-guide"') : page.index('id="view-method"')]
+    section = page[page.index('id="question-guide"') : page.index('id="method"')]
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
     for st in results["sets"]:
         assert f'id="qs-{st}"' in section, st
@@ -113,7 +113,7 @@ def test_each_question_set_has_its_anchor_in_the_section(tmp_path):
 
 def test_no_retired_question_reaches_the_section_or_its_data(tmp_path):
     page, data = _built(tmp_path)
-    section = page[page.index('id="question-guide"') : page.index('id="view-method"')]
+    section = page[page.index('id="question-guide"') : page.index('id="method"')]
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
     scored = {c for spec in results["sets"].values() for c in spec.get("cases") or []}
     retired = {c for spec in results["sets"].values() for c in spec.get("retired") or []} - scored
@@ -174,7 +174,7 @@ def test_no_appendix_remains(tmp_path):
 def test_the_setup_explorer_comes_before_the_setup_map(tmp_path):
     page, _ = _built(tmp_path)
     one = page.index("What each setup is, one at a time</h2>")
-    assert page.index('id="view-setups"') < one < page.index(">What each setup is</h2>")
+    assert page.index('id="setups"') < one < page.index(">What each setup is</h2>")
 
 
 def test_coverage_selective_accuracy_and_pass3_arithmetic():
@@ -341,7 +341,7 @@ VOID = {
 
 def _summary(page):
     """The Summary tab's markup, without its style block."""
-    tab = page[page.index('id="view-summary"') : page.index('id="view-decision-map"')]
+    tab = page[page.index('id="summary"') : page.index('id="decision-map"')]
     return re.sub(r"<style>.*?</style>", "", tab, flags=re.S)
 
 
@@ -419,11 +419,42 @@ def test_every_term_the_summary_defines_has_a_glossary_entry(tmp_path):
     )
 
 
-def test_the_kit_reaches_only_the_summary_tab(tmp_path):
+def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     page, _ = _built(tmp_path)
     css = page[page.index("/* report-kit:css ") : page.index("/* /report-kit:css */")]
-    assert '<section class="view on rk-kit" id="view-summary"' in page
+    assert '<section class="view on rk-kit" id="summary"' in page
+    assert '<section class="view rk-kit" id="decision-map"' in page
+    # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
+    moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
+    for part in moved:
+        assert part in page, part
+    for part in ("metricflow", "every-run", "setups", "question-sets", "method"):
+        assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
     script = page[page.rindex("/* report-kit:js ") - 400 :]
-    assert 'getElementById("view-summary")' in script
+    assert 'getElementById("summary")' in script
+
+
+def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):
+    page, _ = _built(tmp_path)
+    tab = r'class="tab" role="tab" id="tab-([a-z-]+)" href="#([a-z-]+)" aria-controls="([a-z-]+)"'
+    tabs = re.findall(tab, page)
+    assert len(tabs) == 7
+    for name, href, panel in tabs:
+        assert name == href == panel
+        assert f'id="{panel}" data-view="{panel}" role="tabpanel"' in page
+
+
+def test_the_decision_map_is_on_the_kit_and_marks_no_best(tmp_path):
+    page, _ = _built(tmp_path)
+    start = page.index('id="decision-map" data-view')
+    panel = page[start : page.index('<section class="view" id="metricflow"')]
+    assert 'class="rk-head"' in panel and 'class="rk-switch"' in panel and 'id="map-seg"' in panel
+    start = page.index("the Decision map, every set")
+    script = page[start : page.index("Observable Plot: shared pieces")]
+    # cells on the kit's value scale, the kit's sort and wrong-and-sure marks; no best-in-column box
+    assert '<span class="ch" style="--v:${P(v[0])}"' in script
+    assert 'class="rk-sort-mark"' in script and 'data-k="bad"' in script
+    plain = re.sub(r"managed[ -]?[bB]est", "", script)
+    assert "best" not in plain
