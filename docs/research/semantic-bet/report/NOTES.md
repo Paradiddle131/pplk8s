@@ -254,3 +254,31 @@ The Question sets part opens with "The questions", before the appendix: design C
 - The critique ran in one context (no sub-agent tool), so it is a degraded run by the skill's rule; from it: the kind's heading had an outline the width of the panel (now hugs the text), the profile counts were pushed right on a phone (fixed), setup names wrapped in the run table at desktop width (columns rebalanced), and the guide's lead said "beside" where a phone puts the example below (reworded).
 - Screenshots at device scale 1 in `shots/rev3/390/`: the section, a question whose groups differ by set, and a three-turn conversation, each at desktop and phone width in light and dark.
 - Not verified: the page's Google fonts are blocked in this sandbox, so every check ran on the fallback faces (the reservation re-measures once the real fonts load); Safari and Firefox, real touch devices and screen-reader output.
+
+## Revision 3: question browser (#397)
+
+The owner picked design A of three (a modal, a side drawer, an inline panel), 2026-11-07.
+- "See all N" (one button per kind in the guide, the current kind's shown) opens a native modal `<dialog>`: the kind's questions on the left, a copy of the guide's card on the right; on a phone a full-screen sheet with a list step and a card step.
+- One switch widens the list from "This kind" to "Every kind" (all 131) and back; "Another kind" shows the guide's three lists at once in place of the list; a kind chip in the card also lists that kind and keeps the question.
+- Rows show the question's name and how it is first asked, plus "then N follow-up questions" for a conversation: no expected numbers, dots or version tags.
+- Long lists scroll inside their pane; a find box filters by name and wording and says how many match; arrows, Home, End, Page Up and Page Down move the selection, which keeps itself in view; Previous and Next step through the same list.
+- It opens on the example the guide was showing when that example is of the kind.
+- The card is the guide's own markup, filled by the guide's renderers (`fill`); the title renderer gives the name the id its card is labelled by.
+- Reserved heights are measured per card: the guide's card over every question, so it never reflows; the browser's card over the questions it lists, at its own width, so a short kind or a phone sheet carries no tall empty fields and stepping still never moves a field.
+- Escape is layered: a pinned tooltip first, then the kinds panel, then the dialog; focus stays in the dialog and returns to "See all" on close.
+- The page's one tooltip moves into the dialog while it is open (the page behind is inert), into a host at the page's origin so pinned tooltips land under their term; "More in the glossary" closes the dialog and jumps.
+- No new glossary term: every term the browser shows (kinds, the three list titles, set names, outcomes) is already a typed entry with a tooltip.
+
+### How I checked
+
+- Playwright, Chromium, 1280 × 800 and 390 × 844, light and dark, on the built `index.html`.
+- Opened by keyboard from Covered (84) and by mouse from Period (18), on the guide's example; widened to all 131; found "revenue germ" (2 of 131); picked Hidden-rule (15) from "Another kind" by keyboard.
+- Arrows and Page Down moved the selection to question 14 (16 on the phone) with the list scrolled to it; Enter opened the card step on the phone and "The list" returned.
+- 60 Tabs and 10 Shift+Tabs never left the dialog; Escape closed the kinds panel, then the dialog; focus returned to "See all".
+- A term in the card pinned its tooltip under it with the page scrolled; Escape unpinned it and kept the dialog; the tooltip went home on close.
+- The guide's card kept every field's height and its step row's place over six steps and two kind switches at both widths.
+- The browser's card kept its field heights over eight steps in Covered, Period and Fan-out join at both widths; its height on the phone is 1094, 1134 and 534 px for those kinds, against one height for every kind before.
+- No console errors, no horizontal page scroll, one "See all" visible.
+- `node tools/clipcheck.js --quick`: 0 findings (it does not open the dialog).
+- Screenshots at device scale 1 in `shots/rev3/397/`.
+- Not verified: real fonts (blocked in this sandbox), Safari, Firefox, real touch devices, a screen reader.

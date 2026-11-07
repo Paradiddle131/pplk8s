@@ -1,0 +1,6 @@
+## 2026-11-07 — Semantic track — the report's question browser behind "See all N" (#397)
+
+- Done: "See all N" in the question guide is visible and opens a modal question browser (`report/questions.html`): a kind's questions in a list that scrolls and filters inside the dialog, widened to every question in one click or switched to another kind, beside a copy of the guide's card filled by its own renderers; a full-screen two-step sheet on a phone; field heights measured per card, so the guide's card never reflows and the browser's card carries no tall empty fields for a short kind or a narrow screen; `build.py` no longer hides the buttons.
+- Evidence: Playwright at 1280 and 390 px, light and dark (open from two kinds, widen, find, keyboard paging, focus trap, layered Escape, focus return, pinned tooltip inside the dialog, guide card unmoved, no console errors, no horizontal scroll); `node tools/clipcheck.js --quick` 0 findings; `uv run --frozen pytest -q tests/test_report_build.py` 13 passed; `ruff check tests` clean; screenshots in `report/shots/rev3/397/`.
+- Decisions: none in PLAN.md; the owner picked the modal of three designs, recorded in `report/NOTES.md` § Revision 3: question browser.
+- Open: not verified on real fonts, Safari, Firefox, touch devices or a screen reader.
