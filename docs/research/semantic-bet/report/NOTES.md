@@ -1,0 +1,354 @@
+# Report notes: revision 2
+
+Direction kept: a research memo in a scientific-paper register (STIX Two Text, Barlow Semi Condensed labels, graph-paper plots, blue-black ink), with B's scatter and strip plot and C's unit plate.
+Build: `python3 build.py ../results.json`.
+Set versions (RULE.md § Set versions, #378): the page shows one version of each set family, `hard` (v1) until the owner's go on #380, then `hard-v2` with `--show hard-v2` (or `BET_REPORT_SHOW=hard-v2`, and #381 flips `SHOWN`); the other version goes to the appendix, "Appendix: other versions of a question set", labelled not yet adopted or superseded, with its numbers from `results.json`.
+Clipped text (2026-11-06, the owner's report of "Claude Code subagent" losing its first letters in the setup explorer): `tools/clipcheck.js` (Playwright) checks text clipped by a container, past the page, outside an SVG's viewBox, overflowing, overlapping or covered, at 1280, 1024, 768, 400 and 360 px in light, dark and the dark button, over every set switch, explorer setup, map target and Figure 2 glider; it found 26 problems from 6 causes (the explorer's lane heads and narrow side titles, Figure 2's two-panel and phone labels, Figure 5's right labels, Figure 4's axis title), now 0. Lane heads, model labels, family headers and slope labels wrap instead of clipping, and Figures 2 and 5 redraw once the label font loads. Run it from `report/` with `node tools/clipcheck.js --quick` after any change to the page.
+
+## The reader rule (owner, 2026-11-06; binding on every section and design)
+
+The reader sees only the report: never our code base, issues, pull requests, designs, logs or files.
+The owner: "The agents should always know that the reader will not see the code base, our issues, pull requests, our designs, etc. They are just looking at a report."
+- Show only what a reader understands at a glance, with tooltips or a short explanation where a term needs one; every shown term has a glossary entry (`build.py` `TERMS`, checked by `tests/test_report_build.py`).
+- Never on the page: hashes, freeze dates, set-version lineage ("v1", "v2", "supersedes", "not yet adopted", "new in a version"), retired questions in any form (no count, no reason, no list, not even beside a verdict: owner, 2026-11-06, RULE.md § Changes since freezing), pass or run bookkeeping, issue or PR numbers, file names, the owner's decisions, or filters over such fields ("Any / Scored / Retired / New in a version").
+- A set is named by what it holds; a difference between two sets is explained only where a reader needs it to read a number.
+- These facts stay in RULE.md, the findings and the data (`results.json`); `build.py` keeps them out of the page's visible text and its embedded data.
+
+## What changed in revision 2
+
+- Tooltips, click to pin: hover works as before. A click, a tap, or Enter/Space on a focused element pins the tooltip in place. Pinned text can be selected and copied (pointer events on, user-select text) and has a drawn close mark. While a tooltip is pinned, hovering shows nothing else. A click on another tooltip-bearing element moves the pin; a click anywhere else unpins, and so does Escape, which also returns focus to the element.
+- Term tooltips: the fifteen glossary terms are one list in `build.py` (`TERMS`). The glossary and every term tooltip read that list. Terms are marked like setup names (dotted underline) in headings, column headers, legends, tags, pillars, set labels and SVG axis labels.
+- Theme switch at the top right: drawn sun and moon, `aria-pressed`, `data-theme` on the root, kept in `localStorage`. The first visit follows the system. A change fires `report-theme` and re-renders every view, the plate's canvases included.
+- Contrast: a token check found faint marks below 3:1. The wrong-outcome pink (light) and the not-run dot (both themes) were darkened. Every text token now passes 4.5:1 on every ground, and every data mark 3:1, in both themes. Hairline rules and separators are decoration, so they were left out of the check.
+- Figure 2's threshold glider: each panel has a draggable threshold with handles at the top and bottom of the axis. The hit area is 28 px wide over the full panel. The value moves in one-point steps, by pointer or by arrow keys (Shift for five), and stays clamped to the axis. Its home is the managed best: dragging within two points snaps it there, and the line thickens as it catches. Double-click or Home also returns it home. At home nothing is dimmed. Away from home, the rows beyond the threshold dim within 120 ms (no animation under reduced motion), and a live line gives the count per set. Updates are batched per animation frame and touch only the gliders and the marks' classes.
+- Removed the "Show every model" button; each setup's "+N models" toggle remains. The unit plate opens on the hard set. Pending setups stay tagged and are never greyed.
+- Sections contract, at the top of `build.py`'s docstring:
+  - Every `sections/<name>/section.html` is inserted at `<!--SECTIONS-->`, before "Method, briefly".
+  - An early script defines `window.REPORT`, `window.reportReady(fn)` and `window.reportTheme()` before any section script runs.
+  - The tooltip and hover-to-focus handlers (`data-setup`, `data-term`, `.focusable` with `.mk[data-arm|data-key|data-fam]`) are delegated on `document`, so markup added later works.
+
+## Number-heavy prose: what I chose and why
+
+- Takeaway first: the abstract opens with one bold lead sentence. It is a template over the paired intervals and states only the direction, so the eye gets the claim before the numbers.
+- Sets as columns, measures as rows: the abstract's numbers sit in a small table with one column per question set and the same row order. A number on the frozen set and its twin on the hard set sit side by side on one line, and the layout fits 400 px with no sideways scroll.
+- Means bold, with the interval set smaller and lighter, in tabular figures, right-aligned. This is the convention of good statistical tables: the estimate reads first and the uncertainty stays beside it.
+- Two-set figure titles (Figures 1 and 4) are a single lead sentence over a compact twin table of the per-set facts, instead of one long sentence that alternates sets.
+- Pillar sentences keep their words, with numbers set bold and tabular.
+
+## How I checked
+
+- Playwright at 1280 and 400 px, light and dark, with each set selected: no console errors and no horizontal page scroll. The overlap script checked 7,578 text boxes in the abstract, winners and all figures, and found no overlaps.
+- Pinning: I pinned a tooltip, selected its text programmatically (user-select text, pointer events auto), hovered elsewhere (the pin held), clicked another name (the pin moved), clicked empty page (it closed), pressed Enter on a focused name (it pinned) and Escape (it unpinned, focus returned). Tap to pin and tap elsewhere to unpin also passed on a 400 px touch device; the tooltip stayed between 8 and 348 px of the 400 px width.
+- Gliders:
+  - Pointer drag 40 px left on the right-panel handle: the value went to 83% and 37 marks dimmed.
+  - Dragging back to within two points snapped it home, with no dimming.
+  - Keys +1 then Shift +5 on confident-wrong: the value went to 7% and 15 marks dimmed; Home and double-click returned both home.
+- Theme switch: it flips `data-theme`, `aria-pressed`, the body ground, `localStorage` and the event.
+- A stub `sections/zz-check/section.html` used `data-setup`, `data-term`, `.focusable` and `reportReady`. Its setup tooltip, term tooltip and hover-to-focus all worked, `reportReady` saw `REPORT` and it received `report-theme`. The stub was then deleted.
+- Another designer's `sections/a-setup-map/section.html` already exists and was included by this build.
+
+## Open questions
+
+- Should the glider count unique setups rather than setup-and-model rows?
+
+## After revision 2
+
+- The owner, 2026-11-05: "The new revision is good"; the pick between the two setup sections is still theirs.
+- The owner, 2026-11-05T19:50Z: "I wanna keep both for now I loved both equally": the setup map and the setup explorer both stay, in that order, before "Method, briefly".
+- The explorer's "What changes" list: a piece swapped for another of the same title (the instruction reworded, as from `custom-metricflow` to `custom-hybrid`) no longer reads as the same line added and dropped; such a pair carries its first line, so the two read apart.
+  Checked in Chromium: `custom-hybrid` shows "+ Instruction (given): metrics first; …" and "− Instruction (given): use only the metrics; …", with no console errors.
+
+## Observable Plot port
+
+- What moved to Plot: every figure's drawing.
+  - Figure 2: one Plot per panel (their x scales differ), joined into one SVG on wide screens as the page had it, stacked under 700 px.
+  - Figures 3 and 4: one Plot each. Figure 5: one Plot per family.
+  - Figure 6: one Plot per row of squares (in place of the canvases), plus the small interval charts beside each row.
+  - Plot draws the frames, grids, axes, rules, interval links, lines and role glyphs (custom Plot symbols that draw the page's own circle, square, diamond and triangle for a radius r); the y layouts that stack families, sets and lanes stay the page's own, passed to Plot as identity scales.
+- What stayed outside Plot, and why:
+  - The winners band, the decision map, the abstract and twin tables, the legends and the glossary stay HTML.
+  - The page's own tooltip, pinning, hover-to-focus, row band and glider: Plot's `tip` mark cannot pin, select or move a pin. A render transform (`tag()`) reads each element's datum from Plot's binding, and the elements are then regrouped (`collector()`): each moves, inside a shallow copy of its mark's group so it keeps that mark's styling, into per-row groups in reading order. The figures keep the hand-drawn page's DOM: `.mk[data-key|data-arm|data-fam]` around each setup, one focusable `[data-tip]` group per row and set holding its hit area and marks, and the old tab and screen-reader order. The sections contract is unchanged.
+  - The glider is hand-drawn SVG placed with Plot's x scale, with its old pointer and keyboard handlers.
+  - Figure 5's right-hand labels are placed by the page, as before.
+  - Figure 3 names its two key setups with rings and a key instead of placed text (below).
+  - Figure 6 draws its squares as one path per outcome colour (outlines as one-pixel rings) rather than one element per square, and each small interval chart is a Plot scale and zero rule with one function mark; four Plot marks per chart, or a rect per square, made the set switch three to five times slower.
+- Behaviour changes, all deliberate:
+  - Colours reach Plot as `var(--token)` strings, so a theme switch restyles every figure with no redraw; the `report-theme` event still fires and only closes a pinned tooltip.
+  - Figure 3's two key setups are ringed on the plot, above every other mark: the managed best with a solid 2 px ink ring, the deciding setup with a dashed one. A two-entry key under the plot shows each ring with the setup's name and role ("native-context-bare, Gemini default, thinking — managed best"; "custom-metricflow, Nemotron free — decides"). Hovering or focusing an entry focuses that setup on the plot and shows its tooltip, through the page's own `data-key` and `data-setup` handlers.
+    A text label still shows beside a ring, but only where it fits touching its own mark: 5 px from its glyph, covering no glyph, ring or other label, and nearer its own glyph than any other; otherwise the ring and the key carry the name, and there are no leader lines. The label is anchored on the side that touches the mark and placed once the web font has loaded (waiting at most 1.5 s); a font that lands later can only drop a label that no longer fits, never move it.
+    On the hand-drawn page the managed-best label covered the MetricFlow mark and took its hover.
+    Today the deciding setup keeps a direct label at 1280 px on both sets; the managed best, in the crowded top right, and both setups at 400 px, go by ring and key.
+  - The plate's column labels move right when one would run into the previous label on its tier (the hard set at 400 px overlapped by about 1 px before).
+  - The zero rule of the plate's small charts is drawn on the pixel grid (Plot's half-pixel offset), so it is a crisp 1 px line where the hand-drawn one spread over two.
+- Vendored: `@observablehq/plot` 0.6.17 and `d3` 7.9.0, the UMD builds from the npm tarballs (integrity checked against the registry), listed with their sha256 in `vendor/README.md`; `build.py` inlines them and refuses to build if a file's sha256 differs. The page grew from 359 kB to 866 kB.
+- Measured in Chromium at 1280 px, median of seven loads (render plus two frames), hand-drawn page against the Plot page:
+  - Figure 6's switch to the frozen set: 26 ms against 48 ms; to the hard set: 29 ms against 35 ms.
+  - A theme switch: 95 ms against 48 ms, since nothing redraws.
+  - The page's own load (DOMContentLoaded after the response): 425 ms against 571 ms, mostly parsing the two libraries.
+- Checks, old page against new:
+  - Every number the old page shows is on the new one: the visible numbers per figure, with each set selected, match one to one (2,080 at 1280 px, 2,056 at 400 px).
+  - 1280 and 400 px, light and dark, each set: no console errors, no horizontal page scroll, no overlapping text among 1,497 to 1,623 text boxes; Figure 5's label boxes that touch by 2 px are the same pairs on both pages.
+  - Every Figure 6 SVG renders at its own size (89 of 89), and its squares match the canvases pixel for pixel in both themes.
+  - The tab sequences of Figures 2 to 6 are the same stops in the same order (Figure 6 differs only in a canvas becoming an SVG), and focusing each of the 505 stops shows the same tooltip text. Closing a tooltip pinned by mouse returns focus to the mark's group in every figure.
+  - Hovering a mark lights only its own row band (and, in Figure 2, the same row in the other panel), as on the hand-drawn page.
+  - Hover, pin, select, hold, move, close, Escape, the gliders (+1 to 2% with 43 rows dimmed, Shift+5 to 7% with 13, Home, a 40 px drag to 83% with 41 rows), the plate's hover and pin, both setup sections' own focus and tooltips, and the theme switch give the old page's results.
+  - Contrast, computed from the rendered figures: text at least 5.56:1 (light) and 6.49:1 (dark); data marks at least 3.26:1 and 3.25:1. Under `prefers-reduced-motion` the transitions are 0 s and Plot adds no animation.
+
+## Feedback round 2026-11-05 night
+
+- Figure 2's gliders no longer snap.
+  Each moves in whole percent from 0 to its axis' end: by dragging a handle (the grab offset is kept, so a handle taken off-centre does not jump), by pressing in the band of the top handle or of the axis (the glider jumps there and follows the drag), and by keys: arrows ±1, Shift ±5, PageUp and PageDown ±10, Home to the managed best, End to the axis' end.
+  Sitting exactly on the managed best is the reset state: filled handles, nothing dimmed.
+  In the confident-wrong panel the bold light line in dark mode is the managed best's rule at 1%; the glider now sits at 0, left of it.
+  The hit area is 28 px wide between the handles and 18 px at the handles, so a press in the bands a few pixels off a handle jumps rather than grabs.
+- The gliders off home make one joint filter.
+  A row's set (frozen or hard) is out when it fails any glider off home, and an out set's marks dim in both panels, not only in the panel whose glider excluded it.
+  A row's setup and model text, each copy of it (one per panel in the stacked layout under 700 px), dims when every one of the row's sets is out, so in every SVG the text dims exactly when all of that row's marks there dim.
+  With one glider moved, its panel dims as before and the same sets dim in the other panel too.
+  Family headers never dim; the text uses the marks' opacity and 120 ms fade, none under reduced motion.
+  The live line counts the rows passing every active threshold, per set.
+- The glider's value sits beside its top handle on a 3 px paper halo (a text stroke).
+  It moves to the handle's left near the panel's end, and also when on the right it would cross a managed-best rule, so the halo never hides one.
+  It shows while dragging, while focused, and whenever the glider is off home.
+  Under 700 px the rows start 4 px lower, so the value clears the first family header.
+- The winners band shows the n behind each figure: the leader's questions and runs.
+  An interval with no spread (every run right, or none) is not shown as [100, 100] or [0, 0]: the page gives the exact two-sided 95% Clopper-Pearson bound over the questions (lower bound 0.025^(1/n) for n of n, upper bound 1 − 0.025^(1/n) for 0 of n), computed in `build.py`, rounded outward and marked with a glossary term, "Exact bound".
+  The same formatter serves the abstract table, the decision map's interval cells and the row tooltips; the paired differences keep their bootstrap.
+  A figure resting on fewer than 20 questions adds "few questions: reads only large gaps".
+  The pillars share grid rows (subgrid), so each set's figure sits on one line across the band; the note on what a set's uncovered questions are sits below the leader.
+  The leader is labelled and set bold, and its partial flag names its scope ("partial: 110 of 288 runs over the whole set"), apart from the pillar's own runs.
+  When a different setup leads on each set in every pillar, the band says so once above the pillars; otherwise each such pillar says it.
+  The frozen and hard terms say what each set's uncovered questions are.
+- The setup map, from 1180 px: the rungs and their setups are one list on the left, scrolling in its own column, and the map, its readout and legend sit on the right; both stay in view.
+  The section leaves the page column (up to 1456 px, centred, inside the 16 px gutters; the script sets the viewport width without its scrollbar).
+  The readout keeps the height of its longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves; the map takes the rest of the viewport's height, never under 78% of the 1148 px it has in the page column and never over its column's width; the legend comes last and is the first to go below the fold.
+  To keep the readout short, its facts run their names in, and one family's models read once ("Claude Code: Haiku; Sonnet; ...").
+  Measured in Chromium with overlay scrollbars, in the sticky state (map width against 1148 px; worst last readout line against the viewport's bottom, over every setup and rung):
+
+  | Viewport | Map | Readout |
+  | --- | --- | --- |
+  | 1280 × 800 | 895 px, 78.0% (the floor) | fits, 11 px to spare |
+  | 1280 × 900 | 986 px, 85.9% | fits, 46 px to spare |
+  | 1366 × 768 | 895 px, 78.0% (the floor) | 5 of 25 texts end up to 21 px below |
+  | 1440 × 900 | 1022 px, 89.0% | fits, 20 px to spare |
+  | 1920 × 1080 | 1194 px, 104.0% | fits, 77 px to spare |
+
+  At exactly 1180 px the map is 886 px, 77.2% (75.9% with a 15 px classic scrollbar, as the review measured; 84.6% at 1280 with one).
+  Below 1180 px the stacked layout stays: beside the list the map would fall under about 77% of its size, and on a phone it scrolls sideways in any layout, so the readout carries the facts there.
+- Checked with Playwright at 1280 and 400 px, light and dark, each set: both gliders reach every value by keyboard (101 and 51 values) and reach 0, 1, 2, 3, home and the end by dragging a handle; the value's box meets no other text, handle or line at any value, and crosses no managed-best rule; every set's marks dim exactly when the joint filter puts it out, and every text copy matches its row's marks in its own SVG; hovering a setup or rung anywhere in the list highlights the map with both in view; no console errors, no horizontal scroll, no overlapping text, and the tab stops of Figures 2 to 6 are the old ones in the old order.
+
+### Review, two rounds (an independent reviewer with its own Playwright scripts, old page d37d3bf against new)
+
+- Round 1, "fix first": at 400 px a row's text in one stacked panel dimmed for the other panel's glider; with both gliders moved, marks (per panel) and texts (joint) followed two rules; the setup map's readout fell below the fold at laptop heights (up to 145 px at 1366 by 768); the winners' figures did not line up across columns, and "a different setup leads" repeated in every pillar.
+  Decided: one joint filter everywhere, the readout's height reserved beside the list, the figures on shared grid rows and the repeated line said once.
+- Round 2, "ship": 0 violations of the joint filter in every SVG at every keyboard value and six two-glider pairs at 1280 and 400 px; every value reached by keyboard and by real mouse drag on both panels at both widths (the old page missed 92, 93, 95 and 96 on % right and 0, 2 and 3 on confident-wrong); 0 overlapping text boxes; the tab stops of Figures 2 to 6 unchanged (624, 600 and 717); numbers differ from the old page only in the exact bounds and the winners' new lines; no console errors, no horizontal scroll from 360 to 1920 px, classic 15 px scrollbars included; transitions 0 s under reduced motion; new text at least 5.56:1 (light) and 6.49:1 (dark).
+- Left as P3: near 97 to 100% right the readout's halo still covers a few pixels of the managed-best rules (it must sit left of the handle there); Home returns to the managed best, not 0 (the reset the owner asked for); at 1366 by 768 the map sits at its 78% floor and 4 of 95 hovered targets end up to 14 px below the fold; at 1440 by 900 the map is 89% where it was full size, to keep the readout in view.
+- The live line no longer says "the others are dimmed" when no row is.
+
+### The owner's question: why "Uncovered questions" reads 93% [83, 100] on the frozen set but 100% [100, 100] on the hard set
+
+Measured from the page's data (results.json at d37d3bf, the logs scored as the eval scores them), 2026-11-06.
+- Two different setups lead: on the frozen set `native-kc-max` on Gemini, 29 uncovered questions, 87 runs, 81 right and 6 declined; on the hard set `native-context` on Gemini, 19 uncovered questions, 57 runs, all 57 right.
+- The frozen leader's 6 declines are the two temperature questions (`amsterdam_temperature`, `bet_istanbul_warmer`), declined on every run by every managed agent: "the available data ... does not contain weather or temperature records"; the managed agents cannot see the weather table, so 27 of 29 (93%) is their ceiling on that set.
+- [100, 100] was the question-level bootstrap collapsing when every run is right: resampling questions that are all right can only give 100%, so it is not a 95% interval.
+  The page now shows the exact two-sided 95% Clopper-Pearson bound over the questions instead: 19 of 19 gives a lower bound of 82%.
+- The sets are hard in different ways.
+  The frozen set's uncovered questions are medians, percentiles, times between events and weather: shapes no metric composes and SQL agents sometimes get wrong (`native-context` was confidently wrong on 15 of its 87 frozen uncovered runs, mostly medians and percentiles; 0 of 57 on the hard set).
+  The hard set was built hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity; `findings/2026-11-03-356-hard-set.md`); its uncovered questions are mostly ratios and differences of two measures (11 of its 12 `multi_metric` cases are uncovered), ordinary SQL for an agent that writes SQL.
+- The owner's expectation about MetricFlow holds: the ratio questions are composable from two metric queries, so MetricFlow on the free model answers more of the hard set's uncovered questions than the frozen set's (61% of 57 runs against 38% of 29 runs; the hybrid 84% of 19 against 52% of 29).
+  The cost: on the hard set's uncovered questions MetricFlow was confidently wrong on 6 of 57 runs, against 0 of 29 on the frozen set, where it mostly declines.
+- The page also said MetricFlow "declines them by design" next to its 61%: that sentence now reads "which no single metric answers", and the setup's description says it is told to answer only through the metrics.
+
+## Revision 3 (2026-11-06): the tab strip, a structured glossary, structured tooltips, an audit of the text-heavy parts
+
+### What changed
+
+- The page is in seven parts with a tab strip, ported from design A (`variants/396/a-tabs/`): Summary, Decision map, MetricFlow agent, Every run, Setups, Question sets, Method & glossary.
+  The tabs show titles only (the owner: "There's no need to show the figure numbers on the tabs. titles are enough"); everything A verified is kept: a hash per part, `#term-*`, `#map-*`, `#setup-*` and `#other-set-versions` opening their part, Back, Forward and reload with the scroll position, the tooltip jumps and "↑ Back" across parts, figures at real width in closed parts, the WAI-ARIA tabs keyboard pattern, and the sticky heads of Figures 1 and 6 under the strip.
+- A's known gaps, closed:
+  - The setup map's sticky columns stop under the strip in the section's own CSS, and its `fit()` takes the strip's height (`--tabh`) off the viewport's.
+    Subtracting it alone left the longest readout (the Claude Code rung) 73 px below the fold at 1280 × 800, because the map's floor (78% of 1148 px) held; the floor is now 66%, the size at which every readout fits there.
+    Map width and the worst readout line against the viewport's bottom, over all 99 setups, rungs and parts: 1280 × 900 906 px, 19 px to spare; 1280 × 800 765 px, 20 px; 1366 × 768 757 px, 13 px; 1440 × 900 932 px, 20 px; 1920 × 1080 1185 px, 20 px.
+    The cost: at 1280 × 800 the map draws at 67% of its column, so its labels are smaller than before.
+  - `build.py` puts the appendix at its own placeholder, `<!--APPENDIX-->`, in the Question sets part (a template without one still gets it after the sections), so the page no longer moves it at run time; `tests/test_report_build.py` checks both.
+  - `tools/clipcheck.js` opens each part before checking it, and opens a control's part before using that control (A's `clipcheck-views.js`, now the tool itself); `--selftest` still finds all six kinds.
+- The glossary (#401) is a lookup table: 44 terms grouped by their type (`REPORT.terms[i].type`, in `REPORT.termTypes` order) under sticky group headings that fold, with a search box (matches marked, every word must match, the count announced politely), a type filter whose counts follow the search, and an empty state with a reset; it sits in its own scroll box (at most 40rem, and short enough to keep the search and filter in view) with a sticky column head.
+  On a phone each term stacks over its meaning, the filter is one row that scrolls sideways, and each group's heading sticks while its terms pass.
+  A `#term-<key>` jump (from a tooltip or a URL) undoes whatever hides its row (the search, the filter or a fold), lands on the row inside the box and the viewport, and flashes it.
+- Tooltips (#401) share one anatomy: a small-capital kicker saying what kind of thing it is (a term's glossary type, "Setup" and its family, a row's set and model role, a square's question group), a title (no longer an `h4`, so tooltips stay out of the page's outline), a line of what it is, and sections under small-capital labels whose facts are label | value rows, labels muted in one column, values in ink with the key number bold and its interval lighter.
+  A row's tooltip reads Score (with "differences paired by question" said once), How it ran (outcomes as the plate's own glyphs) and An example answer; a plate square's reads its question, then Run k of 3.
+  A pinned tooltip's sections run its full width; only the kicker and title make room for the close mark.
+  A tooltip hidden by a scroll while the pointer rests on its mark comes back when the pointer moves.
+- The audit's fixes to the other text-heavy parts:
+  - Method is one fact per row (Runs, Scoring, Exclusions, Intervals, Comparisons, Models, Claude Code) in a label column, its words unchanged, with its terms marked for their tooltips.
+  - The winners band lists the setups tied with the leader one per row, name left and figure right, so the figures line up; "Against it" reads the same way; setup names no longer break at their hyphens.
+  - The decision map's group columns carry F and H over their two chips, so a reader need not reach the caption to tell the sets apart.
+  - Line lengths of figure titles, the abstract's lead, Method and the glossary are held near 80 characters, and reading text avoids a lone last word.
+
+### How I checked
+
+Chromium with Playwright, on the built page, light and dark (the scripts lived in the session's scratch space, as A's did):
+- The parts (A's 90 checks, rerun on this page: 69 plus 21, 0 failures): each of the seven parts by click, by arrow keys, Home and End, and by URL; Back, Forward and reload with the scroll position; `#term-*`, `#map-*`, `#setup-*`, `#setup-map` and `#other-set-versions` opening their part; both tooltip jumps and "↑ Back" across parts at 1280 and 390 px; figures drawn at the one-page report's sizes after a resize while hidden (900, 1180 and 390 px); the sticky heads of Figures 1 and 6 under the strip; the strip's contrast; no panel fade or bar transition under reduced motion.
+  Each part also loaded by URL at 1280 × 900, 1280 × 800 and 390 × 844 in both themes (42 loads): no console errors, no sideways page scroll.
+- The glossary (30 checks, 0 failures, at 1280 light and 390 dark): 44 rows in 6 groups; a typed search ("join": 3 rows, marks, "3 of 44"); the filter (one group, "8 of 44"); a heading folding its group; tooltip jumps into a row hidden by the search, into a folded group and into a row the filter hides, each lands inside the box and the viewport, flashes, and "↑ Back" returns; a `#term-` hash change into a filtered-out row; a load on `#term-ratio-of-sums`; the sticky head and group heading; the empty state and its reset.
+- Tooltips and dimming (134 checks, 0 failures): every kind (a term, a row in Figures 2 to 5 and in the decision map, a setup in the plate, the setup map and the explorer, a plate square) by hover and pinned by click or tap, at 1280 and 390 px, light and dark: kicker, title, sections, labels coloured apart from values, no heading inside, inside the viewport, every text at least 5.62:1 on the tooltip's ground; Escape closes each.
+  Figures 2 to 5: hover focuses and leaving clears; a click locks the focus and a second mark's hover adds nothing while it holds; Escape clears both; in Figure 2 a glider off home drops a lock and its pin, hover and click add no focus dimming while it is off home, and Home returns it and lets hover focus again.
+- The setup map's readout against the fold: the table above.
+- `node tools/clipcheck.js --quick`: 0 findings, no console errors, no sideways page scroll, at 1280, 1024, 768, 400 and 360 px in light, dark and the dark button, each part opened in turn; `--selftest` finds all six kinds.
+- `tests/test_report_build.py`: 8 passed (one new test: the appendix's placement).
+- Screenshots at device scale 2 in `shots/rev3/`: the strip (desktop light, phone light), the glossary (desktop light, phone dark, each with a search applied too), a pinned row tooltip and a pinned term tooltip in light and dark.
+
+### The impeccable audit and critique (text-heavy parts)
+
+Its detector (`impeccable detect`, the skill's bundled binary, telemetry off) scanned the template, both sections and fourteen static snapshots of the built page per viewport (Summary, Decision map, Method & glossary with and without a search, a pinned term, row and setup tooltip; light and dark; 1280 × 800 and 390 × 844).
+The critique ran in one context (no sub-agent tool was available), so it is a degraded run by the skill's own rule, and it was not saved under `.impeccable/` (outside the files this revision may change).
+- Fixed:
+  - Line length: 22 findings at 1280 (figure titles at 112 to 115 characters a line, Method at 98 to 101, the glossary's meanings at 91 to 92, the abstract's lead at 92), now 0: titles at 40rem, the lead at 42rem, Method and the glossary narrower.
+  - Undersized text: 54 findings of setup names at 10.8 px (the winners band, tooltips) and 10.5 px (the abstract table on a phone), now 0 (12 px and 11 px).
+  - Skipped headings: tooltips' `h4` titles under an `h2`, 6 findings, now 0 (titles are no longer headings).
+  - Stragglers at 390 px: 26 lone last words (byline, captions, glossary, Method), now 0 (`text-wrap: pretty` on reading text).
+  - From the critique, beyond the detector: Method's three paragraphs mixed seven facts (now one per row); the winners band's tied setups ran on as one sentence with setup names broken at their hyphens (now one per row, figures aligned); the decision map's paired chips named their sets only in the caption below a long table (now F and H over the chips); tooltips had no separation of title, sections, labels and values (above).
+- Left, and why:
+  - Text under a pinned tooltip (32 findings at 1280, 36 at 390): a pinned tooltip covers what it sits on by design.
+  - 11.5 px text in the figures' SVG (18 at 1280, 46 at 390): axis and tick labels of the plots, not text-heavy components, and sized to fit their panels; outside this revision's scope.
+  - The template's static scan pairs the dark theme's `--ink-3` with the light tooltip ground (2.7:1); the two never meet on the page, where every tooltip text is at least 5.62:1.
+  - A row tooltip stays tall (about 470 to 510 px at 1280): it keeps every fact it had; it fits a 390 × 844 screen.
+  - The glossary's type filter is seven choices, more than the critique's four at a glance; the counts and "All types" carry it, and it wraps to two rows at desktop width.
+  - Trade-offs kept from A: find-in-page searches only the open part; seven parts.
+- Not verified: Safari and Firefox, real touch devices, screen-reader output.
+
+## Revision 3: question section (#390)
+
+The Question sets part opens with "The questions", before the appendix: design C, the field guide, with the owner's changes of 2026-11-06.
+`build.py` (`question_guide`) writes its markup at `<!--QUESTIONS-->` and its data as `REPORT.questionGuide`; `questions.html` holds its style and script.
+
+### What it shows
+
+- Three set profiles side by side (stacked on a phone), each with the anchor `#qs-<set>`: what the set holds, its number of questions, its group mix as bars, and whether the figures draw it or its totals sit in the appendix.
+  A set's name elsewhere on the page now jumps there from its pinned tooltip ("What the set holds"); other terms still jump to the glossary.
+- "Questions by kind": three lists shown at once on the left, titled Groups, Hard to interpret and Hard in SQL, each title a glossary term; on a phone they wrap as chips.
+  Picking a kind shows its definition and one real question; Previous and Next, or the arrow keys, step through the others, ordered with questions the figures have runs on first, then the plainest.
+  A kind counts each question once across the sets: Jargon has 13.
+- The card has one fixed layout: a name and the sets that hold it, then Asked (every turn with its expected number), Groups, What makes it hard, Obvious SQL and How each setup did, always in that order.
+  Every field reserves the height of its tallest content over all 131 questions, measured at the card's width (again on resize and once the fonts load), and the kind's heading reserves the tallest definition, so stepping or switching kinds never moves a field; a field a question lacks reads "None listed" or "No known trap" in muted ink.
+  The cost is empty space under a one-turn question, sized by the three-turn conversations.
+- Chips in the card are the kinds' own terms: hover or focus shows the definition, a click or Enter opens that kind and moves focus to its heading.
+- How each setup did is a table, not hover text: each setup once, on the row the figures read it on, cheapest first, its three runs as the plate's squares with a key, and a plain summary ("Right on every run: 9 of 18 setups · Confidently wrong at least once: 5"); two columns of rows on a wide card, one on a narrow one.
+  A question asked only in the extended hard set says that set is not drawn and points to the appendix.
+- Set versions show only where a question needs them: a question uncovered in the hard set and composable in the extended hard set shows both groups, each with its set, and one sentence on why.
+- Gone, as the owner asked: the "Every question" list and its filters, freeze dates, hashes, "new in" tags, retirement counts and unlabelled expected numbers; retired questions are absent from the markup and the data.
+- "See all N": one button per kind, hidden (the `hidden` attribute) until the question browser (#397) lands; a click dispatches `CustomEvent("qs:see-all", {detail: {category}})` on `document`, the category being the kind's glossary key.
+- New glossary terms, each typed: Extended hard set, Groups, Hard to interpret, Obvious SQL, Declined, Unclear.
+
+### How I checked
+
+- Playwright, Chromium, at 1280 × 900 and 390 × 844, light and dark: 97 checks, 0 failures.
+  Every example of every kind stepped through (287 steps, all 131 questions reached): the card's height and every field's box stay the same to the pixel, no field overflows its box, the card never scrolls sideways, and a full cycle returns to the first example.
+  Keyboard: Tab reaches the open kind (one tab stop for the lists), arrows, Home and End move and select with wrap-around, Tab goes on to the kind's term, Previous and Next; arrows and Enter step; focus rings show.
+  A chip opens its kind by click and by Enter without pinning a tooltip; Jargon shows 13; the see-all buttons are hidden, one per kind, and dispatch their event; every text node in the section has at least 4.5:1 contrast on its ground; no console errors, no sideways page scroll.
+  A hard-set term on the Summary jumps to `#qs-hard` and "↑ Back" returns; a URL to `#qs-hard-v2` opens the part there; the theme button repaints the card.
+- `node tools/clipcheck.js --quick`: 0 findings.
+  It had one before this revision: on a 400 or 360 px screen Figure 2's label column (132 px) was narrower than `cc-metricflow-compute`, so a glyph near 0% covered it; the narrow column now fits the longest setup name.
+- `tests/test_report_build.py`: 13 passed (five new: the section's place before the appendix, every set's anchor, no retired question in the section or its data, the hidden see-all buttons, a typed term for every list title and kind); `ruff check tests` clean.
+- The impeccable detector (0.1.18, telemetry off) on six static snapshots of the part (a kind at rest, a question whose groups differ by set, a three-turn conversation; light and dark) at 1280 × 800 and 390 × 844, and on `questions.html`: it first found the lead paragraph at 93 characters a line and a flat heading scale (the card's name larger than the profiles' headings); both fixed, now 0 findings and 0 advisories.
+- The critique ran in one context (no sub-agent tool), so it is a degraded run by the skill's rule; from it: the kind's heading had an outline the width of the panel (now hugs the text), the profile counts were pushed right on a phone (fixed), setup names wrapped in the run table at desktop width (columns rebalanced), and the guide's lead said "beside" where a phone puts the example below (reworded).
+- Screenshots at device scale 1 in `shots/rev3/390/`: the section, a question whose groups differ by set, and a three-turn conversation, each at desktop and phone width in light and dark.
+- Not verified: the page's Google fonts are blocked in this sandbox, so every check ran on the fallback faces (the reservation re-measures once the real fonts load); Safari and Firefox, real touch devices and screen-reader output.
+
+## Revision 3: appendix table (#398)
+
+The appendix of other question sets is now one table per set the figures do not draw, built by `build.py` (`appendix_html`) with its own small style and script.
+- What it shows: every setup and model of that set on one row, its setup name (with its tooltip) over its model and role glyph in its family's colour, as the decision map draws them.
+- Columns: questions run of the set (a partial count carries the "partial" term), right and confident-wrong as a mean with its 95% interval (an exact bound carries the "exact" term, a confident-wrong of 10% or more its dot), and right per question group as the map's shaded chips.
+- Sorting: every numeric column's header is a button; a click, Enter or Space sorts highest first, then lowest first, then back to the decision map's order (rung, setup, then the model the map reads it on first).
+  The sort is stable (ties keep the map's order), empty cells sort last either way, and `aria-sort` and a live status line say what is sorted.
+- Filtering: two groups of checkboxes, setup family and model (free model, Claude API, Gemini, Claude Code), each a glossary term with its tooltip on hover and focus; no match shows a sentence, never an empty table.
+- An empty group cell reads "–", named "no question of this group in these runs" to a screen reader, never 0; each chip is named "N% right over M questions".
+- The set's line says what it tests ("the hard set's questions plus fifteen that are hard to write in SQL ..."), never its history.
+- Headers and filters keep their term tooltips; their click, Enter and Space sort or filter instead of pinning the tooltip.
+- Nothing else was added: no rung rows (they would break under a sort), no best-in-column mark, no row tooltip.
+
+### How I checked
+
+- Playwright, Chromium, 1280 × 900 and 390 × 844, light and dark: 3472 checks, 0 failures.
+  Each of the eight numeric columns sorted both ways (order, stability on ties, empty last, `aria-sort` on it and "none" on the others, no tooltip pinned) and back to the default order on a third press; each family and each model kind alone; all models off shows the no-match sentence; keyboard only (Space ticks a filter, Enter and Space sort, Tab moves between headers and shows the term); no console errors, no sideways page scroll (the table scrolls in its own box on a phone).
+- `node tools/clipcheck.js --quick`: 0 findings; its first run found 104, the table's visually hidden caption and per-chip text read as overlapping text, so those became the table's and chips' accessible names.
+- `tests/test_report_build.py`: 18 passed (five new: one table per hidden set with a sort button per numeric column and both filters, every setup and model row in the map's order, an empty cell never written as a number, no version or retired wording, every term a typed glossary term); `ruff check tests` clean.
+- Screenshots at device scale 1 in `shots/rev3/398/`: the appendix at rest, sorted by confident-wrong, and filtered (phone), at desktop and phone width in light and dark.
+- Not verified: Safari and Firefox, real touch devices, screen-reader output; the page's web fonts are blocked in this sandbox.
+## Revision 3: question browser (#397)
+
+The owner picked design A of three (a modal, a side drawer, an inline panel), 2026-11-07.
+- "See all N" (one button per kind in the guide, the current kind's shown) opens a native modal `<dialog>`: the kind's questions on the left, a copy of the guide's card on the right; on a phone a full-screen sheet with a list step and a card step.
+- One switch widens the list from "This kind" to "Every kind" (all 131) and back; "Another kind" shows the guide's three lists at once in place of the list; a kind chip in the card also lists that kind and keeps the question.
+- Rows show the question's name and how it is first asked, plus "then N follow-up questions" for a conversation: no expected numbers, dots or version tags.
+- Long lists scroll inside their pane; a find box filters by name and wording and says how many match; arrows, Home, End, Page Up and Page Down move the selection, which keeps itself in view; Previous and Next step through the same list.
+- It opens on the example the guide was showing when that example is of the kind.
+- The card is the guide's own markup, filled by the guide's renderers (`fill`); the title renderer gives the name the id its card is labelled by.
+- Reserved heights are measured per card: the guide's card over every question, so it never reflows; the browser's card over the questions it lists, at its own width, so a short kind or a phone sheet carries no tall empty fields and stepping still never moves a field.
+- Escape is layered: a pinned tooltip first, then the kinds panel, then the dialog; focus stays in the dialog and returns to "See all" on close.
+- The page's one tooltip moves into the dialog while it is open (the page behind is inert), into a host at the page's origin so pinned tooltips land under their term; "More in the glossary" closes the dialog and jumps.
+- No new glossary term: every term the browser shows (kinds, the three list titles, set names, outcomes) is already a typed entry with a tooltip.
+
+### How I checked
+
+- Playwright, Chromium, 1280 × 800 and 390 × 844, light and dark, on the built `index.html`.
+- Opened by keyboard from Covered (84) and by mouse from Period (18), on the guide's example; widened to all 131; found "revenue germ" (2 of 131); picked Hidden-rule (15) from "Another kind" by keyboard.
+- Arrows and Page Down moved the selection to question 14 (16 on the phone) with the list scrolled to it; Enter opened the card step on the phone and "The list" returned.
+- 60 Tabs and 10 Shift+Tabs never left the dialog; Escape closed the kinds panel, then the dialog; focus returned to "See all".
+- A term in the card pinned its tooltip under it with the page scrolled; Escape unpinned it and kept the dialog; the tooltip went home on close.
+- The guide's card kept every field's height and its step row's place over six steps and two kind switches at both widths.
+- The browser's card kept its field heights over eight steps in Covered, Period and Fan-out join at both widths; its height on the phone is 1094, 1134 and 534 px for those kinds, against one height for every kind before.
+- No console errors, no horizontal page scroll, one "See all" visible.
+- `node tools/clipcheck.js --quick`: 0 findings (it does not open the dialog).
+- Screenshots at device scale 1 in `shots/rev3/397/`.
+- Not verified: real fonts (blocked in this sandbox), Safari, Firefox, real touch devices, a screen reader.
+
+## Revision 4 (2026-11-07)
+
+### What changed
+
+- One decision map: Figure 1 has a set switch (the page's segmented control) over every set with rows, the frozen, hard and extended hard sets; the extended hard set's button and the map's status line say it is not counted in the findings yet.
+  The other figures still draw the frozen and hard sets only (`setOrder`); the map reads `mapOrder`.
+- The map took the appendix table's interaction: every numeric column's head sorts (highest first, lowest first, back to the map's order; stable, empty cells last as "–", `aria-sort`, a live status line), and checkboxes filter by setup family and model kind.
+  In the map's order the rungs, the "+N models" rows, the verdict tags, intervals and group chips stay; a sort lists every setup and model flat, and its third press restores the rungs.
+- The appendix is gone from the Question sets part, with the set profiles' "Drawn in every figure" and "Not drawn in the figures" lines; a link that pointed at it now opens the map on that set (`#map-set-<set>`).
+  A question asked only in the extended hard set now shows how each setup did, since that set's runs are in the page's data.
+- New map columns, each a typed glossary term whose tooltip gives its meaning and a "Computed as" line: Accuracy (the column was "Right"), Coverage, Selective accuracy and pass^3; Confident-wrong is unchanged.
+  Accuracy keeps its interval; the three new measures are plain values, since the page has no interval method for them.
+- Every run (Figure 6): a click on a square, a click on a question's tick in the head's new tick strip, or Enter on a row or on the strip highlights that question on every row and fades every other column; the same question again, Escape or "Show every question" clears it, and another question moves it.
+  The live line above the plate names the question and how many setups were right on every run; it and the button keep their place, so a highlight never moves the plate.
+- A pinned tooltip moves: its kicker row is the handle, with a grab cursor and a grip mark shown only when pinned; drag by mouse, pen or touch (pointer events), or Tab from the pinned mark to the handle and nudge with the arrow keys (Shift for larger steps); it stays inside the viewport, and unpinning forgets the place.
+- "Over the floor" reads "How many points more often a setup is right than the bare agent with the tables only, on the same questions."
+  Its glossary row adds labelled lines: Computed as, The floor, Per question, Combined, Example (three questions at +67, 0 and −33 points give +11) and Reading.
+  Every glossary row now carries such lines instead of repeating its tooltip: handwritten ones for the measures and setups, and from the data for kinds of question (an example question and a count), sets (questions and setups) and setup families (their setups).
+- Setups: "What each setup is, one at a time" now comes before "What each setup is" (`build.py` `SECTION_ORDER`).
+
+### Added to revision 4 (the owner, through the coordinator, 2026-11-07)
+
+- Every run: a highlighted question shows in a strip above the plate as the question guide's card shows it: every turn with its expected answer (labelled "Expected" or "Must carry"), its groups in the set shown and what makes it hard, as the card's own chips with their term tooltips, and one link, "Open in the question guide", which opens the Question sets part at the guide's card on that question (its first kind, a history entry that Back returns from).
+  The strip's renderers are the guide's own (`questions.html` exposes `__qsRender` and `__qsOpen`); it clears with the selection and keeps the height of the set's tallest question at its width, so moving between questions never moves the plate (about 80 to 150 px at 1280, 210 to 250 px at 390).
+- Glossary: every tooltip keeps its one-liner (only "Over the floor" changed); every glossary row has a few labelled short lines that go further (how it is computed, an example, how to read it; for a kind of question, why it is hard or what fixes the obvious SQL, then a real example and a count).
+  `build.py` refuses to build when a longer line repeats or contains its one-liner (`check_longer_lines`), and a test covers it.
+- Bug: on Every run, while a square's tooltip was pinned, hovering other squares replaced its text and leaving the plate left the last hovered one pinned.
+  Reproduced in Playwright (a pinned square, then a hover over other questions and out of the plate: the text changed, 2 failing checks), then fixed where it lived: `showTipHTML` does nothing while a tooltip is pinned, the plate's hover and arrow keys leave a pin alone, and a click on a square pins that square itself, so a click on another question moves the pin and the highlight, and the same one again or Escape clears both.
+  The same checks on Figures 2 to 5 and the decision map passed before and after; their hover already stopped while pinned.
+- `native-context-python` is off the page entirely (no figure, table, winners band, setup list, glossary line or tooltip): it never ran Python, so it repeats `native-context`; `build.py` drops it with `HIDDEN_ARMS` before anything is built, and its runs stay in the logs and `results.json`; a test checks the page never names it.
+- Sorting: each sortable head cell of the decision map is one button over the whole cell (label, mark and line under it), with no text cursor and no text selection; the mark is the usual data-table one, a neutral up-down pair on a sortable column and a single arrow on the sorted one, with `aria-sort` on the head cell.
+
+### Choices
+
+- The switch shows one set at a time, so the map's paired F and H chips became one chip per group; a sort over two sets at once would have no single order.
+- The extended hard set adds a Composable group column, its largest group; the frozen set's map keeps the four headline groups.
+- Coverage counts every decline as not answered, including a run scored right because it asked which meaning was meant (RULE.md § Scoring a run); the build reads such a run from its turns (a right turn with no figure that asks back or declines), and today's runs hold none.
+- Accuracy stays the page's mean over questions; its tooltip says that with three runs on every question it equals right runs ÷ all runs.
+- Coverage and selective accuracy are over runs; pass^3 is shown only where every question a row ran has three runs, "–" otherwise.
+- A click on a plate square still pins its tooltip as before; a click on empty page unpins it and keeps the highlight.
+
+### How I checked
+
+- Playwright (Chromium) at 1280 × 900 and 390 × 844, light and dark: 394 checks, 0 failures; the pin-and-hover check (plate, Figures 2 to 5, the map): 2 failures before the fix, 0 after, with the move, clear and Escape cases added.
+  A head cell sorted by a click in its corner (no text selected, one arrow); the question strip's content, the plate unmoved across six questions, its link opening the guide's card on that question and Back returning; every set in the switch; each new column and confident-wrong sorted both ways (order, empty last, `aria-sort`, flat, no tooltip pinned) and back to the map's order; a sort by keyboard keeps focus; a family filter, all models off (the no-match sentence) and the filters restored by keyboard; a question highlighted by click, moved, cleared by a second click, by Escape and by the button, and by keyboard on the tick strip and on a row; a tooltip pinned, dragged by mouse, clamped to the viewport, nudged by keyboard, Shift+Tab back, unpinned and re-pinned by its mark, and dragged by touch pointer events at 390 px; the floor's tooltip and glossary row; the Setups order; `#map-set-hard-v2` opening the map on that set; no console errors, no sideways page scroll.
+- `tests/test_report_build.py`: the set switch covers every set with rows, no appendix remains, the explorer precedes the setup map, the score arithmetic on a fixture, an asked-back turn, the scores against the runs, the new terms typed with a calculation, every term's longer lines.
+- Screenshots at device scale 1 in `shots/rev4/`.
+- Not verified: real touch devices (touch was synthetic pointer events), Safari, Firefox, a screen reader; the web fonts are blocked in this sandbox.

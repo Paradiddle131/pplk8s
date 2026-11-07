@@ -56,6 +56,17 @@ BUILDS = {
         ),
         contexts={"dbt": "dbt"},
     ),
+    "el-factory": Build(
+        "services/el-factory",
+        "requirements-bigquery.txt",
+        export=(
+            "--frozen",
+            "--no-default-groups",
+            "--extra",
+            "bigquery",
+            "--no-emit-project",
+        ),
+    ),
 }
 POSTGRES = re.compile(
     r"^(dbt-postgres|psycopg|psycopg2|psycopg2-binary|psycopg-binary|psycopg-c|psycopg-pool|asyncpg)$"

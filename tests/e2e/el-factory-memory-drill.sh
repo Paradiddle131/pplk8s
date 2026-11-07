@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # EL Factory memory drill (PLAN.md D35, issue #90; docs/runbook.md Phase 8 drill 1): load real FHVHV
 # row groups through one in-cluster EL Factory pod, several months at once.
-# Each gunicorn process holds at most one chunk (one Parquet row group) in flight (chunks.py
+# Each gunicorn process holds at most one chunk (one Parquet row group) in flight (tlc/chunks.py
 # CHUNK_SLOT), so a few chunks per month show the peak: a whole FHVHV month (~20 M rows) would not
 # raise it, and would not fit the warehouse's 15 GB budget either.
 #

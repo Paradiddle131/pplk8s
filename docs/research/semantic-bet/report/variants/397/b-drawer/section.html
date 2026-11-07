@@ -1,0 +1,334 @@
+<style>
+/* ---------- the question browser (#397), design B: a side drawer beside the guide, a bottom sheet on a phone ----------
+   "See all N" opens it on that kind; one press widens it to every question. The guide's lists stay in view at desktop
+   width and keep driving it: picking another kind there re-scopes the open drawer. A question opens, inside the
+   drawer, to the guide's own card (its markup cloned, filled by the guide's own renderer). */
+.qs .qs-seeall:not([data-current]) { display: none; }
+
+.qsd { position: fixed; z-index: 15; top: 0; right: 0; bottom: 0; width: clamp(24rem, calc(100vw - 340px), 40rem);
+  display: flex; flex-direction: column; background: var(--paper); color: var(--ink);
+  border-left: 1px solid var(--ink-2); box-shadow: -14px 0 32px -18px rgba(0, 0, 0, .38);
+  font-family: var(--serif); font-size: 17px; line-height: 1.5;
+  transform: translateX(104%); visibility: hidden; transition: transform .22s cubic-bezier(.2, .7, .2, 1), visibility 0s linear .22s; }
+.qsd.on { transform: none; visibility: visible; transition: transform .22s cubic-bezier(.2, .7, .2, 1), visibility 0s; }
+.qsd-scrim { position: fixed; inset: 0; z-index: 14; background: rgba(10, 16, 22, .42); opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s linear .2s; }
+.qsd-scrim.on { opacity: 1; visibility: visible; transition: opacity .2s, visibility 0s; }
+.qsd-grip { display: none; }
+
+/* the head: what is listed, the one-step widen, find, and the three lists folded away */
+.qsd-head { flex: none; padding: 16px 20px 10px; border-bottom: 1px solid var(--ink); background: var(--paper); }
+.qsd-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: start; }
+.qsd-k { margin: 0 0 2px; font-family: var(--label); font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); line-height: 1.3; }
+.qsd h2 { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; line-height: 1.25; margin: 0; }
+.qsd h2:focus { outline: none; }
+.qsd h2:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.qsd h2 .n { font-family: var(--label); font-size: 14px; font-weight: 400; color: var(--ink-3); margin-left: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qsd-def { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--ink-2); max-width: 36rem; text-wrap: pretty; }
+.qsd .qsd-x { appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink); width: 36px; height: 36px; border-radius: 3px; display: grid; place-items: center; cursor: pointer; margin: -4px -6px 0 0; }
+.qsd .qsd-x:hover { background: var(--row-band); border-color: var(--ink-3); }
+.qsd-ctl { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin: 12px 0 0; }
+.qsd-ctl .seg button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.qsd-ctl .seg .c { font-variant-numeric: tabular-nums; opacity: .78; }
+.qsd-find { position: relative; flex: 1 1 11rem; min-width: 0; }
+.qsd-find svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.qsd-find input { width: 100%; min-height: 34px; padding: 5px 10px 5px 31px; border: 1px solid var(--ink-3); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 14.5px var(--label); }
+.qsd-find input::placeholder { color: var(--ink-3); opacity: 1; }
+.qsd .qsd-more { appearance: none; border: 0; background: none; padding: 2px 0; min-height: 32px; cursor: pointer; font: 500 14px var(--label); color: var(--ink); display: inline-flex; align-items: center; gap: 5px; text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.qsd .qsd-more svg { display: block; transform-origin: 50% 50%; transition: transform .12s ease-out; }
+.qsd .qsd-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.qsd-kinds { margin: 10px 0 2px; display: grid; gap: 8px; }
+.qsd-kinds[hidden] { display: none; }
+.qsd-kl { display: grid; grid-template-columns: 8.2rem minmax(0, 1fr); gap: 4px 12px; align-items: baseline; }
+.qsd-kl h3 { font: 600 14px var(--label); margin: 0; color: var(--ink); }
+.qsd-kl ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.qsd .qsd-kc { appearance: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; padding: 0 7px; min-height: 28px; cursor: pointer; font: 13.5px var(--label); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
+.qsd .qsd-kc .c { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.qsd .qsd-kc:hover { border-color: var(--ink-3); }
+.qsd .qsd-kc[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.qsd .qsd-kc[aria-pressed="true"] .c { color: var(--paper); }
+
+/* the body scrolls inside the drawer; the page behind never moves */
+.qsd-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+.qsd-count { position: sticky; top: 0; z-index: 2; margin: 0; padding: 7px 20px 6px; background: var(--paper); border-bottom: 1px solid var(--rule); font: 13.5px var(--label); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.qsd-list { list-style: none; margin: 0; padding: 0 0 24px; }
+.qsd-letter { position: sticky; top: var(--qsd-ch, 31px); z-index: 1; padding: 3px 20px 2px; background: var(--paper-2); border-bottom: 1px solid var(--grid-major); font: 600 12.5px var(--label); letter-spacing: .07em; color: var(--ink-2); }
+.qsd .qsd-row { appearance: none; display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px dotted var(--grid-major); background: transparent; color: var(--ink); cursor: pointer; padding: 9px 20px 10px 17px; border-left: 3px solid transparent; font: inherit; }
+.qsd .qsd-row:hover { background: var(--row-band); }
+.qsd .qsd-row:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+.qsd .qsd-row[aria-current="true"] { border-left-color: var(--ink); background: var(--row-band); }
+.qsd-rn { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; font: 600 15.5px var(--label); line-height: 1.3; }
+.qsd-rt { font: 400 13px var(--label); color: var(--ink-3); white-space: nowrap; }
+.qsd-rq { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 2px; font-size: 14.5px; line-height: 1.42; color: var(--ink-2); }
+.qsd mark { background: var(--sel); color: inherit; border-radius: 1px; padding: 0 1px; }
+.qsd-empty { margin: 0; padding: 22px 20px; font: 14.5px var(--label); color: var(--ink-2); }
+.qsd .qsd-empty button { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* one question: a back link and stepping, then the guide's card */
+.qsd-cardv[hidden], .qsd-listv[hidden] { display: none; }
+.qsd-cardv { padding: 0 20px 28px; }
+.qsd-step { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; background: var(--paper); border-bottom: 1px solid var(--rule); font: 14px var(--label); color: var(--ink-2); }
+.qsd .qsd-back { appearance: none; border: 0; background: none; padding: 2px 0; min-height: 32px; cursor: pointer; font: 500 14px var(--label); color: var(--ink); display: inline-flex; align-items: center; gap: 4px; margin-right: auto; text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.qsd-pos { font-variant-numeric: tabular-nums; }
+.qsd .qs-card { margin-top: 12px; }
+
+@media (max-width: 760px) {
+  /* a bottom sheet: modal, over a scrim, most of the screen's height */
+  .qsd { top: auto; left: 0; width: auto; height: min(90dvh, calc(100dvh - 24px)); border-left: 0; border-top: 1px solid var(--ink-2); border-radius: 10px 10px 0 0;
+    box-shadow: 0 -14px 32px -16px rgba(0, 0, 0, .45); transform: translateY(104%); }
+  .qsd-grip { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--rule); margin: 8px auto 0; flex: none; }
+  .qsd-head { padding: 8px 16px 10px; }
+  .qsd-count, .qsd-letter { padding-left: 16px; padding-right: 16px; }
+  .qsd .qsd-row { padding: 9px 16px 10px 13px; }
+  .qsd-cardv { padding: 0 12px 24px; }
+  .qsd-kl { grid-template-columns: minmax(0, 1fr); }
+  .qsd-ctl .seg { flex: 1 1 100%; }
+  .qsd-ctl .seg button { flex: 1 1 0; justify-content: center; }
+  .qsd[data-view="card"] .qsd-def { display: none; }
+  .qsd .qsd-back { flex-basis: 100%; }
+  .qsd-step .qs-btn { flex: 1 1 0; justify-content: center; }
+  .qsd-pos { flex: 1 1 auto; text-align: center; }
+  .qsd-def { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+}
+@media (prefers-reduced-motion: reduce) { .qsd, .qsd.on, .qsd-scrim, .qsd-scrim.on, .qsd .qsd-more svg { transition: none; } }
+</style>
+<script>
+/* ---------- the question browser (#397), design B ---------- */
+// Needs one seam in questions.html: the guide hands its card renderer to its root (`root.qsFill = fill;`),
+// so the drawer's card is the guide's card, filled by the same code.
+window.reportReady(function () {
+  "use strict";
+  const D = window.REPORT, G = D && D.questionGuide, guide = document.getElementById("question-guide");
+  if (!G || !guide || typeof guide.qsFill !== "function") return;
+  const fillCard = guide.qsFill;
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
+  const CAT = {}; G.cats.forEach((c) => (CAT[c.key] = c));
+  const term = (key, text) => (TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${esc(text == null ? TERM[key].label : text)}</span>` : esc(text == null ? key : text));
+  const byName = (a, b) => G.q[a].name.localeCompare(G.q[b].name, "en", { sensitivity: "base" });
+  const ALL = Object.keys(G.q).sort(byName);
+  const sorted = {}; G.cats.forEach((c) => (sorted[c.key] = c.ids.slice().sort(byName)));
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const sheetMQ = matchMedia("(max-width: 760px)");
+  const reduce = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  const svgX = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  const chevL = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const chevR = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const chevD = '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ---------- the drawer's markup ---------- */
+  const scrim = document.createElement("div"); scrim.className = "qsd-scrim"; scrim.setAttribute("aria-hidden", "true");
+  const dr = document.createElement("aside");
+  dr.className = "qs qsd"; dr.id = "qs-drawer"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-labelledby", "qsd-h"); dr.inert = true;
+  dr.innerHTML = `<div class="qsd-grip" aria-hidden="true"></div>
+<div class="qsd-head"><div class="qsd-top"><div><p class="qsd-k" id="qsd-k"></p><h2 id="qsd-h" tabindex="-1"></h2></div>
+<button type="button" class="qsd-x" id="qsd-x" aria-label="Close the question list">${svgX}</button></div>
+<p class="qsd-def" id="qsd-def"></p>
+<div class="qsd-ctl"><div class="seg" role="group" aria-label="Which questions to list"><button type="button" data-scope="kind" aria-pressed="true"></button><button type="button" data-scope="all" aria-pressed="false">Every question <span class="c">${ALL.length}</span></button></div>
+<label class="qsd-find"><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Find a question</span><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="qsd-q" placeholder="Find a question" autocomplete="off" spellcheck="false"></label>
+<button type="button" class="qsd-more" id="qsd-more" aria-expanded="false" aria-controls="qsd-kinds">Other kinds ${chevD}</button></div>
+<div class="qsd-kinds" id="qsd-kinds" hidden>${G.lists.map((L, li) => `<div class="qsd-kl"><h3 id="qsd-l${li}">${term(L.key, L.label)}</h3><ul aria-labelledby="qsd-l${li}">${G.cats.filter((c) => c.list === li).map((c) =>
+    `<li><button type="button" class="qsd-kc" data-cat="${esc(c.key)}" data-term="${esc(c.key)}" aria-pressed="false">${esc(c.label)} <span class="c">${c.ids.length}</span></button></li>`).join("")}</ul></div>`).join("")}</div></div>
+<div class="qsd-body" id="qsd-body">
+<div class="qsd-listv" id="qsd-listv"><p class="qsd-count" id="qsd-count" aria-live="polite"></p><ul class="qsd-list" id="qsd-list" aria-labelledby="qsd-h"></ul></div>
+<div class="qsd-cardv" id="qsd-cardv" hidden><div class="qsd-step"><button type="button" class="qsd-back" id="qsd-back">${chevL}<span id="qsd-backl"></span></button>
+<button type="button" class="qs-btn" data-dstep="-1" aria-label="Previous question">${chevL}Previous</button><span class="qsd-pos" id="qsd-pos" aria-live="polite"></span><button type="button" class="qs-btn" data-dstep="1" aria-label="Next question">Next${chevR}</button></div></div>
+</div>`;
+  document.body.appendChild(scrim); document.body.appendChild(dr);
+  const $ = (s) => dr.querySelector(s);
+  // the guide's own card, its fields empty and unreserved, so it reserves heights at the drawer's width
+  const card = guide.querySelector("#qs-card").cloneNode(true);
+  card.id = "qsd-card"; card.querySelectorAll("[id]").forEach((x) => (x.id = "qsd-" + x.id.replace(/^qs-/, "")));
+  card.setAttribute("aria-labelledby", "qsd-name");
+  card.querySelectorAll("[data-field]").forEach((f) => { f.innerHTML = ""; f.style.minHeight = ""; });
+  $("#qsd-cardv").appendChild(card);
+  const body = $("#qsd-body"), list = $("#qsd-list"), input = $("#qsd-q"), head = $("#qsd-h");
+
+  /* ---------- state ---------- */
+  const st = { open: false, cat: G.cats[0].key, all: false, find: "", view: "list", id: null, ids: [] };
+  let opener = null, listTop = 0;
+  const words = () => st.find.toLowerCase().split(/\s+/).filter(Boolean);
+  const hay = (q) => (q.name + " " + q.turns.join(" ")).toLowerCase();
+  function current() {
+    const base = st.all ? ALL : sorted[st.cat], w = words();
+    return w.length ? base.filter((id) => { const h = hay(G.q[id]); return w.every((x) => h.includes(x)); }) : base;
+  }
+  function mark(text) {
+    const w = words(); let h = esc(text); if (!w.length) return h;
+    const re = new RegExp("(" + w.map((x) => esc(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+    return h.replace(/(<[^>]*>)|([^<]+)/g, (m, tag, txt) => tag || txt.replace(re, "<mark>$1</mark>"));
+  }
+
+  function renderHead() {
+    const c = CAT[st.cat];
+    $("#qsd-k").innerHTML = st.all ? "Questions · all three sets" : "Questions · " + esc(G.lists[c.list].label);
+    head.innerHTML = st.all ? `Every question<span class="n">${plural(ALL.length, "question")}</span>`
+      : `${term(st.cat, c.label)}<span class="n">${plural(c.ids.length, "question")}</span>`;
+    $("#qsd-def").textContent = st.all ? "Every question the setups were scored on, from all three sets, A to Z." : (TERM[st.cat] ? TERM[st.cat].text : "");
+    const [bk, ba] = dr.querySelectorAll(".seg button");
+    bk.innerHTML = `${esc(c.label)} <span class="c">${c.ids.length}</span>`;
+    bk.setAttribute("aria-pressed", String(!st.all)); ba.setAttribute("aria-pressed", String(st.all));
+    dr.querySelectorAll(".qsd-kc").forEach((b) => b.setAttribute("aria-pressed", String(!st.all && b.dataset.cat === st.cat)));
+  }
+  function renderList() {
+    st.ids = current();
+    const base = st.all ? ALL.length : CAT[st.cat].ids.length, scope = st.all ? "" : " of this kind";
+    $("#qsd-count").textContent = st.find ? `${st.ids.length} of ${plural(base, "question")}${scope} match` : `${plural(base, "question")}${scope}, A to Z`;
+    const letters = st.ids.length > 24; let last = "";
+    const out = [];
+    st.ids.forEach((id) => {
+      const q = G.q[id], L = q.name.charAt(0).toUpperCase();
+      if (letters && L !== last) { out.push(`<li class="qsd-letter" aria-hidden="true">${esc(L)}</li>`); last = L; }
+      const turns = q.turns.length > 1 ? `<span class="qsd-rt">${q.turns.length} turns</span>` : "";
+      out.push(`<li><button type="button" class="qsd-row" data-id="${esc(id)}"${id === st.id ? ' aria-current="true"' : ""}><span class="qsd-rn"><span>${mark(q.name)}</span>${turns}</span><span class="qsd-rq">${mark(q.turns[0] || "")}</span></button></li>`);
+    });
+    list.innerHTML = out.join("") || "";
+    if (!st.ids.length) list.innerHTML = `<li><p class="qsd-empty">No question${st.all ? "" : " of this kind"} has every word you typed. <button type="button" data-clear>Clear the search</button>${st.all ? "" : ' or <button type="button" data-scope="all">look in every question</button>'}.</p></li>`;
+    const ch = $("#qsd-count").offsetHeight; if (ch) dr.style.setProperty("--qsd-ch", ch + "px");
+  }
+
+  /* ---------- the card: the guide's fixed layout, each field reserving its tallest content at this width ---------- */
+  let lastW = 0;
+  function reserve() {
+    const w = card.getBoundingClientRect().width;
+    if (!w || Math.abs(w - lastW) < 1) return;
+    lastW = w;
+    const probe = card.cloneNode(true);
+    probe.removeAttribute("id"); probe.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id"));
+    probe.setAttribute("aria-hidden", "true"); probe.inert = true;
+    Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: w + "px", pointerEvents: "none" });
+    const fields = [...probe.querySelectorAll("[data-field]")]; fields.forEach((f) => (f.style.minHeight = ""));
+    card.parentElement.appendChild(probe);
+    const max = {};
+    ALL.forEach((id) => { fillCard(probe, G.q[id], null); fields.forEach((f) => { const k = f.dataset.field; max[k] = Math.max(max[k] || 0, f.getBoundingClientRect().height); }); });
+    probe.remove();
+    card.querySelectorAll("[data-field]").forEach((f) => (f.style.minHeight = Math.ceil(max[f.dataset.field] || 0) + "px"));
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => { if (st.open && st.view === "card") reserve(); }).observe(card);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { lastW = 0; if (st.open && st.view === "card") reserve(); });
+
+  function renderCard() {
+    const i = st.ids.indexOf(st.id), q = G.q[st.id];
+    fillCard(card, q, st.all ? null : st.cat);
+    const nm = card.querySelector(".qs-name"); if (nm) { nm.id = "qsd-name"; nm.tabIndex = -1; } // the renderer redraws the title without its id
+    $("#qsd-pos").textContent = `Question ${i + 1} of ${st.ids.length}`;
+    $("#qsd-backl").textContent = st.all ? (st.find ? "Back to the matches" : "Every question") : `All ${CAT[st.cat].label} questions`;
+    dr.querySelectorAll("[data-dstep]").forEach((b) => (b.disabled = st.ids.length < 2));
+  }
+  const dropTip = () => document.dispatchEvent(new FocusEvent("focusout"));
+  function showCard(id) {
+    listTop = body.scrollTop; st.view = "card"; st.id = id; dr.dataset.view = "card";
+    $("#qsd-listv").hidden = true; $("#qsd-cardv").hidden = false;
+    renderCard(); reserve(); body.scrollTop = 0;
+    card.querySelector(".qs-name").focus({ preventScroll: true });
+  }
+  function showList(focusRow) {
+    st.view = "list"; dr.dataset.view = "list"; dropTip();
+    $("#qsd-cardv").hidden = true; $("#qsd-listv").hidden = false;
+    renderList(); body.scrollTop = listTop;
+    const row = st.id && list.querySelector(`.qsd-row[data-id="${CSS.escape(st.id)}"]`);
+    if (focusRow && row) { row.focus({ preventScroll: true }); const r = row.getBoundingClientRect(), b = body.getBoundingClientRect(); if (r.top < b.top + 40 || r.bottom > b.bottom) row.scrollIntoView({ block: "center" }); }
+  }
+  // a new scope: back to the top of a fresh list
+  function scope(patch, focusHead) {
+    Object.assign(st, patch); st.id = null; listTop = 0;
+    renderHead(); showList(false); body.scrollTop = 0;
+    if (focusHead) head.focus({ preventScroll: true });
+  }
+
+  /* ---------- open and close ---------- */
+  const isSheet = () => sheetMQ.matches;
+  const page = document.querySelector(".page");
+  function setModal() {
+    const m = st.open && isSheet();
+    dr.setAttribute("aria-modal", String(m)); scrim.classList.toggle("on", m);
+    document.documentElement.style.overflow = m ? "hidden" : "";
+    if (page) page.inert = m;
+  }
+  function open(cat, from) {
+    opener = from || opener;
+    const was = st.open;
+    st.open = true; dr.inert = false; dr.classList.add("on");
+    scope({ cat: CAT[cat] ? cat : st.cat, all: false, find: "" }, false);
+    input.value = ""; $("#qsd-kinds").hidden = true; $("#qsd-more").setAttribute("aria-expanded", "false");
+    setModal();
+    // focus once the slide has begun, so the browser does not scroll the page to an off-screen element
+    const go = () => head.focus({ preventScroll: true });
+    if (was || reduce()) go(); else requestAnimationFrame(go);
+  }
+  function close() {
+    if (!st.open) return;
+    dropTip();
+    st.open = false; dr.classList.remove("on"); dr.inert = true; setModal();
+    // back to the button that opened it, or, if the guide has moved to another kind meanwhile, that kind's button
+    let to = opener && opener.isConnected && opener.offsetParent ? opener : guide.querySelector(".qs-seeall[data-current]");
+    if (to) to.focus({ preventScroll: true });
+    const r = to && to.getBoundingClientRect(); if (r && (r.top < 0 || r.bottom > innerHeight)) to.scrollIntoView({ block: "center" });
+  }
+  sheetMQ.addEventListener ? sheetMQ.addEventListener("change", setModal) : sheetMQ.addListener(setModal);
+
+  document.addEventListener("qs:see-all", (e) => {
+    const from = document.activeElement && document.activeElement.closest && document.activeElement.closest(".qs-seeall");
+    open(e.detail && e.detail.category, from || guide.querySelector(`.qs-seeall[data-category="${CSS.escape((e.detail && e.detail.category) || "")}"]`));
+  });
+  // the guide stays live beside the drawer: picking a kind there re-scopes the open drawer
+  const nav = guide.querySelector("#qs-nav");
+  const follow = () => queueMicrotask(() => { if (!st.open || isSheet()) return; const on = nav.querySelector('.qs-cat[aria-pressed="true"]'); if (on && (st.all || on.dataset.cat !== st.cat)) { scope({ cat: on.dataset.cat, all: false, find: "" }); input.value = ""; } });
+  if (nav) { nav.addEventListener("click", follow); nav.addEventListener("keydown", follow); }
+  // a kind chip in the guide's card opens that kind there; follow it too
+  guide.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#qs-card .qs-chip[data-open]")) follow(); });
+
+  /* ---------- in the drawer ---------- */
+  dr.addEventListener("click", (e) => {
+    const t = e.target.closest ? e.target : null; if (!t) return;
+    if (t.closest("#qsd-x")) { close(); return; }
+    const sc = t.closest("[data-scope]");
+    if (sc) { scope({ all: sc.dataset.scope === "all" }); if (sc.closest(".qsd-empty")) input.focus(); return; }
+    if (t.closest("[data-clear]")) { input.value = ""; st.find = ""; scope({}); input.focus(); return; }
+    if (t.closest("#qsd-more")) { const b = $("#qsd-more"), x = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", String(x)); $("#qsd-kinds").hidden = !x; return; }
+    const kc = t.closest(".qsd-kc");
+    if (kc) { e.stopPropagation(); dropTip(); scope({ cat: kc.dataset.cat, all: false }); return; }
+    const row = t.closest(".qsd-row");
+    if (row) { showCard(row.dataset.id); return; }
+    if (t.closest("#qsd-back")) { showList(true); return; }
+    const s = t.closest("[data-dstep]");
+    if (s) { stepCard(+s.dataset.dstep); return; }
+    // a kind chip in the card lists that kind here (and pins no tooltip)
+    const chip = t.closest(".qs-chip[data-open]");
+    if (chip) { e.stopPropagation(); dropTip(); scope({ cat: chip.dataset.open, all: false, find: "" }, true); input.value = ""; }
+  });
+  function stepCard(d) { const n = st.ids.length, i = st.ids.indexOf(st.id); st.id = st.ids[(i + d + n) % n]; renderCard(); }
+  let tmr = 0;
+  input.addEventListener("input", () => { clearTimeout(tmr); tmr = setTimeout(() => { st.find = input.value.trim(); listTop = 0; if (st.view !== "list") showList(false); else renderList(); body.scrollTop = 0; }, 80); });
+  const focusables = () => [...dr.querySelectorAll('button:not([disabled]), input, [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null || x === head);
+  dr.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (document.querySelector(".tip.pinned")) return; // the page closes its pinned tooltip first
+      if (e.target === input && input.value) { input.value = ""; st.find = ""; renderList(); e.stopPropagation(); return; }
+      e.preventDefault(); close(); return;
+    }
+    if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest(".qs-chip, .qsd-kc")) { e.stopPropagation(); return; }
+    if (e.target === input && e.key === "ArrowDown") { const r = list.querySelector(".qsd-row"); if (r) { e.preventDefault(); r.focus(); } return; }
+    const row = e.target.closest && e.target.closest(".qsd-row");
+    if (row && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End")) {
+      const rows = [...list.querySelectorAll(".qsd-row")], i = rows.indexOf(row);
+      const j = e.key === "Home" ? 0 : e.key === "End" ? rows.length - 1 : Math.max(0, Math.min(rows.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)));
+      e.preventDefault(); rows[j].focus(); rows[j].scrollIntoView({ block: "nearest" }); return;
+    }
+    if (st.view === "card" && (e.key === "ArrowLeft" || e.key === "ArrowRight") && e.target.closest && e.target.closest("[data-dstep]")) { e.preventDefault(); stepCard(e.key === "ArrowLeft" ? -1 : 1); return; }
+    if (e.key === "Tab") {
+      const f = focusables(), first = f[0], last = f[f.length - 1];
+      if (isSheet()) { // the sheet is modal: focus stays in it
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === head)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      } else if (!e.shiftKey && document.activeElement === last) { // the drawer sits beside the page: Tab leaves it for the guide's lists
+        const on = guide.querySelector('.qs-cat[aria-pressed="true"]');
+        if (on) { e.preventDefault(); on.focus({ preventScroll: true }); }
+      }
+    }
+  });
+  scrim.addEventListener("click", close);
+  // Escape anywhere on the page closes the drawer too, when nothing else claims it
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && st.open && !dr.contains(e.target) && !document.querySelector(".tip.pinned") && !e.defaultPrevented) close(); });
+  document.addEventListener("report-view", (e) => { if (st.open && e.detail !== "question-sets") close(); });
+});
+</script>

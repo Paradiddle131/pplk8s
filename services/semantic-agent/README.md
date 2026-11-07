@@ -19,11 +19,12 @@ Grey cards are a package's code, named above their title, and white cards this r
 The source is [`assets/semantic-agent.html`](../../assets/semantic-agent.html), one level below the whole lab, [`assets/platform.html`](../../assets/platform.html).
 Most of the agent is reuse: ADK owns the runner, the sessions, the event loop, serving and the eval engine; MetricFlow owns the metric definitions and compiles every query; dbt's parse owns the manifests the catalog and the warehouse objects come from.
 This repo's code is the places it steps in:
-- `agent.py` hands ADK's `LlmAgent` the three tools and two callbacks: `after_tool_callback` (`audit.py`) and `on_model_error_callback` (`model.py`), so the tools stay plain functions.
+- `agent.py` hands ADK's `LlmAgent` the toolset `AGENT_TOOLSET` names ([The toolset seam](#the-toolset-seam)) and two callbacks: `after_tool_callback` (`guard.py`: the audit and the freshness) and `on_model_error_callback` (`model.py`), so the tools stay plain functions.
 - `metrics.py` checks every part of a request against the catalog before MetricFlow sees it, then builds `MetricFlowQueryRequest` and runs it on a `MetricFlowEngine` set up the way the `mf` CLI sets one up (`CLIConfiguration`); the same engine serves `build_catalog.py` offline, for the dimensions and the compiled SQL of each metric.
   That Python surface is undocumented and held by the pin: `tests/test_metricflow_surface.py` checks it offline.
+  On BigQuery the engine renders through `bigquery_sql.py`'s `QuotingSqlClient`, which backticks the reserved-word names MetricFlow 0.213 leaves bare (the entity `order`); `dbt/scripts/build_governed.py` quotes the governed tables with the same `quote_reserved` (#322).
 - `dbt/macros/agent_warehouse.sql` creates the roles and the audit table through `dbt run-operation`, dispatched per adapter, and `dbt/macros/test_matches_metric.sql` renders a metric from dbt's graph as a build-time test.
-- The work platform swaps three things: the model (`MODEL_BACKEND=gemini`, a setting of `model.py`), the warehouse roles (IAM), and the whole metric toolset (`tools.py`, `metrics.py` and MetricFlow's engine) for `DataAgentToolset` on a BigQuery data agent.
+- The work platform swaps three things: the model (`MODEL_BACKEND=gemini`, a setting of `model.py`), the warehouse roles (IAM), and the whole metric toolset (`tools.py`, `metrics.py` and MetricFlow's engine) for `DataAgentToolset` on a BigQuery data agent (`AGENT_TOOLSET=data_agent`, #207).
   The audit and the freshness statement stay: they are the agent's after-tool callback (`guard.py`), outside the toolset (#177).
 
 ## The two packages
@@ -56,6 +57,19 @@ A data tool is every tool but the ones the toolset seam names as reading only th
 - An audit row that cannot be written withholds the result: the model gets an error naming the reason instead of rows.
 
 The writer reads `AUDIT_URL`, else the `DBT_*` host, port and database with the `agent_audit` login, so the audit lands in the warehouse the query read.
+
+## The toolset seam
+
+`AGENT_TOOLSET` picks what the agent answers through (`toolset.py`, #207); each implementation names the tools that read only the catalog, and every other tool's calls are audited and given their freshness by `guard.py`:
+- `metricflow` (the default, `toolset_metricflow.py`): the three metric tools above, `list_metrics` and `describe_metric` the catalog ones.
+- `data_agent` (`toolset_data_agent.py`): ADK's `DataAgentToolset` on the lab project's native data agent, built from the same generated context (`make gcp-data-agent` publishes it): `get_data_agent_info` (catalog) and `ask_data_agent`.
+  The data agent is `DATA_AGENT_NAME`, else `projects/<GCP_PROJECT>/locations/<DATA_AGENT_LOCATION, us>/dataAgents/<DATA_AGENT_ID, pplk8s-semantic>`, and it refuses without either; it asks as the token in `GCP_ACCESS_TOKEN` (a cloud session's proxy), else application default credentials.
+  Its answer names tables, not metrics, so the freshness comes from the tables its generated SQL reads: the catalog lists each semantic model's table with its readiness products (`semantic_models` in `agent.json`), matched on dataset and table; SQL that reads none of them gets "Freshness unknown", saying why.
+  The audit row holds the generated SQL and the rows its `Data Retrieved` steps returned.
+
+`make agent-eval ARM=data_agent` scores this arm on the eval's questions into `docs/research/data-agent-eval.md` (no `metric_choice`, no baseline beside it), with the cost check before and after; it refuses without `GCP_PROJECT`.
+
+Every seam chooses its implementation the same way, `seam.py`'s `choose`: an environment variable names a module `<seam>_<impl>.py`, only the chosen one is imported, and an unknown name or a missing extra fails saying which names exist or which extra to install (`AGENT_WAREHOUSE`, `AGENT_TOOLSET`).
 
 ## The warehouse seam
 

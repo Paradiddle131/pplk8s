@@ -34,7 +34,8 @@ def test_postgres_is_the_default():
 
 
 def test_an_unknown_warehouse_is_refused_at_boot():
-    with pytest.raises(ConfigError, match="ELF_WAREHOUSE='snowflake' is not one of postgres"):
+    refused = "ELF_WAREHOUSE='snowflake' is not one of bigquery, postgres"
+    with pytest.raises(ConfigError, match=refused):
         Config.from_env({"ELF_WAREHOUSE": "snowflake", "WAREHOUSE_DSN": "postgresql://w"})
 
 

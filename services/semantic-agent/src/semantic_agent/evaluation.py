@@ -23,11 +23,21 @@ Usage (`make agent-eval` sets the env): python -m semantic_agent.evaluation [que
 Writes the scores side by side to stdout and to `docs/research/semantic-agent-eval.md`. A run that
 is no score prints what it got, leaves the report as it was and exits 3: the model's daily quota or
 a refused key cut it short, or no question got an answer at all.
+
+The data-agent arm (`AGENT_TOOLSET=data_agent`, `make agent-eval ARM=data_agent`; #207) scores the
+semantic agent over the lab project's native data agent instead (toolset.py), on the same questions
+and expected numbers, and writes `docs/research/data-agent-eval.md`: no `metric_choice` (a data
+agent names no metrics) and no baseline beside it (the text-to-SQL baseline on BigQuery is #299).
+`make agent-eval ARM=data_agent_governed` (`DATA_AGENT_ID=pplk8s-governed`, semantic/PLAN.md
+SL-24) runs the same arm over the second data agent, whose only tables are the governed tables
+MetricFlow computed, and writes `docs/research/data-agent-governed-eval.md`: each data agent has its
+own report.
 """
 
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import datetime
 import json
 import os
@@ -72,9 +82,18 @@ from semantic_agent.model import ModelFailure, failure_of
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "evals" / "questions.yaml"
+# The semantic bet's frozen set (docs/research/semantic-bet/RULE.md): questions.yaml's shape, plus
+# its groups.
+BET_QUESTIONS = ROOT / "evals" / "semantic_bet.yaml"
+# The second, harder set (#356), frozen beside the first and scored under the same rule.
+BET_HARD_QUESTIONS = ROOT / "evals" / "semantic_bet_hard.yaml"
+# Its version 2 (#377, RULE.md § Set versions): v1's cases unchanged plus cases hard in SQL;
+# it supersedes v1.
+BET_HARD_V2_QUESTIONS = ROOT / "evals" / "semantic_bet_hard_v2.yaml"
 # The metrics and their code: also what `adk eval ... --config_file_path` takes.
 EVAL_CONFIG = EvalConfig.model_validate_json((ROOT / "evals" / "eval_config.json").read_text())
 REPORT = ROOT.parents[1] / "docs" / "research" / "semantic-agent-eval.md"
+DATA_AGENT_REPORT = REPORT.with_name("data-agent-eval.md")
 
 MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
 DATES = re.compile(
@@ -162,8 +181,8 @@ class Question:
 Expected = list[list[list[float]]]
 
 
-def load_questions(ids: list[str] | None = None) -> list[Question]:
-    items = yaml.safe_load(QUESTIONS.read_text())["questions"]
+def load_questions(ids: list[str] | None = None, path: Path = QUESTIONS) -> list[Question]:
+    items = yaml.safe_load(path.read_text())["questions"]
     questions = [Question.from_yaml(item) for item in items]
     return [q for q in questions if not ids or q.id in ids]
 
@@ -410,6 +429,60 @@ SEMANTIC_METRICS = [
     PLANTED_IGNORED,
 ]
 BASELINE_METRICS = [ANSWER_CORRECT, DEFINITION_QUOTED, TERM_DISAMBIGUATED, PLANTED_IGNORED]
+# A data agent's answer names no metrics, so which metric it chose is not scored.
+DATA_AGENT_METRICS = [m for m in SEMANTIC_METRICS if m is not METRIC_CHOICE]
+
+
+@dataclass(frozen=True)
+class Arm:
+    """How a run is reported: its columns' names, what it ran on, and where it is written."""
+
+    title: str = "Semantic agent eval"
+    agent: str = "Semantic agent"
+    baseline: str = "Text-to-SQL baseline"
+    on: str = "on `dbt/dev/fixture.sql` and `dbt/dev/fixture_weeks.sql`"
+    path: Path = REPORT
+    metric_choice: bool = True  # whether the agent's answers name the metrics it chose
+
+
+DATA_AGENT_ARM = Arm(
+    title="Data agent eval",
+    agent="Semantic agent over the data agent",
+    baseline="Baseline (not run: #299)",
+    on="through the native data agent of the lab project `{project}` (`AGENT_TOOLSET=data_agent`, "
+    "#207), on the same fixture loaded there by `make bigquery-live-check`; the expected numbers "
+    "come from the Compose warehouse's `dbt_dev`",
+    path=DATA_AGENT_REPORT,
+    metric_choice=False,
+)
+# The second data agent (semantic/PLAN.md SL-24): the same definitions as governed tables whose
+# numbers MetricFlow computed, so its SQL only selects, filters and sums them.
+GOVERNED_ARM = Arm(
+    title="Governed data agent eval",
+    agent="Semantic agent over the governed data agent",
+    baseline="Baseline (not run: #299)",
+    on="through the governed data agent `pplk8s-governed` of the lab project `{project}` "
+    "(`AGENT_TOOLSET=data_agent`, `DATA_AGENT_ID=pplk8s-governed`, SL-24), whose only tables "
+    "are the governed tables MetricFlow computed from the same fixture, built there by "
+    "`make bigquery-live-load`; the expected numbers come from the Compose warehouse's `dbt_dev`",
+    path=REPORT.with_name("data-agent-governed-eval.md"),
+    metric_choice=False,
+)
+DATA_AGENT_ARMS = {"pplk8s-semantic": DATA_AGENT_ARM, "pplk8s-governed": GOVERNED_ARM}
+
+
+def data_agent_arm(name: str) -> Arm:
+    """The report of a run over the data agent `name`
+    (`projects/<p>/locations/<l>/dataAgents/<id>`): each of the lab's data agents its own, any
+    other one a report named after its id, so one data agent's run never overwrites another's."""
+    project, agent_id = name.split("/")[1], name.rsplit("/", 1)[-1]
+    arm = DATA_AGENT_ARMS.get(agent_id) or dataclasses.replace(
+        DATA_AGENT_ARM,
+        title=f"Data agent eval: {agent_id}",
+        on=DATA_AGENT_ARM.on.replace("the native data agent", f"the data agent `{agent_id}`"),
+        path=REPORT.with_name(f"data-agent-{agent_id}-eval.md"),
+    )
+    return dataclasses.replace(arm, on=arm.on.format(project=project))
 
 
 def definitions(questions: list[Question]) -> dict[str, str]:
@@ -473,6 +546,11 @@ class CaseOutcome:
         False  # never sent: a failure that ends the run (ModelFailure.ends_run) came first
     )
     read_planted: bool = False  # a tool result showed the model a planted instruction
+    # What the bet's scoring reads (bet_eval.py): each turn's invocation as the agent answered it,
+    # and how many model responses the case took (its requests, retries left out).
+    inferences: list[Invocation] = field(default_factory=list)
+    model_calls: int = 0
+    ends_run: bool = False  # its failure (a spent quota, a refused key) ends the run
 
 
 # A rate-limited question waits out the limit once, at most this long, then runs again.
@@ -504,6 +582,8 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         session_service=sessions,
     )
 
+    calls: dict[str, int] = {}
+
     async def infer(case: EvalCase) -> tuple[InferenceResult, ModelFailure | None]:
         request = InferenceRequest(
             app_name=app_name,
@@ -517,6 +597,9 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
             session = await sessions.get_session(
                 app_name=app_name, user_id="eval", session_id=result.session_id
             )
+        calls[case.eval_id] = calls.get(case.eval_id, 0) + model_responses(
+            session.events if session else []
+        )
         return result, failure_of(session.events) if session else None
 
     outcomes: dict[str, CaseOutcome] = {}
@@ -533,7 +616,9 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         if result.status != InferenceStatus.SUCCESS:
             outcomes[case.eval_id] = CaseOutcome("", {}, error=result.error_message or "failed")
         elif failure:
-            outcomes[case.eval_id] = CaseOutcome("", {}, error=failure.answer())
+            outcomes[case.eval_id] = CaseOutcome(
+                "", {}, error=failure.answer(), ends_run=failure.ends_run
+            )
             spent = failure if failure.ends_run else None
         else:
             succeeded.append(result)
@@ -541,6 +626,7 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
         r.eval_case_id: " → ".join(_text(i.final_response) for i in r.inferences or [])
         for r in succeeded
     }
+    inferred = {r.eval_case_id: list(r.inferences or []) for r in succeeded}
     by_id = {case.eval_id: case for case in cases}
     shown = {
         r.eval_case_id: any(
@@ -563,8 +649,23 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
                 answers.get(result.eval_id, ""),
                 scores,
                 read_planted=shown.get(result.eval_id, False),
+                inferences=inferred.get(result.eval_id, []),
             )
+    for case_id, outcome in outcomes.items():
+        outcome.model_calls = calls.get(case_id, 0)
     return outcomes
+
+
+def model_responses(events: list[Any]) -> int:
+    """The model's responses among a session's events: one request each (a tool call or text)."""
+    return sum(
+        1
+        for event in events
+        if event.author != "user"
+        and not getattr(event, "partial", False)
+        and event.content
+        and any(p.function_call or p.text for p in event.content.parts or [])
+    )
 
 
 ANSWER_METRICS = ("answer_correct", "definition_quoted", "term_disambiguated")
@@ -572,7 +673,9 @@ ANSWER_METRICS = ("answer_correct", "definition_quoted", "term_disambiguated")
 RIGHT_METRICS = (*ANSWER_METRICS, "planted_ignored")
 
 
-def report(questions, expected, semantic, baseline, model_id: str) -> str:
+def report(questions, expected, semantic, baseline, model_id: str, arm: Arm | None = None) -> str:
+    arm = arm or Arm()
+
     def mark(outcome: CaseOutcome | None, metric: str) -> str:
         if outcome is None:
             return "not run"
@@ -580,7 +683,8 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
             return "skipped"
         if outcome.error:
             return "error"
-        if metric in outcome.scores and outcome.scores[metric] is None:
+        # A metric the arm does not score (metric_choice over a data agent), or no turn applies to.
+        if outcome.scores.get(metric) is None:
             return "none"
         return "✓" if outcome.scores.get(metric) == 1.0 else "✗"
 
@@ -606,21 +710,25 @@ def report(questions, expected, semantic, baseline, model_id: str) -> str:
 
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%MZ")
     lines = [
-        "# Semantic agent eval",
+        f"# {arm.title}",
         "",
         f"Run {stamp} by `make agent-eval` (`services/semantic-agent`, semantic/PLAN.md SL-5), "
-        f"model `{model_id}`, on `dbt/dev/fixture.sql` and `dbt/dev/fixture_weeks.sql`.",
+        f"model `{model_id}`, {arm.on}.",
         "Each agent answers each case once through ADK's `LocalEvalService`, the turns of a "
         "conversation in one session; an answer is right when it carries the number the "
         "warehouse gives (`evals/questions.yaml`), quotes the metric's definition when asked how "
         "a figure was computed, and asks which meaning (or gives each) when a term has more than "
         "one.",
         "",
-        "| | Semantic agent | Text-to-SQL baseline |",
+        f"| | {arm.agent} | {arm.baseline} |",
         "|---|---|---|",
         f"| Questions a metric covers ({len(with_metric)}) | {count(semantic, with_metric)} right, "
-        f"{count(semantic, with_metric, 'metric_choice')} with the expected metric, "
-        f"{count(semantic, with_metric, 'freshness_quoted')} quoting their freshness | "
+        + (
+            f"{count(semantic, with_metric, 'metric_choice')} with the expected metric, "
+            if arm.metric_choice
+            else ""
+        )
+        + f"{count(semantic, with_metric, 'freshness_quoted')} quoting their freshness | "
         f"{count(baseline, with_metric)} right |",
         f"| Questions no metric covers ({len(without)}) | {count(semantic, without)} said so | "
         f"{count(baseline, without)} right |",
@@ -719,6 +827,10 @@ async def main(ids: list[str]) -> int:
     from semantic_agent.model import DEFAULT_MODEL_ID
     from sql_baseline.agent import build_agent as build_baseline
 
+    data_agent = os.environ.get("AGENT_TOOLSET") == "data_agent"
+    if data_agent and not (os.environ.get("GCP_PROJECT") or os.environ.get("DATA_AGENT_NAME")):
+        print("the data-agent arm needs GCP_PROJECT, the lab project whose data agent it asks")
+        return 2
     questions = load_questions(ids)
     database = os.environ.get("DBT_DBNAME", "dbt_dev")
     owner_url = os.environ.get(
@@ -728,10 +840,12 @@ async def main(ids: list[str]) -> int:
     semantic = await evaluate(
         build_semantic(),
         eval_cases(questions, expected, "semantic_agent", semantic=True),
-        SEMANTIC_METRICS,
+        DATA_AGENT_METRICS if data_agent else SEMANTIC_METRICS,
     )
     spent = next((o for o in semantic.values() if o.skipped), None)
-    if spent:
+    if data_agent:
+        baseline = {}
+    elif spent:
         baseline = {q.id: CaseOutcome("", {}, error=spent.error, skipped=True) for q in questions}
     else:
         baseline = await evaluate(
@@ -739,23 +853,28 @@ async def main(ids: list[str]) -> int:
             eval_cases(questions, expected, "sql_baseline", semantic=False),
             BASELINE_METRICS,
         )
+    arm = Arm()
+    if data_agent:
+        from semantic_agent.toolset_data_agent import data_agent_name
+
+        arm = data_agent_arm(data_agent_name())
     text = report(
-        questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
+        questions, expected, semantic, baseline, os.environ.get("MODEL_ID", DEFAULT_MODEL_ID), arm
     )
     print(text)
     outcomes = [*semantic.values(), *baseline.values()]
     not_run = sum(o.skipped for o in outcomes)
     if not_run:
         reason = next(o.error for o in outcomes if o.skipped)
-        print(f"incomplete: {not_run} answers not run. {reason} {REPORT.name} left as it was.")
+        print(f"incomplete: {not_run} answers not run. {reason} {arm.path.name} left as it was.")
         return 3
     if outcomes and all(o.error for o in outcomes):
         reasons = " ".join(sorted({o.error or "" for o in outcomes}))
-        print(f"no answers: every model call failed. {reasons} {REPORT.name} left as it was.")
+        print(f"no answers: every model call failed. {reasons} {arm.path.name} left as it was.")
         return 3
     if not ids:
-        REPORT.write_text(text)
-        print(f"written to {REPORT}")
+        arm.path.write_text(text)
+        print(f"written to {arm.path}")
     return 0
 
 

@@ -7,6 +7,10 @@ the other does not. The database enforces the scope: the lab's `agent_sql` role 
 `gold`, `exposed` and their `information_schema` rows, and every call runs one statement, read-only
 under a timeout. It is the eval's control only: `make agent-eval` runs it in-process, and it is
 never deployed.
+The semantic bet's runner (semantic_agent.bet_eval) also puts the `legacy` tables in its reach,
+as docs/research/semantic-bet/RULE.md wants for every arm that writes SQL:
+`build_agent(extra_tables=...)` names them beside the catalog's, and `agent_sql` may read the
+`legacy` schema where tests/e2e/agent-fixture.sh built it.
 
 Env: `WAREHOUSE_SQL_URL` (default the Compose warehouse as `agent_sql`, database `DBT_DBNAME`).
 """
@@ -15,7 +19,9 @@ from __future__ import annotations
 
 import datetime
 import decimal
+import functools
 import os
+from collections.abc import Sequence
 from typing import Any
 
 import psycopg
@@ -46,9 +52,10 @@ def tables(source: Catalog) -> list[str]:
     return sorted(".".join(model["relation"].split(".")[-2:]) for model in source.models)
 
 
-def instruction(_context: ReadonlyContext | None = None) -> str:
-    """The instruction with the catalog's tables, read when the agent first runs, not on import."""
-    return INSTRUCTION.format(tables=", ".join(tables(catalog())))
+def instruction(_context: ReadonlyContext | None = None, extra_tables: Sequence[str] = ()) -> str:
+    """The instruction with the catalog's tables, and any extra ones after them, read when the agent
+    first runs, not on import."""
+    return INSTRUCTION.format(tables=", ".join([*tables(catalog()), *extra_tables]))
 
 
 def _url() -> str:
@@ -69,7 +76,7 @@ def execute_sql(sql: str) -> dict[str, Any]:
     """Runs one read-only PostgreSQL query on the warehouse and returns its rows.
 
     Args:
-        sql: A single SELECT statement over the gold and exposed tables.
+        sql: A single SELECT statement over the tables you may read.
     """
     try:
         with psycopg.connect(_url(), connect_timeout=10, autocommit=False) as conn:
@@ -92,13 +99,14 @@ def execute_sql(sql: str) -> dict[str, Any]:
     }
 
 
-def build_agent(model: BaseLlm | str | None = None) -> LlmAgent:
+def build_agent(model: BaseLlm | str | None = None, extra_tables: Sequence[str] = ()) -> LlmAgent:
+    """The baseline; `extra_tables` (`schema.table`) are named after the catalog's models."""
     return LlmAgent(
         name="sql_baseline",
         description="Answers business questions with SQL over gold and exposed (eval baseline).",
         model=model or build_model(),
         generate_content_config=request_config(),
-        instruction=instruction,
+        instruction=functools.partial(instruction, extra_tables=tuple(extra_tables)),
         tools=[FunctionTool(execute_sql)],
         # Every call is a data call; with no metric catalog, none gets a freshness (SL-5).
         after_tool_callback=after_data_tool(catalog_tools=()),

@@ -18,6 +18,13 @@ The body of [#43](../../../../issues/43) lists open owner questions only, under 
 - `Owner lane: <maps or issues> — <path globs>`: the owner's attended work.
   A wake picks no issue in those maps or naming a file under those globs, and, among the rest, prefers the one whose files lie furthest from them (docs-only first); `Owner lane: none` clears it.
 
+An issue labelled `at-work` runs only at work (paid services the free lab never runs, `semantic/PLAN.md` SL-23): a wake never picks it.
+
+## Parallel track
+
+[Map #324](../../../../issues/324), the semantic agent bet, runs on its own profile, [`autopilot-semantic-bet.md`](autopilot-semantic-bet.md), and its own routine, on branch `claude/semantic-bet` (`semantic/PLAN.md` SL-25).
+This profile's queue never picks a `semantic-bet` issue, and that track never picks one of this queue's.
+
 ## Merge policy
 
 Wakes merge one kind of PR themselves (owner, 2026-11-03: "merge things like 347 yourself"), with a merge commit, when all of these hold:
@@ -34,10 +41,10 @@ The train PR is marked ready and labelled `needs-local-verify` once its gates pa
 1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
 2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
 3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200).
-4. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (unparked by the owner, 2026-11-01), under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-cost-check` before and after every live step, its exit 1 (a cost) or 3 (not provable yet) ending the wake's GCP work with the SKU or the reason in the handoff; `make gcp-up` is a `needs-owner` step.
+4. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (unparked by the owner, 2026-11-01), under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-usage-check` and `make gcp-cost-check` before and after every live step, the usage check's exit 1 (a free tier past its share) or 3 (a source unreadable) or the cost check's exit 1 (a cost) ending the wake's GCP work with the tier, the SKU or the reason in the handoff, and the cost check's 3 (the export not caught up) reported in it; `make gcp-up` is a `needs-owner` step.
 5. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
 
-**Offline wakes.** A routine prompt that says `offline` (the hourly schedule, owner 2026-11-01) skips Map #212, [#276](../../../../issues/276) and every step that reaches the real GCP project (a `make` target whose help starts with `Live`, such as `bigquery-live-check`, `gcp-plan`, `gcp-images` or `gcp-cost-check`; a live data-agent or Knowledge Catalog call); the offline `gcp-validate` and `gcp-image-check` (the BigQuery emulator) stay gates: live GCP work waits for a wake the owner watches, because the billing export lags hours behind a cost.
+**Offline wakes.** A routine prompt that says `offline` (the hourly schedule, owner 2026-11-01) skips Map #212, [#276](../../../../issues/276) and every step that reaches the real GCP project (a `make` target whose help starts with `Live`, such as `bigquery-live-check`, `gcp-plan`, `gcp-images`, `gcp-usage-check` or `gcp-cost-check`; a live data-agent or Knowledge Catalog call); the offline `gcp-validate` and `gcp-image-check` (the BigQuery emulator) stay gates: live GCP work waits for a wake the owner watches, because the billing export lags hours behind a cost.
 An offline wake that finds nothing else pickable ends after step 9; it never falls through to Map #212.
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.

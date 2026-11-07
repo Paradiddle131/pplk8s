@@ -1,8 +1,16 @@
 """Model factory: the only place that names a model provider (semantic/PLAN.md SL-2).
 
 `MODEL_BACKEND` and `MODEL_ID` pick the model; agent code calls `build_model()` and
-`request_config()` and never branches. The lab runs OpenRouter's free tier; work runs Gemini. Each
+`request_config()` and never branches. The lab runs OpenRouter's free tier; work runs Gemini; the
+bet's eval arms may run on Claude (`MODEL_BACKEND=anthropic`, #361) within the owner's budget. Each
 request is bounded by `MODEL_TIMEOUT_S` and retried `MODEL_RETRIES` times.
+
+Claude takes its key only from `BET_ANTHROPIC_API_KEY` and its base URL only from
+`ANTHROPIC_API_BASE` here, both passed to LiteLLM explicitly: the cloud session's own Claude Code
+reads `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL`, which this module never reads. A missing key
+raises `MissingKey` (the runner skips its Claude pass with that reason); Fable is refused, and only
+the models `spend.PRICES` prices are allowed. Every Claude call is priced from its `usage` and
+counted by `spend.METER`, which refuses a call that would take the pass past its dollar budget.
 
 A model call that still fails (a spent free-tier quota, per minute or per day, included) ends the
 turn with an answer that says so, through ADK's `on_model_error_callback`: `answer_model_failure`
@@ -25,13 +33,32 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
-BACKENDS = ("openrouter", "gemini")
+from semantic_agent import spend
+
+BACKENDS = ("openrouter", "gemini", "anthropic")
+# Claude (#361): the key's only source, and the base URL passed with every call.
+ANTHROPIC_KEY_VAR = "BET_ANTHROPIC_API_KEY"
+ANTHROPIC_API_BASE = "https://api.anthropic.com"
+# Room for adaptive thinking and the answer; a call's output can never cost more than this.
+CLAUDE_MAX_TOKENS = 16000
+# Prompt caching on the stable prefix: Anthropic renders tools, then system, then messages, so the
+# breakpoint on the system instruction caches the tool definitions with it; the one on the last
+# message caches the conversation so far for the turn's next model call.
+CLAUDE_CACHE_POINTS = (
+    {"location": "message", "role": "system"},
+    {"location": "message", "index": -1},
+)
 FAILURE_KEY = "model_failure"
 # OpenRouter states its reset in the body (epoch ms), Gemini its retry delay ("40s").
 RESET_MS = re.compile(r"X-RateLimit-Reset[\"']?:\s*[\"']?(\d{12,})", re.IGNORECASE)
 RETRY_DELAY = re.compile(r"retryDelay[\"']?:\s*[\"']?(\d+(?:\.\d+)?)s", re.IGNORECASE)
 PER_DAY = re.compile(r"per-day|PerDay", re.IGNORECASE)
+# Anthropic's refusal for an account out of credits ("Your credit balance is too low ...").
+BILLING = re.compile(r"credit balance|billing", re.IGNORECASE)
 DEFAULT_MODEL_ID = "nvidia/nemotron-3.5-super-vl:free"
+# The semantic bet's blind judge (docs/research/semantic-bet/RULE.md § Scoring a run): a free model
+# other than the one the local arms answer on, so no arm's own model grades it.
+JUDGE_MODEL_ID = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 
 def build_model(backend: str | None = None, model_id: str | None = None) -> BaseLlm:
@@ -50,6 +77,9 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
     timeout = float(os.environ.get("MODEL_TIMEOUT_S", "120"))
     retries = int(os.environ.get("MODEL_RETRIES", "2"))
 
+    if backend == "anthropic":
+        return build_claude(model_id, timeout, retries)
+
     if backend == "openrouter":
         from google.adk.models.lite_llm import LiteLlm
 
@@ -67,6 +97,67 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
     )
 
 
+def judge_model_id() -> str:
+    """The blind judge's model: `JUDGE_MODEL_ID`, by default a free OpenRouter model."""
+    return os.environ.get("JUDGE_MODEL_ID", JUDGE_MODEL_ID)
+
+
+def build_judge() -> BaseLlm:
+    """The bet's blind judge, always on OpenRouter's free tier, whatever `MODEL_BACKEND` the arms
+    use."""
+    return build_model("openrouter", judge_model_id())
+
+
+class MissingKey(RuntimeError):
+    """No `BET_ANTHROPIC_API_KEY`: the Claude passes are skipped, with this as the reason."""
+
+
+def claude_model(model_id: str) -> str:
+    """The Claude model id, checked: never Fable, and only a model the spend ledger prices."""
+    if model_id.startswith("claude-fable"):
+        raise ValueError(f"Fable is never used for the bet (#361), got {model_id!r}")
+    if model_id not in spend.PRICES:
+        raise ValueError(f"Claude models must be one of {tuple(spend.PRICES)}, got {model_id!r}")
+    return model_id
+
+
+def claude_key() -> str:
+    """The bet's Anthropic key, from `BET_ANTHROPIC_API_KEY` only; raises MissingKey without it."""
+    key = os.environ.get(ANTHROPIC_KEY_VAR, "").strip()
+    if not key:
+        raise MissingKey(f"{ANTHROPIC_KEY_VAR} is unset: the Claude passes are skipped")
+    return key
+
+
+def build_claude(model_id: str, timeout: float = 120.0, retries: int = 2) -> BaseLlm:
+    from google.adk.models.lite_llm import LiteLlm
+
+    class ClaudeLlm(LiteLlm):
+        """LiteLlm on Anthropic, every call checked against and counted by `spend.METER`."""
+
+        async def generate_content_async(self, llm_request: LlmRequest, stream: bool = False):
+            spend.METER.check(model_id)
+            try:
+                async for response in super().generate_content_async(llm_request, stream):
+                    if response.usage_metadata is not None and not response.partial:
+                        spend.METER.record(model_id, spend.usage_of(response.usage_metadata))
+                    yield response
+            except Exception as error:
+                spend.METER.failure(model_id, classify(error))
+                raise
+
+    model_id = claude_model(model_id)
+    return ClaudeLlm(
+        model=f"anthropic/{model_id}",
+        api_key=claude_key(),
+        api_base=ANTHROPIC_API_BASE,
+        max_tokens=CLAUDE_MAX_TOKENS,
+        cache_control_injection_points=[dict(p) for p in CLAUDE_CACHE_POINTS],
+        timeout=timeout,
+        num_retries=retries,
+    )
+
+
 def request_config(backend: str | None = None) -> types.GenerateContentConfig:
     """Every agent's request config: it carries the `MODEL_RETRIES` retries with each request.
 
@@ -77,7 +168,8 @@ def request_config(backend: str | None = None) -> types.GenerateContentConfig:
     if backend is None:
         backend = os.environ.get("MODEL_BACKEND", "openrouter")
     retries = int(os.environ.get("MODEL_RETRIES", "2"))
-    attempts = retries if backend == "openrouter" else retries + 1
+    # LiteLlm (OpenRouter, Claude) reads `attempts` as retries; google-genai as all calls.
+    attempts = retries if backend in ("openrouter", "anthropic") else retries + 1
     retry = types.HttpRetryOptions(attempts=attempts, http_status_codes=[429, 503])
     return types.GenerateContentConfig(http_options=types.HttpOptions(retry_options=retry))
 
@@ -87,18 +179,20 @@ class ModelFailure:
     """A model call that failed after its retries.
 
     `daily_quota`: the free tier's requests for the day are spent; `auth`: the provider refused the
-    credentials (401 or 403), so no later call can succeed either; `rate_limit`: a per-minute or
-    upstream limit, worth one retry after `retry_after_s`; `error`: anything else.
+    credentials (401 or 403), so no later call can succeed either; `billing`: the provider refused
+    for the account's credit balance; `budget`: the pass's dollar budget would be crossed, so the
+    call was never sent (spend.BudgetSpent); `rate_limit`: a per-minute or upstream limit, worth
+    one retry after `retry_after_s`; `error`: anything else.
     """
 
-    kind: Literal["daily_quota", "auth", "rate_limit", "error"]
+    kind: Literal["daily_quota", "auth", "billing", "budget", "rate_limit", "error"]
     message: str
     retry_after_s: float | None = None
 
     @property
     def ends_run(self) -> bool:
         """No call after this one can succeed until someone acts: stop sending."""
-        return self.kind in ("daily_quota", "auth")
+        return self.kind in ("daily_quota", "auth", "billing", "budget")
 
     def answer(self) -> str:
         if self.kind == "daily_quota":
@@ -115,15 +209,27 @@ class ModelFailure:
         if self.kind == "auth":
             return (
                 "No answer: the model provider refused the credentials; check the API key "
-                f"(OPENROUTER_API_KEY for OpenRouter) ({self.message[:200]})."
+                f"(OPENROUTER_API_KEY for OpenRouter, {ANTHROPIC_KEY_VAR} for Claude) "
+                f"({self.message[:200]})."
             )
+        if self.kind == "billing":
+            return (
+                "No answer: the model provider refused for the credit balance "
+                f"({self.message[:200]})."
+            )
+        if self.kind == "budget":
+            return f"No answer: this pass's dollar budget is spent ({self.message[:200]})."
         return f"No answer: the model call failed ({self.message[:200]})."
 
 
 def classify(error: BaseException) -> ModelFailure:
     """Reads a provider error (LiteLLM's or google-genai's) into a ModelFailure."""
-    text = str(error)
+    text = spend.redact(str(error))
+    if isinstance(error, spend.BudgetSpent):
+        return ModelFailure("budget", text)
     status = getattr(error, "status_code", None) or getattr(error, "code", None)
+    if BILLING.search(text):
+        return ModelFailure("billing", " ".join(text.split())[:500])
     if status in (401, 403):
         return ModelFailure("auth", " ".join(text.split())[:500])
     if status != 429 and "RESOURCE_EXHAUSTED" not in text:

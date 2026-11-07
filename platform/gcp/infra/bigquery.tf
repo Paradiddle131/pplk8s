@@ -40,6 +40,19 @@ variable "existing_ops_tables" {
   default     = []
 }
 
+# The datasets on the project now (tofu.sh lists them): one made by hand before it was declared here is imported.
+variable "existing_datasets" {
+  description = "The project's BigQuery datasets now (tofu.sh lists them), imported when declared but not yet in the state."
+  type        = list(string)
+  default     = []
+}
+
+import {
+  for_each = { for ds, _ in local.access.datasets : ds => ds if contains(var.existing_datasets, ds) }
+  to       = google_bigquery_dataset.layer[each.key]
+  id       = "projects/${var.project}/datasets/${each.value}"
+}
+
 resource "google_bigquery_dataset" "layer" {
   for_each = local.access.datasets
 

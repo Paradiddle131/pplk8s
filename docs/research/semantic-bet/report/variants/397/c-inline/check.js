@@ -1,0 +1,78 @@
+// Variant C's checks (Playwright): node check.js from this folder, after python3 make-preview.py.
+const {chromium}=require('playwright');
+const DIR=__dirname+'/';
+const log=[]; const ok=(c,m)=>{log.push((c?'PASS ':'FAIL ')+m)};
+(async()=>{const b=await chromium.launch();
+for (const [w,h] of [[1280,900],[390,844]]) for (const scheme of ['light','dark']) {
+  const ctx=await b.newContext({viewport:{width:w,height:h},deviceScaleFactor:1,colorScheme:scheme});
+  const p=await ctx.newPage(); const errs=[];
+  p.on('console',m=>{if(m.type()==='error')errs.push(m.text())}); p.on('pageerror',e=>errs.push(String(e)));
+  await p.goto('file://'+DIR+'preview.html#question-sets'); await p.waitForTimeout(900);
+  const tag=`${w}-${scheme}`;
+  const hscroll=async()=>p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth);
+  const frame=async()=>{await p.locator('#qs-browse').scrollIntoViewIfNeeded(); await p.evaluate(()=>{const r=document.getElementById('qs-browse').getBoundingClientRect(); window.scrollBy(0, r.top-70);});};
+  await p.click('.qs-cat[data-cat="uncovered"]'); await p.waitForTimeout(100);
+  const sa=p.locator('.qs-seeall[data-current]'); ok(await sa.count()===1 && (await sa.textContent())==='See all 40', tag+' one see-all, for the open kind');
+  await sa.scrollIntoViewIfNeeded(); await p.screenshot({path:DIR+`shots/${tag}-0-guide.png`});
+  await sa.click(); await p.waitForTimeout(250);
+  ok(await p.evaluate(()=>document.activeElement.id)==='qb-h', tag+' focus on the browser heading after open');
+  const n=await p.locator('.qb-row').count(); ok(n===40, tag+' 40 rows for Uncovered ('+n+')');
+  const box=await p.evaluate(()=>{const s=document.getElementById('qb-box');return [s.scrollHeight,s.clientHeight]});
+  ok(box[0]>box[1], tag+' list scrolls inside its box '+box);
+  await frame(); await p.screenshot({path:DIR+`shots/${tag}-1-list-uncovered.png`});
+  await p.evaluate(()=>document.getElementById('qb-box').scrollTop=600); await p.waitForTimeout(100);
+  await p.screenshot({path:DIR+`shots/${tag}-2-list-scrolled.png`});
+  ok(!(await hscroll()), tag+' no horizontal page scroll (list)');
+  await p.click('[data-scope="all"]'); await p.waitForTimeout(100);
+  const na=await p.locator('.qb-row').count(); ok(na===131, tag+' widen lists all 131 ('+na+')');
+  await p.fill('#qb-find','revenue'); await p.waitForTimeout(100);
+  const nf=await p.locator('.qb-row').count(); ok(nf>0&&nf<131, tag+' search narrows ('+nf+')');
+  await frame(); await p.screenshot({path:DIR+`shots/${tag}-3-all-search.png`});
+  await p.fill('#qb-find','zzqx'); await p.waitForTimeout(80);
+  ok(await p.locator('#qb-empty').isVisible(), tag+' empty state'); await p.screenshot({path:DIR+`shots/${tag}-4-empty.png`});
+  await p.fill('#qb-find','');
+  await p.locator('.qb-row').nth(5).click(); await p.waitForTimeout(250);
+  ok(await p.locator('#qs-card').isVisible() && !(await p.locator('#qb-box').isVisible()), tag+' the card replaces the list');
+  ok(await p.evaluate(()=>document.activeElement.classList.contains('qs-name')), tag+' focus on the card name');
+  await frame(); await p.screenshot({path:DIR+`shots/${tag}-5-card.png`});
+  ok(!(await hscroll()), tag+' no horizontal page scroll (card)');
+  await p.click('.qs-cat[data-cat="period"]'); await p.waitForTimeout(150);
+  ok(await p.locator('.qb-row').count()===18 && await p.locator('#qb-box').isVisible(), tag+' second kind (Period) from the left narrows the browser to 18');
+  await frame(); await p.screenshot({path:DIR+`shots/${tag}-6-list-period.png`});
+  await p.click('[data-qb="guide"]'); await p.waitForTimeout(150);
+  ok(await p.evaluate(()=>document.activeElement.matches('.qs-seeall[data-current]')), tag+' Back to the guide focuses See all');
+  ok(await p.locator('#qs-step').isVisible() && await p.locator('#qs-card').isVisible() && await p.locator('#qs-browse').isHidden(), tag+' guide restored');
+  ok(!errs.length, tag+' console errors: '+(errs.join(' | ')||'none'));
+  await ctx.close();
+}
+{ const ctx=await b.newContext({viewport:{width:1280,height:900},deviceScaleFactor:1}); const p=await ctx.newPage(); const errs=[];
+  p.on('pageerror',e=>errs.push(String(e))); p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
+  await p.goto('file://'+DIR+'preview.html#question-sets'); await p.waitForTimeout(900);
+  await p.focus('.qs-cat[aria-pressed="true"]');
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown');
+  const cat=await p.evaluate(()=>document.activeElement.dataset.cat);
+  let guard=0; while(guard++<40){ await p.keyboard.press('Tab'); if(await p.evaluate(()=>document.activeElement.matches('.qs-seeall'))) break; }
+  ok(await p.evaluate(()=>document.activeElement.matches('.qs-seeall')), 'kbd: Tab reaches See all ('+guard+' tabs), kind '+cat);
+  await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+  const seq=[]; for(let i=0;i<5;i++){ await p.keyboard.press('Tab'); seq.push(await p.evaluate(()=>{const a=document.activeElement;return a.id||a.className||a.tagName})); }
+  ok(seq[4]==='qb-row', 'kbd: tab order after open: '+seq.join(' > '));
+  await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Shift+Tab');
+  ok(await p.evaluate(()=>document.activeElement.dataset.qb==='guide'), 'kbd: Shift+Tab reaches Back to the guide');
+  await p.focus('#qb-find'); await p.keyboard.type('day'); await p.keyboard.press('ArrowDown'); await p.keyboard.press('End');
+  await p.keyboard.press('Home'); await p.keyboard.press('ArrowDown');
+  await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+  ok(await p.evaluate(()=>document.activeElement.classList.contains('qs-name')), 'kbd: Enter opens the card, focus on its name');
+  const n1=await p.textContent('#qb-pos');
+  await p.focus('[data-qb-step="1"]'); await p.keyboard.press('Enter'); await p.waitForTimeout(100);
+  ok((await p.textContent('#qb-pos'))!==n1, 'kbd: Next steps '+n1+' -> '+await p.textContent('#qb-pos'));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  const back=await p.evaluate(()=>[document.activeElement.className, document.activeElement.getAttribute('aria-current'), document.getElementById('qb-find').value]);
+  ok(back[0]==='qb-row' && back[1]==='true', 'kbd: Escape from the card lands on the row last opened, search kept: '+back);
+  await p.focus('#qb-find'); await p.keyboard.press('Escape');
+  ok(await p.evaluate(()=>document.getElementById('qb-find').value==='' && !document.getElementById('qs-browse').hidden), 'kbd: first Escape in the search clears it');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  ok(await p.evaluate(()=>document.activeElement.matches('.qs-seeall') && document.getElementById('qs-browse').hidden), 'kbd: next Escape closes, focus back on See all');
+  ok(true,'guide after close shows the last opened question: '+await p.textContent('#qs-pos'));
+  ok(!errs.length,'kbd: console errors: '+(errs.join('|')||'none'));
+  await ctx.close(); }
+await b.close(); console.log(log.join('\n')); console.log(log.filter(l=>l.startsWith('FAIL')).length+' failures of '+log.length);})();

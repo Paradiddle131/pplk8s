@@ -16,6 +16,10 @@ Checks, against the manifests the artefacts were built from (semantic/PLAN.md SL
   from Knowledge Catalog per table;
 - example_queries.json holds one verified query per metric and one per saved query, with the documented keys only;
 - agent.json lists every saved query with its question, metrics and group-bys (#164);
+- agent.json lists every semantic model with its table and readiness products (#207), and the governed tables,
+  which hold every metric exactly once, each with its readiness products (SL-24);
+- data_agent_governed/context.json is a valid v1 `Context` whose tables are the governed tables and the time spine
+  only, with one glossary term per metric and per glossary term, and verified queries that read only its tables;
 - every glossary term (`config.meta.glossary` on a model) is in agent.json, has a description, maps to at
   least one metric or dimension, names only metrics the semantic manifest defines and dimensions one of its
   metrics groups by, and neither repeats another term nor a metric's name or label (a metric is its own
@@ -33,6 +37,7 @@ from pathlib import Path
 
 import yaml
 from build_catalog import GLOSSARY_TERMS_PER_TABLE, SemanticIndex, glossary, glossary_tables
+from governed import DATASET
 
 CONTEXT_SCHEMA = Path(__file__).resolve().parent / "schemas" / "geminidataanalytics-v1-context.json"
 REQUIRED = re.compile(r"\s*Required\.")
@@ -213,6 +218,44 @@ def context_problems(manifest: dict, semantic_manifest: dict, catalog: dict, dat
     return found
 
 
+def governed_problems(semantic_manifest: dict, catalog: dict, governed: Path) -> list[str]:
+    """The governed data agent's context (SL-24) against the pinned v1 schema: its tables are the governed tables
+    and the time spine, every metric sits in exactly one governed table, each metric and glossary term is a
+    glossary term, and every verified query reads only its tables."""
+    pin = json.loads(CONTEXT_SCHEMA.read_text())
+    context = json.loads((governed / "context.json").read_text())
+    found = schema_problems(context, {"$ref": pin["root"]}, pin["schemas"])
+
+    tables = catalog.get("governed_tables", [])
+    placed = sorted(name for table in tables for name in table["metrics"])
+    metrics = sorted(metric["name"] for metric in semantic_manifest["metrics"])
+    if placed != metrics:
+        found.append(f"agent.json: governed tables hold {placed}, not each of the metrics {metrics} once")
+    found += [
+        f"agent.json: governed table {table['name']} has no readiness" for table in tables if not table["readiness"]
+    ]
+
+    refs = ((context.get("datasourceReferences") or {}).get("bq") or {}).get("tableReferences", [])
+    named = {(ref.get("datasetId"), ref.get("tableId")) for ref in refs}
+    expected = {(DATASET, table["name"]) for table in tables}
+    found += [f"table {'.'.join(table)} missing" for table in sorted(expected - named)]
+    spines = {spine["node_relation"]["alias"] for spine in semantic_manifest["project_configuration"]["time_spines"]}
+    others = {table for table in named - expected if table[1] not in spines}
+    found += [f"table {'.'.join(table)} is no governed table or the time spine" for table in sorted(others)]
+
+    names = [metric["label"] for metric in catalog["metrics"]] + [term["term"] for term in catalog["glossary"]]
+    listed = [term.get("displayName", "") for term in context.get("glossaryTerms", [])]
+    if sorted(listed) != sorted(names):
+        found.append(f"glossaryTerms {sorted(set(listed) ^ set(names))} differ from the metrics and glossary terms")
+
+    relation = re.compile(r"`[^`]+`\.`([^`]+)`\.`([^`]+)`")
+    for position, query in enumerate(context.get("exampleQueries", [])):
+        read = set(relation.findall(query.get("sqlQuery", "")))
+        if not read or not read <= named:
+            found.append(f"exampleQueries[{position}] reads {sorted(read - named) or 'no table'}, not its tables")
+    return [f"data_agent_governed/context.json: {problem}" for problem in found]
+
+
 def problems(target: Path) -> list[str]:
     manifest = json.loads((target / "manifest.json").read_text())
     semantic_manifest = json.loads((target / "semantic_manifest.json").read_text())
@@ -267,6 +310,17 @@ def problems(target: Path) -> list[str]:
         if not query.get(field)
     ]
 
+    models = sorted(model["name"] for model in semantic_manifest["semantic_models"])
+    listed_models = {model["name"]: model for model in catalog.get("semantic_models", [])}
+    if sorted(listed_models) != models:
+        found.append(f"agent.json: semantic models {sorted(listed_models)} != manifest {models}")
+    found += [
+        f"agent.json: semantic model {name} has no {field}"
+        for name, model in sorted(listed_models.items())
+        for field in ("relation", "readiness")
+        if not model.get(field)
+    ]
+
     queries = json.loads((catalog_dir / "data_agent" / "example_queries.json").read_text())
     if len(queries) != len(metrics) + len(saved):
         found.append(
@@ -278,6 +332,7 @@ def problems(target: Path) -> list[str]:
             found.append(f"example_queries.json[{position}]: keys must be {sorted(EXAMPLE_QUERY_KEYS)}")
 
     found += context_problems(manifest, semantic_manifest, catalog, catalog_dir / "data_agent")
+    found += governed_problems(semantic_manifest, catalog, catalog_dir / "data_agent_governed")
     return found
 
 

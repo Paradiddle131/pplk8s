@@ -63,6 +63,8 @@ class Catalog:
     saved_queries: dict[str, dict[str, Any]] = field(default_factory=dict)
     unavailable: dict[str, dict[str, Any]] = field(default_factory=dict)
     custom_grains_described: list[dict[str, Any]] = field(default_factory=list)
+    semantic_models: list[dict[str, Any]] = field(default_factory=list)
+    governed_tables: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path | None = None) -> Catalog:
@@ -79,6 +81,23 @@ class Catalog:
             saved_queries={q["name"]: q for q in data.get("saved_queries", [])},
             unavailable={m["name"]: m for m in data.get("unavailable_metrics", [])},
             custom_grains_described=data.get("custom_grains", []),
+            semantic_models=data.get("semantic_models", []),
+            governed_tables=data.get("governed_tables", []),
+        )
+
+    def readiness_of_tables(self, tables: list[str]) -> list[str]:
+        """The readiness products of the semantic models' tables and the governed tables among
+        `tables`, matched on their dataset and table (`silver.orders`, `governed.orders_daily`),
+        so a project or database name in front does not matter; a governed table's are its
+        metrics' (semantic/PLAN.md SL-24); a table neither reads names none."""
+        wanted = {".".join(table.lower().split(".")[-2:]) for table in tables}
+        return sorted(
+            {
+                product
+                for known in (*self.semantic_models, *self.governed_tables)
+                if ".".join(known["relation"].lower().split(".")[-2:]) in wanted
+                for product in known["readiness"]
+            }
         )
 
     @property
@@ -367,14 +386,21 @@ class MetricQuery:
 
 @cache
 def engine():  # -> MetricFlowEngine
-    """MetricFlow's engine on the dbt project, set up as the mf CLI sets it up (about 1 s)."""
+    """MetricFlow's engine on the dbt project, set up as the mf CLI sets it up (about 1 s); on
+    BigQuery, its SQL has reserved-word names quoted, which MetricFlow leaves bare (#322)."""
     from dbt_metricflow.cli.cli_configuration import CLIConfiguration
     from metricflow.engine.metricflow_engine import MetricFlowEngine
+    from metricflow.protocols.sql_client import SqlEngine
 
     config = CLIConfiguration()
     config.setup(dbt_project_path=project_dir(), dbt_profiles_path=project_dir())
+    sql_client = config.sql_client
+    if sql_client.sql_engine_type is SqlEngine.BIGQUERY:
+        from semantic_agent.bigquery_sql import QuotingSqlClient
+
+        sql_client = QuotingSqlClient(sql_client)
     return MetricFlowEngine(
-        semantic_manifest_lookup=config.semantic_manifest_lookup, sql_client=config.sql_client
+        semantic_manifest_lookup=config.semantic_manifest_lookup, sql_client=sql_client
     )
 
 

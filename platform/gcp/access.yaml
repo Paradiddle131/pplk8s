@@ -29,6 +29,7 @@ datasets:
   gold: dbt's gold layer.
   exposed: dbt's exposed layer, what consumers read.
   semantic: The time spine and the semantic layer's own tables.
+  governed: The semantic layer's metrics as MetricFlow computes them, by day and by period, for SQL that cannot call MetricFlow (SL-24).
   ops: The audit table, freshness verdicts and the readiness ledger.
   legacy: Tables built the old way, for the migration rehearsal (SL-11).
   migration: The migration rehearsal's parity report (SL-11).
@@ -38,7 +39,7 @@ service_accounts:
     description: Builds the dbt project (the dbt Cloud Run Jobs, #209).
     lab_role: warehouse
     reads: [ds_source]
-    writes: [bronze, silver, gold, exposed, semantic, ops, legacy, migration]
+    writes: [bronze, silver, gold, exposed, semantic, governed, ops, legacy, migration]
   semantic-agent:
     description: The semantic agent's MetricFlow reads (Cloud Run, #209).
     lab_role: agent_metrics

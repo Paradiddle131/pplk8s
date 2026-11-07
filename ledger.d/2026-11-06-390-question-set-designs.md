@@ -1,0 +1,5 @@
+## 2026-11-06 — Semantic track — three designs for the question-set section (#390)
+
+- Done: `results.json` now carries every set's questions as written (turns, groups, kinds, SQL-rubric kinds, expected numbers, new in v2, retirement reason), its freeze date, file hash and what it supersedes (`bet_eval.question_set`), and the page embeds them (`questionSets`); `build.py --section <file> --out <page>` previews a section without touching the page; three Opus designers built one variant each from `report/variants/390/BRIEF.md`: A, the index (set ledger plus the full searchable list), B, the anatomy (sets as bands of marks, v1 threaded to v2), C, the field guide (examples per group and kind, full list folded); each published as a page and posted on #390 with screenshots.
+- Evidence: each designer's Chromium checks at 1280 and 390 px, light and dark (no console errors, no sideways scroll, text contrast at least 4.5:1); hard-v2's hash in `results.json` equals the freeze finding's.
+- Open: the owner picks one on #390; it is then built in full into `report/sections/`.

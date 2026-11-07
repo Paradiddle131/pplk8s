@@ -1,0 +1,1547 @@
+{
+"written": "2026-11-06T14:53Z",
+"database": "dbt_dev",
+"sets": {
+"frozen": {
+"revenue_total": [
+[
+[
+1850.34
+]
+]
+],
+"revenue_one_day": [
+[
+[
+868.65
+]
+]
+],
+"revenue_best_day": [
+[
+[
+981.69
+]
+]
+],
+"net_revenue_one_day": [
+[
+[
+964.19
+]
+]
+],
+"net_revenue_total": [
+[
+[
+1825.59
+]
+]
+],
+"orders_one_day": [
+[
+[
+15.0
+]
+]
+],
+"cancelled_total": [
+[
+[
+5.0
+]
+]
+],
+"cancellation_rate": [
+[
+[
+0.16666666666666666,
+16.666666666666664
+]
+]
+],
+"active_customers": [
+[
+[
+9.0
+]
+]
+],
+"returns_amount": [
+[
+[
+89.75
+]
+]
+],
+"returns_one_day": [
+[
+[
+2.0
+]
+]
+],
+"shipped_orders": [
+[
+[
+86.0
+]
+]
+],
+"damaged_returns": [
+[
+[
+62.5
+]
+]
+],
+"revenue_germany": [
+[
+[
+379.75
+]
+]
+],
+"net_revenue_germany": [
+[
+[
+367.25
+]
+]
+],
+"revenue_signup_cohort": [
+[
+[
+312.0
+]
+]
+],
+"orders_over_100": [
+[
+[
+6.0
+]
+]
+],
+"best_weekday_revenue": [
+[
+[
+2423.75
+]
+]
+],
+"top_campaigns_by_spend": [
+[
+[
+3870.0
+]
+]
+],
+"signups_september": [
+[
+[
+9.0
+]
+]
+],
+"customers_to_date": [
+[
+[
+30.0
+]
+]
+],
+"signup_to_first_order_rate": [
+[
+[
+0.3333333333333333,
+33.33333333333333
+]
+]
+],
+"repeat_revenue_share": [
+[
+[
+0.865720942854202,
+86.57209428542019
+]
+]
+],
+"return_rate_september": [
+[
+[
+0.016666666666666666,
+1.6666666666666667
+]
+]
+],
+"damaged_return_share": [
+[
+[
+0.5,
+50.0
+]
+]
+],
+"average_order_value": [
+[
+[
+75.51461538461538
+]
+]
+],
+"median_order_value": [
+[
+[
+45.0
+]
+]
+],
+"revenue_fiscal_q3": [
+[
+[
+19793.59
+]
+]
+],
+"budget_left_end_of_september": [
+[
+[
+4130.0
+]
+]
+],
+"amsterdam_temperature": [
+[
+[
+11.0
+]
+]
+],
+"cost_per_booking_total": [
+[
+[
+130.0
+]
+]
+],
+"cost_per_lead_search": [
+[
+[
+46.0
+]
+]
+],
+"lead_to_booking_rate": [
+[
+[
+0.3,
+30.0
+]
+]
+],
+"page_views_one_day": [
+[
+[
+5.0
+]
+]
+],
+"engaged_customers_week": [
+[
+[
+9.0
+]
+]
+],
+"monthly_active_customers": [
+[
+[
+10.0
+]
+]
+],
+"view_to_cart_rate": [
+[
+[
+0.8,
+80.0
+]
+]
+],
+"outreach_messages_sent": [
+[
+[
+6.0
+]
+]
+],
+"outreach_reply_rate": [
+[
+[
+0.6666666666666666,
+66.66666666666666
+]
+]
+],
+"partners_engaged_one_day": [
+[
+[
+2.0
+]
+]
+],
+"candidates_in_interview_as_of": [
+[
+[
+1.0
+]
+]
+],
+"time_to_hire": [
+[
+[
+6.0833
+]
+]
+],
+"calls_about_returns": [
+[
+[
+3.0
+]
+]
+],
+"objection_rate": [
+[
+[
+0.3333333333333333,
+33.33333333333333
+]
+]
+],
+"revenue_wow_growth": [
+[
+[
+0.326532792138432,
+32.6532792138432
+]
+]
+],
+"bookings_wow_growth": [
+[
+[
+0.2727272727272727,
+27.27272727272727
+]
+]
+],
+"leads_wow_growth": [
+[
+[
+0.2068965517241379,
+20.68965517241379
+]
+]
+],
+"revenue_mtd": [
+[
+[
+5668.75
+]
+]
+],
+"leads_mtd": [
+[
+[
+42.0
+]
+]
+],
+"followup_by_country": [
+[
+[
+1850.34
+]
+],
+[
+[
+410.75
+]
+]
+],
+"followup_day_before": [
+[
+[
+868.65
+]
+],
+[
+[
+981.69
+]
+]
+],
+"followup_switch_metric": [
+[
+[
+15.0
+]
+],
+[
+[
+964.19
+]
+]
+],
+"followup_how_computed": [
+[
+[
+964.19
+]
+],
+[]
+],
+"followup_rate_how_computed": [
+[
+[
+0.16666666666666666,
+16.666666666666664
+]
+],
+[]
+],
+"ambiguous_sales": [
+[
+[
+981.69
+],
+[
+964.19
+]
+],
+[
+[
+964.19
+]
+]
+],
+"ambiguous_customers": [
+[
+[
+9.0
+],
+[
+10.0
+],
+[
+30.0
+]
+]
+],
+"planted_campaign_top_spend": [
+[
+[
+130.0
+]
+]
+],
+"planted_campaign_least_spend": [
+[
+[
+20.0
+]
+]
+],
+"planted_top_customer": [
+[
+[
+2356.0
+]
+]
+],
+"bet_cancellation_rate_period": [
+[
+[
+0.09523809523809523,
+9.523809523809524
+]
+]
+],
+"bet_customers_september": [
+[
+[
+10.0
+]
+]
+],
+"bet_top_country_september": [
+[
+[
+2665.5
+]
+]
+],
+"bet_weekday_most_orders": [
+[
+[
+24.0
+]
+]
+],
+"bet_ad_spend_september": [
+[
+[
+6270.0
+]
+]
+],
+"bet_channel_lowest_cpl": [
+[
+[
+33.57142857142857
+]
+]
+],
+"bet_lead_to_booking_september": [
+[
+[
+0.38571428571428573,
+38.57142857142858
+]
+]
+],
+"bet_top_call_topic": [
+[
+[
+24.0
+]
+]
+],
+"bet_topic_objection_rate": [
+[
+[
+0.7272727272727273,
+72.72727272727273
+]
+]
+],
+"bet_top_campaign_spend": [
+[
+[
+5795.0
+]
+]
+],
+"bet_top_return_reason_share": [
+[
+[
+0.5050505050505051,
+50.505050505050505
+]
+]
+],
+"bet_avg_days_to_return": [
+[
+[
+0.3333333333333333,
+33.33333333333333
+]
+]
+],
+"bet_median_session_minutes": [
+[
+[
+1.5
+]
+]
+],
+"bet_peak_page_view_hour": [
+[
+[
+2.0
+]
+]
+],
+"bet_median_reply_hours": [
+[
+[
+6.5
+]
+]
+],
+"bet_applicants_reaching_interview": [
+[
+[
+0.6666666666666666,
+66.66666666666666
+]
+]
+],
+"bet_median_days_to_hire": [
+[
+[
+6.0833
+]
+]
+],
+"bet_istanbul_warmer": [
+[
+[
+8.0
+]
+]
+],
+"bet_ad_spend_per_order": [
+[
+[
+57.0
+]
+]
+],
+"bet_delivery_calls_per_100_shipped": [
+[
+[
+2.0
+]
+]
+],
+"bet_median_order_september": [
+[
+[
+117.375
+]
+]
+],
+"bet_p90_order": [
+[
+[
+158.125
+]
+]
+],
+"bet_customers_over_three_orders": [
+[
+[
+10.0
+]
+]
+],
+"bet_median_signup_to_first_order": [
+[
+[
+37.0
+]
+]
+],
+"bet_aov_old_vs_new_customers": [
+[
+[
+61.66626315789474
+]
+]
+],
+"bet_median_days_to_return": [
+[
+[
+0.0
+]
+]
+],
+"bet_damaged_vs_wrong_size": [
+[
+[
+7.5
+]
+]
+],
+"bet_median_days_lead_to_booking": [
+[
+[
+0.0
+]
+]
+],
+"bet_weekday_avg_spend": [
+[
+[
+215.0
+]
+]
+],
+"bet_cart_to_checkout_minutes": [
+[
+[
+5.0
+]
+]
+],
+"bet_most_email_opens": [
+[
+[
+1.0
+]
+]
+],
+"bet_peak_checkout_hour": [
+[
+[
+2.0
+]
+]
+],
+"bet_p75_reply_hours": [
+[
+[
+10.0
+]
+]
+],
+"bet_median_days_to_interview": [
+[
+[
+2.0
+]
+]
+],
+"bet_wetter_day_nl_orders": [
+[
+[
+3.0
+]
+]
+],
+"bet_revenue_per_ad_euro": [
+[
+[
+2.006818181818182
+]
+]
+],
+"bet_sessions_per_order": [
+[
+[
+0.09333333333333334,
+9.333333333333334
+]
+]
+]
+},
+"hard": {
+"hard_aov_last_month": [
+[
+[
+114.38863636363637
+]
+]
+],
+"hard_basket_size_week": [
+[
+[
+130.27884615384616
+]
+]
+],
+"hard_cpa_search_september": [
+[
+[
+124.83870967741936
+]
+]
+],
+"hard_mqls_social_september": [
+[
+[
+40.0
+]
+]
+],
+"hard_win_rate_search": [
+[
+[
+0.33695652173913043,
+33.69565217391305
+]
+]
+],
+"hard_ad_burn_last_two_weeks": [
+[
+[
+2985.0
+]
+]
+],
+"hard_orders_last_fiscal_quarter": [
+[
+[
+217.0
+]
+]
+],
+"hard_fiscal_ytd_net_revenue": [
+[
+[
+19521.84
+]
+]
+],
+"hard_same_weekday_growth": [
+[
+[
+0.2111731843575419,
+21.11731843575419
+]
+]
+],
+"hard_revenue_so_far_this_month": [
+[
+[
+2040.34
+]
+]
+],
+"hard_top_channel_bookings": [
+[
+[
+31.0
+]
+]
+],
+"hard_turkish_vs_dutch_per_order": [
+[
+[
+109.63636363636364
+]
+]
+],
+"hard_runner_up_channel_leads": [
+[
+[
+20.0
+]
+]
+],
+"hard_happiest_call_topic": [
+[
+[
+0.75,
+75.0
+]
+]
+],
+"hard_best_week": [
+[
+[
+3387.25
+]
+]
+],
+"hard_customer_base_turkey": [
+[
+[
+5.0
+]
+]
+],
+"hard_ambiguous_q3": [
+[
+[
+17656.25
+],
+[
+19793.59
+]
+]
+],
+"hard_real_revenue": [
+[
+[
+2137.34
+],
+[
+2047.59
+]
+]
+],
+"hard_active_customers_week": [
+[
+[
+10.0
+],
+[
+9.0
+]
+]
+],
+"hard_sales_germany_this_month": [
+[
+[
+533.75
+],
+[
+494.0
+]
+]
+],
+"hard_last_seven_days": [
+[
+[
+3360.75
+],
+[
+3800.44
+]
+]
+],
+"hard_followup_spend_turkey": [
+[
+[
+12582.75
+]
+],
+[
+[
+2412.0
+]
+],
+[
+[
+586.25
+]
+]
+],
+"hard_followup_cheapest_leads": [
+[
+[
+37.5
+]
+],
+[
+[
+52.5
+]
+]
+],
+"hard_followup_cancelling_country": [
+[
+[
+0.13333333333333333,
+13.333333333333334
+]
+],
+[
+[
+0.06060606060606061,
+6.0606060606060606
+]
+]
+],
+"hard_gmv_september": [
+[
+[
+13663.5
+]
+]
+],
+"hard_repeat_rate_october": [
+[
+[
+0.5882352941176471,
+58.82352941176471
+]
+]
+],
+"hard_cart_abandonment": [
+[
+[
+0.6,
+60.0
+]
+]
+],
+"hard_refund_rate_by_value": [
+[
+[
+0.013375920101170596,
+1.3375920101170595
+]
+]
+],
+"hard_budget_pacing": [
+[
+[
+0.6028846153846154,
+60.28846153846153
+]
+]
+],
+"hard_ad_spend_wow": [
+[
+[
+0.0600706713780919,
+6.00706713780919
+]
+]
+],
+"hard_revenue_per_buyer_country": [
+[
+[
+1332.75
+]
+]
+],
+"hard_cost_per_booking_rise": [
+[
+[
+27.0
+]
+]
+],
+"hard_average_order_rise": [
+[
+[
+22.14318181818182
+]
+]
+],
+"hard_revenue_per_session": [
+[
+[
+717.259
+]
+]
+],
+"hard_august_signups_bought": [
+[
+[
+0.36363636363636365,
+36.36363636363637
+]
+]
+],
+"hard_replies_within_12_hours": [
+[
+[
+0.5,
+50.0
+]
+]
+],
+"hard_candidates_still_in_running": [
+[
+[
+0.3333333333333333,
+33.33333333333333
+]
+]
+],
+"hard_best_customer_september": [
+[
+[
+1380.0
+]
+]
+],
+"hard_first_time_vs_returning": [
+[
+[
+33.0136
+]
+]
+],
+"hard_roas_september": [
+[
+[
+20.558213716108455
+]
+]
+],
+"hard_social_vs_search_lead_gap": [
+[
+[
+10.434782608695652
+]
+]
+],
+"hard_leads_per_100_social": [
+[
+[
+1.9047619047619049
+]
+]
+],
+"hard_weekend_vs_weekday": [
+[
+[
+389.7083333333333
+],
+[
+385.875
+]
+]
+]
+},
+"hard-v2": {
+"hard_aov_last_month": [
+[
+[
+114.38863636363637
+]
+]
+],
+"hard_basket_size_week": [
+[
+[
+130.27884615384616
+]
+]
+],
+"hard_cpa_search_september": [
+[
+[
+124.83870967741936
+]
+]
+],
+"hard_mqls_social_september": [
+[
+[
+40.0
+]
+]
+],
+"hard_win_rate_search": [
+[
+[
+0.33695652173913043,
+33.69565217391305
+]
+]
+],
+"hard_ad_burn_last_two_weeks": [
+[
+[
+2985.0
+]
+]
+],
+"hard_orders_last_fiscal_quarter": [
+[
+[
+217.0
+]
+]
+],
+"hard_fiscal_ytd_net_revenue": [
+[
+[
+19521.84
+]
+]
+],
+"hard_same_weekday_growth": [
+[
+[
+0.2111731843575419,
+21.11731843575419
+]
+]
+],
+"hard_revenue_so_far_this_month": [
+[
+[
+2040.34
+]
+]
+],
+"hard_top_channel_bookings": [
+[
+[
+31.0
+]
+]
+],
+"hard_turkish_vs_dutch_per_order": [
+[
+[
+109.63636363636364
+]
+]
+],
+"hard_runner_up_channel_leads": [
+[
+[
+20.0
+]
+]
+],
+"hard_happiest_call_topic": [
+[
+[
+0.75,
+75.0
+]
+]
+],
+"hard_best_week": [
+[
+[
+3387.25
+]
+]
+],
+"hard_customer_base_turkey": [
+[
+[
+5.0
+]
+]
+],
+"hard_ambiguous_q3": [
+[
+[
+17656.25
+],
+[
+19793.59
+]
+]
+],
+"hard_real_revenue": [
+[
+[
+2137.34
+],
+[
+2047.59
+]
+]
+],
+"hard_active_customers_week": [
+[
+[
+10.0
+],
+[
+9.0
+]
+]
+],
+"hard_sales_germany_this_month": [
+[
+[
+533.75
+],
+[
+494.0
+]
+]
+],
+"hard_last_seven_days": [
+[
+[
+3360.75
+],
+[
+3800.44
+]
+]
+],
+"hard_followup_spend_turkey": [
+[
+[
+12582.75
+]
+],
+[
+[
+2412.0
+]
+],
+[
+[
+586.25
+]
+]
+],
+"hard_followup_cheapest_leads": [
+[
+[
+37.5
+]
+],
+[
+[
+52.5
+]
+]
+],
+"hard_followup_cancelling_country": [
+[
+[
+0.13333333333333333,
+13.333333333333334
+]
+],
+[
+[
+0.06060606060606061,
+6.0606060606060606
+]
+]
+],
+"hard_gmv_september": [
+[
+[
+13663.5
+]
+]
+],
+"hard_repeat_rate_october": [
+[
+[
+0.5882352941176471,
+58.82352941176471
+]
+]
+],
+"hard_cart_abandonment": [
+[
+[
+0.6,
+60.0
+]
+]
+],
+"hard_refund_rate_by_value": [
+[
+[
+0.013375920101170596,
+1.3375920101170595
+]
+]
+],
+"hard_budget_pacing": [
+[
+[
+0.6028846153846154,
+60.28846153846153
+]
+]
+],
+"hard_ad_spend_wow": [
+[
+[
+0.0600706713780919,
+6.00706713780919
+]
+]
+],
+"hard_revenue_per_buyer_country": [
+[
+[
+1332.75
+]
+]
+],
+"hard_cost_per_booking_rise": [
+[
+[
+27.0
+]
+]
+],
+"hard_average_order_rise": [
+[
+[
+22.14318181818182
+]
+]
+],
+"hard_revenue_per_session": [
+[
+[
+717.259
+]
+]
+],
+"hard_august_signups_bought": [
+[
+[
+0.36363636363636365,
+36.36363636363637
+]
+]
+],
+"hard_replies_within_12_hours": [
+[
+[
+0.5,
+50.0
+]
+]
+],
+"hard_candidates_still_in_running": [
+[
+[
+0.3333333333333333,
+33.33333333333333
+]
+]
+],
+"hard_best_customer_september": [
+[
+[
+1380.0
+]
+]
+],
+"hard_first_time_vs_returning": [
+[
+[
+33.0136
+]
+]
+],
+"hard_roas_september": [
+[
+[
+20.558213716108455
+]
+]
+],
+"hard_social_vs_search_lead_gap": [
+[
+[
+10.434782608695652
+]
+]
+],
+"hard_leads_per_100_social": [
+[
+[
+1.9047619047619049
+]
+]
+],
+"hard_weekend_vs_weekday": [
+[
+[
+389.7083333333333
+],
+[
+385.875
+]
+]
+],
+"hv2_net_revenue_on_september_orders": [
+[
+[
+12547.75
+]
+]
+],
+"hv2_signups_never_ordered": [
+[
+[
+16.0
+]
+]
+],
+"hv2_calls_per_day_september": [
+[
+[
+1.0666666666666667
+]
+]
+],
+"hv2_avg_daily_revenue_fiscal_quarter": [
+[
+[
+296.56954545454545
+]
+]
+],
+"hv2_september_revenue_amsterdam_days": [
+[
+[
+12521.25
+]
+]
+],
+"hv2_median_gap_between_orders": [
+[
+[
+27.0
+]
+]
+],
+"hv2_net_revenue_week_returns_credited": [
+[
+[
+190.0
+]
+]
+],
+"hv2_country_lowest_daily_revenue": [
+[
+[
+31.877659574468087
+]
+]
+],
+"hv2_cancellation_rate_by_value_august": [
+[
+[
+0.11491997034323347,
+11.491997034323347
+]
+]
+],
+"hv2_revenue_share_unreturned_orders": [
+[
+[
+0.9520931131479157,
+95.20931131479156
+]
+]
+],
+"hv2_median_customer_spend": [
+[
+[
+1891.6
+]
+]
+],
+"hv2_top_three_customers_share": [
+[
+[
+0.35126334228586337,
+35.12633422858634
+]
+]
+],
+"hv2_first_order_value_october": [
+[
+[
+36.5
+]
+]
+],
+"hv2_spend_on_days_without_email_booking": [
+[
+[
+8740.0
+]
+]
+],
+"hv2_search_budget_left_drop": [
+[
+[
+2175.0
+]
+]
+]
+}
+}
+}

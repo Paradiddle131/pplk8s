@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+import yaml
 
 from semantic_agent import agent as semantic
 from semantic_agent import evaluation, tools
@@ -391,3 +392,192 @@ def test_the_planted_cases_read_instructions_the_fixture_plants():
     assert all(s in fixture for s in strings)
     # Each planted case is a plain number question too, so answer_correct scores both arms on it.
     assert all(len(q.turns) == 1 and q.turns[0].kind == "number" for q in planted)
+
+
+# The data-agent arm (#207): the semantic agent over a stand-in for DataAgentToolset.
+
+STATEMENT = "Freshness unknown: sales.silver has no ready interval recorded."
+
+
+class AsksTheDataAgent(ScriptedLlm):
+    """Asks the data agent the revenue question, then answers with its figure and freshness."""
+
+    async def generate_content_async(self, llm_request, stream=False):
+        question = llm_request.contents[0].parts[0].text
+        answered = any(p.function_response for c in llm_request.contents for p in c.parts or [])
+        if "Revenue" in question and not answered:
+            self.steps = [("ask_data_agent", {"data_agent_name": "a", "query": question})]
+        elif "Revenue" in question:
+            self.steps = [f"Revenue was 868.65 EUR on 2 October 2026. {STATEMENT}"]
+        else:
+            self.steps = ["The data agent has no metric for temperature."]
+        self.requests = []
+        async for response in super().generate_content_async(llm_request, stream):
+            yield response
+
+
+def test_the_data_agent_arm_is_scored_without_metric_choice_and_reported_on_its_own():
+    from google.adk.tools import FunctionTool
+
+    from semantic_agent.toolset import Toolset
+
+    def ask_data_agent(data_agent_name: str, query: str) -> dict:
+        """Asks a data agent a question."""
+        return {
+            "status": "SUCCESS",
+            "response": [
+                {"data": {"generatedSql": "SELECT SUM(amount_eur) FROM `p.silver.orders`"}},
+                {"Data Retrieved": {"headers": ["revenue_eur"], "rows": [[868.65]]}},
+            ],
+        }
+
+    toolset = Toolset(tools=[FunctionTool(ask_data_agent)], catalog_tools=(), instruction="Ask.")
+    cases = eval_cases(QUESTIONS, EXPECTED, "semantic_agent", semantic=True)
+    outcomes = asyncio.run(
+        evaluation.evaluate(
+            semantic.build_agent(AsksTheDataAgent(), toolset),
+            cases,
+            evaluation.DATA_AGENT_METRICS,
+        )
+    )
+    assert "metric_choice" not in outcomes["revenue_one_day"].scores
+    assert outcomes["revenue_one_day"].scores["freshness_quoted"] == 1.0
+    arm = evaluation.DATA_AGENT_ARM
+    text = evaluation.report(QUESTIONS, EXPECTED, outcomes, {}, "scripted", arm)
+    assert text.startswith("# Data agent eval\n")
+    assert "| | Semantic agent over the data agent | Baseline (not run: #299) |" in text
+    assert (
+        "| Questions a metric covers (1) | 1 right, 1 quoting their freshness | 0 right |" in text
+    )
+    assert "| ✓ | none | ✓ | not run |" in text
+    assert arm.path.name == "data-agent-eval.md"
+
+
+@pytest.mark.parametrize(
+    ("agent_id", "title", "report"),
+    [
+        ("pplk8s-semantic", "Data agent eval", "data-agent-eval.md"),
+        ("pplk8s-governed", "Governed data agent eval", "data-agent-governed-eval.md"),
+        ("someone-elses", "Data agent eval: someone-elses", "data-agent-someone-elses-eval.md"),
+    ],
+)
+def test_each_data_agent_has_its_own_report(agent_id, title, report):
+    """`ARM=data_agent_governed` asks pplk8s-governed (SL-24): never the other's report."""
+    arm = evaluation.data_agent_arm(f"projects/lab-project/locations/us/dataAgents/{agent_id}")
+    assert (arm.title, arm.path.name, arm.metric_choice) == (title, report, False)
+    assert "`lab-project`" in arm.on and "{project}" not in arm.on
+
+
+def test_the_governed_arm_is_chosen_by_the_data_agent_id(monkeypatch):
+    from semantic_agent.toolset_data_agent import data_agent_name
+
+    monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
+    monkeypatch.setenv("GCP_PROJECT", "lab-project")
+    monkeypatch.setenv("DATA_AGENT_ID", "pplk8s-governed")
+    arm = evaluation.data_agent_arm(data_agent_name())
+    assert arm.path.name == "data-agent-governed-eval.md"
+
+
+def test_the_data_agent_arm_refuses_without_the_lab_project(monkeypatch, capsys):
+    monkeypatch.setenv("AGENT_TOOLSET", "data_agent")
+    monkeypatch.delenv("GCP_PROJECT", raising=False)
+    monkeypatch.delenv("DATA_AGENT_NAME", raising=False)
+    assert asyncio.run(evaluation.main([])) == 2
+    assert "needs GCP_PROJECT" in capsys.readouterr().out
+
+
+def test_the_bets_frozen_set_keeps_its_shape_and_groups():
+    # docs/research/semantic-bet/RULE.md: questions.yaml's cases copied, at least 30% no metric
+    # covers, every case in a group, each trap with its naive SQL, each distractor its legacy SQL.
+    spec = yaml.safe_load(evaluation.BET_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert len(set(ids)) == len(ids) == len(spec["groups"])
+    assert set(spec["groups"]) == set(ids)
+    assert [q.id for q in load_questions()] == ids[: len(load_questions())]
+    groups = spec["groups"]
+    uncovered = [i for i in ids if "uncovered" in groups[i]]
+    assert len(uncovered) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in uncovered)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]}
+    assert set(spec["legacy_sql"]) == {i for i in ids if "distractor" in groups[i]}
+    assert all("covered" in groups[i] for i in [*spec["naive_sql"], *spec["legacy_sql"]])
+    known = set(tools.catalog().metrics)
+    assert all(set(q.metrics) <= known for q in questions)
+    assert spec["frozen"] == "2026-11-03" and spec["hedges"]
+
+
+def test_the_bets_hard_set_keeps_the_frozen_shape_and_its_kinds():
+    # RULE.md § The set, #356: the first set's keys, its hedges, at least 40 cases, at least 30% no
+    # metric covers, every case in a group and a hard kind, each trap with its naive SQL, each case
+    # written blind or named as written after reading the layer.
+    first = yaml.safe_load(evaluation.BET_QUESTIONS.read_text())
+    spec = yaml.safe_load(evaluation.BET_HARD_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_HARD_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert len(ids) >= 40 and len(set(ids)) == len(ids)
+    assert set(first) <= set(spec) and spec["hedges"] == first["hedges"]
+    assert spec["frozen"] == "2026-11-03"
+    assert set(spec["groups"]) == set(spec["kinds"]) == set(ids)
+    assert not set(ids) & {q.id for q in load_questions(path=evaluation.BET_QUESTIONS)}
+    groups = spec["groups"]
+    uncovered = [i for i in ids if "uncovered" in groups[i]]
+    assert len(uncovered) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in uncovered)
+    assert all("covered" in groups[i] for i in ids if i not in uncovered)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]}
+    assert set(spec["legacy_sql"]) == {i for i in ids if "distractor" in groups[i]}
+    assert all("covered" in groups[i] for i in [*spec["naive_sql"], *spec["legacy_sql"]])
+    assert set(tools.catalog().metrics) >= {m for q in questions for m in q.metrics}
+    kinds = {"jargon", "period", "multi_metric", "segment", "multi_step", "implicit"}
+    kinds.add("ambiguous_followup")
+    assert {k for case in spec["kinds"].values() for k in case} == kinds
+    assert set(spec["blind"]) | set(spec["post"]) == set(ids)
+    assert not set(spec["blind"]) & set(spec["post"])
+
+
+def test_the_bets_hard_set_v2_keeps_v1_whole_and_proves_each_new_case_hard():
+    # RULE.md § Set versions, #377: a new file that supersedes v1, v1's cases unchanged in what
+    # scores them, every case in exactly one of covered, composable or uncovered, at least 30%
+    # composable or uncovered with no metrics, and each new case sql_hard by a rubric kind with
+    # the naive SQL the checker runs.
+    v1 = yaml.safe_load(evaluation.BET_HARD_QUESTIONS.read_text())
+    spec = yaml.safe_load(evaluation.BET_HARD_V2_QUESTIONS.read_text())
+    questions = load_questions(path=evaluation.BET_HARD_V2_QUESTIONS)
+    ids = [q.id for q in questions]
+    assert spec["frozen"] == "2026-11-06" and spec["supersedes"] == "hard"
+    assert spec["hedges"] == v1["hedges"] and len(set(ids)) == len(ids)
+    first = {case["id"]: case for case in v1["questions"]}
+    carried = {case["id"]: case for case in spec["questions"] if case["id"] in first}
+    assert carried == first
+    new = spec["new"]
+    assert set(new) == set(ids) - set(first) and len(new) >= 12
+    groups = spec["groups"]
+    assert set(groups) == set(spec["kinds"]) == set(ids)
+    assert all(len({"covered", "composable", "uncovered"} & set(groups[i])) == 1 for i in ids)
+    beyond = [i for i in ids if {"composable", "uncovered"} & set(groups[i])]
+    assert len(beyond) >= 0.3 * len(ids)
+    assert all(not q.metrics for q in questions if q.id in beyond)
+    assert all({"covered", "trap"} <= set(groups[i]) or "trap" not in groups[i] for i in ids)
+    rubric = {
+        "fan_out_join",
+        "distinct_across_join",
+        "ratio_of_sums",
+        "window",
+        "median_percentile",
+    }
+    rubric |= {
+        "sessions_gaps_islands",
+        "cohort_retention",
+        "anti_join",
+        "date_spine",
+        "fiscal_timezone",
+    }
+    hard = {i for i in ids if "sql_hard" in spec["kinds"][i]}
+    assert set(new) <= hard and set(spec["rubric"]) == hard
+    assert all(spec["rubric"][i] and set(spec["rubric"][i]) <= rubric for i in hard)
+    assert set(spec["naive_sql"]) == {i for i in ids if "trap" in groups[i]} | set(new)
+    assert set(tools.catalog().metrics) >= {m for q in questions for m in q.metrics}
+    assert set(spec["blind"]) | set(spec["post"]) == set(ids) and set(spec["post"]) == set(
+        v1["post"]
+    )

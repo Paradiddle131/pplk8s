@@ -1,0 +1,10 @@
+## 2026-11-06 — Semantic track — the report's night feedback round, and the free lane by hand
+
+- Done: the owner's five points on the semantic-bet report, built on a side branch by one builder agent, checked by an independent reviewer agent over two rounds ("fix first", then "ship") and merged into the train (`cc5535f`).
+  Figure 2's gliders reach every whole percent with no snapping, act as one joint filter that dims a row's marks in both panels and its setup and model text once all its sets are out, and show their value clear of every handle, rule and label.
+  The setup map lists the rungs beside the map from 1180 px with the map held in view.
+  The winners card gives each figure its n and an exact 95% Clopper-Pearson bound over questions where the bootstrap collapses (19 of 19 right reads at least 82%, not [100, 100]), and flags figures on fewer than 20 questions; "MetricFlow declines them by design" is gone where it answers 61% of the hard set's uncovered questions.
+  The daily scheduled lane failed at start (no repositories in its fresh session, so the environment's setup script found no clone); this session ran the lane by hand: `native-mcp` and `custom-toolbox` whole at k = 1 on both sets on the free model, `baseline` frozen to 56 of 96; the report rebuilt and republished after every pass; the day's watch line; two lessons in `semantic/PLAN.md` § 6.
+- Evidence: the reviewer's own Playwright scripts, old page against new at 1280 and 400 px in both themes and both sets: every value reached by keyboard and real mouse drag, 0 joint-filter violations, 0 overlapping text boxes, the same tab stops in Figures 2 to 6, no console errors or horizontal scroll from 360 to 1920 px, and numbers that differ only in the new exact bounds (`report/NOTES.md`, "Feedback round 2026-11-05 night").
+  OpenRouter free count 0 to 991; GCP $0.000010 before and after (the known egress); `findings/free-lane-days.md`, the 2026-11-06 block.
+- Open: the scheduled task's setup (the owner's fix in the environment's settings); `baseline` and `custom-lightdash` at k = 1, then the k = 3 round.

@@ -64,6 +64,14 @@ ops_tables=$(python3 -c 'import json, sys
 print(json.dumps(sorted(t["tableReference"]["tableId"] for t in json.load(sys.stdin).get("tables", []))))' <<<"$ops")
 vars+=(-var "existing_ops_tables=$ops_tables")
 
+# The datasets that exist now: one made by hand before OpenTofu declared it (`bq mk`, the console) is imported, not
+# created twice (infra/bigquery.tf, infra/data_agent.tf); an import of one already in the state does nothing.
+datasets=$(read_or "https://bigquery.googleapis.com/bigquery/v2/projects/$GCP_PROJECT/datasets?maxResults=1000&all=true" '{}') ||
+  { echo "tofu.sh: could not list the project's datasets" >&2; exit 1; }
+existing_datasets=$(python3 -c 'import json, sys
+print(json.dumps(sorted(d["datasetReference"]["datasetId"] for d in json.load(sys.stdin).get("datasets", []))))' <<<"$datasets")
+vars+=(-var "existing_datasets=$existing_datasets")
+
 # The freshness alert's address (infra/monitoring.tf), never committed: ALERT_EMAIL, else the signed-in gcloud
 # account (a person, not a service account), else the address of the channel deployed now, so a cloud session's
 # plan (no gcloud account) keeps it; with none, a plan has no channel and warns.

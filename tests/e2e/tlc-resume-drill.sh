@@ -94,7 +94,7 @@ read -r CHUNKS LEDGER_ROWS <<<"$(psql_wh "SELECT count(*), sum(rows) FROM ops.fi
 POD0=$(elf_pods | head -1)
 FOOTER_ROWS=$(kubectl -n "$WL" exec "$POD0" -c el-factory -- python -c '
 import sys, pyarrow.parquet as pq
-from el_factory.remote_file import RangeReader, head
+from el_factory.tlc.remote_file import RangeReader, head
 print(pq.ParquetFile(RangeReader(head(sys.argv[1]))).metadata.num_rows)' "$URI")
 [ "$FOOTER_ROWS" = "$LEDGER_ROWS" ] || fail "the ledger holds $LEDGER_ROWS rows, the footer of $URI says $FOOTER_ROWS"
 layers() { # the month's landed rows of this version, silver and quarantine rows of the entity

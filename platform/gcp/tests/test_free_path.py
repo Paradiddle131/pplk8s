@@ -57,14 +57,37 @@ def test_an_api_named_but_not_enabled_fails(copy: Path) -> None:
 
 
 def test_a_dated_exception_expires(copy: Path) -> None:
-    spec = copy / "free-path.yaml"
-    text = spec.read_text().replace(
-        "geminidataanalytics.googleapis.com: {enable: false",
-        "geminidataanalytics.googleapis.com: {enable: true",
+    """The data agent's API (#207) is on through 2026-12-30, the day #232 switches it off by, and refused after."""
+    api = yaml.safe_load((copy / "free-path.yaml").read_text())["apis"][
+        "geminidataanalytics.googleapis.com"
+    ]
+    assert api["enable"] and str(api["until"]) == "2026-12-30"
+    assert problems(copy, dt.date(2026, 12, 30)) == []
+    assert any(
+        "geminidataanalytics.googleapis.com: enabled past its free window" in p
+        for p in problems(copy, dt.date(2026, 12, 31))
     )
+    spec = copy / "free-path.yaml"
+    text = spec.read_text()
+    # The data agent's API and the two it needs (dataplex, cloudaicompanion) end together.
+    for name in DATA_AGENT_APIS:
+        text = text.replace(f"{name}: {{enable: true", f"{name}: {{enable: false")
     spec.write_text(text)
-    assert problems(copy, dt.date(2026, 12, 1)) == []
-    assert any("free window" in p for p in problems(copy, dt.date(2027, 1, 1)))
+    # Switching it off (#232) also removes the data agent's own infra, which names its API.
+    (copy / "infra" / "data_agent.tf").unlink()
+    assert problems(copy, dt.date(2027, 1, 1)) == []
+
+
+DATA_AGENT_APIS = (
+    "geminidataanalytics.googleapis.com",
+    "dataplex.googleapis.com",
+    "cloudaicompanion.googleapis.com",
+)
+
+
+def test_the_apis_a_data_agent_needs_end_with_it(copy: Path) -> None:
+    apis = yaml.safe_load((copy / "free-path.yaml").read_text())["apis"]
+    assert {str(apis[name]["until"]) for name in DATA_AGENT_APIS} == {"2026-12-30"}
 
 
 def with_daily_fence(copy: Path, mib: int) -> Path:
@@ -201,7 +224,10 @@ def test_the_alerting_policy_expires_before_monitoring_charges_for_it(
     copy: Path,
 ) -> None:
     # Cloud Monitoring charges for alerting "no sooner than September 1, 2027".
-    assert problems(copy, dt.date(2027, 8, 31)) == []
+    assert not any(
+        "google_monitoring_alert_policy" in p
+        for p in problems(copy, dt.date(2027, 8, 31))
+    )
     assert any(
         "google_monitoring_alert_policy declared past its free window" in p
         for p in problems(copy, dt.date(2027, 9, 1))
