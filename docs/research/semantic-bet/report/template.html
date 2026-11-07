@@ -475,7 +475,10 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 const D = /*__DATA__*/null;
 window.REPORT = D;
 (function () {
-  try { const t = localStorage.getItem("semantic-bet-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  // light unless the reader chose dark with the theme button (owner, 2026-11-07: light by default)
+  let theme = "light";
+  try { const t = localStorage.getItem("semantic-bet-theme"); if (t === "light" || t === "dark") theme = t; } catch (e) {}
+  document.documentElement.setAttribute("data-theme", theme);
   const q = []; let ready = false;
   window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
   window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
@@ -2120,6 +2123,13 @@ window.REPORT = D;
   const toggleQ = (ci) => selectQ(plateState && plateState.sel === ci ? null : ci);
   $("#plate-clear").addEventListener("click", (e) => { e.stopPropagation(); unpin(false); selectQ(null); const st = $("#pqs"); if (st) st.focus({ preventScroll: true }); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && plateState && plateState.sel != null) selectQ(null); });
+  // a click anywhere but a question (its squares, its tick), the strip or a tooltip shows every question again
+  document.addEventListener("click", (e) => {
+    if (!plateState || plateState.sel == null) return;
+    const t = e.target;
+    if (t.closest && (t.closest("#plate .pu") || t.closest("#pqs") || t.closest("#pstrip") || t.closest(".tip"))) return;
+    unpin(false); selectQ(null);
+  });
   // the head's tick strip: hover names a question, a click selects it; by keyboard, arrows move, Enter selects
   const tickAt = (ev) => { const G = plateState.G, b = $("#pqs").getBoundingClientRect(), x = ev.clientX - b.left; for (const [ci, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) return ci; return null; };
   const tickTip = (ci, x, y) => { const L = caseLine(ci); tipEl = $("#pqs"); showTipHTML(tKick(esc(L.g) + " question") + `<p class="tq">${esc(L.q)}</p><p class="qid">${plateState.sel === ci ? "Highlighted; click to show every question" : "Click to highlight it on every row"}</p>`, x, y); };
