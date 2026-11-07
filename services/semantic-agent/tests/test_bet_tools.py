@@ -161,3 +161,47 @@ def test_the_python_setup_differs_from_its_source_only_in_python_analysis():
         },
     )
     assert [c["tool"] for c in turn["calls"]] == ["generated_sql", "python_analysis"]
+
+
+BQ_REFUSAL = "Unrecognized name: description at [1:32]"
+QUERY = "SELECT column_name, description FROM silver.INFORMATION_SCHEMA.COLUMNS"
+
+
+def test_the_native_mcp_guard_quotes_bigquerys_reason_for_a_failed_dry_run():
+    """#392: Google's server answers a failed dry run with isError and plain text, not JSON."""
+    import asyncio
+
+    mcp = probe("328_mcp_agent.py")
+
+    class Tool:
+        name = "execute_sql_readonly"
+
+        async def run_async(self, args, tool_context):
+            return {"isError": True, "content": [{"type": "text", "text": BQ_REFUSAL}]}
+
+    refused = asyncio.run(mcp.cost_guard(Tool(), {"query": QUERY}, None))
+    assert refused == {"error": f"the dry run refused the query: {BQ_REFUSAL}"}
+
+
+def test_the_claude_code_guard_quotes_the_same_reason(monkeypatch):
+    """#392: cc-native-mcp's guard keeps parity with native-mcp's."""
+    import asyncio
+
+    from mcp import types
+
+    guard = probe("387_mcp_guard.py")
+
+    async def call(url, name, args):
+        return types.CallToolResult(
+            isError=True, content=[types.TextContent(type="text", text=BQ_REFUSAL)]
+        )
+
+    monkeypatch.setattr(guard, "_call", call)
+    refused = asyncio.run(guard.guard("execute_sql_readonly", {"query": QUERY}, "http://x"))
+    assert refused == f"the dry run refused the query: {BQ_REFUSAL}"
+
+
+def test_a_parsed_dry_run_error_is_still_quoted_as_json():
+    mcp = probe("328_mcp_agent.py")
+    payload = {"errors": [{"message": "Not found"}]}
+    assert mcp.dry_run_refusal({}, payload) == '{"errors": [{"message": "Not found"}]}'

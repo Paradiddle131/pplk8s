@@ -102,14 +102,12 @@ async def _call(url: str, name: str, args: dict[str, Any]) -> types.CallToolResu
         return await client.call_tool(name, args)
 
 
-def _payload(result: types.CallToolResult) -> dict[str, Any]:
+def _dumped(result: types.CallToolResult) -> dict[str, Any]:
     dumped = result.model_dump(mode="json", by_alias=True)
-    return ARM._payload(
-        {
-            "structuredContent": dumped.get("structuredContent"),
-            "content": dumped.get("content"),
-        }
-    )
+    return {
+        "structuredContent": dumped.get("structuredContent"),
+        "content": dumped.get("content"),
+    }
 
 
 async def guard(name: str, args: dict[str, Any], url: str) -> str | None:
@@ -131,9 +129,10 @@ async def guard(name: str, args: dict[str, Any], url: str) -> str | None:
         return f"refused: the query reads dataset {blocked}, which is out of reach; use silver"
     if args.get("dryRun"):
         return None
-    dry = _payload(await _call(url, name, {**args, "dryRun": True}))
+    raw = _dumped(await _call(url, name, {**args, "dryRun": True}))
+    dry = ARM._payload(raw)
     if dry.get("errors") or "totalBytesProcessed" not in dry:
-        return f"the dry run refused the query: {json.dumps(dry)[:500]}"
+        return f"the dry run refused the query: {ARM.dry_run_refusal(raw, dry)}"
     if int(dry["totalBytesProcessed"]) > ARM.MAX_BYTES:
         return f"refused: the query would process {dry['totalBytesProcessed']} bytes, over {ARM.MAX_BYTES}"
     return None

@@ -113,6 +113,22 @@ def _payload(result: Any) -> dict[str, Any]:
     return {}
 
 
+def dry_run_refusal(result: Any, payload: dict[str, Any]) -> str:
+    """Why a dry run refused a query, for the agent: BigQuery's own error text (#392).
+
+    Google's server answers a failed dry run with `isError` and plain text (`Unrecognized name: description
+    at [1:32]`), which `_payload` cannot parse; quote that text, else the parsed payload, cut at 500 characters.
+    """
+    if payload:
+        return json.dumps(payload)[:500]
+    texts = [
+        block.get("text")
+        for block in (result.get("content") or [] if isinstance(result, dict) else [])
+        if isinstance(block, dict) and block.get("text")
+    ]
+    return (" ".join(texts) or "no reason given")[:500]
+
+
 async def cost_guard(
     tool: BaseTool, args: dict[str, Any], tool_context: Any
 ) -> dict[str, Any] | None:
@@ -137,11 +153,10 @@ async def cost_guard(
         }
     if args.get("dryRun"):
         return None
-    dry = _payload(
-        await tool.run_async(args={**args, "dryRun": True}, tool_context=tool_context)
-    )
+    raw = await tool.run_async(args={**args, "dryRun": True}, tool_context=tool_context)
+    dry = _payload(raw)
     if dry.get("errors") or "totalBytesProcessed" not in dry:
-        return {"error": f"the dry run refused the query: {json.dumps(dry)[:500]}"}
+        return {"error": f"the dry run refused the query: {dry_run_refusal(raw, dry)}"}
     if int(dry["totalBytesProcessed"]) > MAX_BYTES:
         return {
             "error": f"refused: the query would process {dry['totalBytesProcessed']} bytes, over {MAX_BYTES}"

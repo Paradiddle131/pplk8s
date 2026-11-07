@@ -216,3 +216,7 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Order: the extended hard set at k = 1, then the frozen set at k = 1, then k = 3 if the first round shows a difference worth its runs.
   Why: every data agent so far ran with Python off (the parity finding); whether Google's Python step changes accuracy or confident-wrong answers is a question the work platform will face.
   The owner's words, 2026-11-07, in a session, on the recommendation to add it: "go for native-context-python".
+- 2026-11-07T12:54Z ([#392](../../../../../issues/392)): the BigQuery MCP cost guard of `native-mcp` (`probes/328_mcp_agent.py`) and of `cc-native-mcp` (`probes/387_mcp_guard.py`) quotes BigQuery's own reason when a dry run fails (`dry_run_refusal`, first 500 characters), where it gave `{}` before; both guards change in one commit, so the two setups stay at parity.
+  It takes effect when it merges into the train, after `native-mcp`'s extended-hard-set k = 3 pass is whole, so no pass mixes the two refusal texts; every earlier run keeps the old text and stays as scored.
+  Why: 8 of the first 28 `execute_sql_readonly` calls of the strict `cc-native-mcp` pass were refused with `{}`, so the agent could not see why its SQL failed, while Google's server had answered with the reason.
+  The owner's words, 2026-11-07, in a session, on the recommendation to fix both guards after that pass: "#392 and #383 as recommended".
