@@ -184,3 +184,6 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   #392's fix is PR #411, with its RULE.md entry; like #410, it merges once `native-mcp`'s extended-hard-set k = 3 pass is whole.
   #383 waits for the frozen k = 3 round.
   #409's Figure 1 now compares with the managed best (page version 40; #336's artifact 4 has the same SHA-256); #409's other items remain.
+- Addendum, 2026-11-07T13:22Z: #409 closed (page version 41).
+  Figures 3, 5 and 6 name their set; the summary says what each count covers; the partial leader is tagged "so far"; setup ids stay as names, by design.
+  Next is unchanged: tonight's 00:07Z wake, then the merges of #410 and #411, then #380.
