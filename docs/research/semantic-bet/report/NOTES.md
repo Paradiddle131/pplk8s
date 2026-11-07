@@ -303,3 +303,40 @@ The owner picked design A of three (a modal, a side drawer, an inline panel), 20
 - `node tools/clipcheck.js --quick`: 0 findings (it does not open the dialog).
 - Screenshots at device scale 1 in `shots/rev3/397/`.
 - Not verified: real fonts (blocked in this sandbox), Safari, Firefox, real touch devices, a screen reader.
+
+## Revision 4 (2026-11-07)
+
+### What changed
+
+- One decision map: Figure 1 has a set switch (the page's segmented control) over every set with rows, the frozen, hard and extended hard sets; the extended hard set's button and the map's status line say it is not counted in the findings yet.
+  The other figures still draw the frozen and hard sets only (`setOrder`); the map reads `mapOrder`.
+- The map took the appendix table's interaction: every numeric column's head sorts (highest first, lowest first, back to the map's order; stable, empty cells last as "–", `aria-sort`, a live status line), and checkboxes filter by setup family and model kind.
+  In the map's order the rungs, the "+N models" rows, the verdict tags, intervals and group chips stay; a sort lists every setup and model flat, and its third press restores the rungs.
+- The appendix is gone from the Question sets part, with the set profiles' "Drawn in every figure" and "Not drawn in the figures" lines; a link that pointed at it now opens the map on that set (`#map-set-<set>`).
+  A question asked only in the extended hard set now shows how each setup did, since that set's runs are in the page's data.
+- New map columns, each a typed glossary term whose tooltip gives its meaning and a "Computed as" line: Accuracy (the column was "Right"), Coverage, Selective accuracy and pass^3; Confident-wrong is unchanged.
+  Accuracy keeps its interval; the three new measures are plain values, since the page has no interval method for them.
+- Every run (Figure 6): a click on a square, a click on a question's tick in the head's new tick strip, or Enter on a row or on the strip highlights that question on every row and fades every other column; the same question again, Escape or "Show every question" clears it, and another question moves it.
+  The live line above the plate names the question and how many setups were right on every run; it and the button keep their place, so a highlight never moves the plate.
+- A pinned tooltip moves: its kicker row is the handle, with a grab cursor and a grip mark shown only when pinned; drag by mouse, pen or touch (pointer events), or Tab from the pinned mark to the handle and nudge with the arrow keys (Shift for larger steps); it stays inside the viewport, and unpinning forgets the place.
+- "Over the floor" reads "How many points more often a setup is right than the bare agent with the tables only, on the same questions."
+  Its glossary row adds labelled lines: Computed as, The floor, Per question, Combined, Example (three questions at +67, 0 and −33 points give +11) and Reading.
+  Every glossary row now carries such lines instead of repeating its tooltip: handwritten ones for the measures and setups, and from the data for kinds of question (an example question and a count), sets (questions and setups) and setup families (their setups).
+- Setups: "What each setup is, one at a time" now comes before "What each setup is" (`build.py` `SECTION_ORDER`).
+
+### Choices
+
+- The switch shows one set at a time, so the map's paired F and H chips became one chip per group; a sort over two sets at once would have no single order.
+- The extended hard set adds a Composable group column, its largest group; the frozen set's map keeps the four headline groups.
+- Coverage counts every decline as not answered, including a run scored right because it asked which meaning was meant (RULE.md § Scoring a run); the build reads such a run from its turns (a right turn with no figure that asks back or declines), and today's runs hold none.
+- Accuracy stays the page's mean over questions; its tooltip says that with three runs on every question it equals right runs ÷ all runs.
+- Coverage and selective accuracy are over runs; pass^3 is shown only where every question a row ran has three runs, "–" otherwise.
+- A click on a plate square still pins its tooltip as before; a click on empty page unpins it and keeps the highlight.
+
+### How I checked
+
+- Playwright (Chromium) at 1280 × 900 and 390 × 844, light and dark: 358 checks, 0 failures.
+  Every set in the switch; each new column and confident-wrong sorted both ways (order, empty last, `aria-sort`, flat, no tooltip pinned) and back to the map's order; a sort by keyboard keeps focus; a family filter, all models off (the no-match sentence) and the filters restored by keyboard; a question highlighted by click, moved, cleared by a second click, by Escape and by the button, and by keyboard on the tick strip and on a row; a tooltip pinned, dragged by mouse, clamped to the viewport, nudged by keyboard, Shift+Tab back, unpinned and re-pinned by its mark, and dragged by touch pointer events at 390 px; the floor's tooltip and glossary row; the Setups order; `#map-set-hard-v2` opening the map on that set; no console errors, no sideways page scroll.
+- `tests/test_report_build.py`: the set switch covers every set with rows, no appendix remains, the explorer precedes the setup map, the score arithmetic on a fixture, an asked-back turn, the scores against the runs, the new terms typed with a calculation, every term's longer lines.
+- Screenshots at device scale 1 in `shots/rev4/`.
+- Not verified: real touch devices (touch was synthetic pointer events), Safari, Firefox, a screen reader; the web fonts are blocked in this sandbox.

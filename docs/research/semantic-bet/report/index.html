@@ -265,8 +265,11 @@ table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
 .gl-more dd { margin: 0; color: var(--ink-2); }
 .tip .tcalc { margin: 0; color: var(--ink); }
 .nm { display: inline-block; width: 18px; text-align: center; color: var(--ink-3); }
-.plive { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 6px; }
-.plive .live { margin: 0; flex: 1 1 22rem; }
+/* the line and its button keep their place whatever they say, so a highlight never moves the plate */
+.plive { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 6px; }
+.plive .live { margin: 0; flex: 1 1 22rem; line-height: 1.4; min-height: 2.8em; display: flex; align-items: center; }
+.pclear.off { visibility: hidden; }
+@media (max-width: 640px) { .plive .live { min-height: 5.6em; } }
 .pclear { appearance: none; font: 500 13px var(--label); color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 3px 10px; min-height: 30px; cursor: pointer; }
 .pclear:hover { background: var(--band); }
 .pclear:focus-visible, .pqs:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
@@ -557,7 +560,7 @@ window.REPORT = D;
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
     <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
-    <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear" id="plate-clear" hidden>Show every question</button></div>
+    <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear off" id="plate-clear">Show every question</button></div>
     <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
     <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome, and click a square or a question's tick in the head to highlight that question on every row.</figcaption>
   </figure>
@@ -4226,8 +4229,10 @@ window.reportReady(function () {
   // Escape or "Show every question" clears; another question moves it. The live line says what is shown.
   function caseLine(ci) {
     const c = S(plateState.s).cases[ci], bk = D.buckets.find((x) => x.key === c.b);
-    return { q: c.q || c.id, g: bk ? bk.label : c.b };
+    const qg = D.questionGuide && D.questionGuide.q[c.id];
+    return { q: c.q || c.id, g: bk ? bk.label : c.b, name: qg ? qg.name : c.id };
   }
+  const PLATE_IDLE = "Click a square, or a question's tick above the rows, to highlight that question on every row.";
   function drawTicks() {
     const G = plateState.G, strip = $("#pqs"); if (!strip) return;
     let h = "";
@@ -4251,14 +4256,14 @@ window.reportReady(function () {
         `<rect x="${x + 0.5}" y="0.5" width="${w - 1}" height="${G.h - 1}" fill="none" stroke="var(--ink)" stroke-width="1"/>`;
     });
     drawTicks();
-    $("#plate-clear").hidden = !on;
-    if (quiet && !on) return;
+    $("#plate-clear").classList.toggle("off", !on);
+    if (quiet && !on) { $("#plate-live").textContent = PLATE_IDLE; return; }
     if (on) {
       const L = caseLine(ci), rows = S(plateState.s).rows.filter((r) => r.units);
       const us = rows.map((r) => r.units.slice(ci * 3, ci * 3 + 3)).filter((u) => u.replace(/\./g, "").length);
       const all = us.filter((u) => /^0+$/.test(u.replace(/\./g, ""))).length;
-      $("#plate-live").textContent = `Highlighted: “${L.q}”, a ${L.g.toLowerCase()} question; right on every run for ${all} of ${us.length} setups and models. Click it again or press Escape to show every question.`;
-    } else $("#plate-live").textContent = "Every question shown.";
+      $("#plate-live").textContent = `Highlighted: “${L.name}”, a ${L.g.toLowerCase()} question; right on every run for ${all} of ${us.length} setups and models. Click it again or press Escape to show every question.`;
+    } else $("#plate-live").textContent = "Every question shown. " + PLATE_IDLE;
   }
   const toggleQ = (ci) => selectQ(plateState && plateState.sel === ci ? null : ci);
   $("#plate-clear").addEventListener("click", (e) => { e.stopPropagation(); unpin(false); selectQ(null); const st = $("#pqs"); if (st) st.focus({ preventScroll: true }); });
