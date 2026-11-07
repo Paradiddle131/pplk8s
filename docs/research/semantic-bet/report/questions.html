@@ -200,7 +200,7 @@ window.reportReady(function () {
       : "The two sets group this question differently."}</p>`;
   }
   const RENDER = {
-    title: (q) => `<h5 class="qs-name">${esc(q.name)}</h5><p class="qs-in">In ${and(q.sets.map((s) => "the " + esc(lowerSet(s))))}</p>`,
+    title: (q) => `<h5 class="qs-name" id="qs-name">${esc(q.name)}</h5><p class="qs-in">In ${and(q.sets.map((s) => "the " + esc(lowerSet(s))))}</p>`,
     asked: (q) => {
       const conv = q.turns.length > 1;
       return `<ol class="qs-turns${conv ? " conv" : ""}">${q.turns.map((t, i) => `<li>${conv ? `<span class="k" aria-hidden="true">${i + 1}</span>` : ""}<div><p class="qs-q">${esc(t)}</p><p class="qs-exp">${expected(q.expected[i], t + " " + q.turns[0])}</p></div></li>`).join("")}</ol>`;
