@@ -263,7 +263,7 @@ The appendix of other question sets is now one table per set the figures do not 
 - Sorting: every numeric column's header is a button; a click, Enter or Space sorts highest first, then lowest first, then back to the decision map's order (rung, setup, then the model the map reads it on first).
   The sort is stable (ties keep the map's order), empty cells sort last either way, and `aria-sort` and a live status line say what is sorted.
 - Filtering: two groups of checkboxes, setup family and model (free model, Claude API, Gemini, Claude Code), each a glossary term with its tooltip on hover and focus; no match shows a sentence, never an empty table.
-- An empty group cell reads "–" with a hidden "no question of this group in these runs", never 0.
+- An empty group cell reads "–", named "no question of this group in these runs" to a screen reader, never 0; each chip is named "N% right over M questions".
 - The set's line says what it tests ("the hard set's questions plus fifteen that are hard to write in SQL ..."), never its history.
 - Headers and filters keep their term tooltips; their click, Enter and Space sort or filter instead of pinning the tooltip.
 - Nothing else was added: no rung rows (they would break under a sort), no best-in-column mark, no row tooltip.
@@ -272,7 +272,7 @@ The appendix of other question sets is now one table per set the figures do not 
 
 - Playwright, Chromium, 1280 × 900 and 390 × 844, light and dark: 3472 checks, 0 failures.
   Each of the eight numeric columns sorted both ways (order, stability on ties, empty last, `aria-sort` on it and "none" on the others, no tooltip pinned) and back to the default order on a third press; each family and each model kind alone; all models off shows the no-match sentence; keyboard only (Space ticks a filter, Enter and Space sort, Tab moves between headers and shows the term); no console errors, no sideways page scroll (the table scrolls in its own box on a phone).
-- `node tools/clipcheck.js --quick`: 0 findings.
+- `node tools/clipcheck.js --quick`: 0 findings; its first run found 104, the table's visually hidden caption and per-chip text read as overlapping text, so those became the table's and chips' accessible names.
 - `tests/test_report_build.py`: 18 passed (five new: one table per hidden set with a sort button per numeric column and both filters, every setup and model row in the map's order, an empty cell never written as a number, no version or retired wording, every term a typed glossary term); `ruff check tests` clean.
 - Screenshots at device scale 1 in `shots/rev3/398/`: the appendix at rest, sorted by confident-wrong, and filtered (phone), at desktop and phone width in light and dark.
 - Not verified: Safari and Firefox, real touch devices, screen-reader output; the page's web fonts are blocked in this sandbox.

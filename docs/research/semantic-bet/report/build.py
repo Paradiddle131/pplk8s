@@ -673,8 +673,8 @@ def appendix_html(R, appendix):
             t = term_key(g)
             head.append(sortable("g-" + g, glabel.get(g, g.capitalize()), "g", "% right", t if t in terms else None))
         out.append('<div class="apx-scroll" tabindex="0" role="region" aria-label="%s, every setup and model; scrolls sideways on small screens">'
-                   '<table class="apx-t"><caption class="vh">%s: each setup and model\'s share of questions right and confidently wrong, '
-                   'and right per question group. The column buttons sort the rows.</caption><thead><tr>%s</tr></thead><tbody>'
+                   '<table class="apx-t" aria-label="%s: each setup and model\'s share of questions right and confidently wrong, '
+                   'and right per question group; the column buttons sort the rows"><thead><tr>%s</tr></thead><tbody>'
                    % (html_escape(label), html_escape(label), "".join(head)))
         for i, a in enumerate(rows):
             mlabel, role = info[id(a)]
@@ -698,11 +698,11 @@ def appendix_html(R, appendix):
             for g in groups:
                 gv = (a.get("groups") or {}).get(g)
                 if not gv:
-                    cells.append('<td class="g" data-col="g-%s" data-v=""><span class="ch none" aria-hidden="true">–</span>'
-                                 '<span class="vh">no question of this group in these runs</span></td>' % g)
+                    cells.append('<td class="g" data-col="g-%s" data-v=""><span class="ch none" role="img" '
+                                 'aria-label="no question of this group in these runs">–</span></td>' % g)
                     continue
-                cells.append('<td class="g" data-col="g-%s" data-v="%r"><span class="ch b%d">%d</span><span class="vh">%% right over %d questions</span></td>'
-                             % (g, gv[0], apx_bin(gv[0]), js_round(gv[0]), gv[1]))
+                cells.append('<td class="g" data-col="g-%s" data-v="%r"><span class="ch b%d" role="img" aria-label="%d%% right over %d questions">%d</span></td>'
+                             % (g, gv[0], apx_bin(gv[0]), js_round(gv[0]), gv[1], js_round(gv[0])))
             out.append('<tr data-i="%d" data-fam="%s" data-role="%s">%s</tr>' % (i, fam, role, "".join(cells)))
         out.append('<tr class="apx-none" hidden><td colspan="%d">No setup and model match these filters; tick a family and a model.</td></tr>'
                    % (4 + len(groups)))

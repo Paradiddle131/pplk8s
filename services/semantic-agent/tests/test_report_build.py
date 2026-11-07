@@ -184,7 +184,7 @@ def _appendix(page):
 def test_the_appendix_is_one_sortable_filterable_table_per_hidden_set(tmp_path):
     page, _ = _built(tmp_path)
     apx = _appendix(page)
-    assert apx.count('<table class="apx-t">') == 1
+    assert apx.count('<table class="apx-t"') == 1
     heads = re.findall(
         r'<th scope="col" class="[^"]*" data-col="([^"]+)"[^>]*aria-sort="none">(.*?)</th>', apx
     )
