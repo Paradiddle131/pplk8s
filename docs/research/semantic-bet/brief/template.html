@@ -42,7 +42,7 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.
 h1 { margin: 0; font-size: 2rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em }
 .sets { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--band-line); border-radius: 10px }
 .sets button { font: 600 1rem/1 var(--f); color: var(--band-ink); background: transparent; border: 0; border-radius: 7px;
-  min-height: 40px; padding: 0 var(--s4); cursor: pointer; display: inline-flex; gap: var(--s2); align-items: center;
+  min-height: 44px; padding: 0 var(--s4); cursor: pointer; display: inline-flex; gap: var(--s2); align-items: center;
   transition: background-color .15s ease-out, color .15s ease-out }
 .sets button b { font-weight: 700 }
 .sets button:hover { background: var(--band-line) }
@@ -140,7 +140,7 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
     <div class="sets" role="group" aria-label="Question set">@@TOGGLE@@</div>
   </div>
 </header>
-<main class="wrap">@@TABLES@@</main>
+<main class="wrap">@@TABLES@@<p class="sr" id="status" aria-live="polite"></p></main>
 <div class="tipbox" id="tipbox" aria-hidden="true" hidden></div>
 
 <script>
@@ -150,6 +150,8 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
   let sortKey = "rank", sortDir = "ascending", lit = null;
 
   const value = (tr, key) => Number(tr.dataset[key === "sure_wrong" ? "sureWrong" : key]);
+  // Pointing at an outcome only relights the marks; rows move only when the sort changes.
+  function light() { for (const t of tables) t.dataset.lit = lit || (sortKey === "rank" ? "" : sortKey); }
   function apply(animate) {
     for (const table of tables) {
       const body = table.tBodies[0];
@@ -163,7 +165,6 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
         if (th.dataset.key) th.setAttribute("aria-sort", th.dataset.key === sortKey ? sortDir : "none");
       }
       table.dataset.route = sortKey === "rank" ? "on" : "off";
-      table.dataset.lit = lit || (sortKey === "rank" ? "" : sortKey);
       if (before) {
         const after = rows.map(r => r.getBoundingClientRect().top);
         rows.forEach((r, i) => {
@@ -172,8 +173,10 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
         });
       }
     }
+    light();
   }
 
+  const status = document.getElementById("status");
   for (const btn of document.querySelectorAll("thead button")) {
     const k = btn.dataset.key;
     btn.addEventListener("click", () => {
@@ -181,10 +184,12 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
       else if (sortKey === k) sortDir = sortDir === "descending" ? "ascending" : "descending";
       else { sortKey = k; sortDir = "descending"; }
       apply(true);
+      status.textContent = k === "rank" ? "Ordered from the most native to the most custom."
+        : `Sorted by ${btn.textContent.trim()}, ${sortDir === "descending" ? "most" : "fewest"} first.`;
     });
     if (k !== "rank") {
-      const on = () => { lit = k; apply(false); };
-      const off = () => { lit = null; apply(false); };
+      const on = () => { lit = k; light(); };
+      const off = () => { lit = null; light(); };
       btn.addEventListener("pointerenter", on); btn.addEventListener("pointerleave", off);
       btn.addEventListener("focus", on); btn.addEventListener("blur", off);
     }
@@ -207,6 +212,7 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
   const box = document.getElementById("tipbox");
   let owner = null, hideTimer = 0, touched = false;
   addEventListener("pointerdown", e => { touched = e.pointerType === "touch"; }, { capture: true, passive: true });
+  addEventListener("keydown", () => { touched = false; }, { capture: true });
   function show(el) {
     clearTimeout(hideTimer);
     owner = el; box.textContent = el.dataset.tip; box.hidden = false;
