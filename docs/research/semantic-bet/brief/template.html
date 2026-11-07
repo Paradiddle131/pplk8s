@@ -150,8 +150,8 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
   let sortKey = "rank", sortDir = "ascending", lit = null;
 
   const value = (tr, key) => Number(tr.dataset[key === "sure_wrong" ? "sureWrong" : key]);
-  // Pointing at an outcome only relights the marks; rows move only when the sort changes.
-  function light() { for (const t of tables) t.dataset.lit = lit || (sortKey === "rank" ? "" : sortKey); }
+  // Only a pointer resting on an outcome's header, or keyboard focus on it, lights its marks; leaving resets them.
+  function light() { for (const t of tables) t.dataset.lit = lit || ""; }
   function apply(animate) {
     for (const table of tables) {
       const body = table.tBodies[0];
@@ -188,12 +188,17 @@ table[data-lit="sure_wrong"] .dots i:not(.d-bad) { opacity: .14 }
         : `Sorted by ${btn.textContent.trim()}, ${sortDir === "descending" ? "most" : "fewest"} first.`;
     });
     if (k !== "rank") {
-      const on = () => { lit = k; light(); };
-      const off = () => { lit = null; light(); };
-      btn.addEventListener("pointerenter", on); btn.addEventListener("pointerleave", off);
-      btn.addEventListener("focus", on); btn.addEventListener("blur", off);
+      btn.addEventListener("pointerenter", e => { if (e.pointerType !== "touch") { lit = k; light(); } });
+      btn.addEventListener("pointerleave", unlight);
+      btn.addEventListener("focus", () => { if (btn.matches(":focus-visible")) { lit = k; light(); } });
+      btn.addEventListener("blur", unlight);
     }
   }
+  function unlight() { if (lit) { lit = null; light(); } }
+  for (const t of tables) t.tHead.addEventListener("pointerleave", unlight);
+  document.documentElement.addEventListener("pointerleave", unlight);
+  addEventListener("blur", unlight);
+  addEventListener("keydown", e => { if (e.key === "Escape") unlight(); });
 
   const sets = [...document.querySelectorAll(".sets button")];
   for (const btn of sets) {

@@ -17,6 +17,6 @@ Mode: Operate (a table a person scans). One family: Atkinson Hyperlegible Next 4
 - Two data sizes: words 1rem, numbers 1.375rem bold; rank by weight and reversal, not size. Title 2rem.
 - Marks: filled circle right, full-ink ring couldn't answer, amber circle wrong, scarlet diamond wrong and sure; the header marks are the only legend.
 - Signature: the route line exists only in the native-to-custom order; sorting by a number lifts it (240 ms), "Approach" redraws it.
-- Pointing at an outcome header lights that outcome's marks in every row (others to 14%).
+- Pointing at an outcome header, or focusing it from the keyboard, lights that outcome's marks in every row (others to 14%); leaving the header, Escape or a click elsewhere resets them, and sorting never lights them.
 - Definitions: one reversed bubble on hover or keyboard focus, 2.6 s on tap, Esc dismisses; screen readers get them via aria-describedby from a hidden block.
 - Layout: fixed table above 75rem; below, stacked rows (max 40rem) with a 2x2 sort bar and marked numbers. Gutters max(16px, safe-area).
