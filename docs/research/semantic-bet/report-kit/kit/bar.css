@@ -10,3 +10,8 @@
 .rk-pic .rk-pl { display: block; font-weight: 600; line-height: 1.3 }
 .rk-pic ul:not(.rk-key) { list-style: none; margin: 0; padding: 0 }
 .rk-pic ul:not(.rk-key) > li + li { margin-top: var(--s3) }
+/* a meter: a number over a thin bar, for a cell in a dense grid where many values sit side by side */
+.rk-meter { display: grid; gap: 5px; min-width: 3.5rem }
+.rk-meter b { font: 700 var(--t-num)/1.2 var(--sans); text-align: right }
+.rk-meter .rk-track { height: 5px; border-radius: 3px }
+.rk-meter .rk-fill { border-radius: 3px }

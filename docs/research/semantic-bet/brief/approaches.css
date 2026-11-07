@@ -82,10 +82,10 @@
 .rk-pic.ap-rules ul > li + li { margin-top: 0 }
 .ap-rules li .rk-pl { grid-column: 1 / -1 }
 
-/* Kinds: approaches by kinds of question, each cell a number on a tint of one value scale (the green of a right
-   answer, from none at 0 to half strength at 100), every cell on the same scale so none is singled out. Each kind's
-   head sorts the rows, highest first, then lowest first. Wide, the approach sits left of its four cells; narrow, it
-   heads its row and the cells share the width. */
+/* Kinds: approaches by kinds of question, each cell a number on the kit's tint (the green of a right answer, from none
+   at 0 to half strength at 100), every cell on the same scale so none is singled out; the kit's two-state sort orders
+   the rows by a kind. Wide, the approach sits left of its four cells; narrow, it heads its row and the cells share
+   the width. */
 @container (width > 52rem) { .rk-rows > li.ap-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 40rem) } }
 .ap-kinds { container-type: inline-size }
 .ap-kinds table { width: 100%; border-collapse: separate; border-spacing: 0 3px; table-layout: fixed; margin-top: -3px }
@@ -102,28 +102,25 @@
 .ap-kinds th[aria-sort="descending"] .rk-sort-mark .up, .ap-kinds th[aria-sort="ascending"] .rk-sort-mark .dn { display: none }
 .ap-kinds th[aria-sort="descending"] .rk-sort-mark, .ap-kinds th[aria-sort="ascending"] .rk-sort-mark { stroke-width: 2.4 }
 .ap-kinds tbody th { padding: 6px var(--s2) 6px 0; text-align: left; font-weight: 600; line-height: 1.25 }
-.ap-kinds td { padding: 9px var(--s3) 9px 0; text-align: right; vertical-align: middle; background: color-mix(in oklab, var(--ok) calc(var(--v, 0) * .5%), transparent);
-  border-left: 3px solid transparent; background-clip: padding-box }
+.ap-kinds td { padding: 0 0 0 3px; text-align: right; vertical-align: middle }
+.ap-kinds td .rk-tint { padding: 9px var(--s3) 9px 0 }
 .ap-kinds td b { display: block; font: 700 var(--t-num)/1 var(--sans) }
+/* a head's last word may break at its soft hyphen in a narrow grid (the kit keeps it whole with its sort mark) */
+.ap-kinds thead .rk-nw { white-space: normal }
 @container (max-width: 30rem) {
   .ap-kinds table, .ap-kinds thead, .ap-kinds tbody { display: block }
   .ap-kinds table { margin-top: 0 }
   .ap-kinds tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px }
-  .ap-kinds thead th, .ap-kinds td { width: auto; padding-left: 0; border-left: 0 }
+  .ap-kinds thead th, .ap-kinds td { width: auto; padding-left: 0 }
   .ap-kinds thead th:first-child { display: none }
   .ap-kinds thead tr { border-bottom: 2px solid var(--ink) }
   .ap-kinds thead th { border-bottom: 0 }
   .ap-kinds thead button { min-height: 44px }
   .ap-kinds tbody tr { padding: var(--s3) 0 0 }
   .ap-kinds tbody th { grid-column: 1 / -1; padding: 0 0 2px }
-  .ap-kinds td { padding: 9px var(--s2) 9px 0 }
+  .ap-kinds td .rk-tint { padding: 9px var(--s2) 9px 0 }
 }
 /* at a large text size four numbers outgrow a phone: the kinds go two by two, heads and cells alike */
 @container (max-width: 16rem) { .ap-kinds tr { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
-
-/* Every takeaway's headline one step above its sentence (the section head's size), so the claim reads first; both
-   stay at full ink. */
-.ap-takeaways .rk-rows h3 { font-size: var(--t-head); line-height: 1.25; margin-bottom: var(--s2); text-wrap: balance }
-.ap-takeaways .rk-rows p { line-height: 1.5; text-wrap: pretty }
 
 @media (prefers-reduced-motion: reduce) { .ap-stop::before { transition: none } }

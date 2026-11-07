@@ -7,6 +7,9 @@
 // A missing closing marker is added, so a generator may write the opening markers alone; running the build
 // again replaces what it inlined before. A component's dependencies come with it (dots brings marks); "all"
 // names every component. Vendored files are checked against kit/vendor/checksums.txt before they are inlined.
+// scope=<selector> in the css and js markers runs the kit inside part of a page: the CSS is nested under the
+// selector (:root and body map onto it, so the tokens and the ground live on the scope and nothing leaks out), and
+// the scripts wire only what sits inside each element the selector matches.
 // Usage: node bin/build.cjs <page.html>...      (or: --list, to print the components)
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +18,7 @@ const crypto = require('crypto');
 
 const KIT = path.join(__dirname, '..', 'kit');
 // Every component, in the order its CSS and JS are inlined; deps come along when a page names the component.
-const ORDER = ['tokens', 'base', 'section', 'marks', 'dots', 'bar', 'range', 'slope', 'tabs', 'switch', 'table-sort', 'tip', 'highlight', 'plot-theme'];
+const ORDER = ['tokens', 'base', 'section', 'marks', 'dots', 'bar', 'range', 'grade', 'tint', 'slope', 'tabs', 'switch', 'filter', 'table-sort', 'tip', 'highlight', 'plot-theme'];
 const DEPS = { dots: ['marks'], slope: ['marks'], highlight: ['marks'] };
 const VENDOR = { d3: ['d3-7.9.0.min.js'], plot: ['d3-7.9.0.min.js', 'plot-0.6.17.umd.min.js'] };
 
@@ -41,7 +44,27 @@ function region(src, open, close, file, body) {
   if (lone.test(src)) return src.replace(lone, a => `${a}\n${body(a)}\n${close}`);
   return null;
 }
-const listOf = marker => marker.replace(/^.*?report-kit:\w+\s*/, '').replace(/\s*(\*\/|-->)$/, '').split(/[\s,]+/).filter(Boolean);
+const words = marker => marker.replace(/^.*?report-kit:\w+\s*/, '').replace(/\s*(\*\/|-->)$/, '').split(/[\s,]+/).filter(Boolean);
+const listOf = marker => words(marker).filter(w => !w.includes('='));
+const scopeOf = marker => { const w = words(marker).find(x => x.startsWith('scope=')); return w ? w.slice(6) : null; };
+
+// nests the kit's CSS under a scope selector: @keyframes move out (they cannot nest), a :root rule becomes
+// ":root <scope>" (the static checker still sees its token blocks), html and body become the scope itself
+function scoped(css, sel) {
+  const frames = [];
+  css = css.replace(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, m => { frames.push(m); return ''; });
+  css = css.replace(/(^|[},;]\s*|\n\s*)((?::root[^{,]*?|html|body))(\s*[{,])/g, (_, pre, s, post) => `${pre}${s === 'html' || s === 'body' ? '&' : `${s} &`}${post}`);
+  return `${sel} {\n${css}\n}\n${frames.join('\n')}`;
+}
+// runs after the components: ReportKit.init(root) wires every component inside root; the page's roots are the
+// scope's matches, else the whole document
+const BOOT = `(() => {
+  const RK = (window.ReportKit = window.ReportKit || {});
+  const on = new WeakSet();
+  RK.init = root => { if (on.has(root)) return; on.add(root); (RK.inits || []).forEach(f => f(root)); };
+  const go = () => (RK.root ? [...document.querySelectorAll(RK.root)] : [document]).forEach(RK.init);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
+})();`;
 
 let sums = null;
 function vendorFile(name) {
@@ -66,14 +89,19 @@ function build(file) {
   const css = region(src, '\\/\\* report-kit:css [^*]*\\*\\/', '/* /report-kit:css */', file, m => {
     const names = expand(listOf(m), 'css', file);
     if (!names.includes('tokens')) throw new Error(`${file}: the css marker must name tokens (every component reads them)`);
-    done.push(`css: ${names.join(' ')}`);
-    return names.map(n => fs.readFileSync(path.join(KIT, `${n}.css`), 'utf8').trim()).join('\n');
+    const scope = scopeOf(m);
+    done.push(`css: ${names.join(' ')}${scope ? ` in ${scope}` : ''}`);
+    const css = names.map(n => fs.readFileSync(path.join(KIT, `${n}.css`), 'utf8').trim()).join('\n');
+    return scope ? scoped(css, scope) : css;
   });
   if (css !== null) src = css;
   const js = region(src, '\\/\\* report-kit:js [^*]*\\*\\/', '/* /report-kit:js */', file, m => {
     const names = expand(listOf(m), 'js', file);
-    done.push(`js: ${names.join(' ')}`);
-    return names.map(n => fs.readFileSync(path.join(KIT, `${n}.js`), 'utf8').trim()).join('\n');
+    const scope = scopeOf(m);
+    if (scope && /[`\\$]/.test(scope)) throw new Error(`${file}: scope=${scope}: a selector without backticks, backslashes or $`);
+    done.push(`js: ${names.join(' ')}${scope ? ` in ${scope}` : ''}`);
+    const root = scope ? [`(window.ReportKit = window.ReportKit || {}).root = ${JSON.stringify(scope)};`] : [];
+    return [...root, ...names.map(n => fs.readFileSync(path.join(KIT, `${n}.js`), 'utf8').trim()), BOOT].join('\n');
   });
   if (js !== null) src = js;
   const vendor = region(src, '<!-- report-kit:vendor [^>]*-->', '<!-- /report-kit:vendor -->', file, m => {

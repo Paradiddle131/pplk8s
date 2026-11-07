@@ -4,32 +4,36 @@
    Options on the bubble, <div class="rk-tip" id="rk-tip" data-pin hidden></div> (made when absent):
    data-pin lets a click or Enter on a non-control element pin its definition, which can then be dragged by its
    handle (or moved with the arrow keys) and closed; data-tip-more="#id" on the element adds a link to a fuller
-   entry, labelled by data-tip-more-label. API: ReportKit.tip.show(el), .hide(), .unpin(). */
+   entry, labelled by data-tip-more-label. A bubble on an element the keyboard rests on stays through a scroll and
+   follows it; the pointer's bubble closes on a scroll. With the kit scoped to part of a page, each root has its
+   own bubble, inside the root (so it wears the root's tokens). API: ReportKit.tip.show(el), .hide(), .unpin(). */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   const GRIP = '<svg viewBox="0 0 8 12" width="8" height="12" aria-hidden="true" fill="currentColor"><circle cx="2" cy="2" r="1.1"/>' +
     '<circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="2" cy="10" r="1.1"/><circle cx="6" cy="10" r="1.1"/></svg>';
   const CROSS = '<svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><path d="M2 2 12 12M12 2 2 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  let uid = 0;
   const CONTROL = "a[href], button, input, select, textarea, summary, [role=tab], [role=button]";
-  function init() {
-    const els = [...document.querySelectorAll("[data-tip]")];
-    let box = document.getElementById("rk-tip");
+  function init(root) {
+    const whole = root === document;
+    const els = [...root.querySelectorAll("[data-tip]")];
+    let box = root.querySelector(".rk-tip");
     if (!box) {
       if (!els.length) return;
       box = document.createElement("div");
-      box.id = "rk-tip"; box.className = "rk-tip"; box.hidden = true;
-      document.body.append(box);
+      if (whole) box.id = "rk-tip";
+      box.className = "rk-tip"; box.hidden = true;
+      (whole ? document.body : root).append(box);
     }
     box.setAttribute("aria-hidden", "true");
     const canPin = box.hasAttribute("data-pin");
     const texts = document.createElement("div");
     texts.hidden = true;
-    document.body.append(texts);
-    let n = 0;
+    (whole ? document.body : root).append(texts);
     for (const el of els) {
       if (!el.hasAttribute("aria-describedby")) {
         const d = document.createElement("span");
-        d.id = `rk-tip-${++n}`; d.textContent = el.dataset.tip;
+        d.id = `rk-tip-${++uid}`; d.textContent = el.dataset.tip;
         texts.append(d);
         el.setAttribute("aria-describedby", d.id);
       }
@@ -150,10 +154,15 @@
         box.querySelector(".rk-tip-handle").focus({ preventScroll: true });
       }
     });
-    addEventListener("scroll", () => { if (!pinned && owner) hide(true); }, { passive: true });
+    // a scroll closes the pointer's bubble; the keyboard's stays on its element (the browser scrolls a focused
+    // element into view, which would otherwise close the bubble it just opened) and follows it
+    addEventListener("scroll", () => {
+      if (pinned || !owner) return;
+      if (document.activeElement === owner && owner.matches(":focus-visible") && !box.hidden) place(owner); else hide(true);
+    }, { passive: true });
     addEventListener("resize", () => { if (pinned) { const b = box.getBoundingClientRect(); moveTo(b.left, b.top); } });
     document.addEventListener("rk:tab", () => unpin(false));
     RK.tip = { show, hide: () => hide(true), unpin: () => unpin(false), pin };
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+  (RK.inits = RK.inits || []).push(init);
 })();

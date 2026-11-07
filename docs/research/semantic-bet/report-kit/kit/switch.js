@@ -18,8 +18,8 @@
     }
     document.dispatchEvent(new CustomEvent("rk:switch", { detail: { name, value } }));
   }
-  function init() {
-    for (const g of document.querySelectorAll("[data-rk-switch]")) {
+  function init(root) {
+    for (const g of root.querySelectorAll("[data-rk-switch]")) {
       const name = g.dataset.rkSwitch;
       const buttons = [...g.querySelectorAll("button[data-value]")];
       for (const b of buttons) b.addEventListener("click", () => set(name, b.dataset.value));
@@ -28,5 +28,5 @@
     }
   }
   RK.switches = { set };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+  (RK.inits = RK.inits || []).push(init);
 })();

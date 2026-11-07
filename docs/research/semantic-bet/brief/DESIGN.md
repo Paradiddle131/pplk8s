@@ -16,7 +16,7 @@ The same sections are the report's Summary tab (`summary()` in `build.py`).
 | --hair / --row | ink 16% / line 6% | ink 16% / line 6% | row hairlines / row hover (the kit's) |
 
 ## Rules
-- Two data sizes: words 1rem, numbers 1.375rem bold; rank by weight and reversal, not size. Title 2rem; section heads and takeaway headlines 1.375rem bold.
+- Two data sizes: words 1rem, numbers 1.375rem bold; rank by weight and reversal, not size. Title 2rem; section heads 1.375rem bold; takeaway headlines the kit's finding size (1.1875rem, 700, 800 on dark).
 - Marks: filled circle right, full-ink ring couldn't answer, amber square wrong, scarlet diamond wrong and sure; the header marks are the only legend.
   Wrong was an amber circle, told from the green circle by colour alone; it takes the kit's square, so no outcome rests on colour.
 - Signature: the route line exists only in the native-to-custom order; sorting by a number lifts it (240 ms), "Approach" redraws it.
@@ -27,14 +27,14 @@ The same sections are the report's Summary tab (`summary()` in `build.py`).
 
 ## Takeaways
 - Below the table, on the page ground: the heading at 1.375rem bold wears the table head's 2px ink rule and sits on the route indent.
-- Each takeaway is one row, separated by the table's hairline: headline (1.375rem bold, one step above its sentence so the claim reads first) and its one sentence (1rem, full ink) on the left, one small picture on the right (30rem max); below 60rem the picture drops under the text.
+- Each takeaway is one row, separated by the table's hairline: headline (the kit's finding size, a size and two weight steps above its sentence, so the claim reads first) and its one sentence (1rem, full ink) on the left, one small picture on the right (30rem max); below 60rem the picture drops under the text.
 - Every picture uses the table's 0-100 scale, its marks and its two data sizes; text stays HTML so it never scales with a drawing.
 - Setup: two rails from 0 to 100, a green span between the lowest and highest score with filled circles at its ends, each end numbered under it (pushed apart when close); the end's name shows in the bubble.
 - Rules: one bar pair per model, cheapest to priciest, under two column heads with the ink rule (questions a metric covers, questions none covers); the track is the whole 100, the green fill the share right.
 - Definitions: one slope panel per setup, everyday questions to hard-to-interpret ones, right answers as a green line with circles and wrong-and-sure ones as a red line with diamonds; numbers are pushed apart when close; a two-mark key (Right, Wrong & sure) carries the column definitions in the bubble.
 - Program: three bars, one per program, in the data's order.
-- Kinds: a grid of the approaches (rows, native to custom) by four kinds of question (covered, hidden rule, uncovered, follow-ups), each cell the right answers in 100 on a tint of one value scale (the right-answer green, none at 0, half strength at 100; ink stays above 4.5:1 on every step), every cell on the same scale, no best marked.
-  Each kind's head sorts the rows: highest first on the first press, then lowest first, and back; there is no return to the native-to-custom order, and the two sets' grids keep one sort.
+- Kinds: a grid of the approaches (rows, native to custom) by four kinds of question (covered, hidden rule, uncovered, follow-ups), each cell the right answers in 100 on the kit's tint (the right-answer green, none at 0, half strength at 100; ink stays above 4.5:1 on every step), every cell on the same scale, no best marked, no key (each cell shows its number).
+  Each kind's head sorts the rows with the kit's two-state sort (highest first, then lowest first, and back; no return to the native-to-custom order), and the two sets' grids keep one sort (a sort group).
   It follows the question-set switch, text and grid, the only takeaway that does; its picture column is 40rem, and in a container under 30rem each approach heads its row over four cells (two by two at a large text size).
 - Words in a bubble wear a dotted underline in the line colour; screen readers get each picture as plain sentences (hidden text), its drawing hidden.
 - No eyebrows, section numbers, cards, verdicts or muted text; no motion beyond the bubble.

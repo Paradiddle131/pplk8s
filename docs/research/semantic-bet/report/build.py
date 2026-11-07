@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
-The Summary tab is the Approaches page's two sections (../brief/build.py summary()), on report-kit, scoped to the tab (scope_to_panel, summary_kit); NOTES.md says how.
+The Summary tab is the Approaches page's two sections (../brief/build.py summary()), on report-kit, scoped by the kit's own markers (summary_kit); NOTES.md says how.
 The question sets part (#390): `question_guide` gives the set profiles, the guide's three lists and its card's fixed fields at <!--QUESTIONS--> (in the Question sets part), followed by questions.html, the section's style and script; its data is window.REPORT.questionGuide.
 Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted at <!--SECTIONS--> in SECTION_ORDER, then the rest in name order, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing.
 The decision map (Figure 1) has a set switch over every set with rows (`mapOrder`); the other figures draw `setOrder` only.
@@ -1147,15 +1147,10 @@ def scope_to_panel(css):
 
 
 def summary_kit(path):
-    """Inline report-kit's components at the Summary tab's markers with the kit's own build, then scope its CSS to the
-    tab, so the header, the tab strip and the other tabs keep the report's look. Returns the page."""
+    """Inline report-kit's components at the page's markers with the kit's own build; the markers' `scope=` keeps the
+    kit's look on what carries .rk-kit and its scripts on what carries .rk-js. Returns the page."""
     subprocess.run(["node", KIT_BUILD, path], check=True, capture_output=True)
-    page = open(path, encoding="utf-8").read()
-    a, b = page.index("/* report-kit:css "), page.index("/* /report-kit:css */")
-    page = page[:a] + scope_to_panel(page[a:b]) + page[b:]
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(page)
-    return page
+    return open(path, encoding="utf-8").read()
 
 
 def vendor_scripts():
