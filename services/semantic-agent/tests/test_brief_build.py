@@ -1,0 +1,70 @@
+"""The Approaches page: every scored setup has a plain-language approach, and its figures add up."""
+
+import html
+import importlib.util
+import json
+from pathlib import Path
+
+BUILD = Path(__file__).resolve().parents[3] / "docs/research/semantic-bet/brief/build.py"
+spec = importlib.util.spec_from_file_location("bet_brief_build", BUILD)
+build = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(build)
+
+RESULTS = BUILD.parents[1] / "results.json"
+
+
+def test_per100_sums_to_100_and_counts_unclear_as_wrong():
+    counts = build.per100({"right": 206, "unclear": 13, "confident-wrong": 9}, 228)
+    assert sum(counts.values()) == 100
+    assert counts == {"right": 90, "declined": 0, "wrong": 6, "sure_wrong": 4}
+
+
+def test_every_scored_setup_on_the_page_belongs_to_exactly_one_approach():
+    arms = {a["arm"] for a in json.loads(RESULTS.read_text())["arms"]} - build.LEFT_OUT
+    pooled = [n for _, _, names, _ in build.APPROACHES for n in names]
+    assert len(pooled) == len(set(pooled))
+    assert arms <= set(pooled)
+
+
+def test_the_approach_shown_is_the_pooled_setup_with_most_answers_right():
+    arms = [
+        {
+            "set": "frozen",
+            "arm": "a",
+            "cases": 2,
+            "of_cases": 2,
+            "runs": 4,
+            "outcomes": {"right": 2},
+        },
+        {
+            "set": "frozen",
+            "arm": "b",
+            "cases": 2,
+            "of_cases": 2,
+            "runs": 4,
+            "outcomes": {"right": 3},
+        },
+        {
+            "set": "frozen",
+            "arm": "c",
+            "cases": 1,
+            "of_cases": 2,
+            "runs": 1,
+            "outcomes": {"right": 1},
+        },
+    ]
+    assert build.stands_for(arms, ["a", "b", "c"], "frozen")["arm"] == "b"
+    assert build.stands_for(arms, ["a"], "hard") is None
+
+
+def test_the_page_runs_from_most_native_to_most_custom_and_recommends_nothing():
+    page = build.build(RESULTS)
+    assert "@@" not in page
+    names = [name for name, *_ in build.APPROACHES]
+    assert names[0].startswith("Google's data agent") and names[-1].startswith("Our agent")
+    positions = [page.index(html.escape(n)) for n in names]
+    assert positions == sorted(positions)
+    for word in ("Recommended", "Verdict", "best", "winner"):
+        assert word not in page
+    for setname, *_ in build.SETS:
+        assert f'data-set="{setname}"' in page
