@@ -37,7 +37,7 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
 - Group cells sit on the kit's tint (the right-answer green, none at 0, half strength at 100), the same as the Summary's kinds grid, with no key (owner: the scale reads without one); the old five-step blue scale and the "best in column" box are gone (owner: keep it out), so no cell is singled out.
 - A confident-wrong of 10% or more wears the kit's diamond (wrong and sure) instead of a red dot.
 - The sticky copy of the head shows only once the real head has gone under the tab strip; before that the two were drawn on top of each other, which the kit checker reported as overlapping and clipped labels.
-- The table is 60rem at least (words .875rem, numbers .9375rem bold) and fits the 1180 px column; narrower, it scrolls sideways inside its box, as before.
+- The table is 64rem at least (words and numbers 1rem, numbers bold; see "One standard for every tab") and fits the 1180 px column; narrower, it scrolls sideways inside its box, as before.
 
 ### One main model per setup (owner, 2026-11-07)
 
@@ -68,12 +68,25 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
 - Outcomes take the kit's status tokens and shapes, as the Summary draws them (`outMark()`, used by the plate's rows, the key and every tooltip's swatch): right a green circle, declined an ink ring, wrong an amber square, confident-wrong a scarlet diamond, not run yet a small ink dot.
   Unclear (neither the scoring code nor the judge could settle it; it counts as wrong) has no kit status of its own: it is an amber square ring, in the wrong colour and told from wrong by its shape (an owner question).
   The question guide in the Question sets tab still draws the old squares until that tab moves.
-- Marks never go under 7 px a question (they were 5 to 9) so the four shapes stay apart; the frozen set's 76 questions still fit at 1280 px (7 px), and a narrower screen scrolls the plate sideways as before.
-- The plate's text columns (labels, the two interval charts and their values) are sized in px scaled from the root font size, so a 200% text size widens them; the interval charts' rows grow to hold their values.
-- The group labels over the ticks are laid out by measure (`layoutHead()`, again once the web font is in): each on the first tier where it clears the one before, moved left rather than past its column; they read "10 questions", not "10 q".
-- The head scrolls sideways with the rows (scrollbar hidden; either one moves the other) instead of clipping: the kit checker took the clipped head for cut text at 400 px (7 findings, at 400 px light, dark and 200% text).
+- Nothing around the plate explains how to use it (owner, 2026-11-07: the charts stay intuitive and need no text): no strip, no "Show every question", no idle line, no caption.
+  A click on a mark or a tick (or Enter on a row or the tick strip) highlights the question on every row and pins its tooltip, which carries the question as the guide shows it (its turns with the expected answers), the run, its groups and what makes it hard, and, pinned, "Open in the question guide"; the same mark again, Escape, the tooltip's close mark or a click elsewhere clears both (`unpin` clears a plate highlight).
+  A hidden live line (`#plate-live`) tells screen readers what is highlighted.
+- The head is one word per column on one line: the group names over their bands (each band at least as wide as its name, measured), "Setup", "Over the floor", "Confident-wrong"; what a column holds (a group's question count, what an interval cell shows) is in the head's tooltip under "In this column" (`data-note`), never as a subtitle.
+- Marks are 7 to 9 px a question so the four shapes stay apart; the pitch is the largest that fits, and a few px over come off the label column, so both sets fit 1280 px with no sideways scroll; narrower, the plate scrolls sideways as before.
+- The plate's text columns (labels, the two interval charts and their values) are sized in px scaled from the root font size, so a 200% text size widens them; the interval columns are at least as wide as their heads.
+- The head scrolls sideways with the rows (scrollbar hidden; either one moves the other) instead of clipping.
 - Unselected ticks are ink at 45% (3:1 on the ground, as a clickable mark needs), the highlighted question's tick full ink, the keyboard's place a ring in the line colour; every focusable part of the plate wears the kit's focus ring.
-- Kept: the set switch, the highlight by click, tick strip and keyboard, Escape and "Show every question", the strip's guide card and its link, the tooltip and pin (hovering other marks never replaces a pin), the sticky head, and the strip's reserved height, so a highlight never moves the plate (checked at 1280 and 400 px).
+
+## One standard for every tab (owner, 2026-11-07)
+
+The owner: the Summary's text reads well and the other tabs' did not; one standard for such core things on every tab.
+- Measured before: every kit tab used the kit's family, but the Decision map, the MetricFlow legends and the plate set their words at .875rem (the kit's chart size), and the tabs not yet on the kit used the report's serif and condensed faces at 12.5 to 17px in three inks.
+- The standard (the kit's STANDARDS.md, Reading): one family, Atkinson Hyperlegible Next, for every face but code; every word in full ink; words at 1rem and numbers bold; .875rem only for text drawn inside a chart.
+- Page-wide now, through the report's own tokens: `--serif` and `--label` are the kit's family, `--ink` is the kit's ink (navy, cloud on dark), `--ink-2` and `--ink-3` are the ink, the body is 16px at 1.45; the old faces' font link is gone.
+  The tabs not yet on the kit (Setups, Question sets, Method & glossary) keep their own sizes until each moves; the setup explorer's line steps grew for the taller family (the kit checker's 7 overlaps).
+- The Decision map's words and numbers are 1rem; to fit the 1180 px column it lost the "What this setup is" column (the setup's tooltip carries the same words), its heads lost their subtitles (in the tooltip, "In this column") and break only between words, and the "+3 models, one the managed best" button wraps; narrower, it scrolls sideways as before.
+- The header's only line is when the numbers were written: "Updated 7 November 2026, 10:51 UTC", a `<time datetime>` (the date data reports and publishing systems put right under the title, labelled for what it means); "Evidence as of …" and "A living memo …" are gone.
+- No text that explains how to use a chart, on any kit tab: the Decision map's sort note and its "33 of 33 setups shown" line (now screen-reader only), Figure 5's "Hover a line or a label", and the plate's lines are gone; captions that say what a mark means stay.
 
 ## What changed in revision 2
 
