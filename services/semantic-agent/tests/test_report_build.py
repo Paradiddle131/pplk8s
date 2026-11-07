@@ -535,9 +535,19 @@ def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_pa
     assert 'data-view="plate"' in panel and 'class="seg"' not in panel
     assert 'class="rk-key er-key" id="leg6"' in panel
     assert "fignum" not in panel and not re.search(r"Figure \d", panel)
-    # the function kept: the strip, its clear button, the live line, the plate's head and rows
-    for name in ("pstrip", "plate-clear", "plate-live", "plate-head", "plate-body"):
+    # the plate and a hidden live line; no strip, button, caption or how-to line around the chart
+    # (owner, 2026-11-07): the question's card and its guide link are in the mark's tooltip
+    for name in ("plate-live", "plate-head", "plate-body"):
         assert f'id="{name}"' in panel, name
+    assert '<p class="vh" id="plate-live"' in panel
+    for gone in (
+        'id="pstrip"',
+        'id="plate-clear"',
+        "Show every question",
+        "<figcaption",
+        "Click a ",
+    ):
+        assert gone not in panel, gone
     # outcomes on the kit's status tokens, wherever the kit reaches (the tab and the tooltip)
     tokens = "--o-right: var(--ok); --o-decl: var(--ink); "
     tokens += "--o-wrong: var(--warn); --o-cw: var(--bad)"
@@ -552,8 +562,13 @@ def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_pa
     assert "circ(cx, cy, s / 2)" in marks  # right and declined are round, as the kit's ok and no
     assert "function swatch(ch) { const [c, k, d] = outMark(ch" in script
     assert "outMark(r.units[" in script
+    assert "function qCard(ci)" in script and "Open in the question guide" in script
+    assert "PLATE_IDLE" not in script and "reserveStrip" not in script
+    # the head: one word per column, what a column holds in its tooltip, no subtitles
+    assert "<small>" not in script and "data-note=" in script
     # legible marks: never under 7 px a question; text columns grow with the root size
-    assert "pitch = Math.max(7, Math.min(9, pitch));" in script
+    assert "let pitch = 9, L = lay(pitch);" in script
+    assert "while (pitch > 7 && LW + L.UW + 16 + IW + CWW > avail)" in script
     assert "getComputedStyle(document.documentElement).fontSize" in script
     assert "function layoutHead()" in script
     raw = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
@@ -566,3 +581,25 @@ def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_pa
     assert "outline: 2.5px solid var(--line)" in css
     plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
     assert "best" not in plain
+
+
+def test_one_type_standard_and_no_how_to_text_on_the_page(tmp_path):
+    """Owner, 2026-11-07: one standard for every tab (the kit's family, every word in full ink,
+    words at 1rem), only the last-updated time under the title, column heads without subtitles,
+    and no text that explains how to use a chart."""
+    page, _ = _built(tmp_path)
+    css = page[: page.index("</style>")]
+    assert "STIX" not in page and "Barlow" not in page
+    assert "--ink-2: var(--ink); --ink-3: var(--ink);" in css
+    assert '--serif: "Atkinson Hyperlegible Next"' in css and "--label: var(--serif);" in css
+    assert "font-size: 16px; line-height: 1.45;" in css
+    # the header: one line, when the numbers were written
+    assert '<p class="updated" id="updated"></p>' in page and "byline" not in page
+    assert "living memo" not in page and "Evidence as of" not in page
+    assert 'Updated <time datetime="${esc(D.written)}">' in page
+    # the Decision map: one-word heads (notes in their tooltips), words at 1rem, no how-to line
+    assert "min-width: 64rem; font: 400 var(--t-word)/1.4 var(--sans);" in page
+    assert 'class="dm-note"' not in page and "A column's head sorts" not in page
+    assert "What this setup is" not in page and '<p class="vh" id="map-live"' in page
+    assert "Hover a line or a label" not in page
+    assert 'tSec("In this column"' in page
