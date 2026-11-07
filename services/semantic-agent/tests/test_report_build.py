@@ -19,13 +19,13 @@ PROCESS = re.compile(
 )
 
 
-def test_the_page_shows_v1_until_the_owners_go_and_keeps_v2_in_the_appendix():
+def test_the_figures_show_v1_until_the_owners_go_and_v2_is_drawn_in_the_map_only():
     present, appendix = build.shown_sets(["frozen", "hard", "hard-v2"], {})
     assert present == ["frozen", "hard"]
     assert appendix == [("hard-v2", "Extended hard set")]
 
 
-def test_showing_v2_puts_v1_in_the_appendix_under_its_plain_name():
+def test_showing_v2_puts_v1_in_the_map_only_under_its_plain_name():
     present, appendix = build.shown_sets(["frozen", "hard", "hard-v2"], {"hard": "hard-v2"})
     assert present == ["frozen", "hard-v2"]
     assert appendix == [("hard", "Hard set")]
@@ -44,15 +44,6 @@ def test_each_log_goes_to_the_set_its_longest_prefix_names():
     assert list(by_name.values()) == ["frozen", "hard", "hard-v2"]
 
 
-def test_the_appendix_lists_each_hidden_sets_setups_from_the_results():
-    arm = {"set": "hard-v2", "arm": "native-bare", "model": "google-data-agent", "cases": 43}
-    arm |= {"of_cases": 58, "accuracy": [0.65, 0.5, 0.8], "confident_wrong": [0.28, 0.2, 0.4]}
-    arm |= {"groups": {"composable": [0.67, 20]}}
-    html = build.appendix_html({"arms": [arm]}, [("hard-v2", "Extended hard set")])
-    assert 'id="other-set-versions"' in html and "43 of 58" in html and "65%" in html
-    assert build.appendix_html({"arms": [arm]}, []) == ""
-
-
 def test_the_built_page_carries_no_process_metadata_and_no_retired_question(tmp_path):
     out = tmp_path / "index.html"
     build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out))
@@ -66,7 +57,7 @@ def test_the_built_page_carries_no_process_metadata_and_no_retired_question(tmp_
     shown = json.dumps(data)
     assert not [c for c in retired if f'"{c}"' in shown]
     for spec in data["questionSets"].values():
-        assert set(spec) == {"label", "shown", "appendix", "groups", "questions"}
+        assert set(spec) == {"label", "shown", "groups", "questions"}
         assert all(not ({"retired", "new"} & set(q)) for q in spec["questions"])
     visible = re.sub(r"<script.*?</script>|<style.*?</style>", "", page, flags=re.S)
     text = re.sub(r"<[^>]+>", " ", visible)
@@ -94,26 +85,6 @@ def test_every_glossary_term_has_a_type():
     assert not untyped, f"glossary terms with no type: {untyped}"
 
 
-def test_the_appendix_goes_to_its_own_part_or_after_the_sections(tmp_path):
-    out = tmp_path / "index.html"
-    build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out))
-    page = out.read_text(encoding="utf-8")
-    at = page.index('id="other-set-versions"')
-    assert page.index('id="view-question-sets"') < at < page.index('id="view-method"')
-    setups, setup_map = page.index('id="view-setups"'), page.index('id="setup-map"')
-    assert setups < setup_map < page.index('id="view-question-sets"')
-    bare = tmp_path / "bare.html"
-    bare.write_text(
-        "<script>const D = /*__DATA__*/null;</script><main><!--SECTIONS--></main><!--VENDOR-->",
-        encoding="utf-8",
-    )
-    build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out), template=str(bare))
-    page = out.read_text(encoding="utf-8")
-    assert (
-        page.index('id="setup-map"') < page.index('id="other-set-versions"') < page.index("</main>")
-    )
-
-
 def _built(tmp_path):
     out = tmp_path / "index.html"
     build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out))
@@ -122,18 +93,16 @@ def _built(tmp_path):
     return page, json.loads(payload.replace("<\\/", "</"))
 
 
-def test_the_question_section_sits_in_its_part_before_the_appendix(tmp_path):
+def test_the_question_section_sits_in_its_part(tmp_path):
     page, _ = _built(tmp_path)
     at = page.index('id="question-guide"')
-    assert page.index('id="view-question-sets"') < at < page.index('id="other-set-versions"')
-    assert at > page.index('id="view-setups"') and page.index(
-        'id="other-set-versions"'
-    ) < page.index('id="view-method"')
+    assert page.index('id="view-question-sets"') < at < page.index('id="view-method"')
+    assert at > page.index('id="view-setups"')
 
 
 def test_each_question_set_has_its_anchor_in_the_section(tmp_path):
     page, data = _built(tmp_path)
-    section = page[page.index('id="question-guide"') : page.index('id="other-set-versions"')]
+    section = page[page.index('id="question-guide"') : page.index('id="view-method"')]
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
     for st in results["sets"]:
         assert f'id="qs-{st}"' in section, st
@@ -142,7 +111,7 @@ def test_each_question_set_has_its_anchor_in_the_section(tmp_path):
 
 def test_no_retired_question_reaches_the_section_or_its_data(tmp_path):
     page, data = _built(tmp_path)
-    section = page[page.index('id="question-guide"') : page.index('id="other-set-versions"')]
+    section = page[page.index('id="question-guide"') : page.index('id="view-method"')]
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
     scored = {c for spec in results["sets"].values() for c in spec.get("cases") or []}
     retired = {c for spec in results["sets"].values() for c in spec.get("retired") or []} - scored
@@ -180,71 +149,101 @@ def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(t
     assert not [k for k in keys if k not in terms or k not in build.TERM_TYPE]
 
 
-def _appendix(page):
-    at = page.rindex("<section", 0, page.index('id="other-set-versions"'))
-    return page[at : page.index("</section>", at)]
-
-
-def test_the_appendix_is_one_sortable_filterable_table_per_hidden_set(tmp_path):
-    page, _ = _built(tmp_path)
-    apx = _appendix(page)
-    assert apx.count('<table class="apx-t"') == 1
-    heads = re.findall(
-        r'<th scope="col" class="[^"]*" data-col="([^"]+)"[^>]*aria-sort="none">(.*?)</th>', apx
-    )
-    cols = [c for c, _ in heads]
-    assert cols[:3] == ["q", "acc", "cw"] and len(cols) > 3
-    assert all(c.startswith("g-") for c in cols[3:])
-    assert all('<button type="button" class="apx-sort' in h for _, h in heads)
-    filters = set(
-        re.findall(r'<input type="checkbox" name="(fam|role)" value="([^"]+)" checked', apx)
-    )
-    assert {v for n, v in filters if n == "fam"} >= {"da", "mf"}
-    assert {v for n, v in filters if n == "role"} >= {"decides", "check"}
-
-
-def test_every_setup_and_model_of_the_hidden_set_has_one_row_in_the_maps_order(tmp_path):
-    page, _ = _built(tmp_path)
-    apx = _appendix(page)
+def test_the_decision_maps_set_switch_covers_every_set_with_rows(tmp_path):
+    _, data = _built(tmp_path)
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
-    _, appendix = build.shown_sets(sorted({a["set"] for a in results["arms"]}), {})
-    expect = [a for a in build.strict_view(results["arms"]) if a["set"] in {s for s, _ in appendix}]
-    row = r'<tr data-i="(\d+)" data-fam="[^"]+" data-role="[^"]+"><td class="setup">'
-    rows = re.findall(row + r'<span class="id" data-setup="([^"]+)"', apx)
-    assert [int(i) for i, _ in rows] == list(range(len(expect)))
-    assert sorted(a for _, a in rows) == sorted(a["arm"] for a in expect)
-    rung = {arm: i for i, (_, _, arms) in enumerate(build.LADDER) for arm in arms}
-    rungs = [rung[arm] for _, arm in rows]
-    assert rungs == sorted(rungs)
+    with_rows = {a["set"] for a in build.strict_view(results["arms"])}
+    assert set(data["mapOrder"]) == with_rows and set(data["setOrder"]) < with_rows
+    for st in data["mapOrder"]:
+        rows = data["sets"][st]["rows"]
+        assert rows and all({"cov", "sel", "pass3"} <= set(r) for r in rows)
+        assert data["sets"][st]["counts"] == (st in data["setOrder"])
+    # the figures other than the map draw the counted sets only
+    assert data["setOrder"] == ["frozen", "hard"]
 
 
-def test_an_empty_cell_reads_as_empty_never_as_zero():
-    arm = {"set": "hard-v2", "arm": "native-bare", "model": "google-data-agent (FAST)", "cases": 41}
-    arm |= {"of_cases": 55, "runs": 123, "accuracy": [0.65, 0.5, 0.8]}
-    arm |= {"confident_wrong": [0.0, 0.0, 0.0]}
-    other = dict(arm, arm="baseline", model="claude-haiku-5-5", groups={"composable": [0.5, 14]})
-    sets = [("hard-v2", "Extended hard set")]
-    html = build.appendix_html({"arms": [arm | {"groups": {}}, other]}, sets)
-    assert 'data-col="g-composable" data-v="">' in html and "no question of this group" in html
-    assert 'data-col="g-composable" data-v="0.5">' in html
-
-
-def test_the_appendix_names_no_version_history_or_retired_question(tmp_path):
+def test_no_appendix_remains(tmp_path):
     page, _ = _built(tmp_path)
-    apx = _appendix(page)
-    visible = re.sub(r"<script.*?</script>|<style.*?</style>", "", apx, flags=re.S)
-    text = re.sub(r"<[^>]+>", " ", visible)
-    assert not PROCESS.search(text), PROCESS.search(text)
-    assert not re.search(r"version|added|frozen on|\bnew\b", text, re.I)
-    results = json.loads(RESULTS.read_text(encoding="utf-8"))
-    scored = {c for spec in results["sets"].values() for c in spec.get("cases") or []}
-    retired = {c for spec in results["sets"].values() for c in spec.get("retired") or []} - scored
-    assert not [c for c in retired if c in apx]
+    assert 'other-set-versions"' not in page and 'href="#other-set-versions"' not in page
+    assert not re.search(r"class=\"apx|Appendix|the appendix", page)
+    assert "<!--APPENDIX-->" not in (BUILD.parent / "template.html").read_text(encoding="utf-8")
 
 
-def test_every_term_the_appendix_table_shows_is_a_typed_glossary_term(tmp_path):
+def test_the_setup_explorer_comes_before_the_setup_map(tmp_path):
     page, _ = _built(tmp_path)
-    keys = set(re.findall(r'data-term="([^"]+)"', _appendix(page)))
-    assert keys
-    terms = {t for t, _, _ in build.TERMS}
-    assert not [k for k in keys if k not in terms or k not in build.TERM_TYPE]
+    one = page.index("What each setup is, one at a time</h2>")
+    assert page.index('id="view-setups"') < one < page.index(">What each setup is</h2>")
+
+
+def test_coverage_selective_accuracy_and_pass3_arithmetic():
+    pc = {
+        "a": ["right", "right", "right"],
+        "b": ["right", "declined", "wrong"],
+        "c": ["declined", "declined", "confident-wrong"],
+    }
+    got = build.run_scores(pc)
+    assert got["nRuns"] == 9 and got["answered"] == 6
+    assert got["cov"] == 6 / 9  # (runs - declined) / runs
+    assert got["sel"] == 4 / 6  # right answered / answered
+    assert got["pass3"] == 1 / 3  # questions right on all three runs / questions
+    # a run scored right that only asked which meaning was meant is a decline for coverage
+    asked = build.run_scores(pc, {"b": 1})
+    assert asked["cov"] == 5 / 9 and asked["sel"] == 3 / 5
+    # pass^3 only when every question has three runs; selective accuracy empty with nothing answered
+    assert build.run_scores({"a": ["right", "right"], "b": ["right"] * 3})["pass3"] is None
+    none = build.run_scores({"a": ["declined"] * 3})
+    assert none["cov"] == 0 and none["sel"] is None and none["pass3"] == 0
+    assert build.run_scores({})["cov"] is None
+
+
+def test_an_asked_back_turn_reads_as_a_decline_and_a_define_answer_does_not():
+    assert build.asks_back([{"outcome": "right", "text": "Do you mean gross sales or net sales?"}])
+    assert not build.asks_back(
+        [{"outcome": "right", "text": "Sales were 868.65 EUR. Did you mean net sales?"}]
+    )
+    assert not build.asks_back(
+        [{"outcome": "right", "text": "Revenue is the sum of non-cancelled order amounts."}]
+    )
+    assert not build.asks_back([{"outcome": "declined", "text": "Which sales do you mean?"}])
+
+
+def test_the_maps_scores_match_the_runs_they_come_from(tmp_path):
+    _, data = _built(tmp_path)
+    for st in data["mapOrder"]:
+        for r in data["sets"][st]["rows"]:
+            o = r["outcomes"]
+            if r["cov"] is None:
+                continue
+            assert 0 <= r["cov"] <= 1 and (r["sel"] is None or 0 <= r["sel"] <= 1)
+            if r["pass3"] is not None:
+                assert r["pass3"] <= r["acc"][0] + 1e-9  # never above accuracy
+            if sum(o.values()) == r["nRuns"]:
+                assert abs(r["cov"] - (r["nRuns"] - o.get("declined", 0)) / r["nRuns"]) < 0.1
+
+
+def test_the_new_measures_are_typed_terms_with_a_calculation_and_the_map_shows_them(tmp_path):
+    page, data = _built(tmp_path)
+    terms = {t["key"]: t for t in data["terms"]}
+    for key in ("accuracy", "coverage", "selective-accuracy", "pass-3", "confident-wrong"):
+        assert (
+            key in terms
+            and terms[key]["type"] == "Measures and statistics"
+            and terms[key].get("calc")
+        )
+        assert key in build.TERM_TYPE
+    assert "declin" in terms["coverage"]["calc"]
+    for key in ("accuracy", "coverage", "selective-accuracy", "pass-3"):
+        assert f'["{key}"' in page or f'"{key}",' in page  # the map's column reads its term
+
+
+def test_every_terms_longer_explanation_is_structured_and_not_its_short_text(tmp_path):
+    _, data = _built(tmp_path)
+    floor = next(t for t in data["terms"] if t["key"] == "over-the-floor")
+    assert "paired by question, in points" not in floor["text"]
+    labels = [k for k, _ in floor["more"]]
+    assert {"The floor", "Per question", "Combined", "Example"} <= set(labels)
+    for t in data["terms"]:
+        assert t.get("more"), t["key"]
+        assert all(
+            len(pair) == 2 and pair[1] != t["text"] and len(pair[1]) < 200 for pair in t["more"]
+        ), t["key"]

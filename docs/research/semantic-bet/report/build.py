@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
-The question sets part (#390): `question_guide` gives the set profiles, the guide's three lists and its card's fixed fields at <!--QUESTIONS--> (in the Question sets part, before the appendix), followed by questions.html, the section's style and script; its data is window.REPORT.questionGuide.
-Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing. The appendix of other question sets goes at <!--APPENDIX-->.
+The question sets part (#390): `question_guide` gives the set profiles, the guide's three lists and its card's fixed fields at <!--QUESTIONS--> (in the Question sets part), followed by questions.html, the section's style and script; its data is window.REPORT.questionGuide.
+Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted at <!--SECTIONS--> in SECTION_ORDER, then the rest in name order, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing.
+The decision map (Figure 1) has a set switch over every set with rows (`mapOrder`); the other figures draw `setOrder` only.
 The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
 
 Usage: python3 build.py [--show SET] [--template FILE] [--section FILE ...] [--out FILE] RESULTS_JSON [LOG_DIR] [SETS_DIR]
@@ -14,8 +15,8 @@ LOG_DIR       directory holding eval-*.jsonl and judge.jsonl; default: beside RE
 SETS_DIR      directory holding semantic_bet.yaml and semantic_bet_hard.yaml (question text and
               groups); default: LOG_DIR/../../../services/semantic-agent/evals.
 --show SET    the version of its set family the page shows (RULE.md § Set versions): `hard` (v1, the
-              default until the owner's go on #380) or `hard-v2`; the family's other version goes to
-              the appendix, labelled, with its own numbers. Also BET_REPORT_SHOW.
+              default until the owner's go on #380) or `hard-v2`; the family's other version is drawn in
+              the decision map only, labelled as not counted in the findings yet. Also BET_REPORT_SHOW.
 
 Writes index.html beside this script, from template.html, with the vendored Observable Plot and d3
 (vendor/, checked by sha256) inlined. Standard library only.
@@ -41,7 +42,7 @@ VENDOR = [("vendor/d3-7.9.0.min.js", "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10
 
 SET_LABEL = {"frozen": "Frozen set", "hard": "Hard set", "hard-v2": "Extended hard set"}
 # Set families (RULE.md § Set versions): each family's versions, oldest first. The page shows one
-# version per family (SHOWN, or --show); the others go to the appendix. A set in no family is shown.
+# version per family (SHOWN, or --show) in every figure; the others in the decision map only. A set in no family is shown.
 FAMILIES = {"hard": ["hard", "hard-v2"]}
 # v1 until the owner's go on #380's comparison; #381 flips it to hard-v2.
 SHOWN = {"hard": "hard"}
@@ -132,12 +133,16 @@ TERMS = [
     ("conversation", "Conversation", "A follow-up or an ambiguous term inside a multi-turn chat."),
     ("confident-wrong", "Confident-wrong", "A wrong number stated with no hedge: the failure a business user feels. A lower rate counts only when accuracy ties."),
     ("floor", "The floor", "Google's data agent over the tables alone, with no context; every gain is read against it."),
-    ("over-the-floor", "Over the floor", "A setup's share right minus the floor's, paired by question, in points."),
+    ("over-the-floor", "Over the floor", "How many points more often a setup is right than the bare agent with the tables only, on the same questions."),
     ("managed-best", "Managed best", "The most accurate of Google's managed setups, the bar each of ours is paired against."),
     ("decides", "Decides", "Our setups run on a free model, which decides; Google's agents run on Gemini only."),
     ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
     ("partial", "Partial", "Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider."),
+    ("accuracy", "Accuracy", "How often a setup is right: the share of its runs whose answer carries the expected number."),
+    ("coverage", "Coverage", "How often a setup commits to an answer instead of declining; not the same as covered questions."),
+    ("selective-accuracy", "Selective accuracy", "How often a setup is right when it does answer: accuracy over the runs it did not decline."),
+    ("pass-3", "pass^3", "How often a setup is right on all three runs of a question: whether it can be trusted to give the same right answer again."),
     ("declined", "Declined", "The setup gave no number: it said it could not answer, or asked a question back."),
     ("unclear", "Unclear", "Neither the scoring code nor the blind judge could settle whether the answer was right."),
     ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
@@ -193,7 +198,87 @@ TERM_TYPE = {
     "obvious-sql": 3, "sessions-gaps-islands": 3, "cohort-retention": 3, "anti-join": 3, "date-spine": 3, "fiscal-timezone": 3,
     "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "check": 4, "pending": 4, "family-da": 4,
     "family-gt": 4, "family-mf": 4, "family-ref": 4, "claude-code": 4,
+    "accuracy": 5, "coverage": 5, "selective-accuracy": 5, "pass-3": 5,
     "confident-wrong": 5, "declined": 5, "unclear": 5, "over-the-floor": 5, "partial": 5, "interval": 5, "exact": 5,
+}
+# How a measure is computed, shown in its tooltip and its glossary row as "Computed as".
+TERM_CALC = {
+    "accuracy": "the mean over questions of each question's share of right runs; with three runs on every question, "
+                "right runs ÷ all runs.",
+    "coverage": "(runs − declined runs) ÷ runs. Every decline counts as not answered, even where asking back is the "
+                "right answer (a question with two meanings).",
+    "selective-accuracy": "right runs among those answered ÷ answered runs (runs − declined runs).",
+    "pass-3": "questions right on every one of their three runs ÷ questions; shown only where every question has three runs.",
+    "confident-wrong": "the mean over questions of each question's share of runs confidently wrong.",
+    "over-the-floor": "per question, the setup's share of runs right minus the floor's; then the mean over the questions "
+                      "both ran, in points.",
+}
+# A term's longer explanation in the glossary: a few labelled short lines, never prose (owner, 2026-11-07). Terms of a
+# question kind, a set or a setup family get theirs from the data in build() (an example question, counts, setups).
+TERM_MORE = {
+    "setup": [("Parts", "an agent, the tools it may call, the context it reads, the tables in its reach."),
+              ("Example", "native-bare: Google's data agent over the tables, with nothing else.")],
+    "floor": [("Which setup", "native-bare: Google's data agent over the tables alone, on Gemini."),
+              ("Why", "every gain from context, tools or a semantic layer is read against what it already does.")],
+    "over-the-floor": [("The floor", "native-bare: Google's data agent over the tables alone, on Gemini."),
+                       ("Per question", "the setup's share of runs right minus the floor's: 3 of 3 right against 1 of 3 is +67 points."),
+                       ("Combined", "the mean of those differences over the questions both ran, with a 95% interval."),
+                       ("Example", "three questions at +67, 0 and −33 points: (67 + 0 − 33) ÷ 3 = +11 points."),
+                       ("Reading", "an interval that includes 0 shows no clear gain over the floor.")],
+    "managed-best": [("Chosen", "on each question set, the Google-managed setup with the highest accuracy."),
+                     ("Used for", "each of our setups is compared with it question by question.")],
+    "decides": [("Our setups", "a free model through OpenRouter, Nemotron free."),
+                ("Google's agents", "Gemini, the only model they run on.")],
+    "check": [("Models", "Claude Haiku, Sonnet and Opus, through the Anthropic API."),
+              ("Reading", "if Claude closes a gap the free model leaves, the gap is the model's, not the setup's.")],
+    "pending": [("Becomes decided", "once its run on the free model exists."),
+                ("Until then", "shown in the tables, left out of the headlines and the winners.")],
+    "claude-code": [("Runs", "headless, one fresh session a run."),
+                    ("Tools", "only the setup's own; no shell, file or web tool, checked in every transcript."),
+                    ("Role", "comparison only; it never decides.")],
+    "groups": [("Kinds", "covered, hidden-rule, composable, uncovered, conversation, distractor, planted."),
+               ("Two at once", "a hidden-rule question is also covered; a conversation question is also covered or uncovered.")],
+    "other-covered": [("Holds", "conversation, distractor and planted questions that a metric answers."),
+                      ("Why one column", "each is small on its own; together they show the setups apart.")],
+    "hard-to-interpret": [("Kinds", "jargon, period, segment, several metrics, multi-step, implicit definition, ambiguous follow-up."),
+                          ("Where", "the hard sets; a question can be several kinds.")],
+    "sql-hard": [("Kinds", "fan-out join, distinct across a join, ratio of sums, window, median or percentile, sessions and gaps, "
+                           "cohort retention, anti-join, date spine, fiscal or time-zone boundary."),
+                 ("Where", "the extended hard set's added questions.")],
+    "obvious-sql": [("Example", "the average of each order's rate, where the right rate is a sum over a sum."),
+                    ("Why it matters", "a setup that writes the first query that comes to mind gets these wrong with confidence.")],
+    "distinct-across-join": [("Example", "customers who ordered, counted after joining orders to their items: each customer once, not once per item."),
+                             ("Fix", "count distinct, or count before the join.")],
+    "sessions-gaps-islands": [("Example", "visits split into sessions wherever 30 minutes pass with no event."),
+                              ("Fix", "compare each event with the one before it, then number the runs.")],
+    "cohort-retention": [("Example", "of the customers who signed up in August, how many ordered again in September."),
+                         ("Fix", "fix each customer's start first, then follow them period by period.")],
+    "accuracy": [("Example", "three questions, right on 3, 2 and 0 of their 3 runs: (100 + 67 + 0) ÷ 3 = 56%."),
+                 ("Reading", "higher is better; the 95% interval shows how far it could move on other questions.")],
+    "coverage": [("Example", "30 runs, 6 of them declined: (30 − 6) ÷ 30 = 80%."),
+                 ("Declines", "a decline can be the honest answer; low coverage is not always bad, so read it with selective accuracy."),
+                 ("Not", "the covered question group, which is about the semantic layer.")],
+    "selective-accuracy": [("Example", "24 answered runs, 18 of them right: 18 ÷ 24 = 75%."),
+                           ("Reading", "how far to trust an answer the setup does give; one minus it is the selective risk."),
+                           ("With coverage", "a setup that declines more can score higher here; the two read together.")],
+    "pass-3": [("Example", "10 questions, 7 of them right on all three runs: 7 ÷ 10 = 70%."),
+               ("Reading", "never above accuracy; the gap between the two is how often a setup is right only sometimes."),
+               ("Not shown", "where any question has fewer than three runs: \u2013.")],
+    "confident-wrong": [("Counted", "a number outside tolerance with no hedge in the same answer."),
+                        ("Not counted", "a wrong number said to be uncertain, an estimate or partial; a decline."),
+                        ("Reading", "lower is better; it breaks a tie in accuracy.")],
+    "declined": [("Examples", "\u201cno metric covers this\u201d; \u201cwhich sales do you mean?\u201d"),
+                 ("Scored", "not right on a question that needs a number, and never confident-wrong.")],
+    "unclear": [("Counts as", "wrong, in every measure."),
+                ("Decided by", "the blind judge twice; two different verdicts make it unclear.")],
+    "partial": [("Shown when", "a setup ran fewer questions than the set, or clearly fewer than three runs a question."),
+                ("Effect", "its interval is wider, and a small gap means less.")],
+    "interval": [("How", "the questions are drawn again at random, with repeats, many times, and the mean taken each time."),
+                 ("Range", "the middle 95% of those means."),
+                 ("Paired", "for a difference, each draw keeps both setups on the same questions; an interval that includes 0 is a tie.")],
+    "exact": [("When", "every run of every question is right, or none is."),
+              ("Lower bound", "for n questions all right: 0.025 to the power 1 ÷ n."),
+              ("Example", "19 of 19 questions right: at least 82%.")],
 }
 # Each key a page shows a term for, mapped to its TERMS key where the data names it otherwise (#395).
 TERM_ALIAS = {"trap": "hidden-rule", "plain": "covered", "other": "other-covered", "cc": "claude-code"}
@@ -206,12 +291,6 @@ def term_key(key):
 
 # A question's fields that are process, never shown to a reader (#393): whether it was retired, and in which version it was added.
 READER_HIDDEN = {"retired", "new"}
-# What a set in the appendix tests, in one line of a reader's words (what it holds, never its history: #393, #398);
-# markup, with {hard} the hard set's term.
-APPENDIX_ABOUT = {
-    "hard-v2": "It tests the {hard}'s questions plus fifteen that are hard to write in SQL: joins that multiply rows, "
-               "ratios of sums, windows, medians and date spines.",
-}
 # What each set's uncovered questions ask, for the "Uncovered questions" pillar; a set not listed shows none.
 UNCOVERED_KIND = {
     "frozen": "Its uncovered questions: medians, times between events, peaks, ratios of two measures.",
@@ -479,240 +558,6 @@ def shown_sets(every, show):
     return present, appendix
 
 
-# The appendix table's controls (#398): the setup families and model kinds a reader can filter by, in the
-# decision map's order and words; each with the glossary term its tooltip reads (None: no term).
-APX_FAMS = ["da", "gt", "mf", "ref", "other"]
-APX_ROLES = [("decides", "Free model (%s)", "decides", "decides"), ("check", "Claude API (%s)", "check", "check"),
-             ("gemini", "Gemini in Google's agent", None, None), ("cc", "%s", "claude-code", "Claude Code"),
-             ("other", "Another model", None, None)]
-APX_CSS = """<style>
-.apx h3 { margin: 22px 0 4px; }
-.apx-tools { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 10px 0 8px; font-family: var(--label); font-size: 13.5px; }
-.apx-f { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.apx-f legend { float: left; padding: 0; margin-right: 2px; color: var(--ink-3); font-weight: 500; }
-.apx-chk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 9px 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); cursor: pointer; background: var(--paper); }
-.apx-chk:hover { border-color: var(--ink-3); }
-.apx-chk input { margin: 0; width: 15px; height: 15px; accent-color: var(--ink-2); cursor: pointer; }
-.apx-chk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
-.apx-chk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-.apx-status { margin: 0 0 6px; font-family: var(--label); font-size: 13px; color: var(--ink-2); }
-.apx-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
-.apx-t { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
-.apx-t th, .apx-t td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); background: var(--paper); }
-.apx-t thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); }
-.apx-t thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
-.apx-t th.num, .apx-t td.num { text-align: right; }
-.apx-t th.g, .apx-t td.g { text-align: center; }
-.apx-t td.num, .apx-t td.g { white-space: nowrap; }
-.apx-t .setup { position: sticky; left: 0; z-index: 1; min-width: 180px; }
-.apx-t td.setup .id { display: inline-block; font-size: 12.5px; }
-.apx-t td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
-.apx-t tbody tr:hover td { background: var(--row-band); }
-.apx-t tr[hidden] { display: none; }
-.apx-t td small { color: var(--ink-3); font-size: 12.5px; }
-.apx-t .apx-none td { color: var(--ink-3); text-align: left; padding: 14px 8px; }
-.apx-t .q-of { color: var(--ink-3); }
-.apx-sort { appearance: none; background: none; border: 0; padding: 2px 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 4px; min-height: 24px; text-align: inherit; }
-.apx-sort .ar { display: inline-block; width: 10px; color: var(--ink-3); font-weight: 400; }
-.apx-sort .ar::after { content: "\\2195"; }
-th[aria-sort="descending"] .apx-sort .ar::after { content: "\\2193"; color: var(--ink); }
-th[aria-sort="ascending"] .apx-sort .ar::after { content: "\\2191"; color: var(--ink); }
-th[aria-sort="descending"] .apx-sort .ar, th[aria-sort="ascending"] .apx-sort .ar { color: var(--ink); }
-.apx-sort.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
-</style>"""
-# Sorting and filtering, per table; the page's tooltips stay on the headers and filters, which sort and filter
-# on a click, Enter or Space instead of pinning their tooltip.
-APX_JS = """<script>
-(function () {
-  "use strict";
-  document.querySelectorAll(".apx-set").forEach(function (box) {
-    var tb = box.querySelector("tbody"), rows = [].slice.call(tb.querySelectorAll("tr[data-i]")), none = tb.querySelector("tr.apx-none");
-    var heads = [].slice.call(box.querySelectorAll("th[data-col]")), status = box.querySelector(".apx-status");
-    var col = null, dir = null;
-    function val(tr, c) { var td = tr.querySelector('td[data-col="' + c + '"]'); return !td || td.dataset.v === "" ? null : +td.dataset.v; }
-    function picked(name) { var s = {}; box.querySelectorAll('input[name="' + name + '"]:checked').forEach(function (i) { s[i.value] = 1; }); return s; }
-    function apply() {
-      var fams = picked("fam"), roles = picked("role");
-      var order = rows.slice().sort(function (a, b) {
-        if (col) {
-          var x = val(a, col), y = val(b, col);
-          if (x === null || y === null) { if (x !== y) return x === null ? 1 : -1; }
-          else if (x !== y) return dir === "ascending" ? x - y : y - x;
-        }
-        return a.dataset.i - b.dataset.i;
-      });
-      var n = 0;
-      order.forEach(function (tr) { var on = !!(fams[tr.dataset.fam] && roles[tr.dataset.role]); tr.hidden = !on; if (on) n++; tb.appendChild(tr); });
-      none.hidden = n > 0; tb.appendChild(none);
-      var label = "";
-      heads.forEach(function (th) { var on = th.dataset.col === col; th.setAttribute("aria-sort", on ? dir : "none"); if (on) label = th.dataset.label; });
-      status.textContent = n + " of " + rows.length + " setups and models shown, " +
-        (col ? "sorted by " + label + ", " + (dir === "descending" ? "highest" : "lowest") + " first; empty cells last." : "in the decision map's order.");
-    }
-    box.addEventListener("click", function (e) {
-      var b = e.target.closest && e.target.closest("button.apx-sort");
-      var f = e.target.closest && e.target.closest(".apx-f");
-      if (!b && !f) return;
-      e.stopPropagation(); // the page's delegated click would pin the term's tooltip
-      if (window.__reportUnpin) window.__reportUnpin(false);
-      if (!b) return;
-      var c = b.parentNode.dataset.col;
-      if (col !== c) { col = c; dir = "descending"; } else if (dir === "descending") dir = "ascending"; else { col = null; dir = null; }
-      apply();
-    });
-    box.addEventListener("change", function (e) { if (e.target.matches('input[type="checkbox"]')) apply(); });
-    box.addEventListener("keydown", function (e) {
-      if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("button.apx-sort, .apx-f input")) e.stopPropagation();
-    });
-    apply();
-  });
-})();
-</script>"""
-
-
-def js_round(x):
-    """Math.round(100 * x), as the page's script rounds, so a number reads the same in the table and the map."""
-    return int(math.floor(100 * x + 0.5))
-
-
-def apx_shape(role, color):
-    """The role's glyph, as the page's script draws it beside a model's name (shapeKey)."""
-    if role == "decides":
-        g = '<circle cx="0" cy="0" r="4.5" fill="%s" stroke="var(--paper)" stroke-width="2"/>' % color
-    elif role == "check":
-        g = '<circle cx="0" cy="0" r="4" fill="var(--paper)" stroke="%s" stroke-width="2"/>' % color
-    elif role == "gemini":
-        g = '<rect x="-4" y="-4" width="8" height="8" fill="%s" stroke="var(--paper)" stroke-width="2"/>' % color
-    elif role == "cc":
-        g = '<path d="M0 -5L5 0L0 5L-5 0Z" fill="var(--paper)" stroke="%s" stroke-width="2"/>' % color
-    else:
-        g = '<path d="M0 -5L5 4L-5 4Z" fill="%s" stroke="var(--paper)" stroke-width="1.5"/>' % color
-    return '<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">%s</svg>' % g
-
-
-def apx_order(a, role):
-    """A row's place in the decision map: its rung, its setup within the rung, then the model the map reads it on first."""
-    flat = [arm for _, _, arms in LADDER for arm in arms]
-    rung = next((i for i, (_, _, arms) in enumerate(LADDER) if a["arm"] in arms), len(LADDER))
-    r = {"role": role, "managedBest": False, "model": a["model"], "cases": a["cases"]}
-    return (rung, flat.index(a["arm"]) if a["arm"] in flat else len(flat), a["arm"], pick_order(r))
-
-
-def apx_iv(v, n):
-    """A mean and its interval as the decision map writes them; an exact bound carries its term."""
-    ex = exact(v, n)
-    if ex:
-        lo, hi = math.floor(ex[0] * 100 + 1e-9), math.ceil(ex[1] * 100 - 1e-9)
-        return '<small><span class="term" data-term="exact" tabindex="0">[%d, %d]</span></small>' % (lo, hi)
-    return "<small>[%d, %d]</small>" % (js_round(v[1]), js_round(v[2]))
-
-
-def apx_bin(v):
-    return 5 if v >= 0.95 else 4 if v >= 0.85 else 3 if v >= 0.7 else 2 if v >= 0.5 else 1
-
-
-def apx_term(key, text):
-    return '<span class="term" data-term="%s" tabindex="0">%s</span>' % (key, html_escape(text))
-
-
-def appendix_html(R, appendix):
-    """The appendix: each set the page does not show, as one table of its setups and models (#398): right and
-    confident-wrong with their intervals, right per question group; sortable by each number, filterable by
-    setup family and model kind, in the decision map's order until sorted. Numbers as results.json has them."""
-    if not appendix:
-        return ""
-    glabel = dict(GROUPS_ALL)
-    terms = {k for k, _, _ in TERMS}
-    out = ['<section class="apx" id="other-set-versions" aria-labelledby="apx-h">', APX_CSS,
-           '<h2 id="apx-h">Appendix: more question sets</h2>',
-           '<p class="col">More question sets, with each setup\'s numbers from the same runs; the figures draw the frozen and hard sets only.</p>']
-    for st, label in appendix:
-        rows = [a for a in strict_view(R.get("arms", [])) if a["set"] == st]
-        groups = [k for k, _ in GROUPS_ALL] + sorted({g for a in rows for g in a.get("groups", {})})
-        groups = [g for g in dict.fromkeys(groups) if any(g in a.get("groups", {}) for a in rows)]
-        info = {id(a): model_info(a["model"]) for a in rows}
-        rows.sort(key=lambda a: apx_order(a, info[id(a)][1]))
-        fams = [f for f in APX_FAMS if any(FAMILY.get(a["arm"], "other") == f for a in rows)]
-        roles = [r for r in APX_ROLES if any(info[id(a)][1] == r[0] for a in rows)]
-        out.append('<div class="apx-set" id="apx-%s">' % html_escape(st))
-        out.append('<h3>%s</h3>' % html_escape(label))
-        about = APPENDIX_ABOUT.get(st)
-        if about:
-            out.append('<p class="col">%s</p>' % about.format(hard=apx_term("hard", "hard set")))
-        elif SET_ABOUT.get(st) and "{" not in SET_ABOUT[st]:
-            out.append('<p class="col">%s</p>' % html_escape(SET_ABOUT[st]))
-        # the filters: every family and model kind of the set, all ticked
-        chk = []
-        for f in fams:
-            t = "family-" + f
-            attr = ' data-term="%s"' % t if t in terms else ""
-            chk.append('<label class="apx-chk"%s><input type="checkbox" name="fam" value="%s" checked%s>'
-                       '<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="var(--%s)" stroke-width="2.5" stroke-linecap="round"/></svg>'
-                       '<span%s>%s</span></label>' % (attr, f, attr, f, ' class="tt"' if attr else "", html_escape(FAMILY_LABEL.get(f, f))))
-        rchk = []
-        for key, text, t, word in roles:
-            attr = ' data-term="%s"' % t if t else ""
-            shown = text % ('<span class="tt">%s</span>' % html_escape(word)) if t else html_escape(text)
-            rchk.append('<label class="apx-chk"%s><input type="checkbox" name="role" value="%s" checked%s>%s<span>%s</span></label>'
-                        % (attr, key, attr, apx_shape(key, "var(--ink-2)"), shown))
-        out.append('<div class="apx-tools"><fieldset class="apx-f"><legend>Setup family</legend>%s</fieldset>'
-                   '<fieldset class="apx-f"><legend>Model</legend>%s</fieldset></div>' % ("".join(chk), "".join(rchk)))
-        out.append('<p class="apx-status" aria-live="polite">%d of %d setups and models shown, in the decision map\'s order.</p>' % (len(rows), len(rows)))
-        # the table: setup and model, then one sortable column per number
-        head = ['<th scope="col" class="setup">Setup<small>model it ran on</small></th>']
-
-        def sortable(col, label, cls, small, term=None):
-            inner = html_escape(label) + '<span class="ar" aria-hidden="true"></span>'
-            btn = ('<button type="button" class="apx-sort term" data-term="%s">%s</button>' % (term, inner) if term
-                   else '<button type="button" class="apx-sort">%s</button>' % inner)
-            return ('<th scope="col" class="%s" data-col="%s" data-label="%s" aria-sort="none">%s<small>%s</small></th>'
-                    % (cls, col, html_escape(label), btn, small))
-        head.append(sortable("q", "Questions", "num", "run, of the set"))
-        head.append(sortable("acc", "Right", "num", "mean [95%]"))
-        head.append(sortable("cw", "Confident-wrong", "num", "mean [95%]", "confident-wrong"))
-        for g in groups:
-            t = term_key(g)
-            head.append(sortable("g-" + g, glabel.get(g, g.capitalize()), "g", "% right", t if t in terms else None))
-        out.append('<div class="apx-scroll" tabindex="0" role="region" aria-label="%s, every setup and model; scrolls sideways on small screens">'
-                   '<table class="apx-t" aria-label="%s: each setup and model\'s share of questions right and confidently wrong, '
-                   'and right per question group; the column buttons sort the rows"><thead><tr>%s</tr></thead><tbody>'
-                   % (html_escape(label), html_escape(label), "".join(head)))
-        for i, a in enumerate(rows):
-            mlabel, role = info[id(a)]
-            fam = FAMILY.get(a["arm"], "other")
-            of = a.get("of_cases") or a["cases"]
-            n = a["cases"]
-            qs = '%d <span class="q-of">of %d</span>' % (n, of)
-            if n < of:
-                qs = '<span class="term" data-term="partial" tabindex="0">%d of %d</span>' % (n, of)
-            cells = ['<td class="setup"><span class="id" data-setup="%s" tabindex="0">%s</span><span class="mdl">%s%s</span></td>'
-                     % (html_escape(a["arm"]), html_escape(a["arm"]), apx_shape(role, "var(--%s)" % fam), html_escape(mlabel)),
-                     '<td class="num" data-col="q" data-v="%d">%s</td>' % (n, qs)]
-            for col, field in (("acc", "accuracy"), ("cw", "confident_wrong")):
-                v = a.get(field)
-                if not v:
-                    cells.append('<td class="num" data-col="%s" data-v=""><small>not run</small></td>' % col)
-                    continue
-                hot = ' class="cwhot"' if col == "cw" and v[0] >= 0.1 else ""
-                cells.append('<td class="num" data-col="%s" data-v="%r"><span%s>%d%%</span> %s</td>'
-                             % (col, v[0], hot, js_round(v[0]), apx_iv(v, n)))
-            for g in groups:
-                gv = (a.get("groups") or {}).get(g)
-                if not gv:
-                    cells.append('<td class="g" data-col="g-%s" data-v=""><span class="ch none" role="img" '
-                                 'aria-label="no question of this group in these runs">–</span></td>' % g)
-                    continue
-                cells.append('<td class="g" data-col="g-%s" data-v="%r"><span class="ch b%d" role="img" aria-label="%d%% right over %d questions">%d</span></td>'
-                             % (g, gv[0], apx_bin(gv[0]), js_round(gv[0]), gv[1], js_round(gv[0])))
-            out.append('<tr data-i="%d" data-fam="%s" data-role="%s">%s</tr>' % (i, fam, role, "".join(cells)))
-        out.append('<tr class="apx-none" hidden><td colspan="%d">No setup and model match these filters; tick a family and a model.</td></tr>'
-                   % (4 + len(groups)))
-        out.append("</tbody></table></div></div>")
-    out.append(APX_JS)
-    out.append("</section>")
-    return "\n".join(out)
-
-
 # ---------------------------------------------------------------- the question sets part (#390)
 
 # What each set holds, in a reader's words (never its history: #393); {extra} is the count of questions the
@@ -807,10 +652,10 @@ def question_guide(qsets, sets, order):
             rec.pop(k)
     guide = {"lists": [{"key": k, "label": l} for k, l in QS_LISTS], "cats": cats, "q": q,
              "setLabel": {st: set_label(st) for st in sts}}
-    return guide, questions_html(guide, qsets, sts, set(sets))
+    return guide, questions_html(guide, qsets, sts)
 
 
-def questions_html(guide, qsets, sts, drawn):
+def questions_html(guide, qsets, sts):
     e = html_escape
     term = lambda key, text=None: '<span class="term" data-term="%s" tabindex="0">%s</span>' % (
         e(key), e(text if text is not None else next(l for t, l, _ in TERMS if t == key)))
@@ -827,8 +672,6 @@ def questions_html(guide, qsets, sts, drawn):
         extra = len([i for i in groups if not any(i in qsets[o]["groups"] for o in sts if o != st)])
         mix = [(g, sum(1 for gs in groups.values() if g in gs)) for g in gorder]
         mix = [(g, c) for g, c in mix if c]
-        where = ('<p class="qs-where">Drawn in every figure</p>' if st in drawn else
-                 '<p class="qs-where">Not drawn in the figures; <a href="#other-set-versions">its setups\' totals are in the appendix</a></p>')
         out.append('<article class="qs-set" id="qs-%s" aria-labelledby="qs-%s-h">' % (e(st), e(st)))
         out.append('<h3 id="qs-%s-h">%s</h3>' % (e(st), term(term_key(st), set_label(st)) if term_key(st) in TERM_TYPE else e(set_label(st))))
         out.append('<p class="qs-about">%s</p>' % e(SET_ABOUT.get(st, "").format(extra=extra)))
@@ -839,7 +682,7 @@ def questions_html(guide, qsets, sts, drawn):
             out.append('<dt>%s</dt><dd><span class="bar" aria-hidden="true"><i style="width:%.1f%%"></i></span><span class="c">%d</span></dd>'
                        % (term(term_key(g)), 100.0 * c / top, c))
         out.append('</dl><p class="qs-mixnote">A question can sit in two groups.</p>')
-        out.append(where + '</article>')
+        out.append('</article>')
     out.append('</div>')
     out.append('<h3 class="qs-gh" id="qs-guide-h">Questions by kind</h3>')
     out.append('<p class="qs-sub">Pick a kind of question to see a real one of that kind; '
@@ -878,6 +721,102 @@ def questions_html(guide, qsets, sts, drawn):
     return "\n".join(out)
 
 
+# The Setups part's sections, in this order (owner, 2026-11-07: the explorer first); any other after them by name.
+SECTION_ORDER = ["b-setup-explorer", "a-setup-map"]
+
+
+def section_rank(path):
+    name = os.path.basename(os.path.dirname(path))
+    return (SECTION_ORDER.index(name) if name in SECTION_ORDER else len(SECTION_ORDER), name)
+
+
+# Groups the decision map adds to the four headline ones when a set has them.
+MAP_EXTRA_GROUPS = ["composable"]
+# The eval's own decline and ask-back wordings (semantic_agent.evaluation, DECLINE and ASKS_WHICH), copied so this
+# script stays standard library only: a run scored right whose turn only asks back is a decline for coverage.
+ASKS_WHICH = re.compile(r"[^.!?]*\b(?:which|or|mean|meant)\b[^.!?]*\?", re.IGNORECASE)
+DECLINE_WORDS = re.compile(
+    r"no (?:such |\w+ )?metric|not (?:available|defined|covered|in the semantic layer)|"
+    r"(?:does not|doesn't|do not|don't) (?:have|define|include|cover|contain)|"
+    r"(?:cannot|can't|unable to) (?:answer|be answered|give|report)",
+    re.IGNORECASE,
+)
+
+
+def asks_back(turns):
+    """A run scored right in which a turn states no number and only asks back or declines: on a question with two
+    meanings asking which is right (RULE.md § Scoring a run), yet it commits to no answer."""
+    for t in turns or []:
+        text = (t.get("text") or "").replace("\u2019", "'")
+        if t.get("outcome") == "right" and not re.search(r"\d", text) and (ASKS_WHICH.search(text) or DECLINE_WORDS.search(text)):
+            return True
+    return False
+
+
+def run_scores(pc, asked=None):
+    """Coverage, selective accuracy and pass^3 of one row, from its outcomes per question (`pc`: question -> run
+    outcomes) and its runs scored right that only asked back (`asked`: question -> count).
+    Coverage: (runs - declined) / runs, every decline not answered, an asked-back run included.
+    Selective accuracy: right answered runs / answered runs (None with no answered run).
+    pass^3: questions right on all of their first three runs / questions, only when every question has three runs."""
+    asked = asked or {}
+    runs = sum(len(v) for v in pc.values())
+    if not runs:
+        return {"cov": None, "sel": None, "pass3": None, "answered": 0, "nRuns": 0}
+    back = sum(asked.get(c, 0) for c in pc)
+    declined = sum(v.count("declined") for v in pc.values()) + back
+    right = sum(v.count("right") for v in pc.values()) - back
+    answered = runs - declined
+    three = all(len(v) >= 3 for v in pc.values())
+    return {"cov": answered / runs, "sel": right / answered if answered else None,
+            "pass3": sum(all(o == "right" for o in v[:3]) for v in pc.values()) / len(pc) if three else None,
+            "answered": answered, "nRuns": runs}
+
+
+def glossary(guide, sets, order):
+    """Every term as the page shows it: its label, short text, type, how it is computed (TERM_CALC) and its longer
+    explanation as labelled lines: TERM_MORE's, or from the data for a kind of question (an example and a count),
+    a question set (its questions and setups) and a setup family (its setups)."""
+    cats = {c["key"]: c for c in guide["cats"]}
+    fam_arms = defaultdict(list)
+    for st in order:
+        for r in sets[st]["rows"]:
+            if r["arm"] not in fam_arms[r["family"]]:
+                fam_arms[r["family"]].append(r["arm"])
+    mb = {}
+    for st in order:
+        m = next((r for r in sets[st]["rows"] if r["id"] == sets[st]["managedBest"]), None)
+        if m and sets[st].get("counts"):
+            mb[st] = "%s on %s" % (m["arm"], m["modelLabel"])
+    out = []
+    for k, label, text in TERMS:
+        more = list(TERM_MORE.get(k, []))
+        c = cats.get(k)
+        if not more and c:
+            q = guide["q"][c["ids"][0]]
+            t0 = q["turns"][0] if q["turns"] else None
+            ask = strip_md(str((t0.get("question") if isinstance(t0, dict) else t0) or q["name"]))
+            if len(ask) > 150:
+                ask = ask[:147].rsplit(" ", 1)[0] + "..."
+            more = [("Example", "\u201c%s\u201d" % ask), ("Questions", "%d across the sets" % len(c["ids"]))]
+        if not more and k in SET_LABEL and k in sets:
+            S = sets[k]
+            more = [("Questions", str(S["nCases"])), ("Setups run on it", str(len({r["arm"] for r in S["rows"]})))]
+            if not S.get("counts"):
+                more.append(("Findings", "not counted in the findings yet; drawn in the decision map only."))
+        if not more and k.startswith("family-") and fam_arms.get(k[len("family-"):]):
+            more = [("Setups", ", ".join(fam_arms[k[len("family-"):]]))]
+        if k == "managed-best" and mb:
+            more += [(set_label(st), name) for st, name in mb.items()]
+        e = {"key": k, "label": label, "text": text, "type": TERM_TYPES[TERM_TYPE[k]]}
+        if k in TERM_CALC:
+            e["calc"] = TERM_CALC[k]
+        if more:
+            e["more"] = [[a, b] for a, b in more]
+        out.append(e)
+    return out
+
+
 def html_escape(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -910,10 +849,12 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
     R = json.load(open(results_path, encoding="utf-8"))
     arms_all = strict_view(R.get("arms", []))
     every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
-    present, appendix = shown_sets(every, show or {})
+    present, others = shown_sets(every, show or {})
+    # Every set with rows is in the decision map (`mapOrder`); the other figures draw `present` only.
+    mapped = [st for st in every if st in present or st in {o for o, _ in others}]
     setfiles = SET_FILE
     qsets = {}
-    for st in present:
+    for st in mapped:
         try:
             qsets[st] = parse_set(os.path.join(sets_dir, setfiles.get(st, "semantic_bet_%s.yaml" % st)))
         except (OSError, ValueError):
@@ -940,7 +881,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
         ladder.append({"key": "new", "label": "Not yet placed on the ladder", "arms": new_arms})
 
     sets = {}
-    for st in present:
+    for st in mapped:
         q = qsets[st]
         seen = [e.get("case") for (s2, _, _), es in raw.items() if s2 == st for e in es]
         ids = list(q["questions"]) or list(q["groups"]) or list(dict.fromkeys(c for c in seen if c))
@@ -968,6 +909,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                 partial = "fewer runs per question"
             entries = sorted(raw.get((st, a["arm"], a["model"]), []), key=lambda e: e.get("at", ""))[: a["runs"]]
             pc = defaultdict(list)
+            asked = defaultdict(int)  # runs scored right that only asked which meaning was meant
             example = None
             for e in entries:
                 oc = e.get("outcome") if fresh else judged_outcome(e, st, verdicts)
@@ -975,6 +917,8 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                     continue
                 pc[e["case"]].append(oc)
                 turns = e.get("turns") or []
+                if oc == "right" and asks_back(turns):
+                    asked[e["case"]] += 1
                 turn = next((t for t in turns if t.get("outcome") == e.get("outcome")), turns[-1] if turns else None)
                 if turn and turn.get("text") and (example is None or rank[example["outcome"]] > rank[oc]):
                     text = strip_md(turn["text"])
@@ -996,6 +940,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                 "managedBest": a["arm"] == mbr[0] and a["model"] == mbr[1],
                 "exact": {k: exact(a[f], a["cases"]) for k, f in (("acc", "accuracy"), ("cw", "confident_wrong")) if exact(a[f], a["cases"])},
                 "step2": step2.get((st, a["arm"], a["model"])), "units": units, "_pc": pc,
+                **run_scores(pc, asked),
             })
         for arm in {r["arm"] for r in rows}:
             mine = [r for r in rows if r["arm"] == arm and r["plotted"]]
@@ -1025,30 +970,34 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
             r["vsFloor"] = None if (floor is None or r is floor) else {
                 "acc": paired(r["_pc"], floor["_pc"], ids, "right", sd),
                 "cw": paired(r["_pc"], floor["_pc"], ids, "confident-wrong", sd + 1)}
-        gcount = {g: sum(1 for c in ids if g in q["groups"].get(c, [])) for g, _ in GROUPS_ALL}
-        for g, _ in GROUPS_ALL:  # no set file: fall back on the largest group count a row reports
+        # The map's group columns: the four headline groups, plus composable where the set has it.
+        map_groups = [g for g, _ in GROUPS] + [g for g in MAP_EXTRA_GROUPS if any(g in r["groups"] for r in rows)]
+        gkeys = list(dict.fromkeys([g for g, _ in GROUPS_ALL] + map_groups))
+        gcount = {g: sum(1 for c in ids if g in q["groups"].get(c, [])) for g in gkeys}
+        for g in gkeys:  # no set file: fall back on the largest group count a row reports
             if not gcount[g]:
                 gcount[g] = max((r["groups"].get(g, [0, 0])[1] for r in rows), default=0)
         sets[st] = {"label": set_label(st), "rows": rows, "cases": cases, "nCases": len(ids) or max((r["of"] for r in rows), default=0),
                     "managedBest": mb["id"] if mb else None, "floor": floor["id"] if floor else None,
-                    "mf": mf["id"] if mf else None, "groupCases": gcount,
+                    "mf": mf["id"] if mf else None, "groupCases": gcount, "mapGroups": map_groups,
+                    "counts": st in present,
                     "pillars": make_pillars(st, rows, ids, q["groups"], floor, mf),
                     "parts": make_parts(st, rows, mb, floor, mf)}
         for r in rows:
             r.pop("_pc", None)
 
-    data = {"written": R.get("written"), "setOrder": present, "sets": sets, "ladder": ladder,
+    data = {"written": R.get("written"), "setOrder": present, "mapOrder": mapped, "sets": sets, "ladder": ladder,
             "sentences": combine(sets, present),
             "groups": [{"key": k, "label": l} for k, l in GROUPS],
             "groupsAll": [{"key": k, "label": l, "help": GROUP_HELP[k]} for k, l in GROUPS_ALL],
             "buckets": [{"key": k, "label": l, "help": h} for k, l, h in BUCKETS],
             "familyLabel": FAMILY_LABEL, "desc": DESC, "undescribed": UNDESCRIBED,
-            "terms": [{"key": k, "label": l, "text": t, "type": TERM_TYPES[TERM_TYPE[k]]} for k, l, t in TERMS],
+            "terms": [],
             "termTypes": TERM_TYPES,
             "termAlias": TERM_ALIAS,
             # Every set, shown or not (#390), as its reader sees it (#393, #394): its scored questions and groups only;
             # retired questions, hashes, freeze dates and version lineage stay in RULE.md and results.json.
-            "questionSets": {st: {"label": set_label(st), "shown": st in present, "appendix": st in {a for a, _ in appendix},
+            "questionSets": {st: {"label": set_label(st), "shown": st in present,
                                   "groups": {c: g for c, g in (spec.get("groups") or {}).items() if c in set(spec.get("cases") or [])},
                                   "questions": [{k: v for k, v in q.items() if k not in READER_HIDDEN}
                                                 for q in spec.get("questions") or [] if q.get("id") in set(spec.get("cases") or [])]}
@@ -1057,21 +1006,17 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
     # The question sets part (#390): its data for the page's script, its markup at <!--QUESTIONS-->.
     data["questionGuide"], qs_html = question_guide(data["questionSets"], sets, [s for s in SET_ORDER if s in data["questionSets"]]
                                                     + sorted(s for s in data["questionSets"] if s not in SET_ORDER))
+    data["terms"] = glossary(data["questionGuide"], sets, mapped)
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     page = open(template or os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
     sections = []
-    for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html"))):
+    for path in sorted(glob.glob(os.path.join(HERE, "sections", "*", "section.html")), key=section_rank):
         sections.append(open(path, encoding="utf-8").read())
     for path in extra_sections:  # a design variant previewed beside the page's own sections (#390)
         sections.append(open(path, encoding="utf-8").read())
-    # The appendix goes at <!--APPENDIX--> (the template's question-sets part); a template without one gets it after the sections.
-    apx = appendix_html(R, appendix)
     if "<!--QUESTIONS-->" in page:  # the section's markup, then its own style and script (questions.html)
         page = page.replace("<!--QUESTIONS-->", qs_html + "\n" + open(os.path.join(HERE, "questions.html"), encoding="utf-8").read())
-    if "<!--APPENDIX-->" in page:
-        page = page.replace("<!--SECTIONS-->", "\n".join(sections)).replace("<!--APPENDIX-->", apx)
-    else:
-        page = page.replace("<!--SECTIONS-->", "\n".join(sections + [apx]))
+    page = page.replace("<!--SECTIONS-->", "\n".join(sections))
     page = page.replace("<!--VENDOR-->", vendor_scripts())
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(page)

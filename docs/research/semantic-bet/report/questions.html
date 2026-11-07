@@ -294,7 +294,7 @@ window.reportReady(function () {
   }
   function runsHTML(q) {
     if (!q.runs || !D.sets[q.runs]) {
-      return `<p class="qs-plain">Asked in the ${esc(lowerSet(q.sets[0]))} only, which the figures do not draw; that set's totals per setup are in the appendix.</p>`;
+      return `<p class="qs-plain">Asked in the ${esc(lowerSet(q.sets[0]))} only; <a href="#map-set-${esc(q.sets[0])}">its setups' numbers are in the decision map</a>.</p>`;
     }
     const rows = rowsOf(q.runs), ci = caseIx[q.runs].get(q.id);
     const cells = rows.map((r) => ({ r, u: (r.units || "").slice(ci * 3, ci * 3 + 3).padEnd(3, ".") }));

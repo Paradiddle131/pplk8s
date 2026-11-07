@@ -181,6 +181,12 @@ table.tw td.num, table.tw th.num { text-align: right; }
 .tip.pinned .tk, .tip.pinned .th, .tip.pinned .tq { padding-right: 20px; }
 .tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
 .tip.pinned .tipclose { display: block; }
+.tip.pinned .thandle { cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; margin: -9px -11px 3px; padding: 9px 31px 3px 11px; border-radius: 3px 3px 0 0; }
+.tip.pinned .thandle:hover { background: var(--band); }
+.tip.pinned .thandle:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
+.tip.dragging, .tip.dragging .thandle { cursor: grabbing; }
+.tip .tgrip { display: none; }
+.tip.pinned .tgrip { display: inline-block; vertical-align: -1px; margin-right: 7px; color: var(--ink-3); opacity: .8; }
 .tipclose:hover { background: var(--band); }
 .tipjump { display: none; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--rule); font-size: 13px; }
 .tip.pinned .tipjump { display: block; }
@@ -227,6 +233,44 @@ table.map tr.sub[hidden] { display: none; }
 .ivl { white-space: nowrap; line-height: 1.45; }
 .ivl small { color: var(--ink-3); font-size: 12.5px; }
 .ivl .sk { color: var(--ink-3); font-size: 11.5px; margin-right: 4px; }
+/* Figure 1's set switch, filters and sortable heads */
+.mtools { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: flex-start; margin: 10px 0 6px; font-family: var(--label); font-size: 13.5px; }
+.mseg { max-width: 100%; }
+.mseg button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.2; padding: 4px 11px 5px; }
+.mseg button small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.mseg button[aria-pressed="true"] small { color: var(--paper); opacity: .85; }
+.mf { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mf legend { float: left; padding: 0; margin-right: 2px; color: var(--ink-3); font-weight: 500; }
+.mchk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 9px 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); cursor: pointer; background: var(--paper); }
+.mchk:hover { border-color: var(--ink-3); }
+.mchk input { margin: 0; width: 15px; height: 15px; accent-color: var(--ink-2); cursor: pointer; }
+.mchk:has(input:not(:checked)) { color: var(--ink-3); border-style: dashed; }
+.mchk .tt { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+.mlive { margin: 0 0 6px; font-size: 13px; }
+.msort { appearance: none; background: none; border: 0; padding: 2px 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 4px; min-height: 24px; text-align: inherit; }
+.msort .ar { display: inline-block; width: 10px; color: var(--ink-3); font-weight: 400; }
+.msort .ar::after { content: "\2195"; }
+th[aria-sort="descending"] .msort .ar::after { content: "\2193"; }
+th[aria-sort="ascending"] .msort .ar::after { content: "\2191"; }
+th[aria-sort="descending"] .msort .ar, th[aria-sort="ascending"] .msort .ar { color: var(--ink); }
+.msort.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+.msort:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+table.map th.num .msort { justify-content: flex-end; }
+table.map td.num .mv { white-space: nowrap; }
+table.map tr.mnone td { color: var(--ink-3); padding: 14px 8px; }
+/* glossary rows: the longer explanation as labelled lines */
+.gl-t td .gl-txt { margin: 0; }
+.gl-more { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 5px 0 1px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; }
+.gl-more dt { color: var(--ink-3); font-weight: 500; }
+.gl-more dd { margin: 0; color: var(--ink-2); }
+.tip .tcalc { margin: 0; color: var(--ink); }
+.nm { display: inline-block; width: 18px; text-align: center; color: var(--ink-3); }
+.plive { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 6px; }
+.plive .live { margin: 0; flex: 1 1 22rem; }
+.pclear { appearance: none; font: 500 13px var(--label); color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 3px 10px; min-height: 30px; cursor: pointer; }
+.pclear:hover { background: var(--band); }
+.pclear:focus-visible, .pqs:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
 .cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
 .more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
 
@@ -461,9 +505,15 @@ window.REPORT = D;
   <figure id="fig1">
     <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
     <div class="twin" id="twin1"></div>
+    <div class="mtools">
+      <div class="seg mseg" role="group" aria-label="Question set for Figure 1" id="map-seg"></div>
+      <fieldset class="mf" id="map-fam"><legend>Setup family</legend></fieldset>
+      <fieldset class="mf" id="map-role"><legend>Model</legend></fieldset>
+    </div>
     <div class="figtools"><div class="legend" id="leg1"></div></div>
+    <p class="live mlive" id="map-live" aria-live="polite"></p>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
-    <figcaption>Each cell holds the frozen set first and the hard set second; a boxed number is the best in its column for that set.</figcaption>
+    <figcaption>One question set at a time; a boxed number is the best in its column. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</figcaption>
   </figure>
 
   </section>
@@ -507,8 +557,9 @@ window.REPORT = D;
   <figure id="fig6">
     <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
     <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
+    <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear" id="plate-clear" hidden>Show every question</button></div>
     <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
-    <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
+    <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome, and click a square or a question's tick in the head to highlight that question on every row.</figcaption>
   </figure>
 
   </section>
@@ -519,7 +570,6 @@ window.REPORT = D;
 
   <section class="view" id="view-question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
 <!--QUESTIONS-->
-<!--APPENDIX-->
   </section>
 
 
@@ -554,7 +604,7 @@ window.REPORT = D;
 <script>
 /* ---------- the report's parts as tabs: one open at a time, each with its own URL (#396) ---------- */
 // The hash names the open part (#summary, #decision-map, ...) or an element inside one (#term-<key>,
-// #map-<arm>, #setup-<arm>, #other-set-versions), which opens its part. Every switch is a history entry
+// #map-<arm>, #map-set-<set>, #setup-<arm>), which opens its part. Every switch is a history entry
 // that remembers its scroll position, so Back and Forward return to the part and the place.
 (function () {
   "use strict";
@@ -741,7 +791,9 @@ window.REPORT = D;
   const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
   const ROLE = { decides: "free model, decides", check: "Claude through the API, the check", gemini: "Gemini in Google's agent", cc: "Claude Code, comparison only", other: "model not yet classified" };
   const ALL = {}; SETS.forEach((s) => D.sets[s].rows.forEach((r) => (ALL[r.id] = r)));
-  const byId = (id) => ALL[id];
+  // every row of every set, the decision map's sets beyond the figures' included, for tooltips and lookups by id
+  const ALLX = {}; Object.keys(D.sets).forEach((s) => D.sets[s].rows.forEach((r) => (ALLX[r.id] = r)));
+  const byId = (id) => ALLX[id];
   const S = (s) => D.sets[s];
   const rowOf = (s, key) => S(s) && S(s).rows.find((r) => r.key === key);
   const ladderIdx = {}; D.ladder.forEach((l, i) => l.arms.forEach((a) => (ladderIdx[a] = i)));
@@ -787,11 +839,11 @@ window.REPORT = D;
   const tPts = (d) => `<b>${sg(d[0])}</b> points <span class="iv">[${sg(d[1])}, ${sg(d[2])}]</span>`;
   const OUTCH = { right: "0", declined: "1", wrong: "2", unclear: "3", "confident-wrong": "4" };
   const tOut = (k, n) => `<span class="oc">${swatch(OUTCH[k] || ".")}${n == null ? "" : `<b>${n}</b> `}${esc(k)}</span>`;
-  const ARMFAM = {}; Object.values(ALL).forEach((r) => { if (!ARMFAM[r.arm]) ARMFAM[r.arm] = r.family; });
+  const ARMFAM = {}; Object.values(ALLX).forEach((r) => { if (!ARMFAM[r.arm]) ARMFAM[r.arm] = r.family; });
   const famName = (f) => (f && D.familyLabel[f]) || "";
   function termTip(key) {
     const t = TERM[key];
-    return t ? tKick(t.type ? esc(t.type) : "Term") + `<p class="th">${esc(t.label)}</p><p class="td">${esc(t.text)}</p>` : tKick("Term") + `<p class="th">${esc(key)}</p><p class="td">Not yet defined.</p>`;
+    return t ? tKick(t.type ? esc(t.type) : "Term") + `<p class="th">${esc(t.label)}</p><p class="td">${esc(t.text)}</p>` + (t.calc ? tSec("Computed as", `<p class="tcalc">${esc(t.calc)}</p>`) : "") : tKick("Term") + `<p class="th">${esc(key)}</p><p class="td">Not yet defined.</p>`;
   }
   function setupTip(arm) { return tKick("Setup", esc(famName(ARMFAM[arm]))) + `<p class="th"><span class="id">${esc(arm)}</span></p><p class="td">${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
@@ -840,9 +892,52 @@ window.REPORT = D;
     pinned = true; pinEl = el; tipEl = el;
     tip.style.position = "absolute"; tip.classList.add("pinned");
     tip.setAttribute("role", "dialog"); tip.setAttribute("aria-label", "Pinned detail");
-    tip.innerHTML = CLOSE + h + jumpLine(el); tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+    tip.innerHTML = CLOSE + h + jumpLine(el); addHandle(); tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
     lockFor(el);
   }
+  /* ---------- a pinned tooltip moves out of the way: its kicker row is the handle ---------- */
+  // Drag by mouse, pen or touch (pointer events), or focus the handle and nudge with the arrow keys (Shift for
+  // larger steps); it stays inside the viewport. Unpinning forgets the place: the next pin opens by its mark.
+  const GRIP = `<svg class="tgrip" viewBox="0 0 8 12" width="8" height="12" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="2" cy="10" r="1.1"/><circle cx="6" cy="10" r="1.1"/></g></svg>`;
+  function addHandle() {
+    let k = tip.querySelector(":scope > .tk");
+    if (!k) { k = document.createElement("p"); k.className = "tk"; tip.insertBefore(k, tip.querySelector(":scope > .tipclose").nextSibling); }
+    k.classList.add("thandle"); k.tabIndex = 0; k.setAttribute("role", "button");
+    k.setAttribute("aria-label", "Move this detail: drag it, or use the arrow keys");
+    k.title = "Drag to move";
+    k.insertAdjacentHTML("afterbegin", GRIP);
+  }
+  const tipXY = () => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(tip.style.transform); return m ? [+m[1], +m[2]] : [0, 0]; };
+  function moveTip(x, y) { // x, y: the pinned tooltip's top left in page px, kept inside the viewport
+    const vw = document.documentElement.clientWidth, vh = window.innerHeight, w = tip.offsetWidth, h = tip.offsetHeight;
+    const sx = window.scrollX, sy = window.scrollY;
+    const vx = Math.max(8, Math.min(Math.max(8, vw - w - 8), x - sx)), vy = Math.max(8, Math.min(Math.max(8, vh - h - 8), y - sy));
+    tip.style.transform = `translate(${Math.round(vx + sx)}px, ${Math.round(vy + sy)}px)`;
+  }
+  let drag = null;
+  tip.addEventListener("pointerdown", (e) => {
+    const hd = pinned && e.target.closest && e.target.closest(".thandle"); if (!hd || e.button) return;
+    e.preventDefault(); const [x, y] = tipXY();
+    drag = { id: e.pointerId, dx: e.pageX - x, dy: e.pageY - y };
+    try { hd.setPointerCapture(e.pointerId); } catch (err) {}
+    tip.classList.add("dragging");
+  });
+  tip.addEventListener("pointermove", (e) => { if (drag && e.pointerId === drag.id) moveTip(e.pageX - drag.dx, e.pageY - drag.dy); });
+  const endDrag = (e) => { if (drag && e.pointerId === drag.id) { drag = null; tip.classList.remove("dragging"); } };
+  tip.addEventListener("pointerup", endDrag); tip.addEventListener("pointercancel", endDrag);
+  tip.addEventListener("keydown", (e) => {
+    if (!pinned || !e.target.closest || !e.target.closest(".thandle")) return;
+    const st = e.shiftKey ? 40 : 10, d = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[e.key];
+    if (d) { e.preventDefault(); const [x, y] = tipXY(); moveTip(x + d[0], y + d[1]); return; }
+    // Shift+Tab from the handle goes back to the mark the tooltip belongs to
+    if (e.key === "Tab" && e.shiftKey && pinEl && document.contains(pinEl)) { e.preventDefault(); quietFocus = true; pinEl.focus({ preventScroll: true }); quietFocus = false; }
+  });
+  // Tab from a pinned mark goes into its tooltip, to the handle, so the keyboard can move it too
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab" || e.shiftKey || !pinned || document.activeElement !== pinEl) return;
+    const hd = tip.querySelector(".thandle"); if (!hd) return;
+    e.preventDefault(); hd.focus({ preventScroll: true });
+  });
   /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
   // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
   function jumpTarget(el) {
@@ -1084,13 +1179,17 @@ window.REPORT = D;
     const re = new RegExp("(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
     return String(text).split(re).map((p, i) => (i % 2 ? `<mark>${esc(p)}</mark>` : esc(p))).join("");
   }
+  // a term's row: its short meaning, then how it is computed and its longer explanation, as labelled lines
+  const glLines = (t) => (t.calc ? [["Computed as", t.calc]] : []).concat(t.more || []);
+  const glHay = (t) => glNorm([t.label, t.text].concat(...glLines(t)).join(" "));
+  const glCell = (t, words) => `<p class="gl-txt">${glMark(t.text, words)}</p>` + (glLines(t).length ? `<dl class="gl-more">${glLines(t).map(([k, v]) => `<dt>${glMark(k, words)}</dt><dd>${glMark(v, words)}</dd>`).join("")}</dl>` : "");
   const CHEV = `<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   function renderGloss() {
     const terms = D.terms || [], types = glTypes();
     $("#gl-types").innerHTML = [[null, "All types", terms.length]].concat(types.map((ty) => [ty, ty, terms.filter((t) => t.type === ty).length]))
       .map(([ty, l, n]) => `<button type="button" data-type="${ty == null ? "" : esc(ty)}" aria-pressed="${GS.type === ty}">${esc(l)}<span class="c">${n}</span></button>`).join("");
     const tb = types.map((ty, i) => `<tbody data-type="${esc(ty)}"><tr class="gl-g"><th colspan="2" scope="rowgroup" id="gl-g${i}"><button type="button" aria-expanded="true">${CHEV}<span>${esc(ty)}</span><span class="c"></span></button></th></tr>` +
-      terms.filter((t) => t.type === ty).map((t) => `<tr id="term-${esc(t.key)}" data-key="${esc(t.key)}"><th scope="row">${esc(t.label)}</th><td>${esc(t.text)}</td></tr>`).join("") + `</tbody>`).join("");
+      terms.filter((t) => t.type === ty).map((t) => `<tr id="term-${esc(t.key)}" data-key="${esc(t.key)}"><th scope="row">${esc(t.label)}</th><td></td></tr>`).join("") + `</tbody>`).join("");
     const tbl = $("#gl-t"); tbl.querySelectorAll("tbody").forEach((b) => b.remove()); tbl.insertAdjacentHTML("beforeend", tb);
     glApply();
   }
@@ -1102,9 +1201,9 @@ window.REPORT = D;
       const ty = tb.dataset.type, inType = GS.type == null || GS.type === ty, folded = GS.folded.has(ty) && !words.length;
       let n = 0;
       tb.querySelectorAll("tr[data-key]").forEach((tr) => {
-        const t = byKey[tr.dataset.key], hay = glNorm(t.label + " " + t.text);
+        const t = byKey[tr.dataset.key], hay = glHay(t);
         const hit = words.every((w) => hay.includes(w));
-        tr.cells[0].innerHTML = glMark(t.label, hit ? words : []); tr.cells[1].innerHTML = glMark(t.text, hit ? words : []);
+        tr.cells[0].innerHTML = glMark(t.label, hit ? words : []); tr.cells[1].innerHTML = glCell(t, hit ? words : []);
         if (hit && inType) n++;
         tr.hidden = !(hit && inType) || folded;
       });
@@ -1115,7 +1214,7 @@ window.REPORT = D;
       if (!tb.hidden) { matched += n; if (!folded) shown += n; }
     });
     // each type's count follows the search, so a reader sees where the matches are before choosing a type
-    const hits = terms.filter((t) => { const hay = glNorm(t.label + " " + t.text); return words.every((w) => hay.includes(w)); });
+    const hits = terms.filter((t) => { const hay = glHay(t); return words.every((w) => hay.includes(w)); });
     $("#gl-types").querySelectorAll("button").forEach((b) => {
       const ty = b.dataset.type || null; b.setAttribute("aria-pressed", String(ty === GS.type));
       b.querySelector(".c").textContent = hits.filter((t) => ty == null || t.type === ty).length;
@@ -1137,7 +1236,7 @@ window.REPORT = D;
   function glReveal(row) {
     const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
     const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
-    const hay = glNorm(t.label + " " + t.text), words = glNorm(GS.q).split(/\s+/).filter(Boolean);
+    const hay = glHay(t), words = glNorm(GS.q).split(/\s+/).filter(Boolean);
     if (!words.every((w) => hay.includes(w))) { GS.q = ""; $("#gl-q").value = ""; }
     if (GS.type != null && GS.type !== tb.dataset.type) GS.type = null;
     GS.folded.delete(tb.dataset.type);
@@ -1209,63 +1308,135 @@ window.REPORT = D;
     for (const s of SETS) { const r = S(s).rows.find((x) => x.arm === arm && x.primary); if (r) return r.key; }
     return null;
   }
+  /* One question set at a time (the switch covers every set with rows), sortable by each number and filtered by
+     setup family and model. In the map's own order the rows keep their rungs and each setup's other models sit
+     behind "+N models"; a sort lists every setup and model flat, and its third press returns to the map's order. */
+  const MAPSETS = (D.mapOrder || SETS).filter((s) => D.sets[s]);
+  const MS = { set: MAPSETS[0], col: null, dir: null, off: new Set(), open: new Set() };
+  try { const v = JSON.parse(localStorage.getItem("semantic-bet-views-2") || "{}"); if (MAPSETS.includes(v.map)) MS.set = v.map; } catch (e) {}
+  const MROLES = [["decides", () => `Free model (${term("decides", "decides")})`], ["check", () => `Claude API (${term("check", "check")})`],
+    ["gemini", () => "Gemini in Google's agent"], ["cc", () => term("claude-code", "Claude Code")], ["other", () => "Another model"]];
+  const MNUM = [["acc", "accuracy", "Accuracy", "mean [95%]"], ["cov", "coverage", "Coverage", "% of runs answered"],
+    ["sel", "selective-accuracy", "Selective accuracy", "% right when it answers"], ["pass3", "pass-3", "pass^3", "% of questions"],
+    ["cw", "confident-wrong", "Confident-wrong", "mean [95%]"]];
+  const mval = (r, c) => c.startsWith("g-") ? (r.groups[c.slice(2)] ? r.groups[c.slice(2)][0] : null) : c === "acc" ? r.acc[0] : c === "cw" ? r.cw[0] : (r[c] == null ? null : r[c]);
+  const mpass = (r) => !MS.off.has("fam:" + r.family) && !MS.off.has("role:" + r.role);
+  const setNote = (s) => (S(s).counts ? "" : "not counted in the findings yet");
+  const pctOr = (v) => (v == null ? `<span class="ch none" role="img" aria-label="not measured for this setup">–</span>` : `${P(v)}%`);
+  function mapRowsInOrder(s) {
+    // the map's order: rung, the setup's place in its rung, then the row it reads first (its deciding row), then the data's order
+    const rows = S(s).rows.filter((r) => r.plotted);
+    const pk = {}; rows.forEach((r) => { if (r.deciding && !pk[r.arm]) pk[r.arm] = r.key; }); rows.forEach((r) => { if (r.primary && !pk[r.arm]) pk[r.arm] = r.key; });
+    const pos = (r) => { const i = ladderIdx[r.arm]; return i == null ? 1e3 : i; };
+    return rows.map((r, i) => ({ r, i })).sort((x, y) => pos(x.r) - pos(y.r) || (D.ladder[pos(x.r)] ? D.ladder[pos(x.r)].arms.indexOf(x.r.arm) - D.ladder[pos(y.r)].arms.indexOf(y.r.arm) : x.r.arm.localeCompare(y.r.arm))
+      || (x.r.arm === y.r.arm ? (y.r.key === pk[y.r.arm]) - (x.r.key === pk[x.r.arm]) : 0) || x.i - y.i).map((x) => x.r);
+  }
+  function renderMapTools() {
+    const s = MS.set;
+    $("#map-seg").innerHTML = MAPSETS.map((x) => `<button type="button" data-set="${esc(x)}" aria-pressed="${x === s}">${esc(S(x).label)}<small>${S(x).nCases} questions${setNote(x) ? ` · ${setNote(x)}` : ""}</small></button>`).join("");
+    const rows = S(s).rows.filter((r) => r.plotted);
+    const box = (name, val, inner, t) => `<label class="mchk"${t ? ` data-term="${t}"` : ""}><input type="checkbox" name="${name}" value="${esc(val)}"${MS.off.has(name + ":" + val) ? "" : " checked"}>${inner}</label>`;
+    $("#map-fam").innerHTML = `<legend>Setup family</legend>` + famsPresent(rows).map((f) => box("fam", f, `${famKey(f)}<span${TERM["family-" + f] ? ' class="tt"' : ""}>${esc(D.familyLabel[f] || f)}</span>`, TERM["family-" + f] ? "family-" + f : null)).join("");
+    $("#map-role").innerHTML = `<legend>Model</legend>` + MROLES.filter(([k]) => rows.some((r) => r.role === k)).map(([k, l]) => box("role", k, `${shapeKey(k)}<span>${l()}</span>`)).join("");
+  }
   function renderMap() {
-    const U = unionKeys();
-    const best = {};
-    SETS.forEach((s) => { best[s] = {}; D.groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0]); best[s][g.key] = v.length ? Math.max(...v) : null; }); });
-    const setsSub = SETS.map((s) => short(s)).join(", then ");
+    const s = MS.set, groups = S(s).mapGroups || D.groups.map((g) => g.key);
+    const glab = (k) => { const g = D.groupsAll.find((x) => x.key === k) || D.groups.find((x) => x.key === k); return g ? g.label : (TERM[TK(k)] ? TERM[TK(k)].label : k); };
+    const best = {}; groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g]).map((r) => r.groups[g][0]); best[g] = v.length ? Math.max(...v) : null; });
+    const aria = (c) => (MS.col === c ? MS.dir : "none");
+    const sortBtn = (c, t, lab) => `<button type="button" class="msort${t ? " term" : ""}" data-col="${c}"${t ? ` data-term="${t}"` : ""}>${lab}<span class="ar" aria-hidden="true"></span></button>`;
     let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
-    const GT = new Proxy({}, { get: (_, k) => TK(k) });
-    // under a group's name, its questions per set, and the set keys over the two chips they head
-    const fh = SETS.length > 1 ? `<small class="fh" aria-hidden="true">${SETS.map((s) => `<span>${sKey(s)}</span>`).join("")}</small>` : "";
-    D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small>${fh}</th>`));
-    h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">${term("confident-wrong")}<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
-    const ncol = 4 + D.groups.length;
-    D.ladder.forEach((L) => {
-      const arms = L.arms.filter((a) => U.some((u) => u.arm === a));
-      if (L.key === "L8") { h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">Rung 8. ${esc(L.label)}</th></tr>`; return; }
-      if (!arms.length) return;
-      h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</th></tr>`;
-      arms.forEach((a) => {
-        const pk = primaryKey(a);
-        const list = U.filter((u) => u.arm === a).sort((x, y) => (y.key === pk) - (x.key === pk));
-        list.forEach((u) => {
-          const sub = u.key !== pk; const others = list.length - 1;
-          const rs = SETS.map((s) => rowOf(s, u.key));
-          const any = rs.find(Boolean);
-          const tags = [];
-          rs.forEach((r, i) => { if (r && r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${SETS.length > 1 ? short(SETS[i]) + ": " : ""}${esc(r.partial)}</span>`); });
-          if (any.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
-          if (any.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
-          rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
-          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : `id="map-${esc(a)}"`}>`;
-          h += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(a)}" tabindex="0">${esc(a)}</span>`}<span class="mdl">${shapeKey(any.role, famC(any.family))}${esc(any.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
-          h += `<td class="what">${sub ? "" : esc(descOf(a))}</td>`;
-          D.groups.forEach((g) => {
-            h += `<td class="g">` + rs.map((r, i) => {
-              const v = r && r.groups[g.key];
-              if (!v) return `<span class="ch none" title="${r ? "no question of this group in the pass" : "not run on the " + esc(short(SETS[i])) + " set"}">–</span>`;
-              const isBest = r.primary && r.family !== "ref" && v[0] === best[SETS[i]][g.key];
-              return `<span class="ch b${bin(v[0])}${isBest ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g.key}">${P(v[0])}</span>`;
-            }).join("") + `</td>`;
-          });
-          ["acc", "cw"].forEach((k) => {
-            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>${exIv(r[k], r.exact && r.exact[k])}</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
-          });
-          h += `</tr>`;
-        });
+    groups.forEach((g) => (h += `<th scope="col" class="g" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)))}<small>${S(s).groupCases[g] || 0} questions</small></th>`));
+    MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab))}<small>${sub}</small></th>`));
+    h += `</tr></thead><tbody>`;
+    const ncol = 2 + groups.length + MNUM.length;
+    const ordered = mapRowsInOrder(s), total = ordered.length, shown = ordered.filter(mpass);
+    const idDone = new Set();
+    const rowHTML = (r, sub, others) => {
+      const tags = [];
+      if (r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${esc(r.partial)}</span>`);
+      if (r.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
+      if (r.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
+      if (r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best</span>`);
+      const idAttr = !sub && !idDone.has(r.arm) ? ` id="map-${esc(r.arm)}"` : ""; if (idAttr) idDone.add(r.arm);
+      const open = MS.open.has(r.arm);
+      let x = `<tr class="${sub ? "sub" : "main"}"${sub ? ` data-arm-row="${esc(r.arm)}"${open ? "" : " hidden"}` : idAttr}>`;
+      x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${esc(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
+      x += `<td class="what">${sub ? "" : esc(descOf(r.arm))}</td>`;
+      groups.forEach((g) => {
+        const v = r.groups[g];
+        x += `<td class="g">` + (!v ? `<span class="ch none" role="img" aria-label="no question of this group in these runs">–</span>`
+          : `<span class="ch b${bin(v[0])}${r.primary && r.family !== "ref" && v[0] === best[g] ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g}">${P(v[0])}</span>`) + `</td>`;
       });
-    });
+      MNUM.forEach(([c]) => {
+        if (c === "acc" || c === "cw") x += `<td class="num"><div class="ivl" data-tip="${esc(r.id)}"><span class="${c === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[c][0])}%</span> <small>${exIv(r[c], r.exact && r.exact[c])}</small></div></td>`;
+        else x += `<td class="num"><span class="mv" data-tip="${esc(r.id)}">${pctOr(r[c])}</span></td>`;
+      });
+      return x + `</tr>`;
+    };
+    if (MS.col) {
+      const c = MS.col, dir = MS.dir === "ascending" ? 1 : -1;
+      const sorted = shown.map((r, i) => ({ r, i })).sort((a, b) => { const x = mval(a.r, c), y = mval(b.r, c); if (x === null || y === null) { if (x !== y) return x === null ? 1 : -1; } else if (x !== y) return dir * (x - y); return a.i - b.i; });
+      sorted.forEach(({ r }) => (h += rowHTML(r, false, 0)));
+    } else {
+      D.ladder.forEach((L) => {
+        if (L.key === "L8") { h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">Rung 8. ${esc(L.label)}</th></tr>`; return; }
+        const mine = shown.filter((r) => L.arms.includes(r.arm)); if (!mine.length) return;
+        h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</th></tr>`;
+        L.arms.forEach((a) => { const list = mine.filter((r) => r.arm === a); list.forEach((r, j) => (h += rowHTML(r, j > 0, j ? 0 : list.length - 1))); });
+      });
+      const placed = new Set(D.ladder.flatMap((L) => L.arms)), rest = shown.filter((r) => !placed.has(r.arm));
+      rest.forEach((r) => (h += rowHTML(r, false, 0)));
+    }
+    if (!shown.length) h += `<tr class="mnone"><td colspan="${ncol}">No setup and model match these filters; tick a family and a model.</td></tr>`;
     h += `</tbody>`;
     const t = $("#map"); t.innerHTML = h;
-    t.querySelectorAll("button.more").forEach((b) => b.addEventListener("click", () => {
-      const a = b.dataset.arm; const open = b.getAttribute("aria-expanded") !== "true";
-      const subs = t.querySelectorAll(`tr.sub[data-arm-row="${CSS.escape(a)}"]`);
-      subs.forEach((tr) => (tr.hidden = !open));
-      b.setAttribute("aria-expanded", String(open)); b.textContent = open ? "hide" : "+" + subs.length + (subs.length > 1 ? " models" : " model");
-    }));
-    $("#leg1").innerHTML = legendRoles() + `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span>` + (SETS.length > 1 ? `<span class="k">F frozen set, H hard set</span>` : "");
+    const lab = MS.col ? (MNUM.find((m) => m[0] === MS.col) || [0, 0, glab(MS.col.slice(2))])[2] : "";
+    $("#map-live").textContent = `${S(s).label}${setNote(s) ? ", " + setNote(s) : ""}: ${shown.length} of ${total} setups and models shown, ` +
+      (MS.col ? `sorted by ${lab}, ${MS.dir === "descending" ? "highest" : "lowest"} first; empty cells last.` : "in the map's order, cheapest rung first.");
+    $("#leg1").innerHTML = `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span><span class="k"><span class="nm" aria-hidden="true">–</span>not measured</span>`;
   }
+  function redrawMap(focusCol) {
+    renderMap(); stickMapHead();
+    if (focusCol) { const b = $(`#map thead button.msort[data-col="${CSS.escape(focusCol)}"]`); if (b) { quietFocus = true; b.focus({ preventScroll: true }); quietFocus = false; } }
+  }
+  function setMapSet(s, keepScroll) {
+    if (!MAPSETS.includes(s) || s === MS.set) return false;
+    MS.set = s; hideTip(); unpin(false);
+    try { const v = JSON.parse(localStorage.getItem("semantic-bet-views-2") || "{}"); v.map = s; localStorage.setItem("semantic-bet-views-2", JSON.stringify(v)); } catch (e) {}
+    renderMapTools(); redrawMap(); return true;
+  }
+  (function wireMap() {
+    const fig = $("#fig1");
+    fig.addEventListener("click", (e) => {
+      const seg = e.target.closest("#map-seg button[data-set]");
+      if (seg) { setMapSet(seg.dataset.set); const b = $(`#map-seg button[data-set="${CSS.escape(seg.dataset.set)}"]`); if (b) b.focus({ preventScroll: true }); return; }
+      const sb = e.target.closest("button.msort"), f = e.target.closest(".mf");
+      if (sb || f) { e.stopPropagation(); unpin(false); } // the page's delegated click would pin the term's tooltip
+      if (sb) {
+        const c = sb.dataset.col;
+        if (MS.col !== c) { MS.col = c; MS.dir = "descending"; } else if (MS.dir === "descending") MS.dir = "ascending"; else { MS.col = null; MS.dir = null; }
+        hideTip(); redrawMap(c); return;
+      }
+      const more = e.target.closest("button.more");
+      if (more) {
+        const a = more.dataset.arm, open = !MS.open.has(a); if (open) MS.open.add(a); else MS.open.delete(a);
+        const subs = $("#map").querySelectorAll(`tr.sub[data-arm-row="${CSS.escape(a)}"]`);
+        subs.forEach((tr) => (tr.hidden = !open));
+        more.setAttribute("aria-expanded", String(open)); more.textContent = open ? "hide" : "+" + subs.length + (subs.length > 1 ? " models" : " model");
+      }
+    });
+    fig.addEventListener("change", (e) => {
+      const i = e.target.closest(".mf input[type=checkbox]"); if (!i) return;
+      const k = i.name + ":" + i.value; if (i.checked) MS.off.delete(k); else MS.off.add(k);
+      redrawMap();
+    });
+    fig.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("button.msort, .mf input")) e.stopPropagation(); });
+    // #map-set-<set> (a link from the question sets, or a URL) picks that set
+    const fromHash = () => { let h = location.hash.replace(/^#/, ""); try { h = decodeURIComponent(h); } catch (e) {} const m = /^map-set-(.+)$/.exec(h); if (m) setMapSet(m[1]); };
+    window.addEventListener("hashchange", fromHash); window.addEventListener("popstate", fromHash);
+    let h0 = location.hash.replace(/^#/, ""); const m0 = /^map-set-(.+)$/.exec(h0); if (m0 && MAPSETS.includes(m0[1])) MS.set = m0[1];
+  })();
 
   /* ---------- Observable Plot: shared pieces ---------- */
   // Every figure below is drawn by Observable Plot (inlined from vendor/). Colours are the page's
@@ -1849,6 +2020,72 @@ window.REPORT = D;
     svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
+  /* ---------- Figure 6: one question highlighted on every row ---------- */
+  // The selected question's column keeps its colours on every row and every other column fades; the head's tick strip
+  // marks it too. A click on a square or a tick, or Enter on a row or the strip, selects; the same question again,
+  // Escape or "Show every question" clears; another question moves it. The live line says what is shown.
+  function caseLine(ci) {
+    const c = S(plateState.s).cases[ci], bk = D.buckets.find((x) => x.key === c.b);
+    return { q: c.q || c.id, g: bk ? bk.label : c.b };
+  }
+  function drawTicks() {
+    const G = plateState.G, strip = $("#pqs"); if (!strip) return;
+    let h = "";
+    G.order.forEach((ci) => { const x = G.xs.get(ci), on = plateState.sel === ci, k = plateState.kq === ci;
+      h += `<rect x="${x}" y="${on ? 1 : 4}" width="${Math.max(2, G.pitch - 1)}" height="${on ? 10 : 6}" fill="var(${on ? "--ink" : k ? "--ink-2" : "--grid-major"})"/>`; });
+    if (plateState.kq != null) { const x = G.xs.get(plateState.kq); h += `<rect class="kq" x="${x - 1.5}" y=".5" width="${G.pitch + 2}" height="11" fill="none" stroke="var(--ink-2)" stroke-width="1" rx="1"/>`; }
+    strip.innerHTML = `<svg width="${G.UW}" height="12" aria-hidden="true" style="display:block;overflow:visible">${h}</svg>`;
+  }
+  function selectQ(ci, quiet) {
+    if (!plateState) return;
+    const G = plateState.G, on = ci != null && G.xs.has(ci);
+    plateState.sel = on ? ci : null;
+    $("#plate").classList.toggle("selecting", on);
+    plateState.svgs.forEach((sv) => {
+      let g = sv.querySelector(".psel");
+      if (!on) { if (g) g.remove(); return; }
+      if (!g) { g = document.createElementNS(SVGNS, "g"); g.setAttribute("class", "psel"); g.setAttribute("pointer-events", "none"); sv.append(g); }
+      const x = G.xs.get(ci) - 1, w = G.pitch + 1;
+      g.innerHTML = `<rect x="0" y="0" width="${Math.max(0, x)}" height="${G.h}" fill="var(--paper)" opacity=".8"/>` +
+        `<rect x="${x + w}" y="0" width="${Math.max(0, G.UW - x - w)}" height="${G.h}" fill="var(--paper)" opacity=".8"/>` +
+        `<rect x="${x + 0.5}" y="0.5" width="${w - 1}" height="${G.h - 1}" fill="none" stroke="var(--ink)" stroke-width="1"/>`;
+    });
+    drawTicks();
+    $("#plate-clear").hidden = !on;
+    if (quiet && !on) return;
+    if (on) {
+      const L = caseLine(ci), rows = S(plateState.s).rows.filter((r) => r.units);
+      const us = rows.map((r) => r.units.slice(ci * 3, ci * 3 + 3)).filter((u) => u.replace(/\./g, "").length);
+      const all = us.filter((u) => /^0+$/.test(u.replace(/\./g, ""))).length;
+      $("#plate-live").textContent = `Highlighted: “${L.q}”, a ${L.g.toLowerCase()} question; right on every run for ${all} of ${us.length} setups and models. Click it again or press Escape to show every question.`;
+    } else $("#plate-live").textContent = "Every question shown.";
+  }
+  const toggleQ = (ci) => selectQ(plateState && plateState.sel === ci ? null : ci);
+  $("#plate-clear").addEventListener("click", (e) => { e.stopPropagation(); unpin(false); selectQ(null); const st = $("#pqs"); if (st) st.focus({ preventScroll: true }); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && plateState && plateState.sel != null) selectQ(null); });
+  // the head's tick strip: hover names a question, a click selects it; by keyboard, arrows move, Enter selects
+  const tickAt = (ev) => { const G = plateState.G, b = $("#pqs").getBoundingClientRect(), x = ev.clientX - b.left; for (const [ci, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) return ci; return null; };
+  const tickTip = (ci, x, y) => { const L = caseLine(ci); tipEl = $("#pqs"); showTipHTML(tKick(esc(L.g) + " question") + `<p class="tq">${esc(L.q)}</p><p class="qid">${plateState.sel === ci ? "Highlighted; click to show every question" : "Click to highlight it on every row"}</p>`, x, y); };
+  $("#plate-head").addEventListener("pointermove", (ev) => { if (pinned || !ev.target.closest("#pqs")) return; const ci = tickAt(ev); if (ci == null) return hideTip(); tickTip(ci, ev.clientX, ev.clientY); });
+  $("#plate-head").addEventListener("pointerleave", () => { if (!pinned && tipEl && tipEl.id === "pqs") hideTip(); });
+  $("#plate-head").addEventListener("click", (ev) => { if (!ev.target.closest("#pqs")) return; const ci = tickAt(ev); if (ci == null) return; toggleQ(ci); if (!pinned) tickTip(ci, ev.clientX, ev.clientY); });
+  $("#plate-head").addEventListener("focusin", (ev) => { if (!ev.target.closest("#pqs") || !plateState) return; if (plateState.kq == null) plateState.kq = plateState.sel != null ? plateState.sel : plateState.G.order[0]; drawTicks(); keyTip(); });
+  $("#plate-head").addEventListener("focusout", (ev) => { if (!ev.target.closest("#pqs") || !plateState) return; plateState.kq = null; drawTicks(); if (!pinned) hideTip(); });
+  function keyTip() { const st = $("#pqs"), G = plateState.G, b = st.getBoundingClientRect(); tickTip(plateState.kq, b.left + G.xs.get(plateState.kq), b.bottom - 6); }
+  $("#plate-head").addEventListener("keydown", (ev) => {
+    if (!ev.target.closest("#pqs") || !plateState) return;
+    const G = plateState.G, i = G.order.indexOf(plateState.kq);
+    let j = null;
+    if (ev.key === "ArrowRight") j = Math.min(G.order.length - 1, i + 1); else if (ev.key === "ArrowLeft") j = Math.max(0, i - 1);
+    else if (ev.key === "Home") j = 0; else if (ev.key === "End") j = G.order.length - 1;
+    else if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleQ(plateState.kq); keyTip(); return; }
+    if (j == null) return; ev.preventDefault();
+    plateState.kq = G.order[j]; drawTicks();
+    // keep the tick in view in the sideways-scrolling plate
+    const body = $("#plate-body"), x = G.LW + 8 + G.xs.get(plateState.kq);
+    if (x < body.scrollLeft + G.LW + 8 || x > body.scrollLeft + body.clientWidth - 20) { body.scrollLeft = Math.max(0, x - body.clientWidth / 2); $("#plate-head").scrollLeft = body.scrollLeft; }
+    keyTip();
+  });
   function renderPlate() {
     const s = view.plate; const body = $("#plate-body"), head = $("#plate-head");
     const G = plateGeom(s, body.clientWidth || 1100);
@@ -1861,8 +2098,9 @@ window.REPORT = D;
     const availW = body.clientWidth || total; if (total < availW) { G.CWW += availW - total; total = availW; }
     $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
     const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
-    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:44px">`;
+    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:58px">`;
     G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} q</small></span>`; });
+    hh += `<div class="pqs" id="pqs" tabindex="0" role="group" aria-label="Questions, one tick each: arrow keys move, Enter highlights a question on every row, Escape shows every question" style="width:${G.UW}px"></div>`;
     hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
     // narrow bands: a column label that would run into the previous label on its tier moves right past it
@@ -1894,7 +2132,8 @@ window.REPORT = D;
       attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
       pu.append(sv); svgs.push(sv);
     });
-    plateState = { G, s, hover: null, svgs };
+    const keepSel = plateState && plateState.s === s ? plateState.sel : null;
+    plateState = { G, s, hover: null, svgs, sel: null, kq: null };
     body.onscroll = () => { head.scrollLeft = body.scrollLeft; };
     head.scrollLeft = body.scrollLeft;
     svgs.forEach((sv) => {
@@ -1916,7 +2155,15 @@ window.REPORT = D;
         const ci = G.order[Math.max(0, Math.min(G.order.length - 1, i))]; const b = sv.getBoundingClientRect();
         at(ci, 0, b.left + G.xs.get(ci), b.bottom);
       };
+      // a click on a square, or Enter on the row, highlights its question on every row; the same question again clears it
+      sv.addEventListener("keydown", (ev) => { if (ev.key !== "Enter") return; ev.preventDefault(); toggleQ(plateState.hover == null ? G.order[0] : plateState.hover); });
+      sv.addEventListener("click", (ev) => {
+        const h = hit(ev); if (h.ci == null) return;
+        if (plateState.sel === h.ci) { ev.stopPropagation(); unpin(false); selectQ(null); return; }
+        selectQ(h.ci); // the page's own click then pins the square's tooltip, as before
+      });
     });
+    drawTicks(); selectQ(keepSel, true);
     $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
   }
 
@@ -1936,6 +2183,7 @@ window.REPORT = D;
     const t = document.createElement("table"); t.className = "map"; t.appendChild(thead.cloneNode(true));
     t.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
     t.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+    t.querySelectorAll("button").forEach((b) => (b.tabIndex = -1)); // the copy's sort buttons work by pointer; the keyboard uses the real head
     head.replaceChildren(t);
     const fit = () => {
       const W = tbl.getBoundingClientRect().width; t.style.width = W + "px"; t.style.minWidth = W + "px"; t.style.tableLayout = "fixed";
@@ -1947,7 +2195,7 @@ window.REPORT = D;
     if (mapHeadRO) mapHeadRO.disconnect();
     if (window.ResizeObserver) { mapHeadRO = new ResizeObserver(() => fit()); mapHeadRO.observe(tbl); [...thead.rows[0].cells].forEach((c) => mapHeadRO.observe(c)); }
   }
-  function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  function renderAll() { hideTip(); renderText(); renderWinners(); renderMapTools(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
   let rt, lastW = window.innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
