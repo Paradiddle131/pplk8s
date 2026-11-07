@@ -434,6 +434,24 @@ window.reportReady(function () {
   document.addEventListener("report-view", (e) => { if (e.detail === "question-sets") requestAnimationFrame(reserve); });
   reserve();
 
+  /* ---------- for Figure 6's question strip: the card's own renderers, and opening the guide at one question ---------- */
+  // `set`: the groups of that set only (the plate shows one set), not the card's per-set comparison
+  window.__qsRender = (field, id, set) => (!G.q[id] || !RENDER[field] ? ""
+    : field === "groups" && set && G.q[id].groups[set] ? chips(G.q[id].groups[set], null) : RENDER[field](G.q[id], null));
+  window.__qsOpen = function (id) {
+    // the question's first kind in the guide's lists (its group first), at that question
+    const c = G.cats.find((x) => x.ids.includes(id)); if (!c) return false;
+    st.cat = c.key; st.i = c.ids.indexOf(id);
+    const V = window.__reportViews; if (V) V.jumpTo(root); // opens the Question sets part, a history entry Back returns from
+    render(false);
+    requestAnimationFrame(() => {
+      const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+      window.scrollTo(0, Math.max(0, $("#qs-panel").getBoundingClientRect().top + window.scrollY - top - 8));
+      head.focus({ preventScroll: true });
+    });
+    return true;
+  };
+
   /* ---------- the question browser (#397): "See all N" opens every question of a kind in a modal dialog ----------
      A native <dialog class="qs qb">: the kind's questions on the left, a copy of the guide's card on the right
      filled by the same renderers; a full-screen sheet with a list step and a card step on a phone. */

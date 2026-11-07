@@ -73,7 +73,6 @@ DESC = {
     "native-kc-reach": "The catalog agent given the same tables and legacy schema as the context setups.",
     "native-context-bare": "Google's data agent with written context we generate from MetricFlow.",
     "native-context": "The generated-context agent plus verified example queries.",
-    "native-context-python": "The generated-context agent with verified queries, allowed to run Python on its query results.",
     "native-governed": "Google's data agent over governed tables we build from the metrics.",
     "native-shaped": "Google's data agent over views, table functions and verified queries.",
     "native-graph": "Google's data agent with a property graph and its measures beside the tables.",
@@ -90,7 +89,7 @@ DESC = {
 }
 FAMILY = {
     "native-bare": "da", "native-kc": "da", "native-kc-max": "da", "native-kc-reach": "da",
-    "native-context-bare": "da", "native-context": "da", "native-context-python": "da", "native-governed": "da",
+    "native-context-bare": "da", "native-context": "da", "native-governed": "da",
     "native-shaped": "da", "native-graph": "da",
     "native-mcp": "gt", "custom-toolbox": "gt",
     "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf", "cc-native-mcp": "gt",
@@ -100,6 +99,9 @@ FAMILY = {
 FAMILY_LABEL = {"da": "Google's managed data agent", "gt": "Our agent on Google's tools",
                 "mf": "Our agent on a semantic-layer server", "ref": "Text-to-SQL baseline", "other": "Another setup"}
 UNDESCRIBED = "Not yet described."
+# Setups the page leaves out entirely; their runs stay in the logs and results.json. native-context-python never ran
+# Python, so it repeats native-context (owner, 2026-11-07).
+HIDDEN_ARMS = {"native-context-python"}
 # The setup "MetricFlow on the free model" reads (owner, 2026-11-06, #400: "yes"): the MetricFlow
 # setup allowed arithmetic over its metric results once its free-model runs cover the set, else the first.
 HEADLINE_MF = ("custom-metricflow-compute", "custom-metricflow")
@@ -114,7 +116,7 @@ LADDER = [
     ("ref", "Reference: plain text-to-SQL", ["baseline"]),
     ("L1", "Bare data agent, tables only (the floor)", ["native-bare"]),
     ("L2", "Plus catalog context: import, descriptions, glossary", ["native-kc", "native-kc-max", "native-kc-reach"]),
-    ("L3", "Plus context generated from MetricFlow", ["native-context-bare", "native-context", "native-context-python"]),
+    ("L3", "Plus context generated from MetricFlow", ["native-context-bare", "native-context"]),
     ("L4", "Plus warehouse objects: governed tables, table functions, graph", ["native-governed", "native-shaped", "native-graph"]),
     ("L5", "Our ADK agent on Google's MCP servers or generated tools", ["native-mcp", "custom-toolbox"]),
     ("L6", "Our ADK agent on a semantic-layer server", ["custom-metricflow", "custom-metricflow-compute", "custom-lightdash"]),
@@ -280,6 +282,48 @@ TERM_MORE = {
               ("Lower bound", "for n questions all right: 0.025 to the power 1 ÷ n."),
               ("Example", "19 of 19 questions right: at least 82%.")],
 }
+# A kind of question's longer lines before the data's example and count: why it is hard, or what fixes the obvious SQL.
+TERM_MORE_KIND = {
+    "covered": [("Why it matters", "the metric holds the business rule, so a setup that reads or calls the metrics should get these right.")],
+    "hidden-rule": [("What goes wrong", "the obvious query misses a business rule, such as leaving out cancelled orders.")],
+    "uncovered": [("Who can answer", "only a setup that writes SQL over the tables; a metrics-only setup should decline.")],
+    "conversation": [("Scored", "the run is right only when every turn of the chat is right.")],
+    "composable": [("Who can answer", "a setup allowed arithmetic over the metric results it fetched, or one that writes SQL.")],
+    "distractor": [("What goes wrong", "a setup that reads the older table gives its number, not the current one.")],
+    "planted": [("What goes wrong", "a setup that follows the planted text answers something else.")],
+    "jargon": [("What goes wrong", "the term must be mapped to the right metric before any number is fetched.")],
+    "period": [("What goes wrong", "a period worked out from the wrong date, or a calendar period where the business means its fiscal one.")],
+    "multi-metric": [("What goes wrong", "every metric must be fetched for the same period and scope before they are combined.")],
+    "segment": [("What goes wrong", "the segments must be split by the right field and compared on the same measure.")],
+    "implicit": [("What goes wrong", "the setup must use the business's definition, not the plainest reading of the words.")],
+    "ambiguous-followup": [("Right answer", "ask which meaning was meant, or give a number for every meaning.")],
+    "multi-step": [("What goes wrong", "an error in the first result carries into every later one.")],
+    "fan-out-join": [("Fix", "sum before the join, or join to one row per key.")],
+    "ratio-of-sums": [("Fix", "divide the summed numerator by the summed denominator.")],
+    "window": [("Fix", "a window function over rows in order, such as a running total or a rank.")],
+    "median-percentile": [("Fix", "a percentile function, or rank the rows and take the middle one.")],
+    "anti-join": [("Fix", "keep the rows with no match: a left join where the match is missing, or not exists.")],
+    "date-spine": [("Fix", "generate every day of the period and join the rows to it.")],
+    "fiscal-timezone": [("Fix", "convert to the local time zone, or the fiscal calendar, before cutting the period.")],
+}
+
+
+def norm_words(text):
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def check_longer_lines(entries):
+    """A glossary entry's longer lines must add to its one-liner, never repeat it (owner, 2026-11-07): no line equals
+    the one-liner or holds it whole. Returns the offending keys."""
+    bad = []
+    for e in entries:
+        one = norm_words(e["text"])
+        lines = ([e["calc"]] if e.get("calc") else []) + [v for _, v in e.get("more") or []]
+        if any(norm_words(v) == one or (len(one) > 20 and one in norm_words(v)) for v in lines):
+            bad.append(e["key"])
+    return bad
+
+
 # Each key a page shows a term for, mapped to its TERMS key where the data names it otherwise (#395).
 TERM_ALIAS = {"trap": "hidden-rule", "plain": "covered", "other": "other-covered", "cc": "claude-code"}
 
@@ -798,7 +842,7 @@ def glossary(guide, sets, order):
             ask = strip_md(str((t0.get("question") if isinstance(t0, dict) else t0) or q["name"]))
             if len(ask) > 150:
                 ask = ask[:147].rsplit(" ", 1)[0] + "..."
-            more = [("Example", "\u201c%s\u201d" % ask), ("Questions", "%d across the sets" % len(c["ids"]))]
+            more = TERM_MORE_KIND.get(k, []) + [("Example", "\u201c%s\u201d" % ask), ("Questions", "%d across the sets" % len(c["ids"]))]
         if not more and k in SET_LABEL and k in sets:
             S = sets[k]
             more = [("Questions", str(S["nCases"])), ("Setups run on it", str(len({r["arm"] for r in S["rows"]})))]
@@ -814,6 +858,9 @@ def glossary(guide, sets, order):
         if more:
             e["more"] = [[a, b] for a, b in more]
         out.append(e)
+    bad = check_longer_lines(out)
+    if bad:
+        sys.exit("glossary entries whose longer lines repeat their one-liner: %s" % ", ".join(bad))
     return out
 
 
@@ -847,6 +894,8 @@ def strict_view(arms):
 
 def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(), template=None):
     R = json.load(open(results_path, encoding="utf-8"))
+    R["arms"] = [a for a in R.get("arms", []) if a.get("arm") not in HIDDEN_ARMS]
+    R["step_two"] = [x for x in R.get("step_two", []) if x.get("arm") not in HIDDEN_ARMS]
     arms_all = strict_view(R.get("arms", []))
     every = sorted({a["set"] for a in arms_all}, key=lambda s: (SET_ORDER.index(s) if s in SET_ORDER else 99, s))
     present, others = shown_sets(every, show or {})

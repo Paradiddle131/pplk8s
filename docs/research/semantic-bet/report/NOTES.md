@@ -324,6 +324,18 @@ The owner picked design A of three (a modal, a side drawer, an inline panel), 20
   Every glossary row now carries such lines instead of repeating its tooltip: handwritten ones for the measures and setups, and from the data for kinds of question (an example question and a count), sets (questions and setups) and setup families (their setups).
 - Setups: "What each setup is, one at a time" now comes before "What each setup is" (`build.py` `SECTION_ORDER`).
 
+### Added to revision 4 (the owner, through the coordinator, 2026-11-07)
+
+- Every run: a highlighted question shows in a strip above the plate as the question guide's card shows it: every turn with its expected answer (labelled "Expected" or "Must carry"), its groups in the set shown and what makes it hard, as the card's own chips with their term tooltips, and one link, "Open in the question guide", which opens the Question sets part at the guide's card on that question (its first kind, a history entry that Back returns from).
+  The strip's renderers are the guide's own (`questions.html` exposes `__qsRender` and `__qsOpen`); it clears with the selection and keeps the height of the set's tallest question at its width, so moving between questions never moves the plate (about 80 to 150 px at 1280, 210 to 250 px at 390).
+- Glossary: every tooltip keeps its one-liner (only "Over the floor" changed); every glossary row has a few labelled short lines that go further (how it is computed, an example, how to read it; for a kind of question, why it is hard or what fixes the obvious SQL, then a real example and a count).
+  `build.py` refuses to build when a longer line repeats or contains its one-liner (`check_longer_lines`), and a test covers it.
+- Bug: on Every run, while a square's tooltip was pinned, hovering other squares replaced its text and leaving the plate left the last hovered one pinned.
+  Reproduced in Playwright (a pinned square, then a hover over other questions and out of the plate: the text changed, 2 failing checks), then fixed where it lived: `showTipHTML` does nothing while a tooltip is pinned, the plate's hover and arrow keys leave a pin alone, and a click on a square pins that square itself, so a click on another question moves the pin and the highlight, and the same one again or Escape clears both.
+  The same checks on Figures 2 to 5 and the decision map passed before and after; their hover already stopped while pinned.
+- `native-context-python` is off the page entirely (no figure, table, winners band, setup list, glossary line or tooltip): it never ran Python, so it repeats `native-context`; `build.py` drops it with `HIDDEN_ARMS` before anything is built, and its runs stay in the logs and `results.json`; a test checks the page never names it.
+- Sorting: each sortable head cell of the decision map is one button over the whole cell (label, mark and line under it), with no text cursor and no text selection; the mark is the usual data-table one, a neutral up-down pair on a sortable column and a single arrow on the sorted one, with `aria-sort` on the head cell.
+
 ### Choices
 
 - The switch shows one set at a time, so the map's paired F and H chips became one chip per group; a sort over two sets at once would have no single order.
@@ -335,8 +347,8 @@ The owner picked design A of three (a modal, a side drawer, an inline panel), 20
 
 ### How I checked
 
-- Playwright (Chromium) at 1280 × 900 and 390 × 844, light and dark: 358 checks, 0 failures.
-  Every set in the switch; each new column and confident-wrong sorted both ways (order, empty last, `aria-sort`, flat, no tooltip pinned) and back to the map's order; a sort by keyboard keeps focus; a family filter, all models off (the no-match sentence) and the filters restored by keyboard; a question highlighted by click, moved, cleared by a second click, by Escape and by the button, and by keyboard on the tick strip and on a row; a tooltip pinned, dragged by mouse, clamped to the viewport, nudged by keyboard, Shift+Tab back, unpinned and re-pinned by its mark, and dragged by touch pointer events at 390 px; the floor's tooltip and glossary row; the Setups order; `#map-set-hard-v2` opening the map on that set; no console errors, no sideways page scroll.
+- Playwright (Chromium) at 1280 × 900 and 390 × 844, light and dark: 394 checks, 0 failures; the pin-and-hover check (plate, Figures 2 to 5, the map): 2 failures before the fix, 0 after, with the move, clear and Escape cases added.
+  A head cell sorted by a click in its corner (no text selected, one arrow); the question strip's content, the plate unmoved across six questions, its link opening the guide's card on that question and Back returning; every set in the switch; each new column and confident-wrong sorted both ways (order, empty last, `aria-sort`, flat, no tooltip pinned) and back to the map's order; a sort by keyboard keeps focus; a family filter, all models off (the no-match sentence) and the filters restored by keyboard; a question highlighted by click, moved, cleared by a second click, by Escape and by the button, and by keyboard on the tick strip and on a row; a tooltip pinned, dragged by mouse, clamped to the viewport, nudged by keyboard, Shift+Tab back, unpinned and re-pinned by its mark, and dragged by touch pointer events at 390 px; the floor's tooltip and glossary row; the Setups order; `#map-set-hard-v2` opening the map on that set; no console errors, no sideways page scroll.
 - `tests/test_report_build.py`: the set switch covers every set with rows, no appendix remains, the explorer precedes the setup map, the score arithmetic on a fixture, an asked-back turn, the scores against the runs, the new terms typed with a calculation, every term's longer lines.
 - Screenshots at device scale 1 in `shots/rev4/`.
 - Not verified: real touch devices (touch was synthetic pointer events), Safari, Firefox, a screen reader; the web fonts are blocked in this sandbox.
