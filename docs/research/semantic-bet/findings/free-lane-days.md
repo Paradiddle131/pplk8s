@@ -165,3 +165,18 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Anomalies: none; GCP cost $0.000010 (the known Artifact Registry line) at every check.
 - Nothing left running.
 - Next: tonight's 00:07Z wake resumes at `custom-metricflow-compute` frozen k = 1, then `native-mcp` and `baseline` on hard-v2, then k = 3; after the lane, #380.
+
+## 2026-11-07, 2026-11-07T12:48Z (a session: report housekeeping, the newcomer read, #384's fix; no OpenRouter)
+
+- Free count 961 of 1,000 at the start (read from `/api/v1/key`), unchanged at the end: no lane ran, none was running; tonight's 00:07Z wake resumes the lane.
+- Extended hard set (hard-v2), free model: `custom-hybrid`, `custom-metricflow-compute` 55 of 55 at k = 1, `custom-metricflow` 137 of 165 runs toward k = 3; `native-mcp` and `baseline` 41 of 55 at k = 1 (the carried cases only); no k = 3 pass whole yet, so #379 stays with the lane and #380 waits.
+  Data agents on the same set: `native-bare`, `native-context`, `native-kc-max` and `native-context-bare` (default model) whole at k = 3.
+- Closed, each checked against its "Done when": #390, #393, #394, #395, #396, #397, #398, #400, #401 and the epic #399.
+- #395's newcomer read: a fresh reader over every tab's text; the undefined words got glossary terms and tooltips (tools and products, models, harness, rung, points, tolerance, hedge, blind judge; every model name in the decision map); "Abstract." reads "In short."; `custom-metricflow` and `cc-metricflow` now say that a model which obeys their no-arithmetic rule scores lower (#400).
+  The rest of that read (captions against tables, code names in prose, the partial leader) is #409; its first item is diagnosed there: Figure 1 compares with the best Google agent per group (87%), Figure 4 with the managed best (80%).
+- Report: page version 39; #336's artifact 4 PATCHed and read back with the same SHA-256 (09c407aa…); `test_report_build.py` 23 passed; `clipcheck.js --quick` 0 findings.
+- #384: PR #410 onto the train (the warehouse's reason reaches the model); held for merge between passes, after the MetricFlow arms' extended-hard-set k = 3, so no pass mixes two error texts.
+- #392 and #383: not changed; each changes what an open pass measures (the `native-mcp` guard; the fixture under the frozen set's `candidates_in_interview_as_of`); decision packets on each, lines in Map #324's digest.
+- Anomalies: none; no GCP work, so no cost check was run.
+- Nothing left running.
+- Next: tonight's 00:07Z wake runs the lane (`native-mcp` and `baseline` hard-v2 k = 1, then the k = 3 round); after the MetricFlow arms' hard-v2 k = 3, merge #410; once #379's arms are whole at k = 3, #380.
