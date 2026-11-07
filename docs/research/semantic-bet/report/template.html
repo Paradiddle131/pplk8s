@@ -518,6 +518,7 @@ window.REPORT = D;
   </section>
 
   <section class="view" id="view-question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
+<!--QUESTIONS-->
 <!--APPENDIX-->
   </section>
 
@@ -846,7 +847,8 @@ window.REPORT = D;
   // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
   function jumpTarget(el) {
     if (!el || !el.dataset) return null;
-    if (el.dataset.term != null) { const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
+    // a question set's name jumps to what the set holds (#390), any other term to its glossary entry
+    if (el.dataset.term != null) { const q = document.getElementById("qs-" + el.dataset.term); if (q) return [q, "What the set holds ↓"]; const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
     if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
     return null;
   }
@@ -1358,7 +1360,8 @@ window.REPORT = D;
                     { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, ticks: [] }];
     for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : 0.05) panels[1].ticks.push(+v.toFixed(2));
     const rh = narrow ? 36 : 30, gh = 28;
-    const L = narrow ? 132 : 330, gap = 40;
+    // narrow: the label column fits the longest setup name (11.5 px monospace, about 0.62 em a character)
+    const L = narrow ? Math.min(Math.round(W * 0.48), Math.max(132, Math.ceil(Math.max(...U.map((u) => u.any.arm.length)) * 11.5 * 0.62) + 8)) : 330, gap = 40;
     const pw = (W - L - gap - 10) / 2, plotW = narrow ? W - L - 26 : pw - 16; // a panel's plot width
     const mbLines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
     const mbText = `managed best: ${mbLines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`;

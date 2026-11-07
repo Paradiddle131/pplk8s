@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build the semantic-bet research memo from results.json and the per-run logs.
 
+The question sets part (#390): `question_guide` gives the set profiles, the guide's three lists and its card's fixed fields at <!--QUESTIONS--> (in the Question sets part, before the appendix), followed by questions.html, the section's style and script; its data is window.REPORT.questionGuide.
 Sections contract: every sections/<name>/section.html (one <section> with scoped <style> and <script>) is inserted in name order at <!--SECTIONS-->, the page's Setups part (after Figure 6's part, before the question sets and "Method, briefly"); a missing directory inserts nothing. The appendix of other question sets goes at <!--APPENDIX-->.
 The page gives them window.REPORT (the data), window.reportReady(fn), window.reportTheme() plus a "report-theme" event on document, delegated data-setup / data-term tooltips and .focusable hover-to-focus over .mk[data-arm|data-key|data-fam], and stable tokens (--paper ... --code).
 
@@ -135,11 +136,15 @@ TERMS = [
     ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
     ("partial", "Partial", "Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider."),
+    ("declined", "Declined", "The setup gave no number: it said it could not answer, or asked a question back."),
+    ("unclear", "Unclear", "Neither the scoring code nor the blind judge could settle whether the answer was right."),
     ("interval", "95% interval", "A percentile bootstrap over questions: the range the mean would likely fall in on another draw of questions like these."),
     ("exact", "Exact bound", "When every run of every question is right, or none is, the bootstrap has no spread; the page then gives the exact two-sided 95% (Clopper-Pearson) bound over the questions instead."),
     ("frozen", "Frozen set", "The first question set, fixed before any setup was scored; its uncovered questions are medians, times between events, peaks, and ratios of two measures."),
     ("hard", "Hard set", "A second, harder question set, fixed before any setup ran on it: hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), and its uncovered questions are mostly ratios and differences of two measures. It detects only larger gaps."),
+    ("hard-v2", "Extended hard set", "The hard set's questions plus more that are hard to write in SQL, where the obvious query gives another number; questions answered by arithmetic over a few metric results form their own group, composable."),
     # Question groups beyond the four headline ones, and the unit plate's catch-all column (#395)
+    ("groups", "Groups", "What a question asks of a setup: whether a metric answers it, arithmetic over metrics, or only SQL, and whether it hides a rule or comes in a chat. A question sits in one group or two."),
     ("composable", "Composable", "No single metric answers it, but arithmetic over a few metric results does, such as a ratio or a difference of two."),
     ("distractor", "Distractor", "A covered question with an older, replaced table in reach that gives another number."),
     ("planted", "Planted", "A covered question whose data holds text written like an instruction to the agent, which it must ignore."),
@@ -152,8 +157,10 @@ TERMS = [
     ("implicit", "Implicit definition", "The question leaves a definition unsaid that the business has fixed, such as which orders count."),
     ("ambiguous-followup", "Ambiguous follow-up", "A follow-up in a chat, or a term with more than one meaning that the agent should ask about."),
     ("multi-step", "Multi-step", "The answer needs one result before the next can be asked for."),
+    ("hard-to-interpret", "Hard to interpret", "What makes a question hard to read right before any number is fetched: business words, periods, segments, several metrics or steps, unsaid definitions, ambiguity."),
     ("sql-hard", "Hard in SQL", "The obvious SQL gives another number, for one of the reasons below."),
     # Why the obvious SQL goes wrong (the hard-in-SQL rubric)
+    ("obvious-sql", "Obvious SQL", "The query most people would write first. On some questions it gives another number than the right one."),
     ("fan-out-join", "Fan-out join", "A join repeats rows, so a sum over the joined table counts some values twice."),
     ("distinct-across-join", "Distinct across a join", "A count must stay distinct across a join that repeats rows."),
     ("ratio-of-sums", "Ratio of sums", "The rate is a sum divided by a sum, not the average of each row's ratio."),
@@ -175,16 +182,16 @@ TERMS = [
 TERM_TYPES = ["Question sets", "Question groups", "What makes a question hard", "Why the obvious SQL goes wrong",
               "Setups and models", "Measures and statistics"]
 TERM_TYPE = {
-    "frozen": 0, "hard": 0,
+    "frozen": 0, "hard": 0, "hard-v2": 0,
     "covered": 1, "hidden-rule": 1, "uncovered": 1, "conversation": 1, "composable": 1, "distractor": 1,
-    "planted": 1, "other-covered": 1,
+    "planted": 1, "other-covered": 1, "groups": 1,
     "jargon": 2, "period": 2, "multi-metric": 2, "segment": 2, "implicit": 2, "ambiguous-followup": 2,
-    "multi-step": 2, "sql-hard": 2,
+    "multi-step": 2, "sql-hard": 2, "hard-to-interpret": 2,
     "fan-out-join": 3, "distinct-across-join": 3, "ratio-of-sums": 3, "window": 3, "median-percentile": 3,
-    "sessions-gaps-islands": 3, "cohort-retention": 3, "anti-join": 3, "date-spine": 3, "fiscal-timezone": 3,
+    "obvious-sql": 3, "sessions-gaps-islands": 3, "cohort-retention": 3, "anti-join": 3, "date-spine": 3, "fiscal-timezone": 3,
     "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "check": 4, "pending": 4, "family-da": 4,
     "family-gt": 4, "family-mf": 4, "family-ref": 4, "claude-code": 4,
-    "confident-wrong": 5, "over-the-floor": 5, "partial": 5, "interval": 5, "exact": 5,
+    "confident-wrong": 5, "declined": 5, "unclear": 5, "over-the-floor": 5, "partial": 5, "interval": 5, "exact": 5,
 }
 # Each key a page shows a term for, mapped to its TERMS key where the data names it otherwise (#395).
 TERM_ALIAS = {"trap": "hidden-rule", "plain": "covered", "other": "other-covered", "cc": "claude-code"}
@@ -503,6 +510,171 @@ def appendix_html(R, appendix):
     return "\n".join(out)
 
 
+# ---------------------------------------------------------------- the question sets part (#390)
+
+# What each set holds, in a reader's words (never its history: #393); {extra} is the count of questions the
+# extended hard set adds to the hard set's.
+SET_ABOUT = {
+    "frozen": "Everyday questions a shop owner asks about orders, revenue, marketing, service and hiring. "
+              "Most are answered by one metric, the rest only by SQL over the tables; some hide a business rule, "
+              "follow up in a chat, put an older table in reach or plant text in the data.",
+    "hard": "Questions in a business user's own words: jargon, relative and fiscal periods, several metrics at once, "
+            "segments, unsaid definitions and follow-ups. Its uncovered questions are mostly ratios and differences "
+            "of two measures.",
+    "hard-v2": "The hard set's questions plus {extra} that are hard to write in SQL, where the obvious query gives "
+               "another number. Questions that arithmetic over a few metric results answers form their own group.",
+}
+# The three lists of the guide: a title (a glossary term) and where its categories come from.
+QS_LISTS = [("groups", "Groups"), ("hard-to-interpret", "Hard to interpret"), ("sql-hard", "Hard in SQL")]
+QS_GROUP_ORDER = ["covered", "trap", "composable", "uncovered", "conversation", "distractor", "planted"]
+QS_KIND_ORDER = ["jargon", "period", "ambiguous_followup", "implicit", "segment", "multi_metric", "multi_step"]
+QS_RUBRIC_ORDER = ["fan_out_join", "distinct_across_join", "ratio_of_sums", "window", "median_percentile",
+                   "sessions_gaps_islands", "cohort_retention", "anti_join", "date_spine", "fiscal_timezone"]
+# A question's id as a short name: the set prefixes go, business acronyms and proper names are spelled out.
+NAME_PREFIX = ("hard_", "hv2_", "bet_")
+NAME_WORD = {"aov": "AOV", "cpa": "CPA", "cpl": "CPL", "mqls": "MQLs", "roas": "ROAS", "gmv": "GMV", "q3": "Q3",
+             "wow": "week on week", "mtd": "month to date", "ytd": "year to date", "vs": "vs",
+             "germany": "Germany", "turkey": "Turkey", "turkish": "Turkish", "dutch": "Dutch",
+             "amsterdam": "Amsterdam", "august": "August", "september": "September", "october": "October"}
+
+
+def question_name(qid):
+    for p in NAME_PREFIX:
+        if qid.startswith(p):
+            qid = qid[len(p):]
+            break
+    words = [NAME_WORD.get(w, w) for w in qid.split("_")]
+    text = " ".join(words)
+    return text[:1].upper() + text[1:]
+
+
+def question_guide(qsets, sets, order):
+    """The question sets part: one record per scored question across the sets, the guide's categories (each
+    with its questions in example order), and the static markup (set profiles, the three lists, the card's
+    fixed fields). Retired questions are not in `qsets` (#394), so they are absent here too."""
+    sts = [s for s in order if s in qsets]
+    q = {}
+    for st in sts:
+        spec = qsets[st]
+        for item in spec["questions"]:
+            rec = q.setdefault(item["id"], {
+                "name": question_name(item["id"]), "turns": item.get("turns") or [],
+                "expected": item.get("expected") or [], "sets": [], "groups": {}, "kinds": [], "rubric": [],
+                "naive": False, "runs": None, "_i": len(q)})
+            rec["sets"].append(st)
+            rec["groups"][st] = list(spec["groups"].get(item["id"]) or item.get("groups") or [])
+            rec["kinds"] += [k for k in item.get("kinds") or [] if k != "sql_hard" and k not in rec["kinds"]]
+            rec["rubric"] += [k for k in item.get("rubric") or [] if k not in rec["rubric"]]
+            rec["naive"] = rec["naive"] or bool(item.get("naive"))
+            if rec["runs"] is None and st in sets and any(c["id"] == item["id"] for c in sets[st]["cases"]):
+                rec["runs"] = st
+    # How a question split the setups: each setup's first row in the plate's order, its right share.
+    for rec_id, rec in q.items():
+        st = rec["runs"]
+        rec["_split"], rec["_cw"] = -1.0, 0
+        if not st:
+            continue
+        ci = next(i for i, c in enumerate(sets[st]["cases"]) if c["id"] == rec_id)
+        units = "".join(r["units"][ci * 3: ci * 3 + 3] for r in sets[st]["rows"] if r.get("primary"))
+        ran = [u for u in units if u != "."]
+        if ran:
+            p = ran.count("0") / len(ran)
+            rec["_split"], rec["_cw"] = min(p, 1 - p), ran.count("4")
+    all_groups = {g for rec in q.values() for gs in rec["groups"].values() for g in gs}
+    cats = []
+    for li, keys, has in (
+            (0, [g for g in QS_GROUP_ORDER if g in all_groups] + sorted(all_groups - set(QS_GROUP_ORDER)),
+             lambda rec, k: any(k in gs for gs in rec["groups"].values())),
+            (1, QS_KIND_ORDER + sorted({k for r in q.values() for k in r["kinds"]} - set(QS_KIND_ORDER)),
+             lambda rec, k: k in rec["kinds"]),
+            (2, QS_RUBRIC_ORDER + sorted({k for r in q.values() for k in r["rubric"]} - set(QS_RUBRIC_ORDER)),
+             lambda rec, k: k in rec["rubric"])):
+        for k in keys:
+            ids = [i for i, rec in q.items() if has(rec, k)]
+            if not ids:
+                continue
+            tags = lambda i: len({g for gs in q[i]["groups"].values() for g in gs}) + len(q[i]["kinds"]) + len(q[i]["rubric"])
+            # Example order: a question the figures have runs on first, then the plainest (fewest tags), then the
+            # one that splits the setups most, then the most confident-wrong runs, then the sets' own order.
+            ids.sort(key=lambda i: (q[i]["runs"] is None, tags(i), -q[i]["_split"], -q[i]["_cw"], q[i]["_i"]))
+            key = term_key(k)
+            cats.append({"key": key, "list": li, "label": next((l for t, l, _ in TERMS if t == key), k), "ids": ids})
+    for rec in q.values():
+        for k in ("_i", "_split", "_cw"):
+            rec.pop(k)
+    guide = {"lists": [{"key": k, "label": l} for k, l in QS_LISTS], "cats": cats, "q": q,
+             "setLabel": {st: set_label(st) for st in sts}}
+    return guide, questions_html(guide, qsets, sts, set(sets))
+
+
+def questions_html(guide, qsets, sts, drawn):
+    e = html_escape
+    term = lambda key, text=None: '<span class="term" data-term="%s" tabindex="0">%s</span>' % (
+        e(key), e(text if text is not None else next(l for t, l, _ in TERMS if t == key)))
+    out = ['<section class="qs" id="question-guide" aria-labelledby="qs-h">',
+           '<h2 id="qs-h">The questions</h2>',
+           '<p class="qs-lede">Every setup answers the same questions about one test shop, in sets. '
+           'Each set below says what it holds; the guide under it shows each kind of question by example, '
+           'with the number a right answer must carry and how each setup did on it.</p>',
+           '<div class="qs-sets">']
+    gorder = QS_GROUP_ORDER + sorted({g for st in sts for gs in qsets[st]["groups"].values() for g in gs} - set(QS_GROUP_ORDER))
+    for st in sts:
+        groups = qsets[st]["groups"]
+        n = len(qsets[st]["questions"])
+        extra = len([i for i in groups if not any(i in qsets[o]["groups"] for o in sts if o != st)])
+        mix = [(g, sum(1 for gs in groups.values() if g in gs)) for g in gorder]
+        mix = [(g, c) for g, c in mix if c]
+        where = ('<p class="qs-where">Drawn in every figure</p>' if st in drawn else
+                 '<p class="qs-where">Not drawn in the figures; <a href="#other-set-versions">its setups\' totals are in the appendix</a></p>')
+        out.append('<article class="qs-set" id="qs-%s" aria-labelledby="qs-%s-h">' % (e(st), e(st)))
+        out.append('<h3 id="qs-%s-h">%s</h3>' % (e(st), term(term_key(st), set_label(st)) if term_key(st) in TERM_TYPE else e(set_label(st))))
+        out.append('<p class="qs-about">%s</p>' % e(SET_ABOUT.get(st, "").format(extra=extra)))
+        out.append('<p class="qs-n"><b>%d</b> questions</p>' % n)
+        out.append('<dl class="qs-mix" aria-label="Questions per group in the %s">' % e(set_label(st).lower()))
+        top = max((c for _, c in mix), default=1)
+        for g, c in mix:
+            out.append('<dt>%s</dt><dd><span class="bar" aria-hidden="true"><i style="width:%.1f%%"></i></span><span class="c">%d</span></dd>'
+                       % (term(term_key(g)), 100.0 * c / top, c))
+        out.append('</dl><p class="qs-mixnote">A question can sit in two groups.</p>')
+        out.append(where + '</article>')
+    out.append('</div>')
+    out.append('<h3 class="qs-gh" id="qs-guide-h">Questions by kind</h3>')
+    out.append('<p class="qs-sub">Pick a kind of question; an example opens beside it. '
+               'Step through the others with Previous and Next, or the arrow keys.</p>')
+    out.append('<div class="qs-guide">')
+    out.append('<nav class="qs-nav" id="qs-nav" aria-labelledby="qs-guide-h">')
+    for li, (lk, ll) in enumerate(QS_LISTS):
+        out.append('<div class="qs-list"><h4 id="qs-l%d">%s</h4><ul aria-labelledby="qs-l%d">' % (li, term(lk, ll), li))
+        for c in guide["cats"]:
+            if c["list"] == li:
+                out.append('<li><button type="button" class="qs-cat" data-cat="%s" aria-pressed="false" tabindex="-1">'
+                           '<span class="l">%s</span><span class="c">%d</span></button></li>' % (e(c["key"]), e(c["label"]), len(c["ids"])))
+        out.append('</ul></div>')
+    out.append('</nav>')
+    out.append('<div class="qs-panel" id="qs-panel" aria-labelledby="qs-cat-h">')
+    out.append('<div class="qs-head"><h4 id="qs-cat-h" tabindex="-1"></h4><p class="qs-def" id="qs-def"></p></div>')
+    out.append('<div class="qs-step" id="qs-step">'
+               '<button type="button" class="qs-btn" data-step="-1" aria-label="Previous example">'
+               '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button>'
+               '<span class="qs-pos" id="qs-pos" aria-live="polite"></span>'
+               '<button type="button" class="qs-btn" data-step="1" aria-label="Next example">Next'
+               '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>')
+    # One "See all N" per category opens the full list of its questions. That browser is not built yet (#397):
+    # the buttons stay hidden until it lands, and each dispatches CustomEvent("qs:see-all", {detail: {category}}).
+    out.append('<span class="qs-seeall-set">')
+    for c in guide["cats"]:
+        out.append('<button type="button" class="qs-seeall" data-category="%s" hidden>See all %d</button>' % (e(c["key"]), len(c["ids"])))
+    out.append('</span></div>')
+    fields = [("asked", "Asked"), ("groups", term("groups", "Groups")), ("hard", "What makes it hard"),
+              ("sql", term("obvious-sql", "Obvious SQL")), ("runs", "How each setup did")]
+    out.append('<article class="qs-card" id="qs-card" aria-labelledby="qs-name">'
+               '<div class="qs-title" data-field="title"><h5 class="qs-name" id="qs-name"></h5><p class="qs-in"></p></div><dl class="qs-dl">')
+    for k, lab in fields:
+        out.append('<dt>%s</dt><dd data-field="%s"></dd>' % (lab, k))
+    out.append('</dl></article></div></div></section>')
+    return "\n".join(out)
+
+
 def html_escape(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -679,6 +851,9 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                                                 for q in spec.get("questions") or [] if q.get("id") in set(spec.get("cases") or [])]}
                              for st, spec in (R.get("sets") or {}).items()},
             "abstract": make_abstract(sets, present), "twin": make_twins(sets, present)}
+    # The question sets part (#390): its data for the page's script, its markup at <!--QUESTIONS-->.
+    data["questionGuide"], qs_html = question_guide(data["questionSets"], sets, [s for s in SET_ORDER if s in data["questionSets"]]
+                                                    + sorted(s for s in data["questionSets"] if s not in SET_ORDER))
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     page = open(template or os.path.join(HERE, "template.html"), encoding="utf-8").read().replace("/*__DATA__*/null", payload)
     sections = []
@@ -688,6 +863,8 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
         sections.append(open(path, encoding="utf-8").read())
     # The appendix goes at <!--APPENDIX--> (the template's question-sets part); a template without one gets it after the sections.
     apx = appendix_html(R, appendix)
+    if "<!--QUESTIONS-->" in page:  # the section's markup, then its own style and script (questions.html)
+        page = page.replace("<!--QUESTIONS-->", qs_html + "\n" + open(os.path.join(HERE, "questions.html"), encoding="utf-8").read())
     if "<!--APPENDIX-->" in page:
         page = page.replace("<!--SECTIONS-->", "\n".join(sections)).replace("<!--APPENDIX-->", apx)
     else:

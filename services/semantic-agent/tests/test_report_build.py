@@ -112,3 +112,65 @@ def test_the_appendix_goes_to_its_own_part_or_after_the_sections(tmp_path):
     assert (
         page.index('id="setup-map"') < page.index('id="other-set-versions"') < page.index("</main>")
     )
+
+
+def _built(tmp_path):
+    out = tmp_path / "index.html"
+    build.build(str(RESULTS), str(RESULTS.parent), str(EVALS), str(out))
+    page = out.read_text(encoding="utf-8")
+    payload = re.search(r"const D = (\{.*?\});\nwindow\.REPORT", page, re.S).group(1)
+    return page, json.loads(payload.replace("<\\/", "</"))
+
+
+def test_the_question_section_sits_in_its_part_before_the_appendix(tmp_path):
+    page, _ = _built(tmp_path)
+    at = page.index('id="question-guide"')
+    assert page.index('id="view-question-sets"') < at < page.index('id="other-set-versions"')
+    assert at > page.index('id="view-setups"') and page.index(
+        'id="other-set-versions"'
+    ) < page.index('id="view-method"')
+
+
+def test_each_question_set_has_its_anchor_in_the_section(tmp_path):
+    page, data = _built(tmp_path)
+    section = page[page.index('id="question-guide"') : page.index('id="other-set-versions"')]
+    results = json.loads(RESULTS.read_text(encoding="utf-8"))
+    for st in results["sets"]:
+        assert f'id="qs-{st}"' in section, st
+    assert set(data["questionGuide"]["setLabel"]) == set(results["sets"])
+
+
+def test_no_retired_question_reaches_the_section_or_its_data(tmp_path):
+    page, data = _built(tmp_path)
+    section = page[page.index('id="question-guide"') : page.index('id="other-set-versions"')]
+    results = json.loads(RESULTS.read_text(encoding="utf-8"))
+    scored = {c for spec in results["sets"].values() for c in spec.get("cases") or []}
+    retired = {c for spec in results["sets"].values() for c in spec.get("retired") or []} - scored
+    assert retired
+    guide = data["questionGuide"]
+    assert set(guide["q"]) == scored
+    shown = json.dumps(guide)
+    assert not [c for c in retired if c in section or f'"{c}"' in shown]
+    assert all(set(c["ids"]) <= scored for c in guide["cats"])
+
+
+def test_the_see_all_buttons_exist_one_per_category_and_stay_hidden(tmp_path):
+    page, data = _built(tmp_path)
+    buttons = re.findall(r'<button[^>]*class="qs-seeall"[^>]*>', page)
+    cats = data["questionGuide"]["cats"]
+    assert len(buttons) == len(cats) > 0
+    assert all(re.search(r"\shidden(\s|>|$)", b) for b in buttons)
+    assert {re.search(r'data-category="([^"]+)"', b).group(1) for b in buttons} == {
+        c["key"] for c in cats
+    }
+
+
+def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(tmp_path):
+    _, data = _built(tmp_path)
+    terms = {k for k, _, _ in build.TERMS}
+    guide = data["questionGuide"]
+    keys = [x["key"] for x in guide["lists"]] + [c["key"] for c in guide["cats"]]
+    keys += ["obvious-sql", "groups", "declined", "unclear", "confident-wrong"] + [
+        build.term_key(s) for s in guide["setLabel"]
+    ]
+    assert not [k for k in keys if k not in terms or k not in build.TERM_TYPE]
