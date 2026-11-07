@@ -153,3 +153,15 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   One run a question, so the intervals still overlap for the close pairs.
 - Report: page version 32; #336's artifact 4 read back with the same SHA-256 after each rebuild.
 - Next: decide the canary for `custom-lightdash` hard (use a case the arm's explore can answer, or skip that pass; the owner's or the next session's call, never `--no-canary`), then start `free_lane.sh` again: it resumes at `bet_carry` and the `hard-v2` k = 1 round (`custom-hybrid`, `custom-metricflow`, `custom-metricflow-compute`, `native-mcp`, `baseline`), then k = 3.
+
+## 2026-11-07, 2026-11-07T12:05Z (a session: the free lane by hand, MetricFlow with arithmetic on the free model, report revisions 3 and 4)
+
+- Free count 544 at the start (left from the 00:07Z wake), 961 of 1,000 at the end; the lane ran by hand from 08:40Z and was stopped at 10:40Z by the session's two-hour limit on a background job, near the day's cap.
+- Lane: `custom-lightdash` takes the frozen set's canary before a hard pass (its explores have no channel dimension; the hard case is still asked and scored, `bet_eval.CANARY_SET`); its hard k = 1 pass then ran whole (41 of 41).
+- `custom-metricflow-compute` on the free model, extended hard set k = 1: 74.5% right, 5.5% confident-wrong, 55 of 55 (`custom-metricflow` 68.5% / 4.8%, `custom-hybrid` 74.5% / 3.6%); its frozen pass has not started.
+- The headline "MetricFlow on the free model" reads `custom-metricflow-compute` once its free runs cover a set (owner's "yes" on #400; RULE.md 2026-11-07T08:50Z).
+- `native-context-python` (Python analysis on) ran the extended hard and frozen sets at k = 1 and never took a Python step; dropped from the page by the owner; its runs stay in the logs (`findings/2026-11-07-python-analysis.md`).
+- Report: revision 3's question section (#390), question browser A (#397), then revision 4 (#399): one decision map with a set switch, sorting, filters and four scores (accuracy, coverage, selective accuracy, pass^3); Every run's question highlight with its strip; draggable pinned tooltips; structured glossary entries; page version 36; #336's artifact 4 read back with the same SHA-256.
+- Anomalies: none; GCP cost $0.000010 (the known Artifact Registry line) at every check.
+- Nothing left running.
+- Next: tonight's 00:07Z wake resumes at `custom-metricflow-compute` frozen k = 1, then `native-mcp` and `baseline` on hard-v2, then k = 3; after the lane, #380.
