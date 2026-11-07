@@ -31,7 +31,7 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 - Never raise a quota, a cap or the budget, and never test a permission by attempting the action: ask with `testIamPermissions`.
   The one exception is the owner's own: the daily query fence, which the owner raised to 209,715 MiB (0.2 TiB) on 2026-11-03 ([#370](../../../../issues/370)); an agent records it and never changes it.
 - Cloud Run serves only IAM callers (no public member, invoker IAM on) and bills per request: a public URL would spend the free requests and vCPU-seconds of anyone who finds it.
-- Cloud sessions also carry claude-dotfiles' GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
+- Cloud sessions also carry loadout's GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
 
 ## Identities
 
