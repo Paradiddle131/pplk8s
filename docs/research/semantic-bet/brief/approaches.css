@@ -62,6 +62,8 @@
 
 /* Takeaways: each row on the route indent; the ranges' span is green, as right answers are. */
 .ap-takeaways .rk-rows > li { padding-left: var(--route) }
+/* each picture is its own size container, so the slopes go one per row when their picture, not the list, is narrow */
+.ap-takeaways .rk-pic { container-type: inline-size }
 .ap .rk-span, .ap .rk-span::before, .ap .rk-span::after { background: var(--ok) }
 /* At a large text size the two end numbers of a range outgrow the rail: each then stands outward of its end, low to the
    left and high to the right, so they never meet; the slope's room above and below grows with the text. */
