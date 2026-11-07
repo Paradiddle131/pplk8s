@@ -1,5 +1,5 @@
 {
- "written": "2026-11-07T01:15Z",
+ "written": "2026-11-07T01:35Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -173,41 +173,53 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 4,
-   "cases": 38,
+   "cases": 76,
    "of_cases": 76,
-   "runs": 38,
+   "runs": 76,
    "accuracy": [
-    0.605263157895,
-    0.447368421053,
-    0.763157894737
+    0.592105263158,
+    0.486842105263,
+    0.697368421053
    ],
    "confident_wrong": [
-    0.105263157895,
+    0.078947368421,
     0.026315789474,
-    0.210526315789
+    0.144736842105
    ],
    "groups": {
+    "conversation": [
+     0.2857142857142857,
+     7
+    ],
     "covered": [
-     0.6216216216216216,
-     37
+     0.6557377049180327,
+     61
     ],
-    "trap": [
-     0.5,
-     8
-    ],
-    "uncovered": [
+    "distractor": [
      0.0,
      1
+    ],
+    "planted": [
+     1.0,
+     4
+    ],
+    "trap": [
+     0.6,
+     10
+    ],
+    "uncovered": [
+     0.3333333333333333,
+     15
     ]
    },
-   "pass_all": 0.6052631578947368,
+   "pass_all": 0.5921052631578947,
    "outcomes": {
-    "right": 23,
-    "confident-wrong": 4,
-    "wrong": 4,
-    "declined": 7
+    "right": 45,
+    "confident-wrong": 6,
+    "wrong": 9,
+    "declined": 16
    },
-   "model_calls": 73
+   "model_calls": 151
   },
   {
    "set": "frozen",
@@ -6363,17 +6375,17 @@
    "set": "frozen",
    "arm": "custom-lightdash",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 38,
-   "runs": 38,
+   "cases": 76,
+   "runs": 76,
    "accuracy": [
-    -0.368421052632,
-    -0.526315789474,
+    -0.328947368421,
+    -0.44298245614,
     -0.210526315789
    ],
    "confident_wrong": [
-    0.105263157895,
-    0.026315789474,
-    0.210526315789
+    0.065789473684,
+    0.0,
+    0.131578947368
    ],
    "worth": false
   },
