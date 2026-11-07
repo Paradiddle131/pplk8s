@@ -1,0 +1,6 @@
+## 2026-11-07 — Semantic track — the report's appendix of other question sets as an interactive table (#398)
+
+- Done: `build.py` `appendix_html` writes one table per set the figures do not draw: every setup and model with its setup tooltip, model and role glyph, questions run, right and confident-wrong with their intervals as the decision map writes them, and right per question group as the map's chips; every numeric column sorts by a header button (highest, lowest, back to the map's order; stable, empty cells last, `aria-sort` and a live status); setup family and model checkboxes filter, each a glossary term; the set's line says what it tests, never its history.
+- Evidence: Playwright at 1280 and 390 px, light and dark, 3472 checks, 0 failures (each column both ways, each family and model alone, keyboard only, no console errors, no sideways page scroll); `node tools/clipcheck.js --quick` 0 findings; `uv run --frozen pytest -q tests/test_report_build.py` 18 passed; `ruff check tests` clean; screenshots in `report/shots/rev3/398/`.
+- Decisions: none in PLAN.md; the table's choices are in `report/NOTES.md` § Revision 3: appendix table.
+- Open: not verified in Safari, Firefox, on touch devices or with a screen reader.
