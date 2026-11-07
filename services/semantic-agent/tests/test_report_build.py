@@ -174,3 +174,73 @@ def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(t
         build.term_key(s) for s in guide["setLabel"]
     ]
     assert not [k for k in keys if k not in terms or k not in build.TERM_TYPE]
+
+
+def _appendix(page):
+    at = page.rindex("<section", 0, page.index('id="other-set-versions"'))
+    return page[at : page.index("</section>", at)]
+
+
+def test_the_appendix_is_one_sortable_filterable_table_per_hidden_set(tmp_path):
+    page, _ = _built(tmp_path)
+    apx = _appendix(page)
+    assert apx.count('<table class="apx-t">') == 1
+    heads = re.findall(
+        r'<th scope="col" class="[^"]*" data-col="([^"]+)"[^>]*aria-sort="none">(.*?)</th>', apx
+    )
+    cols = [c for c, _ in heads]
+    assert cols[:3] == ["q", "acc", "cw"] and len(cols) > 3
+    assert all(c.startswith("g-") for c in cols[3:])
+    assert all('<button type="button" class="apx-sort' in h for _, h in heads)
+    filters = set(
+        re.findall(r'<input type="checkbox" name="(fam|role)" value="([^"]+)" checked', apx)
+    )
+    assert {v for n, v in filters if n == "fam"} >= {"da", "mf"}
+    assert {v for n, v in filters if n == "role"} >= {"decides", "check"}
+
+
+def test_every_setup_and_model_of_the_hidden_set_has_one_row_in_the_maps_order(tmp_path):
+    page, _ = _built(tmp_path)
+    apx = _appendix(page)
+    results = json.loads(RESULTS.read_text(encoding="utf-8"))
+    _, appendix = build.shown_sets(sorted({a["set"] for a in results["arms"]}), {})
+    expect = [a for a in build.strict_view(results["arms"]) if a["set"] in {s for s, _ in appendix}]
+    row = r'<tr data-i="(\d+)" data-fam="[^"]+" data-role="[^"]+"><td class="setup">'
+    rows = re.findall(row + r'<span class="id" data-setup="([^"]+)"', apx)
+    assert [int(i) for i, _ in rows] == list(range(len(expect)))
+    assert sorted(a for _, a in rows) == sorted(a["arm"] for a in expect)
+    rung = {arm: i for i, (_, _, arms) in enumerate(build.LADDER) for arm in arms}
+    rungs = [rung[arm] for _, arm in rows]
+    assert rungs == sorted(rungs)
+
+
+def test_an_empty_cell_reads_as_empty_never_as_zero():
+    arm = {"set": "hard-v2", "arm": "native-bare", "model": "google-data-agent (FAST)", "cases": 41}
+    arm |= {"of_cases": 55, "runs": 123, "accuracy": [0.65, 0.5, 0.8]}
+    arm |= {"confident_wrong": [0.0, 0.0, 0.0]}
+    other = dict(arm, arm="baseline", model="claude-haiku-5-5", groups={"composable": [0.5, 14]})
+    sets = [("hard-v2", "Extended hard set")]
+    html = build.appendix_html({"arms": [arm | {"groups": {}}, other]}, sets)
+    assert 'data-col="g-composable" data-v="">' in html and "no question of this group" in html
+    assert 'data-col="g-composable" data-v="0.5">' in html
+
+
+def test_the_appendix_names_no_version_history_or_retired_question(tmp_path):
+    page, _ = _built(tmp_path)
+    apx = _appendix(page)
+    visible = re.sub(r"<script.*?</script>|<style.*?</style>", "", apx, flags=re.S)
+    text = re.sub(r"<[^>]+>", " ", visible)
+    assert not PROCESS.search(text), PROCESS.search(text)
+    assert not re.search(r"version|added|frozen on|\bnew\b", text, re.I)
+    results = json.loads(RESULTS.read_text(encoding="utf-8"))
+    scored = {c for spec in results["sets"].values() for c in spec.get("cases") or []}
+    retired = {c for spec in results["sets"].values() for c in spec.get("retired") or []} - scored
+    assert not [c for c in retired if c in apx]
+
+
+def test_every_term_the_appendix_table_shows_is_a_typed_glossary_term(tmp_path):
+    page, _ = _built(tmp_path)
+    keys = set(re.findall(r'data-term="([^"]+)"', _appendix(page)))
+    assert keys
+    terms = {t for t, _, _ in build.TERMS}
+    assert not [k for k in keys if k not in terms or k not in build.TERM_TYPE]
