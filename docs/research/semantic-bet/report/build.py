@@ -71,6 +71,7 @@ DESC = {
     "native-kc-reach": "The catalog agent given the same tables and legacy schema as the context setups.",
     "native-context-bare": "Google's data agent with written context we generate from MetricFlow.",
     "native-context": "The generated-context agent plus verified example queries.",
+    "native-context-python": "The generated-context agent with verified queries, allowed to run Python on its query results.",
     "native-governed": "Google's data agent over governed tables we build from the metrics.",
     "native-shaped": "Google's data agent over views, table functions and verified queries.",
     "native-graph": "Google's data agent with a property graph and its measures beside the tables.",
@@ -87,7 +88,7 @@ DESC = {
 }
 FAMILY = {
     "native-bare": "da", "native-kc": "da", "native-kc-max": "da", "native-kc-reach": "da",
-    "native-context-bare": "da", "native-context": "da", "native-governed": "da",
+    "native-context-bare": "da", "native-context": "da", "native-context-python": "da", "native-governed": "da",
     "native-shaped": "da", "native-graph": "da",
     "native-mcp": "gt", "custom-toolbox": "gt",
     "custom-metricflow": "mf", "custom-lightdash": "mf", "custom-hybrid": "mf", "cc-metricflow": "mf", "cc-native-mcp": "gt",
@@ -111,7 +112,7 @@ LADDER = [
     ("ref", "Reference: plain text-to-SQL", ["baseline"]),
     ("L1", "Bare data agent, tables only (the floor)", ["native-bare"]),
     ("L2", "Plus catalog context: import, descriptions, glossary", ["native-kc", "native-kc-max", "native-kc-reach"]),
-    ("L3", "Plus context generated from MetricFlow", ["native-context-bare", "native-context"]),
+    ("L3", "Plus context generated from MetricFlow", ["native-context-bare", "native-context", "native-context-python"]),
     ("L4", "Plus warehouse objects: governed tables, table functions, graph", ["native-governed", "native-shaped", "native-graph"]),
     ("L5", "Our ADK agent on Google's MCP servers or generated tools", ["native-mcp", "custom-toolbox"]),
     ("L6", "Our ADK agent on a semantic-layer server", ["custom-metricflow", "custom-metricflow-compute", "custom-lightdash"]),
