@@ -425,7 +425,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -456,6 +456,72 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 #metricflow .live { margin: var(--s3) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
 #metricflow figcaption { margin: var(--s2) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
 @media (max-width: 640px) { #metricflow figure + figure { margin-top: var(--s6) } }
+
+/* run outcomes on the kit's status tokens and shapes, as the Summary draws them, wherever the kit reaches (the
+   Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square, unclear an amber
+   square ring (it counts as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
+.rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
+
+/* the Every run tab: one kit section (its head with the set switch beside it), the finding's headline, the outcome key,
+   the highlighted question's strip, then the unit plate: one row of marks per setup and model, one column per question,
+   and two small interval charts per row. The report's paler inks, rules and bands map onto the kit's (.er, as .mfa);
+   the plate's geometry is in px scaled from the root size (renderPlate), so a 200% text size widens its label columns. */
+#every-run figure { margin: 0 }
+/* a question's tick, unselected: ink at 45%, which keeps 3:1 on the ground (a mark the reader clicks), quieter than the
+   highlighted question's full-ink tick */
+#every-run { --tick: color-mix(in srgb, var(--ink) 45%, var(--paper)) }
+#every-run .rk-head h2 { line-height: 1.4 }
+#every-run .figtitle { margin: 0 0 var(--s3); max-width: 40rem; font: var(--w-head) var(--t-find)/1.3 var(--sans); text-wrap: balance }
+#every-run .er-key { margin: 0 0 var(--s4); font-size: var(--t-chart) }
+#every-run .er-key svg { flex: none; display: block }
+#every-run .pstrip { border-top: 1px solid var(--hair); margin: 0 0 var(--s3); padding-top: var(--s2); font-family: var(--sans) }
+#every-run .plive { gap: var(--s2) var(--s4); margin: 0 0 var(--s2) }
+#every-run .plive .live { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); min-height: 2.8em; max-width: 48rem }
+#every-run .pclear { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--hair);
+  border-radius: 10px; min-height: 44px; padding: 0 var(--s4); transition: background-color var(--t-fast) ease-out }
+#every-run .pclear:hover { background: var(--row) }
+#every-run .ps-q { gap: var(--s2) var(--s6) }
+#every-run .ps-q :is(.qs-q, .qs-exp, .qs-chip, .qs-chips, .k, .ps-dl, .ps-open) { font-family: var(--sans); color: var(--ink) }
+#every-run .ps-q .qs-q { font-size: var(--t-word); line-height: 1.45 }
+#every-run .ps-q .qs-exp { font-size: var(--t-chart) }
+#every-run .ps-q .qs-exp b { font-weight: 700 }
+#every-run .ps-dl { font-size: var(--t-chart); gap: var(--s2) var(--s3) }
+#every-run .ps-dl dt { color: var(--ink); font-weight: 700 }
+#every-run .ps-dl .qs-chip { font-size: var(--t-chart); min-height: 28px; border-color: var(--hair); border-radius: 4px; background: transparent }
+#every-run .ps-open { margin-top: var(--s3); font-size: var(--t-chart); font-weight: 600; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+#every-run .plate { border-top: 0; border-bottom: 2px solid var(--ink) }
+/* the head scrolls with the rows (scrollbar hidden: the rows' own bar moves both), so text past its right edge is
+   scrolled out of view, not cut */
+#every-run .plate-head { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 2px solid var(--ink); background: var(--paper) }
+#every-run .plate-head::-webkit-scrollbar { display: none }
+#every-run .prow { border-bottom: 1px solid var(--hair) }
+#every-run .prow:nth-child(even of .prow.r), #every-run .prow.r:nth-child(even of .prow.r) .pl { background-color: transparent }
+#every-run .prow.r:hover, #every-run .prow.r:hover .pl { background-color: var(--row) }
+#every-run .prow.r:hover .pl { background: linear-gradient(var(--row), var(--row)), var(--paper) }
+#every-run .prow > div { border-left: 1px solid var(--hair) }
+#every-run .prow > div:first-child { border-left: 0 }
+#every-run .prow .pl { padding: var(--s1) var(--s2); font: 400 var(--t-chart)/1.3 var(--sans); color: var(--ink) }
+#every-run .prow .pl .id { font-size: calc(var(--t-chart) - 1px); font-weight: 600; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+#every-run .prow .pl .m { color: var(--ink); white-space: normal }
+#every-run .prow .pl .flag { display: inline-block; margin-top: 2px; font-size: .8125rem; border: 1px solid var(--hair); border-radius: 4px; padding: 4px 8px;
+  line-height: 1.3; cursor: help; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+#every-run .prow .pl .flag.pend { border-style: dashed }
+#every-run figcaption { margin: var(--s3) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
+#every-run .pnote { font: 400 var(--t-chart)/1.3 var(--sans); color: var(--ink); padding: 0 var(--s2) }
+#every-run .prow.step { background: transparent; font: 700 var(--t-word)/1.3 var(--sans); color: var(--ink); border-bottom: 2px solid var(--ink) }
+#every-run .prow.step > div { padding: var(--s4) var(--s2) var(--s2); background: var(--paper) }
+#every-run .prow.step.future > div { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink) }
+#every-run .prow.head > div { font: 700 var(--t-chart)/1.3 var(--sans); color: var(--ink); padding: var(--s2) }
+#every-run .prow.head small { font-size: .8125rem; font-weight: 400; color: var(--ink) }
+#every-run .bh { font: 700 .8125rem/1.3 var(--sans) }
+#every-run .bh small { font-weight: 400 }
+#every-run .pqs { left: var(--s2) }
+/* focus: the kit's ring on every focusable part of the plate (rows of marks, the tick strip, labels, terms, flags) */
+#every-run .plate [tabindex]:focus-visible, #every-run .pqs:focus-visible, #every-run .pclear:focus-visible, #every-run .ps-q :focus-visible {
+  outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 2px }
+#every-run .plate svg[data-row]:focus-visible { outline-offset: 1px }
+@media (prefers-reduced-motion: reduce) { #every-run .pclear { transition: none } }
+@media (max-width: 640px) { #every-run .plive .live { min-height: 5.6em } }
 
 /* the report's own tooltip, shared by every tab, in the kit's type and ink: a light plate (the outcome glyphs inside
    it are drawn in the report's own colours, made for a light ground), every word at full ink, no small capitals */
@@ -1036,19 +1102,21 @@ button[data-tip], a[data-tip] { cursor: pointer }
   </section>
   </section>
 
-  <section class="view" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
-  <h2>Every run, from the cheapest setup to the most custom</h2>
-  <figure id="fig6">
-    <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
-    <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
+  <section class="view rk-kit er" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
+  <section class="rk-section" aria-labelledby="er-h">
+  <div class="rk-head"><h2 id="er-h">Every run, from the cheapest setup to the most custom</h2>
+    <div class="rk-head-tools"><div class="rk-switch" role="group" aria-label="Question set for every run" data-view="plate"></div></div></div>
+  <figure id="fig6" aria-labelledby="t6">
+    <h3 class="figtitle" id="t6"></h3>
+    <ul class="rk-key er-key" id="leg6"></ul>
     <div class="pstrip" id="pstrip">
       <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear off" id="plate-clear">Show every question</button></div>
       <div class="ps-q qs" id="ps-q"></div>
     </div>
     <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
-    <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome, and click a square or a question's tick in the head to highlight that question on every row.</figcaption>
+    <figcaption>One mark per run, three per question, questions in the same place on every row; hover a mark for its question and outcome, and click a mark or a question's tick in the head to highlight that question on every row.</figcaption>
   </figure>
-
+  </section>
   </section>
 
   <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
@@ -5179,47 +5247,51 @@ window.reportReady(function () {
   /* ---------- Figure 6: unit plate in ladder order (one set) ---------- */
   const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
   let plateState = null;
-  function swatch(ch) { return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`}</svg>`; }
+  // One outcome's mark in a cell of side s at (x, y), as path data: [paint token, "fill" or "ring", path]. The kit's
+  // status shapes (marks.css), drawn as paths so a row of marks is a few paths: right a filled circle, declined a ring,
+  // wrong a square, unclear a square ring (both wrong, the warn colour), confident-wrong a diamond, not run a small dot.
+  const circ = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
+  const box = (x, y, w) => `M${x} ${y}h${w}v${w}h${-w}z`;
+  function outMark(ch, x, y, s) {
+    const cx = x + s / 2, cy = y + s / 2, t = Math.max(1.2, s / 6), q = s * .86, d = s / 2 + .5;
+    if (ch === "0") return ["o-right", "fill", circ(cx, cy, s / 2)];
+    if (ch === "1") return ["o-decl", "ring", circ(cx, cy, s / 2) + circ(cx, cy, s / 2 - t)];
+    if (ch === "2") return ["o-wrong", "fill", box(cx - q / 2, cy - q / 2, q)];
+    if (ch === "3") return ["o-wrong", "ring", box(cx - q / 2, cy - q / 2, q) + box(cx - q / 2 + t, cy - q / 2 + t, q - 2 * t)];
+    if (ch === "4") return ["o-cw", "fill", `M${cx} ${cy - d}L${cx + d} ${cy}L${cx} ${cy + d}L${cx - d} ${cy}z`];
+    return ["o-none", "fill", box(cx - 1, cy - 1, 2)];
+  }
+  function swatch(ch) { const [c, k, d] = outMark(ch, 1, 1, 10); return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path fill="var(--${c})"${k === "ring" ? ' fill-rule="evenodd"' : ""} d="${d}"/></svg>`; }
   function plateGeom(s, avail) {
     const cases = S(s).cases; const narrow = avail < 700;
     const floor = byId(S(s).floor);
     const score = (ci) => { if (!floor) return 0; const u = floor.units.slice(ci * 3, ci * 3 + 3); let v = 0; for (const ch of u) { if (ch === "0") v += 100; else if (ch === "1") v += 1; else if (ch === "4") v -= 1; } return v; };
     const bOrder = D.buckets.map((b) => b.key);
     const order = cases.map((c, i) => i).sort((a, b) => bOrder.indexOf(cases[a].b) - bOrder.indexOf(cases[b].b) || score(a) - score(b) || a - b);
-    const LW = narrow ? 156 : 232, IW = narrow ? 120 : 168, CWW = narrow ? 110 : 150, gap = narrow ? 5 : 7;
+    // the columns that hold text grow with the reader's text size (k: the root size over 16 px); the marks keep theirs,
+    // at 7 to 9 px a question so each outcome's shape stays legible (narrower, the plate scrolls sideways)
+    const k = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16;
+    const LW = Math.round((narrow ? 156 : 232) * k), IW = Math.round((narrow ? 120 : 160) * k), CWW = Math.round((narrow ? 110 : 140) * k), gap = narrow ? 5 : 7;
     const nb = new Set(cases.map((c) => c.b)).size;
     let pitch = Math.floor((avail - LW - IW - CWW - 16 - nb * gap) / Math.max(1, cases.length));
-    pitch = Math.max(5, Math.min(9, pitch));
+    pitch = Math.max(7, Math.min(9, pitch));
     const xs = new Map(); const bands = []; let x = 0, prev = null;
     order.forEach((ci) => { const b = cases[ci].b; if (prev !== null && b !== prev) x += gap; if (b !== prev) bands.push({ b, x, n: 0 }); bands[bands.length - 1].n++; xs.set(ci, x); x += pitch; prev = b; });
     bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
-    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
+    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow, k };
   }
-  // One row of squares as a Plot on pixel (identity) scales: three runs per question, stacked.
-  // The squares are drawn as one path per outcome paint (a few paths per row instead of a rect per
-  // square), which keeps the plate's redraw fast; the shapes are the canvas plate's, pixel for pixel.
-  const sqr = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
+  // One row of marks as a Plot on pixel (identity) scales: three runs per question, stacked. The marks are drawn
+  // as one path per outcome paint (a few paths per row instead of a shape per run), which keeps the redraw fast.
   function unitsPlot(r, G) {
-    const s = G.pitch - 1, F = {}, K = {}; // solid and outline path data per colour token
-    // an outline is drawn as a 1 px ring (outer square less inner square, even-odd), which covers
-    // exactly the pixels the canvas's strokeRect at half-pixel offsets covered, corners included
-    const ring = (x, y) => sqr(x, y, s, s) + sqr(x + 1, y + 1, s - 2, s - 2);
-    const add = (o, c, d) => { o[c] = (o[c] || "") + d; };
-    G.order.forEach((ci, j) => {
+    const s = G.pitch - 1, P2 = {}; // path data per paint and kind
+    G.order.forEach((ci) => {
       const x = G.xs.get(ci);
       for (let k = 0; k < 3; k++) {
-        const y = G.h - (k + 1) * G.pitch + 1, ch = r.units[ci * 3 + k] || ".";
-        if (ch === ".") add(F, "o-none", sqr(x + s / 2 - 1, y + s / 2 - 1, 2, 2));
-        else if (ch === "0") add(F, "o-right", sqr(x, y, s, s));
-        else if (ch === "1") add(K, "o-decl", ring(x, y));
-        else if (ch === "2") { add(F, "o-wrong", sqr(x, y + s / 2, s, s / 2)); add(K, "o-wrong", ring(x, y)); }
-        else if (ch === "3") { add(K, "o-decl", ring(x, y)); add(F, "o-decl", sqr(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5)); }
-        // confident-wrong squares overhang their cell by half a pixel and meet their neighbours' on the
-        // gap; the canvas blended the two halves, so neighbours go to separate paths to blend the same way
-        else add(F, `o-cw#${k}${j % 2}`, sqr(x - .5, y - .5, s + 1, s + 1));
+        const y = G.h - (k + 1) * G.pitch + 1, [c, kind, d] = outMark(r.units[ci * 3 + k] || ".", x, y, s);
+        P2[c + "|" + kind] = (P2[c + "|" + kind] || "") + d;
       }
     });
-    const paths = Object.entries(F).map(([c, d]) => `<path fill="var(--${c.split("#")[0]})" d="${d}"/>`).join("") + Object.entries(K).map(([c, d]) => `<path fill="var(--${c})" fill-rule="evenodd" d="${d}"/>`).join("");
+    const paths = Object.entries(P2).map(([ck, d]) => { const [c, kind] = ck.split("|"); return `<path fill="var(--${c})"${kind === "ring" ? ' fill-rule="evenodd"' : ""} d="${d}"/>`; }).join("");
     const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
       raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
     ] });
@@ -5238,15 +5310,16 @@ window.reportReady(function () {
   // The small interval charts beside each row: a Plot gives the x scale and the zero rule; the interval,
   // its mean and the value are one function mark on that scale (four Plot marks per chart cost the
   // plate's set switch about 12 ms across its 60-odd charts, one mark costs about 2).
-  function miniIv(v, w, h, dom, kind, partial) {
-    const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const yc = h / 2;
-    const val = (t, fill, fs) => `<text x="${w - 6}" y="${yc + 4}" text-anchor="end" fill="${fill}" font-size="${fs}" font-family="var(--label)">${t}</text>`;
-    const body = ({ x }) => !v ? val("–", "var(--ink-3)", 12)
+  function miniIv(v, w, h, dom, kind, partial, k) {
+    const fs = 14 * k; h = Math.max(h, Math.ceil(fs * 1.6)); // the row grows to hold the value at a large text size
+    const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--bad)" : "var(--ink)"; const yc = h / 2;
+    const val = (t, fill, wt) => `<text x="${w - 6}" y="${yc}" dominant-baseline="central" text-anchor="end" fill="${fill}" font-size="${fs}" font-weight="${wt}" font-family="var(--sans)">${t}</text>`;
+    const body = ({ x }) => !v ? val("–", "var(--ink)", 400)
       : `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${yc}" y2="${yc}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`
       + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
-      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 12.5);
-    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
-      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" }), raw(body)] });
+      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 700);
+    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: Math.round(46 * k), marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
+      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink)" : "var(--hair)" }), raw(body)] });
     svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
@@ -5259,7 +5332,7 @@ window.reportReady(function () {
     const qg = D.questionGuide && D.questionGuide.q[c.id];
     return { q: c.q || c.id, g: bk ? bk.label : c.b, name: qg ? qg.name : c.id };
   }
-  const PLATE_IDLE = "Click a square, or a question's tick above the rows, to highlight that question on every row.";
+  const PLATE_IDLE = "Click a mark, or a question's tick above the rows, to highlight that question on every row.";
   // The strip above the plate: the highlighted question as the question guide's card shows it (its turns with the
   // expected answers, its groups and what makes it hard, the same terms), and a link to it in the guide. It keeps the
   // height of the set's tallest question at its width, so moving between questions never moves the plate.
@@ -5290,8 +5363,8 @@ window.reportReady(function () {
     const G = plateState.G, strip = $("#pqs"); if (!strip) return;
     let h = "";
     G.order.forEach((ci) => { const x = G.xs.get(ci), on = plateState.sel === ci, k = plateState.kq === ci;
-      h += `<rect x="${x}" y="${on ? 1 : 4}" width="${Math.max(2, G.pitch - 1)}" height="${on ? 10 : 6}" fill="var(${on ? "--ink" : k ? "--ink-2" : "--grid-major"})"/>`; });
-    if (plateState.kq != null) { const x = G.xs.get(plateState.kq); h += `<rect class="kq" x="${x - 1.5}" y=".5" width="${G.pitch + 2}" height="11" fill="none" stroke="var(--ink-2)" stroke-width="1" rx="1"/>`; }
+      h += `<rect x="${x}" y="${on ? 1 : 4}" width="${Math.max(2, G.pitch - 1)}" height="${on ? 10 : 6}" fill="${on || k ? "var(--ink)" : "var(--tick)"}"/>`; });
+    if (plateState.kq != null) { const x = G.xs.get(plateState.kq); h += `<rect class="kq" x="${x - 2}" y="0" width="${G.pitch + 3}" height="12" fill="none" stroke="var(--line)" stroke-width="2" rx="2"/>`; }
     strip.innerHTML = `<svg width="${G.UW}" height="12" aria-hidden="true" style="display:block;overflow:visible">${h}</svg>`;
   }
   function selectQ(ci, quiet) {
@@ -5352,6 +5425,23 @@ window.reportReady(function () {
     if (x < body.scrollLeft + G.LW + 8 || x > body.scrollLeft + body.clientWidth - 20) { body.scrollLeft = Math.max(0, x - body.clientWidth / 2); $("#plate-head").scrollLeft = body.scrollLeft; }
     keyTip();
   });
+  // the group labels, each over its group's first tick, on as many tiers as they need: a label goes on the first tier
+  // where it clears the label before it, and moves left when it would run past the column; the ticks sit under them.
+  // Measured, so it runs again once the web font is in.
+  function layoutHead() {
+    const head = $("#plate-head"), bhs = head.querySelector(".bhs"); if (!bhs || !plateState) return;
+    const cw = plateState.G.UW + 16, tierEnd = []; let lh = 0;
+    const spans = [...bhs.querySelectorAll(".bh")];
+    spans.forEach((sp) => { sp.style.left = sp.dataset.x + "px"; lh = Math.max(lh, sp.offsetHeight); });
+    spans.forEach((sp) => {
+      const w = sp.offsetWidth; const left = Math.min(+sp.dataset.x, Math.max(0, cw - w - 4));
+      let t = tierEnd.findIndex((e) => left >= e + 6);
+      if (t < 0) { t = tierEnd.length; tierEnd.push(-Infinity); }
+      tierEnd[t] = left + w; Object.assign(sp.style, { left: left + "px", top: 6 + t * (lh + 2) + "px" });
+    });
+    const tq = 6 + Math.max(2, tierEnd.length) * (lh + 2) + 4;
+    bhs.style.height = tq + 18 + "px"; bhs.querySelector("#pqs").style.top = tq + "px";
+  }
   function renderPlate() {
     const s = view.plate; const body = $("#plate-body"), head = $("#plate-head");
     const G = plateGeom(s, body.clientWidth || 1100);
@@ -5363,21 +5453,21 @@ window.reportReady(function () {
     let total = G.LW + G.UW + 16 + G.IW + G.CWW;
     const availW = body.clientWidth || total; if (total < availW) { G.CWW += availW - total; total = availW; }
     $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
-    const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
-    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:58px">`;
-    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} q</small></span>`; });
+    // the group labels sit on two tiers, one label line apart (13 px type at 1.3, scaled with the text size), the ticks under them
+    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div class="bhs" style="width:${G.UW + 16}px">`;
+    G.bands.forEach((b) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" data-x="${b.x + 8}" style="left:${b.x + 8}px;top:0">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} ${b.n === 1 ? "question" : "questions"}</small></span>`; });
     hh += `<div class="pqs" id="pqs" tabindex="0" role="group" aria-label="Questions, one tick each: arrow keys move, Enter highlights a question on every row, Escape shows every question" style="width:${G.UW}px"></div>`;
     hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
-    // narrow bands: a column label that would run into the previous label on its tier moves right past it
-    const tierEnd = {};
-    head.querySelectorAll(".bh").forEach((sp) => { const t = sp.style.top, left = parseFloat(sp.style.left); if (tierEnd[t] != null && left < tierEnd[t] + 6) sp.style.left = (tierEnd[t] + 6) + "px"; tierEnd[t] = parseFloat(sp.style.left) + sp.offsetWidth; });
+    // the group labels, each over its group's first tick, on as many tiers as they need: a label goes on the first tier
+    // where it clears the label before it, and moves left when it would run past the column; the ticks sit under them
     let bh = ""; const minis = [];
     D.ladder.forEach((L) => {
-      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div>Rung 8. ${esc(L.label)}</div></div>`; return; }
+      // a rung's title wraps inside the visible width, so it stays readable while the rows scroll sideways under it
+      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div style="max-width:${availW}px">Rung 8. ${esc(L.label)}</div></div>`; return; }
       const rs = rowsAll.filter((r) => L.arms.includes(r.arm)).sort((a, b) => L.arms.indexOf(a.arm) - L.arms.indexOf(b.arm) || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs);
       if (!rs.length) return;
-      bh += `<div class="prow step" style="width:${total}px"><div>${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
+      bh += `<div class="prow step" style="width:${total}px"><div style="max-width:${availW}px">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
       rs.forEach((r) => {
         const tg = tagText(r);
         bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}" data-term="${r.status === "pending" ? "pending" : "partial"}" tabindex="0">${esc(tg)}</span>` : ""}</div>`;
@@ -5391,7 +5481,7 @@ window.reportReady(function () {
     });
     body.innerHTML = `<div style="width:${total}px">${bh}</div>`;
     const cellOf = (id, sel) => body.querySelector(`[data-tip="${CSS.escape(id)}"][data-mini="${sel}"]`);
-    minis.forEach(([id, kind, v, w, dom]) => { const r = byId(id); cellOf(id, kind).append(miniIv(v, w, G.h + 8, dom, kind, r.major)); });
+    minis.forEach(([id, kind, v, w, dom]) => { const r = byId(id); cellOf(id, kind).append(miniIv(v, w, G.h + 8, dom, kind, r.major, G.k)); });
     const svgs = [];
     body.querySelectorAll(".pu[data-units]").forEach((pu) => {
       const r = byId(pu.dataset.units); const sv = unitsPlot(r, G);
@@ -5400,7 +5490,9 @@ window.reportReady(function () {
     });
     const keepSel = plateState && plateState.s === s ? plateState.sel : null;
     plateState = { G, s, hover: null, svgs, sel: null, kq: null };
-    body.onscroll = () => { head.scrollLeft = body.scrollLeft; };
+    layoutHead();
+    body.onscroll = () => { if (head.scrollLeft !== body.scrollLeft) head.scrollLeft = body.scrollLeft; };
+    head.onscroll = () => { if (body.scrollLeft !== head.scrollLeft) body.scrollLeft = head.scrollLeft; };
     head.scrollLeft = body.scrollLeft;
     svgs.forEach((sv) => {
       const r = byId(sv.dataset.row);
@@ -5438,7 +5530,8 @@ window.reportReady(function () {
     });
     drawTicks(); selectQ(keepSel, true);
     window.reportReady(() => requestAnimationFrame(reserveStrip));
-    $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
+    $("#leg6").innerHTML = [["0", "outcome-right", "Right"], ["1", "declined", "Declined"], ["2", "outcome-wrong", "Wrong"], ["3", "unclear", "Unclear, counted wrong"], ["4", "confident-wrong", "Confident-wrong"], [".", "", "Not run yet"]]
+      .map(([c, t, l]) => `<li>${swatch(c)}${t ? term(t, l) : l}</li>`).join("");
   }
 
   /* ---------- the Decision map's column heads stay on screen while its rows scroll by ---------- */
@@ -5481,7 +5574,7 @@ window.reportReady(function () {
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
   // Figures 2 and 5 wrap labels to a measured width: once the web font is in, they are drawn again with its measure.
-  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); reserveStrip(); });
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); layoutHead(); reserveStrip(); });
   document.addEventListener("report-view", (e) => { if (e.detail === "every-run") requestAnimationFrame(reserveStrip); });
 
   window.__reportMarkReady();

@@ -425,11 +425,12 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     assert '<section class="view on rk-kit rk-js" id="summary"' in page
     assert '<section class="view rk-kit" id="decision-map"' in page
     assert '<section class="view rk-kit mfa" id="metricflow"' in page
+    assert '<section class="view rk-kit er" id="every-run"' in page
     # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
     for part in moved:
         assert part in page, part
-    for part in ("every-run", "setups", "question-sets", "method"):
+    for part in ("setups", "question-sets", "method"):
         assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
@@ -501,5 +502,50 @@ def test_the_metricflow_tab_is_on_the_kit_its_charts_on_the_kits_type_and_tokens
     ring = "#metricflow .glider:focus-visible { outline: 2.5px solid var(--line)"
     assert "#metricflow .plot [tabindex]:focus-visible, " + ring in css
     # no winner marks: the only "best" is the managed best, the bar every setup is paired against
+    plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
+    assert "best" not in plain
+
+
+def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_path):
+    """The Every run tab on the kit (2026-11-07): the kit's head with the set switch beside it,
+    no figure number, a key of defined outcomes, every outcome a kit status shape and token, the
+    plate's text columns scaled with the reader's text size, a head that scrolls (not clips)
+    sideways, and the kit's focus ring."""
+    page, _ = _built(tmp_path)
+    start = page.index('id="every-run" data-view')
+    panel = page[page.rindex("<section", 0, start) : page.index('id="setups" data-view')]
+    assert panel.count('class="rk-head"') == 1 and 'class="rk-switch" role="group"' in panel
+    assert 'data-view="plate"' in panel and 'class="seg"' not in panel
+    assert 'class="rk-key er-key" id="leg6"' in panel
+    assert "fignum" not in panel and not re.search(r"Figure \d", panel)
+    # the function kept: the strip, its clear button, the live line, the plate's head and rows
+    for name in ("pstrip", "plate-clear", "plate-live", "plate-head", "plate-body"):
+        assert f'id="{name}"' in panel, name
+    # outcomes on the kit's status tokens, wherever the kit reaches (the tab and the tooltip)
+    tokens = "--o-right: var(--ok); --o-decl: var(--ink); "
+    tokens += "--o-wrong: var(--warn); --o-cw: var(--bad)"
+    assert ".rk-kit { " + tokens in page
+    script = page[page.index("Figure 6: unit plate") : page.index("column heads stay on screen")]
+    marks = script[script.index("function outMark(") :]
+    marks = marks[: marks.index("\n  }\n")]
+    shapes = {"0": ("o-right", "fill"), "1": ("o-decl", "ring"), "2": ("o-wrong", "fill")}
+    shapes |= {"3": ("o-wrong", "ring"), "4": ("o-cw", "fill")}
+    for ch, (paint, kind) in shapes.items():
+        assert f'if (ch === "{ch}") return ["{paint}", "{kind}"' in marks, ch
+    assert "circ(cx, cy, s / 2)" in marks  # right and declined are round, as the kit's ok and no
+    assert "function swatch(ch) { const [c, k, d] = outMark(ch" in script
+    assert "outMark(r.units[" in script
+    # legible marks: never under 7 px a question; text columns grow with the root size
+    assert "pitch = Math.max(7, Math.min(9, pitch));" in script
+    assert "getComputedStyle(document.documentElement).fontSize" in script
+    assert "function layoutHead()" in script
+    raw = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
+    assert not raw.search(script), "a raw colour in the plate's code"
+    css = page[page.index("/* run outcomes on the kit's status tokens") :]
+    css = css[: css.index("/* the report's own tooltip")]
+    assert not raw.search(css), "a raw colour in the tab's rules"
+    assert "#every-run .plate-head { overflow-x: auto;" in css
+    assert "#every-run .plate [tabindex]:focus-visible" in css
+    assert "outline: 2.5px solid var(--line)" in css
     plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
     assert "best" not in plain
