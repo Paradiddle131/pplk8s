@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-07T08:40Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-07T08:42Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 1 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -8,7 +8,7 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 76 of 76 cases; runs finished: baseline 76 of 228, custom-metricflow 89 of 228, custom-hybrid 76 of 228; model responses spent: baseline 347, custom-metricflow 343, custom-hybrid 311.
+Scored on all 1 runs of every case; runs finished: baseline 76 of 76, custom-metricflow 89 of 76, custom-hybrid 76 of 76; model responses spent: baseline 347, custom-metricflow 343, custom-hybrid 311.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
@@ -36,7 +36,7 @@ Confident-wrong turns the judge moved: 0 of 2 (0 to wrong, hedged; 0 to unclear)
 
 ## `claude-haiku-5-5`
 
-Scored on partial: 1 run(s) of 72 of 76 cases; runs finished: baseline 220 of 228, custom-metricflow 225 of 228, custom-hybrid 225 of 228; model responses spent: baseline 785, custom-metricflow 753, custom-hybrid 805.
+Scored on partial: 1 run(s) of 72 of 76 cases; runs finished: baseline 220 of 76, custom-metricflow 225 of 76, custom-hybrid 225 of 76; model responses spent: baseline 785, custom-metricflow 753, custom-hybrid 805.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
@@ -72,15 +72,15 @@ Turns still unclear after judging (counted as wrong):
 
 ## `claude-sonnet-5-5`
 
-Scored on all 3 runs of every case; runs finished: custom-metricflow 228 of 228; model responses spent: custom-metricflow 743.
+Scored on all 1 runs of every case; runs finished: custom-metricflow 228 of 76; model responses spent: custom-metricflow 743.
 
 | | `custom-metricflow` |
 |---|---|
-| Accuracy | 82.0% |
-| Confident-wrong | 0.9% |
-| pass^3 | 80.3% |
+| Accuracy | 81.6% |
+| Confident-wrong | 1.3% |
+| pass^1 | 81.6% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 98.9% |
+| `covered` (61) accuracy | 98.4% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
@@ -92,7 +92,7 @@ Turns judged: 4 (4 the code left unclear, 0 confident-wrong with a hedge outside
 
 ## `claude-opus-5-5`
 
-Scored on partial: 1 run(s) of 74 of 76 cases; runs finished: custom-metricflow 226 of 228; model responses spent: custom-metricflow 743.
+Scored on partial: 1 run(s) of 74 of 76 cases; runs finished: custom-metricflow 226 of 76; model responses spent: custom-metricflow 743.
 
 | | `custom-metricflow` |
 |---|---|
