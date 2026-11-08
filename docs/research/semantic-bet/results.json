@@ -1,5 +1,5 @@
 {
- "written": "2026-11-08T11:04Z",
+ "written": "2026-11-08T11:14Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4535,51 +4535,68 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": null,
-   "cases": 41,
+   "cases": 55,
    "of_cases": 55,
-   "runs": 41,
+   "runs": 55,
    "accuracy": [
-    0.487804878049,
-    0.341463414634,
-    0.634146341463
+    0.454545454545,
+    0.327272727273,
+    0.581818181818
    ],
    "confident_wrong": [
-    0.19512195122,
-    0.073170731707,
-    0.317073170732
+    0.236363636364,
+    0.127272727273,
+    0.345454545455
    ],
    "groups": {
     "composable": [
-     0.6428571428571429,
-     14
+     0.5714285714285714,
+     21
     ],
     "conversation": [
      0.125,
      8
     ],
     "covered": [
-     0.5,
-     22
+     0.5217391304347826,
+     23
     ],
     "trap": [
      0.6,
      5
     ],
     "uncovered": [
-     0.0,
-     5
+     0.09090909090909091,
+     11
     ]
    },
-   "pass_all": 0.4878048780487805,
+   "pass_all": 0.45454545454545453,
    "outcomes": {
-    "right": 20,
-    "confident-wrong": 8,
+    "right": 25,
+    "confident-wrong": 13,
     "wrong": 7,
-    "declined": 5,
+    "declined": 9,
     "unclear": 1
    },
-   "model_calls": 195,
-   "new": {},
+   "model_calls": 264,
+   "new": {
+    "all": [
+     0.35714285714285715,
+     14
+    ],
+    "composable": [
+     0.42857142857142855,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     0.16666666666666666,
+     6
+    ]
+   },
    "carried_runs": 41
   },
   {
