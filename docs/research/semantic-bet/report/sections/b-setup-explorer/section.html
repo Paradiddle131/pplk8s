@@ -308,7 +308,7 @@ window.reportReady(() => {
     b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m" : "s-t"}" x="10" y="${yy - 4}"${p.mono ? ' style="font-weight:600;font-size:12px"' : ""}>${esc(t)}</text>`; });
     b.ls.forEach((l) => { yy += LH.l; s += `<text class="s-${l.c}" x="10" y="${yy - 3}">${esc(l.t)}</text>`; });
     if (opt.model) {
-      const my = yy + 8; const mh = 10 + b.ml.length * 14;
+      const my = yy + 8; const mh = 10 + b.ml.length * LH.l;
       s += `<rect class="s-hb" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/><rect class="s-c${opt.modelAdd ? " add" : ""}" style="fill:none" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/>`;
       b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 16 + i * LH.l}"${l.c === "t" ? ' style="font-size:12px"' : ""}>${esc(l.t)}</text>`; });
     }
@@ -334,7 +334,7 @@ window.reportReady(() => {
     return { key, kind: "e", pts, ang, cls: (opt.reads ? " rd" : "") + (opt.add ? " add" : ""), noEnd: opt.noEnd };
   }
   function textNode(key, x, y, lines, cls, anchor) {
-    const s = lines.map((t, i) => `<text class="${cls}" x="0" y="${i * 14}"${anchor ? ` text-anchor="${anchor}"` : ""}>${esc(t)}</text>`).join("");
+    const s = lines.map((t, i) => `<text class="${cls}" x="0" y="${i * LH.l}"${anchor ? ` text-anchor="${anchor}"` : ""}>${esc(t)}</text>`).join("");
     return { key, kind: "g", x, y, w: 0, h: 0, html: s };
   }
   const H32 = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
@@ -408,7 +408,7 @@ window.reportReady(() => {
       if (S.wh) {
         const fx = C.wh.x, fy = Y; let y = fy + 22; const items = [];
         if (S.wh === "pg") { items.push(textNode("whnote", fx + 12, y, wrap("stands in for BigQuery", C.wh.w - 24, "note"), "s-note")); y += 18; }
-        sqlLines.forEach((s, i) => { const ls = wrap(s.p.title, C.wh.w - 24, "sql"); items.push(Object.assign(textNode("sql:" + s.p.k, fx + 12, y, ls, "s-sql" + (s.add ? " add" : "")), {})); y += ls.length * 14 + 4; });
+        sqlLines.forEach((s, i) => { const ls = wrap(s.p.title, C.wh.w - 24, "sql"); items.push(Object.assign(textNode("sql:" + s.p.k, fx + 12, y, ls, "s-sql" + (s.add ? " add" : "")), {})); y += ls.length * LH.l + 4; });
         y += 6;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, fx + 12, y, C.wh.w - 24, { add: c.add, gone: c.gone }); items.push(n); y += n.h + 8; });
         if (fb) y = Math.max(y, tb + 16);
@@ -464,7 +464,7 @@ window.reportReady(() => {
       } else {
         const fy = y; let yy = fy + 20; const items = [];
         if (S.wh === "pg") { items.push(textNode("whnote", 24, yy, ["stands in for BigQuery"], "s-note")); yy += 18; }
-        sqlLines.forEach((s) => { const ls = wrap(s.p.title, CW - 24, "sql"); items.push(textNode("sql:" + s.p.k, 24, yy, ls, "s-sql" + (s.add ? " add" : ""))); yy += ls.length * 14 + 4; });
+        sqlLines.forEach((s) => { const ls = wrap(s.p.title, CW - 24, "sql"); items.push(textNode("sql:" + s.p.k, 24, yy, ls, "s-sql" + (s.add ? " add" : ""))); yy += ls.length * LH.l + 4; });
         yy += 6; const cw2 = (CW - 24 - 10) / 2; let col = 0; let rowH = 0; const rowY = () => yy;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, 24 + col * (cw2 + 10), rowY(), cw2, { add: c.add, gone: c.gone }); items.push(n); rowH = Math.max(rowH, n.h); col++; if (col === 2) { yy += rowH + 8; col = 0; rowH = 0; } });
         if (col) yy += rowH + 8;
@@ -639,9 +639,9 @@ window.reportReady(() => {
     let o = ""; let y = 8;
     // a lane's name is centred on its lifeline, so it wraps to the room on its narrower side, and a word too long
     // for that room moves inward rather than running past the sheet's edge
-    const heads = Q.lanes.map((l, i) => wrap(l, Math.min(112, 2 * Math.min(xs[i], W - xs[i]) - 4), "lh")); const hh = Math.max(...heads.map((h) => h.length)) * 14;
+    const heads = Q.lanes.map((l, i) => wrap(l, Math.min(112, 2 * Math.min(xs[i], W - xs[i]) - 4), "lh")); const hh = Math.max(...heads.map((h) => h.length)) * LH.l;
     heads.forEach((ls, i) => ls.forEach((t, j) => { const half = tw(t, "lh") / 2 + 2; const cx = Math.max(half, Math.min(W - half, xs[i]));
-      o += `<text class="s-lh" x="${+cx.toFixed(1)}" y="${y + 10 + j * 14}" text-anchor="middle">${esc(t)}</text>`; }));
+      o += `<text class="s-lh" x="${+cx.toFixed(1)}" y="${y + 10 + j * LH.l}" text-anchor="middle">${esc(t)}</text>`; }));
     y += hh + 8; const top = y; let body = ""; let k = 0;
     Q.steps.forEach((s) => {
       const self = s.a === s.b; const l = Math.min(xs[s.a], xs[s.b]); const r = Math.max(xs[s.a], xs[s.b]);
@@ -649,9 +649,9 @@ window.reportReady(() => {
       const ls = wrap(s.t, Math.min(lw, W - lx - 4), s.m ? "m" : "l");
       const num = !s.ret || s.num; if (num) k++;
       y += 6;
-      ls.forEach((t, j) => { body += `<text class="s-sl${s.m ? " m" : ""}${s.ret ? " r" : ""} s-halo" x="${lx}" y="${y + 10 + j * 14}">${esc(t)}</text>`; });
+      ls.forEach((t, j) => { body += `<text class="s-sl${s.m ? " m" : ""}${s.ret ? " r" : ""} s-halo" x="${lx}" y="${y + 10 + j * LH.l}">${esc(t)}</text>`; });
       if (num) body += `<circle class="s-n" cx="12" cy="${y + 6}" r="8"/><text class="s-nt" x="12" y="${y + 10}" text-anchor="middle">${k}</text>`;
-      y += ls.length * 14 + 4;
+      y += ls.length * LH.l + 4;
       const cls = (s.ret ? " rd" : "") + (s.add ? " add" : "");
       if (self) {
         if (!s.end) { body += `<path class="s-e${cls}" d="M${xs[s.a]} ${y - 2}h14v8h-9"/><path class="s-ah${cls}" d="${ahPath([xs[s.a] + 1, y + 6], Math.PI)}"/>`; y += 10; }
