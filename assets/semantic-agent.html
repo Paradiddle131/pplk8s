@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap">
 <style>
 /* One level below assets/platform.html: the semantic agent's code (services/semantic-agent/src), in
-   the order a question travels, top to bottom. Drawn with the draw-architecture kit (loadout:
+   the order a question travels, top to bottom. Drawn with the draw-architecture kit (claude-dotfiles:
    its CSS, API and logos sit between the sheet: markers, refreshed by its bin/build.cjs and checked by its
    bin/check.cjs). On this sheet cobalt is what the agent reads as agent_metrics, vermilion what the
    text-to-SQL baseline reads as agent_sql; the chain line is what the work platform replaces; the hatched
@@ -36,13 +36,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #34353b; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: rgb(50, 51, 56); --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
     --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #34353b; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: rgb(50, 51, 56); --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
   --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
   color-scheme: dark;
 }
@@ -184,7 +184,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <body>
 <div class="stage">
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 736" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 784" role="img" aria-label="Inside the semantic agent, in the order a question travels. A caller asks ADK's Runner, which keeps sessions in the metadata DB outside the cluster and hands the question to the LlmAgent in agent.py. The agent calls the model through model.py; the model, hatched, is the only part that is not code: it chooses the tool and its arguments. The agent calls tools.py; query_metrics has metrics.py check the request against the catalog and MetricFlow's engine compile the SQL, read as agent_metrics from silver and semantic; every result passes through guard.py, ADK's after_tool_callback, outside the toolset: it attaches the freshness of the result's metrics from the readiness ledger, read as agent_metrics, then inserts one row into ops.agent_queries as agent_audit, and withholds the result if it cannot. Agents outside ADK, such as Claude or Gemini CLI, reach the same tools over MCP: an MCP client presents its bearer token to mcp_server.py, a process of its own that make agent-mcp runs with uv and the agent image leaves out, which calls tools.py and hands every data result to guard.py's guarded, the code ADK's callback runs, so its audit row names the agent the token names. An initContainer runs dbt parse and build_catalog.py into target/, which holds the catalog. A chain line marks the toolset the work platform replaces with DataAgentToolset. The eval runs the agent and a text-to-SQL baseline, which reads gold and exposed as agent_sql, on ADK's LocalEvalService."></svg>
   </figure>
 </div>
 <script>
@@ -203,8 +203,8 @@ const LOGOS = window.LOGOS = {
   "coverage": 0.317,
   "light": "colour",
   "dark": "colour",
-  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> </defs></g>",
-  "mono": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g></g>"
+  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g clip-path=\"url(#adk-clip0_756_3354)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> <clipPath id=\"adk-clip0_756_3354\"> <rect width=\"12.6294\" height=\"14\" fill=\"white\" transform=\"translate(2 1)\"/> </clipPath> </defs></g>",
+  "mono": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g clip-path=\"url(#adk-m-clip0_756_3354)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g> <defs> <clipPath id=\"adk-m-clip0_756_3354\"> <rect width=\"12.6294\" height=\"14\" fill=\"white\" transform=\"translate(2 1)\"/> </clipPath> </defs></g>"
  },
  "dbt": {
   "title": "dbt",
@@ -576,85 +576,85 @@ Sheet.ready = () => Promise.all([
 ].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
 /* /sheet:js */
 Sheet.ready().then(() => {
-  const S = Sheet(document.getElementById('d'), { logos: LOGOS });
+  const S = Sheet(document.getElementById('d'), { logos: LOGOS, headline: 'How a question travels through the semantic agent' });
 
   // ---- the caller, outside the pod
-  S.card({ x: 24, y: 74, w: 112, h: 52, title: 'caller', lines: [{ mono: 'adk web, curl' }] });
-  S.edge('M136,92 H200', { label: { text: 'asks', at: [160, 86] } });
-  S.edge('M200,112 H136', { label: { text: 'answer', at: [160, 128] } });
+  S.card({ x: 24, y: 122, w: 112, h: 52, title: 'caller', lines: [{ mono: 'adk web, curl' }] });
+  S.edge('M136,140 H200', { label: { text: 'asks', at: [160, 134] } });
+  S.edge('M200,160 H136', { label: { text: 'answer', at: [160, 176] } });
 
   // ---- the pod: three columns, top to bottom in the order a question travels
-  S.frame({ x: 184, y: 32, w: 700, h: 412, title: 'semantic-agent pod', note: 'adk api_server', logo: 'kubernetes' });
-  S.card({ x: 200, y: 68, w: 164, h: 72, title: 'Runner', lines: [{ mono: 'sessions, events' }], pkg: 'google.adk', logo: 'adk' });
-  S.card({ x: 396, y: 68, w: 220, h: 72, title: 'semantic_agent', lines: [{ mono: 'agent.py' }, { mono: 'LlmAgent, 3 tools' }] });
-  S.card({ x: 648, y: 68, w: 216, h: 72, title: 'model.py', lines: [{ mono: 'MODEL_BACKEND' }, { mono: 'on_model_error_callback' }] });
-  S.edge('M364,100 H396');
-  S.edge('M616,100 H648');
-  S.edge('M282,68 V48 H916', { label: { text: 'sessions', at: [760, 42] } });
+  S.frame({ x: 184, y: 80, w: 700, h: 412, title: 'semantic-agent pod', note: 'adk api_server', logo: 'kubernetes' });
+  S.card({ x: 200, y: 116, w: 164, h: 72, title: 'Runner', lines: [{ mono: 'sessions, events' }], pkg: 'google.adk', logo: 'adk' });
+  S.card({ x: 396, y: 116, w: 220, h: 72, title: 'semantic_agent', lines: [{ mono: 'agent.py' }, { mono: 'LlmAgent, 3 tools' }] });
+  S.card({ x: 648, y: 116, w: 216, h: 72, title: 'model.py', lines: [{ mono: 'MODEL_BACKEND' }, { mono: 'on_model_error_callback' }] });
+  S.edge('M364,148 H396');
+  S.edge('M616,148 H648');
+  S.edge('M282,116 V96 H916', { label: { text: 'sessions', at: [760, 90] } });
 
   // the guard: ADK's after_tool_callback, outside the toolset, so a swapped toolset keeps both: every data
   // result gets its metrics' freshness, then its audit row, on its way back to the agent
-  S.card({ x: 432, y: 160, w: 184, h: 64, title: 'guard.py', lines: [{ mono: 'freshness.py, audit.py' }, 'no row, no result'] });
-  S.edge('M420,140 V256');
-  S.edge('M536,256 V224');
-  S.edge('M536,160 V140', { label: { text: 'after_tool_callback', at: [548, 154], anchor: 'start', mono: true } });
-  S.edge('M616,192 H924', { label: { text: 'insert', at: [770, 186] } });
-  S.edge('M616,216 H892 V286 H924', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [770, 210] } });
+  S.card({ x: 432, y: 208, w: 184, h: 64, title: 'guard.py', lines: [{ mono: 'freshness.py, audit.py' }, 'no row, no result'] });
+  S.edge('M420,188 V304');
+  S.edge('M536,304 V272');
+  S.edge('M536,208 V188', { label: { text: 'after_tool_callback', at: [548, 202], anchor: 'start', mono: true } });
+  S.edge('M616,240 H924', { label: { text: 'insert', at: [770, 234] } });
+  S.edge('M616,264 H892 V334 H924', { reads: true, tone: 'cobalt', label: { text: 'freshness', at: [770, 258] } });
 
   // the toolset, which the work platform replaces
-  S.phantom({ x: 384, y: 240, w: 492, h: 184, label: 'at work: DataAgentToolset' });
-  S.card({ x: 396, y: 256, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
-  S.card({ x: 648, y: 256, w: 216, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
-  S.card({ x: 648, y: 348, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
-  S.edge('M616,288 H648');
-  S.edge('M756,320 V348');
-  S.edge('M864,380 H924', { reads: true, tone: 'cobalt' });
+  S.phantom({ x: 384, y: 288, w: 492, h: 184, label: 'at work: DataAgentToolset' });
+  S.card({ x: 396, y: 304, w: 220, h: 80, title: 'tools.py', lines: [{ mono: 'list_metrics' }, { mono: 'describe_metric' }, { mono: 'query_metrics' }] });
+  S.card({ x: 648, y: 304, w: 216, h: 64, title: 'metrics.py', lines: ['checks a request against', 'the catalog'] });
+  S.card({ x: 648, y: 396, w: 216, h: 64, title: 'MetricFlowEngine', lines: ['compiles the SQL'], pkg: 'metricflow' });
+  S.edge('M616,336 H648');
+  S.edge('M756,368 V396');
+  S.edge('M864,428 H924', { reads: true, tone: 'cobalt' });
 
   // the initContainer: the catalog the toolset reads, built for the database the pod reads
-  S.frame({ x: 192, y: 168, w: 172, h: 260, title: 'initContainer' });
-  S.card({ x: 200, y: 188, w: 152, h: 64, title: 'dbt parse', lines: [{ mono: 'manifests' }], pkg: 'dbt-core', logo: 'dbt' });
-  S.card({ x: 200, y: 272, w: 152, h: 52, title: 'build_catalog.py', lines: ["MetricFlow's engine"] });
-  S.card({ x: 200, y: 344, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
-  S.edge('M276,252 V272');
-  S.edge('M276,324 V344');
-  S.edge('M352,380 H648');
+  S.frame({ x: 192, y: 216, w: 172, h: 260, title: 'initContainer' });
+  S.card({ x: 200, y: 236, w: 152, h: 64, title: 'dbt parse', lines: [{ mono: 'manifests' }], pkg: 'dbt-core', logo: 'dbt' });
+  S.card({ x: 200, y: 320, w: 152, h: 52, title: 'build_catalog.py', lines: ["MetricFlow's engine"] });
+  S.card({ x: 200, y: 392, w: 152, h: 72, title: 'target/', lines: [{ mono: 'agent.json' }, { mono: 'semantic_manifest' }] });
+  S.edge('M276,300 V320');
+  S.edge('M276,372 V392');
+  S.edge('M352,428 H648');
 
   // ---- outside the cluster
-  S.frame({ x: 900, y: 16, w: 276, h: 556, title: 'outside the cluster' });
-  S.card({ x: 916, y: 28, w: 244, h: 40, title: 'metadata DB' });
-  S.text(null, 1148, 52.5, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
-  S.card({ x: 916, y: 76, w: 244, h: 66, title: 'the model', lines: [{ mono: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], hatch: true });
-  S.edge('M864,100 H916');
+  S.frame({ x: 900, y: 64, w: 276, h: 556, title: 'outside the cluster' });
+  S.card({ x: 916, y: 76, w: 244, h: 40, title: 'metadata DB' });
+  S.text(null, 1148, 100.5, 'agent_sessions', 'mono dim', { 'text-anchor': 'end' });
+  S.card({ x: 916, y: 124, w: 244, h: 66, title: 'the model', lines: [{ mono: 'OpenRouter :free, Gemini' }, 'chooses the tool and its arguments'], hatch: true });
+  S.edge('M864,148 H916');
 
-  S.frame({ x: 908, y: 160, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
-  S.region({ x: 916, y: 172, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
-  S.card({ x: 924, y: 180, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
-  S.region({ x: 916, y: 252, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
-  S.card({ x: 924, y: 260, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
-  S.card({ x: 924, y: 360, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
-  S.region({ x: 916, y: 484, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
-  S.card({ x: 924, y: 492, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
+  S.frame({ x: 908, y: 208, w: 260, h: 404, title: 'warehouse', note: 'IAM at work', logo: 'postgresql' });
+  S.region({ x: 916, y: 220, w: 244, h: 64, role: 'agent_audit: insert only', edge: 'bottom' });
+  S.card({ x: 924, y: 228, w: 228, h: 36, title: 'ops.agent_queries', tcls: 'mono' });
+  S.region({ x: 916, y: 300, w: 244, h: 168, tone: 'cobalt', role: 'agent_metrics: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 308, w: 228, h: 52, title: 'ops.readiness', lines: [{ mono: 'ops.product_deadlines' }], tcls: 'mono' });
+  S.card({ x: 924, y: 408, w: 228, h: 40, title: 'silver, semantic', tcls: 'mono' });
+  S.region({ x: 916, y: 532, w: 244, h: 68, tone: 'vermilion', role: 'agent_sql: read-only', edge: 'bottom' });
+  S.card({ x: 924, y: 540, w: 228, h: 40, title: 'gold, exposed', tcls: 'mono' });
 
   // ---- the MCP server: the same tools and the same guard for agents outside ADK, served by its own
   // process (make agent-mcp, with uv), not by the pod: the agent image leaves it out (SL-19, SL-20)
-  S.card({ x: 24, y: 496, w: 160, h: 56, title: 'MCP client', lines: [{ mono: 'Claude, Gemini CLI' }] });
-  S.edge('M184,532 H400', { label: { text: 'bearer token', at: [244, 526] } });
-  S.frame({ x: 384, y: 468, w: 500, h: 100, title: 'make agent-mcp', note: 'uv, not in the image', edge: 'bottom' });
-  S.card({ x: 400, y: 496, w: 248, h: 56, title: 'mcp_server.py', lines: [{ mono: 'MCPServer, streamable HTTP' }], logo: 'mcp' });
-  S.edge('M560,496 V336');
-  S.edge('M400,512 H376 V200 H432', { label: { text: 'guarded', at: [384, 460], anchor: 'start', mono: true } });
+  S.card({ x: 24, y: 544, w: 160, h: 56, title: 'MCP client', lines: [{ mono: 'Claude, Gemini CLI' }] });
+  S.edge('M184,580 H400', { label: { text: 'bearer token', at: [244, 574] } });
+  S.frame({ x: 384, y: 516, w: 500, h: 100, title: 'make agent-mcp', note: 'uv, not in the image', edge: 'bottom' });
+  S.card({ x: 400, y: 544, w: 248, h: 56, title: 'mcp_server.py', lines: [{ mono: 'MCPServer, streamable HTTP' }], logo: 'mcp' });
+  S.edge('M560,544 V384');
+  S.edge('M400,560 H376 V248 H432', { label: { text: 'guarded', at: [384, 508], anchor: 'start', mono: true } });
 
   // ---- the eval, in-process
-  S.frame({ x: 24, y: 588, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
-  S.card({ x: 40, y: 612, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
-  S.card({ x: 268, y: 612, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
-  S.card({ x: 496, y: 612, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
-  S.edge('M236,644 H268');
-  S.edge('M464,644 H496');
-  S.edge('M300,612 V444', { label: { text: 'runs semantic_agent', at: [292, 470], anchor: 'end' } });
-  S.edge('M756,632 H892 V512 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [824, 626], mono: true } });
+  S.frame({ x: 24, y: 636, w: 860, h: 104, title: 'eval', note: 'make agent-eval, in-process' });
+  S.card({ x: 40, y: 660, w: 196, h: 64, title: 'evaluation.py', lines: ['three custom metrics'] });
+  S.card({ x: 268, y: 660, w: 196, h: 64, title: 'LocalEvalService', lines: ['runs both agents'], pkg: 'google.adk' });
+  S.card({ x: 496, y: 660, w: 260, h: 64, title: 'sql_baseline', lines: ['reuses model.py, audit.py, the catalog'] });
+  S.edge('M236,692 H268');
+  S.edge('M464,692 H496');
+  S.edge('M300,660 V492', { label: { text: 'runs semantic_agent', at: [292, 518], anchor: 'end' } });
+  S.edge('M756,680 H892 V560 H924', { reads: true, tone: 'vermilion', label: { text: 'execute_sql', at: [824, 674], mono: true } });
 
-  S.legend(24, 716, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
+  S.legend(24, 764, [['card', "this repo's code"], ['pkg', 'a package'], ['hatch', 'the model: the only part that is not code'], ['phantom', 'replaced at work'], ['calls', 'calls, writes'], ['reads', 'reads']]);
   S.done();
 });
 </script>

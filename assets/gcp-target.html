@@ -24,19 +24,20 @@
   --muted: #5d5d65;
   --cobalt: #2f4bc4;
   --vermilion: #b83d16;
+  --wire: var(--ink);
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
   --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: rgb(50, 51, 56); --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
     --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: rgb(50, 51, 56); --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
   --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
   color-scheme: dark;
 }
@@ -82,6 +83,8 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .region.cobalt { stroke: var(--cobalt); }
 .region.vermilion { stroke: var(--vermilion); }
 
+/* the headline: the one line above the drawing, one step up the scale from a card's title, regular weight */
+.headline { font-size: 17px; font-weight: 400; fill: var(--ink); }
 .ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
 .sub { font-size: 11px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
@@ -91,7 +94,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .vermilion-text { fill: var(--vermilion); }
 .halo { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
 
-.edge { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.edge { fill: none; stroke: var(--wire); stroke-width: 1.2; }
 .edge.thin { stroke: var(--rule); stroke-width: 1; }
 .edge.reads { stroke-dasharray: 4 3; }
 .edge.cobalt { stroke: var(--cobalt); }
@@ -100,6 +103,9 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .elabel.mono { font-family: var(--mono); }
 .mark { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 .mark-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.step-dot { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.step-n { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.accent { display: none; }
 .logo { color: var(--ink); }
 /* a logo in its brand colours, or its one-ink copy in a theme where the colours do not read (registry) */
 .logo .lm, .logo[data-light="mono"] .lc { display: none; }
@@ -114,6 +120,59 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 :root[data-theme="dark"] .logo .lm { display: none; }
 :root[data-theme="dark"] .logo[data-dark="mono"] .lc { display: none; }
 :root[data-theme="dark"] .logo[data-dark="mono"] .lm { display: inline; }
+
+
+/* ---- the board style (Sheet(svg, {style: 'board'})): the same drawing, set as soft panels on a cool
+   canvas. Outermost frames are white panels, the levels inside alternate with the canvas tone; cards are
+   rounded with a hairline and a faint lift; a card's accent bar names its role; steps are filled badges.
+   Geometry, type sizes and every check are the sheet style's. */
+:root[data-style="board"] {
+  --paper: #f2f4f7; --panel: #ffffff; --inset: #f2f4f7; --card: #ffffff; --pkg: #e8ebf0;
+  --ink: #17203a; --wire: #5b6579; --rule: #c4cad4; --line: #d6dbe3; --hair: #dfe3e9; --muted: #565f72;
+  --cobalt: #2f5bd8; --vermilion: #c2410c; --teal: #0e8a7d; --violet: #7c4ddb; --amber: #b7791f;
+  --lift: rgba(16, 24, 40, 0.07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="board"]:not([data-theme="light"]) {
+    --paper: #0e1116; --panel: #161a21; --inset: #0e1116; --card: #1d222b; --pkg: #2b313d;
+    --ink: #e8ebf1; --wire: #9aa4b5; --rule: #444c5b; --line: #31384a; --hair: #2a303b; --muted: #a7b0bf;
+    --cobalt: #8fa8ff; --vermilion: #ff8a5c; --teal: #3cc8b8; --violet: #b197fc; --amber: #f0b44c;
+    --lift: rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-style="board"][data-theme="dark"] {
+  --paper: #0e1116; --panel: #161a21; --inset: #0e1116; --card: #1d222b; --pkg: #2b313d;
+  --ink: #e8ebf1; --wire: #9aa4b5; --rule: #444c5b; --line: #31384a; --hair: #2a303b; --muted: #a7b0bf;
+  --cobalt: #8fa8ff; --vermilion: #ff8a5c; --teal: #3cc8b8; --violet: #b197fc; --amber: #f0b44c;
+  --lift: rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+:root[data-style="board"] .frame { rx: 12px; stroke: var(--line); }
+:root[data-style="board"] .frame.band-open, :root[data-style="board"] .frame.band-paper { fill: var(--panel); }
+:root[data-style="board"] .frame.band-tint { fill: var(--inset); }
+:root[data-style="board"] .knock.k-open, :root[data-style="board"] .knock.k-even { fill: var(--panel); }
+:root[data-style="board"] .knock.tint { fill: var(--inset); }
+:root[data-style="board"] .card { rx: 8px; stroke: var(--line); filter: drop-shadow(0 1px 1.5px var(--lift)); }
+:root[data-style="board"] .legend .card { filter: none; }
+:root[data-style="board"] .legend .card { rx: 4px; }
+:root[data-style="board"] .legend .region { stroke-dasharray: none; rx: 4px; }
+:root[data-style="board"] .phantom { stroke: var(--wire); stroke-dasharray: 10 3 2 3; }
+:root[data-style="board"] .card.phantom { stroke: var(--wire); }
+:root[data-style="board"] .outline { rx: 10px; }
+:root[data-style="board"] .region { rx: 12px; stroke-width: 1.5; stroke-dasharray: 6 4; }
+:root[data-style="board"] .edge { stroke-width: 1.4; }
+:root[data-style="board"] .elabel { stroke: none; }
+:root[data-style="board"] .headline { font-size: 19px; font-weight: 700; }
+:root[data-style="board"] .accent { display: inline; }
+:root[data-style="board"] .accent.teal { fill: var(--teal); }
+:root[data-style="board"] .accent.violet { fill: var(--violet); }
+:root[data-style="board"] .accent.amber { fill: var(--amber); }
+:root[data-style="board"] .step-dot { fill: var(--cobalt); stroke: none; }
+:root[data-style="board"] .step-n { font-family: var(--sans); font-weight: 700; fill: var(--panel); }
+:root[data-style="board"] .seg { border-color: var(--line); border-radius: 999px; }
+:root[data-style="board"] .seg button + button { border-left-color: var(--line); }
 /* /sheet:css */
 </style>
 </head>
@@ -121,27 +180,43 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 <div class="stage">
   <div class="bar" id="bar"></div>
   <figure>
-    <svg class="sheet" id="d" viewBox="0 0 1200 680" role="img" aria-label="The target on GCP. Inside one GCP project, Cloud Scheduler starts a Cloud Workflows run per pipeline, which calls EL Factory on Cloud Run, the dbt build Cloud Run Job, and records readiness in BigQuery's ops dataset. EL Factory stages files from the sources in Cloud Storage and loads ds_source. dbt builds a BigQuery dataset per layer, ds_source to bronze, silver with the semantic models, gold and exposed, each hop checked in the build, beside the semantic dataset (metrics, glossary, time spine) and ops (readiness, deadlines, source freshness, agent queries). An hourly source freshness Cloud Run Job writes its verdicts to ops, and Cloud Monitoring alerts on them. Knowledge Catalog reads the descriptions; the Data Access log records every job with its labels. A business user asks the semantic agent on Cloud Run, which keeps ADK sessions in Firestore, reads semantic and ops through a read-only account with its three metric tools on MetricFlow, and asks Gemini through Model Armor; a BigQuery data agent whose context the build generates is the native alternative to its tools."></svg>
+    <svg class="sheet" id="d" viewBox="0 0 1200 720" role="img" aria-label="The target on GCP. Inside one GCP project, Cloud Scheduler starts a Cloud Workflows run per pipeline, which calls EL Factory on Cloud Run, the dbt build Cloud Run Job, and records readiness in BigQuery's ops dataset. EL Factory stages files from the sources in Cloud Storage and loads ds_source. dbt builds a BigQuery dataset per layer, ds_source to bronze, silver with the semantic models, gold and exposed, each hop checked in the build, beside the semantic dataset (metrics, glossary, time spine) and ops (readiness, deadlines, source freshness, agent queries). An hourly source freshness Cloud Run Job writes its verdicts to ops, and Cloud Monitoring alerts on them. Knowledge Catalog reads the descriptions; the Data Access log records every job with its labels. A business user asks the semantic agent on Cloud Run, which keeps ADK sessions in Firestore, reads semantic and ops through a read-only account with its three metric tools on MetricFlow, and asks Gemini through Model Armor; a BigQuery data agent whose context the build generates is the native alternative to its tools."></svg>
   </figure>
 </div>
 <script>
 /* sheet:logos */
 const LOGOS = window.LOGOS = {
- "googlecloudrun": {
-  "title": "Cloud Run",
-  "coverage": 0.359,
+ "googlecloudscheduler": {
+  "title": "Cloud Scheduler",
+  "coverage": 0.36,
   "light": "colour",
   "dark": "colour",
-  "body": "<g fill=\"currentColor\" transform=\"matrix(0.0677 0 0 0.0677 3.3287 4.2076)\"><path fill=\"rgb(66, 133, 244)\" d=\"M75.39 0a23.1 23.1 0 0 0-19.72 11.76L3.054 102.995a22.96 22.96 0 0 0 0 22.879l52.598 91.997a23.54 23.54 0 0 0 19.719 12.18h105.216a23.46 23.46 0 0 0 19.74-12.12l52.598-91.477a23.44 23.44 0 0 0 3.074-11.61c0-4.004-1.025-8.01-3.074-11.61L200.326 11.76A23.12 23.12 0 0 0 180.606 0z\"/><path fill-opacity=\".07\" d=\"m236.495 155.027l-36.17 62.905a23.46 23.46 0 0 1-19.739 12.12H140.51l-58.472-58.995l17.238-55.583l-17.238-56.22l17.705 11.893l23.806 24.019l-11.12-35.912l83.375 56.008z\"/><path fill=\"rgb(255, 255, 255)\" d=\"m82.038 59.254l17.705 11.893l13.88 44.618l-13.633 43.278l-17.952 12.014l17.343-55.796zm45.347 19.836l8.593 27.792h32.989zm68.42 36.172l-83.376 55.795l17.343-55.795l-17.343-56.008z\"/></g>",
-  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.0677 0 0 0.0677 3.3287 4.2076)\"><path fill=\"currentColor\" d=\"M75.39 0a23.1 23.1 0 0 0-19.72 11.76L3.054 102.995a22.96 22.96 0 0 0 0 22.879l52.598 91.997a23.54 23.54 0 0 0 19.719 12.18h105.216a23.46 23.46 0 0 0 19.74-12.12l52.598-91.477a23.44 23.44 0 0 0 3.074-11.61c0-4.004-1.025-8.01-3.074-11.61L200.326 11.76A23.12 23.12 0 0 0 180.606 0z\"/><path fill-opacity=\".07\" d=\"m236.495 155.027l-36.17 62.905a23.46 23.46 0 0 1-19.739 12.12H140.51l-58.472-58.995l17.238-55.583l-17.238-56.22l17.705 11.893l23.806 24.019l-11.12-35.912l83.375 56.008z\"/><path fill=\"currentColor\" d=\"m82.038 59.254l17.705 11.893l13.88 44.618l-13.633 43.278l-17.952 12.014l17.343-55.796zm45.347 19.836l8.593 27.792h32.989zm68.42 36.172l-83.376 55.795l17.343-55.795l-17.343-56.008z\"/></g>"
+  "body": "<g fill=\"currentColor\" transform=\"matrix(1.0684 0 0 1.0684 -0.8206 -0.3208)\"><defs/><g data-name=\"Product Icons\"><path d=\"M20,21a1,1,0,0,1-.7-.29l-2-2a1,1,0,0,1,1.41-1.41l2,2a1,1,0,0,1,0,1.41A1,1,0,0,1,20,21Z\" fill=\"rgb(102, 157, 246)\"/><path d=\"M4,21a1,1,0,0,1-.7-1.71l2-2a1,1,0,0,1,1.42,0,1,1,0,0,1,0,1.41l-2,2A1,1,0,0,1,4,21Z\" fill=\"rgb(102, 157, 246)\"/><path d=\"M5.47,17.13,4.25,18.35a11.13,11.13,0,0,0,1.42,1.41l1.22-1.22Z\" fill=\"rgb(66, 133, 244)\"/><path d=\"M19.73,18.31l-1-1a1.19,1.19,0,0,0-.23-.16l-1.34,1.34a1.19,1.19,0,0,0,.16.23l1,1A11.13,11.13,0,0,0,19.73,18.31Z\" fill=\"rgb(66, 133, 244)\"/><g data-name=\"colored-32/scheduler\"><g><g><path d=\"M12,21a9,9,0,1,1,9-9A9,9,0,0,1,12,21Zm0-2a7,7,0,1,0-7-7A7,7,0,0,0,12,19Z\" fill=\"rgb(102, 157, 246)\"/><path id=\"googlecloudscheduler-Oval\" d=\"M12,17a5,5,0,0,0,5-5,5,5,0,0,0-5-5v5L7.92,14.91A5,5,0,0,0,12,17Z\" fill=\"rgb(66, 133, 244)\"/></g></g></g><path d=\"M4,6.07a1,1,0,0,1-.71-1.71l2-2a1,1,0,0,1,1.42,0,1,1,0,0,1,0,1.41l-2,2A1,1,0,0,1,4,6.07Z\" fill=\"rgb(174, 203, 250)\"/><path d=\"M20,6.07a1,1,0,0,1-.71-.3l-2-2a1,1,0,0,1,0-1.41,1,1,0,0,1,1.42,0l2,2A1,1,0,0,1,20,6.07Z\" fill=\"rgb(174, 203, 250)\"/></g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(1.0684 0 0 1.0684 -0.8206 -0.3208)\"><defs/><g data-name=\"Product Icons\"><path d=\"M20,21a1,1,0,0,1-.7-.29l-2-2a1,1,0,0,1,1.41-1.41l2,2a1,1,0,0,1,0,1.41A1,1,0,0,1,20,21Z\" fill=\"currentColor\"/><path d=\"M4,21a1,1,0,0,1-.7-1.71l2-2a1,1,0,0,1,1.42,0,1,1,0,0,1,0,1.41l-2,2A1,1,0,0,1,4,21Z\" fill=\"currentColor\"/><path d=\"M5.47,17.13,4.25,18.35a11.13,11.13,0,0,0,1.42,1.41l1.22-1.22Z\" fill=\"currentColor\"/><path d=\"M19.73,18.31l-1-1a1.19,1.19,0,0,0-.23-.16l-1.34,1.34a1.19,1.19,0,0,0,.16.23l1,1A11.13,11.13,0,0,0,19.73,18.31Z\" fill=\"currentColor\"/><g data-name=\"colored-32/scheduler\"><g><g><path d=\"M12,21a9,9,0,1,1,9-9A9,9,0,0,1,12,21Zm0-2a7,7,0,1,0-7-7A7,7,0,0,0,12,19Z\" fill=\"currentColor\"/><path id=\"googlecloudscheduler-m-Oval\" d=\"M12,17a5,5,0,0,0,5-5,5,5,0,0,0-5-5v5L7.92,14.91A5,5,0,0,0,12,17Z\" fill=\"currentColor\"/></g></g></g><path d=\"M4,6.07a1,1,0,0,1-.71-1.71l2-2a1,1,0,0,1,1.42,0,1,1,0,0,1,0,1.41l-2,2A1,1,0,0,1,4,6.07Z\" fill=\"currentColor\"/><path d=\"M20,6.07a1,1,0,0,1-.71-.3l-2-2a1,1,0,0,1,0-1.41,1,1,0,0,1,1.42,0l2,2A1,1,0,0,1,20,6.07Z\" fill=\"currentColor\"/></g></g>"
+ },
+ "googlecloudworkflows": {
+  "title": "Workflows",
+  "coverage": 0.36,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" transform=\"matrix(1.1179 0 0 1.1179 -1.4093 -1.4149)\"><path fill=\"rgb(66, 133, 244)\" d=\"M19.5,20.06h-.7v-1.5h.7a.76.76,0,0,0,.75-.75V13.5a.76.76,0,0,0-.75-.75H15.89v-1.5H19.5a2.25,2.25,0,0,1,2.25,2.25v4.31A2.25,2.25,0,0,1,19.5,20.06Z\"/><path fill=\"rgb(66, 133, 244)\" d=\"M11.55,20.06H6.65v-1.5h4.9Z\"/><path fill=\"rgb(102, 157, 246)\" fill-rule=\"evenodd\" d=\"M8.12,12.75H4.5A2.25,2.25,0,0,1,2.25,10.5V6.19A2.25,2.25,0,0,1,4.5,3.94h1v1.5h-1a.75.75,0,0,0-.75.75V10.5a.76.76,0,0,0,.75.75H8.12Z\"/><path fill=\"rgb(66, 133, 244)\" d=\"M17.3,5.44H11.82V3.94H17.3Z\"/><path fill=\"rgb(174, 203, 250)\" d=\"M8.63,3.94V2.44h-3A1.13,1.13,0,0,0,4.5,3.56V5.81A1.13,1.13,0,0,0,5.63,6.94h3V5.44H6V3.94Z\"/><path fill=\"rgb(102, 157, 246)\" fill-rule=\"evenodd\" d=\"M12.75,3.56V5.81a1.13,1.13,0,0,1-1.12,1.13h-3V5.44h2.62V3.94H8.63V2.44h3A1.12,1.12,0,0,1,12.75,3.56Z\"/><path fill=\"rgb(174, 203, 250)\" d=\"M19.31,7.13a2.44,2.44,0,1,1,2.44-2.44A2.45,2.45,0,0,1,19.31,7.13Zm0-3.38a.94.94,0,1,0,.94.94A.94.94,0,0,0,19.31,3.75Z\"/><path fill=\"rgb(154, 160, 166)\" d=\"M4.69,21.75a2.44,2.44,0,1,1,2.43-2.44A2.44,2.44,0,0,1,4.69,21.75Zm0-3.38a.94.94,0,1,0,.93.94A.94.94,0,0,0,4.69,18.37Z\"/><path fill=\"rgb(174, 203, 250)\" d=\"M4.69,21.75a2.44,2.44,0,1,1,2.43-2.44A2.44,2.44,0,0,1,4.69,21.75Zm0-3.38a.94.94,0,1,0,.93.94A.94.94,0,0,0,4.69,18.37Z\"/><path fill=\"rgb(174, 203, 250)\" d=\"M15.36,18.57v-1.5h-3a1.13,1.13,0,0,0-1.12,1.13v2.25a1.12,1.12,0,0,0,1.12,1.12h3v-1.5H12.74v-1.5Z\"/><path fill=\"rgb(102, 157, 246)\" fill-rule=\"evenodd\" d=\"M19.49,18.2v2.25a1.13,1.13,0,0,1-1.13,1.12h-3v-1.5H18v-1.5H15.36v-1.5h3A1.14,1.14,0,0,1,19.49,18.2Z\"/><path fill=\"rgb(174, 203, 250)\" d=\"M12,11.25V9.75H9a1.13,1.13,0,0,0-1.13,1.12v2.25A1.13,1.13,0,0,0,9,14.25h3v-1.5H9.37v-1.5Z\"/><path fill=\"rgb(102, 157, 246)\" fill-rule=\"evenodd\" d=\"M16.12,10.87v2.25A1.13,1.13,0,0,1,15,14.25H12v-1.5h2.62v-1.5H12V9.75h3A1.12,1.12,0,0,1,16.12,10.87Z\"/></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(1.1179 0 0 1.1179 -1.4093 -1.4149)\"><path fill=\"currentColor\" d=\"M19.5,20.06h-.7v-1.5h.7a.76.76,0,0,0,.75-.75V13.5a.76.76,0,0,0-.75-.75H15.89v-1.5H19.5a2.25,2.25,0,0,1,2.25,2.25v4.31A2.25,2.25,0,0,1,19.5,20.06Z\"/><path fill=\"currentColor\" d=\"M11.55,20.06H6.65v-1.5h4.9Z\"/><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M8.12,12.75H4.5A2.25,2.25,0,0,1,2.25,10.5V6.19A2.25,2.25,0,0,1,4.5,3.94h1v1.5h-1a.75.75,0,0,0-.75.75V10.5a.76.76,0,0,0,.75.75H8.12Z\"/><path fill=\"currentColor\" d=\"M17.3,5.44H11.82V3.94H17.3Z\"/><path fill=\"currentColor\" d=\"M8.63,3.94V2.44h-3A1.13,1.13,0,0,0,4.5,3.56V5.81A1.13,1.13,0,0,0,5.63,6.94h3V5.44H6V3.94Z\"/><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M12.75,3.56V5.81a1.13,1.13,0,0,1-1.12,1.13h-3V5.44h2.62V3.94H8.63V2.44h3A1.12,1.12,0,0,1,12.75,3.56Z\"/><path fill=\"currentColor\" d=\"M19.31,7.13a2.44,2.44,0,1,1,2.44-2.44A2.45,2.45,0,0,1,19.31,7.13Zm0-3.38a.94.94,0,1,0,.94.94A.94.94,0,0,0,19.31,3.75Z\"/><path fill=\"currentColor\" d=\"M4.69,21.75a2.44,2.44,0,1,1,2.43-2.44A2.44,2.44,0,0,1,4.69,21.75Zm0-3.38a.94.94,0,1,0,.93.94A.94.94,0,0,0,4.69,18.37Z\"/><path fill=\"currentColor\" d=\"M4.69,21.75a2.44,2.44,0,1,1,2.43-2.44A2.44,2.44,0,0,1,4.69,21.75Zm0-3.38a.94.94,0,1,0,.93.94A.94.94,0,0,0,4.69,18.37Z\"/><path fill=\"currentColor\" d=\"M15.36,18.57v-1.5h-3a1.13,1.13,0,0,0-1.12,1.13v2.25a1.12,1.12,0,0,0,1.12,1.12h3v-1.5H12.74v-1.5Z\"/><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M19.49,18.2v2.25a1.13,1.13,0,0,1-1.13,1.12h-3v-1.5H18v-1.5H15.36v-1.5h3A1.14,1.14,0,0,1,19.49,18.2Z\"/><path fill=\"currentColor\" d=\"M12,11.25V9.75H9a1.13,1.13,0,0,0-1.13,1.12v2.25A1.13,1.13,0,0,0,9,14.25h3v-1.5H9.37v-1.5Z\"/><path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M16.12,10.87v2.25A1.13,1.13,0,0,1,15,14.25H12v-1.5h2.62v-1.5H12V9.75h3A1.12,1.12,0,0,1,16.12,10.87Z\"/></g>"
+ },
+ "googlecloudrun": {
+  "title": "Cloud Run",
+  "coverage": 0.304,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" stroke-width=\"3.3954\" stroke-linejoin=\"round\" transform=\"matrix(0.0589 0 0 0.0589 -3.0832 -3.0745)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlecloudrun-bounding_box\"> </g> <g id=\"googlecloudrun-art\"> <path d=\"M144.4,272c-6.4,0-12.4-3.8-14.9-10.1L55.4,75.9c-3.3-8.2.7-17.5,8.9-20.8,8.2-3.3,17.5.7,20.8,8.9l74.2,186c3.3,8.2-.7,17.5-8.9,20.8-1.9.8-3.9,1.1-5.9,1.1h-.1Z\" fill=\"rgb(251, 188, 4)\" stroke=\"rgb(251, 188, 4)\"/> <g id=\"googlecloudrun-b\"> <path d=\"M256,272c-6.4,0-12.4-3.8-14.9-10.1l-74.1-186c-2.6-6.6-.6-14.1,5-18.5s13.4-4.5,19.2-.4l260.1,186c7.2,5.1,8.9,15.1,3.7,22.3s-15.1,8.9-22.3,3.7L216.9,114.7l54,135.3c3.3,8.2-.7,17.5-8.9,20.8-1.9.8-4,1.1-5.9,1.1h-.1Z\" fill=\"rgb(234, 67, 53)\" stroke=\"rgb(234, 67, 53)\"/> </g> <path d=\"M127.2,256l-72,180c-3.3,8.2.7,17.5,8.9,20.8,3.1,1.2,4,1.1,5.9,1.1,6.3,0,12.4-3.8,14.9-10.1l74.4-186c.8-2,1.1-4,1.1-5.9h-33.2Z\" fill=\"rgb(52, 168, 83)\" stroke=\"rgb(52, 168, 83)\"/> <path d=\"M414.5,256l-197.7,141.2,54.1-135.3c.8-2,1.1-4,1.1-5.9h-33.2l-72,180c-2.6,6.6-.6,14.1,5,18.5,2.9,2.3,6.4,3.4,9.9,3.4s6.5-1,9.3-3l260.4-186c4.4-3.1,6.7-8,6.7-13h-43.6Z\" fill=\"rgb(66, 133, 244)\" stroke=\"rgb(66, 133, 244)\"/> </g></g>",
+  "mono": "<g fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"3.3954\" stroke-linejoin=\"round\" transform=\"matrix(0.0589 0 0 0.0589 -3.0832 -3.0745)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlecloudrun-m-bounding_box\"> </g> <g id=\"googlecloudrun-m-art\"> <path d=\"M144.4,272c-6.4,0-12.4-3.8-14.9-10.1L55.4,75.9c-3.3-8.2.7-17.5,8.9-20.8,8.2-3.3,17.5.7,20.8,8.9l74.2,186c3.3,8.2-.7,17.5-8.9,20.8-1.9.8-3.9,1.1-5.9,1.1h-.1Z\" fill=\"currentColor\"/> <g id=\"googlecloudrun-m-b\"> <path d=\"M256,272c-6.4,0-12.4-3.8-14.9-10.1l-74.1-186c-2.6-6.6-.6-14.1,5-18.5s13.4-4.5,19.2-.4l260.1,186c7.2,5.1,8.9,15.1,3.7,22.3s-15.1,8.9-22.3,3.7L216.9,114.7l54,135.3c3.3,8.2-.7,17.5-8.9,20.8-1.9.8-4,1.1-5.9,1.1h-.1Z\" fill=\"currentColor\"/> </g> <path d=\"M127.2,256l-72,180c-3.3,8.2.7,17.5,8.9,20.8,3.1,1.2,4,1.1,5.9,1.1,6.3,0,12.4-3.8,14.9-10.1l74.4-186c.8-2,1.1-4,1.1-5.9h-33.2Z\" fill=\"currentColor\"/> <path d=\"M414.5,256l-197.7,141.2,54.1-135.3c.8-2,1.1-4,1.1-5.9h-33.2l-72,180c-2.6,6.6-.6,14.1,5,18.5,2.9,2.3,6.4,3.4,9.9,3.4s6.5-1,9.3-3l260.4-186c4.4-3.1,6.7-8,6.7-13h-43.6Z\" fill=\"currentColor\"/> </g></g>"
  },
  "googlecloudstorage": {
   "title": "Cloud Storage",
   "coverage": 0.361,
-  "light": "mono",
+  "light": "colour",
   "dark": "colour",
-  "body": "<g fill=\"rgb(174, 203, 250)\" transform=\"matrix(0.7748 0 0 0.7748 2.7026 2.7026)\"><path d=\"M24 2.4v8.4h-2.4V2.4H24zM0 10.8h2.4V2.4H0v8.4zm3-8.4h18v8.4H3V2.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zm-10.8.6H12V6H4.8v1.2zm16.8 14.4H24v-8.4h-2.4v8.4zM0 21.6h2.4v-8.4H0v8.4zm3-8.4h18v8.4H3v-8.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zM4.8 18H12v-1.2H4.8V18z\"/></g>",
-  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.7748 0 0 0.7748 2.7026 2.7026)\"><path d=\"M24 2.4v8.4h-2.4V2.4H24zM0 10.8h2.4V2.4H0v8.4zm3-8.4h18v8.4H3V2.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zm-10.8.6H12V6H4.8v1.2zm16.8 14.4H24v-8.4h-2.4v8.4zM0 21.6h2.4v-8.4H0v8.4zm3-8.4h18v8.4H3v-8.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zM4.8 18H12v-1.2H4.8V18z\"/></g>"
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.0501 0 0 0.0501 -0.8228 -0.8403)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlecloudstorage-bounding_box\"> </g> <g id=\"googlecloudstorage-art\"> <path d=\"M442,277.9H70c-8.8,0-16,7.2-16,16v148.1c0,8.8,7.2,16,16,16h107.2c1.5.5,3.1.7,4.8.7s3.3-.3,4.8-.7h255.2c8.8,0,16-7.2,16-16v-148.1c0-8.8-7.2-16-16-16ZM86,309.9h80v116.1h-80v-116.1ZM426,425.9h-228v-116.1h228v116.1Z\" fill=\"rgb(52, 168, 83)\"/> <path d=\"M442,54H70c-8.8,0-16,7.2-16,16v148.8c0,8.8,7.2,16,16,16h372c8.8,0,16-7.2,16-16V70c0-8.8-7.2-16-16-16ZM86,86h80v116.8h-80v-116.8ZM426,202.8h-228v-116.8h228v116.8Z\" fill=\"rgb(251, 188, 4)\"/> <path d=\"M442,234.8h-16V86H54v-16c0-8.8,7.2-16,16-16h372c8.8,0,16,7.2,16,16v148.8c0,8.8-7.2,16-16,16Z\" fill=\"rgb(234, 67, 53)\"/> <path d=\"M442,457.9h-16v-148.1H54v-16c0-8.8,7.2-16,16-16h372c8.8,0,16,7.2,16,16v148.1c0,8.8-7.2,16-16,16Z\" fill=\"rgb(66, 133, 244)\"/> <circle cx=\"349\" cy=\"144.4\" r=\"37\" fill=\"rgb(234, 67, 53)\"/> <circle cx=\"349\" cy=\"367.9\" r=\"37\" fill=\"rgb(66, 133, 244)\"/> </g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.0501 0 0 0.0501 -0.8228 -0.8403)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlecloudstorage-m-bounding_box\"> </g> <g id=\"googlecloudstorage-m-art\"> <path d=\"M442,277.9H70c-8.8,0-16,7.2-16,16v148.1c0,8.8,7.2,16,16,16h107.2c1.5.5,3.1.7,4.8.7s3.3-.3,4.8-.7h255.2c8.8,0,16-7.2,16-16v-148.1c0-8.8-7.2-16-16-16ZM86,309.9h80v116.1h-80v-116.1ZM426,425.9h-228v-116.1h228v116.1Z\" fill=\"currentColor\"/> <path d=\"M442,54H70c-8.8,0-16,7.2-16,16v148.8c0,8.8,7.2,16,16,16h372c8.8,0,16-7.2,16-16V70c0-8.8-7.2-16-16-16ZM86,86h80v116.8h-80v-116.8ZM426,202.8h-228v-116.8h228v116.8Z\" fill=\"currentColor\"/> <path d=\"M442,234.8h-16V86H54v-16c0-8.8,7.2-16,16-16h372c8.8,0,16,7.2,16,16v148.8c0,8.8-7.2,16-16,16Z\" fill=\"currentColor\"/> <path d=\"M442,457.9h-16v-148.1H54v-16c0-8.8,7.2-16,16-16h372c8.8,0,16,7.2,16,16v148.1c0,8.8-7.2,16-16,16Z\" fill=\"currentColor\"/> <circle cx=\"349\" cy=\"144.4\" r=\"37\" fill=\"currentColor\"/> <circle cx=\"349\" cy=\"367.9\" r=\"37\" fill=\"currentColor\"/> </g></g>"
  },
  "dbt": {
   "title": "dbt",
@@ -151,21 +226,45 @@ const LOGOS = window.LOGOS = {
   "body": "<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"rgb(255, 105, 74)\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>",
   "mono": "<g fill=\"currentColor\" transform=\"matrix(0.0687 0 0 0.0687 3.2016 3.2016)\"><path fill=\"currentColor\" d=\"M245.121 10.647c6.018 5.787 9.953 13.425 10.879 21.758c0 3.472-.926 5.787-3.01 10.185c-2.082 4.397-27.775 48.839-35.413 61.106c-4.398 7.176-6.713 15.74-6.713 24.072c0 8.565 2.315 16.898 6.713 24.073c7.638 12.268 33.33 56.94 35.414 61.338c2.083 4.398 3.009 6.48 3.009 9.953c-.926 8.333-4.63 15.971-10.647 21.526c-5.787 6.018-13.425 9.953-21.527 10.648c-3.471 0-5.786-.926-9.953-3.01s-49.533-27.08-61.8-34.719c-.927-.463-1.852-1.157-3.01-1.62L88.42 180.08c1.388 11.573 6.48 22.683 14.813 30.784c1.62 1.62 3.24 3.01 5.093 4.398c-1.39.694-3.01 1.39-4.398 2.315c-12.268 7.638-56.94 33.33-61.338 35.414c-4.398 2.083-6.481 3.009-10.185 3.009c-8.333-.926-15.971-4.63-21.526-10.647C4.86 239.566.926 231.928 0 223.595c.231-3.472 1.157-6.944 3.01-9.953c2.082-4.398 27.775-49.07 35.413-61.338c4.398-7.176 6.713-15.508 6.713-24.072s-2.315-16.898-6.713-24.073C30.785 91.429 4.861 46.756 3.009 42.358C1.157 39.348.231 35.877 0 32.405c.926-8.333 4.63-15.971 10.647-21.758C16.434 4.63 24.072.926 32.405 0c3.472.231 6.944 1.157 10.185 3.01c3.703 1.62 36.34 20.6 53.7 30.784l3.934 2.315q2.083 1.388 3.472 2.083l1.852 1.157l61.8 36.571c-1.388-13.888-8.563-26.618-19.674-35.182c1.39-.694 3.01-1.39 4.398-2.315c12.268-7.638 56.94-33.562 61.338-35.414C216.42 1.157 219.891.231 223.595 0a35.43 35.43 0 0 1 21.526 10.647m-113.88 133.787l13.193-13.194c1.852-1.851 1.852-4.629 0-6.48l-13.194-13.194c-1.851-1.852-4.629-1.852-6.48 0l-13.194 13.194c-1.852 1.851-1.852 4.629 0 6.48l13.194 13.194c1.62 1.62 4.629 1.62 6.48 0\"/></g>"
  },
- "googlebigquery": {
-  "title": "BigQuery",
+ "googlecloudmonitoring": {
+  "title": "Cloud Monitoring",
   "coverage": 0.36,
   "light": "colour",
   "dark": "colour",
-  "body": "<g fill=\"rgb(102, 157, 246)\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>",
-  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.9597 0 0 0.9597 0.4832 0.4832)\"><path d=\"M5.676 10.595h2.052v5.244a5.892 5.892 0 0 1-2.052-2.088v-3.156zm18.179 10.836a.504.504 0 0 1 0 .708l-1.716 1.716a.504.504 0 0 1-.708 0l-4.248-4.248a.206.206 0 0 1-.007-.007c-.02-.02-.028-.045-.043-.066a10.736 10.736 0 0 1-6.334 2.065C4.835 21.599 0 16.764 0 10.799S4.835 0 10.8 0s10.799 4.835 10.799 10.8c0 2.369-.772 4.553-2.066 6.333.025.017.052.028.074.05l4.248 4.248zm-5.028-10.632a8.015 8.015 0 1 0-8.028 8.028h.024a8.016 8.016 0 0 0 8.004-8.028zm-4.86 4.98a6.002 6.002 0 0 0 2.04-2.184v-1.764h-2.04v3.948zm-4.5.948c.442.057.887.08 1.332.072.4.025.8.025 1.2 0V7.692H9.468v9.035z\"/></g>"
+  "body": "<g fill=\"currentColor\" transform=\"matrix(1.0156 0 0 1.0156 -0.1866 -0.212)\"><defs/><g data-name=\"Product Icons\"><rect x=\"10.83\" y=\"15.84\" width=\"2.33\" height=\"2.64\" fill=\"rgb(102, 157, 246)\"/><path d=\"M18.48,13.87a.56.56,0,0,1-.4-.17L14,9.47l-2.74,2.89a.57.57,0,0,1-.76.05L8.42,10.73l-2.2,2.92a.56.56,0,0,1-.45.22H2v1.71a.75.75,0,0,0,.74.75H21.26a.75.75,0,0,0,.74-.75V13.87Z\" fill=\"rgb(66, 133, 244)\"/><path d=\"M5.5,12.76,7.88,9.6a.55.55,0,0,1,.37-.22.63.63,0,0,1,.42.12l2.12,1.72,2.8-2.94a.54.54,0,0,1,.4-.17h0a.54.54,0,0,1,.4.17l4.33,4.48H22V6a.74.74,0,0,0-.74-.74H2.74A.74.74,0,0,0,2,6v6.81Z\" fill=\"rgb(102, 157, 246)\"/><rect x=\"8.67\" y=\"18.18\" width=\"6.67\" height=\"0.61\" rx=\"0.3\" fill=\"rgb(66, 133, 244)\"/></g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(1.0156 0 0 1.0156 -0.1866 -0.212)\"><defs/><g data-name=\"Product Icons\"><rect x=\"10.83\" y=\"15.84\" width=\"2.33\" height=\"2.64\" fill=\"currentColor\"/><path d=\"M18.48,13.87a.56.56,0,0,1-.4-.17L14,9.47l-2.74,2.89a.57.57,0,0,1-.76.05L8.42,10.73l-2.2,2.92a.56.56,0,0,1-.45.22H2v1.71a.75.75,0,0,0,.74.75H21.26a.75.75,0,0,0,.74-.75V13.87Z\" fill=\"currentColor\"/><path d=\"M5.5,12.76,7.88,9.6a.55.55,0,0,1,.37-.22.63.63,0,0,1,.42.12l2.12,1.72,2.8-2.94a.54.54,0,0,1,.4-.17h0a.54.54,0,0,1,.4.17l4.33,4.48H22V6a.74.74,0,0,0-.74-.74H2.74A.74.74,0,0,0,2,6v6.81Z\" fill=\"currentColor\"/><rect x=\"8.67\" y=\"18.18\" width=\"6.67\" height=\"0.61\" rx=\"0.3\" fill=\"currentColor\"/></g></g>"
+ },
+ "googlebigquery": {
+  "title": "BigQuery",
+  "coverage": 0.314,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" stroke-width=\"3.9496\" stroke-linejoin=\"round\" transform=\"matrix(0.0506 0 0 0.0506 -1.0178 -1.0191)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlebigquery-bounding_box\"> </g> <g id=\"googlebigquery-art\"> <path d=\"M311.9,418.9c-8.8,0-16-7.2-16-16v-145.8c0-8.8,7.2-16,16-16s16,7.2,16,16v145.8c0,8.8-7.2,16-16,16h0Z\" fill=\"rgb(52, 168, 83)\" stroke=\"rgb(52, 168, 83)\"/> <path d=\"M147.6,418.9c-8.8,0-16-7.2-16-16v-200.5c0-8.8,7.2-16,16-16s16,7.2,16,16v200.5c0,8.8-7.2,16-16,16Z\" fill=\"rgb(52, 168, 83)\" stroke=\"rgb(52, 168, 83)\"/> <path d=\"M229.8,437.4c-8.8,0-16-7.2-16-16V147.6c0-8.8,7.2-16,16-16s16,7.2,16,16v273.7c0,8.8-7.2,16-16,16h0Z\" fill=\"rgb(52, 168, 83)\" stroke=\"rgb(52, 168, 83)\"/> <path d=\"M229.8,437.4c-114.5,0-207.6-93.1-207.6-207.6h32c0,96.8,78.8,175.6,175.6,175.6s175.6-78.8,175.6-175.6h32c0,114.5-93.1,207.6-207.6,207.6h0Z\" fill=\"rgb(251, 188, 4)\" stroke=\"rgb(251, 188, 4)\"/> <path d=\"M437.4,229.8h-32c0-96.8-78.8-175.6-175.6-175.6S54.1,132.9,54.1,229.8H22.1c0-114.5,93.2-207.7,207.7-207.7s207.6,93.1,207.6,207.6h0Z\" fill=\"rgb(234, 67, 53)\" stroke=\"rgb(234, 67, 53)\"/> <path d=\"M487.4,464.8l-100-100c32.3-37.6,49.9-85,49.9-135.1s-21.6-107.6-60.8-146.8l-22.6,22.6c33.2,33.2,51.4,77.3,51.4,124.2s-18.3,90.9-51.5,124.1h0c-5,5-7.5,7-11.8,10.8l122.8,122.8c3.1,3.1,7.2,4.7,11.3,4.7h0c4.1,0,8.2-1.6,11.3-4.7,6.2-6.2,6.2-16.4,0-22.6h0Z\" fill=\"rgb(66, 133, 244)\" stroke=\"rgb(66, 133, 244)\"/> </g></g>",
+  "mono": "<g fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"3.9496\" stroke-linejoin=\"round\" transform=\"matrix(0.0506 0 0 0.0506 -1.0178 -1.0191)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlebigquery-m-bounding_box\"> </g> <g id=\"googlebigquery-m-art\"> <path d=\"M311.9,418.9c-8.8,0-16-7.2-16-16v-145.8c0-8.8,7.2-16,16-16s16,7.2,16,16v145.8c0,8.8-7.2,16-16,16h0Z\" fill=\"currentColor\"/> <path d=\"M147.6,418.9c-8.8,0-16-7.2-16-16v-200.5c0-8.8,7.2-16,16-16s16,7.2,16,16v200.5c0,8.8-7.2,16-16,16Z\" fill=\"currentColor\"/> <path d=\"M229.8,437.4c-8.8,0-16-7.2-16-16V147.6c0-8.8,7.2-16,16-16s16,7.2,16,16v273.7c0,8.8-7.2,16-16,16h0Z\" fill=\"currentColor\"/> <path d=\"M229.8,437.4c-114.5,0-207.6-93.1-207.6-207.6h32c0,96.8,78.8,175.6,175.6,175.6s175.6-78.8,175.6-175.6h32c0,114.5-93.1,207.6-207.6,207.6h0Z\" fill=\"currentColor\"/> <path d=\"M437.4,229.8h-32c0-96.8-78.8-175.6-175.6-175.6S54.1,132.9,54.1,229.8H22.1c0-114.5,93.2-207.7,207.7-207.7s207.6,93.1,207.6,207.6h0Z\" fill=\"currentColor\"/> <path d=\"M487.4,464.8l-100-100c32.3-37.6,49.9-85,49.9-135.1s-21.6-107.6-60.8-146.8l-22.6,22.6c33.2,33.2,51.4,77.3,51.4,124.2s-18.3,90.9-51.5,124.1h0c-5,5-7.5,7-11.8,10.8l122.8,122.8c3.1,3.1,7.2,4.7,11.3,4.7h0c4.1,0,8.2-1.6,11.3-4.7,6.2-6.2,6.2-16.4,0-22.6h0Z\" fill=\"currentColor\"/> </g></g>"
+ },
+ "googlecloudlogging": {
+  "title": "Cloud Logging",
+  "coverage": 0.359,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.9537 0 0 0.9537 0.556 1.0329)\"><defs/><g data-name=\"Product Icons\"><rect x=\"6\" y=\"11\" width=\"4\" height=\"2\" fill=\"rgb(66, 133, 244)\"/><rect x=\"4\" y=\"18\" width=\"6\" height=\"2\" fill=\"rgb(66, 133, 244)\"/><g data-name=\"colored-32/logs\"><g><polygon id=\"googlecloudlogging-Fill-3\" points=\"4 18 6 18 6 6 4 6 4 18\" fill=\"rgb(66, 133, 244)\"/><polygon id=\"googlecloudlogging-Fill-4\" points=\"9 7 22 7 22 3 9 3 9 7\" fill=\"rgb(102, 157, 246)\"/><polygon id=\"googlecloudlogging-Fill-4-2\" data-name=\"Fill-4\" points=\"9 14 22 14 22 10 9 10 9 14\" fill=\"rgb(102, 157, 246)\"/><polygon id=\"googlecloudlogging-Fill-4-3\" data-name=\"Fill-4\" points=\"9 21 22 21 22 17 9 17 9 21\" fill=\"rgb(102, 157, 246)\"/><polygon id=\"googlecloudlogging-Fill-7\" points=\"2 8 8 8 8 2 2 2 2 8\" fill=\"rgb(174, 203, 250)\"/></g></g></g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.9537 0 0 0.9537 0.556 1.0329)\"><g data-name=\"Product Icons\"><rect x=\"6\" y=\"11\" width=\"4\" height=\"2\" fill=\"currentColor\"/><rect x=\"4\" y=\"18\" width=\"6\" height=\"2\" fill=\"currentColor\"/><g data-name=\"colored-32/logs\"><g><polygon points=\"4 18 6 18 6 6 4 6 4 18\" fill=\"currentColor\"/><polygon points=\"9 7 22 7 22 3 9 3 9 7\" fill=\"currentColor\"/><polygon data-name=\"Fill-4\" points=\"9 14 22 14 22 10 9 10 9 14\" fill=\"currentColor\"/><polygon data-name=\"Fill-4\" points=\"9 21 22 21 22 17 9 17 9 21\" fill=\"currentColor\"/><polygon points=\"2 8 8 8 8 2 2 2 2 8\" fill=\"currentColor\"/></g></g></g></g>"
+ },
+ "googlecloudfirestore": {
+  "title": "Firestore",
+  "coverage": 0.36,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" transform=\"matrix(1.1159 0 0 1.1159 -1.3913 -1.3913)\"><defs/><g data-name=\"Product Icons\"><g data-name=\"colored-32/firestore\"><g><path d=\"M21,13,12,9v4l9,4Zm0-7L12,2V6l9,4Z\" fill=\"rgb(102, 157, 246)\"/><polygon id=\"googlecloudfirestore-Rectangle-7\" points=\"3 6 12 2 12 6 3 10 3 6\" fill=\"rgb(174, 203, 250)\"/><polygon id=\"googlecloudfirestore-Rectangle-7-2\" data-name=\"Rectangle-7\" points=\"3 13 12 9 12 13 3 17 3 13\" fill=\"rgb(174, 203, 250)\"/><polygon id=\"googlecloudfirestore-Rectangle-7-3\" data-name=\"Rectangle-7\" points=\"12 18 15.37 16.5 19.88 18.5 12 22 12 18\" fill=\"rgb(66, 133, 244)\"/></g></g></g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(1.1159 0 0 1.1159 -1.3913 -1.3913)\"><defs/><g data-name=\"Product Icons\"><g data-name=\"colored-32/firestore\"><g><path d=\"M21,13,12,9v4l9,4Zm0-7L12,2V6l9,4Z\" fill=\"currentColor\"/><polygon id=\"googlecloudfirestore-m-Rectangle-7\" points=\"3 6 12 2 12 6 3 10 3 6\" fill=\"currentColor\"/><polygon id=\"googlecloudfirestore-m-Rectangle-7-2\" data-name=\"Rectangle-7\" points=\"3 13 12 9 12 13 3 17 3 13\" fill=\"currentColor\"/><polygon id=\"googlecloudfirestore-m-Rectangle-7-3\" data-name=\"Rectangle-7\" points=\"12 18 15.37 16.5 19.88 18.5 12 22 12 18\" fill=\"currentColor\"/></g></g></g></g>"
  },
  "adk": {
   "title": "Agent Development Kit",
   "coverage": 0.317,
   "light": "colour",
   "dark": "colour",
-  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> </defs></g>",
-  "mono": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g></g>"
+  "body": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g clip-path=\"url(#adk-clip0_756_3354)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"rgb(234, 67, 53)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"rgb(66, 133, 244)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"rgb(52, 168, 83)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"rgb(251, 188, 4)\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"rgb(66, 133, 244)\"/> </g> <defs> <clipPath id=\"adk-clip0_756_3354\"> <rect width=\"12.6294\" height=\"14\" fill=\"white\" transform=\"translate(2 1)\"/> </clipPath> </defs></g>",
+  "mono": "<g fill=\"none\" transform=\"matrix(1.7203 0 0 1.7203 -2.3049 -1.7618)\"><g clip-path=\"url(#adk-m-clip0_756_3354)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M8.69139 10.1458C8.89799 10.3937 8.8645 10.7622 8.61657 10.9688L7.07351 12.2547L8.61657 13.5406C8.8645 13.7472 8.89799 14.1157 8.69139 14.3636C8.48478 14.6115 8.11631 14.645 7.86838 14.4384L5.82029 12.7317C5.52243 12.4834 5.52242 12.026 5.82029 11.7777L7.86838 10.071C8.11631 9.86438 8.48478 9.89788 8.69139 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4459 10.1458C11.2393 10.3937 11.2728 10.7622 11.5207 10.9688L13.0638 12.2547L11.5207 13.5406C11.2728 13.7472 11.2393 14.1157 11.4459 14.3636C11.6525 14.6115 12.021 14.645 12.2689 14.4384L14.317 12.7317C14.6149 12.4834 14.6149 12.026 14.317 11.7777L12.2689 10.071C12.021 9.86438 11.6525 9.89788 11.4459 10.1458Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M5.94165 2.19288C4.44903 2.19288 3.23902 3.40289 3.23902 4.89551C3.23902 6.38813 4.44903 7.59814 5.94165 7.59814H8.60776V8.76685H5.94165C3.80357 8.76685 2.07031 7.03359 2.07031 4.89551C2.07031 2.75743 3.80357 1.02417 5.94165 1.02417H9.73995C10.0627 1.02417 10.3243 1.28579 10.3243 1.60852C10.3243 1.93125 10.0627 2.19288 9.73995 2.19288H5.94165Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.6895 2.19288C12.1821 2.19288 13.3922 3.40289 13.3922 4.89551C13.3922 6.38813 12.1821 7.59814 10.6895 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.6895C12.8276 8.76685 14.5609 7.03359 14.5609 4.89551C14.5609 2.75743 12.8276 1.02417 10.6895 1.02417H6.89123C6.5685 1.02417 6.30687 1.28579 6.30687 1.60852C6.30687 1.93125 6.5685 2.19288 6.89123 2.19288H10.6895Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.23902 10.739H4.18859C4.51132 10.739 4.77295 10.4774 4.77295 10.1547C4.77295 9.83196 4.51132 9.57033 4.18859 9.57033H3.01989C2.49545 9.57033 2.07031 9.99547 2.07031 10.5199V14.026C2.07031 14.5505 2.49545 14.9756 3.01989 14.9756H4.18859C4.51132 14.9756 4.77295 14.714 4.77295 14.3912C4.77295 14.0685 4.51132 13.8069 4.18859 13.8069H3.23902V10.739Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.9452 8.1825C10.9452 7.85977 10.6836 7.59814 10.3608 7.59814H6.89123C6.5685 7.59814 6.30687 7.85977 6.30687 8.1825C6.30687 8.50523 6.5685 8.76685 6.89123 8.76685H10.3608C10.6836 8.76685 10.9452 8.50523 10.9452 8.1825Z\" fill=\"currentColor\"/> <path d=\"M6.74514 4.89551C6.74514 5.25858 6.45081 5.55291 6.08774 5.55291C5.72467 5.55291 5.43034 5.25858 5.43034 4.89551C5.43034 4.53244 5.72467 4.23811 6.08774 4.23811C6.45081 4.23811 6.74514 4.53244 6.74514 4.89551Z\" fill=\"currentColor\"/> <path d=\"M11.2739 4.89551C11.2739 5.25858 10.9795 5.55291 10.6165 5.55291C10.2534 5.55291 9.95908 5.25858 9.95908 4.89551C9.95908 4.53244 10.2534 4.23811 10.6165 4.23811C10.9795 4.23811 11.2739 4.53244 11.2739 4.89551Z\" fill=\"currentColor\"/> </g> <defs> <clipPath id=\"adk-m-clip0_756_3354\"> <rect width=\"12.6294\" height=\"14\" fill=\"white\" transform=\"translate(2 1)\"/> </clipPath> </defs></g>"
  }
 };
 /* /sheet:logos */
@@ -174,7 +273,9 @@ const LOGOS = window.LOGOS = {
    sheet:js markers; edit it here, never in a copy. SKILL.md documents the calls. */
 function Sheet(svg, opt = {}) {
   const NS = 'http://www.w3.org/2000/svg';
-  const LOGO = 14; // the one logo size on every sheet, in user units
+  // the one logo size on a sheet, in user units: 14 in the sheet style, 20 on the board, where colour
+  // carries more of the picture
+  const LOGO = opt.style === 'board' ? 20 : 14;
   const INSET = 8; // a card's logo slot: this far in from its right edge, centred on its first text row
   const modes = opt.modes ?? [];
   const ids = modes.map(m => m.id);
@@ -186,6 +287,14 @@ function Sheet(svg, opt = {}) {
   const knocks = []; // every knock-out, painted by done() to match what lies behind each half
   const edges = []; // every edge, for the bridges done() draws where two cross
   const HOP = 4; // a bridge's radius
+  const HEAD = [24, 32]; // the headline's baseline start; the drawing starts at TOP or below
+  const TOP = 64;
+  const steps = []; // numbered step badges, raised above every edge by done()
+  // The style: 'sheet' (ink on paper, the default) or 'board' (soft panels, accent bars, filled step
+  // badges). Only the stylesheet changes: every call, coordinate and check is the same in both.
+  const style = opt.style ?? 'sheet';
+  if (!['sheet', 'board'].includes(style)) throw new Error(`draw-architecture: no style "${style}" (sheet or board)`);
+  document.documentElement.dataset.style = style;
 
   const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
   const pick = v => (isModal(v) ? v[mode] : v);
@@ -232,7 +341,7 @@ function Sheet(svg, opt = {}) {
   };
 
   const defs = el('defs');
-  for (const [id, color] of [['ink', 'ink'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
+  for (const [id, color] of [['ink', 'wire'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
     const m = el('marker', { id: `arrow-${id}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m).style.fill = `var(--${color})`;
   }
@@ -243,6 +352,10 @@ function Sheet(svg, opt = {}) {
   const screen = el('pattern', { id: 'screen', patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, defs);
   el('rect', { width: 6, height: 6, class: 'screen-bg' }, screen);
   el('circle', { cx: 3, cy: 3, r: 0.75, class: 'screen-dot' }, screen);
+
+  // The headline: the one line above the drawing that says the question the sheet answers, or its
+  // takeaway; drawn first, at the top left, so the drawing starts below it (the checker holds the rest).
+  if (opt.headline !== undefined) text(svg, HEAD[0], HEAD[1], opt.headline, 'headline');
 
   // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
   // edge: 'bottom' (a title block, for a frame that edges enter from above).
@@ -266,9 +379,14 @@ function Sheet(svg, opt = {}) {
 
   // A card: an optional overline (the package a grey card is), a title, then lines: a string is sans,
   // {mono: '...'} is mono; any text may be {<mode>: '...'}. The logo sits in the top-right slot.
-  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id }) => {
+  // accent: 'teal' | 'violet' | 'amber' marks the card's role with a bar on its left edge in the board
+  // style (the legend says which role each hue is); the sheet style, two pencils only, draws no bar.
+  const ACCENTS = ['teal', 'violet', 'amber'];
+  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id, accent }) => {
+    if (accent && !ACCENTS.includes(accent)) throw new Error(`draw-architecture: no accent "${accent}" (${ACCENTS.join(', ')})`);
     const g = el('g');
     const r = el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${pkg ? 'pkg' : ''} ${cls}` }, g);
+    if (accent) el('rect', { x: x + 1, y: y + 10, width: 3, height: h - 20, rx: 1.5, class: `accent ${accent}` }, g);
     if (cls.includes('phantom')) phantoms.push(r);
     if (hatched) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
     const halo = hatched ? ' halo' : '';
@@ -281,7 +399,8 @@ function Sheet(svg, opt = {}) {
       const mono = line !== null && typeof line === 'object' && 'mono' in line;
       text(g, x + 12, y1, mono ? line.mono : line, (mono ? 'mono dim' : 'sub') + halo);
     });
-    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', row - LOGO / 2); }
+    // centred on the first text row, kept 6 inside the card's top (a board's larger logo on an overline)
+    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', Math.max(row - LOGO / 2, y + 6)); }
     return r;
   };
 
@@ -336,6 +455,15 @@ function Sheet(svg, opt = {}) {
     el('circle', { cx: x, cy: y, r: 6.5, class: 'mark' }, parent);
     text(parent, x, y + 4, '=', 'mono', { 'text-anchor': 'middle' });
   };
+  // A numbered step on the sheet's main path, set on an edge: the numbers carry the order, so the edges
+  // need no words. Drawn above every edge (done() raises it).
+  const step = (x, y, n, parent = svg) => {
+    const g = el('g', { class: 'step' }, parent);
+    el('circle', { cx: x, cy: y, r: 9, class: 'step-dot' }, g);
+    text(g, x, y + 4, String(n), 'step-n', { 'text-anchor': 'middle' });
+    if (parent === svg) steps.push(g);
+    return g;
+  };
 
   // A legend that lays itself out from (x, y), left to right, or top to bottom with {column: true} (in a
   // margin beside the sheet); each item is [kind, label].
@@ -353,6 +481,11 @@ function Sheet(svg, opt = {}) {
       vermilion: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region vermilion' }, g),
       tick: cx => tick(cx + 15, y, g),
       equal: cx => equal(cx + 15, y, g),
+      step: cx => step(cx + 15, y, 1, g),
+      ...Object.fromEntries(ACCENTS.map(a => [a, cx => {
+        el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g);
+        el('rect', { x: cx + 3, y: y - 5, width: 3, height: 10, rx: 1.5, class: `accent ${a}` }, g);
+      }])),
     };
     let cx = x;
     for (const [kind, label] of items) {
@@ -378,12 +511,16 @@ function Sheet(svg, opt = {}) {
   const band = () => {
     for (const f of frames) f.depth = frames.filter(o => inside(f, o)).length;
     for (const f of frames) f.rect.classList.add(f.depth === 0 ? 'band-open' : f.depth % 2 ? 'band-tint' : 'band-paper');
+    // each knock-out half is painted like the band it sits on: outside every frame, an outermost frame,
+    // an odd level (screened) or an even one; the style decides the fill of each
     const first = svg.querySelector('defs')?.nextSibling ?? svg.firstChild;
     for (const f of [...frames].sort((a, b) => a.depth - b.depth)) svg.insertBefore(f.rect, first);
     for (const r of knocks) {
       const c = { x: +r.getAttribute('x') + 1, y: +r.getAttribute('y') + 4, w: 0, h: 0 };
       const home = frames.filter(f => inside(c, f) || (c.x >= f.x && c.x <= f.x + f.w && c.y > f.y && c.y < f.y + f.h)).sort((a, b) => b.depth - a.depth)[0];
       r.classList.toggle('tint', !!home && home.depth % 2 === 1);
+      r.classList.toggle('k-open', !!home && home.depth === 0);
+      r.classList.toggle('k-even', !!home && home.depth > 0 && home.depth % 2 === 0);
     }
   };
 
@@ -443,6 +580,7 @@ function Sheet(svg, opt = {}) {
   const done = ({ unmarked = {} } = {}) => {
     band();
     bridge();
+    for (const g of steps) svg.appendChild(g);
     const params = new URLSearchParams(location.search);
     if (opt.bar && modes.length > 1) {
       if (params.has('static')) opt.bar.hidden = true;
@@ -460,87 +598,88 @@ function Sheet(svg, opt = {}) {
       const want = params.get('mode') ?? saved;
       if (want && ids.includes(want) && want !== mode) setMode(want);
     }
-    window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked };
+    window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked, logo: LOGO };
   };
 
-  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO };
+  return { el, text, frame, card, phantom, region, edge, tick, equal, step, legend, done, setMode, LOGO, TOP, style };
 }
 
 // Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
 // loads lazily, on first use, so text drawn before any mono text exists is measured in a fallback font.
 Sheet.ready = () => Promise.all([
   '700 13px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Mono"',
+  '700 11px "Atkinson Hyperlegible Next"',
 ].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
 /* /sheet:js */
 Sheet.ready().then(() => {
-  const S = Sheet(document.getElementById('d'), { logos: LOGOS });
+  const S = Sheet(document.getElementById('d'), { logos: LOGOS, headline: 'How the platform runs on GCP, from sources to the agent' });
 
   // ---- where the data comes from
-  S.card({ x: 24, y: 160, w: 104, h: 56, title: 'sources', lines: ['APIs, files, CRM'] });
-  S.edge('M128,192 H168');
+  S.card({ x: 24, y: 200, w: 104, h: 56, title: 'sources', lines: ['APIs, files, CRM'] });
+  S.edge('M128,232 H168');
 
-  S.frame({ x: 144, y: 24, w: 896, h: 600, title: 'GCP project', note: 'us-central1, BigQuery in US' });
+  S.frame({ x: 144, y: 64, w: 896, h: 600, title: 'GCP project', note: 'us-central1, BigQuery in US' });
 
   // ---- orchestration: a schedule starts a workflow per pipeline (semantic/PLAN.md SL-13)
-  S.card({ x: 168, y: 56, w: 160, h: 56, title: 'Cloud Scheduler', lines: ['a schedule per pipeline'] });
-  S.card({ x: 360, y: 56, w: 336, h: 56, title: 'Cloud Workflows', lines: ['extract, build, then record readiness'] });
-  S.edge('M328,84 H360');
-  S.edge('M364,112 V216 H328');
-  S.edge('M380,112 V384 H328');
-  S.edge('M680,112 V160', { label: { text: 'readiness', at: [688, 132], anchor: 'start' } });
-  S.edge('M168,96 H156 V480 H168');
+  S.card({ x: 168, y: 96, w: 160, h: 56, title: 'Cloud Scheduler', lines: ['a schedule per pipeline'], logo: 'googlecloudscheduler' });
+  S.card({ x: 360, y: 96, w: 336, h: 56, title: 'Cloud Workflows', lines: ['extract, build, then record readiness'], logo: 'googlecloudworkflows' });
+  S.edge('M328,136 H360');
+  S.edge('M364,152 V256 H328');
+  S.edge('M380,152 V424 H328');
+  S.edge('M680,152 V200', { label: { text: 'readiness', at: [688, 172], anchor: 'start' } });
+  S.edge('M168,136 H156 V520 H168');
 
   // ---- extraction and transformation jobs
-  S.card({ x: 168, y: 160, w: 160, h: 64, title: 'EL Factory', lines: ['Cloud Run service', 'stages, then loads'], logo: 'googlecloudrun' });
-  S.card({ x: 168, y: 256, w: 160, h: 56, title: 'Cloud Storage', lines: [{ mono: 'landing files' }], logo: 'googlecloudstorage' });
-  S.edge('M248,224 V256');
-  S.card({ x: 168, y: 352, w: 160, h: 64, title: 'dbt build', lines: ['Cloud Run Job', 'one pipeline stage'], logo: 'dbt' });
-  S.card({ x: 168, y: 448, w: 160, h: 64, title: 'source freshness', lines: ['Cloud Run Job, hourly', 'thresholds in dbt'] });
-  S.card({ x: 168, y: 552, w: 160, h: 56, title: 'Cloud Monitoring', lines: ['SourceStale, failed jobs'] });
-  S.edge('M248,512 V552', { reads: true });
+  S.card({ x: 168, y: 200, w: 160, h: 64, title: 'EL Factory', lines: ['Cloud Run service', 'stages, then loads'], logo: 'googlecloudrun' });
+  S.card({ x: 168, y: 296, w: 160, h: 56, title: 'Cloud Storage', lines: [{ mono: 'landing files' }], logo: 'googlecloudstorage' });
+  S.edge('M248,264 V296');
+  S.card({ x: 168, y: 392, w: 160, h: 64, title: 'dbt build', lines: ['Cloud Run Job', 'one pipeline stage'], logo: 'dbt' });
+  S.card({ x: 168, y: 488, w: 160, h: 64, title: 'source freshness', lines: ['Cloud Run Job, hourly', 'thresholds in dbt'] });
+  S.card({ x: 168, y: 592, w: 160, h: 56, title: 'Cloud Monitoring', lines: ['SourceStale, failed jobs'], logo: 'googlecloudmonitoring' });
+  S.edge('M248,552 V592', { reads: true });
 
   // ---- the warehouse: a dataset per layer, each hop checked in dbt build
-  S.frame({ x: 392, y: 136, w: 384, h: 392, title: 'BigQuery', note: 'a dataset per layer', logo: 'googlebigquery' });
-  S.card({ x: 408, y: 160, w: 168, h: 40, title: 'ds_source', tcls: 'mono' });
-  S.card({ x: 408, y: 224, w: 168, h: 40, title: 'bronze', tcls: 'mono' });
-  S.card({ x: 408, y: 288, w: 168, h: 56, title: 'silver', tcls: 'mono', lines: ['the semantic models'] });
-  S.card({ x: 408, y: 368, w: 168, h: 40, title: 'gold', tcls: 'mono' });
-  S.card({ x: 408, y: 432, w: 168, h: 40, title: 'exposed', tcls: 'mono' });
-  S.edge('M492,200 V224'); S.tick(492, 212);
-  S.edge('M492,264 V288'); S.tick(492, 276);
-  S.edge('M492,344 V368'); S.tick(492, 356);
-  S.edge('M492,408 V432'); S.tick(492, 420);
-  S.edge('M328,196 H408');
-  S.edge('M328,400 H408', { label: { text: 'builds', at: [354, 394] } });
+  S.frame({ x: 392, y: 176, w: 384, h: 392, title: 'BigQuery', note: 'a dataset per layer', logo: 'googlebigquery' });
+  S.card({ x: 408, y: 200, w: 168, h: 40, title: 'ds_source', tcls: 'mono' });
+  S.card({ x: 408, y: 264, w: 168, h: 40, title: 'bronze', tcls: 'mono' });
+  S.card({ x: 408, y: 328, w: 168, h: 56, title: 'silver', tcls: 'mono', lines: ['the semantic models'] });
+  S.card({ x: 408, y: 408, w: 168, h: 40, title: 'gold', tcls: 'mono' });
+  S.card({ x: 408, y: 472, w: 168, h: 40, title: 'exposed', tcls: 'mono' });
+  S.edge('M492,240 V264'); S.tick(492, 252);
+  S.edge('M492,304 V328'); S.tick(492, 316);
+  S.edge('M492,384 V408'); S.tick(492, 396);
+  S.edge('M492,448 V472'); S.tick(492, 460);
+  S.edge('M328,236 H408');
+  S.edge('M328,440 H408', { label: { text: 'builds', at: [354, 434] } });
 
-  S.card({ x: 600, y: 160, w: 160, h: 80, title: 'ops', tcls: 'mono', lines: [{ mono: 'readiness, deadlines' }, { mono: 'source_freshness' }, { mono: 'agent_queries' }] });
-  S.card({ x: 600, y: 280, w: 160, h: 72, title: 'semantic', tcls: 'mono', lines: [{ mono: 'metrics, glossary' }, { mono: 'time_spine' }] });
-  S.edge('M328,480 H588 V232 H600');
+  S.card({ x: 600, y: 200, w: 160, h: 80, title: 'ops', tcls: 'mono', lines: [{ mono: 'readiness, deadlines' }, { mono: 'source_freshness' }, { mono: 'agent_queries' }] });
+  S.card({ x: 600, y: 320, w: 160, h: 72, title: 'semantic', tcls: 'mono', lines: [{ mono: 'metrics, glossary' }, { mono: 'time_spine' }] });
+  S.edge('M328,520 H588 V272 H600');
 
   // ---- around the warehouse: the catalog and the audit
-  S.card({ x: 392, y: 552, w: 184, h: 56, title: 'Knowledge Catalog', lines: ['descriptions, dbt import'] });
-  S.edge('M480,472 V552', { reads: true });
-  S.card({ x: 600, y: 552, w: 176, h: 56, title: 'Data Access log', lines: ['every job, its labels'] });
+  S.card({ x: 392, y: 592, w: 184, h: 56, title: 'Knowledge Catalog', lines: ['descriptions, dbt import'] });
+  S.edge('M480,512 V592', { reads: true });
+  S.card({ x: 600, y: 592, w: 176, h: 56, title: 'Data Access log', lines: ['every job, its labels'], logo: 'googlecloudlogging' });
 
   // ---- the agent, and what replaces its tools at work
-  S.card({ x: 808, y: 160, w: 216, h: 56, title: 'Firestore', lines: ['ADK sessions'] });
-  S.card({ x: 808, y: 272, w: 216, h: 72, title: 'semantic agent', lines: ['Cloud Run service', 'three metric tools, MetricFlow'], logo: 'adk' });
-  S.edge('M916,272 V216', { label: { text: 'sessions', at: [924, 248], anchor: 'start' } });
-  S.edge('M808,288 H784 V224 H760', { reads: true, tone: 'cobalt' });
-  S.edge('M808,316 H760', { reads: true, tone: 'cobalt' });
-  S.card({ x: 808, y: 376, w: 216, h: 56, title: 'Model Armor', lines: ['screens each model call'] });
-  S.card({ x: 808, y: 456, w: 216, h: 56, title: 'Gemini', lines: ['chooses the tool and arguments'], hatch: true });
-  S.edge('M916,344 V376');
-  S.edge('M916,432 V456');
-  S.card({ x: 808, y: 552, w: 216, h: 56, title: 'BigQuery data agent', lines: ['context generated by the build'], cls: 'phantom' });
-  S.edge('M808,336 H796 V580 H808');
+  S.card({ x: 808, y: 200, w: 216, h: 56, title: 'Firestore', lines: ['ADK sessions'], logo: 'googlecloudfirestore' });
+  S.card({ x: 808, y: 312, w: 216, h: 72, title: 'semantic agent', lines: ['Cloud Run service', 'three metric tools, MetricFlow'], logo: 'adk' });
+  S.edge('M916,312 V256', { label: { text: 'sessions', at: [924, 288], anchor: 'start' } });
+  S.edge('M808,328 H784 V264 H760', { reads: true, tone: 'cobalt' });
+  S.edge('M808,356 H760', { reads: true, tone: 'cobalt' });
+  S.card({ x: 808, y: 416, w: 216, h: 56, title: 'Model Armor', lines: ['screens each model call'] });
+  S.card({ x: 808, y: 496, w: 216, h: 56, title: 'Gemini', lines: ['chooses the tool and arguments'], hatch: true });
+  S.edge('M916,384 V416');
+  S.edge('M916,472 V496');
+  S.card({ x: 808, y: 592, w: 216, h: 56, title: 'BigQuery data agent', lines: ['context generated by the build'], cls: 'phantom' });
+  S.edge('M808,376 H796 V620 H808');
 
   // ---- who asks
-  S.card({ x: 1064, y: 272, w: 112, h: 64, title: 'business user', lines: ['asks in words'] });
-  S.edge('M1064,308 H1024');
-  S.edge('M1024,328 H1064');
+  S.card({ x: 1064, y: 312, w: 112, h: 64, title: 'business user', lines: ['asks in words'] });
+  S.edge('M1064,348 H1024');
+  S.edge('M1024,368 H1064');
 
-  S.legend(24, 656, [['card', "this repo's code, a GCP service"], ['hatch', 'the model'], ['phantom', 'the native alternative'], ['calls', 'calls, writes'], ['reads', 'reads'], ['cobalt', "the agent's read-only account"], ['tick', 'a hop checked in dbt build']]);
+  S.legend(24, 696, [['card', "this repo's code, a GCP service"], ['hatch', 'the model'], ['phantom', 'the native alternative'], ['calls', 'calls, writes'], ['reads', 'reads'], ['cobalt', "the agent's read-only account"], ['tick', 'a hop checked in dbt build']]);
   S.done();
 });
 </script>
