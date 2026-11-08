@@ -368,16 +368,16 @@ async function selftest(browser) {
       await hs(state);
     };
     // a side column folded behind its button (a phone) opens before a control inside it is used
-    const unfold = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const a = el && el.closest(".rk-aside"); const b = a && a.querySelector(".fold-btn"); if (b && !b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }, sel); };
+    const unfold = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const a = el && el.closest(".rk-aside"); const b = a && a.querySelector(".rk-fold"); if (b && !b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }, sel); };
     const openView = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const v = el && el.closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, sel); await settle(page); };
     const viewNames = await page.$$eval(".view", (vs) => vs.map((v) => v.dataset.view));
     if (!viewNames.length) await run("rest", null, true);
     for (const vn of viewNames) { await page.evaluate((vn) => window.__reportViews.show(vn), vn); await settle(page); await run("rest view=" + vn, null, true); }
     // every folded side column, opened, so its own words are checked too
-    const folds = await page.$$eval(".rk-aside .fold-btn", (bs) => bs.filter((b) => !b.hidden).length);
+    const folds = await page.$$eval(".rk-aside .rk-fold", (bs) => bs.filter((b) => !b.hidden).length);
     if (folds) {
-      await openView(".rk-aside .fold-btn");
-      await page.evaluate(() => document.querySelectorAll(".rk-aside .fold-btn").forEach((b) => { if (!b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }));
+      await openView(".rk-aside .rk-fold");
+      await page.evaluate(() => document.querySelectorAll(".rk-aside .rk-fold").forEach((b) => { if (!b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }));
       await settle(page); await run("folds open", null, true);
     }
     // every set switch, the report's own (.seg) and the kit's (.rk-switch) on the tabs moved onto report-kit
