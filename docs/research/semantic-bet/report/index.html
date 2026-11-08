@@ -434,18 +434,8 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
 
-/* a side column's fold (window.reportFold): one full-width button, the column's name and its current choice, with a
-   chevron that turns when open; the folded part is gone, not hidden behind a scroll */
-.fold-btn { appearance: none; display: flex; width: 100%; align-items: center; gap: var(--s3); min-height: 44px; padding: var(--s2) var(--s3);
-  border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); font: 700 var(--t-word)/1.3 var(--sans); text-align: left; cursor: pointer }
-.fold-btn[hidden] { display: none }
-.fold-btn:hover { background: var(--row) }
-.fold-btn:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
-.fold-btn .fold-cur { margin-left: auto; font: 600 .9375rem/1.3 var(--code); overflow-wrap: anywhere; text-align: right }
-.fold-btn svg { flex: none; width: 16px; height: 16px; transition: transform var(--t-fast) ease-out }
-.fold-btn[aria-expanded="true"] svg { transform: rotate(180deg) }
-.folded { display: none !important }
-@media (prefers-reduced-motion: reduce) { .fold-btn svg { transition: none } }
+/* the Setups ladders fold behind the kit's .rk-fold on a phone; its current choice is a setup id, in the mono face */
+.st .rk-fold-cur { font: 600 .9375rem/1.3 var(--code) }
 
 /* the Setups tab: its two sections (the setup map, the setup explorer) as kit sections, each head the kit's over a
    2px ink rule; their words in the kit's family at 1rem in full ink (the sections' own rules), their bands on --row,
@@ -532,27 +522,6 @@ window.REPORT = D;
   const q = []; let ready = false;
   window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
   window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
-  // A long side column (a ladder to pick from) folds behind a disclosure button once it stacks above the stage it
-  // drives, so the stage starts on the first screen (the kit's side-column standard); side by side, the button hides and
-  // the column stays open. The button shows the current choice (setCurrent). Sections call it with their column's
-  // button, the part it folds and the stage.
-  window.reportFold = function (btn, panel, stage) {
-    let stacked = null;
-    const aside = btn.parentElement;
-    const set = (open) => { panel.classList.toggle("folded", !open); btn.setAttribute("aria-expanded", String(open)); };
-    const sync = () => {
-      const s = stage.getBoundingClientRect().top >= aside.getBoundingClientRect().bottom - 1;
-      if (s === stacked) return;
-      stacked = s; btn.hidden = !s; set(!s);
-    };
-    btn.addEventListener("click", () => set(panel.classList.contains("folded")));
-    if (window.ResizeObserver) new ResizeObserver(sync).observe(stage.parentElement); else window.addEventListener("resize", sync);
-    sync();
-    return {
-      close() { if (stacked) set(false); },
-      setCurrent(text) { const c = btn.querySelector(".fold-cur"); if (c) c.textContent = text || ""; },
-    };
-  };
   window.reportTheme = function () {
     const a = document.documentElement.getAttribute("data-theme");
     if (a === "light" || a === "dark") return a;
@@ -1325,7 +1294,7 @@ button[data-tip], a[data-tip] { cursor: pointer }
 <div class="sxb-wrap rk-split">
   <div class="sxb-pick rk-aside">
     <h3 class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</h3>
-    <button type="button" class="fold-btn" aria-controls="sxb-ladder" aria-expanded="true" hidden><span class="vh">The cost ladder, now on </span><span class="fold-cur"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="rk-fold" aria-controls="sxb-ladder" hidden><span class="vh">The cost ladder, now on </span><span class="rk-fold-cur"></span></button>
     <div class="sxb-ladder" id="sxb-ladder"><div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
     <div class="sxb-fams"></div></div>
   </div>
@@ -1976,25 +1945,25 @@ window.reportReady(() => {
     root.querySelector(".sxb-legend").innerHTML = legend(S);
     root.querySelectorAll(".sxb-chip").forEach((c) => { const on = c.dataset.arm === a; c.setAttribute("aria-checked", on ? "true" : "false"); c.tabIndex = on ? 0 : -1; });
     root.querySelectorAll(".sxb-rung").forEach((r) => r.classList.toggle("on", r.dataset.rung === String(rungOf[a])));
-    fold.setCurrent(a);
+    window.ReportKit.fold.current(foldBtn, a);
   }
 
   /* ---------- the selector ---------- */
   const pick = root.querySelector(".sxb-rungs");
   pick.innerHTML = rungs.map((r, i) => `<div class="sxb-rung${r.arms.length ? "" : " empty"}" data-rung="${i}" role="group" aria-label="${esc(r.label)}">
-      <p class="sxb-rl">${esc(r.label)}</p>${r.arms.length ? `<div class="sxb-chips">${r.arms.map((a) => `<button type="button" class="sxb-chip" role="radio" aria-checked="false" tabindex="-1" data-arm="${esc(a)}"><i style="background:var(--${famOf(a)})"></i>${esc(a)}</button>`).join("")}</div>` : ""}</div>`).join("");
+      <p class="sxb-rl">${esc(r.label)}</p>${r.arms.length ? `<div class="sxb-chips">${r.arms.map((a) => `<button type="button" class="sxb-chip" data-rk-fold-pick role="radio" aria-checked="false" tabindex="-1" data-arm="${esc(a)}"><i style="background:var(--${famOf(a)})"></i>${esc(a)}</button>`).join("")}</div>` : ""}</div>`).join("");
   const famsUsed = FAMS.concat(["other"]).filter((f) => order.some((a) => famOf(a) === f));
   root.querySelector(".sxb-fams").innerHTML = famsUsed.map((f) => `<span><i style="background:var(--${f})"></i>${esc(famLabel(f))}</span>`).join("");
   const setHash = (a) => { try { history.replaceState(null, "", "#setup-" + a); } catch (e) {} };
   function choose(a, focus) { if (a === sel) { if (focus) focusChip(a); return; } show(a, true); setHash(a); if (focus) focusChip(a); }
   const focusChip = (a) => { const c = root.querySelector(`.sxb-chip[data-arm="${CSS.escape(a)}"]`); if (c) c.focus(); };
   // stacked above the stage (a phone), the ladder folds behind a button that names the chosen setup; a pick closes it
-  const foldBtn = root.querySelector(".sxb-pick .fold-btn");
-  const fold = window.reportFold(foldBtn, root.querySelector(".sxb-ladder"), root.querySelector(".sxb-stage"));
+  // (the kit's fold: a click on a chip, marked data-rk-fold-pick, closes it and gives its button the focus)
+  const foldBtn = root.querySelector(".sxb-pick .rk-fold");
+  window.ReportKit.fold.init(root);
   pick.addEventListener("click", (e) => {
     const c = e.target.closest(".sxb-chip"); if (!c) return;
     choose(c.dataset.arm, false);
-    if (!foldBtn.hidden) { fold.close(); foldBtn.focus(); }
   });
   pick.addEventListener("keydown", (e) => {
     const c = e.target.closest(".sxb-chip"); if (!c) return;
@@ -2042,7 +2011,6 @@ window.reportReady(() => {
    without a border; the setup or rung it holds is a reversed plate */
 .sm .sm-aside { margin: 0 0 var(--gap-part); }
 .sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0; padding: 0; list-style: none; }
-.sm .fold-btn:not([hidden]) + .sm-rungs { margin-top: var(--s3); }
 .sm .sm-rung { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 0; }
 .sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
 .sm .sm-rhd small { display: block; font-size: var(--t-word); font-weight: 400; color: var(--ink); }
@@ -2166,10 +2134,10 @@ window.reportReady(() => {
   <p class="sm-lede">Every setup on one map: each part is drawn once, where it runs, and a setup is the path through the parts it uses.</p>
   <div class="sm-body">
   <div class="sm-aside rk-aside">
-  <button type="button" class="fold-btn" aria-controls="sm-rungs" aria-expanded="true" hidden>The cost ladder<span class="fold-cur"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button type="button" class="rk-fold" aria-controls="sm-rungs" hidden>The cost ladder<span class="rk-fold-cur"></span></button>
   <ul class="sm-rungs" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
   </div>
-  <div class="sm-side">
+  <div class="sm-side rk-stage">
   <figure class="sm-fig rk-fig">
   <div class="sm-scroll" tabindex="0" role="group" aria-label="Map of every setup; scrolls sideways on small screens"><svg class="sm-sheet" id="sm-svg" viewBox="0 0 1200 840" role="img" aria-labelledby="sm-svg-t"><title id="sm-svg-t">Map of every setup. In Google Cloud: the BigQuery data agent on Gemini, the context it is given, Knowledge Catalog, Google's MCP servers and BigQuery with its silver, governed, legacy, table-function and graph objects. On our machine: our ADK agent and a Claude Code subagent, MCP Toolbox, the Lightdash tool and server, a read-only SQL tool, the three MetricFlow tools and MetricFlow, and the warehouse stand-in. Model APIs: a free model and Claude.</title></svg></div>
   <ul class="sm-legend rk-key" id="sm-legend"></ul>
@@ -2546,8 +2514,8 @@ window.reportReady(() => {
     /* ---------- focus ---------- */
     const read = document.getElementById("sm-read");
     // stacked above the map (narrower than the wide layout), the ladder folds behind a button naming the pinned setup
-    const foldBtn = asideEl.querySelector(".fold-btn");
-    const fold = window.reportFold(foldBtn, listEl, document.querySelector("#setup-map .sm-side"));
+    const foldBtn = asideEl.querySelector(".rk-fold");
+    window.ReportKit.fold.init(asideEl.parentElement);
     let preview = null, pinned = null;
     const same = (a, b) => a && b && a.k === b.k && a.id === b.id;
     function armsFor(t) {
@@ -2625,7 +2593,7 @@ window.reportReady(() => {
       listEl.querySelectorAll(".sm-rung").forEach((r) => r.classList.toggle("on", ladder.some((l) => l.key === r.dataset.rung && l.arms.some((a) => arms.includes(a)))));
       listEl.querySelectorAll("button.sm-rhd").forEach((b) => b.setAttribute("aria-pressed", String(!!pinned && pinned.k === "r" && pinned.id === b.dataset.rung)));
       svg.querySelectorAll(".sm-cardg").forEach((g) => g.setAttribute("aria-pressed", String(!!pinned && pinned.k === "c" && pinned.id === g.dataset.c)));
-      fold.setCurrent(pinned && pinned.k === "s" ? pinned.id : "");
+      window.ReportKit.fold.current(foldBtn, pinned && pinned.k === "s" ? pinned.id : "");
       read.innerHTML = !t ? restText() : t.k === "s" ? setupText(t.id) : t.k === "r" ? rungText(t.id) : partText(t.id);
     }
     const targetOf = (el) => {
@@ -2653,8 +2621,8 @@ window.reportReady(() => {
         e.preventDefault(); const t = targetOf(e.target); pinned = same(t, pinned) ? null : t; apply();
       }
     });
-    // a pick on a phone closes the ladder, so the map and its readout come up under it
-    listEl.addEventListener("click", (e) => { if (!foldBtn.hidden && targetOf(e.target)) { fold.close(); foldBtn.focus(); } });
+    // a pick on a phone closes the ladder (the kit's fold), so the map and its readout come up under it
+    listEl.querySelectorAll("button").forEach((b) => b.setAttribute("data-rk-fold-pick", ""));
     const section = document.getElementById("setup-map");
     section.addEventListener("keydown", (e) => { if (e.key === "Escape" && pinned) { pinned = null; apply(); } });
     document.addEventListener("click", (e) => { if (pinned && !asideEl.contains(e.target) && !svg.contains(e.target) && !(e.target.closest && e.target.closest(".tip"))) { pinned = null; preview = null; apply(); } });
