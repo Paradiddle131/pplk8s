@@ -21,7 +21,8 @@ The tabs move to report-kit (vendored in `../report-kit/`) one at a time, each a
 On the kit: every tab (the Summary, the Decision map, the MetricFlow agent, Every run, Setups, Question sets, Method & glossary) and the report's shared chrome (the header, the tab strip and the hover tooltip), restyled with the second tab so the kit tabs and the chrome around them read as one page.
 Until every tab is on the kit, the kit is confined by its own markers' scopes:
 - CSS: `scope=.rk-kit` nests the kit under every element carrying `.rk-kit` (its `:root` and `body` rules land on each); `../brief/approaches.css` is nested the same way by `build.py` (`scope_to_panel`), and each `.rk-kit` keeps the page's ground (`--report-paper`).
-  The kit's token names (`--paper`, `--ink`, `--tip`) collide with the report's, which is why the scope stays until the last tab moves.
+  The kit's token names (`--paper`, `--ink`, `--tip`, and `--s2` to `--s5`, the report's blue ramp against the kit's spacing steps) collide with the report's.
+  With every tab on the kit the scope still stays: unscoping is a token rename across the page, checked tab by tab, not part of a tab's restyle; the options and the recommendation (drop the CSS scope after the rename, keep the JS scope while the report keeps its own tooltip) wait for the owner in [#418](../../../../../../issues/418).
 - The header, the tab strip, the Summary and Decision map panels and the tooltip carry `.rk-kit`; their own rules (the parts the kit has no component for) are in the template's "On report-kit" block, every colour a kit token.
 - JS: `scope=.rk-js` runs the kit's scripts only inside the Summary panel and the Decision map's filter; the map's cells and the other tabs use `data-tip` for the report's rich tooltip, which ignores anything inside `#summary`.
   The js marker also names `plot-theme`, which only defines `ReportKit.plotTheme` and `ReportKit.plot`; the kit's script block sits right after the vendor marker, before the report's own script, so the figures can read the theme as they draw.
@@ -96,8 +97,8 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   - The explorer's "What changes from …" and "On one question" are two kit parts (`.rk-parts`: an h4 over each part's own 1px ink rule, broken by the column gap); the map's readout is a part too, its head the setup, rung or part it reads, then a tag line, the description once, then the facts.
   - One statement per fact: the tag line is the family and the rung's number ("Our agent on a semantic-layer server, rung 6"), never the rung's name again; the change summary over the list of changes is gone (the list says it); captions under a sequence that restated it are gone (two stay, Claude Code's and Lightdash's, which say what the drawing cannot); the map's lede lost the two sentences its resting readout says.
   - The explorer's ladder column is 20rem, so the longest id fits on one line; the map's keeps 272 px (less padding than the kit's, so the map keeps its 944 px at 1260).
-  - Both ladders fold on a phone (owner, 2026-11-08, after the trial): stacked above their stage, each folds behind one full-width button naming the current choice (`window.reportFold` in the template: open beside the stage, folded once stacked, a pick closes it and gives the button the focus), so at 400 px the stage starts about 350 px into the section instead of 1,200; `tools/clipcheck.js` opens a fold before clicking inside it and checks every fold open once.
-    The fold is the page's own until the kit's `.rk-fold` (the same behaviour, proposed upstream with the other gaps the trial found) lands in loadout; then the page re-vendors the kit and drops `window.reportFold`.
+  - Both ladders fold on a phone (owner, 2026-11-08, after the trial): stacked above their stage, each folds behind one full-width button naming the current choice (the kit's `.rk-fold`, initialised by each section with `ReportKit.fold.init`: open beside the stage, folded once stacked, a pick closes it and gives the button the focus), so at 400 px the stage starts about 350 px into the section instead of 1,200; `tools/clipcheck.js` opens a fold before clicking inside it and checks every fold open once.
+    The page's own fold (`window.reportFold`, `.fold-btn`) is gone since the kit's landed; each pick is marked `data-rk-fold-pick`, and the button's current choice is a setup id in the mono face.
   - Pointing at a setup lights its row on a band with a 3px ink edge and a bold id; the rest of the list stays in full ink (it faded to 38% grey before, against the kit's no-muted-text rule); the map's drawing still steps its other parts back, as the kit's highlight does for marks.
   - The explorer's chips are rows of the panel: no border, a hover band, the chosen one a reversed plate (a bordered chip on the raised panel was a box inside a box).
 
@@ -114,7 +115,7 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   The focus starts on the dialog's heading (it started on the chosen row).
   Its script stays the page's own, not the kit's `dialog.js`: the page moves its own tooltip into the dialog while it is open, which the kit's dialog (made for the kit's bubble) does not do.
 - Headings step down one level at a time (the kit checker's outline check, new with this kit): the guide's question is an h4 under the kind's h3, the browser's an h3 under its h2 (it was an h5 in both, under an h2 in the browser); the setup map's readout heads in the Setups tab, h4 straight under the section's h2, are h3 now, in the same look.
-- The kit is re-vendored for this tab (fold, step and dialog, the runs of marks and the outline check); the Setups' own fold (`window.reportFold`) is not yet swapped for the kit's `.rk-fold`.
+- The kit is re-vendored for this tab (fold, step and dialog, the runs of marks and the outline check).
 
 ### Method & glossary on the kit
 
@@ -124,15 +125,15 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   It was a table in a scroll box of its own, with a "Term / What it means" head row and sticky, folding group rows on a tinted band; all of that is gone, so the page keeps one scroll and no entry is lost behind a fold.
   `build.py` writes the markup (`glossary_html`, every term `glossary()` gives, in `TERM_TYPES`' order), so every `#term-<key>` exists before any script runs; the page's own renderer (`renderGloss`, `glApply`) is gone.
 - Search and type: the kit's find (`find`): a find box with its label shown ("Find a term", no placeholder), one chip per type that wraps (on a phone too: the sideways strip with a hidden scrollbar is gone), each chip counting the matches in its type for what is typed, the count as a status ("87 terms", "2 of 87 terms shown"), and, when nothing matches, "No term matches." with a button that clears the box.
-  The count no longer says "a type's heading folds it" (a line on how to use a control); the search no longer marks its matches in the text (the kit's find has no marking).
+  The count no longer says "a type's heading folds it" (a line on how to use a control); the search marks the typed words in each entry shown, as the old glossary did (the kit's find marks them since the trial found it did not).
 - A link to an entry ("More in the glossary" in a pinned tooltip, or a `#term-<key>` hash from any tab) still lands on it: the page's router and its tooltip jump call `ReportKit.find.reveal`, which clears a search or a type that hides the entry, then scroll it under the tab strip (`#method .rk-glossary > div` sets its scroll margin to the strip's height, which the kit's own 48px margin fell 1px short of at 400px), flash it, and put "↑ Back" in its term.
 - The way back after a jump ("↑ Back") is at the word size in the kit's look on every kit tab (`.rk-kit .jumpback`); it was 12.5px in a paler ink.
-- An entry's facts get a 4px step between them (`#method .rk-facts-tight > div + div`): the kit sets them with no gap, and once a value wraps its rows read as one block (proposed upstream).
+- An entry's facts sit a 4px step apart, their labels at 600 under the term at the heading weight (700, 800 on dark), so the term heads its entry: both from the kit since the trial (it set them with no gap and at one weight, so a wrapped value ran into the next label and the term read as one more label).
 - The kit is re-vendored for this tab (the find component, labelled facts and the grouped glossary; a disabled step button now stays in sight in the kit itself, so the Question sets tab's own override is gone).
   The new kit checker adds two checks that found three boxes on other tabs, settled here:
   - the tab strip scrolled sideways with its scrollbar hidden (`strip`): it shows a thin scrollbar now, as the kit's own tabs do, with the soft edges kept;
   - the setup map's ladder (`.sm-aside`) scrolls up and down inside the page (`nest`) by the owner's choice (Setups on the kit: "the list stays sticky in its own column" beside the map it drives), so it carries `data-rk-scroll`, the kit's mark for a box the page keeps on the record;
-  - Every run's plate head scrolls sideways with its scrollbar hidden (`strip`) because the rows' own scrollbar, in sight under them, moves both: it carries `data-rk-scroll` too (the kit documents the mark for an inner vertical box only; this is its sideways use, proposed upstream).
+  - Every run's plate head scrolls sideways with its scrollbar hidden (`strip`) because the rows' own scrollbar, in sight under them, moves both: it carries `data-rk-scroll` too (the kit's strip rule names this use since the trial).
 
 ## One standard for every tab (owner, 2026-11-07)
 

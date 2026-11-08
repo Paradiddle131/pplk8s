@@ -21,7 +21,7 @@
 /* a glossary: each term an anchor the bubble's "more" link can open */
 .rk-glossary { margin: 0; max-width: var(--measure) }
 .rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
-.rk-glossary dt { font-weight: 700 }
+.rk-glossary > div > dt { font-weight: var(--w-head) }
 .rk-glossary dd { margin: var(--s1) 0 0 }
 .rk-glossary dd > p { margin: 0 }
 /* a glossary grouped by type: each group a part (an h3 over its 1px ink rule), never a tinted band, a sticky row or a
@@ -43,9 +43,11 @@
 .rk-facts.rk-facts-tight { border-top: 0; margin-top: var(--s2) }
 .rk-facts.rk-facts-tight { column-gap: var(--s4) }
 .rk-facts.rk-facts-tight > div { padding: 0; border-bottom: 0; row-gap: 0 }
+.rk-facts.rk-facts-tight > div + div { margin-top: var(--s1) }
+.rk-facts.rk-facts-tight dt { font-weight: 600 }
 /* the label goes above its value once the list is narrow; an entry's short facts (a count) keep it beside to 20rem */
 @container (max-width: 30rem) { .rk-facts:not(.rk-facts-tight) > div { grid-template-columns: minmax(0, 1fr) } }
-@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } .rk-facts-tight > div + div { margin-top: var(--s1) } }
+@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } }
 /* levels inside a section: section, part, item. A part is a sub-part with its own head (h3 in the section, h4 in a
    stage under the stage's h3) over a 1px ink rule, the 2px section rule's smaller echo, with --gap-part above it;
    an item is a 1rem bold head with --gap-item above it and no rule. Right under a section head the head's own rule

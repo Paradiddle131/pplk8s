@@ -375,9 +375,6 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
    behaviour; the way back is a control at the word size, as every kit tab's words. */
 #method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
-/* an entry's facts: a short step between them, so a value that wraps never runs into the next label (the kit sets them
-   with no gap, which reads as one block once values wrap; proposed upstream) */
-#method .rk-facts-tight > div + div { margin-top: var(--s1) }
 .rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
   border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
 .rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
@@ -623,7 +620,7 @@ p { text-wrap: pretty }
 /* a glossary: each term an anchor the bubble's "more" link can open */
 .rk-glossary { margin: 0; max-width: var(--measure) }
 .rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
-.rk-glossary dt { font-weight: 700 }
+.rk-glossary > div > dt { font-weight: var(--w-head) }
 .rk-glossary dd { margin: var(--s1) 0 0 }
 .rk-glossary dd > p { margin: 0 }
 /* a glossary grouped by type: each group a part (an h3 over its 1px ink rule), never a tinted band, a sticky row or a
@@ -645,9 +642,11 @@ p { text-wrap: pretty }
 .rk-facts.rk-facts-tight { border-top: 0; margin-top: var(--s2) }
 .rk-facts.rk-facts-tight { column-gap: var(--s4) }
 .rk-facts.rk-facts-tight > div { padding: 0; border-bottom: 0; row-gap: 0 }
+.rk-facts.rk-facts-tight > div + div { margin-top: var(--s1) }
+.rk-facts.rk-facts-tight dt { font-weight: 600 }
 /* the label goes above its value once the list is narrow; an entry's short facts (a count) keep it beside to 20rem */
 @container (max-width: 30rem) { .rk-facts:not(.rk-facts-tight) > div { grid-template-columns: minmax(0, 1fr) } }
-@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } .rk-facts-tight > div + div { margin-top: var(--s1) } }
+@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } }
 /* levels inside a section: section, part, item. A part is a sub-part with its own head (h3 in the section, h4 in a
    stage under the stage's h3) over a 1px ink rule, the 2px section rule's smaller echo, with --gap-part above it;
    an item is a 1rem bold head with --gap-item above it and no rule. Right under a section head the head's own rule
@@ -835,6 +834,10 @@ p { text-wrap: pretty }
 .rk-find-none button { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: none; border: 0; min-height: 40px;
   padding: 0 var(--s2); margin-left: var(--s1); border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 .rk-find-none button:hover { background: var(--row) }
+/* the typed words in each item shown: a tint of the line colour under full ink, with a line under it, so a match
+   is seen without reading colour alone */
+mark.rk-find-hit { background: color-mix(in srgb, var(--line) 20%, transparent); color: inherit; border-radius: 2px;
+  box-shadow: inset 0 -2px 0 var(--line) }
 [data-rk-find-item][hidden], [data-rk-find-group][hidden] { display: none !important }
 @media (prefers-reduced-motion: reduce) { .rk-chips button { transition: none } }
 /* report-kit fold: a long side column (.rk-aside) folds behind one full-width button once it stacks above its stage,
@@ -3664,12 +3667,35 @@ window.reportReady(function () {
    accents, and its type is the chosen one; a group with no match hides; each chip counts the matches in its type, so
    the reader sees where the matches are before choosing. data-rk-find-noun="terms" names what is counted. A hash that
    names a hidden item clears what hides it before the tabs scroll to it (ReportKit.find.reveal).
+   The typed words are marked in each item shown (<mark class="rk-find-hit">), as typed, ignoring case.
    API: ReportKit.find.reveal(el), .apply(list); event rk:find {detail: {list, shown, total}} on the list. */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const lists = new Map(); // list element -> state
   const typeOf = it => it.dataset.rkFindType || (it.closest("[data-rk-find-group]") || {}).dataset?.rkFindGroup || "";
+  const esc = w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function unmark(list) {
+    for (const m of list.querySelectorAll("mark.rk-find-hit")) { const p = m.parentNode; p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); }
+  }
+  // the typed words marked where they appear in an item's text (inside links and terms too, never in a script)
+  function mark(it, words) {
+    const re = new RegExp(words.map(esc).join("|"), "gi"), nodes = [];
+    const tw = document.createTreeWalker(it, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest("script, style, mark") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    while (tw.nextNode()) nodes.push(tw.currentNode);
+    for (const n of nodes) {
+      const s = n.nodeValue; let i = 0, m, f = null;
+      re.lastIndex = 0;
+      while ((m = re.exec(s))) {
+        if (!m[0]) { re.lastIndex++; continue; }
+        f = f || document.createDocumentFragment();
+        f.append(s.slice(i, m.index));
+        const k = document.createElement("mark"); k.className = "rk-find-hit"; k.textContent = m[0]; f.append(k);
+        i = m.index + m[0].length;
+      }
+      if (f) { f.append(s.slice(i)); n.replaceWith(f); }
+    }
+  }
   function apply(list) {
     const st = lists.get(list);
     if (!st) return;
@@ -3678,7 +3704,9 @@ window.reportReady(function () {
     const items = [...list.querySelectorAll("[data-rk-find-item]")];
     const hits = new Set(items.filter(hit));
     let shown = 0;
-    for (const it of items) { const on = hits.has(it) && (!st.type || typeOf(it) === st.type); it.hidden = !on; if (on) shown++; }
+    unmark(list);
+    const typed = (st.input ? st.input.value : "").toLowerCase().split(/\s+/).filter(Boolean);
+    for (const it of items) { const on = hits.has(it) && (!st.type || typeOf(it) === st.type); it.hidden = !on; if (on) { shown++; if (typed.length) mark(it, typed); } }
     for (const g of list.querySelectorAll("[data-rk-find-group]")) g.hidden = ![...g.querySelectorAll("[data-rk-find-item]")].some(it => !it.hidden);
     for (const b of st.chips) {
       b.setAttribute("aria-pressed", String((b.dataset.value || "") === st.type));

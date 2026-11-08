@@ -8,12 +8,35 @@
    accents, and its type is the chosen one; a group with no match hides; each chip counts the matches in its type, so
    the reader sees where the matches are before choosing. data-rk-find-noun="terms" names what is counted. A hash that
    names a hidden item clears what hides it before the tabs scroll to it (ReportKit.find.reveal).
+   The typed words are marked in each item shown (<mark class="rk-find-hit">), as typed, ignoring case.
    API: ReportKit.find.reveal(el), .apply(list); event rk:find {detail: {list, shown, total}} on the list. */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const lists = new Map(); // list element -> state
   const typeOf = it => it.dataset.rkFindType || (it.closest("[data-rk-find-group]") || {}).dataset?.rkFindGroup || "";
+  const esc = w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function unmark(list) {
+    for (const m of list.querySelectorAll("mark.rk-find-hit")) { const p = m.parentNode; p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); }
+  }
+  // the typed words marked where they appear in an item's text (inside links and terms too, never in a script)
+  function mark(it, words) {
+    const re = new RegExp(words.map(esc).join("|"), "gi"), nodes = [];
+    const tw = document.createTreeWalker(it, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest("script, style, mark") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    while (tw.nextNode()) nodes.push(tw.currentNode);
+    for (const n of nodes) {
+      const s = n.nodeValue; let i = 0, m, f = null;
+      re.lastIndex = 0;
+      while ((m = re.exec(s))) {
+        if (!m[0]) { re.lastIndex++; continue; }
+        f = f || document.createDocumentFragment();
+        f.append(s.slice(i, m.index));
+        const k = document.createElement("mark"); k.className = "rk-find-hit"; k.textContent = m[0]; f.append(k);
+        i = m.index + m[0].length;
+      }
+      if (f) { f.append(s.slice(i)); n.replaceWith(f); }
+    }
+  }
   function apply(list) {
     const st = lists.get(list);
     if (!st) return;
@@ -22,7 +45,9 @@
     const items = [...list.querySelectorAll("[data-rk-find-item]")];
     const hits = new Set(items.filter(hit));
     let shown = 0;
-    for (const it of items) { const on = hits.has(it) && (!st.type || typeOf(it) === st.type); it.hidden = !on; if (on) shown++; }
+    unmark(list);
+    const typed = (st.input ? st.input.value : "").toLowerCase().split(/\s+/).filter(Boolean);
+    for (const it of items) { const on = hits.has(it) && (!st.type || typeOf(it) === st.type); it.hidden = !on; if (on) { shown++; if (typed.length) mark(it, typed); } }
     for (const g of list.querySelectorAll("[data-rk-find-group]")) g.hidden = ![...g.querySelectorAll("[data-rk-find-item]")].some(it => !it.hidden);
     for (const b of st.chips) {
       b.setAttribute("aria-pressed", String((b.dataset.value || "") === st.type));

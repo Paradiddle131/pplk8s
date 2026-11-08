@@ -20,5 +20,9 @@
 .rk-find-none button { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: none; border: 0; min-height: 40px;
   padding: 0 var(--s2); margin-left: var(--s1); border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 .rk-find-none button:hover { background: var(--row) }
+/* the typed words in each item shown: a tint of the line colour under full ink, with a line under it, so a match
+   is seen without reading colour alone */
+mark.rk-find-hit { background: color-mix(in srgb, var(--line) 20%, transparent); color: inherit; border-radius: 2px;
+  box-shadow: inset 0 -2px 0 var(--line) }
 [data-rk-find-item][hidden], [data-rk-find-group][hidden] { display: none !important }
 @media (prefers-reduced-motion: reduce) { .rk-chips button { transition: none } }
