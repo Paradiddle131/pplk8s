@@ -187,3 +187,28 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Addendum, 2026-11-07T13:22Z: #409 closed (page version 41).
   Figures 3, 5 and 6 name their set; the summary says what each count covers; the partial leader is tagged "so far"; setup ids stay as names, by design.
   Next is unchanged: tonight's 00:07Z wake, then the merges of #410 and #411, then #380.
+
+## 2026-11-08, 2026-11-08T12:10Z (the daily wake: the free lane from 09:25Z)
+
+- Free count 0 at the start, 963 of 1,000 at the end (read from `/api/v1/key`); the lane stopped itself at its 990 cap (`skip custom-metricflow hard-v2 k=3: free count 963 of 990`).
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU, as on 2026-11-07) and `gcp-usage-check` ok; no GCP work in the lane, and the cost check after it again read $0.000010.
+- Anomalies: none (exit 3 on a `hard-v2` pass is "log not whole for the set as scored", not a gate; `custom-hybrid` and `custom-metricflow` `hard-v2` k = 1 and `custom-metricflow-compute` `hard-v2` k = 1 ended 3 with no request spent, their logs already held 55 of 55).
+  One OpenRouter transfer error (`TransferEncodingError`) on a `custom-hybrid` turn, retried by the lane; recorded as "No answer" in the log as before.
+- Passes (Nemotron free; cases of the set as scored: frozen 76, hard 41, hard-v2 55, read from `results.json`):
+
+| Pass | Logged today | Log's total now |
+|---|---|---|
+| backlog judge | the backlog | |
+| v1 k = 1 round: `custom-hybrid`, `native-mcp`, `custom-toolbox`, `baseline`, `custom-lightdash` (frozen and hard) | none (all whole; the Lightdash image started) | 76 and 41 of each |
+| `custom-metricflow-compute` frozen k = 1 | 281 calls | 76 of 76 |
+| `native-mcp` hard-v2 k = 1 | about 170 calls | 55 of 55 |
+| `baseline` hard-v2 k = 1 | about 170 calls | 55 of 55 |
+| `custom-hybrid` hard-v2 k = 3 | about 500 calls | 165 of 165 runs (55 cases x 3) |
+
+- Mid-way: nothing; the next pass in order, `custom-metricflow` hard-v2 k = 3 (137 of 165 runs), was skipped on the cap.
+- Figures that moved (Nemotron free, right / confident-wrong): frozen `custom-metricflow-compute` 89.5% / 0.0% (k = 1); hard-v2 `native-mcp` 92.7% / 0.0%, `baseline` 45.5% / 23.6%, `custom-hybrid` 76.4% / 4.8% at k = 3 (was 74.5% / 3.6% at k = 1).
+  Unchanged: hard-v2 `custom-metricflow` 68.5% / 4.8%, `custom-metricflow-compute` 74.5% / 5.5%; frozen and hard v1 rows as on 2026-11-07.
+- What the numbers say: on the extended hard set `native-mcp` (the managed best) leads at 92.7% with no confident-wrong answer; the hybrid's k = 3 reading (76.4%) and the MetricFlow arms (68.5% to 74.5%) sit 16 to 24 points under it, while plain text-to-SQL `baseline` is worst with the most confident-wrong answers (23.6%).
+  The hybrid's k = 3 move (74.5% to 76.4%) is inside the interval; MetricFlow with arithmetic matches the hybrid on this set, as on 2026-11-07.
+- Report: rebuilt after the judge backlog, `custom-metricflow-compute` frozen, the hard-v2 k = 1 round and the final pass (build with `python3.12`: the session's `python3` is 3.11 and `build.py` needs 3.12 f-strings); claude.ai artifact published, #336's artifact 4 read back with the same SHA-256 after each rebuild.
+- Next: tomorrow's wake starts with `custom-metricflow` hard-v2 k = 3 (28 runs left), then `custom-metricflow-compute` hard-v2 k = 3, `native-mcp` and `baseline` hard-v2 k = 3, then the frozen set's k = 3 round; #380 and the merges of #410 and #411 wait on those.

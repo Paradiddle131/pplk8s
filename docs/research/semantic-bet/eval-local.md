@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-08T10:23Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-08T12:05Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -8,19 +8,19 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 76 of 76 cases; runs finished: baseline 76 of 228, custom-metricflow 89 of 228, custom-hybrid 76 of 228; model responses spent: baseline 347, custom-metricflow 343, custom-hybrid 311.
+Scored on partial: 1 run(s) of 76 of 76 cases; runs finished: baseline 76 of 228, custom-metricflow 89 of 228, custom-hybrid 76 of 228, custom-metricflow-compute 76 of 228; model responses spent: baseline 347, custom-metricflow 343, custom-hybrid 311, custom-metricflow-compute 277.
 
-| | `baseline` | `custom-metricflow` | `custom-hybrid` |
-|---|---|---|---|
-| Accuracy | 59.2% | 89.5% | 89.5% |
-| Confident-wrong | 9.2% | 0.0% | 0.0% |
-| pass^1 | 59.2% | 89.5% | 89.5% |
-| `conversation` (7) accuracy | 42.9% | 100.0% | 100.0% |
-| `covered` (61) accuracy | 68.9% | 100.0% | 100.0% |
-| `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% |
-| `planted` (4) accuracy | 100.0% | 100.0% | 100.0% |
-| `trap` (10) accuracy | 60.0% | 100.0% | 100.0% |
-| `uncovered` (15) accuracy | 20.0% | 46.7% | 46.7% |
+| | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
+|---|---|---|---|---|
+| Accuracy | 59.2% | 89.5% | 89.5% | 89.5% |
+| Confident-wrong | 9.2% | 0.0% | 0.0% | 0.0% |
+| pass^1 | 59.2% | 89.5% | 89.5% | 89.5% |
+| `conversation` (7) accuracy | 42.9% | 100.0% | 100.0% | 100.0% |
+| `covered` (61) accuracy | 68.9% | 100.0% | 100.0% | 100.0% |
+| `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
+| `planted` (4) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
+| `trap` (10) accuracy | 60.0% | 100.0% | 100.0% | 100.0% |
+| `uncovered` (15) accuracy | 20.0% | 46.7% | 46.7% | 46.7% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
