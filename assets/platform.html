@@ -29,19 +29,20 @@
   --muted: #5d5d65;
   --cobalt: #2f4bc4;
   --vermilion: #b83d16;
+  --wire: var(--ink);
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
   --mono: "Atkinson Hyperlegible Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+    --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #34353b; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
     --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #2a2b2f; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
+  --paper: rgb(20, 21, 23); --dot: #56575d; --card: rgb(34, 35, 39); --pkg: #34353b; --ink: #ecebe7; --rule: #7b7b82; --hair: #3a3b40;
   --muted: #a6a6ae; --cobalt: #93a5ff; --vermilion: #ff8f6b;
   color-scheme: dark;
 }
@@ -87,6 +88,8 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .region.cobalt { stroke: var(--cobalt); }
 .region.vermilion { stroke: var(--vermilion); }
 
+/* the headline: the one line above the drawing, one step up the scale from a card's title, regular weight */
+.headline { font-size: 17px; font-weight: 400; fill: var(--ink); }
 .ftitle, .title { font-size: 13px; font-weight: 700; fill: var(--ink); }
 .sub { font-size: 11px; fill: var(--muted); }
 .mono { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
@@ -96,7 +99,7 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .vermilion-text { fill: var(--vermilion); }
 .halo { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
 
-.edge { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.edge { fill: none; stroke: var(--wire); stroke-width: 1.2; }
 .edge.thin { stroke: var(--rule); stroke-width: 1; }
 .edge.reads { stroke-dasharray: 4 3; }
 .edge.cobalt { stroke: var(--cobalt); }
@@ -105,6 +108,9 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 .elabel.mono { font-family: var(--mono); }
 .mark { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 .mark-ink { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.step-dot { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+.step-n { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.accent { display: none; }
 .logo { color: var(--ink); }
 /* a logo in its brand colours, or its one-ink copy in a theme where the colours do not read (registry) */
 .logo .lm, .logo[data-light="mono"] .lc { display: none; }
@@ -119,6 +125,59 @@ svg.sheet { display: block; width: 100%; height: auto; min-width: 720px; font-fa
 :root[data-theme="dark"] .logo .lm { display: none; }
 :root[data-theme="dark"] .logo[data-dark="mono"] .lc { display: none; }
 :root[data-theme="dark"] .logo[data-dark="mono"] .lm { display: inline; }
+
+
+/* ---- the board style (Sheet(svg, {style: 'board'})): the same drawing, set as soft panels on a cool
+   canvas. Outermost frames are white panels, the levels inside alternate with the canvas tone; cards are
+   rounded with a hairline and a faint lift; a card's accent bar names its role; steps are filled badges.
+   Geometry, type sizes and every check are the sheet style's. */
+:root[data-style="board"] {
+  --paper: #f2f4f7; --panel: #ffffff; --inset: #f2f4f7; --card: #ffffff; --pkg: #e8ebf0;
+  --ink: #17203a; --wire: #5b6579; --rule: #c4cad4; --line: #d6dbe3; --hair: #dfe3e9; --muted: #565f72;
+  --cobalt: #2f5bd8; --vermilion: #c2410c; --teal: #0e8a7d; --violet: #7c4ddb; --amber: #b7791f;
+  --lift: rgba(16, 24, 40, 0.07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="board"]:not([data-theme="light"]) {
+    --paper: #0e1116; --panel: #161a21; --inset: #0e1116; --card: #1d222b; --pkg: #2b313d;
+    --ink: #e8ebf1; --wire: #9aa4b5; --rule: #444c5b; --line: #31384a; --hair: #2a303b; --muted: #a7b0bf;
+    --cobalt: #8fa8ff; --vermilion: #ff8a5c; --teal: #3cc8b8; --violet: #b197fc; --amber: #f0b44c;
+    --lift: rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-style="board"][data-theme="dark"] {
+  --paper: #0e1116; --panel: #161a21; --inset: #0e1116; --card: #1d222b; --pkg: #2b313d;
+  --ink: #e8ebf1; --wire: #9aa4b5; --rule: #444c5b; --line: #31384a; --hair: #2a303b; --muted: #a7b0bf;
+  --cobalt: #8fa8ff; --vermilion: #ff8a5c; --teal: #3cc8b8; --violet: #b197fc; --amber: #f0b44c;
+  --lift: rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+:root[data-style="board"] .frame { rx: 12px; stroke: var(--line); }
+:root[data-style="board"] .frame.band-open, :root[data-style="board"] .frame.band-paper { fill: var(--panel); }
+:root[data-style="board"] .frame.band-tint { fill: var(--inset); }
+:root[data-style="board"] .knock.k-open, :root[data-style="board"] .knock.k-even { fill: var(--panel); }
+:root[data-style="board"] .knock.tint { fill: var(--inset); }
+:root[data-style="board"] .card { rx: 8px; stroke: var(--line); filter: drop-shadow(0 1px 1.5px var(--lift)); }
+:root[data-style="board"] .legend .card { filter: none; }
+:root[data-style="board"] .legend .card { rx: 4px; }
+:root[data-style="board"] .legend .region { stroke-dasharray: none; rx: 4px; }
+:root[data-style="board"] .phantom { stroke: var(--wire); stroke-dasharray: 10 3 2 3; }
+:root[data-style="board"] .card.phantom { stroke: var(--wire); }
+:root[data-style="board"] .outline { rx: 10px; }
+:root[data-style="board"] .region { rx: 12px; stroke-width: 1.5; stroke-dasharray: 6 4; }
+:root[data-style="board"] .edge { stroke-width: 1.4; }
+:root[data-style="board"] .elabel { stroke: none; }
+:root[data-style="board"] .headline { font-size: 19px; font-weight: 700; }
+:root[data-style="board"] .accent { display: inline; }
+:root[data-style="board"] .accent.teal { fill: var(--teal); }
+:root[data-style="board"] .accent.violet { fill: var(--violet); }
+:root[data-style="board"] .accent.amber { fill: var(--amber); }
+:root[data-style="board"] .step-dot { fill: var(--cobalt); stroke: none; }
+:root[data-style="board"] .step-n { font-family: var(--sans); font-weight: 700; fill: var(--panel); }
+:root[data-style="board"] .seg { border-color: var(--line); border-radius: 999px; }
+:root[data-style="board"] .seg button + button { border-left-color: var(--line); }
 /* /sheet:css */
 </style>
 </head>
@@ -220,6 +279,14 @@ const LOGOS = window.LOGOS = {
   "body": "<g fill=\"rgb(174, 203, 250)\" transform=\"matrix(0.7748 0 0 0.7748 2.7026 2.7026)\"><path d=\"M24 2.4v8.4h-2.4V2.4H24zM0 10.8h2.4V2.4H0v8.4zm3-8.4h18v8.4H3V2.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zm-10.8.6H12V6H4.8v1.2zm16.8 14.4H24v-8.4h-2.4v8.4zM0 21.6h2.4v-8.4H0v8.4zm3-8.4h18v8.4H3v-8.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zM4.8 18H12v-1.2H4.8V18z\"/></g>",
   "mono": "<g fill=\"currentColor\" transform=\"matrix(0.7748 0 0 0.7748 2.7026 2.7026)\"><path d=\"M24 2.4v8.4h-2.4V2.4H24zM0 10.8h2.4V2.4H0v8.4zm3-8.4h18v8.4H3V2.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zm-10.8.6H12V6H4.8v1.2zm16.8 14.4H24v-8.4h-2.4v8.4zM0 21.6h2.4v-8.4H0v8.4zm3-8.4h18v8.4H3v-8.4zm12.6 4.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 0 0-3.6 0zM4.8 18H12v-1.2H4.8V18z\"/></g>"
  },
+ "googlecloudsql": {
+  "title": "Cloud SQL",
+  "coverage": 0.36,
+  "light": "colour",
+  "dark": "colour",
+  "body": "<g fill=\"currentColor\" transform=\"matrix(0.0562 0 0 0.0562 -2.3874 -2.3853)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <defs> </defs> <g id=\"googlecloudsql-bounding_box\"> </g> <g id=\"googlecloudsql-art\"> <path d=\"M447.5,123.7l-186-68.7c-3.6-1.3-7.5-1.3-11.1,0l-40.7,15-145.2,53.5c-6.3,2.3-10.5,8.3-10.5,15s4.2,12.7,10.5,15l145.1,53.4s0,0,0,0l40.8,15c1.8.6,3.7,1,5.5,1s3.7-.3,5.5-1l185.9-68.2c6.3-2.3,10.5-8.3,10.5-15,0-6.7-4.2-12.7-10.5-15h0ZM256,189.9l-139.6-51.4,139.6-51.4,139.7,51.6-139.6,51.2Z\" fill=\"rgb(251, 188, 4)\"/> <path d=\"M447.5,388.8l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"rgb(52, 168, 83)\"/> <path d=\"M447.5,310.4l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"rgb(52, 168, 83)\"/> <path d=\"M447.5,232.1l-185.9,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3.1-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"rgb(52, 168, 83)\"/> <path d=\"M458,138.7c0,6.7-4.2,12.7-10.5,15l-186,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0s46.4-17,46.4-17l139.6-51.2-139.7-51.6-46.2-17.1,40.7-15c3.6-1.3,7.5-1.3,11.1,0l186,68.7c6.3,2.3,10.5,8.3,10.5,15h0Z\" fill=\"rgb(234, 67, 53)\"/> <path d=\"M447.5,388.8l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15,46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M447.5,310.4l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M447.5,232.1l-185.9,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"rgb(66, 133, 244)\"/> <path d=\"M302.4,206.9l-186-68.5-51.8-15c-6.3,2.3-10.5,8.3-10.5,15s4.2,12.7,10.5,15l145.1,53.4s0,0,0,0l40.8,15c1.8.6,3.7,1,5.5,1s3.7-.3,5.5-1l40.9-15h0Z\" fill=\"rgb(251, 188, 4)\"/> </g></g>",
+  "mono": "<g fill=\"currentColor\" transform=\"matrix(0.0562 0 0 0.0562 -2.3874 -2.3853)\"><!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142) --> <g> </g> <g> <path d=\"M447.5,123.7l-186-68.7c-3.6-1.3-7.5-1.3-11.1,0l-40.7,15-145.2,53.5c-6.3,2.3-10.5,8.3-10.5,15s4.2,12.7,10.5,15l145.1,53.4s0,0,0,0l40.8,15c1.8.6,3.7,1,5.5,1s3.7-.3,5.5-1l185.9-68.2c6.3-2.3,10.5-8.3,10.5-15,0-6.7-4.2-12.7-10.5-15h0ZM256,189.9l-139.6-51.4,139.6-51.4,139.7,51.6-139.6,51.2Z\" fill=\"currentColor\"/> <path d=\"M447.5,388.8l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"currentColor\"/> <path d=\"M447.5,310.4l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"currentColor\"/> <path d=\"M447.5,232.1l-185.9,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l-145.1-53.4c-8.3-3.1-12.5-12.2-9.5-20.5,3-8.3,12.2-12.5,20.5-9.5l180.4,66.4,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"currentColor\"/> <path d=\"M458,138.7c0,6.7-4.2,12.7-10.5,15l-186,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0s46.4-17,46.4-17l139.6-51.2-139.7-51.6-46.2-17.1,40.7-15c3.6-1.3,7.5-1.3,11.1,0l186,68.7c6.3,2.3,10.5,8.3,10.5,15h0Z\" fill=\"currentColor\"/> <path d=\"M447.5,388.8l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15,46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"currentColor\"/> <path d=\"M447.5,310.4l-185.9,68.2c-1.8.6-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5Z\" fill=\"currentColor\"/> <path d=\"M447.5,232.1l-185.9,68.2c-1.8.7-3.6,1-5.5,1s-3.7-.3-5.5-1l-40.8-15h0l46.4-17,180.4-66.2c8.3-3,17.5,1.2,20.5,9.5,3,8.3-1.2,17.5-9.5,20.5h0Z\" fill=\"currentColor\"/> <path d=\"M302.4,206.9l-186-68.5-51.8-15c-6.3,2.3-10.5,8.3-10.5,15s4.2,12.7,10.5,15l145.1,53.4s0,0,0,0l40.8,15c1.8.6,3.7,1,5.5,1s3.7-.3,5.5-1l40.9-15h0Z\" fill=\"currentColor\"/> </g></g>"
+ },
  "postgresql": {
   "title": "PostgreSQL",
   "coverage": 0.359,
@@ -243,7 +310,9 @@ const LOGOS = window.LOGOS = {
    sheet:js markers; edit it here, never in a copy. SKILL.md documents the calls. */
 function Sheet(svg, opt = {}) {
   const NS = 'http://www.w3.org/2000/svg';
-  const LOGO = 14; // the one logo size on every sheet, in user units
+  // the one logo size on a sheet, in user units: 14 in the sheet style, 20 on the board, where colour
+  // carries more of the picture
+  const LOGO = opt.style === 'board' ? 20 : 14;
   const INSET = 8; // a card's logo slot: this far in from its right edge, centred on its first text row
   const modes = opt.modes ?? [];
   const ids = modes.map(m => m.id);
@@ -255,6 +324,14 @@ function Sheet(svg, opt = {}) {
   const knocks = []; // every knock-out, painted by done() to match what lies behind each half
   const edges = []; // every edge, for the bridges done() draws where two cross
   const HOP = 4; // a bridge's radius
+  const HEAD = [24, 32]; // the headline's baseline start; the drawing starts at TOP or below
+  const TOP = 64;
+  const steps = []; // numbered step badges, raised above every edge by done()
+  // The style: 'sheet' (ink on paper, the default) or 'board' (soft panels, accent bars, filled step
+  // badges). Only the stylesheet changes: every call, coordinate and check is the same in both.
+  const style = opt.style ?? 'sheet';
+  if (!['sheet', 'board'].includes(style)) throw new Error(`draw-architecture: no style "${style}" (sheet or board)`);
+  document.documentElement.dataset.style = style;
 
   const isModal = v => v !== null && typeof v === 'object' && !Array.isArray(v) && ids.some(i => i in v);
   const pick = v => (isModal(v) ? v[mode] : v);
@@ -301,7 +378,7 @@ function Sheet(svg, opt = {}) {
   };
 
   const defs = el('defs');
-  for (const [id, color] of [['ink', 'ink'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
+  for (const [id, color] of [['ink', 'wire'], ['cobalt', 'cobalt'], ['vermilion', 'vermilion'], ['rule', 'rule']]) {
     const m = el('marker', { id: `arrow-${id}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M1,1.5 L9,5 L1,8.5 z' }, m).style.fill = `var(--${color})`;
   }
@@ -312,6 +389,10 @@ function Sheet(svg, opt = {}) {
   const screen = el('pattern', { id: 'screen', patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, defs);
   el('rect', { width: 6, height: 6, class: 'screen-bg' }, screen);
   el('circle', { cx: 3, cy: 3, r: 0.75, class: 'screen-dot' }, screen);
+
+  // The headline: the one line above the drawing that says the question the sheet answers, or its
+  // takeaway; drawn first, at the top left, so the drawing starts below it (the checker holds the rest).
+  if (opt.headline !== undefined) text(svg, HEAD[0], HEAD[1], opt.headline, 'headline');
 
   // A frame: no fill; [logo] title and note knocked into its top line, or its bottom line with
   // edge: 'bottom' (a title block, for a frame that edges enter from above).
@@ -335,9 +416,14 @@ function Sheet(svg, opt = {}) {
 
   // A card: an optional overline (the package a grey card is), a title, then lines: a string is sans,
   // {mono: '...'} is mono; any text may be {<mode>: '...'}. The logo sits in the top-right slot.
-  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id }) => {
+  // accent: 'teal' | 'violet' | 'amber' marks the card's role with a bar on its left edge in the board
+  // style (the legend says which role each hue is); the sheet style, two pencils only, draws no bar.
+  const ACCENTS = ['teal', 'violet', 'amber'];
+  const card = ({ x, y, w, h, title = '', lines = [], pkg, hatch: hatched, cls = '', tcls = 'title', logo: id, accent }) => {
+    if (accent && !ACCENTS.includes(accent)) throw new Error(`draw-architecture: no accent "${accent}" (${ACCENTS.join(', ')})`);
     const g = el('g');
     const r = el('rect', { x, y, width: w, height: h, rx: 2, class: `card ${pkg ? 'pkg' : ''} ${cls}` }, g);
+    if (accent) el('rect', { x: x + 1, y: y + 10, width: 3, height: h - 20, rx: 1.5, class: `accent ${accent}` }, g);
     if (cls.includes('phantom')) phantoms.push(r);
     if (hatched) el('rect', { x: x + 0.5, y: y + 0.5, width: w - 1, height: h - 1, fill: 'url(#hatch)' }, g);
     const halo = hatched ? ' halo' : '';
@@ -350,7 +436,8 @@ function Sheet(svg, opt = {}) {
       const mono = line !== null && typeof line === 'object' && 'mono' in line;
       text(g, x + 12, y1, mono ? line.mono : line, (mono ? 'mono dim' : 'sub') + halo);
     });
-    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', row - LOGO / 2); }
+    // centred on the first text row, kept 6 inside the card's top (a board's larger logo on an overline)
+    if (id) { const lg = logo(g, id, 'card'); lg.box.setAttribute('x', x + w - INSET - LOGO); lg.box.setAttribute('y', Math.max(row - LOGO / 2, y + 6)); }
     return r;
   };
 
@@ -405,6 +492,15 @@ function Sheet(svg, opt = {}) {
     el('circle', { cx: x, cy: y, r: 6.5, class: 'mark' }, parent);
     text(parent, x, y + 4, '=', 'mono', { 'text-anchor': 'middle' });
   };
+  // A numbered step on the sheet's main path, set on an edge: the numbers carry the order, so the edges
+  // need no words. Drawn above every edge (done() raises it).
+  const step = (x, y, n, parent = svg) => {
+    const g = el('g', { class: 'step' }, parent);
+    el('circle', { cx: x, cy: y, r: 9, class: 'step-dot' }, g);
+    text(g, x, y + 4, String(n), 'step-n', { 'text-anchor': 'middle' });
+    if (parent === svg) steps.push(g);
+    return g;
+  };
 
   // A legend that lays itself out from (x, y), left to right, or top to bottom with {column: true} (in a
   // margin beside the sheet); each item is [kind, label].
@@ -422,6 +518,11 @@ function Sheet(svg, opt = {}) {
       vermilion: cx => el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'region vermilion' }, g),
       tick: cx => tick(cx + 15, y, g),
       equal: cx => equal(cx + 15, y, g),
+      step: cx => step(cx + 15, y, 1, g),
+      ...Object.fromEntries(ACCENTS.map(a => [a, cx => {
+        el('rect', { x: cx, y: y - 8, width: 30, height: 16, rx: 2, class: 'card' }, g);
+        el('rect', { x: cx + 3, y: y - 5, width: 3, height: 10, rx: 1.5, class: `accent ${a}` }, g);
+      }])),
     };
     let cx = x;
     for (const [kind, label] of items) {
@@ -447,12 +548,16 @@ function Sheet(svg, opt = {}) {
   const band = () => {
     for (const f of frames) f.depth = frames.filter(o => inside(f, o)).length;
     for (const f of frames) f.rect.classList.add(f.depth === 0 ? 'band-open' : f.depth % 2 ? 'band-tint' : 'band-paper');
+    // each knock-out half is painted like the band it sits on: outside every frame, an outermost frame,
+    // an odd level (screened) or an even one; the style decides the fill of each
     const first = svg.querySelector('defs')?.nextSibling ?? svg.firstChild;
     for (const f of [...frames].sort((a, b) => a.depth - b.depth)) svg.insertBefore(f.rect, first);
     for (const r of knocks) {
       const c = { x: +r.getAttribute('x') + 1, y: +r.getAttribute('y') + 4, w: 0, h: 0 };
       const home = frames.filter(f => inside(c, f) || (c.x >= f.x && c.x <= f.x + f.w && c.y > f.y && c.y < f.y + f.h)).sort((a, b) => b.depth - a.depth)[0];
       r.classList.toggle('tint', !!home && home.depth % 2 === 1);
+      r.classList.toggle('k-open', !!home && home.depth === 0);
+      r.classList.toggle('k-even', !!home && home.depth > 0 && home.depth % 2 === 0);
     }
   };
 
@@ -512,6 +617,7 @@ function Sheet(svg, opt = {}) {
   const done = ({ unmarked = {} } = {}) => {
     band();
     bridge();
+    for (const g of steps) svg.appendChild(g);
     const params = new URLSearchParams(location.search);
     if (opt.bar && modes.length > 1) {
       if (params.has('static')) opt.bar.hidden = true;
@@ -529,16 +635,17 @@ function Sheet(svg, opt = {}) {
       const want = params.get('mode') ?? saved;
       if (want && ids.includes(want) && want !== mode) setMode(want);
     }
-    window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked };
+    window.__sheet = { modes: ids, setMode, mode: () => mode, unmarked, logo: LOGO };
   };
 
-  return { el, text, frame, card, phantom, region, edge, tick, equal, legend, done, setMode, LOGO };
+  return { el, text, frame, card, phantom, region, edge, tick, equal, step, legend, done, setMode, LOGO, TOP, style };
 }
 
 // Resolves once the sheet's three faces are loaded. document.fonts.ready alone is not enough: a face
 // loads lazily, on first use, so text drawn before any mono text exists is measured in a fallback font.
 Sheet.ready = () => Promise.all([
   '700 13px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Next"', '400 11px "Atkinson Hyperlegible Mono"',
+  '700 11px "Atkinson Hyperlegible Next"',
 ].map(f => document.fonts.load(f))).then(() => document.fonts.ready);
 /* /sheet:js */
 Sheet.ready().then(() => {
@@ -601,7 +708,7 @@ Sheet.ready().then(() => {
   S.card({ x: 56, y: 880, w: 144, h: 64, title: 'Pub/Sub', lines: [{ lab: 'emulator', gcp: 'Pub/Sub, Eventarc' }, 'object events'], logo: 'googlepubsub' });
   S.card({ x: 208, y: 880, w: 144, h: 64, title: 'object storage', lines: [{ lab: 'fake-gcs-server', gcp: 'Cloud Storage' }, 'staging, task logs'], logo: { gcp: 'googlecloudstorage' } });
   S.card({ x: 360, y: 880, w: 144, h: 64, title: 'image registry', lines: [{ lab: 'kind registry', gcp: 'Artifact Registry' }] });
-  S.card({ x: 56, y: 960, w: 296, h: 64, title: 'metadata DB', lines: [{ lab: 'Postgres', gcp: 'Cloud SQL' }, { mono: 'airflow, agent_sessions' }] });
+  S.card({ x: 56, y: 960, w: 296, h: 64, title: 'metadata DB', lines: [{ lab: 'Postgres', gcp: 'Cloud SQL' }, { mono: 'airflow, agent_sessions' }], logo: { gcp: 'googlecloudsql' } });
   S.card({ x: 360, y: 960, w: 144, h: 64, title: 'data agent', lines: [{ mono: 'build_catalog.py' }, 'context, verified queries'], cls: 'phantom' });
   S.card({ x: 208, y: 1048, w: 296, h: 64, title: 'eval', lines: [{ mono: 'make agent-eval' }, 'the agent against text-to-SQL'] });
 
