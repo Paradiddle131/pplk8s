@@ -1,7 +1,7 @@
 /* report-kit tabs. Markup: a .rk-tabs <nav> holding a [role=tablist] of <a role=tab href="#part" aria-controls="part">,
    and each part a [role=tabpanel] with that id. A part with nothing in it loses its tab; one part left hides
    the strip. The URL's hash names the open part, or an element inside one, which opens its part and comes into
-   view; Back and Forward walk the parts; one strip per page (the first in the kit's root). API: ReportKit.tabs.open(id); event rk:tab {detail: id} on document. */
+   view (a search or filter that hides it is cleared first: ReportKit.find.reveal); Back and Forward walk the parts; one strip per page (the first in the kit's root). API: ReportKit.tabs.open(id); event rk:tab {detail: id} on document. */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   function init(root) {
@@ -43,6 +43,7 @@
       const [p, el] = resolve();
       show(p);
       if (el) {
+        if (RK.find) RK.find.reveal(el); // an entry a search or a type filter hides comes back first
         el.scrollIntoView({ block: "center" });
         el.classList.remove("rk-flash"); void el.offsetWidth; el.classList.add("rk-flash");
       }

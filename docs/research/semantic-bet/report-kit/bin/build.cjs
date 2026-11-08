@@ -18,7 +18,7 @@ const crypto = require('crypto');
 
 const KIT = path.join(__dirname, '..', 'kit');
 // Every component, in the order its CSS and JS are inlined; deps come along when a page names the component.
-const ORDER = ['tokens', 'base', 'section', 'marks', 'dots', 'bar', 'range', 'grade', 'tint', 'slope', 'tabs', 'switch', 'filter', 'fold', 'step', 'dialog', 'table-sort', 'tip', 'highlight', 'plot-theme'];
+const ORDER = ['tokens', 'base', 'section', 'marks', 'dots', 'bar', 'range', 'grade', 'tint', 'slope', 'tabs', 'switch', 'filter', 'find', 'fold', 'step', 'dialog', 'table-sort', 'tip', 'highlight', 'plot-theme'];
 const DEPS = { dots: ['marks'], slope: ['marks'], highlight: ['marks'] };
 const VENDOR = { d3: ['d3-7.9.0.min.js'], plot: ['d3-7.9.0.min.js', 'plot-0.6.17.umd.min.js'] };
 

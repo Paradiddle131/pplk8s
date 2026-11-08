@@ -23,6 +23,29 @@
 .rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
 .rk-glossary dt { font-weight: 700 }
 .rk-glossary dd { margin: var(--s1) 0 0 }
+.rk-glossary dd > p { margin: 0 }
+/* a glossary grouped by type: each group a part (an h3 over its 1px ink rule), never a tinted band, a sticky row or a
+   fold; the part keeps the list's measure, so its rule and the entries' hairlines end on one right edge */
+.rk-part:has(> .rk-glossary, > .rk-facts) { max-width: var(--measure) }
+/* labelled facts: a short list of label and value, the label beside its value (bold, at the word size, in full ink)
+   while the list has room, above it once narrow. The label column takes the longest label's width, measured in the
+   theme's own tracking (a fixed width in rem wraps a label on a dark ground only), up to --facts-label; every row
+   shares it (subgrid), so the values start on one left edge.
+   .rk-facts-tight sets the facts inside an entry (a glossary term's extra lines) with no rules between them. */
+.rk-facts { display: grid; grid-template-columns: fit-content(var(--facts-label, 14rem)) minmax(0, 1fr); column-gap: var(--s5);
+  margin: 0; max-width: var(--measure); container-type: inline-size; border-top: 1px solid var(--ink) }
+.rk-facts > div { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; row-gap: var(--s1);
+  padding: var(--s3) 0; border-bottom: 1px solid var(--hair) }
+.rk-facts dt { font-weight: 700 }
+.rk-facts dd { margin: 0 }
+.rk-head + .rk-facts, :is(h3, h4) + .rk-facts { border-top: 0 }
+.rk-head + .rk-facts > div:first-child, :is(h3, h4) + .rk-facts > div:first-child { padding-top: 0 }
+.rk-facts.rk-facts-tight { border-top: 0; margin-top: var(--s2) }
+.rk-facts.rk-facts-tight { column-gap: var(--s4) }
+.rk-facts.rk-facts-tight > div { padding: 0; border-bottom: 0; row-gap: 0 }
+/* the label goes above its value once the list is narrow; an entry's short facts (a count) keep it beside to 20rem */
+@container (max-width: 30rem) { .rk-facts:not(.rk-facts-tight) > div { grid-template-columns: minmax(0, 1fr) } }
+@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } .rk-facts-tight > div + div { margin-top: var(--s1) } }
 /* levels inside a section: section, part, item. A part is a sub-part with its own head (h3 in the section, h4 in a
    stage under the stage's h3) over a 1px ink rule, the 2px section rule's smaller echo, with --gap-part above it;
    an item is a 1rem bold head with --gap-item above it and no rule. Right under a section head the head's own rule

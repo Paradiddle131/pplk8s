@@ -46,10 +46,6 @@
 .qs .qs-def { margin: 6px 0 0; max-width: 40rem; text-wrap: pretty }
 .qs .qs-step { margin: var(--s4) 0 var(--s4) }
 .qs .rk-step-pos { font-variant-numeric: tabular-nums }
-/* at an end the button stays in sight, dimmed and inert (to 4.8:1 on light, the most the kit checker allows), so the row never
-   opens on an empty slot; the kit hides it (proposed upstream) */
-.qs .rk-step button:disabled { visibility: visible; opacity: .64; cursor: default }
-.qs .rk-step button:disabled:hover { background: transparent }
 .qs .rk-step .qs-seeall:not([data-current]) { display: none }
 .qs .qs-step + .qs-card { margin-top: 0 }
 

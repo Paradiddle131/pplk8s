@@ -951,6 +951,44 @@ def html_escape(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+def glossary_html(terms):
+    """The glossary on report-kit (its find component, STANDARDS.md "A glossary is a definition list"): a find box with
+    its label shown, one chip per type that wraps, the count as a status, then one part per type (an h3 over its rule),
+    each a definition list in the page's flow; an entry's longer lines are labelled facts under its meaning, a count
+    in bold. Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links point at."""
+    e = html_escape
+    types = [ty for ty in TERM_TYPES if any(t["type"] == ty for t in terms)]
+    slug = {ty: re.sub(r"[^a-z0-9]+", "-", ty.lower()).strip("-") for ty in types}
+
+    def value(v):
+        # a count leads its value ("84 across the sets"): numbers bold, words at the word size
+        m = re.match(r"(\d[\d,.]*%?)(.*)$", v, re.S)
+        return "<b>%s</b>%s" % (e(m.group(1)), e(m.group(2))) if m else e(v)
+
+    def entry(t):
+        lines = ([("Computed as", t["calc"])] if t.get("calc") else []) + [tuple(x) for x in t.get("more") or []]
+        facts = ('<dl class="rk-facts rk-facts-tight">%s</dl>' % "".join(
+            "<div><dt>%s</dt><dd>%s</dd></div>" % (e(k), value(v)) for k, v in lines)) if lines else ""
+        return '<div id="term-%s" data-rk-find-item><dt>%s</dt><dd><p>%s</p>%s</dd></div>' % (
+            e(t["key"]), e(t["label"]), e(t["text"]), facts)
+
+    chips = '<button type="button" data-value="" aria-pressed="true">Every type<span class="rk-chip-n"></span></button>' + "".join(
+        '<button type="button" data-value="%s" aria-pressed="false">%s<span class="rk-chip-n"></span></button>' % (slug[ty], e(ty))
+        for ty in types)
+    parts = "".join(
+        '<div class="rk-part" data-rk-find-group="%s"><h3 id="gl-%s">%s</h3><dl class="rk-glossary">%s</dl></div>'
+        % (slug[ty], slug[ty], e(ty), "".join(entry(t) for t in terms if t["type"] == ty))
+        for ty in types)
+    return (
+        '<div class="rk-find" data-rk-find="gloss" data-rk-find-noun="terms">'
+        '<label class="rk-find-box">Find a term<input type="search" id="gl-q" autocomplete="off" spellcheck="false" aria-controls="gloss"></label>'
+        '<div class="rk-chips" role="group" aria-label="Type of term">%s</div>'
+        '<p class="rk-find-count" role="status"></p></div>'
+        '<div id="gloss">%s'
+        '<p class="rk-find-none" hidden>No term matches. <button type="button">Show every term</button></p></div>'
+    ) % (chips, parts)
+
+
 STRICT_WHOLE = ("claude-code-strict (haiku)", "claude-code-strict (sonnet)")
 
 
@@ -1148,6 +1186,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
     if "<!--QUESTIONS-->" in page:  # the section's markup, then its own style and script (questions.html)
         page = page.replace("<!--QUESTIONS-->", qs_html + "\n" + open(os.path.join(HERE, "questions.html"), encoding="utf-8").read())
     page = page.replace("<!--SECTIONS-->", "\n".join(sections))
+    page = page.replace("<!--GLOSSARY-->", glossary_html(data["terms"]))  # the Method & glossary tab, on report-kit
     # The Summary tab: the Approaches page's two sections, on report-kit, scoped to the tab (summary_kit)
     page = page.replace("<!--SUMMARY-->", brief.summary(results_path))
     page = page.replace("/*SUMMARY_CSS*/", scope_to_panel(brief.PAGE_CSS.read_text()))

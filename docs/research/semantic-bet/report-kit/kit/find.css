@@ -1,0 +1,24 @@
+/* report-kit find: a long reference list (a glossary, an index) narrowed in place, in the page's own flow. A find box
+   with its label shown over it, an optional row of type chips that wraps (never a sideways strip), the count said as a
+   status, and a sentence with a clear button when nothing matches. The list is never boxed in a scroll area of its
+   own, so the page keeps one scroll and nothing sticks over the entries. Every word is in full ink, at the word size. */
+.rk-find { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; margin-bottom: var(--s3) }
+.rk-find-box { display: flex; flex-direction: column; gap: var(--s1); flex: 1 1 18rem; max-width: 28rem; font-weight: 700 }
+.rk-find-box input { font: 400 var(--t-word)/1.3 var(--sans); letter-spacing: var(--track-word); color: var(--ink); background: var(--paper);
+  min-height: 44px; padding: var(--s2) var(--s3); border: 1px solid var(--ink); border-radius: 6px; width: 100% }
+.rk-find-box input:focus-visible { outline-offset: 1px }
+/* type chips: one choice of many, each naming its count; the chosen one a reversed ink plate, as a switch's segment */
+.rk-chips { display: flex; flex-wrap: wrap; gap: var(--s2); flex: 1 1 100%; margin: 0; padding: 0; border: 0 }
+.rk-chips button { font: 600 var(--t-word)/1.2 var(--sans); letter-spacing: var(--track-word); color: var(--ink); background: transparent;
+  min-height: 40px; padding: var(--s1) var(--s3); border: 1px solid var(--hair); border-radius: 8px; cursor: pointer;
+  display: inline-flex; gap: var(--s2); align-items: center; text-align: left; transition: background-color var(--t-fast) ease-out }
+.rk-chips button:hover { background: var(--row) }
+.rk-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.rk-chip-n { font-weight: 400; font-variant-numeric: tabular-nums }
+.rk-find-count { flex: 1 1 100%; margin: 0 }
+.rk-find-none { margin: var(--s4) 0 }
+.rk-find-none button { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: none; border: 0; min-height: 40px;
+  padding: 0 var(--s2); margin-left: var(--s1); border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.rk-find-none button:hover { background: var(--row) }
+[data-rk-find-item][hidden], [data-rk-find-group][hidden] { display: none !important }
+@media (prefers-reduced-motion: reduce) { .rk-chips button { transition: none } }

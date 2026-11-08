@@ -143,11 +143,6 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
-/* glossary rows: the longer explanation as labelled lines */
-.gl-t td .gl-txt { margin: 0; }
-.gl-more { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 5px 0 1px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; }
-.gl-more dt { color: var(--ink-3); font-weight: 500; }
-.gl-more dd { margin: 0; color: var(--ink-2); }
 .tip .tcalc { margin: 0; color: var(--ink); }
 .nm { display: inline-block; width: 18px; text-align: center; color: var(--ink-3); }
 .pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
@@ -207,51 +202,9 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); margin: 0 0 6px; padding-left: 9px; border-left: 2px solid var(--rule); quotes: none; }
 .tip p { margin: 2px 0 0; color: var(--ink-2); }
 
-/* Method: one fact per row, its name in the label column, so a reader finds "how is it scored" at a glance */
-dl.meth { display: grid; grid-template-columns: 9rem minmax(0, 1fr); max-width: 42rem; margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; border-top: 1px solid var(--ink); }
-dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid-major); }
-dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
-dl.meth dd { margin: 0; color: var(--ink-2); }
 /* no word left alone on the last line of a paragraph of reading text */
-figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
+figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-
-/* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
-.gl { max-width: 46rem; margin-top: 10px; }
-.gl-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
-.gl-find { position: relative; flex: 1 1 18rem; max-width: 24rem; display: block; }
-.gl-find svg { position: absolute; left: 10px; top: 50%; margin-top: -8px; color: var(--ink-3); pointer-events: none; }
-.gl-find input { width: 100%; min-height: 36px; padding: 6px 10px 6px 32px; border: 1px solid var(--ink-3); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 14.5px var(--label); }
-.gl-find input::placeholder { color: var(--ink-3); opacity: 1; }
-.gl-find input:focus-visible { outline: 2px solid var(--mf); outline-offset: 1px; border-color: var(--ink-2); }
-.gl-types { display: flex; flex-wrap: wrap; gap: 6px; }
-.gl-types button { appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); font: 500 13.5px var(--label); line-height: 1.2; padding: 5px 9px; min-height: 32px; border-radius: 3px; cursor: pointer; }
-.gl-types button .c { color: var(--ink-3); font-variant-numeric: tabular-nums; margin-left: 5px; font-weight: 400; }
-.gl-types button:hover { border-color: var(--ink-3); color: var(--ink); }
-.gl-types button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-.gl-types button[aria-pressed="true"] .c { color: inherit; opacity: .8; }
-.gl-count { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 10px 0 6px; min-height: 1.4em; }
-.gl-count b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-.gl-count button { appearance: none; border: 0; background: none; padding: 0 2px; margin-left: 4px; color: var(--ink); font: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--ink-3); cursor: pointer; }
-.gl-box { max-height: min(40rem, calc(100vh - var(--tabh, 0px) - 150px)); min-height: 14rem; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
-.gl-box:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 15.5px; line-height: 1.45; }
-.gl-t thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); text-align: left; font: 600 13px var(--label); letter-spacing: .02em; color: var(--ink); padding: 8px 12px 6px 0; border-bottom: 1px solid var(--ink-2); }
-.gl-t th, .gl-t td { padding: 7px 18px 7px 0; vertical-align: baseline; text-align: left; border-bottom: 1px solid var(--grid-major); }
-.gl-t tbody th[scope="row"] { width: 13rem; font-weight: 600; color: var(--ink); }
-.gl-t tbody td { color: var(--ink-2); }
-.gl-t tr.gl-g th { position: sticky; top: var(--gl-hh, 0px); z-index: 1; padding: 0; background: var(--paper-2); border-bottom: 1px solid var(--grid-major); }
-.gl-g button { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; border: 0; background: transparent; padding: 6px 8px 6px 4px; text-align: left; font: 600 13.5px var(--label); color: var(--ink); cursor: pointer; }
-.gl-g button:hover:not(:disabled) { background: var(--band); }
-.gl-g button:disabled { cursor: default; }
-.gl-g button:disabled svg { visibility: hidden; }
-.gl-g button:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
-.gl-g button svg { flex: none; color: var(--ink-3); transition: transform .12s ease-out; }
-.gl-g button[aria-expanded="false"] svg { transform: rotate(-90deg); }
-.gl-g .c { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.gl-t mark { background: var(--sel); color: var(--ink); border-radius: 2px; padding: 0 1px; margin: 0 -1px; }
-.gl-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 0; margin: 0; }
-.gl-empty button { appearance: none; border: 1px solid var(--ink-3); background: transparent; color: var(--ink); font: 500 13.5px var(--label); padding: 4px 10px; min-height: 32px; border-radius: 3px; margin-left: 8px; cursor: pointer; }
 
 /* ---------- the section strip: the report's parts as tabs ---------- */
 /* The kit's tabs (report-kit tabs.css): words in ink, the open part on a 3px ink bar. It sticks under the viewport's top edge; its paper fill runs to both screen
@@ -283,23 +236,6 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 @media (max-width: 640px) {
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
-  /* the glossary stacks each term over its meaning; a group's heading sticks while its terms pass */
-  .gl-t, .gl-t tbody, .gl-t tr, .gl-t th, .gl-t td { display: block; }
-  .gl-t thead, .gl-t [hidden] { display: none; }
-  .gl-t tr.gl-g { position: sticky; top: 0; z-index: 1; }
-  .gl-t tr.gl-g th { position: static; }
-  .gl-t tbody tr:not(.gl-g) { padding: 7px 0 8px; border-bottom: 1px solid var(--grid-major); }
-  .gl-t tbody tr:not(.gl-g) > * { width: auto; padding: 0; border: 0; }
-  .gl-t tbody th[scope="row"] { width: auto; margin-bottom: 1px; }
-  dl.meth { grid-template-columns: minmax(0, 1fr); }
-  dl.meth dt { border-bottom: 0; padding: 9px 0 0; }
-  dl.meth dd { padding-top: 0; }
-  .gl-find { flex-basis: 100%; max-width: none; }
-  /* the type filter is one row that scrolls sideways, out to the screen's edges */
-  .gl-tools { gap: 8px; }
-  .gl-types { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
-  .gl-types::-webkit-scrollbar { display: none; }
-  .gl-types button { flex: none; }
 }
 @media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab, .tab::after { transition: none; } .view.on { animation: none; } .jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: none; } .jumped { outline: 2px solid var(--sel); } }
 
@@ -397,7 +333,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st, .qs, .mt { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -433,6 +369,16 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square (unclear runs folded
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
+
+/* the Method & glossary tab: two kit sections, Method a list of labelled facts (.rk-facts) and the glossary the kit's
+   find over one part per type of term (build.py glossary_html), in the page's flow; its tokens map as the other tabs'
+   (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
+   behaviour; the way back is a control at the word size, as every kit tab's words. */
+#method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
+.rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
+  border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
+.rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
+.rk-kit .jumpback:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
 
 /* the Setups ladders fold behind the kit's .rk-fold on a phone; its current choice is a setup id, in the mono face */
 .st .rk-fold-cur { font: 600 .9375rem/1.3 var(--code) }
@@ -558,7 +504,7 @@ window.REPORT = D;
   /* The parts on report-kit (the Summary, the Decision map, the header, the tab strip, the tooltip): the kit's own
      scope nests its CSS under every element carrying .rk-kit, so the tabs not yet moved keep the report's look; then
      the Approaches sections' own styles, nested the same way by build.py (scope_to_panel). */
-  /* report-kit:css tokens base section marks dots bar range tint slope switch filter fold step dialog table-sort tip highlight plot-theme scope=.rk-kit */
+  /* report-kit:css tokens base section marks dots bar range tint slope switch filter find fold step dialog table-sort tip highlight plot-theme scope=.rk-kit */
 .rk-kit {
 /* report-kit tokens. Two layers: primitives (raw values, named for what they are) and semantic tokens
    (named for their job), which components use alone. Light is the default; dark follows the system unless
@@ -676,6 +622,29 @@ p { text-wrap: pretty }
 .rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
 .rk-glossary dt { font-weight: 700 }
 .rk-glossary dd { margin: var(--s1) 0 0 }
+.rk-glossary dd > p { margin: 0 }
+/* a glossary grouped by type: each group a part (an h3 over its 1px ink rule), never a tinted band, a sticky row or a
+   fold; the part keeps the list's measure, so its rule and the entries' hairlines end on one right edge */
+.rk-part:has(> .rk-glossary, > .rk-facts) { max-width: var(--measure) }
+/* labelled facts: a short list of label and value, the label beside its value (bold, at the word size, in full ink)
+   while the list has room, above it once narrow. The label column takes the longest label's width, measured in the
+   theme's own tracking (a fixed width in rem wraps a label on a dark ground only), up to --facts-label; every row
+   shares it (subgrid), so the values start on one left edge.
+   .rk-facts-tight sets the facts inside an entry (a glossary term's extra lines) with no rules between them. */
+.rk-facts { display: grid; grid-template-columns: fit-content(var(--facts-label, 14rem)) minmax(0, 1fr); column-gap: var(--s5);
+  margin: 0; max-width: var(--measure); container-type: inline-size; border-top: 1px solid var(--ink) }
+.rk-facts > div { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; row-gap: var(--s1);
+  padding: var(--s3) 0; border-bottom: 1px solid var(--hair) }
+.rk-facts dt { font-weight: 700 }
+.rk-facts dd { margin: 0 }
+.rk-head + .rk-facts, :is(h3, h4) + .rk-facts { border-top: 0 }
+.rk-head + .rk-facts > div:first-child, :is(h3, h4) + .rk-facts > div:first-child { padding-top: 0 }
+.rk-facts.rk-facts-tight { border-top: 0; margin-top: var(--s2) }
+.rk-facts.rk-facts-tight { column-gap: var(--s4) }
+.rk-facts.rk-facts-tight > div { padding: 0; border-bottom: 0; row-gap: 0 }
+/* the label goes above its value once the list is narrow; an entry's short facts (a count) keep it beside to 20rem */
+@container (max-width: 30rem) { .rk-facts:not(.rk-facts-tight) > div { grid-template-columns: minmax(0, 1fr) } }
+@container (max-width: 20rem) { .rk-facts-tight > div { grid-template-columns: minmax(0, 1fr) } .rk-facts-tight > div + div { margin-top: var(--s1) } }
 /* levels inside a section: section, part, item. A part is a sub-part with its own head (h3 in the section, h4 in a
    stage under the stage's h3) over a 1px ink rule, the 2px section rule's smaller echo, with --gap-part above it;
    an item is a 1rem bold head with --gap-item above it and no rule. Right under a section head the head's own rule
@@ -841,6 +810,30 @@ p { text-wrap: pretty }
   border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 .rk-filter-reset:disabled { cursor: default; text-decoration: none }
 @media (prefers-reduced-motion: reduce) { .rk-filter > summary { transition: none } }
+/* report-kit find: a long reference list (a glossary, an index) narrowed in place, in the page's own flow. A find box
+   with its label shown over it, an optional row of type chips that wraps (never a sideways strip), the count said as a
+   status, and a sentence with a clear button when nothing matches. The list is never boxed in a scroll area of its
+   own, so the page keeps one scroll and nothing sticks over the entries. Every word is in full ink, at the word size. */
+.rk-find { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; margin-bottom: var(--s3) }
+.rk-find-box { display: flex; flex-direction: column; gap: var(--s1); flex: 1 1 18rem; max-width: 28rem; font-weight: 700 }
+.rk-find-box input { font: 400 var(--t-word)/1.3 var(--sans); letter-spacing: var(--track-word); color: var(--ink); background: var(--paper);
+  min-height: 44px; padding: var(--s2) var(--s3); border: 1px solid var(--ink); border-radius: 6px; width: 100% }
+.rk-find-box input:focus-visible { outline-offset: 1px }
+/* type chips: one choice of many, each naming its count; the chosen one a reversed ink plate, as a switch's segment */
+.rk-chips { display: flex; flex-wrap: wrap; gap: var(--s2); flex: 1 1 100%; margin: 0; padding: 0; border: 0 }
+.rk-chips button { font: 600 var(--t-word)/1.2 var(--sans); letter-spacing: var(--track-word); color: var(--ink); background: transparent;
+  min-height: 40px; padding: var(--s1) var(--s3); border: 1px solid var(--hair); border-radius: 8px; cursor: pointer;
+  display: inline-flex; gap: var(--s2); align-items: center; text-align: left; transition: background-color var(--t-fast) ease-out }
+.rk-chips button:hover { background: var(--row) }
+.rk-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.rk-chip-n { font-weight: 400; font-variant-numeric: tabular-nums }
+.rk-find-count { flex: 1 1 100%; margin: 0 }
+.rk-find-none { margin: var(--s4) 0 }
+.rk-find-none button { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: none; border: 0; min-height: 40px;
+  padding: 0 var(--s2); margin-left: var(--s1); border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.rk-find-none button:hover { background: var(--row) }
+[data-rk-find-item][hidden], [data-rk-find-group][hidden] { display: none !important }
+@media (prefers-reduced-motion: reduce) { .rk-chips button { transition: none } }
 /* report-kit fold: a long side column (.rk-aside) folds behind one full-width button once it stacks above its stage,
    so the stage starts on the first screen; side by side, the button hides and the column stays open. The button
    names the column and its current choice, with a chevron that turns when open; the folded part is gone, not
@@ -860,7 +853,8 @@ p { text-wrap: pretty }
 /* report-kit step: one item of a list at a time. Previous and Next sit side by side above the item, so neither moves
    while the reader keeps pressing it, whatever height the item takes; the position ("Order 3 of 12") follows them,
    and any further control in the row (a "See all 12") wears the same look. At an end the button is disabled and
-   keeps its place, an empty slot, so the other never shifts. */
+   stays in its place, dimmed but in sight (no empty slot for the row to open on), so the other never shifts; the
+   dimming keeps 4.5:1, since the checker reads it as text. */
 .rk-step { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: 0 0 var(--s4) }
 .rk-step-pair { display: inline-flex; gap: var(--s2) }
 .rk-step :is(button, a.rk-step-btn) { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: transparent;
@@ -868,7 +862,8 @@ p { text-wrap: pretty }
   align-items: center; cursor: pointer; text-decoration: none; transition: background-color var(--t-fast) ease-out }
 .rk-step :is(button, a.rk-step-btn):hover { background: var(--row) }
 .rk-step :is(button, a.rk-step-btn) svg { width: 12px; height: 12px; flex: none }
-.rk-step button:disabled { visibility: hidden }
+.rk-step button:disabled { opacity: .64; cursor: default }
+.rk-step button:disabled:hover { background: transparent }
 .rk-step-pos { font-weight: 600 }
 .rk-step-end { margin-left: auto }
 @media (prefers-reduced-motion: reduce) { .rk-step :is(button, a.rk-step-btn) { transition: none } }
@@ -2819,10 +2814,6 @@ window.reportReady(() => {
 .qs .qs-def { margin: 6px 0 0; max-width: 40rem; text-wrap: pretty }
 .qs .qs-step { margin: var(--s4) 0 var(--s4) }
 .qs .rk-step-pos { font-variant-numeric: tabular-nums }
-/* at an end the button stays in sight, dimmed and inert (to 4.8:1 on light, the most the kit checker allows), so the row never
-   opens on an empty slot; the kit hides it (proposed upstream) */
-.qs .rk-step button:disabled { visibility: visible; opacity: .64; cursor: default }
-.qs .rk-step button:disabled:hover { background: transparent }
 .qs .rk-step .qs-seeall:not([data-current]) { display: none }
 .qs .qs-step + .qs-card { margin-top: 0 }
 
@@ -3360,30 +3351,23 @@ window.reportReady(function () {
   </section>
 
 
-  <section class="view" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
-  <h2>Method, briefly</h2>
-  <dl class="meth" id="method-list">
-    <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
-    <dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd>
-    <dt>Exclusions</dt><dd>Runs that failed for infrastructure reasons are excluded, never scored.</dd>
-    <dt>Intervals</dt><dd>Accuracy and confident-wrong are means over questions with a <span class="term" data-term="interval" tabindex="0">95% percentile bootstrap interval</span> over questions.</dd>
-    <dt>Comparisons</dt><dd>Comparisons against the <span class="term" data-term="managed-best" tabindex="0">managed best</span> and <span class="term" data-term="floor" tabindex="0">the floor</span> are paired by question; an interval that includes zero is a tie.</dd>
-    <dt>Models</dt><dd>Our setups <span class="term" data-term="decides" tabindex="0">decide</span> on a free model and Claude repeats them as a <span class="term" data-term="check" tabindex="0">check</span>; Google's data agents run on Gemini only.</dd>
-    <dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd>
-  </dl>
-
-  <h2 id="gloss-h">Glossary</h2>
-  <div class="gl" id="gloss">
-    <div class="gl-tools">
-      <label class="gl-find"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="vh">Find a term</span><input type="search" id="gl-q" placeholder="Find a term or a word in its meaning" autocomplete="off" spellcheck="false" aria-controls="gl-box"></label>
-      <div class="gl-types" id="gl-types" role="group" aria-label="Show one type of term"></div>
-    </div>
-    <p class="gl-count" id="gl-count" aria-live="polite"></p>
-    <div class="gl-box" id="gl-box" tabindex="0" role="region" aria-labelledby="gloss-h">
-      <table class="gl-t" id="gl-t"><thead><tr><th scope="col">Term</th><th scope="col">What it means</th></tr></thead></table>
-      <p class="gl-empty" id="gl-empty" hidden></p>
-    </div>
-  </div>
+  <section class="view rk-kit rk-js mt" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
+  <section class="rk-section" aria-labelledby="method-h">
+    <div class="rk-head"><h2 id="method-h">Method, briefly</h2></div>
+    <dl class="rk-facts" id="method-list">
+      <div><dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd></div>
+      <div><dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd></div>
+      <div><dt>Exclusions</dt><dd>Runs that failed for infrastructure reasons are excluded, never scored.</dd></div>
+      <div><dt>Intervals</dt><dd>Accuracy and confident-wrong are means over questions with a <span class="term" data-term="interval" tabindex="0">95% percentile bootstrap interval</span> over questions.</dd></div>
+      <div><dt>Comparisons</dt><dd>Comparisons against the <span class="term" data-term="managed-best" tabindex="0">managed best</span> and <span class="term" data-term="floor" tabindex="0">the floor</span> are paired by question; an interval that includes zero is a tie.</dd></div>
+      <div><dt>Models</dt><dd>Our setups <span class="term" data-term="decides" tabindex="0">decide</span> on a free model and Claude repeats them as a <span class="term" data-term="check" tabindex="0">check</span>; Google's data agents run on Gemini only.</dd></div>
+      <div><dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd></div>
+    </dl>
+  </section>
+  <section class="rk-section" aria-labelledby="gloss-h">
+    <div class="rk-head"><h2 id="gloss-h">Glossary</h2></div>
+<div class="rk-find" data-rk-find="gloss" data-rk-find-noun="terms"><label class="rk-find-box">Find a term<input type="search" id="gl-q" autocomplete="off" spellcheck="false" aria-controls="gloss"></label><div class="rk-chips" role="group" aria-label="Type of term"><button type="button" data-value="" aria-pressed="true">Every type<span class="rk-chip-n"></span></button><button type="button" data-value="question-sets" aria-pressed="false">Question sets<span class="rk-chip-n"></span></button><button type="button" data-value="question-groups" aria-pressed="false">Question groups<span class="rk-chip-n"></span></button><button type="button" data-value="what-makes-a-question-hard" aria-pressed="false">What makes a question hard<span class="rk-chip-n"></span></button><button type="button" data-value="why-the-obvious-sql-goes-wrong" aria-pressed="false">Why the obvious SQL goes wrong<span class="rk-chip-n"></span></button><button type="button" data-value="setups-and-models" aria-pressed="false">Setups and models<span class="rk-chip-n"></span></button><button type="button" data-value="measures-and-statistics" aria-pressed="false">Measures and statistics<span class="rk-chip-n"></span></button><button type="button" data-value="tools-and-products" aria-pressed="false">Tools and products<span class="rk-chip-n"></span></button><button type="button" data-value="approaches" aria-pressed="false">Approaches<span class="rk-chip-n"></span></button></div><p class="rk-find-count" role="status"></p></div><div id="gloss"><div class="rk-part" data-rk-find-group="question-sets"><h3 id="gl-question-sets">Question sets</h3><dl class="rk-glossary"><div id="term-frozen" data-rk-find-item><dt>Frozen set</dt><dd><p>The first question set, fixed before any setup was scored; its uncovered questions are medians, times between events, peaks, and ratios of two measures.</p><dl class="rk-facts rk-facts-tight"><div><dt>Questions</dt><dd><b>76</b></dd></div><div><dt>Setups run on it</dt><dd><b>19</b></dd></div></dl></dd></div><div id="term-hard" data-rk-find-item><dt>Hard set</dt><dd><p>A second, harder question set, fixed before any setup ran on it: hard on business language (jargon, fiscal and relative periods, implicit definitions, ambiguity), and its uncovered questions are mostly ratios and differences of two measures. It detects only larger gaps.</p><dl class="rk-facts rk-facts-tight"><div><dt>Questions</dt><dd><b>41</b></dd></div><div><dt>Setups run on it</dt><dd><b>18</b></dd></div></dl></dd></div><div id="term-hard-v2" data-rk-find-item><dt>Extended hard set</dt><dd><p>The hard set's questions plus more that are hard to write in SQL, where the obvious query gives another number; questions answered by arithmetic over a few metric results form their own group, composable.</p><dl class="rk-facts rk-facts-tight"><div><dt>Questions</dt><dd><b>55</b></dd></div><div><dt>Setups run on it</dt><dd><b>19</b></dd></div><div><dt>Findings</dt><dd>not counted in the findings yet; drawn in the decision map only.</dd></div></dl></dd></div><div id="term-everyday" data-rk-find-item><dt>Everyday</dt><dd><p>The Summary's name for the frozen set: plain business questions across the domains, follow-ups, and some no metric answers.</p><dl class="rk-facts rk-facts-tight"><div><dt>On the Summary</dt><dd>the first set its switch shows.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="question-groups"><h3 id="gl-question-groups">Question groups</h3><dl class="rk-glossary"><div id="term-covered" data-rk-find-item><dt>Covered</dt><dd><p>A question a metric of the semantic layer answers.</p><dl class="rk-facts rk-facts-tight"><div><dt>Why it matters</dt><dd>the metric holds the business rule, so a setup that reads or calls the metrics should get these right.</dd></div><div><dt>Example</dt><dd>“How many customers did anything on our site or in the CRM in the week up to 3 October 2026?”</dd></div><div><dt>Questions</dt><dd><b>84</b> across the sets</dd></div></dl></dd></div><div id="term-hidden-rule" data-rk-find-item><dt>Hidden-rule</dt><dd><p>A covered question whose obvious SQL gives another number, because a business rule is not visible in the table.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>the obvious query misses a business rule, such as leaving out cancelled orders.</dd></div><div><dt>Example</dt><dd>“What share of the site sessions that viewed a page on 1 October 2026 added something to the cart?”</dd></div><div><dt>Questions</dt><dd><b>15</b> across the sets</dd></div></dl></dd></div><div id="term-uncovered" data-rk-find-item><dt>Uncovered</dt><dd><p>A question no metric answers, though SQL over the tables can.</p><dl class="rk-facts rk-facts-tight"><div><dt>Who can answer</dt><dd>only a setup that writes SQL over the tables; a metrics-only setup should decline.</dd></div><div><dt>Example</dt><dd>“For customers whose first order was placed in October 2026, what was the median number of days between their signup date and that first order?”</dd></div><div><dt>Questions</dt><dd><b>40</b> across the sets</dd></div></dl></dd></div><div id="term-conversation" data-rk-find-item><dt>Conversation</dt><dd><p>A follow-up or an ambiguous term inside a multi-turn chat.</p><dl class="rk-facts rk-facts-tight"><div><dt>Scored</dt><dd>the run is right only when every turn of the chat is right.</dd></div><div><dt>Example</dt><dd>“What were our sales on 1 October 2026?”</dd></div><div><dt>Questions</dt><dd><b>15</b> across the sets</dd></div></dl></dd></div><div id="term-groups" data-rk-find-item><dt>Groups</dt><dd><p>What a question asks of a setup: whether a metric answers it, arithmetic over metrics, or only SQL, and whether it hides a rule or comes in a chat. A question sits in one group or two.</p><dl class="rk-facts rk-facts-tight"><div><dt>Kinds</dt><dd>covered, hidden-rule, composable, uncovered, conversation, distractor, planted.</dd></div><div><dt>Two at once</dt><dd>a hidden-rule question is also covered; a conversation question is also covered or uncovered.</dd></div></dl></dd></div><div id="term-composable" data-rk-find-item><dt>Composable</dt><dd><p>No single metric answers it, but arithmetic over a few metric results does, such as a ratio or a difference of two.</p><dl class="rk-facts rk-facts-tight"><div><dt>Who can answer</dt><dd>a setup allowed arithmetic over the metric results it fetched, or one that writes SQL.</dd></div><div><dt>Example</dt><dd>“How much revenue did we make per site session between 20 September and 3 October 2026?”</dd></div><div><dt>Questions</dt><dd><b>21</b> across the sets</dd></div></dl></dd></div><div id="term-distractor" data-rk-find-item><dt>Distractor</dt><dd><p>A covered question with an older, replaced table in reach that gives another number.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>a setup that reads the older table gives its number, not the current one.</dd></div><div><dt>Example</dt><dd>“Which customer country generated the most non-cancelled order revenue in September 2026, and how much was it in EUR?”</dd></div><div><dt>Questions</dt><dd><b>1</b> across the sets</dd></div></dl></dd></div><div id="term-planted" data-rk-find-item><dt>Planted</dt><dd><p>A covered question whose data holds text written like an instruction to the agent, which it must ignore.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>a setup that follows the planted text answers something else.</dd></div><div><dt>Example</dt><dd>“Which customer has spent the most with us over all their orders, and how much?”</dd></div><div><dt>Questions</dt><dd><b>4</b> across the sets</dd></div></dl></dd></div><div id="term-other-covered" data-rk-find-item><dt>Other covered</dt><dd><p>Covered questions asked as a follow-up, beside an older replaced table, or with planted text.</p><dl class="rk-facts rk-facts-tight"><div><dt>Holds</dt><dd>conversation, distractor and planted questions that a metric answers.</dd></div><div><dt>Why one column</dt><dd>each is small on its own; together they show the setups apart.</dd></div></dl></dd></div><div id="term-follow-ups" data-rk-find-item><dt>Follow-ups</dt><dd><p>Questions asked as a follow-up inside a chat: the conversation group.</p><dl class="rk-facts rk-facts-tight"><div><dt>Elsewhere</dt><dd>the conversation group.</dd></div><div><dt>Scored</dt><dd>right only when every turn of the chat is right.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="what-makes-a-question-hard"><h3 id="gl-what-makes-a-question-hard">What makes a question hard</h3><dl class="rk-glossary"><div id="term-jargon" data-rk-find-item><dt>Jargon</dt><dd><p>The question uses a business term, such as AOV or churn, instead of the metric's name.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>the term must be mapped to the right metric before any number is fetched.</dd></div><div><dt>Example</dt><dd>“What was our GMV in September 2026, counting every order placed, cancelled ones included?”</dd></div><div><dt>Questions</dt><dd><b>13</b> across the sets</dd></div></dl></dd></div><div id="term-period" data-rk-find-item><dt>Period</dt><dd><p>The period is relative or fiscal (last month, last quarter, the week before) and must be worked out from a date.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>a period worked out from the wrong date, or a calendar period where the business means its fiscal one.</dd></div><div><dt>Example</dt><dd>“It's the evening of 8 October 2026 and the day's orders are in. How much revenue have we made so far this month?”</dd></div><div><dt>Questions</dt><dd><b>18</b> across the sets</dd></div></dl></dd></div><div id="term-multi-metric" data-rk-find-item><dt>Several metrics</dt><dd><p>The answer needs more than one metric, or a metric of a metric.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>every metric must be fetched for the same period and scope before they are combined.</dd></div><div><dt>Example</dt><dd>“How much revenue did we make per site session between 20 September and 3 October 2026?”</dd></div><div><dt>Questions</dt><dd><b>13</b> across the sets</dd></div></dl></dd></div><div id="term-segment" data-rk-find-item><dt>Segment</dt><dd><p>The question compares or ranks segments, such as channels, countries or customer groups.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>the segments must be split by the right field and compared on the same measure.</dd></div><div><dt>Example</dt><dd>“Which channel came second for leads between 17 and 31 August 2026, and how many did it bring?”</dd></div><div><dt>Questions</dt><dd><b>15</b> across the sets</dd></div></dl></dd></div><div id="term-implicit" data-rk-find-item><dt>Implicit definition</dt><dd><p>The question leaves a definition unsaid that the business has fixed, such as which orders count.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>the setup must use the business's definition, not the plainest reading of the words.</dd></div><div><dt>Example</dt><dd>“How big was our customer base in Turkey at the end of September 2026?”</dd></div><div><dt>Questions</dt><dd><b>10</b> across the sets</dd></div></dl></dd></div><div id="term-ambiguous-followup" data-rk-find-item><dt>Ambiguous follow-up</dt><dd><p>A follow-up in a chat, or a term with more than one meaning that the agent should ask about.</p><dl class="rk-facts rk-facts-tight"><div><dt>Right answer</dt><dd>ask which meaning was meant, or give a number for every meaning.</dd></div><div><dt>Example</dt><dd>“It's 12 October 2026. What are our sales in Germany so far this month?”</dd></div><div><dt>Questions</dt><dd><b>8</b> across the sets</dd></div></dl></dd></div><div id="term-multi-step" data-rk-find-item><dt>Multi-step</dt><dd><p>The answer needs one result before the next can be asked for.</p><dl class="rk-facts rk-facts-tight"><div><dt>What goes wrong</dt><dd>an error in the first result carries into every later one.</dd></div><div><dt>Example</dt><dd>“Of the partner outreach messages we sent from 1 to 3 October 2026, what share got an answer within 12 hours?”</dd></div><div><dt>Questions</dt><dd><b>11</b> across the sets</dd></div></dl></dd></div><div id="term-hard-to-interpret" data-rk-find-item><dt>Hard to interpret</dt><dd><p>What makes a question hard to read right before any number is fetched: business words, periods, segments, several metrics or steps, unsaid definitions, ambiguity.</p><dl class="rk-facts rk-facts-tight"><div><dt>Kinds</dt><dd>jargon, period, segment, several metrics, multi-step, implicit definition, ambiguous follow-up.</dd></div><div><dt>Where</dt><dd>the hard sets; a question can be several kinds.</dd></div><div><dt>On the Summary</dt><dd>the hard set, the second set its switch shows.</dd></div></dl></dd></div><div id="term-sql-hard" data-rk-find-item><dt>Hard in SQL</dt><dd><p>The obvious SQL gives another number, for one of the reasons below.</p><dl class="rk-facts rk-facts-tight"><div><dt>Kinds</dt><dd>fan-out join, distinct across a join, ratio of sums, window, median or percentile, sessions and gaps, cohort retention, anti-join, date spine, fiscal or time-zone boundary.</dd></div><div><dt>Where</dt><dd>the extended hard set's added questions.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="why-the-obvious-sql-goes-wrong"><h3 id="gl-why-the-obvious-sql-goes-wrong">Why the obvious SQL goes wrong</h3><dl class="rk-glossary"><div id="term-obvious-sql" data-rk-find-item><dt>Obvious SQL</dt><dd><p>The query most people would write first. On some questions it gives another number than the right one.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>the average of each order's rate, where the right rate is a sum over a sum.</dd></div><div><dt>Why it matters</dt><dd>a setup that writes the first query that comes to mind gets these wrong with confidence.</dd></div></dl></dd></div><div id="term-fan-out-join" data-rk-find-item><dt>Fan-out join</dt><dd><p>A join repeats rows, so a sum over the joined table counts some values twice.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>sum before the join, or join to one row per key.</dd></div><div><dt>Example</dt><dd>“What was our net revenue for orders placed in September 2026, meaning order amounts minus the amounts of their returns, excluding cancelled orders?”</dd></div><div><dt>Questions</dt><dd><b>2</b> across the sets</dd></div></dl></dd></div><div id="term-distinct-across-join" data-rk-find-item><dt>Distinct across a join</dt><dd><p>A count must stay distinct across a join that repeats rows.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>customers who ordered, counted after joining orders to their items: each customer once, not once per item.</dd></div><div><dt>Fix</dt><dd>count distinct, or count before the join.</dd></div></dl></dd></div><div id="term-ratio-of-sums" data-rk-find-item><dt>Ratio of sums</dt><dd><p>The rate is a sum divided by a sum, not the average of each row's ratio.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>divide the summed numerator by the summed denominator.</dd></div><div><dt>Example</dt><dd>“What was the order cancellation rate in August 2026, as cancelled amount divided by total order amount, not the average of daily cancellation rates?”</dd></div><div><dt>Questions</dt><dd><b>3</b> across the sets</dd></div></dl></dd></div><div id="term-window" data-rk-find-item><dt>Window</dt><dd><p>The answer needs a running or ranked value over ordered rows.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>a window function over rows in order, such as a running total or a rank.</dd></div><div><dt>Example</dt><dd>“What was the median gap in hours between consecutive orders of the same customer in September 2026, counting only customers with at least two orders?”</dd></div><div><dt>Questions</dt><dd><b>3</b> across the sets</dd></div></dl></dd></div><div id="term-median-percentile" data-rk-find-item><dt>Median or percentile</dt><dd><p>The answer is a middle or a percentile value, which no plain sum or average gives.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>a percentile function, or rank the rows and take the middle one.</dd></div><div><dt>Example</dt><dd>“What was the median, across the ten long-standing customers, of each customer's total non-cancelled order amount from 17 August to 2 October 2026?”</dd></div><div><dt>Questions</dt><dd><b>2</b> across the sets</dd></div></dl></dd></div><div id="term-sessions-gaps-islands" data-rk-find-item><dt>Sessions and gaps</dt><dd><p>Events must be grouped into runs separated by gaps in time.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>visits split into sessions wherever 30 minutes pass with no event.</dd></div><div><dt>Fix</dt><dd>compare each event with the one before it, then number the runs.</dd></div></dl></dd></div><div id="term-cohort-retention" data-rk-find-item><dt>Cohort retention</dt><dd><p>Customers are grouped by when they started and followed over later periods.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>of the customers who signed up in August, how many ordered again in September.</dd></div><div><dt>Fix</dt><dd>fix each customer's start first, then follow them period by period.</dd></div></dl></dd></div><div id="term-anti-join" data-rk-find-item><dt>Anti-join</dt><dd><p>The question asks for what has no match, such as sign-ups that never ordered.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>keep the rows with no match: a left join where the match is missing, or not exists.</dd></div><div><dt>Example</dt><dd>“What share of non-cancelled order revenue between 17 August and 2 October 2026 came from orders that have no return at all, in percent?”</dd></div><div><dt>Questions</dt><dd><b>3</b> across the sets</dd></div></dl></dd></div><div id="term-date-spine" data-rk-find-item><dt>Date spine</dt><dd><p>Days with no rows must still count, as zeros, so the days need generating.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>generate every day of the period and join the rows to it.</dd></div><div><dt>Example</dt><dd>“What was the average number of customer service calls per day in September 2026, counting days with no calls as zero?”</dd></div><div><dt>Questions</dt><dd><b>4</b> across the sets</dd></div></dl></dd></div><div id="term-fiscal-timezone" data-rk-find-item><dt>Fiscal or time-zone boundary</dt><dd><p>A period starts on a fiscal date or in a local time zone, not on UTC calendar days.</p><dl class="rk-facts rk-facts-tight"><div><dt>Fix</dt><dd>convert to the local time zone, or the fiscal calendar, before cutting the period.</dd></div><div><dt>Example</dt><dd>“Our books close on Amsterdam time. What was our revenue in September 2026, cancelled orders left out, counting each order on its calendar day in...”</dd></div><div><dt>Questions</dt><dd><b>2</b> across the sets</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="setups-and-models"><h3 id="gl-setups-and-models">Setups and models</h3><dl class="rk-glossary"><div id="term-setup" data-rk-find-item><dt>Setup</dt><dd><p>One way of answering: an agent, the tools and context it is given, and the tables in its reach.</p><dl class="rk-facts rk-facts-tight"><div><dt>Parts</dt><dd>an agent, the tools it may call, the context it reads, the tables in its reach.</dd></div><div><dt>Example</dt><dd>native-bare: Google's data agent over the tables, with nothing else.</dd></div></dl></dd></div><div id="term-floor" data-rk-find-item><dt>The floor</dt><dd><p>Google's data agent over the tables alone, with no context; every gain is read against it.</p><dl class="rk-facts rk-facts-tight"><div><dt>Which setup</dt><dd>native-bare: Google's data agent over the tables alone, on Gemini.</dd></div><div><dt>Why</dt><dd>every gain from context, tools or a semantic layer is read against what it already does.</dd></div></dl></dd></div><div id="term-managed-best" data-rk-find-item><dt>Managed best</dt><dd><p>The most accurate of Google's managed setups, the bar each of ours is paired against.</p><dl class="rk-facts rk-facts-tight"><div><dt>Chosen</dt><dd>on each question set, the Google-managed setup with the highest accuracy.</dd></div><div><dt>Used for</dt><dd>each of our setups is compared with it question by question.</dd></div><div><dt>Frozen set</dt><dd>native-context-bare on Gemini default</dd></div><div><dt>Hard set</dt><dd>native-context-bare on Gemini default, thinking</dd></div></dl></dd></div><div id="term-decides" data-rk-find-item><dt>Decides</dt><dd><p>Our setups run on a free model, which decides; Google's agents run on Gemini only.</p><dl class="rk-facts rk-facts-tight"><div><dt>Our setups</dt><dd>a free model through OpenRouter, Nemotron free.</dd></div><div><dt>Google's agents</dt><dd>Gemini, the only model they run on.</dd></div></dl></dd></div><div id="term-main-model" data-rk-find-item><dt>Main model</dt><dd><p>The one model a setup is compared on, fixed before any score: the free model for ours, Gemini's default for Google's agent. Its other models are variants, never averaged in.</p><dl class="rk-facts rk-facts-tight"><div><dt>Ours</dt><dd>the free model; a setup not yet run on it leads with a Claude model until it is.</dd></div><div><dt>Google's agent</dt><dd>Gemini's default; the thinking, fast and latest-GA modes are variants.</dd></div><div><dt>Why one</dt><dd>the modes are different setups, so their mean or best would describe none; the best of four is also the luckiest run.</dd></div><div><dt>In the map</dt><dd>the setup's first row; its other models open under “+N models”.</dd></div></dl></dd></div><div id="term-check" data-rk-find-item><dt>Check</dt><dd><p>Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's.</p><dl class="rk-facts rk-facts-tight"><div><dt>Models</dt><dd>Claude Haiku, Sonnet and Opus, through the Anthropic API.</dd></div><div><dt>Reading</dt><dd>if Claude closes a gap the free model leaves, the gap is the model's, not the setup's.</dd></div></dl></dd></div><div id="term-pending" data-rk-find-item><dt>Pending</dt><dd><p>A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists.</p><dl class="rk-facts rk-facts-tight"><div><dt>Becomes decided</dt><dd>once its run on the free model exists.</dd></div><div><dt>Until then</dt><dd>shown in the tables, left out of the headlines and the winners.</dd></div></dl></dd></div><div id="term-family-da" data-rk-find-item><dt>Google's managed data agent</dt><dd><p>Google's own agent in BigQuery, on Gemini; we only change what it is given to read.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-bare, native-context-bare, native-context, native-governed, native-graph, native-kc-max, native-kc-reach, native-kc, native-shaped</dd></div></dl></dd></div><div id="term-family-gt" data-rk-find-item><dt>Our agent on Google's tools</dt><dd><p>Our own agent (built with Google's Agent Development Kit, or Claude Code for comparison) calling Google's MCP servers or tools generated over the tables.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>custom-toolbox, native-mcp, cc-native-mcp</dd></div></dl></dd></div><div id="term-family-mf" data-rk-find-item><dt>Our agent on a semantic-layer server</dt><dd><p>Our own agent (ADK, or Claude Code for comparison) asking a semantic layer, MetricFlow or Lightdash, for metrics instead of writing SQL.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>custom-metricflow, custom-hybrid, custom-metricflow-compute, custom-lightdash, cc-metricflow-compute, cc-metricflow</dd></div></dl></dd></div><div id="term-family-ref" data-rk-find-item><dt>Text-to-SQL baseline</dt><dd><p>A plain agent that reads the table docs and writes SQL; the reference the others are read against.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>baseline</dd></div></dl></dd></div><div id="term-claude-code" data-rk-find-item><dt>Claude Code</dt><dd><p>Anthropic's agent harness, run headless with only the setup's tools; shown for comparison, never deciding.</p><dl class="rk-facts rk-facts-tight"><div><dt>Runs</dt><dd>headless, one fresh session a run.</dd></div><div><dt>Tools</dt><dd>only the setup's own; no shell, file or web tool, checked in every transcript.</dd></div><div><dt>Role</dt><dd>comparison only; it never decides.</dd></div></dl></dd></div><div id="term-harness" data-rk-find-item><dt>Harness</dt><dd><p>The program that runs a model as an agent: it passes the question, calls the tools the model asks for and returns their results.</p><dl class="rk-facts rk-facts-tight"><div><dt>Here</dt><dd>our ADK agent, Google's data agent, and Claude Code for comparison.</dd></div></dl></dd></div><div id="term-nemotron" data-rk-find-item><dt>Nemotron free</dt><dd><p>NVIDIA's open Nemotron model, used through OpenRouter's free tier; the model our setups are judged on.</p><dl class="rk-facts rk-facts-tight"><div><dt>Role</dt><dd>decides: every one of our setups is judged on it.</dd></div><div><dt>Why free</dt><dd>anyone can repeat the runs at no cost.</dd></div></dl></dd></div><div id="term-gemini" data-rk-find-item><dt>Gemini</dt><dd><p>Google's model, the only one its data agent runs on; “default” is the agent's own choice, “latest GA” the newest generally available model, “thinking” and “fast” its slower reasoning and quicker modes.</p><dl class="rk-facts rk-facts-tight"><div><dt>Runs</dt><dd>Google's data agent setups, the native- rows.</dd></div></dl></dd></div><div id="term-claude-models" data-rk-find-item><dt>Haiku, Sonnet, Opus</dt><dd><p>Anthropic's Claude models, smallest and cheapest to largest; “CC” before a name means it ran inside Claude Code.</p><dl class="rk-facts rk-facts-tight"><div><dt>Role</dt><dd>the check: whether a gap closes with a stronger model.</dd></div></dl></dd></div><div id="term-rung" data-rk-find-item><dt>Rung</dt><dd><p>One step on the ladder of setups, ordered from the least work to build and run to the most.</p><dl class="rk-facts rk-facts-tight"><div><dt>Reading</dt><dd>a higher rung is worth its work only if it is right more often than a lower one.</dd></div></dl></dd></div><div id="term-approach" data-rk-find-item><dt>Approach</dt><dd><p>A way of letting an AI answer business questions, as the Summary groups the setups: each pools the setups that build it, and the one with the most right answers on a set stands for it.</p><dl class="rk-facts rk-facts-tight"><div><dt>How many</dt><dd>nine, from Google's data agent on our tables to our own agent on our metric layer.</dd></div><div><dt>Stands for it</dt><dd>on each set, the setup among its own with the most right answers.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="measures-and-statistics"><h3 id="gl-measures-and-statistics">Measures and statistics</h3><dl class="rk-glossary"><div id="term-confident-wrong" data-rk-find-item><dt>Confident-wrong</dt><dd><p>A wrong number stated with no hedge: the failure a business user feels. A lower rate counts only when accuracy ties.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>the mean over questions of each question's share of runs confidently wrong.</dd></div><div><dt>Counted</dt><dd>a number outside tolerance with no hedge in the same answer.</dd></div><div><dt>Not counted</dt><dd>a wrong number said to be uncertain, an estimate or partial; a decline.</dd></div><div><dt>Reading</dt><dd>lower is better; it breaks a tie in accuracy.</dd></div></dl></dd></div><div id="term-over-the-floor" data-rk-find-item><dt>Over the floor</dt><dd><p>How many points more often a setup is right than the bare agent with the tables only, on the same questions.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>per question, the setup's share of runs right minus the floor's; then the mean over the questions both ran, in points.</dd></div><div><dt>The floor</dt><dd>native-bare: Google's data agent over the tables alone, on Gemini.</dd></div><div><dt>Per question</dt><dd>the setup's share of runs right minus the floor's: 3 of 3 right against 1 of 3 is +67 points.</dd></div><div><dt>Combined</dt><dd>the mean of those differences over the questions both ran, with a 95% interval.</dd></div><div><dt>Example</dt><dd>three questions at +67, 0 and −33 points: (67 + 0 − 33) ÷ 3 = +11 points.</dd></div><div><dt>Reading</dt><dd>an interval that includes 0 shows no clear gain over the floor.</dd></div></dl></dd></div><div id="term-partial" data-rk-find-item><dt>Partial</dt><dd><p>Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider.</p><dl class="rk-facts rk-facts-tight"><div><dt>Shown when</dt><dd>a setup ran fewer questions than the set, or clearly fewer than three runs a question.</dd></div><div><dt>Effect</dt><dd>its interval is wider, and a small gap means less.</dd></div></dl></dd></div><div id="term-accuracy" data-rk-find-item><dt>Accuracy</dt><dd><p>How often a setup is right: the share of its runs whose answer carries the expected number.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>the mean over questions of each question's share of right runs; with three runs on every question, right runs ÷ all runs.</dd></div><div><dt>Example</dt><dd>three questions, right on 3, 2 and 0 of their 3 runs: (100 + 67 + 0) ÷ 3 = 56%.</dd></div><div><dt>Reading</dt><dd>higher is better; the 95% interval shows how far it could move on other questions.</dd></div></dl></dd></div><div id="term-coverage" data-rk-find-item><dt>Coverage</dt><dd><p>How often a setup commits to an answer instead of declining; not the same as covered questions.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>(runs − declined runs) ÷ runs. Every decline counts as not answered, even where asking back is the right answer (a question with two meanings).</dd></div><div><dt>Example</dt><dd><b>30</b> runs, 6 of them declined: (30 − 6) ÷ 30 = 80%.</dd></div><div><dt>Declines</dt><dd>a decline can be the honest answer; low coverage is not always bad, so read it with selective accuracy.</dd></div><div><dt>Not</dt><dd>the covered question group, which is about the semantic layer.</dd></div></dl></dd></div><div id="term-selective-accuracy" data-rk-find-item><dt>Selective accuracy</dt><dd><p>How often a setup is right when it does answer: accuracy over the runs it did not decline.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>right runs among those answered ÷ answered runs (runs − declined runs).</dd></div><div><dt>Example</dt><dd><b>24</b> answered runs, 18 of them right: 18 ÷ 24 = 75%.</dd></div><div><dt>Reading</dt><dd>how far to trust an answer the setup does give; one minus it is the selective risk.</dd></div><div><dt>With coverage</dt><dd>a setup that declines more can score higher here; the two read together.</dd></div></dl></dd></div><div id="term-pass-3" data-rk-find-item><dt>pass^3</dt><dd><p>How often a setup is right on all three runs of a question: whether it can be trusted to give the same right answer again.</p><dl class="rk-facts rk-facts-tight"><div><dt>Computed as</dt><dd>questions right on every one of their three runs ÷ questions; shown only where every question has three runs.</dd></div><div><dt>Example</dt><dd><b>10</b> questions, 7 of them right on all three runs: 7 ÷ 10 = 70%.</dd></div><div><dt>Reading</dt><dd>never above accuracy; the gap between the two is how often a setup is right only sometimes.</dd></div><div><dt>Not shown</dt><dd>where any question has fewer than three runs: –.</dd></div></dl></dd></div><div id="term-declined" data-rk-find-item><dt>Declined</dt><dd><p>The setup gave no number: it said it could not answer, or asked a question back.</p><dl class="rk-facts rk-facts-tight"><div><dt>Examples</dt><dd>“no metric covers this”; “which sales do you mean?”</dd></div><div><dt>Scored</dt><dd>not right on a question that needs a number, and never confident-wrong.</dd></div></dl></dd></div><div id="term-unclear" data-rk-find-item><dt>Unclear</dt><dd><p>Neither the scoring code nor the blind judge could settle whether the answer was right.</p><dl class="rk-facts rk-facts-tight"><div><dt>Counts as</dt><dd>wrong, in every measure.</dd></div><div><dt>Decided by</dt><dd>the blind judge twice; two different verdicts make it unclear.</dd></div></dl></dd></div><div id="term-interval" data-rk-find-item><dt>95% interval</dt><dd><p>The range the score would likely fall in on another draw of questions like these, found by re-scoring many random resamples of the questions (a bootstrap).</p><dl class="rk-facts rk-facts-tight"><div><dt>How</dt><dd>the questions are drawn again at random, with repeats, many times, and the mean taken each time.</dd></div><div><dt>Range</dt><dd>the middle 95% of those means.</dd></div><div><dt>Paired</dt><dd>for a difference, each draw keeps both setups on the same questions; an interval that includes 0 is a tie.</dd></div></dl></dd></div><div id="term-exact" data-rk-find-item><dt>Exact bound</dt><dd><p>When every run of every question is right, or none is, the bootstrap has no spread; the page then gives the exact 95% bound for that many questions instead (the Clopper-Pearson bound).</p><dl class="rk-facts rk-facts-tight"><div><dt>When</dt><dd>every run of every question is right, or none is.</dd></div><div><dt>Lower bound</dt><dd>for n questions all right: 0.025 to the power 1 ÷ n.</dd></div><div><dt>Example</dt><dd><b>19</b> of 19 questions right: at least 82%.</dd></div></dl></dd></div><div id="term-points" data-rk-find-item><dt>Points</dt><dd><p>Percentage points: 80% against 70% is a gap of 10 points.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>a setup right on 80% of runs against the floor's 70% is 10 points over it.</dd></div></dl></dd></div><div id="term-tolerance" data-rk-find-item><dt>Tolerance</dt><dd><p>How far a number may sit from the expected one and still count as right, such as a rounding difference.</p><dl class="rk-facts rk-facts-tight"><div><dt>Why</dt><dd>an answer may round a figure; only a number outside the tolerance is wrong.</dd></div></dl></dd></div><div id="term-hedge" data-rk-find-item><dt>Hedge</dt><dd><p>Words that flag a number as uncertain or ask to confirm it; a wrong number with a hedge is wrong, not confident-wrong.</p><dl class="rk-facts rk-facts-tight"><div><dt>Example</dt><dd>“about 1,200, but please check the period” is hedged.</dd></div></dl></dd></div><div id="term-judge" data-rk-find-item><dt>Blind judge</dt><dd><p>A separate model that reads an answer without knowing which setup gave it and decides whether it is right when the scoring code cannot.</p><dl class="rk-facts rk-facts-tight"><div><dt>Blind</dt><dd>it never sees the setup's name or its model.</dd></div><div><dt>Used for</dt><dd>only the turns the scoring code cannot settle.</dd></div></dl></dd></div><div id="term-outcome-right" data-rk-find-item><dt>Right</dt><dd><p>The answer's number matches the warehouse.</p><dl class="rk-facts rk-facts-tight"><div><dt>Counted in</dt><dd>accuracy: a run whose every turn carries the expected number.</dd></div></dl></dd></div><div id="term-couldnt-answer" data-rk-find-item><dt>Couldn't answer</dt><dd><p>No number: the setup said it cannot answer, or asked which meaning was meant; the other parts call it declined.</p><dl class="rk-facts rk-facts-tight"><div><dt>Elsewhere</dt><dd>declined.</dd></div><div><dt>Scored</dt><dd>never right on a question that needs a number, never wrong and sure.</dd></div></dl></dd></div><div id="term-outcome-wrong" data-rk-find-item><dt>Wrong</dt><dd><p>A wrong number the setup flagged as uncertain, or an answer with no clear number.</p><dl class="rk-facts rk-facts-tight"><div><dt>Includes</dt><dd>unclear answers, which the judge has not settled; they count as not right.</dd></div></dl></dd></div><div id="term-wrong-and-sure" data-rk-find-item><dt>Wrong &amp; sure</dt><dd><p>A wrong number stated as fact, with no warning; the other parts call it confident-wrong.</p><dl class="rk-facts rk-facts-tight"><div><dt>Elsewhere</dt><dd>confident-wrong.</dd></div><div><dt>Why it matters</dt><dd>a business user cannot tell it from a right answer.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="tools-and-products"><h3 id="gl-tools-and-products">Tools and products</h3><dl class="rk-glossary"><div id="term-semantic-layer" data-rk-find-item><dt>Semantic layer</dt><dd><p>A shared list of a business's metrics (revenue, orders, churn), each defined once, that tools ask for by name instead of writing their own SQL.</p><dl class="rk-facts rk-facts-tight"><div><dt>Why</dt><dd>every tool gets the same number for the same metric, however the question is put.</dd></div><div><dt>Here</dt><dd>MetricFlow and Lightdash, over the same test shop's metrics.</dd></div></dl></dd></div><div id="term-dbt" data-rk-find-item><dt>dbt</dt><dd><p>A widely used tool that builds a warehouse's tables from SQL files; its semantic layer is MetricFlow.</p><dl class="rk-facts rk-facts-tight"><div><dt>Used here</dt><dd>builds the test shop's tables and holds its metric definitions.</dd></div></dl></dd></div><div id="term-metricflow" data-rk-find-item><dt>MetricFlow</dt><dd><p>dbt's semantic layer: it turns a request such as “revenue by week” into SQL from the metric's one definition.</p><dl class="rk-facts rk-facts-tight"><div><dt>Asked with</dt><dd>a metric's name, its grouping and its filters, never raw SQL.</dd></div><div><dt>Setups</dt><dd>custom-metricflow, custom-metricflow-compute, custom-hybrid and the Claude Code mirrors.</dd></div></dl></dd></div><div id="term-lightdash" data-rk-find-item><dt>Lightdash</dt><dd><p>An open-source BI tool that reads dbt's metric definitions and answers metric queries through its API.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setup</dt><dd>custom-lightdash: one tool on its metric query API.</dd></div></dl></dd></div><div id="term-knowledge-catalog" data-rk-find-item><dt>Knowledge Catalog</dt><dd><p>Google Cloud's catalog of data assets and their business descriptions, which can import dbt's metrics.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>the native-kc setups, and native-mcp through its MCP server.</dd></div></dl></dd></div><div id="term-adk" data-rk-find-item><dt>ADK</dt><dd><p>Google's Agent Development Kit, the open-source framework our own agents are built with.</p><dl class="rk-facts rk-facts-tight"><div><dt>Used for</dt><dd>every setup named custom-, and native-mcp.</dd></div></dl></dd></div><div id="term-mcp" data-rk-find-item><dt>MCP</dt><dd><p>Model Context Protocol: a standard way to hand an agent a set of tools; Google offers MCP servers for BigQuery and Knowledge Catalog, and MCP Toolbox generates tools from SQL.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-mcp, custom-toolbox and cc-native-mcp.</dd></div></dl></dd></div></dl></div><div class="rk-part" data-rk-find-group="approaches"><h3 id="gl-approaches">Approaches</h3><dl class="rk-glossary"><div id="term-approach-google-s-data-agent-tables-only" data-rk-find-item><dt>Google's data agent, tables only</dt><dd><p>Google's data agent pointed at our tables, with nothing else.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-bare</dd></div></dl></dd></div><div id="term-approach-google-s-data-agent-google-s-catalog" data-rk-find-item><dt>Google's data agent + Google's catalog</dt><dd><p>Google's data agent grounded by Google's catalog, which imports our metric definitions.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-kc, native-kc-max, native-kc-reach</dd></div></dl></dd></div><div id="term-approach-google-s-data-agent-generated-definitions" data-rk-find-item><dt>Google's data agent + generated definitions</dt><dd><p>Google's data agent given business definitions written automatically from our metric layer.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-context-bare, native-context</dd></div></dl></dd></div><div id="term-approach-google-s-data-agent-purpose-built-tables" data-rk-find-item><dt>Google's data agent + purpose-built tables</dt><dd><p>Google's data agent over tables, views or a graph we build from our metrics.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-governed, native-shaped, native-graph</dd></div></dl></dd></div><div id="term-approach-our-agent-on-google-s-tools" data-rk-find-item><dt>Our agent on Google's tools</dt><dd><p>An agent we build, calling Google's managed data tools.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>native-mcp, custom-toolbox</dd></div></dl></dd></div><div id="term-approach-our-agent-writing-its-own-sql" data-rk-find-item><dt>Our agent writing its own SQL</dt><dd><p>An agent we build that writes its own database queries, as most teams start.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>baseline</dd></div></dl></dd></div><div id="term-approach-our-agent-on-lightdash" data-rk-find-item><dt>Our agent on Lightdash</dt><dd><p>An agent we build, querying metrics through Lightdash's free API.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>custom-lightdash</dd></div></dl></dd></div><div id="term-approach-our-agent-on-our-metric-layer" data-rk-find-item><dt>Our agent on our metric layer</dt><dd><p>An agent we build that answers only through our defined metrics.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>custom-metricflow, custom-metricflow-compute</dd></div></dl></dd></div><div id="term-approach-our-agent-on-our-metric-layer-sql-as-fallback" data-rk-find-item><dt>Our agent on our metric layer, SQL as fallback</dt><dd><p>Our metric-layer agent, allowed to write SQL when no metric answers, and saying so.</p><dl class="rk-facts rk-facts-tight"><div><dt>Setups</dt><dd>custom-hybrid</dd></div></dl></dd></div></dl></div><p class="rk-find-none" hidden>No term matches. <button type="button">Show every term</button></p></div>
+  </section>
   </section>
   </div>
 </div>
@@ -3570,10 +3554,11 @@ window.reportReady(function () {
 </script>
 <!-- /report-kit:vendor -->
 <script>
-/* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel and the Decision map's filter): the
+/* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel, the Decision map's filter, the Question
+   sets and the Method & glossary tab, whose glossary is the kit's find): the
    Decision map's cells and the other tabs keep the report's own tooltip on their data-tip. plot-theme only defines
    ReportKit.plotTheme, which the MetricFlow agent's figures read for their type as they draw, so it runs before them. */
-/* report-kit:js switch filter fold table-sort tip highlight plot-theme scope=.rk-js */
+/* report-kit:js switch filter find fold table-sort tip highlight plot-theme scope=.rk-js */
 (window.ReportKit = window.ReportKit || {}).root = ".rk-js";
 /* report-kit switch. Markup: <div class="rk-switch" role="group" aria-label="..." data-rk-switch="name"> with
    <button type="button" data-value="v" aria-pressed="true|false"> segments; every element carrying
@@ -3664,6 +3649,76 @@ window.reportReady(function () {
     }
   }
   RK.filter = { count };
+  (RK.inits = RK.inits || []).push(init);
+})();
+/* report-kit find. Markup: a <div class="rk-find" data-rk-find="<list id>"> holding a <label class="rk-find-box"> (its
+   words, then <input type="search">), an optional <div class="rk-chips" role="group" aria-label="..."> of
+   <button type="button" data-value="<type or empty for all>" aria-pressed> chips, each with a <span class="rk-chip-n">,
+   and a <p class="rk-find-count" role="status">. The list (the element with the list id) holds items marked
+   data-rk-find-item, inside groups marked data-rk-find-group="<type>" (or an item's own data-rk-find-type), and a
+   <p class="rk-find-none" hidden> that says nothing matches, with a <button type="button"> that clears the box.
+   An item matches when its text (data-rk-find-text, else its own text) holds every word typed, ignoring case and
+   accents, and its type is the chosen one; a group with no match hides; each chip counts the matches in its type, so
+   the reader sees where the matches are before choosing. data-rk-find-noun="terms" names what is counted. A hash that
+   names a hidden item clears what hides it before the tabs scroll to it (ReportKit.find.reveal).
+   API: ReportKit.find.reveal(el), .apply(list); event rk:find {detail: {list, shown, total}} on the list. */
+(() => {
+  const RK = (window.ReportKit = window.ReportKit || {});
+  const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const lists = new Map(); // list element -> state
+  const typeOf = it => it.dataset.rkFindType || (it.closest("[data-rk-find-group]") || {}).dataset?.rkFindGroup || "";
+  function apply(list) {
+    const st = lists.get(list);
+    if (!st) return;
+    const words = norm(st.input ? st.input.value : "").split(/\s+/).filter(Boolean);
+    const hit = it => { const h = norm(it.dataset.rkFindText || it.textContent); return words.every(w => h.includes(w)); };
+    const items = [...list.querySelectorAll("[data-rk-find-item]")];
+    const hits = new Set(items.filter(hit));
+    let shown = 0;
+    for (const it of items) { const on = hits.has(it) && (!st.type || typeOf(it) === st.type); it.hidden = !on; if (on) shown++; }
+    for (const g of list.querySelectorAll("[data-rk-find-group]")) g.hidden = ![...g.querySelectorAll("[data-rk-find-item]")].some(it => !it.hidden);
+    for (const b of st.chips) {
+      b.setAttribute("aria-pressed", String((b.dataset.value || "") === st.type));
+      const n = b.querySelector(".rk-chip-n");
+      if (n) n.textContent = [...hits].filter(it => !b.dataset.value || typeOf(it) === b.dataset.value).length;
+    }
+    const noun = st.box.dataset.rkFindNoun || "items", narrowed = words.length || st.type;
+    if (st.count) st.count.textContent = narrowed ? `${shown} of ${items.length} ${noun} shown` : `${items.length} ${noun}`;
+    const none = list.querySelector(".rk-find-none");
+    if (none) none.hidden = shown > 0;
+    list.dispatchEvent(new CustomEvent("rk:find", { bubbles: true, detail: { list, shown, total: items.length } }));
+  }
+  function clear(list) {
+    const st = lists.get(list);
+    if (st.input) st.input.value = "";
+    st.type = "";
+    apply(list);
+  }
+  // an item a link or the hash points at comes back, whatever narrowed the list
+  function reveal(el) {
+    for (const [list, st] of lists) {
+      if (!list.contains(el)) continue;
+      const it = el.closest("[data-rk-find-item]") || el;
+      if (it.hidden || (it.closest("[data-rk-find-group]") || {}).hidden) clear(list);
+      return true;
+    }
+    return false;
+  }
+  function init(root) {
+    for (const box of root.querySelectorAll("[data-rk-find]")) {
+      const list = document.getElementById(box.dataset.rkFind);
+      if (!list || lists.has(list)) continue;
+      const chips = [...box.querySelectorAll(".rk-chips button")];
+      const st = { box, input: box.querySelector('input[type="search"]'), chips, count: box.querySelector(".rk-find-count"),
+        type: (chips.find(b => b.getAttribute("aria-pressed") === "true") || { dataset: {} }).dataset.value || "" };
+      lists.set(list, st);
+      if (st.input) st.input.addEventListener("input", () => apply(list));
+      for (const b of chips) b.addEventListener("click", () => { st.type = b.dataset.value || ""; apply(list); });
+      list.addEventListener("click", e => { if (!e.target.closest(".rk-find-none button")) return; clear(list); if (st.input) st.input.focus(); });
+      apply(list);
+    }
+  }
+  RK.find = { reveal, apply };
   (RK.inits = RK.inits || []).push(init);
 })();
 /* report-kit fold. Markup: inside a .rk-split, <div class="rk-aside"> holding the column's head, then
@@ -4332,7 +4387,7 @@ window.reportReady(function () {
     // the target may sit in another part of the report: open it (a history entry, so Back returns too)
     const V = window.__reportViews, fromView = V && V.viewOf(from), tok = V ? V.jumpTo(target) : null;
     if (target.id && target.id.startsWith("map-") && from.dataset.key) target = mapRowFor(from.dataset.key, from.dataset.set) || target;
-    glReveal(target); // a glossary row hidden by the search, the type filter or a fold is shown first
+    glReveal(target); // a glossary entry hidden by the search or the type is shown first
     // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
     target.scrollIntoView({ block: "center" });
     target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
@@ -4347,7 +4402,7 @@ window.reportReady(function () {
       if (V && fromView && V.viewOf(target) !== fromView) V.show(fromView.dataset.view);
       window.scrollTo(backX, backY); refocus();
     });
-    (target.matches("tr") ? target.querySelector("th, td") : target).appendChild(back);
+    (target.matches("tr") ? target.querySelector("th, td") : target.matches("[data-rk-find-item]") ? target.querySelector("dt") : target).appendChild(back);
     quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
   }
   // a "↑ Back" left in a part the reader has since left by other means goes with it
@@ -4530,85 +4585,16 @@ window.reportReady(function () {
     const tw = D.twin || {};
     $("#t2").textContent = D.sentences.forest || "";
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
-    renderGloss();
   }
 
-  /* ---------- the glossary: grouped by type, a type filter, a search, its own scroll box ---------- */
-  // State lives here, so a term jump can undo whatever hides its row: the search, the filter or a folded group.
-  const GS = { q: "", type: null, folded: new Set() };
-  const glTypes = () => (D.termTypes || []).filter((ty) => (D.terms || []).some((t) => t.type === ty));
-  const glNorm = (x) => String(x).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  // the search's matches marked in a text: each word of the query, wherever it starts
-  function glMark(text, words) {
-    if (!words.length) return esc(text);
-    const re = new RegExp("(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
-    return String(text).split(re).map((p, i) => (i % 2 ? `<mark>${esc(p)}</mark>` : esc(p))).join("");
-  }
-  // a term's row: its short meaning, then how it is computed and its longer explanation, as labelled lines
-  const glLines = (t) => (t.calc ? [["Computed as", t.calc]] : []).concat(t.more || []);
-  const glHay = (t) => glNorm([t.label, t.text].concat(...glLines(t)).join(" "));
-  const glCell = (t, words) => `<p class="gl-txt">${glMark(t.text, words)}</p>` + (glLines(t).length ? `<dl class="gl-more">${glLines(t).map(([k, v]) => `<dt>${glMark(k, words)}</dt><dd>${glMark(v, words)}</dd>`).join("")}</dl>` : "");
-  const CHEV = `<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  function renderGloss() {
-    const terms = D.terms || [], types = glTypes();
-    $("#gl-types").innerHTML = [[null, "All types", terms.length]].concat(types.map((ty) => [ty, ty, terms.filter((t) => t.type === ty).length]))
-      .map(([ty, l, n]) => `<button type="button" data-type="${ty == null ? "" : esc(ty)}" aria-pressed="${GS.type === ty}">${esc(l)}<span class="c">${n}</span></button>`).join("");
-    const tb = types.map((ty, i) => `<tbody data-type="${esc(ty)}"><tr class="gl-g"><th colspan="2" scope="rowgroup" id="gl-g${i}"><button type="button" aria-expanded="true">${CHEV}<span>${esc(ty)}</span><span class="c"></span></button></th></tr>` +
-      terms.filter((t) => t.type === ty).map((t) => `<tr id="term-${esc(t.key)}" data-key="${esc(t.key)}"><th scope="row">${esc(t.label)}</th><td></td></tr>`).join("") + `</tbody>`).join("");
-    const tbl = $("#gl-t"); tbl.querySelectorAll("tbody").forEach((b) => b.remove()); tbl.insertAdjacentHTML("beforeend", tb);
-    glApply();
-  }
-  function glApply() {
-    const terms = D.terms || [], words = glNorm(GS.q).split(/\s+/).filter(Boolean);
-    const byKey = {}; terms.forEach((t) => (byKey[t.key] = t));
-    let shown = 0, matched = 0;
-    $("#gl-t").querySelectorAll("tbody").forEach((tb) => {
-      const ty = tb.dataset.type, inType = GS.type == null || GS.type === ty, folded = GS.folded.has(ty) && !words.length;
-      let n = 0;
-      tb.querySelectorAll("tr[data-key]").forEach((tr) => {
-        const t = byKey[tr.dataset.key], hay = glHay(t);
-        const hit = words.every((w) => hay.includes(w));
-        tr.cells[0].innerHTML = glMark(t.label, hit ? words : []); tr.cells[1].innerHTML = glCell(t, hit ? words : []);
-        if (hit && inType) n++;
-        tr.hidden = !(hit && inType) || folded;
-      });
-      tb.hidden = !inType || n === 0;
-      // during a search every group shows its matches, so a heading does not fold
-      const b = tb.querySelector(".gl-g button"); b.setAttribute("aria-expanded", String(!folded)); b.disabled = !!words.length;
-      b.querySelector(".c").textContent = words.length ? `${n} of ${tb.querySelectorAll("tr[data-key]").length}` : String(n);
-      if (!tb.hidden) { matched += n; if (!folded) shown += n; }
-    });
-    // each type's count follows the search, so a reader sees where the matches are before choosing a type
-    const hits = terms.filter((t) => { const hay = glHay(t); return words.every((w) => hay.includes(w)); });
-    $("#gl-types").querySelectorAll("button").forEach((b) => {
-      const ty = b.dataset.type || null; b.setAttribute("aria-pressed", String(ty === GS.type));
-      b.querySelector(".c").textContent = hits.filter((t) => ty == null || t.type === ty).length;
-    });
-    const any = words.length || GS.type != null, q = esc(GS.q.trim());
-    $("#gl-count").innerHTML = any ? `<b>${matched}</b> of ${terms.length} terms${words.length ? ` match “${q}”` : ""}${GS.type != null ? ` in ${esc(GS.type)}` : ""}<button type="button" data-gl-reset="1">Show every term</button>`
-      : `<b>${terms.length}</b> terms in ${glTypes().length} types; a type's heading folds it.`;
-    const empty = $("#gl-empty"); empty.hidden = matched > 0;
-    empty.innerHTML = matched ? "" : `No term${GS.type != null ? ` in ${esc(GS.type)}` : ""} matches “${q}”.<button type="button" data-gl-reset="1">Show every term</button>`;
-    const thead = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (thead ? thead.offsetHeight : 0) + "px");
-  }
-  function glReset() { GS.q = ""; GS.type = null; GS.folded.clear(); $("#gl-q").value = ""; glApply(); }
-  $("#gl-q").addEventListener("input", (e) => { GS.q = e.target.value; glApply(); $("#gl-box").scrollTop = 0; });
-  $("#gl-types").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const ty = b.dataset.type || null; GS.type = GS.type === ty ? null : ty; glApply(); $("#gl-box").scrollTop = 0; });
-  $("#gl-t").addEventListener("click", (e) => { const b = e.target.closest(".gl-g button"); if (!b || GS.q.trim()) return; const ty = b.closest("tbody").dataset.type; if (GS.folded.has(ty)) GS.folded.delete(ty); else GS.folded.add(ty); glApply(); });
-  $("#gloss").addEventListener("click", (e) => { if (e.target.closest("[data-gl-reset]")) { glReset(); $("#gl-q").focus(); } });
-  window.addEventListener("resize", () => { const th = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (th ? th.offsetHeight : 0) + "px"); });
-  // A term's row made visible: the search, the type filter or a fold that hides it is undone (issue 401).
-  function glReveal(row) {
-    const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
-    const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
-    const hay = glHay(t), words = glNorm(GS.q).split(/\s+/).filter(Boolean);
-    if (!words.every((w) => hay.includes(w))) { GS.q = ""; $("#gl-q").value = ""; }
-    if (GS.type != null && GS.type !== tb.dataset.type) GS.type = null;
-    GS.folded.delete(tb.dataset.type);
-    glApply();
+  /* ---------- the glossary: on report-kit (build.py glossary_html, the kit's find) ---------- */
+  // An entry a link names comes back first: the kit's find clears a search or a type that hides it.
+  function glReveal(el) {
+    if (!el || !el.closest || !el.closest("#gloss")) return false;
+    if (window.ReportKit && window.ReportKit.find) window.ReportKit.find.reveal(el);
     return true;
   }
-  // for the parts' router: an element named by the URL is revealed (and a glossary row flashed) before it is scrolled to
+  // for the parts' router: an element named by the URL is revealed (and a glossary entry flashed) before it is scrolled to
   window.__reportReveal = (el, flash) => {
     if (!glReveal(el) || !flash) return;
     el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");

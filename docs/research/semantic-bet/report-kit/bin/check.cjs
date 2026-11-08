@@ -15,6 +15,9 @@
 //   muted     a heading (h1 to h6) set paler than the words around it, by its colour or its opacity
 //   outline   a heading that skips a level on the way down (an h2 straight to an h4); an open modal dialog is an
 //             outline of its own, starting at h2
+//   nest      a box that scrolls up and down inside the page (a dialog, a form control, and a box marked
+//             data-rk-scroll are exempt)
+//   strip     a box that scrolls sideways with its scrollbar hidden
 //   static    raw hex outside token blocks (a drawing's own colours inside <svg> are exempt), gradient text, emoji
 //             as icons, a banned font, a theme block missing
 // Usage: node bin/check.cjs <page.html>... [--quick] [--shots <dir>]   (--quick: 400 and 1280 only)
@@ -237,9 +240,23 @@ async function inspect() {
   for (const d of document.querySelectorAll('dialog[open]')) outline(heads.filter(h => h.closest('dialog') === d), 1);
   const sw = document.documentElement.scrollWidth, cw = document.documentElement.clientWidth;
   if (sw > cw) out.push({ kind: 'hscroll', text: `the page scrolls sideways (${sw} > ${cw})`, where: 'page' });
+  // one scroll per page: a box that scrolls up and down inside it hides its overview, takes the wheel and the thumb
+  // until its end, and pins sticky heads over what the keyboard focuses; a dialog and a form control are exempt, and
+  // data-rk-scroll keeps a box the page's DESIGN.md records. A sideways strip with its scrollbar hidden hides what
+  // lies past its edge with no cue at all.
+  for (const el of document.body.querySelectorAll('*')) {
+    if (isSvg(el) || !visible(el) || el.closest('dialog, .rk-tip, [data-rk-scroll], textarea, select')) continue;
+    const cs = getComputedStyle(el);
+    if (scrolls(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 2) {
+      out.push({ kind: 'nest', text: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${[...el.classList].map(c => '.' + c).join('')} scrolls up and down inside the page: let the list run in the page's flow`, where: where(el) });
+    }
+    if (scrolls(cs.overflowX) && el.scrollWidth > el.clientWidth + 1 && cs.scrollbarWidth === 'none') {
+      out.push({ kind: 'strip', text: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${[...el.classList].map(c => '.' + c).join('')} scrolls sideways with its scrollbar hidden: wrap it, or show the scrollbar`, where: where(el) });
+    }
+  }
   for (const g of document.querySelectorAll('[data-rk-switch]')) {
     const n = g.querySelectorAll('button').length;
-    if (n > 4) out.push({ kind: 'switch', text: `a switch with ${n} segments: four at most, else tabs or a select`, where: where(g) });
+    if (n > 4) out.push({ kind: 'switch', text: `a switch with ${n} segments: four at most, else tabs, a select, or chips for a filter`, where: where(g) });
   }
   return out;
 }
@@ -563,6 +580,7 @@ async function selftest(browser, file) {
       <p><span>one</span><span style="margin-left:-20px">two on top</span></p>
       <button type="button" style="outline:none">no focus ring</button>
       <div style="width:3000px">wider than the page</div>
+      <div style="display:flex;width:120px;overflow-x:auto;scrollbar-width:none"><span style="flex:none">a strip whose scrollbar is hidden</span></div>
       <div style="height:40px;overflow:auto;line-height:20px"><div>in view</div><div>in view too</div><div>scrolled out of sight</div></div><p style="margin-top:0;line-height:20px">just below the box</p>`;
     document.querySelector('main').prepend(s);
   });
@@ -571,7 +589,7 @@ async function selftest(browser, file) {
   found.push(...await page.evaluate(focusCheck));
   found.push(...staticChecks('<style>.x { color: #abcdef; background-clip: text; font-family: Arial }</style><p>\u{1F680}</p>'));
   const brand = staticChecks('<svg viewBox="0 0 8 8"><path fill="#7262ff" d="M0 0h8v8z"/></svg>');
-  const want = { clip: /cut by its box/, overflow: /ellipsis/, contrast: /faint words/, viewbox: /past the viewBox/, overlap: /one|two on top/, muted: /a grey sub-head/, outline: /skipped a level/, focus: /no focus ring/, hscroll: /sideways/, static: /raw colour/ };
+  const want = { clip: /cut by its box/, overflow: /ellipsis/, contrast: /faint words/, viewbox: /past the viewBox/, overlap: /one|two on top/, muted: /a grey sub-head/, outline: /skipped a level/, focus: /no focus ring/, hscroll: /the page scrolls sideways/, nest: /scrolls up and down/, strip: /scrollbar hidden/, static: /raw colour/ };
   let missed = 0;
   for (const [kind, re] of Object.entries(want)) {
     const hit = found.some(f => f.kind === kind && re.test(f.text));
