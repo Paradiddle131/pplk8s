@@ -952,41 +952,72 @@ def html_escape(text):
 
 
 def glossary_html(terms):
-    """The glossary on report-kit (its find component, STANDARDS.md "A glossary is a definition list"): a find box with
-    its label shown, one chip per type that wraps, the count as a status, then one part per type (an h3 over its rule),
-    each a definition list in the page's flow; an entry's longer lines are labelled facts under its meaning, a count
-    in bold. Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links point at."""
+    """The glossary on report-kit as an index and an entry (the kit's split, STANDARDS.md "A long list is browsed with a
+    find box, in place where it can be"): a side column on the raised surface holding the kit's find (a find box with
+    its label shown, one chip per type that wraps, the count as a status) over every term as a compact list grouped
+    under its type's name, beside a stage that shows one term's whole entry (its name as the heading, its type, its
+    meaning, its longer lines as labelled facts) under the kit's step row. On a phone the column folds behind the kit's
+    fold naming the current term. Every term `glossary()` gives, in TERM_TYPES' order; each entry is in the markup with
+    its id (what the tooltips' links and a `#term-<key>` hash point at), the first shown and the rest
+    `hidden="until-found"`, so the browser's own find and a link still reach them."""
     e = html_escape
     types = [ty for ty in TERM_TYPES if any(t["type"] == ty for t in terms)]
     slug = {ty: re.sub(r"[^a-z0-9]+", "-", ty.lower()).strip("-") for ty in types}
+    ordered = [t for ty in types for t in terms if t["type"] == ty]
 
     def value(v):
         # a count leads its value ("84 across the sets"): numbers bold, words at the word size
         m = re.match(r"(\d[\d,.]*%?)(.*)$", v, re.S)
         return "<b>%s</b>%s" % (e(m.group(1)), e(m.group(2))) if m else e(v)
 
-    def entry(t):
-        lines = ([("Computed as", t["calc"])] if t.get("calc") else []) + [tuple(x) for x in t.get("more") or []]
-        facts = ('<dl class="rk-facts rk-facts-tight">%s</dl>' % "".join(
-            "<div><dt>%s</dt><dd>%s</dd></div>" % (e(k), value(v)) for k, v in lines)) if lines else ""
-        return '<div id="term-%s" data-rk-find-item><dt>%s</dt><dd><p>%s</p>%s</dd></div>' % (
-            e(t["key"]), e(t["label"]), e(t["text"]), facts)
+    def lines(t):
+        return ([("Computed as", t["calc"])] if t.get("calc") else []) + [tuple(x) for x in t.get("more") or []]
+
+    def row(t):
+        # what the find box searches: the term, its meaning and its longer lines, so a word of the meaning finds it
+        text = " ".join([t["label"], t["text"]] + ["%s %s" % kv for kv in lines(t)])
+        return ('<li data-rk-find-item data-rk-find-text="%s"><a href="#term-%s" class="gl-item" data-key="%s" tabindex="-1" '
+                'data-rk-fold-pick><span class="gl-l">%s</span></a></li>') % (e(text), e(t["key"]), e(t["key"]), e(t["label"]))
+
+    def entry(i, t):
+        ls = lines(t)
+        facts = ('<dl class="rk-facts gl-facts">%s</dl>' % "".join(
+            "<div><dt>%s</dt><dd>%s</dd></div>" % (e(k), value(v)) for k, v in ls)) if ls else ""
+        return ('<article class="gl-entry rk-part" id="term-%s" aria-labelledby="term-%s-h"%s><h3 id="term-%s-h">%s</h3>'
+                '<p class="gl-type">%s</p><p class="gl-text">%s</p>%s</article>') % (
+            e(t["key"]), e(t["key"]), "" if i == 0 else ' hidden="until-found"', e(t["key"]), e(t["label"]),
+            e(t["type"]), e(t["text"]), facts)
 
     chips = '<button type="button" data-value="" aria-pressed="true">Every type<span class="rk-chip-n"></span></button>' + "".join(
         '<button type="button" data-value="%s" aria-pressed="false">%s<span class="rk-chip-n"></span></button>' % (slug[ty], e(ty))
         for ty in types)
-    parts = "".join(
-        '<div class="rk-part" data-rk-find-group="%s"><h3 id="gl-%s">%s</h3><dl class="rk-glossary">%s</dl></div>'
-        % (slug[ty], slug[ty], e(ty), "".join(entry(t) for t in terms if t["type"] == ty))
+    groups = "".join(
+        '<div class="gl-group" data-rk-find-group="%s"><h3 id="gl-%s">%s</h3><ul aria-labelledby="gl-%s">%s</ul></div>'
+        % (slug[ty], slug[ty], e(ty), slug[ty], "".join(row(t) for t in terms if t["type"] == ty))
         for ty in types)
+    chev = lambda d: ('<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="%s" fill="none" '
+                      'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' % d)
+    first = ordered[0]
     return (
-        '<div class="rk-find" data-rk-find="gloss" data-rk-find-noun="terms">'
+        '<div class="gl-wrap"><div class="gl rk-split">'
+        '<nav class="gl-aside rk-aside rk-dense" aria-label="Terms">'
+        '<button type="button" class="rk-fold" aria-controls="gl-col" hidden>Term<span class="rk-fold-cur">%s</span></button>'
+        '<div class="gl-col" id="gl-col">'
+        '<div class="rk-find gl-find" data-rk-find="gloss" data-rk-find-noun="terms">'
         '<label class="rk-find-box">Find a term<input type="search" id="gl-q" autocomplete="off" spellcheck="false" aria-controls="gloss"></label>'
         '<div class="rk-chips" role="group" aria-label="Type of term">%s</div>'
         '<p class="rk-find-count" role="status"></p></div>'
-        '<div id="gloss">%s'
+        '<div class="gl-list" id="gloss" data-rk-scroll>%s'
         '<p class="rk-find-none" hidden>No term matches. <button type="button">Show every term</button></p></div>'
-    ) % (chips, parts)
+        '</div></nav>'
+        '<div class="gl-stage rk-stage" id="gl-stage">'
+        '<div class="rk-step gl-step"><span class="rk-step-pair">'
+        '<button type="button" data-gl-step="-1" aria-label="Previous term">%sPrevious</button>'
+        '<button type="button" data-gl-step="1" aria-label="Next term">Next%s</button></span>'
+        '<span class="rk-step-pos" id="gl-pos" aria-live="polite"></span></div>'
+        '%s</div></div></div>'
+    ) % (e(first["label"]), chips, groups, chev("M7.5 2.5L4 6l3.5 3.5"), chev("M4.5 2.5L8 6 4.5 9.5"),
+         "".join(entry(i, t) for i, t in enumerate(ordered)))
 
 
 STRICT_WHOLE = ("claude-code-strict (haiku)", "claude-code-strict (sonnet)")

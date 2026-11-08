@@ -219,7 +219,9 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
 /* the parts: every one laid out at the column's width, the closed ones folded to nothing, so a figure
    measures its real width whether or not its part is open (and redraws on a resize either way) */
 .view { padding-top: 26px; scroll-margin-top: var(--tabh, 0px); }
-.view:not(.on) { height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
+/* a closed part takes no room: relative, so its absolutely placed screen-reader text (.vh) is clipped with it rather
+   than stretching the page under a shorter open part */
+.view:not(.on) { position: relative; height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
 .view:focus { outline: none; }
 .view.on { animation: viewin .16s ease-out; }
 @keyframes viewin { from { opacity: 0; } to { opacity: 1; } }
@@ -370,11 +372,63 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
 
-/* the Method & glossary tab: two kit sections, Method a list of labelled facts (.rk-facts) and the glossary the kit's
-   find over one part per type of term (build.py glossary_html), in the page's flow; its tokens map as the other tabs'
+/* the Method & glossary tab: two kit sections, Method a list of labelled facts (.rk-facts) and the glossary an index
+   and an entry (build.py glossary_html): the kit's split, every term in the side column on the raised surface under
+   the kit's find, one term's whole entry on the stage under the kit's step row; its tokens map as the other tabs'
    (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
    behaviour; the way back is a control at the word size, as every kit tab's words. */
-#method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
+#method .gl-wrap { container-type: inline-size }
+/* side by side from 50rem: the column (20rem, Microsoft's master panel is 280 to 320 px) beside a stage of 28rem or more */
+#method .gl { gap: var(--gap-part) var(--s6) }
+#method .gl-aside { --aside: 20rem; padding: var(--s3); min-width: 0 }
+#method .gl-stage { min-inline-size: min(100%, 28rem) }
+#method .gl-col { display: flex; flex-direction: column; min-height: 0 }
+#method .gl-find { flex: none; gap: var(--s2); margin: 0; padding-bottom: var(--s3); position: relative }
+/* the count sits on the find box's label row, so the list keeps that line */
+#method .gl-find .rk-find-count { position: absolute; top: 0; right: 0; max-width: 60%; text-align: right; line-height: 1.3 }
+#method .gl-find .rk-find-box { flex-basis: 100%; max-width: none }
+#method .gl-find .rk-chips { gap: 0 var(--s1) }
+#method .gl-find .rk-chips button { min-height: 30px; padding: 2px var(--s2); border-radius: 4px }
+#method .gl-find .rk-chips button:focus-visible, #method .gl-item:focus-visible, #method .gl-step button:focus-visible,
+#method .rk-find-none button:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px }
+/* the list: every term a row of the column, grouped under its type's name; the shown term a reversed plate */
+#method .gl-list { padding: 0 }
+#method .gl-group + .gl-group { margin-top: var(--s4) }
+#method .gl-group h3 { margin: 0 0 2px; padding: 0 var(--s2); font-size: var(--t-word); font-weight: var(--w-head); line-height: 1.3 }
+#method .gl-group ul { list-style: none; margin: 0; padding: 0 }
+#method .gl-item { display: block; margin: 0; padding: 4px var(--s2); border-radius: 4px; color: var(--ink); text-decoration: none; line-height: 1.3 }
+#method .gl-item:hover { background: var(--row) }
+#method .gl-item[aria-current="true"] { background: var(--ink); color: var(--paper); font-weight: 700 }
+#method .gl-item[aria-current="true"] mark.rk-find-hit { color: inherit }
+/* under a row whose name does not hold what is typed: the words of its entry that do */
+#method .gl-snip { display: block; margin-top: 2px; font-weight: 400 }
+#method .gl-item:has(.gl-snip) .gl-l { font-weight: 700 }
+#method .rk-find-none { margin: var(--s2) var(--s2) var(--s3) }
+/* wide: the column stays in sight beside the entry, as tall as the screen under the tab strip at most (less what
+   follows the glossary on the page, --gl-below, so the page's last scroll position still shows the find box), and only its
+   list scrolls (data-rk-scroll: kept on the record, a navigation list beside the entry it drives). Its scroll chains
+   to the page at either end (no overscroll-behavior), its scrollbar is always drawn, and it holds no sticky row, so
+   the focus it scrolls to is never covered. */
+@container (min-width: 50rem) {
+  #method .gl-aside { position: sticky; top: calc(var(--tabh, 0px) + var(--s3)); display: flex; flex-direction: column;
+    max-height: calc(100vh - var(--tabh, 0px) - var(--s3) - max(var(--s3), var(--gl-below, 0px)));
+    max-height: calc(100dvh - var(--tabh, 0px) - var(--s3) - max(var(--s3), var(--gl-below, 0px))) }
+  #method .gl-col { flex: 1 1 auto }
+  #method .gl-list { flex: 1 1 auto; min-height: 9rem; overflow-y: auto; scrollbar-gutter: stable;
+    margin: 0 calc(-1 * var(--s3)) 0 0; padding: var(--s3) var(--s1) 0 0; border-top: 1px solid var(--hair);
+    scrollbar-color: color-mix(in srgb, var(--ink) 45%, transparent) transparent }
+}
+/* the entry: one part (its name over the part's 1px ink rule), then its type, its meaning and its labelled facts */
+#method .gl-step { margin: 0 0 var(--s4) }
+#method .gl-step ~ .gl-entry { margin-top: 0 }
+#method .gl-step .rk-step-pos { font-variant-numeric: tabular-nums }
+#method .gl-entry { max-width: var(--measure); scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
+#method .gl-entry[hidden] { display: block; border: 0; padding: 0; margin: 0 }
+#method .gl-entry[hidden]:not([hidden="until-found"]) { display: none }
+#method .gl-entry h3 { margin: 0 0 var(--s1) }
+#method .gl-type { margin: 0 0 var(--s3); font-weight: 600 }
+#method .gl-text { margin: 0; max-width: var(--measure); text-wrap: pretty }
+#method .gl-facts { margin-top: var(--s4); border-top: 1px solid var(--hair) }
 .rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
   border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
 .rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
@@ -677,7 +731,7 @@ window.REPORT = D;
     const el = document.getElementById(h);
     if (el && el.closest(".view")) return [el.closest(".view"), el];
     // targets the page's script draws later: glossary entries and the decision map's rows
-    const home = /^term-/.test(h) ? document.getElementById("gloss") : /^map-/.test(h) ? document.getElementById("map") : /^setup-/.test(h) ? byName("setups") : null;
+    const home = /^term-/.test(h) ? document.getElementById("gl-stage") : /^map-/.test(h) ? document.getElementById("map") : /^setup-/.test(h) ? byName("setups") : null;
     if (home && home.closest(".view")) return [home.closest(".view"), null];
     return [views[0], null];
   }
@@ -997,7 +1051,7 @@ window.REPORT = D;
       if (V && fromView && V.viewOf(target) !== fromView) V.show(fromView.dataset.view);
       window.scrollTo(backX, backY); refocus();
     });
-    (target.matches("tr") ? target.querySelector("th, td") : target.matches("[data-rk-find-item]") ? target.querySelector("dt") : target).appendChild(back);
+    (target.matches("tr") ? target.querySelector("th, td") : target.matches(".gl-entry") ? target.querySelector("h3") : target).appendChild(back);
     quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
   }
   // a "↑ Back" left in a part the reader has since left by other means goes with it
@@ -1182,13 +1236,123 @@ window.REPORT = D;
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
   }
 
-  /* ---------- the glossary: on report-kit (build.py glossary_html, the kit's find) ---------- */
-  // An entry a link names comes back first: the kit's find clears a search or a type that hides it.
-  function glReveal(el) {
-    if (!el || !el.closest || !el.closest("#gloss")) return false;
-    if (window.ReportKit && window.ReportKit.find) window.ReportKit.find.reveal(el);
-    return true;
-  }
+  /* ---------- the glossary: an index and an entry (build.py glossary_html, the kit's split, find, fold and step) ---------- */
+  // Every term is a row of the side column; the stage shows one entry at a time. A pick (a click, an arrow key, the
+  // step row, a link or a hash, the browser's own find) shows its entry, marks its row and names it in the URL; the
+  // search and the type narrow the list only, so the entry stays until another is picked.
+  const GLOSS = (() => {
+    const list = document.getElementById("gloss"); if (!list) return null;
+    const col = list.closest(".gl-aside"), pos = document.getElementById("gl-pos"), input = document.getElementById("gl-q");
+    const items = [...list.querySelectorAll(".gl-item")], prevB = document.querySelector('[data-gl-step="-1"]'), nextB = document.querySelector('[data-gl-step="1"]');
+    const entry = (k) => document.getElementById("term-" + k);
+    let cur = items[0].dataset.key;
+    const shownItems = () => items.filter((a) => !a.closest("[data-rk-find-item]").hidden && !a.closest("[data-rk-find-group]").hidden);
+    const label = (k) => { const a = items.find((x) => x.dataset.key === k); return a ? a.querySelector(".gl-l").textContent : ""; };
+    // the typed words marked in the entry shown, as the kit's find marks them in the list
+    const words = () => (input ? input.value : "").toLowerCase().split(/\s+/).filter(Boolean);
+    const reEsc = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    function unmark(root) { root.querySelectorAll("mark.rk-find-hit").forEach((m) => { const p = m.parentNode; p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); }); }
+    function mark(root, ws) {
+      if (!ws.length) return;
+      const re = new RegExp(ws.map(reEsc).join("|"), "gi"), nodes = [];
+      const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest("mark, button") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+      while (tw.nextNode()) nodes.push(tw.currentNode);
+      for (const n of nodes) {
+        const t = n.nodeValue; let i = 0, m, f = null; re.lastIndex = 0;
+        while ((m = re.exec(t))) { if (!m[0]) { re.lastIndex++; continue; } f = f || document.createDocumentFragment(); f.append(t.slice(i, m.index)); const k = document.createElement("mark"); k.className = "rk-find-hit"; k.textContent = m[0]; f.append(k); i = m.index + m[0].length; }
+        if (f) { f.append(t.slice(i)); n.replaceWith(f); }
+      }
+    }
+    // a row whose name does not hold every typed word shows the words of its entry that do, so a match says why
+    function snips() {
+      list.querySelectorAll(".gl-snip").forEach((x) => x.remove());
+      const ws = words(); if (!ws.length) return;
+      const fold = (x) => x.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      for (const a of shownItems()) {
+        const name = fold(a.querySelector(".gl-l").textContent);
+        if (ws.every((w) => name.includes(fold(w)))) continue;
+        const e = entry(a.dataset.key); if (!e) continue;
+        const parts = [...e.querySelectorAll(".gl-text, .gl-facts dd")].map((x) => x.textContent), w = ws.find((x) => !name.includes(fold(x)));
+        const src = parts.find((x) => fold(x).includes(fold(w))); if (!src) continue;
+        const at = fold(src).indexOf(fold(w)), from = Math.max(0, src.lastIndexOf(" ", Math.max(0, at - 28)) + 1), to = Math.min(src.length, at + w.length + 40);
+        const end = to < src.length ? src.lastIndexOf(" ", to) : src.length;
+        const sp = document.createElement("span"); sp.className = "gl-snip";
+        sp.textContent = (from > 0 ? "…" : "") + src.slice(from, end > at ? end : to) + (to < src.length ? "…" : "");
+        a.appendChild(sp); mark(sp, ws);
+      }
+    }
+    // the box keeps the current row in sight without moving the page
+    function keepRow(a) {
+      if (!a || !list.clientHeight || list.scrollHeight <= list.clientHeight + 1) return;
+      const r = a.getBoundingClientRect(), b = list.getBoundingClientRect();
+      if (r.top < b.top + 8) list.scrollTop -= b.top + 8 - r.top; else if (r.bottom > b.bottom - 8) list.scrollTop += r.bottom - b.bottom + 8;
+    }
+    function sync() {
+      const sh = shownItems(), i = sh.findIndex((a) => a.dataset.key === cur), n = sh.length;
+      items.forEach((a) => { const on = a.dataset.key === cur; a.toggleAttribute("aria-current", false); if (on) a.setAttribute("aria-current", "true"); a.tabIndex = -1; });
+      (i >= 0 ? sh[i] : sh[0] || items[0]).tabIndex = 0;
+      const all = items.map((a) => a.dataset.key), at = all.indexOf(cur);
+      const before = sh.filter((a) => all.indexOf(a.dataset.key) < at), after = sh.filter((a) => all.indexOf(a.dataset.key) > at);
+      pos.textContent = !n ? "No term shown" : i >= 0 ? `Term ${i + 1} of ${n}` : `Not among the ${n} shown`;
+      const was = document.activeElement;
+      prevB.disabled = !before.length; nextB.disabled = !after.length;
+      if (was && was.disabled) (was === prevB ? nextB : prevB).focus({ preventScroll: true });
+      return { before, after };
+    }
+    // show term k's entry; url: name it in the URL (replacing the entry, so Back leaves the glossary in one step)
+    function pick(k, opt) {
+      opt = opt || {};
+      const e = entry(k); if (!e) return;
+      if (k !== cur) { const old = entry(cur); if (old) { unmark(old); old.setAttribute("hidden", "until-found"); } }
+      cur = k; e.removeAttribute("hidden");
+      unmark(e); mark(e, words());
+      if (window.ReportKit && ReportKit.fold) ReportKit.fold.current(col.querySelector(".gl-col"), label(k));
+      sync();
+      const a = items.find((x) => x.dataset.key === k);
+      keepRow(a);
+      if (opt.focusRow && a) a.focus({ preventScroll: true });
+      if (opt.url) { try { history.replaceState(history.state, "", "#term-" + k); } catch (err) {} }
+      if (opt.bring) {
+        // the entry's head back in sight when the page had scrolled past it
+        const r = e.getBoundingClientRect(), top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+        if (r.top < top || r.top > window.innerHeight - 80) window.scrollTo(0, Math.max(0, r.top + window.scrollY - top - 12));
+      }
+    }
+    function step(d) { const s = sync(), to = d < 0 ? s.before[s.before.length - 1] : s.after[0]; if (to) pick(to.dataset.key, { url: true, bring: true }); }
+    list.addEventListener("click", (ev) => {
+      const a = ev.target.closest && ev.target.closest(".gl-item"); if (!a) return;
+      if (ev.button || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return; // a new tab or window keeps the link
+      ev.preventDefault(); pick(a.dataset.key, { url: true, bring: true }); // on a phone the kit's fold closes the column and focuses its button
+    });
+    list.addEventListener("keydown", (ev) => {
+      const a = ev.target.closest && ev.target.closest(".gl-item"); if (!a) return;
+      const sh = shownItems(), i = sh.indexOf(a); let j = null;
+      if (ev.key === "ArrowDown") j = Math.min(sh.length - 1, i + 1); else if (ev.key === "ArrowUp") j = Math.max(0, i - 1);
+      else if (ev.key === "Home") j = 0; else if (ev.key === "End") j = sh.length - 1;
+      else if (ev.key === " ") { ev.preventDefault(); a.click(); return; }
+      if (j == null || j < 0) return;
+      ev.preventDefault(); pick(sh[j].dataset.key, { url: true, focusRow: true });
+    });
+    document.getElementById("gl-stage").addEventListener("click", (ev) => { const b = ev.target.closest && ev.target.closest("[data-gl-step]"); if (b && !b.disabled) step(+b.dataset.glStep); });
+    // the browser's own find reaches a hidden entry: it becomes the entry shown
+    document.querySelectorAll("#method .gl-entry").forEach((e) => e.addEventListener("beforematch", () => pick(e.id.slice(5), { url: true })));
+    list.addEventListener("rk:find", () => { snips(); const e = entry(cur); if (e) { unmark(e); mark(e, words()); } sync(); });
+    // a link or a hash to an entry: its row comes back (the kit's find clears a search or a type that hides it)
+    function reveal(el) {
+      const e = el && el.closest && el.closest("#method .gl-entry"); if (!e) return false;
+      const k = e.id.slice(5), a = items.find((x) => x.dataset.key === k);
+      if (a && window.ReportKit && ReportKit.find) ReportKit.find.reveal(a);
+      pick(k); return true;
+    }
+    // what follows the split on the page: the column leaves that much of the screen, so at the page's end it is still whole
+    const split = col.parentElement;
+    const fit = () => { if (!split.offsetParent) return; const below = document.documentElement.scrollHeight - (split.getBoundingClientRect().bottom + window.scrollY); split.style.setProperty("--gl-below", Math.max(0, Math.round(below)) + "px"); };
+    window.addEventListener("resize", fit); document.addEventListener("report-view", () => requestAnimationFrame(fit));
+    if (window.reportReady) window.reportReady(() => requestAnimationFrame(fit));
+    sync();
+    return { reveal };
+  })();
+  function glReveal(el) { return GLOSS ? GLOSS.reveal(el) : false; }
   // for the parts' router: an element named by the URL is revealed (and a glossary entry flashed) before it is scrolled to
   window.__reportReveal = (el, flash) => {
     if (!glReveal(el) || !flash) return;

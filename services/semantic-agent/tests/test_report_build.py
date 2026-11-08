@@ -589,27 +589,40 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
 
 
 def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
-    """Method & glossary on the kit (STANDARDS.md "A glossary is a definition list", "A long list runs in the page's
-    flow", "A short list of labelled facts"): Method as labelled facts, the glossary the kit's find over one part per
-    type, every term build.py gives with its longer lines as facts, no scroll box, no table, no sticky or folding group."""
+    """Method & glossary on the kit (STANDARDS.md "A long list is browsed with a find box, in place where it can be",
+    "A side column sits on the raised surface", "One item at a time", "A short list of labelled facts"): Method as
+    labelled facts; the glossary an index and an entry, the kit's split: every term a row of the side column under the
+    kit's find, grouped under its type's name, beside one term's whole entry under the kit's step row; every entry is in
+    the markup with its id, the first shown and the rest hidden until found; the list is the one scroll box, on record."""
     page, data = _built(tmp_path)
     panel = page[page.index('<section class="view rk-kit rk-js mt" id="method"') : page.index('<div class="tip rk-kit" id="tip"')]
     assert panel.count('class="rk-section"') == 2 and panel.count('class="rk-head"') == 2
     assert '<dl class="rk-facts" id="method-list">' in panel and "<dt>Scoring</dt>" in panel
-    # the kit's find: a shown label (no placeholder), chips that wrap, the count as a status, the empty sentence
+    # the kit's split: the column on the raised surface, folding on a phone, beside the stage
+    assert 'class="gl rk-split"' in panel and 'class="gl-aside rk-aside rk-dense"' in panel and 'class="gl-stage rk-stage"' in panel
+    assert '<button type="button" class="rk-fold" aria-controls="gl-col" hidden>Term<span class="rk-fold-cur">' in panel
+    # the kit's find in the column: a shown label (no placeholder), chips that wrap, the count as a status, the empty sentence
     assert 'data-rk-find="gloss"' in panel and '<label class="rk-find-box">Find a term<input' in panel
     assert "placeholder" not in panel and 'class="rk-find-count" role="status"' in panel and 'class="rk-find-none" hidden' in panel
     types = [ty for ty in build.TERM_TYPES if any(t["type"] == ty for t in data["terms"])]
-    assert panel.count('<div class="rk-part" data-rk-find-group=') == len(types)
+    assert panel.count('<div class="gl-group" data-rk-find-group=') == len(types)
     assert panel.count('class="rk-chips"') == 1 and panel.count("<button type=\"button\" data-value=") == len(types) + 1
-    for t in data["terms"]:
-        assert f'<div id="term-{t["key"]}" data-rk-find-item><dt>' in panel, t["key"]
+    # one row and one entry per term, in the list's order; the first entry shown, the rest reachable by find and links
+    order = [t for ty in types for t in data["terms"] if t["type"] == ty]
+    rows = re.findall(r'<a href="#term-([^"]+)" class="gl-item" data-key="\1" tabindex="-1" data-rk-fold-pick>', panel)
+    entries = re.findall(r'<article class="gl-entry rk-part" id="term-([^"]+)" aria-labelledby="term-\1-h"( hidden="until-found")?>', panel)
+    assert rows == [t["key"] for t in order] == [k for k, _ in entries]
+    assert [bool(h) for _, h in entries] == [False] + [True] * (len(order) - 1)
     assert panel.count("data-rk-find-item") == len(data["terms"]) == len(build.TERMS)
+    # the step row above the entry, the position a polite live region
+    assert 'data-gl-step="-1"' in panel and 'data-gl-step="1"' in panel and 'id="gl-pos" aria-live="polite"' in panel
     lines = sum(len(t.get("more") or []) + bool(t.get("calc")) for t in data["terms"])
-    assert panel.count('<dl class="rk-facts rk-facts-tight">') == sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
+    assert panel.count('<dl class="rk-facts gl-facts">') == sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
     assert panel.count("<div><dt>") == lines + 7  # the longer lines, and Method's seven facts
     assert "<b>84</b> across the sets" in panel  # a count in bold
-    for gone in ('"gl-box"', '"gl-t"', '"gl-types"', '"gl-count"', '"gl-g"', "<table", "data-rk-scroll"):
+    # the list is the tab's one scroll box, marked for the kit's checker; no table, no folding group
+    assert panel.count("data-rk-scroll") == 1 and 'class="gl-list" id="gloss" data-rk-scroll' in panel
+    for gone in ('"gl-box"', '"gl-t"', '"gl-types"', '"gl-count"', '"gl-g"', "<table", 'class="rk-glossary"'):
         assert gone not in panel, gone
     css = page[: page.index("/* report-kit:css ")]
     assert ".gl-box" not in css and "dl.meth" not in css
