@@ -1,0 +1,7 @@
+## 2026-11-08 — Semantic track — the report's Setups fold on report-kit, blank screens under every tab gone
+
+- Done: the Setups ladders fold with the kit's `.rk-fold` (the page's own `window.reportFold` is gone); report-kit re-vendored from loadout main, whose step row keeps a disabled button in sight, so the Question sets tab's own override for it is gone.
+- Done: a closed part of the report now holds the kit's absolutely placed screen-reader text inside its clip; before, the closed Summary's ran the page on, leaving 1,300 to 3,900 blank px under every tab at 1280 px; the template declares its encoding (`<meta charset="utf-8">`).
+- Kept: Method & glossary as it was (owner: none of four restyles tried in the session was better: the glossary in the page's flow, an index beside one entry, a compact list opening in place, a reading pane sized to the screen); the lessons went to loadout.
+- Open: dropping the kit's CSS scope and the report's token block is a token rename, in issue #418.
+- Evidence: the kit checker `--quick`: 0 problems on the report and the brief; clipcheck `--quick`: 0 findings; the report tests: 51 passed; every tab's page ends 72 px under its content at 1280 px (was 1,290 to 3,851 px).

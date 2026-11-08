@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Text2SQL Eval Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,6 +144,11 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
 .stack + .stack { margin-top: 20px; }
 
+/* glossary rows: the longer explanation as labelled lines */
+.gl-t td .gl-txt { margin: 0; }
+.gl-more { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 5px 0 1px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; }
+.gl-more dt { color: var(--ink-3); font-weight: 500; }
+.gl-more dd { margin: 0; color: var(--ink-2); }
 .tip .tcalc { margin: 0; color: var(--ink); }
 .nm { display: inline-block; width: 18px; text-align: center; color: var(--ink-3); }
 .pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
@@ -202,17 +208,59 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); margin: 0 0 6px; padding-left: 9px; border-left: 2px solid var(--rule); quotes: none; }
 .tip p { margin: 2px 0 0; color: var(--ink-2); }
 
+/* Method: one fact per row, its name in the label column, so a reader finds "how is it scored" at a glance */
+dl.meth { display: grid; grid-template-columns: 9rem minmax(0, 1fr); max-width: 42rem; margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; border-top: 1px solid var(--ink); }
+dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid-major); }
+dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
+dl.meth dd { margin: 0; color: var(--ink-2); }
 /* no word left alone on the last line of a paragraph of reading text */
-figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
+figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
+.gl { max-width: 46rem; margin-top: 10px; }
+.gl-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.gl-find { position: relative; flex: 1 1 18rem; max-width: 24rem; display: block; }
+.gl-find svg { position: absolute; left: 10px; top: 50%; margin-top: -8px; color: var(--ink-3); pointer-events: none; }
+.gl-find input { width: 100%; min-height: 36px; padding: 6px 10px 6px 32px; border: 1px solid var(--ink-3); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 14.5px var(--label); }
+.gl-find input::placeholder { color: var(--ink-3); opacity: 1; }
+.gl-find input:focus-visible { outline: 2px solid var(--mf); outline-offset: 1px; border-color: var(--ink-2); }
+.gl-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.gl-types button { appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); font: 500 13.5px var(--label); line-height: 1.2; padding: 5px 9px; min-height: 32px; border-radius: 3px; cursor: pointer; }
+.gl-types button .c { color: var(--ink-3); font-variant-numeric: tabular-nums; margin-left: 5px; font-weight: 400; }
+.gl-types button:hover { border-color: var(--ink-3); color: var(--ink); }
+.gl-types button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.gl-types button[aria-pressed="true"] .c { color: inherit; opacity: .8; }
+.gl-count { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 10px 0 6px; min-height: 1.4em; }
+.gl-count b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-count button { appearance: none; border: 0; background: none; padding: 0 2px; margin-left: 4px; color: var(--ink); font: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--ink-3); cursor: pointer; }
+.gl-box { max-height: min(40rem, calc(100vh - var(--tabh, 0px) - 150px)); min-height: 14rem; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+.gl-box:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 15.5px; line-height: 1.45; }
+.gl-t thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); text-align: left; font: 600 13px var(--label); letter-spacing: .02em; color: var(--ink); padding: 8px 12px 6px 0; border-bottom: 1px solid var(--ink-2); }
+.gl-t th, .gl-t td { padding: 7px 18px 7px 0; vertical-align: baseline; text-align: left; border-bottom: 1px solid var(--grid-major); }
+.gl-t tbody th[scope="row"] { width: 13rem; font-weight: 600; color: var(--ink); }
+.gl-t tbody td { color: var(--ink-2); }
+.gl-t tr.gl-g th { position: sticky; top: var(--gl-hh, 0px); z-index: 1; padding: 0; background: var(--paper-2); border-bottom: 1px solid var(--grid-major); }
+.gl-g button { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; border: 0; background: transparent; padding: 6px 8px 6px 4px; text-align: left; font: 600 13.5px var(--label); color: var(--ink); cursor: pointer; }
+.gl-g button:hover:not(:disabled) { background: var(--band); }
+.gl-g button:disabled { cursor: default; }
+.gl-g button:disabled svg { visibility: hidden; }
+.gl-g button:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+.gl-g button svg { flex: none; color: var(--ink-3); transition: transform .12s ease-out; }
+.gl-g button[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.gl-g .c { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.gl-t mark { background: var(--sel); color: var(--ink); border-radius: 2px; padding: 0 1px; margin: 0 -1px; }
+.gl-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 0; margin: 0; }
+.gl-empty button { appearance: none; border: 1px solid var(--ink-3); background: transparent; color: var(--ink); font: 500 13.5px var(--label); padding: 4px 10px; min-height: 32px; border-radius: 3px; margin-left: 8px; cursor: pointer; }
 
 /* ---------- the section strip: the report's parts as tabs ---------- */
 /* The kit's tabs (report-kit tabs.css): words in ink, the open part on a 3px ink bar. It sticks under the viewport's top edge; its paper fill runs to both screen
    edges (a pseudo-element under it, its shadow clipped to the strip's height; the strip itself clips nothing) so nothing that leaves the column shows beside it. */
 .tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--hair, var(--rule)); }
 .tabs::before { content: ""; position: absolute; z-index: -1; inset: 0 0 -1px; background: var(--paper); box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax); pointer-events: none; }
-/* a thin scrollbar under the tabs when they outrun a narrow screen, as the kit's tabs: a hidden one leaves the tabs past the edge with no cue */
-.tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--hair, var(--rule)) transparent; -webkit-overflow-scrolling: touch; }
+.tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tabs-in::-webkit-scrollbar { display: none; }
 .tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); }
 .tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); }
 .tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); }
@@ -220,6 +268,9 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    measures its real width whether or not its part is open (and redraws on a resize either way) */
 .view { padding-top: 26px; scroll-margin-top: var(--tabh, 0px); }
 .view:not(.on) { height: 0; padding: 0; overflow: hidden; visibility: hidden; opacity: 0; }
+/* a closed part is the containing block of what it positions absolutely (the kit's screen-reader text, .rk-sr), so its
+   clip holds them too; otherwise they ran the page on past the open part (blank screens under every tab) */
+.view:not(.on) { position: relative; }
 .view:focus { outline: none; }
 .view.on { animation: viewin .16s ease-out; }
 @keyframes viewin { from { opacity: 0; } to { opacity: 1; } }
@@ -236,6 +287,23 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
 @media (max-width: 640px) {
   body { font-size: 16.5px; }
   .page { padding-top: 24px; }
+  /* the glossary stacks each term over its meaning; a group's heading sticks while its terms pass */
+  .gl-t, .gl-t tbody, .gl-t tr, .gl-t th, .gl-t td { display: block; }
+  .gl-t thead, .gl-t [hidden] { display: none; }
+  .gl-t tr.gl-g { position: sticky; top: 0; z-index: 1; }
+  .gl-t tr.gl-g th { position: static; }
+  .gl-t tbody tr:not(.gl-g) { padding: 7px 0 8px; border-bottom: 1px solid var(--grid-major); }
+  .gl-t tbody tr:not(.gl-g) > * { width: auto; padding: 0; border: 0; }
+  .gl-t tbody th[scope="row"] { width: auto; margin-bottom: 1px; }
+  dl.meth { grid-template-columns: minmax(0, 1fr); }
+  dl.meth dt { border-bottom: 0; padding: 9px 0 0; }
+  dl.meth dd { padding-top: 0; }
+  .gl-find { flex-basis: 100%; max-width: none; }
+  /* the type filter is one row that scrolls sideways, out to the screen's edges */
+  .gl-tools { gap: 8px; }
+  .gl-types { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
+  .gl-types::-webkit-scrollbar { display: none; }
+  .gl-types button { flex: none; }
 }
 @media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab, .tab::after { transition: none; } .view.on { animation: none; } .jumped:not(tr), tr.jumped > td, tr.jumped > th { animation: none; } .jumped { outline: 2px solid var(--sel); } }
 
@@ -333,7 +401,7 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er, .st, .qs, .mt { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -370,16 +438,6 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
 
-/* the Method & glossary tab: two kit sections, Method a list of labelled facts (.rk-facts) and the glossary the kit's
-   find over one part per type of term (build.py glossary_html), in the page's flow; its tokens map as the other tabs'
-   (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
-   behaviour; the way back is a control at the word size, as every kit tab's words. */
-#method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
-.rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
-  border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
-.rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
-.rk-kit .jumpback:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
-
 /* the Setups ladders fold behind the kit's .rk-fold on a phone; its current choice is a setup id, in the mono face */
 .st .rk-fold-cur { font: 600 .9375rem/1.3 var(--code) }
 
@@ -402,8 +460,8 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
 #every-run .er-key { margin: 0 0 var(--s5) }
 #every-run .er-key svg { flex: none; display: block }
 #every-run .plate { border-top: 0; border-bottom: 2px solid var(--ink) }
-/* the head scrolls with the rows (scrollbar hidden: the rows' own bar, in sight, moves both), so text past its right
-   edge is scrolled out of view, not cut; data-rk-scroll tells the kit checker the hidden bar is the rows' (NOTES.md) */
+/* the head scrolls with the rows (scrollbar hidden: the rows' own bar moves both), so text past its right edge is
+   scrolled out of view, not cut */
 #every-run .plate-head { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 2px solid var(--ink); background: var(--paper) }
 #every-run .plate-head::-webkit-scrollbar { display: none }
 #every-run .prow { border-bottom: 1px solid var(--hair) }
@@ -504,7 +562,7 @@ window.REPORT = D;
   /* The parts on report-kit (the Summary, the Decision map, the header, the tab strip, the tooltip): the kit's own
      scope nests its CSS under every element carrying .rk-kit, so the tabs not yet moved keep the report's look; then
      the Approaches sections' own styles, nested the same way by build.py (scope_to_panel). */
-  /* report-kit:css tokens base section marks dots bar range tint slope switch filter find fold step dialog table-sort tip highlight plot-theme scope=.rk-kit */
+  /* report-kit:css tokens base section marks dots bar range tint slope switch filter fold step dialog table-sort tip highlight plot-theme scope=.rk-kit */
   .rk-kit {
   /*SUMMARY_CSS*/
   /* every part on the kit keeps the page's ground */
@@ -577,7 +635,7 @@ window.REPORT = D;
     <h3 class="figtitle" id="t6"></h3>
     <ul class="rk-key er-key" id="leg6"></ul>
     <p class="vh" id="plate-live" aria-live="polite"></p>
-    <div class="plate" id="plate"><div class="plate-head" id="plate-head" data-rk-scroll></div><div class="plate-body" id="plate-body"></div></div>
+    <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
   </figure>
   </section>
   </section>
@@ -591,23 +649,30 @@ window.REPORT = D;
   </section>
 
 
-  <section class="view rk-kit rk-js mt" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
-  <section class="rk-section" aria-labelledby="method-h">
-    <div class="rk-head"><h2 id="method-h">Method, briefly</h2></div>
-    <dl class="rk-facts" id="method-list">
-      <div><dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd></div>
-      <div><dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd></div>
-      <div><dt>Exclusions</dt><dd>Runs that failed for infrastructure reasons are excluded, never scored.</dd></div>
-      <div><dt>Intervals</dt><dd>Accuracy and confident-wrong are means over questions with a <span class="term" data-term="interval" tabindex="0">95% percentile bootstrap interval</span> over questions.</dd></div>
-      <div><dt>Comparisons</dt><dd>Comparisons against the <span class="term" data-term="managed-best" tabindex="0">managed best</span> and <span class="term" data-term="floor" tabindex="0">the floor</span> are paired by question; an interval that includes zero is a tie.</dd></div>
-      <div><dt>Models</dt><dd>Our setups <span class="term" data-term="decides" tabindex="0">decide</span> on a free model and Claude repeats them as a <span class="term" data-term="check" tabindex="0">check</span>; Google's data agents run on Gemini only.</dd></div>
-      <div><dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd></div>
-    </dl>
-  </section>
-  <section class="rk-section" aria-labelledby="gloss-h">
-    <div class="rk-head"><h2 id="gloss-h">Glossary</h2></div>
-<!--GLOSSARY-->
-  </section>
+  <section class="view" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
+  <h2>Method, briefly</h2>
+  <dl class="meth" id="method-list">
+    <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
+    <dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd>
+    <dt>Exclusions</dt><dd>Runs that failed for infrastructure reasons are excluded, never scored.</dd>
+    <dt>Intervals</dt><dd>Accuracy and confident-wrong are means over questions with a <span class="term" data-term="interval" tabindex="0">95% percentile bootstrap interval</span> over questions.</dd>
+    <dt>Comparisons</dt><dd>Comparisons against the <span class="term" data-term="managed-best" tabindex="0">managed best</span> and <span class="term" data-term="floor" tabindex="0">the floor</span> are paired by question; an interval that includes zero is a tie.</dd>
+    <dt>Models</dt><dd>Our setups <span class="term" data-term="decides" tabindex="0">decide</span> on a free model and Claude repeats them as a <span class="term" data-term="check" tabindex="0">check</span>; Google's data agents run on Gemini only.</dd>
+    <dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd>
+  </dl>
+
+  <h2 id="gloss-h">Glossary</h2>
+  <div class="gl" id="gloss">
+    <div class="gl-tools">
+      <label class="gl-find"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="vh">Find a term</span><input type="search" id="gl-q" placeholder="Find a term or a word in its meaning" autocomplete="off" spellcheck="false" aria-controls="gl-box"></label>
+      <div class="gl-types" id="gl-types" role="group" aria-label="Show one type of term"></div>
+    </div>
+    <p class="gl-count" id="gl-count" aria-live="polite"></p>
+    <div class="gl-box" id="gl-box" tabindex="0" role="region" aria-labelledby="gloss-h">
+      <table class="gl-t" id="gl-t"><thead><tr><th scope="col">Term</th><th scope="col">What it means</th></tr></thead></table>
+      <p class="gl-empty" id="gl-empty" hidden></p>
+    </div>
+  </div>
   </section>
   </div>
 </div>
@@ -785,11 +850,10 @@ window.REPORT = D;
 </script>
 <!-- report-kit:vendor plot -->
 <script>
-/* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel, the Decision map's filter, the Question
-   sets and the Method & glossary tab, whose glossary is the kit's find): the
+/* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel and the Decision map's filter): the
    Decision map's cells and the other tabs keep the report's own tooltip on their data-tip. plot-theme only defines
    ReportKit.plotTheme, which the MetricFlow agent's figures read for their type as they draw, so it runs before them. */
-/* report-kit:js switch filter find fold table-sort tip highlight plot-theme scope=.rk-js */
+/* report-kit:js switch filter fold table-sort tip highlight plot-theme scope=.rk-js */
 </script>
 
 <script>
@@ -982,7 +1046,7 @@ window.REPORT = D;
     // the target may sit in another part of the report: open it (a history entry, so Back returns too)
     const V = window.__reportViews, fromView = V && V.viewOf(from), tok = V ? V.jumpTo(target) : null;
     if (target.id && target.id.startsWith("map-") && from.dataset.key) target = mapRowFor(from.dataset.key, from.dataset.set) || target;
-    glReveal(target); // a glossary entry hidden by the search or the type is shown first
+    glReveal(target); // a glossary row hidden by the search, the type filter or a fold is shown first
     // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
     target.scrollIntoView({ block: "center" });
     target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
@@ -997,7 +1061,7 @@ window.REPORT = D;
       if (V && fromView && V.viewOf(target) !== fromView) V.show(fromView.dataset.view);
       window.scrollTo(backX, backY); refocus();
     });
-    (target.matches("tr") ? target.querySelector("th, td") : target.matches("[data-rk-find-item]") ? target.querySelector("dt") : target).appendChild(back);
+    (target.matches("tr") ? target.querySelector("th, td") : target).appendChild(back);
     quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
   }
   // a "↑ Back" left in a part the reader has since left by other means goes with it
@@ -1180,16 +1244,85 @@ window.REPORT = D;
     const tw = D.twin || {};
     $("#t2").textContent = D.sentences.forest || "";
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
+    renderGloss();
   }
 
-  /* ---------- the glossary: on report-kit (build.py glossary_html, the kit's find) ---------- */
-  // An entry a link names comes back first: the kit's find clears a search or a type that hides it.
-  function glReveal(el) {
-    if (!el || !el.closest || !el.closest("#gloss")) return false;
-    if (window.ReportKit && window.ReportKit.find) window.ReportKit.find.reveal(el);
+  /* ---------- the glossary: grouped by type, a type filter, a search, its own scroll box ---------- */
+  // State lives here, so a term jump can undo whatever hides its row: the search, the filter or a folded group.
+  const GS = { q: "", type: null, folded: new Set() };
+  const glTypes = () => (D.termTypes || []).filter((ty) => (D.terms || []).some((t) => t.type === ty));
+  const glNorm = (x) => String(x).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // the search's matches marked in a text: each word of the query, wherever it starts
+  function glMark(text, words) {
+    if (!words.length) return esc(text);
+    const re = new RegExp("(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+    return String(text).split(re).map((p, i) => (i % 2 ? `<mark>${esc(p)}</mark>` : esc(p))).join("");
+  }
+  // a term's row: its short meaning, then how it is computed and its longer explanation, as labelled lines
+  const glLines = (t) => (t.calc ? [["Computed as", t.calc]] : []).concat(t.more || []);
+  const glHay = (t) => glNorm([t.label, t.text].concat(...glLines(t)).join(" "));
+  const glCell = (t, words) => `<p class="gl-txt">${glMark(t.text, words)}</p>` + (glLines(t).length ? `<dl class="gl-more">${glLines(t).map(([k, v]) => `<dt>${glMark(k, words)}</dt><dd>${glMark(v, words)}</dd>`).join("")}</dl>` : "");
+  const CHEV = `<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  function renderGloss() {
+    const terms = D.terms || [], types = glTypes();
+    $("#gl-types").innerHTML = [[null, "All types", terms.length]].concat(types.map((ty) => [ty, ty, terms.filter((t) => t.type === ty).length]))
+      .map(([ty, l, n]) => `<button type="button" data-type="${ty == null ? "" : esc(ty)}" aria-pressed="${GS.type === ty}">${esc(l)}<span class="c">${n}</span></button>`).join("");
+    const tb = types.map((ty, i) => `<tbody data-type="${esc(ty)}"><tr class="gl-g"><th colspan="2" scope="rowgroup" id="gl-g${i}"><button type="button" aria-expanded="true">${CHEV}<span>${esc(ty)}</span><span class="c"></span></button></th></tr>` +
+      terms.filter((t) => t.type === ty).map((t) => `<tr id="term-${esc(t.key)}" data-key="${esc(t.key)}"><th scope="row">${esc(t.label)}</th><td></td></tr>`).join("") + `</tbody>`).join("");
+    const tbl = $("#gl-t"); tbl.querySelectorAll("tbody").forEach((b) => b.remove()); tbl.insertAdjacentHTML("beforeend", tb);
+    glApply();
+  }
+  function glApply() {
+    const terms = D.terms || [], words = glNorm(GS.q).split(/\s+/).filter(Boolean);
+    const byKey = {}; terms.forEach((t) => (byKey[t.key] = t));
+    let shown = 0, matched = 0;
+    $("#gl-t").querySelectorAll("tbody").forEach((tb) => {
+      const ty = tb.dataset.type, inType = GS.type == null || GS.type === ty, folded = GS.folded.has(ty) && !words.length;
+      let n = 0;
+      tb.querySelectorAll("tr[data-key]").forEach((tr) => {
+        const t = byKey[tr.dataset.key], hay = glHay(t);
+        const hit = words.every((w) => hay.includes(w));
+        tr.cells[0].innerHTML = glMark(t.label, hit ? words : []); tr.cells[1].innerHTML = glCell(t, hit ? words : []);
+        if (hit && inType) n++;
+        tr.hidden = !(hit && inType) || folded;
+      });
+      tb.hidden = !inType || n === 0;
+      // during a search every group shows its matches, so a heading does not fold
+      const b = tb.querySelector(".gl-g button"); b.setAttribute("aria-expanded", String(!folded)); b.disabled = !!words.length;
+      b.querySelector(".c").textContent = words.length ? `${n} of ${tb.querySelectorAll("tr[data-key]").length}` : String(n);
+      if (!tb.hidden) { matched += n; if (!folded) shown += n; }
+    });
+    // each type's count follows the search, so a reader sees where the matches are before choosing a type
+    const hits = terms.filter((t) => { const hay = glHay(t); return words.every((w) => hay.includes(w)); });
+    $("#gl-types").querySelectorAll("button").forEach((b) => {
+      const ty = b.dataset.type || null; b.setAttribute("aria-pressed", String(ty === GS.type));
+      b.querySelector(".c").textContent = hits.filter((t) => ty == null || t.type === ty).length;
+    });
+    const any = words.length || GS.type != null, q = esc(GS.q.trim());
+    $("#gl-count").innerHTML = any ? `<b>${matched}</b> of ${terms.length} terms${words.length ? ` match “${q}”` : ""}${GS.type != null ? ` in ${esc(GS.type)}` : ""}<button type="button" data-gl-reset="1">Show every term</button>`
+      : `<b>${terms.length}</b> terms in ${glTypes().length} types; a type's heading folds it.`;
+    const empty = $("#gl-empty"); empty.hidden = matched > 0;
+    empty.innerHTML = matched ? "" : `No term${GS.type != null ? ` in ${esc(GS.type)}` : ""} matches “${q}”.<button type="button" data-gl-reset="1">Show every term</button>`;
+    const thead = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (thead ? thead.offsetHeight : 0) + "px");
+  }
+  function glReset() { GS.q = ""; GS.type = null; GS.folded.clear(); $("#gl-q").value = ""; glApply(); }
+  $("#gl-q").addEventListener("input", (e) => { GS.q = e.target.value; glApply(); $("#gl-box").scrollTop = 0; });
+  $("#gl-types").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const ty = b.dataset.type || null; GS.type = GS.type === ty ? null : ty; glApply(); $("#gl-box").scrollTop = 0; });
+  $("#gl-t").addEventListener("click", (e) => { const b = e.target.closest(".gl-g button"); if (!b || GS.q.trim()) return; const ty = b.closest("tbody").dataset.type; if (GS.folded.has(ty)) GS.folded.delete(ty); else GS.folded.add(ty); glApply(); });
+  $("#gloss").addEventListener("click", (e) => { if (e.target.closest("[data-gl-reset]")) { glReset(); $("#gl-q").focus(); } });
+  window.addEventListener("resize", () => { const th = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (th ? th.offsetHeight : 0) + "px"); });
+  // A term's row made visible: the search, the type filter or a fold that hides it is undone (issue 401).
+  function glReveal(row) {
+    const tb = row && row.closest && row.closest("#gl-t tbody"); if (!tb) return false;
+    const t = (D.terms || []).find((x) => x.key === row.dataset.key); if (!t) return false;
+    const hay = glHay(t), words = glNorm(GS.q).split(/\s+/).filter(Boolean);
+    if (!words.every((w) => hay.includes(w))) { GS.q = ""; $("#gl-q").value = ""; }
+    if (GS.type != null && GS.type !== tb.dataset.type) GS.type = null;
+    GS.folded.delete(tb.dataset.type);
+    glApply();
     return true;
   }
-  // for the parts' router: an element named by the URL is revealed (and a glossary entry flashed) before it is scrolled to
+  // for the parts' router: an element named by the URL is revealed (and a glossary row flashed) before it is scrolled to
   window.__reportReveal = (el, flash) => {
     if (!glReveal(el) || !flash) return;
     el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped");

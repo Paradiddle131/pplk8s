@@ -150,7 +150,7 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert f'<section class="{sec} rk-section"' in panel, sec
         assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
     # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
-    assert ".mfa, .er, .st, .qs, .mt { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    assert ".mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
@@ -195,7 +195,7 @@ def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
         '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div>'
         '<div class="sxb-seq rk-part"></div></div>' in panel
     )
-    assert '<div class="sm-aside rk-aside" data-rk-scroll>' in panel
+    assert '<div class="sm-aside rk-aside">' in panel
     fig = panel.index('<figure class="sm-fig rk-fig">')
     assert (
         fig
@@ -573,46 +573,19 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     assert '<section class="view rk-kit" id="decision-map"' in page
     assert '<section class="view rk-kit mfa" id="metricflow"' in page
     assert '<section class="view rk-kit er" id="every-run"' in page
-    # the shared chrome moved with the second tab; every tab is on the kit now
+    # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
     for part in moved:
         assert part in page, part
     assert '<section class="view rk-kit st" id="setups"' in page
     assert '<section class="view rk-kit rk-js qs-v" id="question-sets"' in page
-    assert '<section class="view rk-kit rk-js mt" id="method"' in page
+    assert '<section class="view" id="method"' in page
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
-    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter, Question sets, Method & glossary)
+    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter, Question sets' fold)
     assert "/* report-kit:css " in page and "scope=.rk-kit */" in page
     assert "scope=.rk-js */" in page and '.root = ".rk-js";' in page
-    assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 4
-
-
-def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
-    """Method & glossary on the kit (STANDARDS.md "A glossary is a definition list", "A long list runs in the page's
-    flow", "A short list of labelled facts"): Method as labelled facts, the glossary the kit's find over one part per
-    type, every term build.py gives with its longer lines as facts, no scroll box, no table, no sticky or folding group."""
-    page, data = _built(tmp_path)
-    panel = page[page.index('<section class="view rk-kit rk-js mt" id="method"') : page.index('<div class="tip rk-kit" id="tip"')]
-    assert panel.count('class="rk-section"') == 2 and panel.count('class="rk-head"') == 2
-    assert '<dl class="rk-facts" id="method-list">' in panel and "<dt>Scoring</dt>" in panel
-    # the kit's find: a shown label (no placeholder), chips that wrap, the count as a status, the empty sentence
-    assert 'data-rk-find="gloss"' in panel and '<label class="rk-find-box">Find a term<input' in panel
-    assert "placeholder" not in panel and 'class="rk-find-count" role="status"' in panel and 'class="rk-find-none" hidden' in panel
-    types = [ty for ty in build.TERM_TYPES if any(t["type"] == ty for t in data["terms"])]
-    assert panel.count('<div class="rk-part" data-rk-find-group=') == len(types)
-    assert panel.count('class="rk-chips"') == 1 and panel.count("<button type=\"button\" data-value=") == len(types) + 1
-    for t in data["terms"]:
-        assert f'<div id="term-{t["key"]}" data-rk-find-item><dt>' in panel, t["key"]
-    assert panel.count("data-rk-find-item") == len(data["terms"]) == len(build.TERMS)
-    lines = sum(len(t.get("more") or []) + bool(t.get("calc")) for t in data["terms"])
-    assert panel.count('<dl class="rk-facts rk-facts-tight">') == sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
-    assert panel.count("<div><dt>") == lines + 7  # the longer lines, and Method's seven facts
-    assert "<b>84</b> across the sets" in panel  # a count in bold
-    for gone in ('"gl-box"', '"gl-t"', '"gl-types"', '"gl-count"', '"gl-g"', "<table", "data-rk-scroll"):
-        assert gone not in panel, gone
-    css = page[: page.index("/* report-kit:css ")]
-    assert ".gl-box" not in css and "dl.meth" not in css
+    assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 3
 
 
 def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):

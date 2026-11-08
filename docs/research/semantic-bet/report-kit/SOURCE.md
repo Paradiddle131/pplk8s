@@ -1,6 +1,6 @@
 # report-kit, vendored
 
-A copy of the report kit the semantic-bet pages are built with: loadout `skills/report-kit` (the owner's shared collection, which claude-dotfiles became) at commit 92a846f, which adds a reference list read in the page's flow (a glossary grouped as definition lists, type chips that wrap, labelled facts, the find component) to stepping one item at a time, browsing a long list, a modal dialog, a side column's fold, runs of status marks and a heading-outline check.
+A copy of the report kit the semantic-bet pages are built with: loadout `skills/report-kit` (the owner's shared collection, which claude-dotfiles became) at commit 6b1160a, which adds stepping one item at a time (a disabled step button kept in sight), browsing a long list, a modal dialog, a side column's fold, runs of status marks and a heading-outline check to the levels inside a section.
 Only what the pages need is here: the components (`kit/`), the build that inlines them (`bin/build.cjs`) and the checker (`bin/check.cjs`).
 The kit's docs (`SKILL.md`, `STANDARDS.md`, `REFERENCE.md`) stay upstream; read them there.
 
