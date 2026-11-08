@@ -1,0 +1,6 @@
+## 2026-11-08 — Semantic track — the report's Method & glossary tab on report-kit
+
+- Done: Method & glossary on the kit, the last tab to move: two kit sections; Method the kit's labelled facts at 1rem in full ink; the glossary the kit's grouped definition list in the page's flow (one part per type, an entry's longer lines as labelled facts, counts bold), with the kit's find (a labelled find box, type chips that wrap, the count as a status, an empty sentence that clears it).
+- Done: the glossary's own scroll box, its table head, its sticky and folding group rows, its sideways chip strip and its "a type's heading folds it" line are gone; `build.py` writes the glossary's markup (`glossary_html`); links to an entry still land on it through `ReportKit.find.reveal`.
+- Done: report-kit re-vendored from loadout for the find component and labelled facts; its new `strip` and `nest` checks settled on other tabs (the tab strip shows a thin scrollbar; the setup ladder and the plate head carry `data-rk-scroll`, recorded in the report's NOTES.md).
+- Evidence: the kit checker `--quick`: 0 problems; clipcheck `--quick` and the report tests (with a new test for the tab) as quoted in the session's handoff.

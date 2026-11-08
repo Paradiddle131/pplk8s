@@ -150,7 +150,7 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert f'<section class="{sec} rk-section"' in panel, sec
         assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
     # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
-    assert ".mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    assert ".mfa, .er, .st, .qs, .mt { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
@@ -195,7 +195,7 @@ def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
         '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div>'
         '<div class="sxb-seq rk-part"></div></div>' in panel
     )
-    assert '<div class="sm-aside rk-aside">' in panel
+    assert '<div class="sm-aside rk-aside" data-rk-scroll>' in panel
     fig = panel.index('<figure class="sm-fig rk-fig">')
     assert (
         fig
