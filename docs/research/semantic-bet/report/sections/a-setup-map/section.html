@@ -5,34 +5,39 @@
 .sm .sm-lede b { font-weight: 700; }
 
 /* the rung lists */
-.sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0 0 14px; padding: 0; list-style: none; }
+/* the ladder is the kit's side column (.rk-aside): the one raised surface, so the controls read apart from the map
+   without a border; the setup or rung it holds is a reversed plate */
+.sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0 0 var(--gap-part); list-style: none; }
 .sm .sm-rung { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 0; transition: opacity .12s ease-out; }
 .sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
 .sm .sm-rhd small { display: block; font-size: var(--t-word); font-weight: 400; color: var(--ink); }
-.sm .sm-rhd:hover, .sm .sm-rhd[aria-pressed="true"] { background: var(--paper-2); }
+.sm .sm-rhd:hover { background: var(--paper-2); }
+.sm .sm-rhd[aria-pressed="true"], .sm .sm-rhd[aria-pressed="true"] small { background: var(--ink); color: var(--paper); }
 .sm .sm-rung ul { list-style: none; margin: 2px 0 0; padding: 0; }
 .sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--sans); font-size: var(--t-word); line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
 .sm .sm-s::before { content: ""; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 3px; border-radius: 1px; background: var(--f, var(--other)); }
 .sm .sm-s .id { font-size: .9375rem; font-weight: 600; display: inline-block; }
 .sm .sm-s .sm-d { display: block; color: var(--ink); font-size: var(--t-word); }
-.sm .sm-s:hover, .sm .sm-s[aria-pressed="true"] { background: var(--paper-2); }
-.sm .sm-s[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--ink-2); }
+.sm .sm-s:hover { background: var(--paper-2); }
+.sm .sm-s[aria-pressed="true"], .sm .sm-s[aria-pressed="true"] .sm-d { background: var(--ink); color: var(--paper); }
+.sm .sm-s[aria-pressed="true"] .id { color: var(--paper); font-weight: 700; }
 .sm .sm-none { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); padding: 2px 0 0; }
 .sm .sm-rungs.focusing .sm-s:not(.on) { opacity: .38; }
 .sm .sm-rungs.focusing .sm-rung:not(.on) .sm-rhd { opacity: .55; }
 
-/* the readout */
-.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
-.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: var(--t-word); }
-.sm .sm-read .sm-rt .id { font-size: .9375rem; font-weight: 600; }
-.sm .sm-read .sm-rt .sm-fam { color: var(--ink); }
+/* the readout: a part under the figure (.rk-part: its own head over a 1px ink rule, a part's gap above), its head
+   the setup, rung or part it reads; a tag line places it, then its description once, then its facts */
+.sm .sm-read { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
+.sm .sm-read h4 .id { font-family: var(--code); font-size: var(--t-find); font-weight: 700; }
+.sm .sm-read .sm-tag { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sm .sm-read .sm-tag i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; flex: none; }
+.sm .sm-read .sm-desc { max-width: 44rem; margin-top: var(--s2); }
 .sm .sm-read p { margin: 0 0 4px; }
 .sm .sm-read b { color: var(--ink); font-weight: 700; }
-.sm .sm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; margin: 0; }
+.sm .sm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3) 22px; margin: var(--s3) 0 0; }
 .sm .sm-grid div { min-width: 0; }
 .sm .sm-grid dt { font-size: var(--t-word); font-weight: 700; color: var(--ink); }
 .sm .sm-grid dd { margin: 0; color: var(--ink); }
-.sm .sm-grid dd.sm-sql { font-weight: 700; }
 .sm .sm-hint { color: var(--ink); font-size: var(--t-word); }
 
 /* the sheet */
@@ -85,9 +90,9 @@
 .sm svg.focusing .sm-cardg:not(.on) .sm-row { opacity: 1; }
 .sm svg.focusing .sm-fr.on .sm-frame { stroke: var(--hl); stroke-width: 1.6; }
 
-/* legend */
-.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); align-items: center; margin: 10px 0 0; }
-.sm .sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+/* the key, in the figure right under the map (.rk-fig) */
+.sm .sm-legend { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); align-items: center; }
+.sm .sm-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .sm .sm-legend svg { overflow: visible; flex: none; }
 
 @media (max-width: 760px) {
@@ -103,16 +108,14 @@
    its scrollbar, set by the script) so the map has its room. Narrower screens stack them, the map scrolling sideways. */
 @media (min-width: 1260px) {
   .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 0 16px; align-items: start; }
-  .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; padding: var(--s3) var(--s2) var(--s3) var(--s3); position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  .sm .sm-rungs > .sm-rung:first-child { border-top: 0; padding-top: 0; }
   .sm .sm-rungs:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
   .sm .sm-side { display: flex; flex-direction: column; min-width: 0; }
-  .sm .sm-scroll { order: 1; }
-  .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
-  .sm .sm-read .sm-rt { margin-bottom: 4px; }
+  .sm .sm-read { min-height: 0; }
   /* each fact's name runs in before it, a line saved per row of facts */
   .sm .sm-grid dt, .sm .sm-grid dd { display: inline; }
   .sm .sm-grid dt { margin-right: 5px; }
-  .sm .sm-legend { order: 3; margin-top: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sm .sm-x, .sm .sm-s, .sm .sm-rung { transition: none; }
@@ -120,13 +123,15 @@
 </style>
 
   <div class="rk-head"><h2 id="sm-h">What each setup is</h2></div>
-  <p class="sm-lede">Every setup on one map. Each part is drawn once, where it runs; a setup is a path through the parts it uses: who asks, on which model, through which tools, with what context, over which tables. <b>Google's data agents write their own SQL</b> from whatever context they hold. <b>Our agent on MetricFlow never writes SQL</b>: it lists the metrics, reads one metric's definition and dimensions, and asks MetricFlow to compute; MetricFlow writes the SQL.</p>
+  <p class="sm-lede">Every setup on one map: each part is drawn once, where it runs, and a setup is the path through the parts it uses.</p>
   <div class="sm-body">
-  <ul class="sm-rungs" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
+  <ul class="sm-rungs rk-aside" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
   <div class="sm-side">
-  <div class="sm-read" id="sm-read" aria-live="polite"></div>
+  <figure class="sm-fig rk-fig">
   <div class="sm-scroll" tabindex="0" role="group" aria-label="Map of every setup; scrolls sideways on small screens"><svg class="sm-sheet" id="sm-svg" viewBox="0 0 1200 840" role="img" aria-labelledby="sm-svg-t"><title id="sm-svg-t">Map of every setup. In Google Cloud: the BigQuery data agent on Gemini, the context it is given, Knowledge Catalog, Google's MCP servers and BigQuery with its silver, governed, legacy, table-function and graph objects. On our machine: our ADK agent and a Claude Code subagent, MCP Toolbox, the Lightdash tool and server, a read-only SQL tool, the three MetricFlow tools and MetricFlow, and the warehouse stand-in. Model APIs: a free model and Claude.</title></svg></div>
-  <div class="sm-legend" id="sm-legend"></div>
+  <ul class="sm-legend rk-key" id="sm-legend"></ul>
+  </figure>
+  <div class="sm-read rk-part" id="sm-read" aria-live="polite"></div>
   </div>
   </div>
 
@@ -487,12 +492,12 @@
 
     /* ---------- the legend ---------- */
     document.getElementById("sm-legend").innerHTML = [
-      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="var(--paper)" stroke="var(--ink)"/></svg>a part, drawn once</span>`,
-      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-hatch)" stroke="var(--ink)"/></svg>a model</span>`,
-      `<span><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-dots)" stroke="var(--rule)"/></svg>a warehouse</span>`,
-      `<span><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>calls or writes</span>`,
-      `<span><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>reads</span>`,
-      `<span><svg width="44" height="10" aria-hidden="true"><path d="M1 5H13" stroke="var(--da)" stroke-width="2.4"/><path d="M16 5H28" stroke="var(--gt)" stroke-width="2.4"/><path d="M31 5H43" stroke="var(--mf)" stroke-width="2.4"/></svg>a highlighted path, in its family's colour: Google's data agent, ours on Google's tools, ours on a semantic layer</span>`,
+      `<li><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="var(--paper)" stroke="var(--ink)"/></svg>a part, drawn once</li>`,
+      `<li><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-hatch)" stroke="var(--ink)"/></svg>a model</li>`,
+      `<li><svg width="22" height="14" aria-hidden="true"><rect x=".5" y=".5" width="21" height="13" fill="url(#sm-dots)" stroke="var(--rule)"/></svg>a warehouse</li>`,
+      `<li><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>calls or writes</li>`,
+      `<li><svg width="26" height="10" aria-hidden="true"><path d="M1 5H19" stroke="var(--ink-2)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M25 5L18 1.5V8.5Z" fill="var(--ink-2)"/></svg>reads</li>`,
+      `<li><svg width="44" height="10" aria-hidden="true"><path d="M1 5H13" stroke="var(--da)" stroke-width="2.4"/><path d="M16 5H28" stroke="var(--gt)" stroke-width="2.4"/><path d="M31 5H43" stroke="var(--mf)" stroke-width="2.4"/></svg>a highlighted path, in its family's colour: Google's data agent, ours on Google's tools, ours on a semantic layer</li>`,
     ].join("");
 
     /* ---------- focus ---------- */
@@ -507,16 +512,24 @@
     }
     const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
     function restText() {
-      return `<p class="sm-rt">Two shapes run through the map.</p>
+      return `<h4>Two shapes run through the map</h4>
         <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
         <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>`;
     }
-    function setupText(a) {
-      const sp = specOf(a); const f = famOf(a);
-      const head = `<p class="sm-rt"><span class="id">${esc(a)}</span> <span class="sm-fam">${esc(famLabel(f))}</span>. ${esc(descOf(a))}</p>`;
-      if (!sp) return head + `<p>Not yet drawn on the map; its parts are not recorded here.</p>`;
+    // a setup's readout: its name as the part's head, a tag line that places it (family, rung), its description once,
+    // then the facts the map draws for it
+    const rungOfArm = (a) => ladder.find((l) => l.arms.includes(a));
+    function factsOf(a) {
+      const sp = specOf(a);
+      if (!sp) return `<p>Not yet drawn on the map; its parts are not recorded here.</p>`;
       const cell = (k, v, cls) => `<div><dt>${k}</dt><dd${cls ? ` class="${cls}"` : ""}>${esc(v)}</dd></div>`;
-      return head + `<dl class="sm-grid">${cell("Who asks", ASKS[sp.asks])}${cell("Model", modelText(a))}${cell("Tools", sp.tools)}${cell("Context", sp.ctx)}${cell("Tables in reach", sp.reach)}${cell("Who writes the SQL", sp.sql, "sm-sql")}</dl>`;
+      return `<dl class="sm-grid">${cell("Who asks", ASKS[sp.asks])}${cell("Model", modelText(a))}${cell("Tools", sp.tools)}${cell("Context", sp.ctx)}${cell("Tables in reach", sp.reach)}${cell("Who writes the SQL", sp.sql)}</dl>`;
+    }
+    function setupText(a) {
+      const f = famOf(a); const l = rungOfArm(a);
+      const where = l ? (/^L\d+$/.test(l.key) ? RUNG_KEY(l.key).toLowerCase() : l.label.replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase())) : "";
+      return `<h4><span class="id">${esc(a)}</span></h4><p class="sm-tag"><i style="background:var(--${f})"></i>${esc(famLabel(f))}${where ? ", " + esc(where) : ""}</p>` +
+        `<p class="sm-desc">${esc(descOf(a))}</p>` + factsOf(a);
     }
     function listParts(ids, all) {
       const set = new Set(all || ids);
@@ -527,8 +540,8 @@
     function rungText(key) {
       const l = ladder.find((x) => x.key === key); if (!l) return "";
       const arms = l.arms;
-      const head = `<p class="sm-rt"><b>${esc(RUNG_KEY(key))}.</b> ${esc(l.label)}: ${nameList(arms)}.</p>`;
-      if (arms.length < 2) return head + (arms[0] ? setupText(arms[0]).replace(/^<p class="sm-rt">[\s\S]*?<\/p>/, "") : "");
+      const head = `<h4>${esc(RUNG_KEY(key))}: ${esc(l.label)}</h4><p class="sm-tag">${arms.length ? nameList(arms) : "No setup yet"}</p>`;
+      if (arms.length < 2) return head + (arms[0] ? factsOf(arms[0]) : "");
       const count = {}; arms.forEach((a) => pathOf(a).forEach((id) => (count[id] = (count[id] || 0) + 1)));
       const ids = Object.keys(count);
       const shared = listParts(ids.filter((id) => count[id] === arms.length), ids);
@@ -540,7 +553,7 @@
     }
     function partText(id) {
       const users = USERS[id] || [];
-      return `<p class="sm-rt"><b>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</b></p>` +
+      return `<h4>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</h4>` +
         (users.length ? `<p>Used by ${nameList(users)}.</p>` : `<p>No setup on the map uses it.</p>`);
     }
     function apply() {
@@ -601,10 +614,10 @@
     // Wide layout: the rung list keeps to its own column, as tall as the room under the part strip, and scrolls
     // there; the map beside it is drawn at its full size (the sheet above), its readout under it keeps the height
     // of its longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves.
-    const wide = window.matchMedia("(min-width: 1260px)"), side = scroller.parentElement;
+    const wide = window.matchMedia("(min-width: 1260px)"), side = scroller.closest(".sm-side");
     function readMax() {
       const probe = document.createElement("div");
-      probe.className = "sm-read"; probe.setAttribute("aria-hidden", "true");
+      probe.className = "sm-read rk-part"; probe.setAttribute("aria-hidden", "true");
       Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: side.clientWidth + "px", minHeight: "0" });
       side.append(probe);
       let m = 0;

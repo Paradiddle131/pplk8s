@@ -177,6 +177,34 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert gone not in panel, gone
 
 
+def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
+    """Owner, 2026-11-08: the parts of each setup section read apart at a glance. The ladders sit
+    on the kit's raised side column, each sheet is a figure holding its key, the explorer's two
+    parts and the map's readout are kit parts (an h4 over a 1px ink rule), and each fact is said
+    once: no change summary over the list of changes, no tag line repeating the rung's name, no
+    caption restating its sequence, no map lede repeating the readout."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    assert '<div class="sxb-wrap rk-split">' in panel
+    assert '<div class="sxb-pick rk-aside">' in panel and '<h3 class="sxb-pick-h"' in panel
+    assert '<div class="sxb-stage rk-stage">' in panel
+    assert '<figure class="sxb-fig rk-fig"><svg' in panel and '<ul class="sxb-legend rk-key"' in panel
+    assert '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div><div class="sxb-seq rk-part"></div></div>' in panel
+    assert '<ul class="sm-rungs rk-aside"' in panel
+    fig = panel.index('<figure class="sm-fig rk-fig">')
+    assert fig < panel.index('<ul class="sm-legend rk-key"') < panel.index('<div class="sm-read rk-part"')
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert "<h4>What changes from" in script and "<h4>On one question</h4>" in script
+    assert 'why: "' not in script and "S.why" not in script
+    assert '"rung " + m[1] + ": "' not in script  # the tag line names the rung by number only
+    assert "MetricFlow turns the definition into SQL" not in script
+    lede = re.search(r'<p class="sm-lede">(.*?)</p>', panel, re.S).group(1)
+    assert "write their own SQL" not in lede and "never writes SQL" not in lede  # the readout says it
+    # the kit carries the levels the tab uses (vendored from upstream, never copied into the page)
+    kit = (BUILD.parent.parent / "report-kit/kit/section.css").read_text(encoding="utf-8")
+    assert ".rk-aside {" in kit and ".rk-part {" in kit and ".rk-fig {" in kit
+
+
 def test_the_page_folds_unclear_runs_into_wrong(tmp_path):
     _, data = _built(tmp_path)
     rows = [r for st in data["sets"].values() for r in st["rows"]]

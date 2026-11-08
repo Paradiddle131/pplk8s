@@ -12,6 +12,7 @@
 //   tabs, switch, sort, highlight, bubble   a control that does not do what it claims
 //   console   a console or page error; the kit's web font (on its first section, else the body) not loaded
 //   control   a control the checker could not reach or press in time
+//   muted     a heading (h1 to h4) set paler than the words around it, by its colour or its opacity
 //   static    raw hex outside token blocks (a drawing's own colours inside <svg> are exempt), gradient text, emoji
 //             as icons, a banned font, a theme block missing
 // Usage: node bin/check.cjs <page.html>... [--quick] [--shots <dir>]   (--quick: 400 and 1280 only)
@@ -208,6 +209,17 @@ async function inspect() {
     if (ratio < need && !reported.has(it.text)) {
       reported.add(it.text);
       out.push({ kind: 'contrast', text: `"${it.text.slice(0, 50)}" ${ratio.toFixed(2)}:1, under ${need}:1`, where: where(el) });
+    }
+  }
+  // rank comes from size, weight, space and rules, never a paler grey: a heading keeps the full ink of its text
+  const solid = (e, stop) => { let a = 1; for (; e && e !== stop; e = e.parentElement) a *= +getComputedStyle(e).opacity; return a; };
+  for (const h of document.querySelectorAll('h1, h2, h3, h4')) {
+    if (!visible(h) || !h.textContent.trim()) continue;
+    const box = h.parentElement.closest('p, li, td, th, dd, section, main, body');
+    const want = parse(getComputedStyle(box).color), got = parse(getComputedStyle(h).color);
+    const a = solid(h, box);
+    if (want && got && (got.some((v, i) => Math.abs(v - want[i]) > 2) || a < 0.99)) {
+      out.push({ kind: 'muted', text: `heading "${h.textContent.trim().slice(0, 40)}" paler than its text: rank it by size, weight and space`, where: where(h) });
     }
   }
   const sw = document.documentElement.scrollWidth, cw = document.documentElement.clientWidth;
@@ -533,6 +545,7 @@ async function selftest(browser, file) {
       <div style="width:120px;overflow:hidden;white-space:nowrap"><span>a long line cut by its box</span></div>
       <p style="width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">an ellipsis that truncates</p>
       <p style="color:rgb(200,200,200)">faint words</p>
+      <h3 style="color:rgb(90,98,120)">a grey sub-head</h3><p>its words in ink</p>
       <svg viewBox="0 0 100 30" width="100" height="30"><text x="-20" y="20">past the viewBox</text></svg>
       <p><span>one</span><span style="margin-left:-20px">two on top</span></p>
       <button type="button" style="outline:none">no focus ring</button>
@@ -545,7 +558,7 @@ async function selftest(browser, file) {
   found.push(...await page.evaluate(focusCheck));
   found.push(...staticChecks('<style>.x { color: #abcdef; background-clip: text; font-family: Arial }</style><p>\u{1F680}</p>'));
   const brand = staticChecks('<svg viewBox="0 0 8 8"><path fill="#7262ff" d="M0 0h8v8z"/></svg>');
-  const want = { clip: /cut by its box/, overflow: /ellipsis/, contrast: /faint words/, viewbox: /past the viewBox/, overlap: /one|two on top/, focus: /no focus ring/, hscroll: /sideways/, static: /raw colour/ };
+  const want = { clip: /cut by its box/, overflow: /ellipsis/, contrast: /faint words/, viewbox: /past the viewBox/, overlap: /one|two on top/, muted: /a grey sub-head/, focus: /no focus ring/, hscroll: /sideways/, static: /raw colour/ };
   let missed = 0;
   for (const [kind, re] of Object.entries(want)) {
     const hit = found.some(f => f.kind === kind && re.test(f.text));

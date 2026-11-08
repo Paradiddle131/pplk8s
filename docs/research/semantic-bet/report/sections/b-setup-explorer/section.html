@@ -3,9 +3,10 @@
 .sxb { --sxb-pencil: var(--mf); }
 .sxb h2 { margin-top: 0; }
 .sxb .sxb-lede { max-width: 40rem; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin: 0 0 var(--s5); }
-.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; padding-top: 0; }
-.sxb .sxb-pick { font-family: var(--sans); position: relative; }
-.sxb .sxb-pick-h { font-size: var(--t-word); font-weight: 700; color: var(--ink); margin: 0 0 8px; line-height: 1.35; }
+/* the kit's side column and stage (.rk-split): the ladder on the one raised surface, what it picks on the ground; the
+   column holds the longest id on one line (20rem), and wraps above the stage once the stage would fall under 60% */
+.sxb .sxb-pick { flex-basis: 20rem; font-family: var(--sans); position: relative; }
+.sxb .sxb-pick-h { margin: 0 0 var(--s3); }
 .sxb .sxb-rungs { position: relative; padding-left: 16px; }
 .sxb .sxb-rungs::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 0; border-left: 1px solid var(--grid-major); }
 .sxb .sxb-rung { position: relative; padding: 0 0 9px; }
@@ -15,7 +16,7 @@
 .sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 700; }
 .sxb .sxb-rung.empty .sxb-rl { color: var(--ink); }
 .sxb .sxb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
+.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: transparent; color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
 .sxb .sxb-chip:hover { border-color: var(--ink-2); }
 .sxb .sxb-chip i { flex: none; width: 3px; align-self: stretch; min-height: 14px; border-radius: 1px; background: var(--other); }
 .sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
@@ -24,34 +25,36 @@
 .sxb .sxb-fams span { display: inline-flex; align-items: center; gap: 5px; }
 .sxb .sxb-fams i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
 
-.sxb .sxb-stage { min-width: 0; }
-.sxb .sxb-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; }
-.sxb .sxb-name { font-family: var(--code); font-size: var(--t-find); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.sxb .sxb-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; align-content: start; }
+.sxb h3.sxb-name { font-family: var(--code); font-size: var(--t-find); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 .sxb .sxb-name span[data-setup] { text-decoration: none; }
-.sxb .sxb-meta { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.sxb .sxb-meta i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
-.sxb .sxb-desc { grid-column: 1 / -1; font-size: var(--t-word); line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
+.sxb .sxb-meta { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.35; margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sxb .sxb-meta i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; flex: none; }
+.sxb .sxb-meta span { flex: 1 1 0; min-width: 0; }
+/* the lead: what the setup is, once, a short step under its name and tag line */
+.sxb .sxb-desc { grid-column: 1 / -1; font-size: var(--t-word); line-height: 1.45; margin: var(--s2) 0 0; max-width: 44rem; }
 .sxb .sxb-steps { display: flex; gap: 4px; }
 .sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--sans); font-size: var(--t-word); min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
 .sxb .sxb-steps button:disabled { color: var(--ink-3); border-color: var(--rule); cursor: default; }
 .sxb .sxb-steps button:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
-.sxb .sxb-fig { margin: 12px 0 0; }
-.sxb .sxb-fig svg { display: block; width: 100%; height: auto; }
-.sxb .sxb-fig.narrow svg { max-width: 420px; }
-.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--sans); font-size: var(--t-word); color: var(--ink); margin: 8px 0 0; line-height: 1.4; }
-.sxb .sxb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+/* the figure (.rk-fig) holds the sheet and its key, a short step apart; the parts follow a part's gap below */
+.sxb .sxb-fig { margin: var(--s5) 0 0; }
+.sxb .sxb-fig > svg { display: block; width: 100%; height: auto; }
+.sxb .sxb-fig.narrow > svg { max-width: 420px; }
+.sxb .sxb-legend { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.4; }
+.sxb .sxb-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .sxb .sxb-legend svg { flex: none; }
-.sxb .sxb-panel { display: grid; align-content: start; align-items: start; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
-.sxb .sxb-panel h3 { font-family: var(--sans); font-size: var(--t-word); font-weight: 700; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
+/* two parts side by side (.rk-parts), each its own h4 over its own 1px ink rule, broken by the column gap */
+.sxb .sxb-panel { align-content: start; }
 .sxb .sxb-panel p { font-size: var(--t-word); line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
-.sxb .sxb-panel .sxb-cap { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.45; margin: 6px 0 0; }
+.sxb .sxb-panel .sxb-cap { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.45; margin: var(--s2) 0 0; }
 .sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--sans); font-size: var(--t-word); line-height: 1.4; }
 .sxb .sxb-diff li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px; padding: 2px 0; }
 .sxb .sxb-diff b { font-weight: 700; text-align: center; }
 .sxb .sxb-diff li.add b { color: var(--sxb-pencil); }
 .sxb .sxb-diff li.gone { color: var(--ink-3); }
 .sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
-.sxb .sxb-q { font-style: italic; }
+.sxb .sxb-q { font-style: italic; margin: 0 0 var(--s2); }
 .sxb .sxb-seq svg { display: block; max-width: none; height: auto; }
 .sxb .sxb-fade { animation: sxb-in .32s ease-out; }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
@@ -94,26 +97,21 @@
 .sxb .s-sl.m { font-family: var(--code) !important; font-size: 13px; }
 .sxb .s-sl.r { fill: var(--ink-2); }
 
-@media (max-width: 860px) {
-  .sxb .sxb-wrap { grid-template-columns: 1fr; gap: 18px; }
-  .sxb .sxb-panel { grid-template-columns: 1fr; }
-}
 @media (prefers-reduced-motion: reduce) { .sxb .sxb-fade { animation: none; } }
 </style>
 
 <div class="rk-head"><h2 id="sxb-h">What each setup is, one at a time</h2></div>
 <p class="sxb-lede">One setup at a time, on the cost ladder: where each part runs, which agent asks, through which tools, with what context, which tables it can reach, and what it adds to the setup before it.</p>
-<div class="sxb-wrap">
-  <div class="sxb-pick">
-    <p class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</p>
+<div class="sxb-wrap rk-split">
+  <div class="sxb-pick rk-aside">
+    <h3 class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</h3>
     <div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
     <div class="sxb-fams"></div>
   </div>
-  <div class="sxb-stage">
+  <div class="sxb-stage rk-stage">
     <div class="sxb-head" aria-live="polite"></div>
-    <div class="sxb-fig"><svg role="img" aria-label=""></svg></div>
-    <div class="sxb-legend" aria-hidden="true"></div>
-    <div class="sxb-panel"><div class="sxb-change"></div><div class="sxb-seq"></div></div>
+    <figure class="sxb-fig rk-fig"><svg role="img" aria-label=""></svg><ul class="sxb-legend rk-key" aria-hidden="true"></ul></figure>
+    <div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div><div class="sxb-seq rk-part"></div></div>
   </div>
 </div>
 
@@ -161,68 +159,68 @@ window.reportReady(() => {
   const daSeq = (holds, how) => ({ kind: "da", holds, how });
   const FACTS = {
     "native-bare": DA({ ctx: [Object.assign({}, CX.instr, { lines: ["and nothing else"] })], reach: [Object.assign({}, RE.silver, { lines: ["copies, no descriptions"] }), RE.cal, RE.legacy],
-      first: "The floor: Google's data agent with the tables and nothing else. Every data agent above it adds to this shape.", seq: daSeq("the tables' names and columns only") }),
+      first: "The floor: every data agent above it adds to this shape.", seq: daSeq("the tables' names and columns only") }),
     "native-kc": DA({ before: "native-bare", ctx: [CX.instr, CX.kc], reach: [RE.silver, RE.legacy],
-      why: "Knowledge Catalog's import of the dbt metrics now grounds the agent; it is given fewer tables.", seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
+      seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
     "native-kc-max": DA({ before: "native-kc", ctx: [CX.instr, CX.kc, CX.desc, CX.gloss], reach: [Object.assign({}, RE.silver, { lines: ["copies, described"] }), RE.cal, RE.legacy],
-      why: "Every free piece of catalog context added: column descriptions and a glossary linked to the columns.", seq: daSeq("descriptions, linked glossary terms, the catalog import") }),
+      seq: daSeq("descriptions, linked glossary terms, the catalog import") }),
     "native-kc-reach": DA({ before: "native-kc", ctx: [CX.instr, CX.kc], reach: [RE.silver, RE.cal, RE.legacy],
-      why: "The same catalog agent, given the wider set of tables the generated-context setups read.", seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
+      seq: daSeq("the catalog's imported metric definitions, if it uses them") }),
     "native-context-bare": DA({ before: "native-kc-reach", ctx: [CX.gen], reach: [RE.silver, RE.cal, RE.legacy],
-      why: "Same tables; the catalog import is swapped for written context generated from MetricFlow.", seq: daSeq("generated context: fields, how each aggregates, glossary") }),
+      seq: daSeq("generated context: fields, how each aggregates, glossary") }),
     "native-context": DA({ before: "native-context-bare", ctx: [CX.gen, CX.vq], reach: [RE.silver, RE.cal, RE.legacy],
-      why: "Verified example queries are added: MetricFlow's compiled SQL for each metric.", seq: daSeq("generated context and verified queries", "or reuses a verified query that matches") }),
+      seq: daSeq("generated context and verified queries", "or reuses a verified query that matches") }),
     "native-governed": DA({ before: "native-context", ctx: [CX.gen, Object.assign({}, CX.vq, { lines: ["one per metric, over the governed tables"] })], reach: [RE.governed, RE.cal, RE.legacy],
-      why: "The cleaned tables are swapped for governed tables computed from the metrics.", seq: daSeq("generated context and verified queries", "over tables the metrics already computed") }),
+      seq: daSeq("generated context and verified queries", "over tables the metrics already computed") }),
     "native-shaped": DA({ before: "native-governed", ctx: [Object.assign({}, CX.instr, { title: "A one-paragraph instruction" }), Object.assign({}, CX.vq, { lines: ["with date parameters, each calling a table function"] })], reach: [RE.silver, RE.tf, RE.legacy],
-      why: "Warehouse objects of another shape: table functions over the cleaned tables, and verified queries that call them.", seq: daSeq("verified queries that call the table functions", "or calls a table function or a verified query") }),
+      seq: daSeq("verified queries that call the table functions", "or calls a table function or a verified query") }),
     "native-graph": DA({ before: "native-shaped", ctx: [Object.assign({}, CX.instr, { lines: ["naming the graph"] })], reach: [Object.assign({}, RE.silver, { lines: ["orders, customers, returns"] }), RE.graph, RE.legacy],
-      why: "The table functions and verified queries give way to a property graph whose measures hold the metrics.", seq: daSeq("a one-line instruction naming the graph", "or aggregates through the graph's measures") }),
+      seq: daSeq("a one-line instruction naming the graph", "or aggregates through the graph's measures") }),
     "native-mcp": OURS({ kind: "gt", before: "native-kc", side: { agent: "o", tools: "o", server: "g" }, wh: "bq", agent: AG.adk("built on Google's servers only"),
       tools: [P("gmcp-tools", "Google's MCP tools", [M("search_entries, lookup_context"), M("get_table_info"), M("execute_sql_readonly"), "read-only ones only"])],
       server: P("gmcp", "Google's MCP servers", ["Knowledge Catalog and BigQuery; the catalog holds the import of the dbt metrics"], { logo: "dbt" }),
       reach: [Object.assign({}, RE.silver, { lines: ["the only dataset it may query"] })], sql: [SQL.agent],
-      why: "Our agent replaces Google's: it reads the same catalog import through Google's MCP servers and writes SQL over the cleaned tables.", seq: { kind: "mcp" } }),
+      seq: { kind: "mcp" } }),
     "custom-toolbox": OURS({ kind: "gt", before: "native-shaped", wh: "bq", agent: AG.adk("calls only the generated tools"),
       tools: [P("tb-tools", "Generated tools", [M("daily_sales(start, end)"), "one per table function, dates only"])],
       server: P("toolbox", "MCP Toolbox", ["Google's open-source tool server: runs each tool's fixed statement"]),
       reach: [RE.tf], sql: [SQL.fixed],
-      why: "The table functions become our agent's only tools; it picks one and passes two dates.", seq: { kind: "toolbox" } }),
+      seq: { kind: "toolbox" } }),
     "custom-metricflow": OURS({ kind: "mf", before: "baseline", agent: AG.adk("answers through metrics only"),
       ctx: [P("i-mf", "Instruction", ["use only the metrics; never write SQL"])], tools: [MFT()], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
-      why: "The one SQL tool is swapped for MetricFlow's three tools: from here the agent asks for metrics and never writes SQL.", seq: { kind: "mf" } }),
+      seq: { kind: "mf" } }),
     "custom-metricflow-compute": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.adk("metrics, with arithmetic over them"),
       ctx: [P("i-mfc", "Instruction", ["use only the metrics; sums, differences and ratios of their results allowed; never write SQL"])], tools: [MFT()], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
-      why: "The instruction now allows the arithmetic Google's agents do in their SQL: a sum, difference, ratio or share of the metric results it fetched, with the figures named.", seq: { kind: "mf" } }),
+      seq: { kind: "mf" } }),
     "custom-lightdash": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.adk("one tool over Lightdash"),
       ctx: [P("i-ld", "Instruction", ["lists every explore and its metrics"])], tools: [P("ld-tool", "One tool", [M("query_metrics"), "builds a Lightdash metric query, never SQL"])],
       server: P("lightdash", "Lightdash", ["open source, self-hosted: holds the dbt metrics its CLI translated, compiles each query"]),
       reach: [P("ldm", "dbt models", ["the ones Lightdash serves"])], sql: [SQL.ld],
-      why: "Another semantic-layer server: Lightdash's free metric query API takes MetricFlow's place.", seq: { kind: "ld" } }),
+      seq: { kind: "ld" } }),
     "custom-hybrid": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.adk("metrics first, SQL fallback"),
       ctx: [P("i-hy", "Instruction", ["metrics first; SQL only where no metric covers it, and say so"])],
       tools: [MFT(), P("fb", "Fallback", [M("execute_sql"), "one read-only query"])], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read by MetricFlow"] }), RE.gold, RE.legacy], sql: [SQL.mf, SQL.fb],
-      why: "A read-only SQL fallback is added for what no metric covers; its answer then opens with “Not a governed metric:”.", seq: { kind: "mf", hybrid: true } }),
+      seq: { kind: "mf", hybrid: true } }),
     "cc-metricflow": OURS({ kind: "mf", before: "custom-metricflow", agent: AG.cc,
       ctx: [P("i-mf", "Instruction", ["use only the metrics; never write SQL"])], tools: [MFT()], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
-      why: "The same three tools and instruction in Claude Code instead of the ADK agent; with no shell, file or web tool, the tools are its only way to a number.", seq: { kind: "mf", cc: true } }),
+      seq: { kind: "mf", cc: true } }),
     "cc-metricflow-compute": OURS({ kind: "mf", before: "cc-metricflow", agent: AG.cc,
       ctx: [P("i-mfc", "Instruction", ["use only the metrics; sums, differences and ratios of their results allowed; never write SQL"])], tools: [MFT()], server: MFS,
       reach: [Object.assign({}, RE.silver, { lines: ["read only by MetricFlow"] })], sql: [SQL.mf],
-      why: "The same arithmetic-allowing instruction as custom-metricflow-compute, in Claude Code instead of the ADK agent.", seq: { kind: "mf", cc: true } }),
+      seq: { kind: "mf", cc: true } }),
     "cc-native-mcp": OURS({ kind: "gt", before: "native-mcp", side: { agent: "o", tools: "o", server: "g" }, wh: "bq", agent: AG.cc,
       tools: [P("gmcp-tools", "Google's MCP tools", [M("search_entries, lookup_context"), M("get_table_info"), M("execute_sql_readonly"), "read-only ones only, and no other tool"])],
       server: P("gmcp", "Google's MCP servers", ["Knowledge Catalog and BigQuery; the catalog holds the import of the dbt metrics"], { logo: "dbt" }),
       reach: [Object.assign({}, RE.silver, { lines: ["the only dataset it may query"] })], sql: [SQL.agent],
-      why: "The same Google MCP tools and instruction in Claude Code instead of the ADK agent, behind the same cost guard.", seq: { kind: "mcp", cc: true } }),
+      seq: { kind: "mcp", cc: true } }),
     "baseline": OURS({ kind: "ref", agent: AG.adk("plain text-to-SQL"),
       ctx: [P("i-sql", "Instruction", ["names the tables it may read"])], tools: [P("sql-tool", "One SQL tool", [M("execute_sql"), "one read-only statement"])], server: null,
       reach: [RE.gold, RE.legacy], sql: [SQL.agent],
-      first: "The reference: an agent with one SQL tool and the names of the tables. It is not a rung; the ladder is read against it.", seq: { kind: "sql" } }),
+      first: "Not a rung: the ladder is read against it.", seq: { kind: "sql" } }),
   };
 
   /* ---------- the setups, from the data ---------- */
@@ -594,8 +592,7 @@ window.reportReady(() => {
       { a: 1, b: 0, t: "reads " + holds, ret: true, num: true },
       { a: 0, b: 0, t: "writes its own SQL" + (q.how ? ", " + q.how : "") + "; the rule that cancelled orders are left out must come from what it holds" },
       { a: 0, b: 2, t: "runs its SQL" }, { a: 2, b: 0, t: "rows", ret: true },
-      { a: 0, b: 0, t: "answers with the figure", end: true }],
-      cap: "Google's agent writes the SQL itself, on Gemini; nothing in between checks it against a metric." };
+      { a: 0, b: 0, t: "answers with the figure", end: true }] };
     if (q.kind === "mf") {
       const lane0 = q.cc ? "Claude Code" : "ADK agent";
       const st = [
@@ -607,7 +604,7 @@ window.reportReady(() => {
         { a: 0, b: 0, t: "answers with the figure and its freshness; it never wrote SQL", end: true }];
       if (q.hybrid) st.push({ a: 0, b: 2, t: "only when no metric covers a question: execute_sql, its own read-only query, the answer opening “Not a governed metric:”", m: false, add: true });
       return { lanes: [lane0, "MetricFlow", "Warehouse"], steps: st,
-        cap: q.cc ? "The same tools, served over MCP; Claude Code has no other tool, so it cannot write or run SQL." : "The agent names a metric and a period; MetricFlow turns the definition into SQL." };
+        cap: q.cc ? "The same tools, served over MCP; Claude Code has no other tool, so it cannot write or run SQL." : "" };
     }
     if (q.kind === "ld") return { lanes: ["ADK agent", "Lightdash", "Warehouse"], steps: [
       { a: 0, b: 0, t: "finds the explore and metric in its instruction" },
@@ -615,27 +612,24 @@ window.reportReady(() => {
       { a: 1, b: 2, t: "Lightdash compiles the SQL and runs it" }, { a: 2, b: 1, t: "rows", ret: true },
       { a: 1, b: 0, t: "rows, each metric's description, the SQL", ret: true },
       { a: 0, b: 0, t: "answers with the figure; it never wrote SQL", end: true }],
-      cap: "The tool checks every name against what Lightdash serves, then sends a metric query, never SQL." };
+      cap: "The tool checks every name against what Lightdash serves before it sends the query." };
     if (q.kind === "mcp") return { lanes: [q.cc ? "Claude Code" : "ADK agent", "Google's MCP servers", "BigQuery"], steps: [
       { a: 0, b: 1, t: "search_entries, lookup_context", m: true }, { a: 1, b: 0, t: "the imported dbt definition of average order value", ret: true },
       { a: 0, b: 1, t: "get_table_info", m: true }, { a: 1, b: 0, t: "the cleaned tables' columns", ret: true },
       { a: 0, b: 0, t: "writes its own SQL from the definition" },
       { a: 0, b: 1, t: "execute_sql_readonly", m: true }, { a: 1, b: 2, t: "runs it" }, { a: 2, b: 0, t: "rows", ret: true },
-      { a: 0, b: 0, t: "answers with the figure", end: true }],
-      cap: "The definition comes from the catalog; the SQL is still the agent's own." };
+      { a: 0, b: 0, t: "answers with the figure", end: true }] };
     if (q.kind === "toolbox") return { lanes: ["ADK agent", "MCP Toolbox", "BigQuery"], steps: [
       { a: 0, b: 1, t: "daily_sales(2026-10-01, 2026-10-01)", m: true },
       { a: 1, b: 2, t: "runs the tool's fixed statement, a table function" }, { a: 2, b: 1, t: "rows", ret: true },
       { a: 1, b: 0, t: "revenue, orders and cancellations for the day", ret: true },
-      { a: 0, b: 0, t: "divides them itself, or declines when no tool fits", end: true }],
-      cap: "The agent only picks a tool and two dates; any arithmetic beyond the tool's rows is its own." };
+      { a: 0, b: 0, t: "divides them itself, or declines when no tool fits", end: true }] };
     if (q.kind === "sql") return { lanes: ["ADK agent", "Warehouse"], steps: [
       { a: 0, b: 0, t: "reads the table names in its instruction" },
       { a: 0, b: 1, t: "execute_sql: information_schema.columns", m: true }, { a: 1, b: 0, t: "the tables' columns", ret: true },
       { a: 0, b: 0, t: "writes its own SQL; nothing tells it to leave cancelled orders out" },
       { a: 0, b: 1, t: "execute_sql", m: true }, { a: 1, b: 0, t: "rows", ret: true },
-      { a: 0, b: 0, t: "answers with the figure", end: true }],
-      cap: "Plain text-to-SQL: whatever rule the tables do not show, the agent has to guess." };
+      { a: 0, b: 0, t: "answers with the figure", end: true }] };
     return null;
   }
   function drawSeq(Q) {
@@ -676,18 +670,20 @@ window.reportReady(() => {
   const head = root.querySelector(".sxb-head"); const change = root.querySelector(".sxb-change"); const seqEl = root.querySelector(".sxb-seq");
   const fig = root.querySelector(".sxb-fig"); const panel = root.querySelector(".sxb-panel");
   const rungLabel = (a) => (rungs[rungOf[a]] || {}).label || "";
-  const rungShort = (a) => { const r = rungs[rungOf[a]] || {}; const m = /^L(\d+)$/.exec(r.key || ""); return m ? "rung " + m[1] + ": " + r.label : r.label || ""; };
+  // the tag line places the setup: its family, then its rung's number alone (the ladder beside names the rung); a rung
+  // with no number keeps its name, lower-cased after the comma
+  const rungShort = (a) => { const r = rungs[rungOf[a]] || {}; const m = /^L(\d+)$/.exec(r.key || ""); return m ? "rung " + m[1] : (r.label || "").replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase()); };
   function headHTML(a) {
     const f = famOf(a); const i = order.indexOf(a);
     const prev = order[i - 1], next = order[i + 1];
-    return `<div><p class="sxb-name"><span data-setup="${esc(a)}" tabindex="0">${esc(a)}</span></p>
-      <p class="sxb-meta"><i style="background:var(--${f})"></i><span>${esc(famLabel(f))}</span><span><span aria-hidden="true">/ </span>${esc(rungShort(a))}</span></p></div>
+    return `<div><h3 class="sxb-name"><span data-setup="${esc(a)}" tabindex="0">${esc(a)}</span></h3>
+      <p class="sxb-meta"><i style="background:var(--${f})"></i><span>${esc(famLabel(f))}, ${esc(rungShort(a))}</span></p></div>
       <div class="sxb-steps"><button type="button" data-go="${esc(prev || "")}" ${prev ? `aria-label="Previous setup: ${esc(prev)}"` : "disabled aria-label=\"No previous setup\""}>←</button><button type="button" data-go="${esc(next || "")}" ${next ? `aria-label="Next setup: ${esc(next)}"` : "disabled aria-label=\"No next setup\""}>→</button></div>
       <p class="sxb-desc">${esc(descOf(a))}</p>`;
   }
   function changeHTML(S) {
     const df = diffOf(S);
-    if (!df) return `<h3>What it starts from</h3><p>${esc(S.first || "The first setup on its rung; nothing before it to compare.").replace(/^The floor/, '<span class="term" data-term="floor" tabindex="0">The floor</span>')}</p>`;
+    if (!df) return `<h4>What it starts from</h4><p>${esc(S.first || "The first setup on its rung; nothing before it to compare.").replace(/^The floor/, '<span class="term" data-term="floor" tabindex="0">The floor</span>')}</p>`;
     const label = (x) => x.slot === "model" ? x.p.title.replace(/^Model: /, "model: ") + ((x.p.lines || [])[0] ? ", " + x.p.lines[0] : "") :
       x.slot === "wh" ? "warehouse: " + x.p.title : (x.slot === "sql" ? "" : x.slot === "server" ? "server: " : x.slot === "agent" ? "agent: " : "") + x.p.title + (x.slot === "ctx" || x.slot === "reach" ? (x.slot === "reach" ? " (in reach)" : " (given)") : "");
     const added = pieces(S).filter((x) => df.added.has(x.k));
@@ -698,13 +694,13 @@ window.reportReady(() => {
     const say = (x) => { const l = label(x); const first = (x.p.lines || [])[0]; return twin.has(l) && typeof first === "string" ? l + ": " + first : l; };
     const li = added.map((x) => `<li class="add"><b aria-label="added">+</b><span>${esc(say(x))}</span></li>`).join("") +
       df.removed.map((x) => `<li class="gone"><b aria-label="dropped">−</b><span>${esc(say(x))}</span></li>`).join("");
-    return `<h3>What changes from <span class="id" data-setup="${esc(df.before)}" tabindex="0">${esc(df.before)}</span></h3>
-      <p>${esc(S.why || "")}</p>${li ? `<ul class="sxb-diff">${li}</ul>` : `<p class="sxb-cap">No piece drawn here changes.</p>`}`;
+    return `<h4>What changes from <span class="id" data-setup="${esc(df.before)}" tabindex="0">${esc(df.before)}</span></h4>
+      ${li ? `<ul class="sxb-diff">${li}</ul>` : `<p class="sxb-cap">No piece drawn here changes.</p>`}`;
   }
   function seqHTML(S) {
     const Q = seqOf(S);
-    if (!Q) return `<h3>On one question</h3><p class="sxb-cap">Not drawn yet for this setup.</p>`;
-    return `<h3>On one question: <span class="sxb-q">“${esc(EXQ)}”</span></h3>${drawSeq(Q)}<p class="sxb-cap">${esc(Q.cap)}</p>`;
+    if (!Q) return `<h4>On one question</h4><p class="sxb-cap">Not drawn yet for this setup.</p>`;
+    return `<h4>On one question</h4><p class="sxb-q">“${esc(EXQ)}”</p>${drawSeq(Q)}${Q.cap ? `<p class="sxb-cap">${esc(Q.cap)}</p>` : ""}`;
   }
   function ariaOf(S) {
     const parts = [S.arm + ": " + descOf(S.arm), "Agent: " + S.agent.title + ", " + S.model.title.replace("Model: ", "on ")];
@@ -725,7 +721,7 @@ window.reportReady(() => {
     // the panel keeps the height of its tallest setup at this width, so the page never jumps
     [head, panel].forEach((el) => (el.style.minHeight = ""));
     const probe = root.querySelector(".sxb-stage").cloneNode(false); probe.removeAttribute("aria-live"); probe.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;width:" + root.querySelector(".sxb-stage").clientWidth + "px";
-    probe.innerHTML = `<div class="sxb-head"></div><div class="sxb-panel"><div class="sxb-change"></div><div class="sxb-seq"></div></div>`;
+    probe.innerHTML = `<div class="sxb-head"></div><div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div><div class="sxb-seq rk-part"></div></div>`;
     root.appendChild(probe);
     let hh = 0, ph = 0;
     order.forEach((a) => { const S = setupOf(a); probe.firstChild.innerHTML = headHTML(a); probe.children[1].children[0].innerHTML = changeHTML(S); probe.children[1].children[1].innerHTML = seqHTML(S);
@@ -743,7 +739,7 @@ window.reportReady(() => {
       [sw(`<rect class="s-c add" x="2" y="2" width="22" height="10"/>`), "added since the setup before"],
       [sw(`<rect class="s-c gone" x="2" y="2" width="22" height="10"/>`), "dropped since then"],
     ];
-    return items.map(([s, t]) => `<span>${s}${esc(t)}</span>`).join("");
+    return items.map(([s, t]) => `<li>${s}${esc(t)}</li>`).join("");
   }
   function show(a, animate) {
     if (!(a in rungOf)) a = order[0];
