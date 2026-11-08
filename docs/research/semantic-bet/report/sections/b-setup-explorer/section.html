@@ -16,10 +16,11 @@
 .sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 700; }
 .sxb .sxb-rung.empty .sxb-rl { color: var(--ink); }
 .sxb .sxb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: transparent; color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
-.sxb .sxb-chip:hover { border-color: var(--ink-2); }
+.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
+.sxb .sxb-chip:hover { background: var(--row); }
 .sxb .sxb-chip i { flex: none; width: 3px; align-self: stretch; min-height: 14px; border-radius: 1px; background: var(--other); }
-.sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+/* the chips are rows of the column, not boxes inside its box: no border, a hover band, the chosen one a reversed plate */
 .sxb .sxb-chip:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: var(--t-word); color: var(--ink); line-height: 1.35; }
 .sxb .sxb-fams span { display: inline-flex; align-items: center; gap: 5px; }
@@ -105,8 +106,9 @@
 <div class="sxb-wrap rk-split">
   <div class="sxb-pick rk-aside">
     <h3 class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</h3>
-    <div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
-    <div class="sxb-fams"></div>
+    <button type="button" class="fold-btn" aria-controls="sxb-ladder" aria-expanded="true" hidden><span class="vh">The cost ladder, now on </span><span class="fold-cur"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="sxb-ladder" id="sxb-ladder"><div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
+    <div class="sxb-fams"></div></div>
   </div>
   <div class="sxb-stage rk-stage">
     <div class="sxb-head" aria-live="polite"></div>
@@ -755,6 +757,7 @@ window.reportReady(() => {
     root.querySelector(".sxb-legend").innerHTML = legend(S);
     root.querySelectorAll(".sxb-chip").forEach((c) => { const on = c.dataset.arm === a; c.setAttribute("aria-checked", on ? "true" : "false"); c.tabIndex = on ? 0 : -1; });
     root.querySelectorAll(".sxb-rung").forEach((r) => r.classList.toggle("on", r.dataset.rung === String(rungOf[a])));
+    fold.setCurrent(a);
   }
 
   /* ---------- the selector ---------- */
@@ -766,7 +769,14 @@ window.reportReady(() => {
   const setHash = (a) => { try { history.replaceState(null, "", "#setup-" + a); } catch (e) {} };
   function choose(a, focus) { if (a === sel) { if (focus) focusChip(a); return; } show(a, true); setHash(a); if (focus) focusChip(a); }
   const focusChip = (a) => { const c = root.querySelector(`.sxb-chip[data-arm="${CSS.escape(a)}"]`); if (c) c.focus(); };
-  pick.addEventListener("click", (e) => { const c = e.target.closest(".sxb-chip"); if (c) choose(c.dataset.arm, false); });
+  // stacked above the stage (a phone), the ladder folds behind a button that names the chosen setup; a pick closes it
+  const foldBtn = root.querySelector(".sxb-pick .fold-btn");
+  const fold = window.reportFold(foldBtn, root.querySelector(".sxb-ladder"), root.querySelector(".sxb-stage"));
+  pick.addEventListener("click", (e) => {
+    const c = e.target.closest(".sxb-chip"); if (!c) return;
+    choose(c.dataset.arm, false);
+    if (!foldBtn.hidden) { fold.close(); foldBtn.focus(); }
+  });
   pick.addEventListener("keydown", (e) => {
     const c = e.target.closest(".sxb-chip"); if (!c) return;
     const a = c.dataset.arm; const i = order.indexOf(a); let to = null;

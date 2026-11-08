@@ -434,6 +434,19 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
 
+/* a side column's fold (window.reportFold): one full-width button, the column's name and its current choice, with a
+   chevron that turns when open; the folded part is gone, not hidden behind a scroll */
+.fold-btn { appearance: none; display: flex; width: 100%; align-items: center; gap: var(--s3); min-height: 44px; padding: var(--s2) var(--s3);
+  border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); font: 700 var(--t-word)/1.3 var(--sans); text-align: left; cursor: pointer }
+.fold-btn[hidden] { display: none }
+.fold-btn:hover { background: var(--row) }
+.fold-btn:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+.fold-btn .fold-cur { margin-left: auto; font: 600 .9375rem/1.3 var(--code); overflow-wrap: anywhere; text-align: right }
+.fold-btn svg { flex: none; width: 16px; height: 16px; transition: transform var(--t-fast) ease-out }
+.fold-btn[aria-expanded="true"] svg { transform: rotate(180deg) }
+.folded { display: none !important }
+@media (prefers-reduced-motion: reduce) { .fold-btn svg { transition: none } }
+
 /* the Setups tab: its two sections (the setup map, the setup explorer) as kit sections, each head the kit's over a
    2px ink rule; their words in the kit's family at 1rem in full ink (the sections' own rules), their bands on --row,
    every focusable part the kit's focus ring. The sheets keep their drawn sizes (an owner question). */
@@ -519,6 +532,27 @@ window.REPORT = D;
   const q = []; let ready = false;
   window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
   window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
+  // A long side column (a ladder to pick from) folds behind a disclosure button once it stacks above the stage it
+  // drives, so the stage starts on the first screen (the kit's side-column standard); side by side, the button hides and
+  // the column stays open. The button shows the current choice (setCurrent). Sections call it with their column's
+  // button, the part it folds and the stage.
+  window.reportFold = function (btn, panel, stage) {
+    let stacked = null;
+    const aside = btn.parentElement;
+    const set = (open) => { panel.classList.toggle("folded", !open); btn.setAttribute("aria-expanded", String(open)); };
+    const sync = () => {
+      const s = stage.getBoundingClientRect().top >= aside.getBoundingClientRect().bottom - 1;
+      if (s === stacked) return;
+      stacked = s; btn.hidden = !s; set(!s);
+    };
+    btn.addEventListener("click", () => set(panel.classList.contains("folded")));
+    if (window.ResizeObserver) new ResizeObserver(sync).observe(stage.parentElement); else window.addEventListener("resize", sync);
+    sync();
+    return {
+      close() { if (stacked) set(false); },
+      setCurrent(text) { const c = btn.querySelector(".fold-cur"); if (c) c.textContent = text || ""; },
+    };
+  };
   window.reportTheme = function () {
     const a = document.documentElement.getAttribute("data-theme");
     if (a === "light" || a === "dark") return a;

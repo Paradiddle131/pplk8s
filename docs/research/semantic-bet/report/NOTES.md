@@ -96,7 +96,9 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   - The explorer's "What changes from …" and "On one question" are two kit parts (`.rk-parts`: an h4 over each part's own 1px ink rule, broken by the column gap); the map's readout is a part too, its head the setup, rung or part it reads, then a tag line, the description once, then the facts.
   - One statement per fact: the tag line is the family and the rung's number ("Our agent on a semantic-layer server, rung 6"), never the rung's name again; the change summary over the list of changes is gone (the list says it); captions under a sequence that restated it are gone (two stay, Claude Code's and Lightdash's, which say what the drawing cannot); the map's lede lost the two sentences its resting readout says.
   - The explorer's ladder column is 20rem, so the longest id fits on one line; the map's keeps 272 px (less padding than the kit's, so the map keeps its 944 px at 1260).
-  - Not done: folding the ladder on a phone (the kit standard's "keep it short"); both ladders still come first and run long at 400 px.
+  - Both ladders fold on a phone (owner, 2026-11-08, after the trial): stacked above their stage, each folds behind one full-width button naming the current choice (`window.reportFold` in the template: open beside the stage, folded once stacked, a pick closes it and gives the button the focus), so at 400 px the stage starts about 350 px into the section instead of 1,200; `tools/clipcheck.js` opens a fold before clicking inside it and checks every fold open once.
+  - Pointing at a setup lights its row on a band with a 3px ink edge and a bold id; the rest of the list stays in full ink (it faded to 38% grey before, against the kit's no-muted-text rule); the map's drawing still steps its other parts back, as the kit's highlight does for marks.
+  - The explorer's chips are rows of the panel: no border, a hover band, the chosen one a reversed plate (a bordered chip on the raised panel was a box inside a box).
 
 ## One standard for every tab (owner, 2026-11-07)
 

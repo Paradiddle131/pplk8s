@@ -367,10 +367,19 @@ async function selftest(browser) {
       f.forEach((x) => all.push(Object.assign({ width: w, theme, state }, x)));
       await hs(state);
     };
+    // a side column folded behind its button (a phone) opens before a control inside it is used
+    const unfold = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const a = el && el.closest(".rk-aside"); const b = a && a.querySelector(".fold-btn"); if (b && !b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }, sel); };
     const openView = async (sel) => { await page.evaluate((sel) => { const el = document.querySelector(sel); const v = el && el.closest(".view"); if (v && !v.classList.contains("on")) window.__reportViews.show(v.dataset.view); }, sel); await settle(page); };
     const viewNames = await page.$$eval(".view", (vs) => vs.map((v) => v.dataset.view));
     if (!viewNames.length) await run("rest", null, true);
     for (const vn of viewNames) { await page.evaluate((vn) => window.__reportViews.show(vn), vn); await settle(page); await run("rest view=" + vn, null, true); }
+    // every folded side column, opened, so its own words are checked too
+    const folds = await page.$$eval(".rk-aside .fold-btn", (bs) => bs.filter((b) => !b.hidden).length);
+    if (folds) {
+      await openView(".rk-aside .fold-btn");
+      await page.evaluate(() => document.querySelectorAll(".rk-aside .fold-btn").forEach((b) => { if (!b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }));
+      await settle(page); await run("folds open", null, true);
+    }
     // every set switch, the report's own (.seg) and the kit's (.rk-switch) on the tabs moved onto report-kit
     const SW = ".seg, .rk-switch";
     const sets = await page.$$eval(".seg button[data-set], .rk-switch button[data-set]", (bs) => [...new Set(bs.map((b) => b.dataset.set))]);
@@ -382,14 +391,17 @@ async function selftest(browser) {
     const chips = await page.$$eval(".sxb .sxb-chip", (cs) => cs.map((c) => c.dataset.arm));
     if (chips.length) await openView(".sxb");
     for (const a of chips) {
+      await unfold(`.sxb .sxb-chip[data-arm="${a}"]`);
       await page.click(`.sxb .sxb-chip[data-arm="${a}"]`); await settle(page);
       await run("explorer=" + a, "section.sxb", !QUICK);
     }
     // the setup map: every setup and rung
     const smTargets = await page.$$eval(".sm .sm-s[data-arm], .sm button.sm-rhd[data-rung]", (bs) => bs.map((b) => b.dataset.arm ? `.sm .sm-s[data-arm="${b.dataset.arm}"]` : `.sm button.sm-rhd[data-rung="${b.dataset.rung}"]`));
     for (const sel of smTargets) {
+      await unfold(sel);
       await page.click(sel); await settle(page);
       await run("map=" + sel.replace(/^.*data-(arm|rung)="([^"]+)".*$/, "$1:$2"), "section.sm", false);
+      await unfold(sel);
       await page.click(sel); await settle(page); // let go
     }
     // Figure 2's gliders at 0 and at the end

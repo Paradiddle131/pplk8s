@@ -188,21 +188,50 @@ def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
     assert '<div class="sxb-wrap rk-split">' in panel
     assert '<div class="sxb-pick rk-aside">' in panel and '<h3 class="sxb-pick-h"' in panel
     assert '<div class="sxb-stage rk-stage">' in panel
-    assert '<figure class="sxb-fig rk-fig"><svg' in panel and '<ul class="sxb-legend rk-key"' in panel
-    assert '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div><div class="sxb-seq rk-part"></div></div>' in panel
-    assert '<ul class="sm-rungs rk-aside"' in panel
+    assert (
+        '<figure class="sxb-fig rk-fig"><svg' in panel and '<ul class="sxb-legend rk-key"' in panel
+    )
+    assert (
+        '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div>'
+        '<div class="sxb-seq rk-part"></div></div>' in panel
+    )
+    assert '<div class="sm-aside rk-aside">' in panel
     fig = panel.index('<figure class="sm-fig rk-fig">')
-    assert fig < panel.index('<ul class="sm-legend rk-key"') < panel.index('<div class="sm-read rk-part"')
+    assert (
+        fig
+        < panel.index('<ul class="sm-legend rk-key"')
+        < panel.index('<div class="sm-read rk-part"')
+    )
     script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
     assert "<h4>What changes from" in script and "<h4>On one question</h4>" in script
     assert 'why: "' not in script and "S.why" not in script
     assert '"rung " + m[1] + ": "' not in script  # the tag line names the rung by number only
     assert "MetricFlow turns the definition into SQL" not in script
     lede = re.search(r'<p class="sm-lede">(.*?)</p>', panel, re.S).group(1)
-    assert "write their own SQL" not in lede and "never writes SQL" not in lede  # the readout says it
+    assert (
+        "write their own SQL" not in lede and "never writes SQL" not in lede
+    )  # the readout says it
     # the kit carries the levels the tab uses (vendored from upstream, never copied into the page)
     kit = (BUILD.parent.parent / "report-kit/kit/section.css").read_text(encoding="utf-8")
     assert ".rk-aside {" in kit and ".rk-part {" in kit and ".rk-fig {" in kit
+
+
+def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
+    """Owner, 2026-11-08 (the trial's misses): stacked above their stage, both ladders fold behind
+    a button naming the current choice; pointing at a setup lights its row on a band instead of
+    fading the rest to grey; the explorer's chips are rows of the panel, not boxes inside it."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    assert "window.reportFold = function (btn, panel, stage)" in page
+    assert panel.count('class="fold-btn" aria-controls=') == 2
+    assert 'aria-controls="sxb-ladder"' in panel and 'aria-controls="sm-rungs"' in panel
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert script.count("window.reportFold(") == 2 and script.count("fold.setCurrent(") == 2
+    styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
+    assert ".sm-s:not(.on) { opacity" not in styles and ".sm-rhd { opacity" not in styles
+    assert not re.search(r"\.sm-rungs[^{]*\{[^}]*opacity", styles)
+    chip = re.search(r"\.sxb \.sxb-chip \{[^}]*\}", styles).group(0)
+    assert "border: 0;" in chip
 
 
 def test_the_page_folds_unclear_runs_into_wrong(tmp_path):
