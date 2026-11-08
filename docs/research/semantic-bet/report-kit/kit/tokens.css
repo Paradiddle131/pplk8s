@@ -9,9 +9,14 @@
   --midnight: #0a1430; --cloud: #edf1f8; --cobalt-lt: #86a4ff; --green-lt: #3fcf8e; --amber-lt: #f2b23e;
   --scarlet-lt: #ff6a5c; --petrol-lt: #6cc4e0; --vermilion-lt: #ff8f6b; --teal-lt: #4fd1c5; --plum-lt: #e39ad0;
   --slate: #6f778a; --cobalt-md: #5b7de8; --slate-dk: #666e82; --vermilion-md: #e0663c;
+  --white: #ffffff; --dusk: #1c2640;
 
   /* semantic: surfaces and ink (no muted ink: every word is read at full contrast) */
   --paper: var(--porcelain); --ink: var(--navy); --line: var(--cobalt);
+  /* the one raised surface (a side column beside a stage): a step lighter than the ground in both themes, about
+     1.1:1 on light and 1.2:1 on dark (a dark step must be larger to be seen); ink, status and series colours keep
+     their contrast on it */
+  --panel: var(--white);
   --hair: color-mix(in srgb, var(--ink) 16%, transparent);
   --row: color-mix(in srgb, var(--line) 6%, transparent);
   --tip: var(--ink); --tip-ink: var(--paper);
@@ -35,6 +40,9 @@
 
   /* space, on a 4px step */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  /* the space around each level inside a page: a step down in rank is a step down in space, and what sits inside
+     a level is never looser than the space around it */
+  --gap-section: calc(var(--s7) + var(--s4)); --gap-part: var(--s6); --gap-item: var(--s3);
   --gutter-l: max(16px, env(safe-area-inset-left, 0px)); --gutter-r: max(16px, env(safe-area-inset-right, 0px));
   --measure: 40rem; --page: 80rem;
 
@@ -44,7 +52,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+    --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt); --panel: var(--dusk);
     --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
     --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
     --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
@@ -54,7 +62,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+  --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt); --panel: var(--dusk);
   --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
   --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
   --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
