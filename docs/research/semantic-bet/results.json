@@ -1,5 +1,5 @@
 {
- "written": "2026-11-08T10:29Z",
+ "written": "2026-11-08T10:50Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -165,6 +165,60 @@
     "declined": 7
    },
    "model_calls": 311
+  },
+  {
+   "set": "frozen",
+   "arm": "custom-metricflow-compute",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "harness": "adk-openrouter",
+   "session": "fresh per run",
+   "rung": 4,
+   "cases": 76,
+   "of_cases": 76,
+   "runs": 76,
+   "accuracy": [
+    0.894736842105,
+    0.828947368421,
+    0.960526315789
+   ],
+   "confident_wrong": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "groups": {
+    "conversation": [
+     1.0,
+     7
+    ],
+    "covered": [
+     1.0,
+     61
+    ],
+    "distractor": [
+     1.0,
+     1
+    ],
+    "planted": [
+     1.0,
+     4
+    ],
+    "trap": [
+     1.0,
+     10
+    ],
+    "uncovered": [
+     0.4666666666666667,
+     15
+    ]
+   },
+   "pass_all": 0.8947368421052632,
+   "outcomes": {
+    "right": 68,
+    "declined": 7,
+    "wrong": 1
+   },
+   "model_calls": 277
   },
   {
    "set": "frozen",
@@ -6756,6 +6810,24 @@
   },
   {
    "set": "frozen",
+   "arm": "custom-metricflow-compute",
+   "model": "nvidia/nemotron-3.5-super-vl:free",
+   "cases": 76,
+   "runs": 76,
+   "accuracy": [
+    -0.052631578947,
+    -0.118421052632,
+    0.013157894737
+   ],
+   "confident_wrong": [
+    -0.026315789474,
+    -0.065789473684,
+    0.0
+   ],
+   "worth": false
+  },
+  {
+   "set": "frozen",
    "arm": "custom-lightdash",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 76,
@@ -8130,6 +8202,7 @@
    "custom-hybrid on claude-haiku-5-5",
    "custom-hybrid on nvidia/nemotron-3.5-super-vl:free",
    "custom-metricflow on nvidia/nemotron-3.5-super-vl:free",
+   "custom-metricflow-compute on nvidia/nemotron-3.5-super-vl:free",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, FAST)",
