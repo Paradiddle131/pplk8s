@@ -244,15 +244,17 @@ def test_the_question_sets_tab_is_on_the_kit(tmp_path):
 
 def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
     """Owner, 2026-11-08 (the trial's misses): stacked above their stage, both ladders fold behind
-    a button naming the current choice; pointing at a setup lights its row on a band instead of
+    the kit's button naming the current choice; pointing at a setup lights its row on a band instead of
     fading the rest to grey; the explorer's chips are rows of the panel, not boxes inside it."""
     page, _ = _built(tmp_path)
     panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
-    assert "window.reportFold = function (btn, panel, stage)" in page
-    assert panel.count('class="fold-btn" aria-controls=') == 2
+    # the kit's fold (.rk-fold), the page's own (window.reportFold, .fold-btn) gone
+    assert "window.reportFold" not in page and "fold-btn" not in page
+    assert panel.count('class="rk-fold" aria-controls=') == 2
     assert 'aria-controls="sxb-ladder"' in panel and 'aria-controls="sm-rungs"' in panel
     script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
-    assert script.count("window.reportFold(") == 2 and script.count("fold.setCurrent(") == 2
+    assert script.count("ReportKit.fold.init(") == 2 and script.count("ReportKit.fold.current(") == 2
+    assert "data-rk-fold-pick" in script
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     assert ".sm-s:not(.on) { opacity" not in styles and ".sm-rhd { opacity" not in styles
     assert not re.search(r"\.sm-rungs[^{]*\{[^}]*opacity", styles)
