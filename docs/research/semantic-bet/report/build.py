@@ -953,9 +953,12 @@ def html_escape(text):
 
 def glossary_html(terms):
     """The glossary on report-kit (its find component, STANDARDS.md "A glossary is a definition list"): a find box with
-    its label shown, one chip per type that wraps, the count as a status, then one part per type (an h3 over its rule),
-    each a definition list in the page's flow; an entry's longer lines are labelled facts under its meaning, a count
-    in bold. Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links point at."""
+    its label shown, one chip per type that wraps (folded behind the kit's fold button on a phone), the count as a
+    status, then a reading pane: one region, named by the section's heading and reachable by Tab, that scrolls inside
+    itself (marked data-rk-scroll, the kit's mark for a box the page keeps; the template sizes it to the screen under
+    the tab strip and these controls), holding one part per type (an h3 that sticks to the pane's top while its terms
+    pass), each a definition list; an entry's longer lines are labelled facts under its meaning, a count in bold.
+    Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links point at."""
     e = html_escape
     types = [ty for ty in TERM_TYPES if any(t["type"] == ty for t in terms)]
     slug = {ty: re.sub(r"[^a-z0-9]+", "-", ty.lower()).strip("-") for ty in types}
@@ -982,9 +985,10 @@ def glossary_html(terms):
     return (
         '<div class="rk-find" data-rk-find="gloss" data-rk-find-noun="terms">'
         '<label class="rk-find-box">Find a term<input type="search" id="gl-q" autocomplete="off" spellcheck="false" aria-controls="gloss"></label>'
-        '<div class="rk-chips" role="group" aria-label="Type of term">%s</div>'
-        '<p class="rk-find-count" role="status"></p></div>'
-        '<div id="gloss">%s'
+        '<button type="button" class="rk-fold gl-fold" aria-controls="gl-kinds" aria-expanded="true" hidden>Type of term<span class="rk-fold-cur">Every type</span></button>'
+        '<div class="rk-chips" id="gl-kinds" role="group" aria-label="Type of term">%s</div>'
+        '<p class="rk-find-count" id="gl-n" role="status"></p></div>'
+        '<div id="gloss" class="gl-pane" role="region" aria-labelledby="gloss-h gl-n" tabindex="0" data-rk-scroll>%s'
         '<p class="rk-find-none" hidden>No term matches. <button type="button">Show every term</button></p></div>'
     ) % (chips, parts)
 

@@ -589,16 +589,17 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
 
 
 def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
-    """Method & glossary on the kit (STANDARDS.md "A glossary is a definition list", "A long list runs in the page's
-    flow", "A short list of labelled facts"): Method as labelled facts, the glossary the kit's find over one part per
-    type, every term build.py gives with its longer lines as facts, no scroll box, no table, no sticky or folding group."""
+    """Method & glossary on the kit (STANDARDS.md "A glossary is a definition list", "A short list of labelled facts"):
+    Method as labelled facts, the glossary the kit's find over a reading pane, one part per type, every term build.py
+    gives with its longer lines as facts, no table. The pane overrides the kit's "A long list runs in the page's flow"
+    on the record: a named region reached by Tab, marked data-rk-scroll, sized to the screen and its heads sticky."""
     page, data = _built(tmp_path)
     panel = page[page.index('<section class="view rk-kit rk-js mt" id="method"') : page.index('<div class="tip rk-kit" id="tip"')]
     assert panel.count('class="rk-section"') == 2 and panel.count('class="rk-head"') == 2
     assert '<dl class="rk-facts" id="method-list">' in panel and "<dt>Scoring</dt>" in panel
     # the kit's find: a shown label (no placeholder), chips that wrap, the count as a status, the empty sentence
     assert 'data-rk-find="gloss"' in panel and '<label class="rk-find-box">Find a term<input' in panel
-    assert "placeholder" not in panel and 'class="rk-find-count" role="status"' in panel and 'class="rk-find-none" hidden' in panel
+    assert "placeholder" not in panel and 'class="rk-find-count" id="gl-n" role="status"' in panel and 'class="rk-find-none" hidden' in panel
     types = [ty for ty in build.TERM_TYPES if any(t["type"] == ty for t in data["terms"])]
     assert panel.count('<div class="rk-part" data-rk-find-group=') == len(types)
     assert panel.count('class="rk-chips"') == 1 and panel.count("<button type=\"button\" data-value=") == len(types) + 1
@@ -609,10 +610,19 @@ def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
     assert panel.count('<dl class="rk-facts rk-facts-tight">') == sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
     assert panel.count("<div><dt>") == lines + 7  # the longer lines, and Method's seven facts
     assert "<b>84</b> across the sets" in panel  # a count in bold
-    for gone in ('"gl-box"', '"gl-t"', '"gl-types"', '"gl-count"', '"gl-g"', "<table", "data-rk-scroll"):
+    # the reading pane: one keyboard-reachable named region that scrolls inside itself, on the record
+    assert panel.count('<div id="gloss" class="gl-pane" role="region" aria-labelledby="gloss-h gl-n" tabindex="0" data-rk-scroll>') == 1
+    assert panel.count("data-rk-scroll") == 1 and 'class="rk-find-count" id="gl-n" role="status"' in panel
+    # the types fold behind the kit's fold button on a phone
+    assert '<button type="button" class="rk-fold gl-fold" aria-controls="gl-kinds"' in panel and 'id="gl-kinds"' in panel
+    for gone in ('"gl-box"', '"gl-t"', '"gl-count"', '"gl-g"', "<table"):
         assert gone not in panel, gone
     css = page[: page.index("/* report-kit:css ")]
     assert ".gl-box" not in css and "dl.meth" not in css
+    # sized to the screen under the strip and the controls, its scroll padding the sticky head, overscroll said
+    for rule in ("100dvh - var(--tabh, 0px) - var(--glctl", "scroll-padding-top: calc(var(--glstick", "overscroll-behavior: auto",
+                 ".gl-pane .rk-part > h3 { position: sticky; top: 0"):
+        assert rule in css, rule
 
 
 def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):

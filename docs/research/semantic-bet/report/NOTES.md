@@ -135,6 +135,18 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   - the setup map's ladder (`.sm-aside`) scrolls up and down inside the page (`nest`) by the owner's choice (Setups on the kit: "the list stays sticky in its own column" beside the map it drives), so it carries `data-rk-scroll`, the kit's mark for a box the page keeps on the record;
   - Every run's plate head scrolls sideways with its scrollbar hidden (`strip`) because the rows' own scrollbar, in sight under them, moves both: it carries `data-rk-scroll` too (the kit's strip rule names this use since the trial).
 
+### The glossary as a reading pane (alternative C, 2026-11-08)
+
+The owner: "what we ended up with is expanding the full content directly to the page which is not good at all."
+This alternative keeps the shape the owner first chose (the find's controls over one box that scrolls inside itself, each type's name sticking to the box's top) and overrides the kit's "A long list runs in the page's flow" on the record: the box carries `data-rk-scroll`.
+- The box is sized to the screen under the tab strip and the controls (the page's script measures both), so once the controls sit under the strip the whole box is in sight and only one of the two scrolls; the tab is about 1,500 px tall at 1280 px and 1,900 px at 400 px, where it was 16,300 and 23,000.
+- It is a region named by the section's head and the count, reached by Tab, so arrows, Page Up/Down, Home and End scroll it (axe, scrollable-region-focusable); its scrollbar shows on the kit's colours, with room kept for it.
+- Its scroll padding is the sticky head's height, and Chromium's page step honours it, so no line is hidden under a head (WCAG 2.2 Focus Not Obscured); a link or a hash brings the controls under the strip and the entry right under its type's head.
+- `overscroll-behavior` stays `auto`: at either end the next wheel or swipe moves the page, so the box never traps a reader; with `contain` the only way out of a box that fills the screen would be its thin margins.
+- The types filter (the brief keeps a way to narrow to one type), and each chip counts the matches in its type; on a phone they fold behind the kit's fold button naming the current type, and the box keeps its own scroll.
+- The pane reads at 35rem (under 80 characters a line), its definitions wrapped with `text-wrap: pretty`.
+- The template declares its charset: the page had none, and Chromium guessed it from the first bytes read from disk, so a longer head (this change's) could load it as Windows-1252 and break the kit's scripts.
+
 ## One standard for every tab (owner, 2026-11-07)
 
 The owner: the Summary's text reads well and the other tabs' did not; one standard for such core things on every tab.

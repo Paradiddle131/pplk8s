@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Text2SQL Eval Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -374,7 +375,42 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    find over one part per type of term (build.py glossary_html), in the page's flow; its tokens map as the other tabs'
    (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
    behaviour; the way back is a control at the word size, as every kit tab's words. */
-#method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
+/* The glossary is a reading pane (owner's first choice, kept and made right): the find's controls over one box that
+   scrolls inside itself, each type's name sticking to the box's top while its terms pass. Overrides the kit's "a long
+   list runs in the page's flow" (STANDARDS.md; the checker's `nest`): the box is marked data-rk-scroll because it is
+   sized to the screen under the tab strip and the controls (--glctl, measured by the page's script), so once the
+   controls sit under the strip the whole box is in sight and only one of the two scrolls: the page stays short and
+   the search and the types never scroll away from what they narrow. Short results shrink the box to their height.
+   - It is a named region reachable by Tab, so arrows, Page Up/Down, Home and End scroll it (axe
+     scrollable-region-focusable); its scrollbar always shows, on the kit's colours, with room kept for it.
+   - Its scroll padding is the sticky heading's height (--glstick, measured), so an entry reached by a link, a key
+     or a page step is never hidden under its heading (WCAG 2.2 Focus Not Obscured).
+   - overscroll-behavior stays auto (said, not left): at either end of the box the next wheel or swipe moves the page,
+     so the box never traps a reader on touch; the box fills the screen, so with "contain" the only way out
+     would be to aim at the thin margins round it.
+   - On a phone it keeps its own scroll, the types folded behind the kit's fold button so the box keeps most of
+     the screen; its floor (18rem) means a short or landscape screen scrolls the page as well, and stays usable. */
+#method .gl-pane { --glpad: var(--s4); --glmeasure: 35rem; position: relative; overflow-y: auto; overscroll-behavior: auto; scrollbar-gutter: stable;
+  scrollbar-width: auto; scrollbar-color: var(--line) var(--row);
+  max-height: max(18rem, calc(100dvh - var(--tabh, 0px) - var(--glctl, 14rem) - var(--s3) - var(--s2)));
+  max-width: calc(var(--glmeasure) + 2 * var(--glpad) + 18px); padding: var(--s1) var(--glpad) var(--s3);
+  border: 1px solid var(--hair); border-radius: 8px; background: var(--paper);
+  scroll-padding-top: calc(var(--glstick, 3.25rem) + var(--s2)) }
+#method .gl-pane:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+#method .gl-pane { display: flex; flex-direction: column; row-gap: var(--s5) } /* a gap only between the groups shown */
+#method .gl-pane > * { flex: none }
+#method .gl-pane > .rk-part { border-top: 0; padding-top: 0; margin-top: 0 }
+#method .gl-pane .rk-part > h3 { position: sticky; top: 0; z-index: 2; margin: 0 calc(-1 * var(--glpad)); padding: var(--s3) var(--glpad) var(--s2);
+  background: var(--paper); border-bottom: 1px solid var(--ink) }
+/* the pane reads at under 80 characters a line (the kit's 40rem measure ran to 90), each line wrapped to leave no word alone */
+#method .gl-pane .rk-glossary, #method .gl-pane > .rk-part { max-width: var(--glmeasure) }
+#method .gl-pane .rk-glossary dd { text-wrap: pretty }
+#method .gl-pane .rk-glossary > div { scroll-margin-top: 0 }
+#method .gl-pane .rk-glossary > div:last-child { border-bottom: 0 }
+#method .gl-pane .rk-find-none { margin: var(--s4) 0 0 }
+/* the types fold behind the kit's fold button where the chips would take a third of a phone's screen */
+#method .gl-fold { border: 1px solid var(--ink); flex: 1 1 100% }
+#method .gl-fold:not([hidden]) + * { margin-top: 0 }
 .rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
   border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
 .rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
@@ -713,6 +749,7 @@ window.REPORT = D;
     show(v);
     if (el && window.__reportReveal) window.__reportReveal(el, typeof s.y !== "number");
     if (typeof s.y === "number") window.scrollTo(0, s.y);
+    else if (el && window.__reportLand && window.__reportLand(el)) requestAnimationFrame(() => window.__reportLand(el)); // again after the browser's own scroll to the fragment
     else if (el) el.scrollIntoView({ block: el.matches("tr") ? "center" : "start" });
     else if (fromPop) toPartTop();
     if (fromPop) {
@@ -778,7 +815,7 @@ window.REPORT = D;
     show(v);
     if (el && window.__reportReveal) window.__reportReveal(el, typeof s.y !== "number");
     if (typeof s.y === "number") window.scrollTo(0, s.y);
-    else if (el) el.scrollIntoView({ block: el.matches("tr") ? "center" : "start" });
+    else if (el && !(window.__reportLand && window.__reportLand(el))) el.scrollIntoView({ block: el.matches("tr") ? "center" : "start" });
   };
   if (window.reportReady) window.reportReady(() => requestAnimationFrame(settle));
 })();
@@ -984,7 +1021,7 @@ window.REPORT = D;
     if (target.id && target.id.startsWith("map-") && from.dataset.key) target = mapRowFor(from.dataset.key, from.dataset.set) || target;
     glReveal(target); // a glossary entry hidden by the search or the type is shown first
     // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
-    target.scrollIntoView({ block: "center" });
+    if (!glLand(target)) target.scrollIntoView({ block: "center" });
     target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
     setTimeout(() => target.classList.remove("jumped"), 1900);
     const back = document.createElement("button");
@@ -1182,13 +1219,61 @@ window.REPORT = D;
     $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
   }
 
-  /* ---------- the glossary: on report-kit (build.py glossary_html, the kit's find) ---------- */
+  /* ---------- the glossary: on report-kit (build.py glossary_html, the kit's find), in a reading pane ---------- */
+  const glPane = document.getElementById("gloss"), glCtl = document.querySelector("#method .rk-find");
+  const glFold = document.querySelector("#method .gl-fold"), glKinds = document.getElementById("gl-kinds");
+  const glPx = (v) => parseFloat(v) || 0;
+  // the pane's height: the screen under the tab strip and the controls (--glctl); its scroll padding: the tallest
+  // sticky heading shown (--glstick). Measured while the tab is open (a closed tab measures nothing).
+  function glMeasure() {
+    const m = document.getElementById("method");
+    if (!glPane || !glCtl || !m || !m.classList.contains("on")) return;
+    m.style.setProperty("--glctl", Math.ceil(glCtl.offsetHeight + glPx(getComputedStyle(glCtl).marginBottom)) + "px");
+    const hs = [...glPane.querySelectorAll(".rk-part > h3")].map((h) => h.offsetHeight).filter((x) => x > 0);
+    if (hs.length) m.style.setProperty("--glstick", Math.max(...hs) + "px");
+  }
+  if (glPane && glCtl) {
+    if (window.ResizeObserver) { const ro = new ResizeObserver(glMeasure); ro.observe(glCtl); ro.observe(glPane); }
+    window.addEventListener("resize", glMeasure);
+    document.addEventListener("report-view", () => requestAnimationFrame(glMeasure));
+    // a new search or type starts the pane at its first match
+    glPane.addEventListener("rk:find", () => {
+      glPane.scrollTop = 0;
+      const b = glKinds && glKinds.querySelector('[aria-pressed="true"]'), cur = glFold && glFold.querySelector(".rk-fold-cur");
+      if (b && cur) cur.textContent = b.firstChild.textContent;
+      glMeasure();
+    });
+  }
+  // on a phone the types fold behind the kit's fold button naming the current type; a pick folds them again
+  if (glFold && glKinds) {
+    const narrow = matchMedia("(max-width: 40rem)");
+    const set = (open) => { glKinds.classList.toggle("rk-folded", !open); glFold.setAttribute("aria-expanded", String(open)); };
+    const sync = () => { glFold.hidden = !narrow.matches; set(!narrow.matches); };
+    glFold.addEventListener("click", () => set(glKinds.classList.contains("rk-folded")));
+    glKinds.addEventListener("click", (e) => { if (narrow.matches && e.target.closest("button")) { set(false); glFold.focus(); } });
+    if (narrow.addEventListener) narrow.addEventListener("change", sync); else narrow.addListener(sync);
+    sync();
+  }
   // An entry a link names comes back first: the kit's find clears a search or a type that hides it.
   function glReveal(el) {
     if (!el || !el.closest || !el.closest("#gloss")) return false;
     if (window.ReportKit && window.ReportKit.find) window.ReportKit.find.reveal(el);
     return true;
   }
+  // ... then lands: the page brings the controls under the tab strip (when the pane is not all in sight), and the
+  // pane scrolls the entry to just under its type's sticky heading. Returns false for anything outside the pane.
+  function glLand(el) {
+    if (!glPane || !el || !glPane.contains(el)) return false;
+    glMeasure();
+    const tabh = glPx(getComputedStyle(document.documentElement).getPropertyValue("--tabh"));
+    const b = glPane.getBoundingClientRect();
+    if (b.top < tabh || b.bottom > window.innerHeight) window.scrollTo(0, Math.max(0, glCtl.getBoundingClientRect().top + window.scrollY - tabh - 12));
+    const part = el.closest(".rk-part"), h3 = part && part.querySelector("h3");
+    const y = el.getBoundingClientRect().top - glPane.getBoundingClientRect().top - glPane.clientTop + glPane.scrollTop;
+    glPane.scrollTop = Math.max(0, y - (h3 ? h3.offsetHeight : 0) - 8);
+    return true;
+  }
+  window.__reportLand = glLand;
   // for the parts' router: an element named by the URL is revealed (and a glossary entry flashed) before it is scrolled to
   window.__reportReveal = (el, flash) => {
     if (!glReveal(el) || !flash) return;
