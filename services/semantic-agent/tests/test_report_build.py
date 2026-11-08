@@ -140,6 +140,14 @@ def test_the_see_all_buttons_exist_one_per_category_visible_and_wired_to_the_bro
     assert "dlg.showModal()" in page
 
 
+def test_the_page_folds_unclear_runs_into_wrong(tmp_path):
+    _, data = _built(tmp_path)
+    rows = [r for st in data["sets"].values() for r in st["rows"]]
+    assert rows and not [r for r in rows if "3" in r["units"] or "unclear" in r["outcomes"]]
+    assert not [r for r in rows if r.get("example") and r["example"]["outcome"] == "unclear"]
+    assert build.shown_outcomes({"wrong": 2, "unclear": 3, "right": 1}) == {"wrong": 5, "right": 1}
+
+
 def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(tmp_path):
     _, data = _built(tmp_path)
     terms = {k for k, _, _ in build.TERMS}
@@ -556,9 +564,11 @@ def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_pa
     marks = script[script.index("function outMark(") :]
     marks = marks[: marks.index("\n  }\n")]
     shapes = {"0": ("o-right", "fill"), "1": ("o-decl", "ring"), "2": ("o-wrong", "fill")}
-    shapes |= {"3": ("o-wrong", "ring"), "4": ("o-cw", "fill")}
+    shapes |= {"4": ("o-cw", "fill")}
     for ch, (paint, kind) in shapes.items():
         assert f'if (ch === "{ch}") return ["{paint}", "{kind}"' in marks, ch
+    # unclear is folded into wrong (owner): no mark, no key entry, no count of its own on the page
+    assert 'ch === "3"' not in marks and '"unclear"' not in script
     assert "circ(cx, cy, s / 2)" in marks  # right and declined are round, as the kit's ok and no
     assert "function swatch(ch) { const [c, k, d] = outMark(ch" in script
     assert "outMark(r.units[" in script

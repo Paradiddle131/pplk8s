@@ -430,8 +430,8 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 @media (max-width: 640px) { #metricflow figure + figure { margin-top: var(--s6) } }
 
 /* run outcomes on the kit's status tokens and shapes, as the Summary draws them, wherever the kit reaches (the
-   Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square, unclear an amber
-   square ring (it counts as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
+   Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square (unclear runs folded
+   in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
 
 /* the Every run tab: one kit section (its head with the set switch beside it), the finding's headline, the outcome key,
@@ -909,7 +909,7 @@ window.REPORT = D;
   const tRows = (rows) => { const r = rows.filter(Boolean); return r.length ? `<dl>${r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""; };
   const tPct = (v, ex) => `<b>${P(v[0])}%</b> <span class="iv">${ivTxt(v, ex)}</span>`;
   const tPts = (d) => `<b>${sg(d[0])}</b> points <span class="iv">[${sg(d[1])}, ${sg(d[2])}]</span>`;
-  const OUTCH = { right: "0", declined: "1", wrong: "2", unclear: "3", "confident-wrong": "4" };
+  const OUTCH = { right: "0", declined: "1", wrong: "2", "confident-wrong": "4" };
   const tOut = (k, n) => `<span class="oc">${swatch(OUTCH[k] || ".")}${n == null ? "" : `<b>${n}</b> `}${esc(k)}</span>`;
   const ARMFAM = {}; Object.values(ALLX).forEach((r) => { if (!ARMFAM[r.arm]) ARMFAM[r.arm] = r.family; });
   const famName = (f) => (f && D.familyLabel[f]) || "";
@@ -920,7 +920,7 @@ window.REPORT = D;
   function setupTip(arm) { return tKick("Setup", esc(famName(ARMFAM[arm]))) + `<p class="th"><span class="id">${esc(arm)}</span></p><p class="td">${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
     if (!r) return "";
-    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
+    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong"];
     let gl = null;
     if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = [esc(gg ? gg.label : g), `<b>${P(r.groups[g][0])}%</b> right <span class="iv">over ${r.groups[g][1]} questions</span>`]; }
     const exA = r.exact && r.exact.acc, exC = r.exact && r.exact.cw;
@@ -2065,11 +2065,11 @@ window.REPORT = D;
   }
 
   /* ---------- Figure 6: unit plate in ladder order (one set) ---------- */
-  const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  const OUTN = { "0": "right", "1": "declined", "2": "wrong", "4": "confident-wrong" }; // unclear is drawn as wrong
   let plateState = null;
   // One outcome's mark in a cell of side s at (x, y), as path data: [paint token, "fill" or "ring", path]. The kit's
   // status shapes (marks.css), drawn as paths so a row of marks is a few paths: right a filled circle, declined a ring,
-  // wrong a square, unclear a square ring (both wrong, the warn colour), confident-wrong a diamond, not run a small dot.
+  // wrong a square (unclear runs among them), confident-wrong a diamond, not run a small dot.
   const circ = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
   const box = (x, y, w) => `M${x} ${y}h${w}v${w}h${-w}z`;
   function outMark(ch, x, y, s) {
@@ -2077,7 +2077,6 @@ window.REPORT = D;
     if (ch === "0") return ["o-right", "fill", circ(cx, cy, s / 2)];
     if (ch === "1") return ["o-decl", "ring", circ(cx, cy, s / 2) + circ(cx, cy, s / 2 - t)];
     if (ch === "2") return ["o-wrong", "fill", box(cx - q / 2, cy - q / 2, q)];
-    if (ch === "3") return ["o-wrong", "ring", box(cx - q / 2, cy - q / 2, q) + box(cx - q / 2 + t, cy - q / 2 + t, q - 2 * t)];
     if (ch === "4") return ["o-cw", "fill", `M${cx} ${cy - d}L${cx + d} ${cy}L${cx} ${cy + d}L${cx - d} ${cy}z`];
     return ["o-none", "fill", box(cx - 1, cy - 1, 2)];
   }
@@ -2310,7 +2309,7 @@ window.REPORT = D;
     const svgs = [];
     body.querySelectorAll(".pu[data-units]").forEach((pu) => {
       const r = byId(pu.dataset.units); const sv = unitsPlot(r, G);
-      attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
+      attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${Object.values(OUTN).map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
       pu.append(sv); svgs.push(sv);
     });
     const keepSel = plateState && plateState.s === s ? plateState.sel : null;
@@ -2327,7 +2326,7 @@ window.REPORT = D;
         const bk = D.buckets.find((x) => x.key === c.b);
         const C = qCard(ci);
         return tKick(esc(bk ? bk.label : c.b) + " question") + C.asked +
-          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[+ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])) +
+          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])) +
           qAbout(C) + C.link;
       };
       const at = (ci, k, cx, cy) => {
@@ -2362,7 +2361,7 @@ window.REPORT = D;
       });
     });
     drawTicks(); selectQ(keepSel, true);
-    $("#leg6").innerHTML = [["0", "outcome-right", "Right"], ["1", "declined", "Declined"], ["2", "outcome-wrong", "Wrong"], ["3", "unclear", "Unclear, counted wrong"], ["4", "confident-wrong", "Confident-wrong"], [".", "", "Not run yet"]]
+    $("#leg6").innerHTML = [["0", "outcome-right", "Right"], ["1", "declined", "Declined"], ["2", "outcome-wrong", "Wrong"], ["4", "confident-wrong", "Confident-wrong"], [".", "", "Not run yet"]]
       .map(([c, t, l]) => `<li>${swatch(c)}${t ? term(t, l) : l}</li>`).join("");
   }
 

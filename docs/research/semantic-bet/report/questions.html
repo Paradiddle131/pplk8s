@@ -271,16 +271,15 @@ window.reportReady(function () {
   }
 
   /* ---------- the plate's run squares ---------- */
-  const OUT = { "0": "right", "1": "declined", "2": "wrong", "3": "unclear", "4": "confident-wrong", ".": "not run" };
+  const OUT = { "0": "right", "1": "declined", "2": "wrong", "4": "confident-wrong", ".": "not run" };
   function swatch(ch) {
     const b = ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>`
       : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>`
       : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>`
-      : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>`
       : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`;
     return `<svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">${b}</svg>`;
   }
-  const KEY = `<p class="qs-key">${["0", "1", "2", "3", "4", "."].map((ch) => `<span class="k">${swatch(ch)}${term(OUT[ch], OUT[ch])}</span>`).join("")}</p>`;
+  const KEY = `<p class="qs-key">${["0", "1", "2", "4", "."].map((ch) => `<span class="k">${swatch(ch)}${term(OUT[ch], OUT[ch])}</span>`).join("")}</p>`;
   const famC = (f) => `var(--${["da", "gt", "mf", "ref"].includes(f) ? f : "other"})`;
   // each setup once, on the row the figures read it on, in the cost ladder's order (cheapest first)
   const ladder = {}; (D.ladder || []).forEach((L, i) => L.arms.forEach((a, j) => (ladder[a] = i * 100 + j)));
