@@ -380,6 +380,14 @@ async function selftest(browser) {
       await page.evaluate(() => document.querySelectorAll(".rk-aside .rk-fold").forEach((b) => { if (!b.hidden && b.getAttribute("aria-expanded") === "false") b.click(); }));
       await settle(page); await run("folds open", null, true);
     }
+    // every glossary entry opened in place, so its folded lines are checked too
+    if (await page.$$eval("#gloss .gl-tog", (bs) => bs.length)) {
+      await openView("#gloss");
+      await page.evaluate(() => document.querySelectorAll('#gloss .gl-tog[aria-expanded="false"]').forEach((b) => b.click()));
+      await settle(page); await run("glossary open", "#method", true);
+      await page.evaluate(() => document.querySelectorAll('#gloss .gl-tog[aria-expanded="true"]').forEach((b) => b.click()));
+      await settle(page);
+    }
     // every set switch, the report's own (.seg) and the kit's (.rk-switch) on the tabs moved onto report-kit
     const SW = ".seg, .rk-switch";
     const sets = await page.$$eval(".seg button[data-set], .rk-switch button[data-set]", (bs) => [...new Set(bs.map((b) => b.dataset.set))]);

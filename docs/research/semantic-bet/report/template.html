@@ -375,6 +375,36 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    (.mt beside .mfa, .er, .st and .qs). A term's flash on arrival and the way back after a jump keep the report's own
    behaviour; the way back is a control at the word size, as every kit tab's words. */
 #method .rk-glossary > div { scroll-margin-top: calc(var(--tabh, 0px) + var(--s3)) }
+/* the glossary as a compact list that opens in place (progressive disclosure): each entry one row, its term beside its
+   one-sentence meaning (under it once narrow), its longer lines folded under the meaning (hidden="until-found", so the
+   browser's find and a link open them) and opened by the row itself; many rows may be open at once. The list runs
+   past the kit's 40rem measure (a row is a term and one sentence, read across like a table's row): the term's column
+   takes 15rem and the meaning a line of up to 75ch (the reading measure), so most meanings keep to one line. */
+#method .rk-part.gl-part, #method .gl-list { max-width: calc(15rem + var(--s5) + 75ch + var(--s2)) }
+#method .gl-list > .gl-row { display: grid; grid-template-columns: 15rem minmax(0, 75ch); column-gap: var(--s5); align-items: start;
+  padding: 6px var(--s2) 6px 0; border-bottom: 1px solid var(--hair); cursor: pointer }
+#method .gl-list > .gl-row:hover { background: var(--row) }
+#method .gl-row > dt { grid-column: 1; margin: 0 }
+#method .gl-row > dd { grid-column: 2; margin: 0 }
+#method .gl-tog { font: var(--w-head) var(--t-word)/var(--lh-word) var(--sans); letter-spacing: var(--track-word); color: var(--ink);
+  background: none; border: 0; border-radius: 4px; padding: 0 0 0 1.375rem; margin: 0; text-align: left; cursor: pointer; position: relative; min-height: 24px }
+#method .gl-tog::before { content: ""; position: absolute; left: .25rem; top: calc(.725em - 5px); border-left: 7px solid currentColor;
+  border-block: 5px solid transparent; transition: transform var(--t-fast) ease-out }
+#method .gl-tog[aria-expanded="true"]::before { transform: rotate(90deg) }
+#method .gl-tog:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+#method .gl-row > dt:not(:has(.gl-tog)) { padding-left: 1.375rem }
+#method .gl-more .rk-facts-tight { margin: var(--s2) 0 var(--s1) }
+#method .gl-row:not(:has(.gl-tog)) { cursor: auto }
+/* a search that matches only inside a folded entry says so on its row */
+#method .gl-row.gl-inside > .gl-mean::after { content: "Match in its details"; margin-left: var(--s2); padding: 0 var(--s1); border-radius: 2px;
+  font-weight: 600; background: color-mix(in srgb, var(--line) 20%, transparent); box-shadow: inset 0 -2px 0 var(--line); white-space: nowrap }
+@media (max-width: 760px) {
+  #method .gl-list > .gl-row { grid-template-columns: minmax(0, 1fr); padding-right: 0 }
+  #method .gl-row > dd { grid-column: 1; padding-left: 1.375rem }
+  #method .gl-row > dd.gl-mean { margin-top: 2px }
+}
+@media print { #method .gl-more[hidden] { content-visibility: visible } #method .gl-tog::before { display: none } }
+@media (prefers-reduced-motion: reduce) { #method .gl-tog::before { transition: none } }
 .rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
   border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
 .rk-kit .jumpback:hover { background: var(--row); color: var(--ink) }
@@ -1187,8 +1217,51 @@ window.REPORT = D;
   function glReveal(el) {
     if (!el || !el.closest || !el.closest("#gloss")) return false;
     if (window.ReportKit && window.ReportKit.find) window.ReportKit.find.reveal(el);
+    const row = el.closest(".gl-row"); if (row) glOpen(row, true); // a linked entry lands open
     return true;
   }
+  // an entry's row opens and closes its longer lines in place (the term is the button; a press anywhere on the row
+  // does the same); several may be open at once. The folded lines are hidden="until-found": the browser's find
+  // and a fragment open them, and `beforematch` keeps the button's state in step.
+  function glOpen(row, open) {
+    const b = row.querySelector(".gl-tog"); if (!b) return;
+    const more = document.getElementById(b.getAttribute("aria-controls")); if (!more) return;
+    b.setAttribute("aria-expanded", String(open));
+    if (open) more.removeAttribute("hidden"); else more.setAttribute("hidden", "until-found");
+    glHint(row);
+  }
+  // a row whose only matches sit in its folded lines shows that it matched there
+  function glHint(row) {
+    const more = row.querySelector(".gl-more");
+    const inside = !!(more && more.hasAttribute("hidden") && more.querySelector("mark.rk-find-hit")) && !row.querySelector("dt mark.rk-find-hit, .gl-mean mark.rk-find-hit");
+    row.classList.toggle("gl-inside", inside);
+  }
+  (function () {
+    const g = document.getElementById("gloss"); if (!g) return;
+    g.addEventListener("click", (e) => {
+      const row = e.target.closest(".gl-row"); if (!row || !row.querySelector(".gl-tog")) return;
+      if (e.target.closest(".jumpback, a, .term")) return;
+      if (!e.target.closest(".gl-tog")) {
+        if (e.target.closest(".gl-more")) return; // the open lines stay put while read or selected
+        const sel = window.getSelection && String(window.getSelection()); if (sel) return;
+      }
+      glOpen(row, row.querySelector(".gl-tog").getAttribute("aria-expanded") !== "true");
+    });
+    g.addEventListener("beforematch", (e) => { const row = e.target.closest && e.target.closest(".gl-row"); if (row) glOpen(row, true); }, true);
+    g.addEventListener("rk:find", () => g.querySelectorAll(".gl-row").forEach(glHint));
+    // Enter in the find box goes to the first entry shown, past the type chips
+    const q = document.getElementById("gl-q");
+    if (q) q.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.isComposing) return;
+      const first = [...g.querySelectorAll(".gl-row")].find((r) => r.offsetParent);
+      if (!first) return;
+      e.preventDefault();
+      const t = first.querySelector(".gl-tog") || first.querySelector("dt");
+      if (!t.matches("button")) t.tabIndex = -1;
+      t.focus({ preventScroll: true }); first.scrollIntoView({ block: "nearest" });
+    });
+    g.querySelectorAll(".gl-row").forEach(glHint);
+  })();
   // for the parts' router: an element named by the URL is revealed (and a glossary entry flashed) before it is scrolled to
   window.__reportReveal = (el, flash) => {
     if (!glReveal(el) || !flash) return;

@@ -952,10 +952,13 @@ def html_escape(text):
 
 
 def glossary_html(terms):
-    """The glossary on report-kit (its find component, STANDARDS.md "A glossary is a definition list"): a find box with
-    its label shown, one chip per type that wraps, the count as a status, then one part per type (an h3 over its rule),
-    each a definition list in the page's flow; an entry's longer lines are labelled facts under its meaning, a count
-    in bold. Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links point at."""
+    """The glossary on report-kit (its find component, STANDARDS.md "A glossary is a definition list"), as a compact
+    list that opens in place: a find box with its label shown, one chip per type that wraps, the count as a status,
+    then one part per type (an h3 over its rule), each a definition list in the page's flow. An entry is one row, its
+    term beside its one-sentence meaning; the term is a disclosure button (aria-expanded) that opens the entry's
+    longer lines, labelled facts folded under the meaning with hidden="until-found", so the browser's find and a link
+    still reach them. Every term `glossary()` gives, in TERM_TYPES' order; an entry's id is what the tooltips' links
+    point at, and its facts' id is the entry's plus "-more"."""
     e = html_escape
     types = [ty for ty in TERM_TYPES if any(t["type"] == ty for t in terms)]
     slug = {ty: re.sub(r"[^a-z0-9]+", "-", ty.lower()).strip("-") for ty in types}
@@ -967,16 +970,24 @@ def glossary_html(terms):
 
     def entry(t):
         lines = ([("Computed as", t["calc"])] if t.get("calc") else []) + [tuple(x) for x in t.get("more") or []]
-        facts = ('<dl class="rk-facts rk-facts-tight">%s</dl>' % "".join(
-            "<div><dt>%s</dt><dd>%s</dd></div>" % (e(k), value(v)) for k, v in lines)) if lines else ""
-        return '<div id="term-%s" data-rk-find-item><dt>%s</dt><dd><p>%s</p>%s</dd></div>' % (
-            e(t["key"]), e(t["label"]), e(t["text"]), facts)
+        k = e(t["key"])
+        if not lines:
+            return '<div id="term-%s" class="gl-row" data-rk-find-item><dt>%s</dt><dd class="gl-mean">%s</dd></div>' % (
+                k, e(t["label"]), e(t["text"]))
+        facts = '<dl class="rk-facts rk-facts-tight">%s</dl>' % "".join(
+            "<div><dt>%s</dt><dd>%s</dd></div>" % (e(a), value(v)) for a, v in lines)
+        return (
+            '<div id="term-%s" class="gl-row" data-rk-find-item>'
+            '<dt><button type="button" class="gl-tog" aria-expanded="false" aria-controls="term-%s-more">%s</button></dt>'
+            '<dd class="gl-mean">%s</dd>'
+            '<dd class="gl-more" id="term-%s-more" hidden="until-found">%s</dd></div>'
+        ) % (k, k, e(t["label"]), e(t["text"]), k, facts)
 
     chips = '<button type="button" data-value="" aria-pressed="true">Every type<span class="rk-chip-n"></span></button>' + "".join(
         '<button type="button" data-value="%s" aria-pressed="false">%s<span class="rk-chip-n"></span></button>' % (slug[ty], e(ty))
         for ty in types)
     parts = "".join(
-        '<div class="rk-part" data-rk-find-group="%s"><h3 id="gl-%s">%s</h3><dl class="rk-glossary">%s</dl></div>'
+        '<div class="rk-part gl-part" data-rk-find-group="%s"><h3 id="gl-%s">%s</h3><dl class="rk-glossary gl-list">%s</dl></div>'
         % (slug[ty], slug[ty], e(ty), "".join(entry(t) for t in terms if t["type"] == ty))
         for ty in types)
     return (

@@ -591,7 +591,8 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
 def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
     """Method & glossary on the kit (STANDARDS.md "A glossary is a definition list", "A long list runs in the page's
     flow", "A short list of labelled facts"): Method as labelled facts, the glossary the kit's find over one part per
-    type, every term build.py gives with its longer lines as facts, no scroll box, no table, no sticky or folding group."""
+    type, every term build.py gives as one row with its longer lines as facts folded under it, no scroll box, no table,
+    no sticky or folding group."""
     page, data = _built(tmp_path)
     panel = page[page.index('<section class="view rk-kit rk-js mt" id="method"') : page.index('<div class="tip rk-kit" id="tip"')]
     assert panel.count('class="rk-section"') == 2 and panel.count('class="rk-head"') == 2
@@ -600,13 +601,23 @@ def test_the_method_and_glossary_tab_is_on_the_kit(tmp_path):
     assert 'data-rk-find="gloss"' in panel and '<label class="rk-find-box">Find a term<input' in panel
     assert "placeholder" not in panel and 'class="rk-find-count" role="status"' in panel and 'class="rk-find-none" hidden' in panel
     types = [ty for ty in build.TERM_TYPES if any(t["type"] == ty for t in data["terms"])]
-    assert panel.count('<div class="rk-part" data-rk-find-group=') == len(types)
+    assert panel.count('<div class="rk-part gl-part" data-rk-find-group=') == len(types)
     assert panel.count('class="rk-chips"') == 1 and panel.count("<button type=\"button\" data-value=") == len(types) + 1
+    # a compact list that opens in place: each entry one row, its term a disclosure button beside its meaning, its
+    # longer lines folded under it with hidden="until-found" (the browser's find and a link still reach them)
     for t in data["terms"]:
-        assert f'<div id="term-{t["key"]}" data-rk-find-item><dt>' in panel, t["key"]
+        k = t["key"]
+        if t.get("more") or t.get("calc"):
+            assert (f'<div id="term-{k}" class="gl-row" data-rk-find-item><dt><button type="button" class="gl-tog" '
+                    f'aria-expanded="false" aria-controls="term-{k}-more">') in panel, k
+            assert f'<dd class="gl-more" id="term-{k}-more" hidden="until-found"><dl class="rk-facts rk-facts-tight">' in panel, k
+        else:
+            assert f'<div id="term-{k}" class="gl-row" data-rk-find-item><dt>' in panel, k
     assert panel.count("data-rk-find-item") == len(data["terms"]) == len(build.TERMS)
     lines = sum(len(t.get("more") or []) + bool(t.get("calc")) for t in data["terms"])
-    assert panel.count('<dl class="rk-facts rk-facts-tight">') == sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
+    folded = sum(1 for t in data["terms"] if t.get("more") or t.get("calc"))
+    assert panel.count('<dl class="rk-facts rk-facts-tight">') == folded == panel.count('hidden="until-found"')
+    assert panel.count('aria-expanded="false" aria-controls="term-') == folded
     assert panel.count("<div><dt>") == lines + 7  # the longer lines, and Method's seven facts
     assert "<b>84</b> across the sets" in panel  # a count in bold
     for gone in ('"gl-box"', '"gl-t"', '"gl-types"', '"gl-count"', '"gl-g"', "<table", "data-rk-scroll"):

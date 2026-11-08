@@ -135,6 +135,21 @@ Until every tab is on the kit, the kit is confined by its own markers' scopes:
   - the setup map's ladder (`.sm-aside`) scrolls up and down inside the page (`nest`) by the owner's choice (Setups on the kit: "the list stays sticky in its own column" beside the map it drives), so it carries `data-rk-scroll`, the kit's mark for a box the page keeps on the record;
   - Every run's plate head scrolls sideways with its scrollbar hidden (`strip`) because the rows' own scrollbar, in sight under them, moves both: it carries `data-rk-scroll` too (the kit's strip rule names this use since the trial).
 
+### The glossary as a compact list that opens in place (design B, 2026-11-08)
+
+The owner on the glossary in the page's flow: "what we ended up with is expanding the full content directly to the page which is not good at all."
+- Each entry is one row: the term beside its one-sentence meaning at 1280 px (under it once narrow), its labelled longer lines folded under the meaning; the term is a disclosure button (`aria-expanded`, a triangle before it) and a press anywhere on the row does the same (NN/g, Accordions on desktop: "ensure that both the heading and icon are clickable").
+- What is shown closed is what most readers come for, the meaning; the longer lines ("Computed as", "Example", counts) are what only some need (NN/g, Progressive disclosure: "Initially, show users only a few of the most important options"; GOV.UK Details: "information that only some users will need").
+- Many rows may be open at once: a reader compares two terms (accuracy and confident-wrong), and closing one row when another opens moves the page under the pointer (NN/g: "Allow users to open or collapse multiple sections at a time").
+- The folds are `hidden="until-found"`: the browser's find and a fragment open them (MDN: content in that state "will be accessible to the browser's 'Find in page' feature or to fragment navigation"), and `beforematch` keeps the button's state in step; printing opens every row.
+- The kit's rule on a glossary ("a fold that hides a group adds a way to lose an entry") is kept: no entry and no group folds, only an entry's longer lines, and the kit's own "When not" names `hidden="until-found"` for a brief that keeps folds.
+- The kit's measure (40rem) is overridden for this list: a row is a term and one sentence, read across like a table's row, so the term takes 15rem and the meaning a line of up to 75ch (impeccable's craft floor: a body measure of 65 to 75ch), and 53 of 87 rows keep to one line; term and meaning align at the row's top, so a term on two lines does not push its meaning down.
+- The type chips stay filters, as the kit's find has them: each counts the matches in its type, so the reader sees where a search landed before choosing; with the list closed the last group is about five screens down, one press away on its chip.
+- A search opens nothing: it narrows the rows and marks the typed words; a row whose only matches are in its folded lines says "Match in its details" (drawn by CSS, so the find does not match its own words); Enter in the find box goes to the first entry shown.
+- A link or a hash (`#term-<key>`, "More in the glossary ↓") clears what hides the entry, opens its row and brings it under the tab strip.
+- Measured at 1280 by 800 (light): the tab is 5,545 px (16,700 before), the glossary closed 4,569 px (about 5.7 screens), its last group 4,036 px under the find box; at 400 px the tab is 10,854 px (23,300 before).
+  Three screens is out of reach while every closed row shows its meaning: 87 rows of at least 35 px are 3,000 px before any heading.
+
 ## One standard for every tab (owner, 2026-11-07)
 
 The owner: the Summary's text reads well and the other tabs' did not; one standard for such core things on every tab.
