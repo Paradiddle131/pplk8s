@@ -150,7 +150,7 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert f'<section class="{sec} rk-section"' in panel, sec
         assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
     # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
-    assert ".mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    assert ".mfa, .er, .st, .qs, .mg { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
@@ -579,7 +579,9 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
         assert part in page, part
     assert '<section class="view rk-kit st" id="setups"' in page
     assert '<section class="view rk-kit rk-js qs-v" id="question-sets"' in page
-    assert '<section class="view" id="method"' in page
+    # Method & glossary keeps its own layout, its text on the kit's standard (owner, 2026-11-08)
+    assert '<section class="view rk-kit mg" id="method"' in page
+    assert "a type's heading folds it" not in page and 'class="gl-label">Find a term' in page
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
     # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter, Question sets' fold)

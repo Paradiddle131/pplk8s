@@ -401,7 +401,45 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st, .qs, .mg { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+
+/* the Method & glossary tab: its own layout (Method a list of facts, the glossary a searchable, type-filtered table in
+   its own scroll box with sticky group rows), its text on the one standard: the kit's family, words at 1rem in full
+   ink (the paler inks map to ink above), numbers bold, heads the kit's over a 2px ink rule, the kit's focus ring */
+.mg .rk-head + dl.meth { border-top: 0; margin-top: 0 }
+.mg dl.meth { font: 400 var(--t-word)/var(--lh-word) var(--sans) }
+.mg dl.meth dt { font: 700 var(--t-word)/var(--lh-word) var(--sans); letter-spacing: 0 }
+.mg .mg-gl-head { margin-top: var(--gap-section) }
+.mg .gl-find { display: flex; flex-direction: column; gap: var(--s1) }
+.mg .gl-label { font-weight: 700 }
+.mg .gl-find svg { top: auto; bottom: 14px; margin-top: 0; color: var(--ink) }
+.mg .gl-find input { min-height: 44px; border: 1px solid var(--ink); border-radius: 6px; font: 400 var(--t-word)/1.3 var(--sans) }
+.mg .gl-types button { min-height: 40px; padding: var(--s1) var(--s3); border: 1px solid var(--hair); border-radius: 8px; font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink) }
+.mg .gl-types button:hover { background: var(--row); border-color: var(--hair) }
+.mg .gl-types button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.mg .gl-types button .c { color: inherit; font-weight: 400 }
+.mg .gl-types button[aria-pressed="true"] .c { opacity: 1 }
+.mg .gl-count, .mg .gl-empty { font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
+.mg .gl-count b { font-weight: 700 }
+.mg .gl-count button, .mg .gl-empty button { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
+.mg .gl-empty button { border: 0; min-height: 40px }
+.mg .gl-box { border-top-width: 2px }
+.mg table.gl-t { font: 400 var(--t-word)/var(--lh-word) var(--sans) }
+.mg .gl-t thead th { font: 700 var(--t-word)/1.3 var(--sans); letter-spacing: 0; border-bottom: 1px solid var(--ink) }
+.mg .gl-t tbody th[scope="row"] { font-weight: 700 }
+.mg .gl-g button { min-height: 40px; font: 700 var(--t-word)/1.3 var(--sans) }
+.mg .gl-g button svg { color: var(--ink) }
+.mg .gl-g .c { color: var(--ink); font-weight: 400 }
+.mg .gl-more { font: 400 var(--t-word)/var(--lh-word) var(--sans); gap: 2px var(--s4) }
+.mg .gl-more dt { font-weight: 600 }
+.mg .gl-more dd b, .mg .gl-count b { font-weight: 700 }
+.mg :is(.gl-find input, .gl-types button, .gl-box, .gl-g button, .gl-count button, .gl-empty button):focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+.mg .gl-g button:focus-visible { outline-offset: -2.5px }
+/* the way back after a jump to a glossary row (any tab's term), a control at the word size */
+.rk-kit .jumpback { font: 600 var(--t-word)/1.2 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink);
+  border-radius: 6px; min-height: 32px; padding: 2px var(--s2); margin-left: var(--s2); vertical-align: 0 }
+.rk-kit .jumpback:hover { background: var(--row) }
+.rk-kit .jumpback:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -3362,8 +3400,8 @@ window.reportReady(function () {
   </section>
 
 
-  <section class="view" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
-  <h2>Method, briefly</h2>
+  <section class="view rk-kit mg" id="method" data-view="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
+  <div class="rk-head"><h2 id="meth-h">Method, briefly</h2></div>
   <dl class="meth" id="method-list">
     <dt>Runs</dt><dd>Each question is asked up to three times per setup and model, each run in a fresh session.</dd>
     <dt>Scoring</dt><dd>A run is right when every turn carries the expected number, and <span class="term" data-term="confident-wrong" tabindex="0">confidently wrong</span> when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</dd>
@@ -3374,10 +3412,10 @@ window.reportReady(function () {
     <dt>Claude Code</dt><dd><span class="term" data-term="claude-code" tabindex="0">Claude Code</span> is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</dd>
   </dl>
 
-  <h2 id="gloss-h">Glossary</h2>
+  <div class="rk-head mg-gl-head"><h2 id="gloss-h">Glossary</h2></div>
   <div class="gl" id="gloss">
     <div class="gl-tools">
-      <label class="gl-find"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="vh">Find a term</span><input type="search" id="gl-q" placeholder="Find a term or a word in its meaning" autocomplete="off" spellcheck="false" aria-controls="gl-box"></label>
+      <label class="gl-find"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 10.3L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="gl-label">Find a term or a word in its meaning</span><input type="search" id="gl-q" autocomplete="off" spellcheck="false" aria-controls="gl-box"></label>
       <div class="gl-types" id="gl-types" role="group" aria-label="Show one type of term"></div>
     </div>
     <p class="gl-count" id="gl-count" aria-live="polite"></p>
@@ -4588,7 +4626,7 @@ window.reportReady(function () {
     });
     const any = words.length || GS.type != null, q = esc(GS.q.trim());
     $("#gl-count").innerHTML = any ? `<b>${matched}</b> of ${terms.length} terms${words.length ? ` match “${q}”` : ""}${GS.type != null ? ` in ${esc(GS.type)}` : ""}<button type="button" data-gl-reset="1">Show every term</button>`
-      : `<b>${terms.length}</b> terms in ${glTypes().length} types; a type's heading folds it.`;
+      : `<b>${terms.length}</b> terms in ${glTypes().length} types`;
     const empty = $("#gl-empty"); empty.hidden = matched > 0;
     empty.innerHTML = matched ? "" : `No term${GS.type != null ? ` in ${esc(GS.type)}` : ""} matches “${q}”.<button type="button" data-gl-reset="1">Show every term</button>`;
     const thead = $("#gl-t").tHead; $("#gl-t").style.setProperty("--gl-hh", (thead ? thead.offsetHeight : 0) + "px");
