@@ -397,7 +397,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -433,6 +433,12 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square (unclear runs folded
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
+
+/* the Setups tab: its two sections (the setup map, the setup explorer) as kit sections, each head the kit's over a
+   2px ink rule; their words in the kit's family at 1rem in full ink (the sections' own rules), their bands on --row,
+   every focusable part the kit's focus ring. The sheets keep their drawn sizes (an owner question). */
+.st { --paper-2: var(--row) }
+.st .rk-head h2 { line-height: 1.4 }
 
 /* the Every run tab: one kit section (its head with the set switch beside it), the finding's headline, the outcome key,
    the highlighted question's strip, then the unit plate: one row of marks per setup and model, one column per question,
@@ -1076,62 +1082,61 @@ button[data-tip], a[data-tip] { cursor: pointer }
   </section>
   </section>
 
-  <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
-<section class="sxb" id="setups-b" aria-labelledby="sxb-h">
+  <section class="view rk-kit st" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
+<section class="sxb rk-section" id="setups-b" aria-labelledby="sxb-h">
 <style>
-.sxb { --sxb-pencil: var(--mf); margin-top: 60px; }
+.sxb { --sxb-pencil: var(--mf); }
 .sxb h2 { margin-top: 0; }
-.sxb .sxb-lede { max-width: 46rem; font-size: 16px; color: var(--ink-2); margin: 0 0 18px; }
-.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; border-top: 1px solid var(--ink); padding-top: 16px; }
-.sxb .sxb-pick { font-family: var(--label); position: relative; }
-.sxb .sxb-pick-h { font-size: 13px; color: var(--ink-3); margin: 0 0 8px; line-height: 1.35; }
+.sxb .sxb-lede { max-width: 40rem; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin: 0 0 var(--s5); }
+.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; padding-top: 0; }
+.sxb .sxb-pick { font-family: var(--sans); position: relative; }
+.sxb .sxb-pick-h { font-size: var(--t-word); font-weight: 700; color: var(--ink); margin: 0 0 8px; line-height: 1.35; }
 .sxb .sxb-rungs { position: relative; padding-left: 16px; }
 .sxb .sxb-rungs::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 0; border-left: 1px solid var(--grid-major); }
 .sxb .sxb-rung { position: relative; padding: 0 0 9px; }
 .sxb .sxb-rung::before { content: ""; position: absolute; left: -16px; top: 7px; width: 9px; height: 0; border-top: 1px solid var(--rule); }
 .sxb .sxb-rung.on::before { border-top: 2px solid var(--ink); top: 6px; width: 11px; }
-.sxb .sxb-rl { font-size: 12.5px; line-height: 1.3; color: var(--ink-2); margin: 0 0 4px; }
-.sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 600; }
-.sxb .sxb-rung.empty .sxb-rl { color: var(--ink-3); font-style: italic; font-family: var(--serif); font-size: 13px; }
+.sxb .sxb-rl { font-size: var(--t-word); line-height: 1.35; color: var(--ink); margin: 0 0 4px; }
+.sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 700; }
+.sxb .sxb-rung.empty .sxb-rl { color: var(--ink); }
 .sxb .sxb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: 12px; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
+.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
 .sxb .sxb-chip:hover { border-color: var(--ink-2); }
 .sxb .sxb-chip i { flex: none; width: 3px; align-self: stretch; min-height: 14px; border-radius: 1px; background: var(--other); }
 .sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.sxb .sxb-chip:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-.sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.sxb .sxb-chip:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
+.sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: var(--t-word); color: var(--ink); line-height: 1.35; }
 .sxb .sxb-fams span { display: inline-flex; align-items: center; gap: 5px; }
 .sxb .sxb-fams i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
-.sxb .sxb-keys { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; line-height: 1.35; }
 
 .sxb .sxb-stage { min-width: 0; }
 .sxb .sxb-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; }
-.sxb .sxb-name { font-family: var(--code); font-size: 19px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.sxb .sxb-name { font-family: var(--code); font-size: var(--t-find); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 .sxb .sxb-name span[data-setup] { text-decoration: none; }
-.sxb .sxb-meta { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sxb .sxb-meta { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sxb .sxb-meta i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
-.sxb .sxb-desc { grid-column: 1 / -1; font-size: 16px; line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
+.sxb .sxb-desc { grid-column: 1 / -1; font-size: var(--t-word); line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
 .sxb .sxb-steps { display: flex; gap: 4px; }
-.sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 13.5px; min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
+.sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--sans); font-size: var(--t-word); min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
 .sxb .sxb-steps button:disabled { color: var(--ink-3); border-color: var(--rule); cursor: default; }
-.sxb .sxb-steps button:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sxb .sxb-steps button:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sxb .sxb-fig { margin: 12px 0 0; }
 .sxb .sxb-fig svg { display: block; width: 100%; height: auto; }
 .sxb .sxb-fig.narrow svg { max-width: 420px; }
-.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--label); font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.3; }
+.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--sans); font-size: var(--t-word); color: var(--ink); margin: 8px 0 0; line-height: 1.4; }
 .sxb .sxb-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sxb .sxb-legend svg { flex: none; }
 .sxb .sxb-panel { display: grid; align-content: start; align-items: start; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
-.sxb .sxb-panel h3 { font-family: var(--label); font-size: 14px; font-weight: 600; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
-.sxb .sxb-panel p { font-size: 15px; line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
-.sxb .sxb-panel .sxb-cap { font-family: var(--label); font-size: 13px; color: var(--ink-2); line-height: 1.4; margin: 6px 0 0; }
-.sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--label); font-size: 13.5px; line-height: 1.35; }
+.sxb .sxb-panel h3 { font-family: var(--sans); font-size: var(--t-word); font-weight: 700; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
+.sxb .sxb-panel p { font-size: var(--t-word); line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
+.sxb .sxb-panel .sxb-cap { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.45; margin: 6px 0 0; }
+.sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--sans); font-size: var(--t-word); line-height: 1.4; }
 .sxb .sxb-diff li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px; padding: 2px 0; }
-.sxb .sxb-diff b { font-weight: 600; text-align: center; }
+.sxb .sxb-diff b { font-weight: 700; text-align: center; }
 .sxb .sxb-diff li.add b { color: var(--sxb-pencil); }
 .sxb .sxb-diff li.gone { color: var(--ink-3); }
 .sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
-.sxb .sxb-q { font-family: var(--serif); font-style: italic; }
+.sxb .sxb-q { font-style: italic; }
 .sxb .sxb-seq svg { display: block; width: 100%; max-width: 390px; height: auto; }
 .sxb .sxb-fade { animation: sxb-in .32s ease-out; }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
@@ -1180,14 +1185,13 @@ button[data-tip], a[data-tip] { cursor: pointer }
 @media (prefers-reduced-motion: reduce) { .sxb .sxb-fade { animation: none; } }
 </style>
 
-<h2 id="sxb-h">What each setup is, one at a time</h2>
-<p class="sxb-lede">Pick a setup on the ladder: the sheet shows where each part runs, which agent asks, through which tools, with what context, and which tables it can reach. Step through a rung to see what each setup adds to the one before it.</p>
+<div class="rk-head"><h2 id="sxb-h">What each setup is, one at a time</h2></div>
+<p class="sxb-lede">One setup at a time, on the cost ladder: where each part runs, which agent asks, through which tools, with what context, which tables it can reach, and what it adds to the setup before it.</p>
 <div class="sxb-wrap">
   <div class="sxb-pick">
     <p class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</p>
     <div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
     <div class="sxb-fams"></div>
-    <p class="sxb-keys">Arrow keys move between setups; up and down jump a rung.</p>
   </div>
   <div class="sxb-stage">
     <div class="sxb-head" aria-live="polite"></div>
@@ -1875,47 +1879,46 @@ window.reportReady(() => {
 </script>
 </section>
 
-<section class="sm" id="setup-map" aria-labelledby="sm-h">
+<section class="sm rk-section" id="setup-map" aria-labelledby="sm-h">
 <style>
 .sm { --hl: var(--ink); }
-.sm .sm-lede { max-width: 46rem; margin: 0 0 14px; }
-.sm .sm-lede b { font-weight: 600; }
-.sm .sm-take { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 12px; max-width: 54rem; font-weight: 500; }
+.sm .sm-lede { max-width: 40rem; margin: 0 0 var(--s5); font: 400 var(--t-word)/1.45 var(--sans); }
+.sm .sm-lede b { font-weight: 700; }
 
 /* the rung lists */
 .sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0 0 14px; padding: 0; list-style: none; }
 .sm .sm-rung { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 0; transition: opacity .12s ease-out; }
-.sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--label); font-size: 14px; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
-.sm .sm-rhd small { display: block; font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
+.sm .sm-rhd small { display: block; font-size: var(--t-word); font-weight: 400; color: var(--ink); }
 .sm .sm-rhd:hover, .sm .sm-rhd[aria-pressed="true"] { background: var(--paper-2); }
 .sm .sm-rung ul { list-style: none; margin: 2px 0 0; padding: 0; }
-.sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--label); font-size: 13.5px; line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
+.sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--sans); font-size: var(--t-word); line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
 .sm .sm-s::before { content: ""; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 3px; border-radius: 1px; background: var(--f, var(--other)); }
-.sm .sm-s .id { font-size: 12.5px; display: inline-block; }
-.sm .sm-s .sm-d { display: block; color: var(--ink-2); font-size: 13px; }
+.sm .sm-s .id { font-size: .9375rem; font-weight: 600; display: inline-block; }
+.sm .sm-s .sm-d { display: block; color: var(--ink); font-size: var(--t-word); }
 .sm .sm-s:hover, .sm .sm-s[aria-pressed="true"] { background: var(--paper-2); }
 .sm .sm-s[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--ink-2); }
-.sm .sm-none { font-family: var(--label); font-size: 13px; color: var(--ink-3); padding: 2px 0 0; }
+.sm .sm-none { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); padding: 2px 0 0; }
 .sm .sm-rungs.focusing .sm-s:not(.on) { opacity: .38; }
 .sm .sm-rungs.focusing .sm-rung:not(.on) .sm-rhd { opacity: .55; }
 
 /* the readout */
-.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font-family: var(--label); font-size: 14px; line-height: 1.38; color: var(--ink-2); min-height: 9.6em; }
-.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: 14.5px; }
-.sm .sm-read .sm-rt .id { font-size: 13px; }
-.sm .sm-read .sm-rt .sm-fam { color: var(--ink-3); }
+.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
+.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: var(--t-word); }
+.sm .sm-read .sm-rt .id { font-size: .9375rem; font-weight: 600; }
+.sm .sm-read .sm-rt .sm-fam { color: var(--ink); }
 .sm .sm-read p { margin: 0 0 4px; }
-.sm .sm-read b { color: var(--ink); font-weight: 600; }
+.sm .sm-read b { color: var(--ink); font-weight: 700; }
 .sm .sm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; margin: 0; }
 .sm .sm-grid div { min-width: 0; }
-.sm .sm-grid dt { font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-grid dt { font-size: var(--t-word); font-weight: 700; color: var(--ink); }
 .sm .sm-grid dd { margin: 0; color: var(--ink); }
-.sm .sm-grid dd.sm-sql { font-weight: 600; }
-.sm .sm-hint { color: var(--ink-3); font-size: 13px; }
+.sm .sm-grid dd.sm-sql { font-weight: 700; }
+.sm .sm-hint { color: var(--ink); font-size: var(--t-word); }
 
 /* the sheet */
 .sm .sm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 2px; }
-.sm .sm-scroll:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sm .sm-scroll:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sm svg.sm-sheet { display: block; width: 100%; min-width: 1080px; height: auto; font-family: var(--label); overflow: visible; }
 .sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; }
 .sm .sm-sheet .t-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
@@ -1942,7 +1945,8 @@ window.reportReady(() => {
 .sm .sm-sheet [data-c] { cursor: pointer; }
 .sm .sm-ring { fill: none; stroke: none; }
 .sm .sm-sheet g[tabindex]:focus { outline: none; }
-.sm .sm-sheet g[tabindex]:focus-visible .sm-ring { stroke: var(--mf); stroke-width: 2; }
+.sm .sm-sheet g[tabindex]:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 2px; }
+.sm .sm-sheet g[tabindex]:focus-visible .sm-ring { stroke: var(--line); stroke-width: 2.5; }
 .sm .sm-x { transition: opacity .12s ease-out; }
 
 /* focus: the path stays, the rest dims; nothing is hidden */
@@ -1963,15 +1967,13 @@ window.reportReady(() => {
 .sm svg.focusing .sm-fr.on .sm-frame { stroke: var(--hl); stroke-width: 1.6; }
 
 /* legend */
-.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); align-items: center; margin: 10px 0 0; }
+.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); align-items: center; margin: 10px 0 0; }
 .sm .sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sm .sm-legend svg { overflow: visible; flex: none; }
-.sm .sm-swipe { display: none; font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 0 0 6px; }
 
 @media (max-width: 760px) {
   .sm .sm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sm .sm-read { min-height: 15.5em; }
-  .sm .sm-swipe { display: block; }
 }
 @media (max-width: 460px) {
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -1981,9 +1983,9 @@ window.reportReady(() => {
    viewport's 16 px gutters; --sm-vw is the viewport's width without its scrollbar, set by the script)
    so the map keeps close to its size. Narrower screens keep the stacked layout. */
 @media (min-width: 1180px) {
-  .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: 0 16px; align-items: start; }
+  .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 0 16px; align-items: start; }
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
-  .sm .sm-rungs:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+  .sm .sm-rungs:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
   .sm .sm-side { position: sticky; top: calc(var(--tabh, 0px) + 8px); display: flex; flex-direction: column; min-width: 0; }
   .sm .sm-scroll { order: 1; overflow: visible; }
   .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
@@ -1993,21 +1995,18 @@ window.reportReady(() => {
   .sm .sm-grid dt { margin-right: 5px; }
   .sm .sm-legend { order: 3; margin-top: 6px; }
   .sm svg.sm-sheet { min-width: 0; max-width: 1200px; }
-  .sm .sm-swipe { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sm .sm-x, .sm .sm-s, .sm .sm-rung { transition: none; }
 }
 </style>
 
-  <h2 id="sm-h">What each setup is</h2>
+  <div class="rk-head"><h2 id="sm-h">What each setup is</h2></div>
   <p class="sm-lede">Every setup on one map. Each part is drawn once, where it runs; a setup is a path through the parts it uses: who asks, on which model, through which tools, with what context, over which tables. <b>Google's data agents write their own SQL</b> from whatever context they hold. <b>Our agent on MetricFlow never writes SQL</b>: it lists the metrics, reads one metric's definition and dimensions, and asks MetricFlow to compute; MetricFlow writes the SQL.</p>
-  <p class="sm-take">Hover or tap a setup, a rung, or any part of the map; tap again to let go.</p>
   <div class="sm-body">
   <ul class="sm-rungs" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
   <div class="sm-side">
   <div class="sm-read" id="sm-read" aria-live="polite"></div>
-  <p class="sm-swipe">The map scrolls sideways.</p>
   <div class="sm-scroll" tabindex="0" role="group" aria-label="Map of every setup; scrolls sideways on small screens"><svg class="sm-sheet" id="sm-svg" viewBox="0 0 1200 840" role="img" aria-labelledby="sm-svg-t"><title id="sm-svg-t">Map of every setup. In Google Cloud: the BigQuery data agent on Gemini, the context it is given, Knowledge Catalog, Google's MCP servers and BigQuery with its silver, governed, legacy, table-function and graph objects. On our machine: our ADK agent and a Claude Code subagent, MCP Toolbox, the Lightdash tool and server, a read-only SQL tool, the three MetricFlow tools and MetricFlow, and the warehouse stand-in. Model APIs: a free model and Claude.</title></svg></div>
   <div class="sm-legend" id="sm-legend"></div>
   </div>
@@ -2358,8 +2357,7 @@ window.reportReady(() => {
     function restText() {
       return `<p class="sm-rt">Two shapes run through the map.</p>
         <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
-        <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>
-        <p class="sm-hint">Hover or tap a setup, a rung or a part of the map; Escape lets go.</p>`;
+        <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>`;
     }
     function setupText(a) {
       const sp = specOf(a); const f = famOf(a);
@@ -2596,7 +2594,7 @@ window.reportReady(() => {
 <dt>How each setup did</dt><dd data-field="runs"></dd>
 </dl></article></div></div></section>
 <style>
-/* ---------- the question sets part (#390): set profiles, then a guide by kind of question ---------- */
+/* ---------- the question sets part: set profiles, then a guide by kind of question ---------- */
 .qs .qs-lede { max-width: 36rem; margin: 0 0 18px; text-wrap: pretty; }
 .qs h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; line-height: 1.3; margin: 0 0 4px; }
 .qs button { font: inherit; color: inherit; }
@@ -2712,7 +2710,7 @@ window.reportReady(() => {
   .qs .qs-pos { flex: 1 1 auto; }
   .qs .qs-seeall-set { margin-left: 0; flex-basis: 100%; }
 }
-/* ---------- the question browser (#397): "See all N" opens a centred modal ----------
+/* ---------- the question browser: "See all N" opens a centred modal ----------
    A native <dialog class="qs qb">: the list of a kind's questions on the left, the guide's own card on the right;
    a full-screen sheet with a list step and a card step on a phone. Its markup is made by the script below. */
 .qs .qs-seeall:not([data-current]) { display: none; }
@@ -2837,7 +2835,7 @@ html.qb-open { overflow: hidden; }
 }
 </style>
 <script>
-/* ---------- the question sets part (#390) ---------- */
+/* ---------- the question sets part ---------- */
 // Every example renders into one card whose fields keep the same places and heights: the tallest content each
 // field takes over every question is measured once per card width, and each field reserves that height.
 window.reportReady(function () {
@@ -3048,7 +3046,7 @@ window.reportReady(function () {
     return true;
   };
 
-  /* ---------- the question browser (#397): "See all N" opens every question of a kind in a modal dialog ----------
+  /* ---------- the question browser: "See all N" opens every question of a kind in a modal dialog ----------
      A native <dialog class="qs qb">: the kind's questions on the left, a copy of the guide's card on the right
      filled by the same renderers; a full-screen sheet with a list step and a card step on a phone. */
   (function browser(gs, $g) {

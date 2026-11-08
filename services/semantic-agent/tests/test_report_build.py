@@ -140,6 +140,36 @@ def test_the_see_all_buttons_exist_one_per_category_visible_and_wired_to_the_bro
     assert "dlg.showModal()" in page
 
 
+def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
+    """Both setup sections are kit sections (a kit head each), their words at 1rem in the kit's
+    family and full ink, every control wears the kit's focus ring, and no text says how to use
+    them."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    for sec, h in (("sm", "sm-h"), ("sxb", "sxb-h")):
+        assert f'<section class="{sec} rk-section"' in panel, sec
+        assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
+    # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
+    assert ".mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
+    rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
+    html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
+    small = [r for r in html_rules if re.search(r"font-size: 1[0-5](\.\d)?px", r)]
+    assert not small, (
+        small
+    )  # words at 1rem (the sheets' own text, .s- and .sm-sheet, keeps its drawn size)
+    assert not [r for r in html_rules if "outline: 2px solid var(--mf)" in r]
+    assert "g[tabindex]:focus-visible { outline: 2.5px solid var(--line)" in styles
+    for gone in (
+        "Hover or tap",
+        "Escape lets go",
+        "scrolls sideways.</p>",
+        "Arrow keys move",
+        "Pick a setup",
+    ):
+        assert gone not in panel, gone
+
+
 def test_the_page_folds_unclear_runs_into_wrong(tmp_path):
     _, data = _built(tmp_path)
     rows = [r for st in data["sets"].values() for r in st["rows"]]
@@ -455,7 +485,8 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
     for part in moved:
         assert part in page, part
-    for part in ("setups", "question-sets", "method"):
+    assert '<section class="view rk-kit st" id="setups"' in page
+    for part in ("question-sets", "method"):
         assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1

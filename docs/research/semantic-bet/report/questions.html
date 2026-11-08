@@ -1,5 +1,5 @@
 <style>
-/* ---------- the question sets part (#390): set profiles, then a guide by kind of question ---------- */
+/* ---------- the question sets part: set profiles, then a guide by kind of question ---------- */
 .qs .qs-lede { max-width: 36rem; margin: 0 0 18px; text-wrap: pretty; }
 .qs h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; line-height: 1.3; margin: 0 0 4px; }
 .qs button { font: inherit; color: inherit; }
@@ -115,7 +115,7 @@
   .qs .qs-pos { flex: 1 1 auto; }
   .qs .qs-seeall-set { margin-left: 0; flex-basis: 100%; }
 }
-/* ---------- the question browser (#397): "See all N" opens a centred modal ----------
+/* ---------- the question browser: "See all N" opens a centred modal ----------
    A native <dialog class="qs qb">: the list of a kind's questions on the left, the guide's own card on the right;
    a full-screen sheet with a list step and a card step on a phone. Its markup is made by the script below. */
 .qs .qs-seeall:not([data-current]) { display: none; }
@@ -240,7 +240,7 @@ html.qb-open { overflow: hidden; }
 }
 </style>
 <script>
-/* ---------- the question sets part (#390) ---------- */
+/* ---------- the question sets part ---------- */
 // Every example renders into one card whose fields keep the same places and heights: the tallest content each
 // field takes over every question is measured once per card width, and each field reserves that height.
 window.reportReady(function () {
@@ -451,7 +451,7 @@ window.reportReady(function () {
     return true;
   };
 
-  /* ---------- the question browser (#397): "See all N" opens every question of a kind in a modal dialog ----------
+  /* ---------- the question browser: "See all N" opens every question of a kind in a modal dialog ----------
      A native <dialog class="qs qb">: the kind's questions on the left, a copy of the guide's card on the right
      filled by the same renderers; a full-screen sheet with a list step and a card step on a phone. */
   (function browser(gs, $g) {

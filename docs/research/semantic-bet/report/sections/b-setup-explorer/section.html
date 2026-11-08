@@ -1,58 +1,57 @@
-<section class="sxb" id="setups-b" aria-labelledby="sxb-h">
+<section class="sxb rk-section" id="setups-b" aria-labelledby="sxb-h">
 <style>
-.sxb { --sxb-pencil: var(--mf); margin-top: 60px; }
+.sxb { --sxb-pencil: var(--mf); }
 .sxb h2 { margin-top: 0; }
-.sxb .sxb-lede { max-width: 46rem; font-size: 16px; color: var(--ink-2); margin: 0 0 18px; }
-.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; border-top: 1px solid var(--ink); padding-top: 16px; }
-.sxb .sxb-pick { font-family: var(--label); position: relative; }
-.sxb .sxb-pick-h { font-size: 13px; color: var(--ink-3); margin: 0 0 8px; line-height: 1.35; }
+.sxb .sxb-lede { max-width: 40rem; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin: 0 0 var(--s5); }
+.sxb .sxb-wrap { display: grid; grid-template-columns: minmax(250px, 292px) minmax(0, 1fr); gap: 28px; align-items: start; padding-top: 0; }
+.sxb .sxb-pick { font-family: var(--sans); position: relative; }
+.sxb .sxb-pick-h { font-size: var(--t-word); font-weight: 700; color: var(--ink); margin: 0 0 8px; line-height: 1.35; }
 .sxb .sxb-rungs { position: relative; padding-left: 16px; }
 .sxb .sxb-rungs::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 0; border-left: 1px solid var(--grid-major); }
 .sxb .sxb-rung { position: relative; padding: 0 0 9px; }
 .sxb .sxb-rung::before { content: ""; position: absolute; left: -16px; top: 7px; width: 9px; height: 0; border-top: 1px solid var(--rule); }
 .sxb .sxb-rung.on::before { border-top: 2px solid var(--ink); top: 6px; width: 11px; }
-.sxb .sxb-rl { font-size: 12.5px; line-height: 1.3; color: var(--ink-2); margin: 0 0 4px; }
-.sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 600; }
-.sxb .sxb-rung.empty .sxb-rl { color: var(--ink-3); font-style: italic; font-family: var(--serif); font-size: 13px; }
+.sxb .sxb-rl { font-size: var(--t-word); line-height: 1.35; color: var(--ink); margin: 0 0 4px; }
+.sxb .sxb-rung.on .sxb-rl { color: var(--ink); font-weight: 700; }
+.sxb .sxb-rung.empty .sxb-rl { color: var(--ink); }
 .sxb .sxb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: 12px; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
+.sxb .sxb-chip { appearance: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 9px 3px 7px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper); color: var(--ink); font-family: var(--code); font-size: .9375rem; font-weight: 600; letter-spacing: -.01em; cursor: pointer; line-height: 1.2; text-align: left; }
 .sxb .sxb-chip:hover { border-color: var(--ink-2); }
 .sxb .sxb-chip i { flex: none; width: 3px; align-self: stretch; min-height: 14px; border-radius: 1px; background: var(--other); }
 .sxb .sxb-chip[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.sxb .sxb-chip:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-.sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.sxb .sxb-chip:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
+.sxb .sxb-fams { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 6px 0 0; padding: 8px 0 0; border-top: 1px solid var(--grid-major); font-size: var(--t-word); color: var(--ink); line-height: 1.35; }
 .sxb .sxb-fams span { display: inline-flex; align-items: center; gap: 5px; }
 .sxb .sxb-fams i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
-.sxb .sxb-keys { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; line-height: 1.35; }
 
 .sxb .sxb-stage { min-width: 0; }
 .sxb .sxb-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; }
-.sxb .sxb-name { font-family: var(--code); font-size: 19px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.sxb .sxb-name { font-family: var(--code); font-size: var(--t-find); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 .sxb .sxb-name span[data-setup] { text-decoration: none; }
-.sxb .sxb-meta { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sxb .sxb-meta { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.35; margin: 2px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sxb .sxb-meta i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
-.sxb .sxb-desc { grid-column: 1 / -1; font-size: 16px; line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
+.sxb .sxb-desc { grid-column: 1 / -1; font-size: var(--t-word); line-height: 1.45; margin: 4px 0 0; max-width: 44rem; }
 .sxb .sxb-steps { display: flex; gap: 4px; }
-.sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 13.5px; min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
+.sxb .sxb-steps button { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--sans); font-size: var(--t-word); min-height: 32px; min-width: 32px; padding: 2px 9px; border-radius: 2px; cursor: pointer; }
 .sxb .sxb-steps button:disabled { color: var(--ink-3); border-color: var(--rule); cursor: default; }
-.sxb .sxb-steps button:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sxb .sxb-steps button:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sxb .sxb-fig { margin: 12px 0 0; }
 .sxb .sxb-fig svg { display: block; width: 100%; height: auto; }
 .sxb .sxb-fig.narrow svg { max-width: 420px; }
-.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--label); font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.3; }
+.sxb .sxb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--sans); font-size: var(--t-word); color: var(--ink); margin: 8px 0 0; line-height: 1.4; }
 .sxb .sxb-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sxb .sxb-legend svg { flex: none; }
 .sxb .sxb-panel { display: grid; align-content: start; align-items: start; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 28px; margin-top: 16px; border-top: 1px solid var(--grid-major); padding-top: 12px; }
-.sxb .sxb-panel h3 { font-family: var(--label); font-size: 14px; font-weight: 600; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
-.sxb .sxb-panel p { font-size: 15px; line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
-.sxb .sxb-panel .sxb-cap { font-family: var(--label); font-size: 13px; color: var(--ink-2); line-height: 1.4; margin: 6px 0 0; }
-.sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--label); font-size: 13.5px; line-height: 1.35; }
+.sxb .sxb-panel h3 { font-family: var(--sans); font-size: var(--t-word); font-weight: 700; margin: 0 0 4px; line-height: 1.3; color: var(--ink); }
+.sxb .sxb-panel p { font-size: var(--t-word); line-height: 1.45; margin: 0 0 8px; color: var(--ink); }
+.sxb .sxb-panel .sxb-cap { font-family: var(--sans); font-size: var(--t-word); color: var(--ink); line-height: 1.45; margin: 6px 0 0; }
+.sxb .sxb-diff { list-style: none; padding: 0; margin: 4px 0 0; font-family: var(--sans); font-size: var(--t-word); line-height: 1.4; }
 .sxb .sxb-diff li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px; padding: 2px 0; }
-.sxb .sxb-diff b { font-weight: 600; text-align: center; }
+.sxb .sxb-diff b { font-weight: 700; text-align: center; }
 .sxb .sxb-diff li.add b { color: var(--sxb-pencil); }
 .sxb .sxb-diff li.gone { color: var(--ink-3); }
 .sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
-.sxb .sxb-q { font-family: var(--serif); font-style: italic; }
+.sxb .sxb-q { font-style: italic; }
 .sxb .sxb-seq svg { display: block; width: 100%; max-width: 390px; height: auto; }
 .sxb .sxb-fade { animation: sxb-in .32s ease-out; }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
@@ -101,14 +100,13 @@
 @media (prefers-reduced-motion: reduce) { .sxb .sxb-fade { animation: none; } }
 </style>
 
-<h2 id="sxb-h">What each setup is, one at a time</h2>
-<p class="sxb-lede">Pick a setup on the ladder: the sheet shows where each part runs, which agent asks, through which tools, with what context, and which tables it can reach. Step through a rung to see what each setup adds to the one before it.</p>
+<div class="rk-head"><h2 id="sxb-h">What each setup is, one at a time</h2></div>
+<p class="sxb-lede">One setup at a time, on the cost ladder: where each part runs, which agent asks, through which tools, with what context, which tables it can reach, and what it adds to the setup before it.</p>
 <div class="sxb-wrap">
   <div class="sxb-pick">
     <p class="sxb-pick-h" id="sxb-pick-h">The cost ladder, cheapest first</p>
     <div class="sxb-rungs" role="radiogroup" aria-labelledby="sxb-pick-h"></div>
     <div class="sxb-fams"></div>
-    <p class="sxb-keys">Arrow keys move between setups; up and down jump a rung.</p>
   </div>
   <div class="sxb-stage">
     <div class="sxb-head" aria-live="polite"></div>

@@ -397,7 +397,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -433,6 +433,12 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square (unclear runs folded
    in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
 .rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
+
+/* the Setups tab: its two sections (the setup map, the setup explorer) as kit sections, each head the kit's over a
+   2px ink rule; their words in the kit's family at 1rem in full ink (the sections' own rules), their bands on --row,
+   every focusable part the kit's focus ring. The sheets keep their drawn sizes (an owner question). */
+.st { --paper-2: var(--row) }
+.st .rk-head h2 { line-height: 1.4 }
 
 /* the Every run tab: one kit section (its head with the set switch beside it), the finding's headline, the outcome key,
    the highlighted question's strip, then the unit plate: one row of marks per setup and model, one column per question,
@@ -627,7 +633,7 @@ window.REPORT = D;
   </section>
   </section>
 
-  <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
+  <section class="view rk-kit st" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
 <!--SECTIONS-->
   </section>
 

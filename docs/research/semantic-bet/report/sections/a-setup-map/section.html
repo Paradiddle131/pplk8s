@@ -1,44 +1,43 @@
-<section class="sm" id="setup-map" aria-labelledby="sm-h">
+<section class="sm rk-section" id="setup-map" aria-labelledby="sm-h">
 <style>
 .sm { --hl: var(--ink); }
-.sm .sm-lede { max-width: 46rem; margin: 0 0 14px; }
-.sm .sm-lede b { font-weight: 600; }
-.sm .sm-take { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 12px; max-width: 54rem; font-weight: 500; }
+.sm .sm-lede { max-width: 40rem; margin: 0 0 var(--s5); font: 400 var(--t-word)/1.45 var(--sans); }
+.sm .sm-lede b { font-weight: 700; }
 
 /* the rung lists */
 .sm .sm-rungs { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px 22px; margin: 0 0 14px; padding: 0; list-style: none; }
 .sm .sm-rung { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 0; transition: opacity .12s ease-out; }
-.sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--label); font-size: 14px; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
-.sm .sm-rhd small { display: block; font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-rhd { appearance: none; border: 0; background: transparent; padding: 2px 4px 4px; margin: 0 -4px; width: calc(100% + 8px); text-align: left; cursor: pointer; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; color: var(--ink); border-radius: 2px; display: block; }
+.sm .sm-rhd small { display: block; font-size: var(--t-word); font-weight: 400; color: var(--ink); }
 .sm .sm-rhd:hover, .sm .sm-rhd[aria-pressed="true"] { background: var(--paper-2); }
 .sm .sm-rung ul { list-style: none; margin: 2px 0 0; padding: 0; }
-.sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--label); font-size: 13.5px; line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
+.sm .sm-s { appearance: none; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; width: calc(100% + 8px); margin: 0 -4px; padding: 4px 4px 4px 12px; font-family: var(--sans); font-size: var(--t-word); line-height: 1.3; border-radius: 2px; position: relative; display: block; min-height: 32px; transition: opacity .12s ease-out; }
 .sm .sm-s::before { content: ""; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 3px; border-radius: 1px; background: var(--f, var(--other)); }
-.sm .sm-s .id { font-size: 12.5px; display: inline-block; }
-.sm .sm-s .sm-d { display: block; color: var(--ink-2); font-size: 13px; }
+.sm .sm-s .id { font-size: .9375rem; font-weight: 600; display: inline-block; }
+.sm .sm-s .sm-d { display: block; color: var(--ink); font-size: var(--t-word); }
 .sm .sm-s:hover, .sm .sm-s[aria-pressed="true"] { background: var(--paper-2); }
 .sm .sm-s[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--ink-2); }
-.sm .sm-none { font-family: var(--label); font-size: 13px; color: var(--ink-3); padding: 2px 0 0; }
+.sm .sm-none { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); padding: 2px 0 0; }
 .sm .sm-rungs.focusing .sm-s:not(.on) { opacity: .38; }
 .sm .sm-rungs.focusing .sm-rung:not(.on) .sm-rhd { opacity: .55; }
 
 /* the readout */
-.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font-family: var(--label); font-size: 14px; line-height: 1.38; color: var(--ink-2); min-height: 9.6em; }
-.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: 14.5px; }
-.sm .sm-read .sm-rt .id { font-size: 13px; }
-.sm .sm-read .sm-rt .sm-fam { color: var(--ink-3); }
+.sm .sm-read { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin: 0 0 10px; font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
+.sm .sm-read .sm-rt { color: var(--ink); margin: 0 0 6px; font-size: var(--t-word); }
+.sm .sm-read .sm-rt .id { font-size: .9375rem; font-weight: 600; }
+.sm .sm-read .sm-rt .sm-fam { color: var(--ink); }
 .sm .sm-read p { margin: 0 0 4px; }
-.sm .sm-read b { color: var(--ink); font-weight: 600; }
+.sm .sm-read b { color: var(--ink); font-weight: 700; }
 .sm .sm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 22px; margin: 0; }
 .sm .sm-grid div { min-width: 0; }
-.sm .sm-grid dt { font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+.sm .sm-grid dt { font-size: var(--t-word); font-weight: 700; color: var(--ink); }
 .sm .sm-grid dd { margin: 0; color: var(--ink); }
-.sm .sm-grid dd.sm-sql { font-weight: 600; }
-.sm .sm-hint { color: var(--ink-3); font-size: 13px; }
+.sm .sm-grid dd.sm-sql { font-weight: 700; }
+.sm .sm-hint { color: var(--ink); font-size: var(--t-word); }
 
 /* the sheet */
 .sm .sm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 2px; }
-.sm .sm-scroll:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.sm .sm-scroll:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sm svg.sm-sheet { display: block; width: 100%; min-width: 1080px; height: auto; font-family: var(--label); overflow: visible; }
 .sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; }
 .sm .sm-sheet .t-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
@@ -65,7 +64,8 @@
 .sm .sm-sheet [data-c] { cursor: pointer; }
 .sm .sm-ring { fill: none; stroke: none; }
 .sm .sm-sheet g[tabindex]:focus { outline: none; }
-.sm .sm-sheet g[tabindex]:focus-visible .sm-ring { stroke: var(--mf); stroke-width: 2; }
+.sm .sm-sheet g[tabindex]:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 2px; }
+.sm .sm-sheet g[tabindex]:focus-visible .sm-ring { stroke: var(--line); stroke-width: 2.5; }
 .sm .sm-x { transition: opacity .12s ease-out; }
 
 /* focus: the path stays, the rest dims; nothing is hidden */
@@ -86,15 +86,13 @@
 .sm svg.focusing .sm-fr.on .sm-frame { stroke: var(--hl); stroke-width: 1.6; }
 
 /* legend */
-.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); align-items: center; margin: 10px 0 0; }
+.sm .sm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink); align-items: center; margin: 10px 0 0; }
 .sm .sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sm .sm-legend svg { overflow: visible; flex: none; }
-.sm .sm-swipe { display: none; font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 0 0 6px; }
 
 @media (max-width: 760px) {
   .sm .sm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sm .sm-read { min-height: 15.5em; }
-  .sm .sm-swipe { display: block; }
 }
 @media (max-width: 460px) {
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -104,9 +102,9 @@
    viewport's 16 px gutters; --sm-vw is the viewport's width without its scrollbar, set by the script)
    so the map keeps close to its size. Narrower screens keep the stacked layout. */
 @media (min-width: 1180px) {
-  .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: 0 16px; align-items: start; }
+  .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 0 16px; align-items: start; }
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
-  .sm .sm-rungs:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+  .sm .sm-rungs:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
   .sm .sm-side { position: sticky; top: calc(var(--tabh, 0px) + 8px); display: flex; flex-direction: column; min-width: 0; }
   .sm .sm-scroll { order: 1; overflow: visible; }
   .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
@@ -116,21 +114,18 @@
   .sm .sm-grid dt { margin-right: 5px; }
   .sm .sm-legend { order: 3; margin-top: 6px; }
   .sm svg.sm-sheet { min-width: 0; max-width: 1200px; }
-  .sm .sm-swipe { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sm .sm-x, .sm .sm-s, .sm .sm-rung { transition: none; }
 }
 </style>
 
-  <h2 id="sm-h">What each setup is</h2>
+  <div class="rk-head"><h2 id="sm-h">What each setup is</h2></div>
   <p class="sm-lede">Every setup on one map. Each part is drawn once, where it runs; a setup is a path through the parts it uses: who asks, on which model, through which tools, with what context, over which tables. <b>Google's data agents write their own SQL</b> from whatever context they hold. <b>Our agent on MetricFlow never writes SQL</b>: it lists the metrics, reads one metric's definition and dimensions, and asks MetricFlow to compute; MetricFlow writes the SQL.</p>
-  <p class="sm-take">Hover or tap a setup, a rung, or any part of the map; tap again to let go.</p>
   <div class="sm-body">
   <ul class="sm-rungs" id="sm-rungs" aria-label="Setups by rung of the cost ladder, cheapest first"></ul>
   <div class="sm-side">
   <div class="sm-read" id="sm-read" aria-live="polite"></div>
-  <p class="sm-swipe">The map scrolls sideways.</p>
   <div class="sm-scroll" tabindex="0" role="group" aria-label="Map of every setup; scrolls sideways on small screens"><svg class="sm-sheet" id="sm-svg" viewBox="0 0 1200 840" role="img" aria-labelledby="sm-svg-t"><title id="sm-svg-t">Map of every setup. In Google Cloud: the BigQuery data agent on Gemini, the context it is given, Knowledge Catalog, Google's MCP servers and BigQuery with its silver, governed, legacy, table-function and graph objects. On our machine: our ADK agent and a Claude Code subagent, MCP Toolbox, the Lightdash tool and server, a read-only SQL tool, the three MetricFlow tools and MetricFlow, and the warehouse stand-in. Model APIs: a free model and Claude.</title></svg></div>
   <div class="sm-legend" id="sm-legend"></div>
   </div>
@@ -481,8 +476,7 @@
     function restText() {
       return `<p class="sm-rt">Two shapes run through the map.</p>
         <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
-        <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>
-        <p class="sm-hint">Hover or tap a setup, a rung or a part of the map; Escape lets go.</p>`;
+        <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>`;
     }
     function setupText(a) {
       const sp = specOf(a); const f = famOf(a);
