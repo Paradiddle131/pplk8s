@@ -211,8 +211,8 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
    edges (a pseudo-element under it, its shadow clipped to the strip's height; the strip itself clips nothing) so nothing that leaves the column shows beside it. */
 .tabs { position: sticky; top: 0; z-index: 8; background: var(--paper); border-bottom: 1px solid var(--hair, var(--rule)); }
 .tabs::before { content: ""; position: absolute; z-index: -1; inset: 0 0 -1px; background: var(--paper); box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax); pointer-events: none; }
-.tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.tabs-in::-webkit-scrollbar { display: none; }
+/* a thin scrollbar under the tabs when they outrun a narrow screen, as the kit's tabs: a hidden one leaves the tabs past the edge with no cue */
+.tabs-in { display: flex; gap: 0 26px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--hair, var(--rule)) transparent; -webkit-overflow-scrolling: touch; }
 .tabs.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - 36px), transparent); }
 .tabs.fade-l .tabs-in { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - 36px), transparent); }
 .tabs.fade-l.fade-r .tabs-in { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) 36px, var(--ink) calc(100% - 36px), transparent); }
@@ -402,8 +402,8 @@ figcaption, .tip .td, .tip .tq { text-wrap: pretty; }
 #every-run .er-key { margin: 0 0 var(--s5) }
 #every-run .er-key svg { flex: none; display: block }
 #every-run .plate { border-top: 0; border-bottom: 2px solid var(--ink) }
-/* the head scrolls with the rows (scrollbar hidden: the rows' own bar moves both), so text past its right edge is
-   scrolled out of view, not cut */
+/* the head scrolls with the rows (scrollbar hidden: the rows' own bar, in sight, moves both), so text past its right
+   edge is scrolled out of view, not cut; data-rk-scroll tells the kit checker the hidden bar is the rows' (NOTES.md) */
 #every-run .plate-head { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 2px solid var(--ink); background: var(--paper) }
 #every-run .plate-head::-webkit-scrollbar { display: none }
 #every-run .prow { border-bottom: 1px solid var(--hair) }
@@ -577,7 +577,7 @@ window.REPORT = D;
     <h3 class="figtitle" id="t6"></h3>
     <ul class="rk-key er-key" id="leg6"></ul>
     <p class="vh" id="plate-live" aria-live="polite"></p>
-    <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
+    <div class="plate" id="plate"><div class="plate-head" id="plate-head" data-rk-scroll></div><div class="plate-body" id="plate-body"></div></div>
   </figure>
   </section>
   </section>
