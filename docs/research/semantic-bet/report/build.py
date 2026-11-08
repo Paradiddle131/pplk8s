@@ -412,7 +412,17 @@ def term_key(key):
 READER_HIDDEN = {"retired", "new"}
 FREE = "nvidia/nemotron-3.5-super-vl:free"
 MIN_CASES_TO_PLOT = 5
-OUTCODE = {"right": "0", "declined": "1", "wrong": "2", "unclear": "3", "confident-wrong": "4"}
+# The page folds unclear into wrong (owner, on the kit's outcome marks): an unclear run counts as wrong in every
+# measure, so it is drawn, keyed and counted as wrong; the scoring and results.json keep the two apart.
+OUTCODE = {"right": "0", "declined": "1", "wrong": "2", "unclear": "2", "confident-wrong": "4"}
+
+
+def shown_outcomes(outcomes):
+    """A row's outcome counts as the page shows them: unclear folded into wrong."""
+    o = dict(outcomes or {})
+    if "unclear" in o:
+        o["wrong"] = o.get("wrong", 0) + o.pop("unclear")
+    return o
 NBOOT = 2000
 
 
@@ -1042,7 +1052,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                     if len(text) > 240:
                         text = text[:237].rsplit(" ", 1)[0] + "..."
                     tools = turn.get("tools") or sorted({c.get("tool") for c in (turn.get("calls") or []) if c.get("tool")})
-                    example = {"case": e["case"], "outcome": oc, "text": text, "tools": tools}
+                    example = {"case": e["case"], "outcome": "wrong" if oc == "unclear" else oc, "text": text, "tools": tools}
             units = "".join("".join(OUTCODE[o] for o in pc.get(c, [])[:3]).ljust(3, ".") for c in ids)
             rows.append({
                 "id": "%s|%s|%s" % (st, a["arm"], a["model"]), "key": "%s|%s" % (a["arm"], a["model"]), "set": st,
@@ -1051,7 +1061,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                 "harness": HARNESS.get(a.get("harness"), a.get("harness") or "not recorded"), "session": a.get("session"),
                 "acc": a["accuracy"], "cw": a["confident_wrong"], "groups": a.get("groups") or {},
                 "cases": a["cases"], "of": of, "runs": a["runs"], "expected": expected,
-                "outcomes": a.get("outcomes") or {}, "partial": partial,
+                "outcomes": shown_outcomes(a.get("outcomes")), "partial": partial,
                 "major": a["cases"] < of or a["runs"] < 0.9 * expected,
                 "plotted": a["cases"] >= MIN_CASES_TO_PLOT, "example": example,
                 "managedBest": a["arm"] == mbr[0] and a["model"] == mbr[1],

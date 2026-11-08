@@ -1,18 +1,18 @@
 # report-kit, vendored
 
-A copy of the report kit the semantic-bet pages are built with: claude-dotfiles `skills/report-kit` at commit a7587e5 (the merge of its PR 52).
+A copy of the report kit the semantic-bet pages are built with: loadout `skills/report-kit` (the owner's shared collection, which claude-dotfiles became) at commit d266b33, which adds the levels inside a section (parts, a side column on the raised surface, a figure with its key).
 Only what the pages need is here: the components (`kit/`), the build that inlines them (`bin/build.cjs`) and the checker (`bin/check.cjs`).
 The kit's docs (`SKILL.md`, `STANDARDS.md`, `REFERENCE.md`) stay upstream; read them there.
 
 ## Never edit the copy
 
 Every file here is listed with its sha256 in [`MANIFEST.sha256`](MANIFEST.sha256), and `services/semantic-agent/tests/test_report_kit_vendored.py` fails when a file differs from it, is missing, or is not listed.
-A change the pages need goes upstream into claude-dotfiles first, then comes here as an update.
+A change the pages need goes upstream into loadout first, then comes here as an update.
 Page-specific styles stay in the page's own template, never in `kit/`.
 
 ## Updating
 
-From the repo root, with a claude-dotfiles clone at `$DOTFILES` checked out at the new commit:
+From the repo root, with a loadout clone at `$DOTFILES` checked out at the new commit:
 
 ```sh
 cd docs/research/semantic-bet/report-kit

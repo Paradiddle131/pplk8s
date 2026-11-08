@@ -3,24 +3,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap">
-<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --report-paper: var(--paper);
-  --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
+  /* one standard for the whole page, the tabs not yet on report-kit included: the kit's ink (navy on light, cloud on
+     dark) for every word, no paler inks (--ink-2 and --ink-3 are the ink), and the kit's family for every face but code */
+  --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #0D1B3E; --ink-2: var(--ink); --ink-3: var(--ink);
   --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
   --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
   --s2: #E2E9EC; --s3: #CBD9E1; --s4: #AEC4D3; --s5: #8FAEC4;
   --o-right: #24384A; --o-decl: #7D8A94; --o-wrong: #C46A7D; --o-cw: #C0213F; --o-none: #7E8890;
   --band: rgba(22, 32, 42, .07); --sel: #CBD9E1; --tip: #FFFFFF; --tip-shadow: 0 6px 18px rgba(22,32,42,.16);
-  --serif: "STIX Two Text", "STIX Two", Cambria, "Times New Roman", serif;
-  --label: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --serif: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --label: var(--serif);
   --code: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+    --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #EDF1F8; --ink-2: var(--ink); --ink-3: var(--ink);
     --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
     --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
     --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
@@ -30,7 +31,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+  --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #EDF1F8; --ink-2: var(--ink); --ink-3: var(--ink);
   --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
   --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
   --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
@@ -40,7 +41,7 @@
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--rule) var(--paper); }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.58; font-variant-numeric: lining-nums; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.45; font-variant-numeric: lining-nums tabular-nums; }
 ::selection { background: var(--sel); color: var(--ink); }
 :focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; border-radius: 2px; }
 code, .id { font-family: var(--code); font-size: .8em; letter-spacing: -.01em; color: var(--ink); }
@@ -51,8 +52,6 @@ span[data-setup] { text-decoration: underline dotted var(--ink-3); text-underlin
 .col { max-width: 41rem; }
 header.memo { padding-bottom: 14px; }
 h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
-.byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
-.byline b { font-weight: 600; color: var(--ink); }
 h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
 p { margin: 0 0 1em; }
 
@@ -151,29 +150,6 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .gl-more dd { margin: 0; color: var(--ink-2); }
 .tip .tcalc { margin: 0; color: var(--ink); }
 .nm { display: inline-block; width: 18px; text-align: center; color: var(--ink-3); }
-/* the line and its button keep their place whatever they say, so a highlight never moves the plate */
-.plive { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 6px; }
-.plive .live { margin: 0; flex: 1 1 22rem; line-height: 1.4; min-height: 2.8em; display: flex; align-items: center; }
-.pclear.off { visibility: hidden; }
-.pstrip { border-top: 1px solid var(--rule); margin: 0 0 8px; padding-top: 6px; }
-.ps-q { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); gap: 6px 28px; align-items: start; }
-.ps-q.empty { display: block; }
-.ps-q .qs-turns > li + li { margin-top: 3px; }
-.ps-q .qs-turns > li > div > p { display: block; margin: 0; }
-.ps-q .qs-q { font-size: 15px; line-height: 1.4; }
-.ps-q .qs-exp { margin: 2px 0 0; font-size: 13.5px; }
-.ps-q .qs-turns.conv > li > .k { padding-top: 1px; }
-.ps-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 0; font-family: var(--label); font-size: 13px; align-items: baseline; }
-.ps-dl dt { color: var(--ink-3); font-weight: 500; }
-.ps-dl dd { margin: 0; }
-.ps-dl .qs-chip { min-height: 24px; font-size: 13px; cursor: help; }
-.ps-open { display: inline-block; margin-top: 8px; font-family: var(--label); font-size: 13.5px; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.ps-open:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
-@media (max-width: 640px) { .ps-q { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 640px) { .plive .live { min-height: 5.6em; } }
-.pclear { appearance: none; font: 500 13px var(--label); color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 3px 10px; min-height: 30px; cursor: pointer; }
-.pclear:hover { background: var(--band); }
-.pclear:focus-visible, .pqs:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
 .pqs { position: absolute; left: 8px; top: 44px; height: 12px; cursor: pointer; }
 
 /* unit plate */
@@ -198,9 +174,7 @@ figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color
 .prow.step > div { border-left: 0; padding: 5px 8px; position: sticky; left: 0; }
 .prow.step.future > div { font-weight: 400; font-style: italic; font-family: var(--serif); color: var(--ink-3); font-size: 14.5px; }
 .prow.head > div { font-family: var(--label); font-size: 13px; color: var(--ink); font-weight: 600; padding: 6px 8px; position: relative; }
-.prow.head small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12px; }
 .bh { position: absolute; white-space: nowrap; font-weight: 600; font-size: 12.5px; }
-.prow.head .bh small { display: inline; margin-left: 4px; }
 
 .tip { position: fixed; z-index: 20; max-width: min(340px, calc(100vw - 16px)); background: var(--tip); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 9px 11px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; pointer-events: none; opacity: 0; transition: opacity .12s ease-out; left: 0; top: 0; }
 .tip.on { opacity: 1; }
@@ -239,7 +213,7 @@ dl.meth dt, dl.meth dd { padding: 8px 0 9px; border-bottom: 1px solid var(--grid
 dl.meth dt { font: 600 13.5px/23.25px var(--label); color: var(--ink); letter-spacing: .01em; padding-right: 18px; }
 dl.meth dd { margin: 0; color: var(--ink-2); }
 /* no word left alone on the last line of a paragraph of reading text */
-.byline, figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
+figcaption, .gl-t td, dl.meth dd, .tip .td, .tip .tq { text-wrap: pretty; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* glossary: a lookup table, grouped by type, with a search and a type filter, in its own scroll box */
@@ -334,8 +308,9 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    below are the report's own parts the kit has no component for. Every colour is a kit token. */
 .memo.rk-kit { padding-bottom: var(--s5); background: transparent }
 .memo.rk-kit h1 { font: 700 var(--t-title)/1.15 var(--sans); letter-spacing: 0; max-width: 24em }
-.memo.rk-kit .byline { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin-top: var(--s3); max-width: 36rem }
-.memo.rk-kit .byline b { font-weight: 700; color: var(--ink) }
+/* the one line under the title: when the numbers were last written */
+.memo.rk-kit .updated { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); margin: var(--s3) 0 0 }
+.memo.rk-kit .updated time { font-variant-numeric: tabular-nums }
 .memo.rk-kit .term, .rk-kit .term { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px; cursor: help }
 .memo.rk-kit .themebtn { border: 1px solid var(--hair); border-radius: 10px; padding: 3px; gap: 3px; color: var(--ink); min-height: 44px }
 .memo.rk-kit .themebtn svg { width: 36px; height: 36px; padding: 9px; border-radius: 7px }
@@ -361,19 +336,15 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .dm .rk-filter-panel svg { flex: none }
 .dm-key { margin: 0 0 var(--s2) }
 .dm-key .rk-mark { margin-right: 2px }
-.dm-live { margin: 0 0 var(--s2) }
-.dm-note { margin: var(--s3) 0 0; max-width: 36rem }
 
 .dm .maphead:not(.on) { visibility: hidden }
 .dm .maphead { position: sticky; top: var(--tabh, 0px); z-index: 4; overflow: hidden; background: var(--paper); pointer-events: auto }
 .dm .maphead table.map { margin: 0 }
 .dm .mapwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--hair) }
-.dm table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 60rem; font: 400 .875rem/1.35 var(--sans);
+.dm table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 64rem; font: 400 var(--t-word)/1.4 var(--sans);
   font-variant-numeric: tabular-nums; color: var(--ink) }
 .dm table.map th, .dm table.map td { padding: var(--s2) 6px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--hair) }
 .dm table.map thead th { font-weight: 700; vertical-align: bottom; border-bottom: 2px solid var(--ink); background: var(--paper) }
-.dm table.map thead th small { display: block; font-weight: 400; font-size: .8125rem; max-width: 6.5rem; margin-left: auto; text-wrap: balance }
-.dm table.map thead th:not(.sortable) small { margin-left: 0 }
 .dm table.map th.num, .dm table.map td.num { text-align: right }
 .dm table.map th.g, .dm table.map td.g { text-align: right }
 .dm table.map td.g { padding: 3px }
@@ -383,37 +354,38 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
   padding: var(--s2) 6px; border-radius: 6px }
 .dm .msort:hover { background: var(--row) }
 .dm .msort:hover .tl { text-decoration-style: solid }
-.dm .msort .ml { display: inline-flex; align-items: center; gap: 6px }
+.dm .msort .ml { display: inline-flex; align-items: center; gap: 6px; text-align: right }
+/* a head breaks only between its words, never at a hyphen (sortBtn sets non-breaking hyphens) */
+.dm .msort .tl { text-wrap: balance }
 .dm .msort .rk-sort-mark { margin-left: 0; flex: none }
 .dm .msort .tl { text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
 .dm .msort:focus-visible { outline: 2.5px solid var(--line); outline-offset: -2.5px }
 .dm th[aria-sort="descending"] .rk-sort-mark .up, .dm th[aria-sort="ascending"] .rk-sort-mark .dn { display: none }
 .dm th[aria-sort="descending"] .rk-sort-mark, .dm th[aria-sort="ascending"] .rk-sort-mark { stroke-width: 2.4 }
-.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); text-align: right; font-weight: 700; font-size: .9375rem }
+.dm .ch { display: block; min-width: 2.75rem; padding: 6px var(--s2); text-align: right; font-weight: 700; font-size: var(--t-word) }
 .dm .ch.none { background: none; font-weight: 400 }
 .dm table.map tr.rung th { font-weight: 700; padding: var(--s4) var(--s2) var(--s2); border-bottom: 2px solid var(--ink); background: var(--paper) }
-.dm table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 10rem; z-index: 1 }
+.dm table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 10rem; width: 13rem; z-index: 1 }
 .dm table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1 }
 .dm table.map tbody tr.main:hover > td, .dm table.map tbody tr.sub:hover > td { background-color: var(--row) }
 .dm table.map tbody tr:hover > td.setup { background: linear-gradient(var(--row), var(--row)), var(--paper) }
-.dm table.map td.setup .id { display: inline-block; font-size: .8125rem; font-weight: 700 }
+.dm table.map td.setup .id { display: inline-block; font-size: .9375rem; font-weight: 700 }
 .dm table.map td.setup .mdl { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px }
 .dm table.map td.setup .mdl > :not(svg):not(.more) { flex: 1 1 0; min-width: 0 }
 .dm table.map td.setup .mdl > .more { flex-basis: 100%; text-align: left; margin-left: 14px }
-.dm table.map td.what { max-width: 13rem; min-width: 9rem }
 .dm table.map tr.sub td.setup { padding-left: var(--s5) }
 .dm table.map tr.sub[hidden] { display: none }
 .dm .tags { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1) }
-.dm .flag { display: inline-block; font-size: .8125rem; border: 1px solid var(--hair); border-radius: 4px; padding: 0 6px; line-height: 1.5; white-space: nowrap }
+.dm .flag { display: inline-block; font-size: .875rem; border: 1px solid var(--hair); border-radius: 4px; padding: 0 6px; line-height: 1.5; white-space: nowrap }
 .dm .flag[data-term] { cursor: help; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
 .dm .flag.pend { border-style: dashed }
 .dm .ivl { white-space: nowrap; line-height: 1.35 }
-.dm .ivl > span:first-child { font-weight: 700; font-size: .9375rem }
-.dm .ivl small { font-size: .875rem }
+.dm .ivl > span:first-child { font-weight: 700; font-size: var(--t-word) }
+.dm .ivl small { font-size: .9375rem }
 .dm .ivl .rk-mark { margin-right: 6px; vertical-align: 1px }
-.dm table.map td.num .mv { white-space: nowrap; font-weight: 700; font-size: .9375rem }
+.dm table.map td.num .mv { white-space: nowrap; font-weight: 700; font-size: var(--t-word) }
 .dm table.map tr.mnone td { padding: var(--s4) var(--s2) }
-.dm .more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 var(--s1); min-height: 32px; border-radius: 4px;
+.dm .more { white-space: normal; text-align: left; appearance: none; background: none; border: 0; padding: 0 var(--s1); min-height: 32px; border-radius: 4px;
   color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 .dm .more:hover { text-decoration-thickness: 2.5px }
 /* setup families on the kit's chart series (one hue each, the line colour first), wherever the kit reaches: the
@@ -425,7 +397,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -457,8 +429,73 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 #metricflow figcaption { margin: var(--s2) 0 0; max-width: 34rem; font: 400 var(--t-word)/var(--lh-word) var(--sans); color: var(--ink) }
 @media (max-width: 640px) { #metricflow figure + figure { margin-top: var(--s6) } }
 
-/* the report's own tooltip, shared by every tab, in the kit's type and ink: a light plate (the outcome glyphs inside
-   it are drawn in the report's own colours, made for a light ground), every word at full ink, no small capitals */
+/* run outcomes on the kit's status tokens and shapes, as the Summary draws them, wherever the kit reaches (the
+   Every run tab and the tooltip): right a green circle, declined an ink ring, wrong an amber square (unclear runs folded
+   in: build.py draws them as wrong), confident-wrong a scarlet diamond, not run yet a small ink dot (swatch(), unitsPlot()) */
+.rk-kit { --o-right: var(--ok); --o-decl: var(--ink); --o-wrong: var(--warn); --o-cw: var(--bad); --o-none: var(--ink); --cw: var(--bad) }
+
+/* a side column's fold (window.reportFold): one full-width button, the column's name and its current choice, with a
+   chevron that turns when open; the folded part is gone, not hidden behind a scroll */
+.fold-btn { appearance: none; display: flex; width: 100%; align-items: center; gap: var(--s3); min-height: 44px; padding: var(--s2) var(--s3);
+  border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); font: 700 var(--t-word)/1.3 var(--sans); text-align: left; cursor: pointer }
+.fold-btn[hidden] { display: none }
+.fold-btn:hover { background: var(--row) }
+.fold-btn:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+.fold-btn .fold-cur { margin-left: auto; font: 600 .9375rem/1.3 var(--code); overflow-wrap: anywhere; text-align: right }
+.fold-btn svg { flex: none; width: 16px; height: 16px; transition: transform var(--t-fast) ease-out }
+.fold-btn[aria-expanded="true"] svg { transform: rotate(180deg) }
+.folded { display: none !important }
+@media (prefers-reduced-motion: reduce) { .fold-btn svg { transition: none } }
+
+/* the Setups tab: its two sections (the setup map, the setup explorer) as kit sections, each head the kit's over a
+   2px ink rule; their words in the kit's family at 1rem in full ink (the sections' own rules), their bands on --row,
+   every focusable part the kit's focus ring. The sheets keep their drawn sizes (an owner question). */
+.st { --paper-2: var(--row) }
+.st .rk-head h2 { line-height: 1.4 }
+
+/* the Every run tab: one kit section (its head with the set switch beside it), the finding's headline, the outcome key,
+   the highlighted question's strip, then the unit plate: one row of marks per setup and model, one column per question,
+   and two small interval charts per row. The report's paler inks, rules and bands map onto the kit's (.er, as .mfa);
+   the plate's geometry is in px scaled from the root size (renderPlate), so a 200% text size widens its label columns. */
+#every-run figure { margin: 0 }
+/* a question's tick, unselected: ink at 45%, which keeps 3:1 on the ground (a mark the reader clicks), quieter than the
+   highlighted question's full-ink tick */
+#every-run { --tick: color-mix(in srgb, var(--ink) 45%, var(--paper)) }
+#every-run .rk-head h2 { line-height: 1.4 }
+#every-run .figtitle { margin: 0 0 var(--s3); max-width: 40rem; font: var(--w-head) var(--t-find)/1.3 var(--sans); text-wrap: balance }
+#every-run .er-key { margin: 0 0 var(--s5) }
+#every-run .er-key svg { flex: none; display: block }
+#every-run .plate { border-top: 0; border-bottom: 2px solid var(--ink) }
+/* the head scrolls with the rows (scrollbar hidden: the rows' own bar moves both), so text past its right edge is
+   scrolled out of view, not cut */
+#every-run .plate-head { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 2px solid var(--ink); background: var(--paper) }
+#every-run .plate-head::-webkit-scrollbar { display: none }
+#every-run .prow { border-bottom: 1px solid var(--hair) }
+#every-run .prow:nth-child(even of .prow.r), #every-run .prow.r:nth-child(even of .prow.r) .pl { background-color: transparent }
+#every-run .prow.r:hover, #every-run .prow.r:hover .pl { background-color: var(--row) }
+#every-run .prow.r:hover .pl { background: linear-gradient(var(--row), var(--row)), var(--paper) }
+#every-run .prow > div { border-left: 1px solid var(--hair) }
+#every-run .prow > div:first-child { border-left: 0 }
+#every-run .prow .pl { padding: var(--s1) var(--s2); font: 400 var(--t-word)/1.35 var(--sans); color: var(--ink) }
+#every-run .prow .pl .id { font-size: .9375rem; font-weight: 600; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+#every-run .prow .pl .m { color: var(--ink); white-space: normal }
+#every-run .prow .pl .flag { display: inline-block; margin-top: 2px; font-size: .875rem; border: 1px solid var(--hair); border-radius: 4px; padding: 4px 8px;
+  line-height: 1.3; cursor: help; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 4px }
+#every-run .prow .pl .flag.pend { border-style: dashed }
+#every-run .pnote { font: 400 var(--t-word)/1.35 var(--sans); color: var(--ink); padding: 0 var(--s2) }
+#every-run .prow.step { background: transparent; font: 700 var(--t-word)/1.3 var(--sans); color: var(--ink); border-bottom: 2px solid var(--ink) }
+#every-run .prow.step > div { padding: var(--s4) var(--s2) var(--s2); background: var(--paper) }
+#every-run .prow.step.future > div { font: 400 var(--t-word)/1.4 var(--sans); color: var(--ink) }
+#every-run .prow.head > div { font: 700 var(--t-word)/1.3 var(--sans); color: var(--ink); padding: var(--s2) }
+#every-run .bh { font: 700 var(--t-word)/1.3 var(--sans); white-space: nowrap }
+#every-run .pqs { left: var(--s2) }
+/* focus: the kit's ring on every focusable part of the plate (rows of marks, the tick strip, labels, terms, flags) */
+#every-run .plate [tabindex]:focus-visible, #every-run .pqs:focus-visible {
+  outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 2px }
+#every-run .plate svg[data-row]:focus-visible { outline-offset: 1px }
+
+/* the report's own tooltip, shared by every tab, in the kit's type and ink: a plate on the page's ground, its outcome
+   glyphs the kit's status shapes and tokens (as the Every run tab draws them), every word at full ink, no small capitals */
 .tip.rk-kit { background: var(--paper); color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; box-shadow: var(--shadow);
   padding: 10px 12px; font: 400 var(--t-tip)/1.4 var(--sans) }
 .tip.rk-kit.pinned { border-color: var(--ink) }
@@ -470,6 +507,17 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
 .tip.rk-kit q { border-left-color: var(--hair) }
 .tip.rk-kit .thandle:hover, .tip.rk-kit .tipclose:hover { background: var(--row) }
 .tip.rk-kit :focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+/* a question in the tooltip (the Every run plate): its turns as the question guide shows them, the question in bold,
+   its expected answer under it; a pinned tooltip's link opens it in the guide */
+.tip.rk-kit .tq-asked { margin: 2px 0 0 }
+.tip.rk-kit .tq-asked .qs-turns { list-style: none; margin: 0; padding: 0 }
+.tip.rk-kit .tq-asked .qs-turns > li + li { margin-top: var(--s2) }
+.tip.rk-kit .tq-asked .qs-turns.conv > li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) }
+.tip.rk-kit .tq-asked :is(.qs-q, .qs-exp, .k) { margin: 0; color: var(--ink); font-family: var(--sans) }
+.tip.rk-kit .tq-asked .qs-q { font-size: 1rem; font-weight: 600; line-height: 1.35 }
+.tip.rk-kit .tq-asked .qs-exp { font-size: var(--t-tip) }
+.tip.rk-kit .tq-asked .qs-exp b { font-weight: 700 }
+.tip.rk-kit .tipjump a { font-weight: 600; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 @media (max-width: 640px) { .dm table.map td.setup { min-width: 9rem } .memo.rk-kit h1 { font-size: 1.625rem } }
 </style>
 
@@ -484,6 +532,27 @@ window.REPORT = D;
   const q = []; let ready = false;
   window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
   window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
+  // A long side column (a ladder to pick from) folds behind a disclosure button once it stacks above the stage it
+  // drives, so the stage starts on the first screen (the kit's side-column standard); side by side, the button hides and
+  // the column stays open. The button shows the current choice (setCurrent). Sections call it with their column's
+  // button, the part it folds and the stage.
+  window.reportFold = function (btn, panel, stage) {
+    let stacked = null;
+    const aside = btn.parentElement;
+    const set = (open) => { panel.classList.toggle("folded", !open); btn.setAttribute("aria-expanded", String(open)); };
+    const sync = () => {
+      const s = stage.getBoundingClientRect().top >= aside.getBoundingClientRect().bottom - 1;
+      if (s === stacked) return;
+      stacked = s; btn.hidden = !s; set(!s);
+    };
+    btn.addEventListener("click", () => set(panel.classList.contains("folded")));
+    if (window.ResizeObserver) new ResizeObserver(sync).observe(stage.parentElement); else window.addEventListener("resize", sync);
+    sync();
+    return {
+      close() { if (stacked) set(false); },
+      setCurrent(text) { const c = btn.querySelector(".fold-cur"); if (c) c.textContent = text || ""; },
+    };
+  };
   window.reportTheme = function () {
     const a = document.documentElement.getAttribute("data-theme");
     if (a === "light" || a === "dark") return a;
@@ -500,7 +569,7 @@ window.REPORT = D;
         <svg class="moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6z"/></svg>
       </button>
     </div>
-    <p class="byline" id="byline"></p>
+    <p class="updated" id="updated"></p>
   </header>
   <nav class="tabs rk-kit" id="tabs" aria-label="Parts of the report">
     <div class="tabs-in" role="tablist" aria-label="Parts of the report">
@@ -545,9 +614,8 @@ window.REPORT = D;
         </details></div></div></div>
     <p class="dm-lead" id="t1"></p>
     <ul class="rk-key dm-key" id="leg1"></ul>
-    <p class="dm-live" id="map-live" aria-live="polite"></p>
+    <p class="vh" id="map-live" aria-live="polite"></p>
     <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
-    <p class="dm-note">One question set at a time. A column's head sorts the rows: highest first, then lowest first, then back to the map's order.</p>
   </section>
   </section>
 
@@ -582,27 +650,24 @@ window.REPORT = D;
     <div class="mfa-fighead"><h3 class="figtitle" id="t5"></h3><div class="rk-switch" role="group" aria-label="Question set for the covered to uncovered chart" data-view="slopes"></div></div>
     <div class="legend" id="leg5"></div>
     <div class="plot" id="slopes"></div>
-    <figcaption>Hover a line or a label to follow one setup.</figcaption>
   </figure>
   </section>
   </section>
 
-  <section class="view" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
-  <h2>Every run, from the cheapest setup to the most custom</h2>
-  <figure id="fig6">
-    <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
-    <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
-    <div class="pstrip" id="pstrip">
-      <div class="plive"><p class="live" id="plate-live" aria-live="polite"></p><button type="button" class="pclear off" id="plate-clear">Show every question</button></div>
-      <div class="ps-q qs" id="ps-q"></div>
-    </div>
+  <section class="view rk-kit er" id="every-run" data-view="every-run" role="tabpanel" aria-labelledby="tab-every-run" tabindex="-1">
+  <section class="rk-section" aria-labelledby="er-h">
+  <div class="rk-head"><h2 id="er-h">Every run, from the cheapest setup to the most custom</h2>
+    <div class="rk-head-tools"><div class="rk-switch" role="group" aria-label="Question set for every run" data-view="plate"></div></div></div>
+  <figure id="fig6" aria-labelledby="t6">
+    <h3 class="figtitle" id="t6"></h3>
+    <ul class="rk-key er-key" id="leg6"></ul>
+    <p class="vh" id="plate-live" aria-live="polite"></p>
     <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
-    <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome, and click a square or a question's tick in the head to highlight that question on every row.</figcaption>
   </figure>
-
+  </section>
   </section>
 
-  <section class="view" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
+  <section class="view rk-kit st" id="setups" data-view="setups" role="tabpanel" aria-labelledby="tab-setups" tabindex="-1">
 <!--SECTIONS-->
   </section>
 
@@ -884,7 +949,7 @@ window.REPORT = D;
   const tRows = (rows) => { const r = rows.filter(Boolean); return r.length ? `<dl>${r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""; };
   const tPct = (v, ex) => `<b>${P(v[0])}%</b> <span class="iv">${ivTxt(v, ex)}</span>`;
   const tPts = (d) => `<b>${sg(d[0])}</b> points <span class="iv">[${sg(d[1])}, ${sg(d[2])}]</span>`;
-  const OUTCH = { right: "0", declined: "1", wrong: "2", unclear: "3", "confident-wrong": "4" };
+  const OUTCH = { right: "0", declined: "1", wrong: "2", "confident-wrong": "4" };
   const tOut = (k, n) => `<span class="oc">${swatch(OUTCH[k] || ".")}${n == null ? "" : `<b>${n}</b> `}${esc(k)}</span>`;
   const ARMFAM = {}; Object.values(ALLX).forEach((r) => { if (!ARMFAM[r.arm]) ARMFAM[r.arm] = r.family; });
   const famName = (f) => (f && D.familyLabel[f]) || "";
@@ -895,7 +960,7 @@ window.REPORT = D;
   function setupTip(arm) { return tKick("Setup", esc(famName(ARMFAM[arm]))) + `<p class="th"><span class="id">${esc(arm)}</span></p><p class="td">${esc(descOf(arm))}</p>`; }
   function rowTip(r, g) {
     if (!r) return "";
-    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
+    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong"];
     let gl = null;
     if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = [esc(gg ? gg.label : g), `<b>${P(r.groups[g][0])}%</b> right <span class="iv">over ${r.groups[g][1]} questions</span>`]; }
     const exA = r.exact && r.exact.acc, exC = r.exact && r.exact.cw;
@@ -915,7 +980,7 @@ window.REPORT = D;
       tSec("Score", score, r.step2 || (r.vsFloor && r.vsFloor.acc) ? "differences paired by question" : "") + tSec("How it ran", runs) + tSec("An example answer", ex);
   }
   function htmlFor(el) {
-    if (el.dataset.term != null) return termTip(el.dataset.term);
+    if (el.dataset.term != null) return termTip(el.dataset.term) + (el.dataset.note ? tSec("In this column", `<p>${esc(el.dataset.note)}</p>`) : "");
     if (el.dataset.setup != null) return setupTip(el.dataset.setup);
     if (el.dataset.tip) return rowTip(byId(el.dataset.tip), el.dataset.g);
     return "";
@@ -1031,6 +1096,8 @@ window.REPORT = D;
   function unpin(returnFocus) {
     if (!pinned) return;
     const el = pinEl; pinned = false; pinEl = null;
+    // a question highlighted on the Every run plate lives with its pinned tooltip: closing one clears the other
+    if (el && el.closest && el.closest("#plate") && plateState && plateState.sel != null) selectQ(null);
     tip.classList.remove("pinned"); tip.style.position = ""; tip.setAttribute("role", "tooltip"); tip.removeAttribute("aria-label");
     hideTip(); unlockFocus();
     if (returnFocus && el && el.focus && document.contains(el)) { quietFocus = true; el.focus({ preventScroll: true }); quietFocus = false; }
@@ -1195,7 +1262,11 @@ window.REPORT = D;
   const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
   const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
   function renderText() {
-    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
+    // when the page's numbers were last written, the only line under the title: the date and the time in UTC, in a <time>
+    // element whose datetime machines read (the reader rule keeps every other process fact off the page)
+    const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const wm = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(D.written || "");
+    $("#updated").innerHTML = wm ? `Updated <time datetime="${esc(D.written)}">${+wm[3]} ${MONTHS[+wm[2] - 1]} ${wm[1]}, ${wm[4]}:${wm[5]} UTC</time>` : "";
     $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
     const tw = D.twin || {};
     $("#t2").textContent = D.sentences.forest || "";
@@ -1303,9 +1374,12 @@ window.REPORT = D;
   try { const v = JSON.parse(localStorage.getItem("semantic-bet-views-2") || "{}"); if (MAPSETS.includes(v.map)) MS.set = v.map; } catch (e) {}
   const MROLES = [["decides", () => `Free model (${term("decides", "decides")})`], ["check", () => `Claude API (${term("check", "check")})`],
     ["gemini", () => "Gemini in Google's agent"], ["cc", () => term("claude-code", "Claude Code")], ["other", () => "Another model"]];
-  const MNUM = [["acc", "accuracy", "Accuracy", "mean [95%]"], ["cov", "coverage", "Coverage", "% of runs answered"],
-    ["sel", "selective-accuracy", "Selective accuracy", "% right when it answers"], ["pass3", "pass-3", "pass^3", "% of questions"],
-    ["cw", "confident-wrong", "Confident-wrong", "mean [95%]"]];
+  // each number column: its key, its term, its head, and what a cell holds (the head's tooltip, "In this column")
+  const MNUM = [["acc", "accuracy", "Accuracy", "Each cell: the mean over questions, then its 95% interval in brackets."],
+    ["cov", "coverage", "Coverage", "Each cell: the share of runs that gave an answer."],
+    ["sel", "selective-accuracy", "Selective accuracy", "Each cell: the share right among the runs that gave an answer."],
+    ["pass3", "pass-3", "pass^3", "Each cell: the share of questions right on all three runs."],
+    ["cw", "confident-wrong", "Confident-wrong", "Each cell: the mean over questions, then its 95% interval in brackets."]];
   const mval = (r, c) => c.startsWith("g-") ? (r.groups[c.slice(2)] ? r.groups[c.slice(2)][0] : null) : c === "acc" ? r.acc[0] : c === "cw" ? r.cw[0] : (r[c] == null ? null : r[c]);
   const mpass = (r) => !MS.off.has("fam:" + r.family) && !MS.off.has("role:" + r.role);
   const setNote = (s) => (S(s).counts ? "" : "not counted in the findings yet");
@@ -1352,12 +1426,13 @@ window.REPORT = D;
     // the usual data-table one: a neutral up-down pair on a sortable column, one arrow on the sorted one.
     // the kit's sort mark: an up-down pair on a sortable column, one arrow on the sorted one (CSS reads aria-sort)
     const SORTMARK = `<svg class="rk-sort-mark" viewBox="0 0 10 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="up" d="M1.5 5 5 1.5 8.5 5"/><path class="dn" d="M1.5 9 5 12.5 8.5 9"/></svg>`;
-    const sortBtn = (c, t, lab, sub) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab}</span>${SORTMARK}</span><small>${sub}</small></button>`;
-    let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
-    groups.forEach((g) => (h += `<th scope="col" class="g sortable" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)), `${S(s).groupCases[g] || 0} questions`)}</th>`));
+    // a head is one word; what its cells hold is in its tooltip ("In this column"), not under it
+    const sortBtn = (c, t, lab, note) => `<button type="button" class="msort" data-col="${c}"${t ? ` data-term="${t}" data-note="${esc(note)}"` : ""}><span class="ml"><span class="${t ? "tl" : ""}">${lab.replace(/-/g, "\u2011")}</span>${SORTMARK}</span></button>`;
+    let h = `<thead><tr><th scope="col"><span class="term" data-term="setup" data-note="Each row is one setup on the model it ran on." tabindex="0">Setup</span></th>`;
+    groups.forEach((g) => { const n = S(s).groupCases[g] || 0; h += `<th scope="col" class="g sortable" data-col="g-${g}" aria-sort="${aria("g-" + g)}">${sortBtn("g-" + g, TK(g), esc(glab(g)), `Each cell: the share right of the ${n} ${n === 1 ? "question" : "questions"} in this group.`)}</th>`; });
     MNUM.forEach(([c, t, lab, sub]) => (h += `<th scope="col" class="num sortable" data-col="${c}" aria-sort="${aria(c)}">${sortBtn(c, t, esc(lab), sub)}</th>`));
     h += `</tr></thead><tbody>`;
-    const ncol = 2 + groups.length + MNUM.length;
+    const ncol = 1 + groups.length + MNUM.length; // what a setup is lives in its tooltip, not in a column
     const ordered = mapRowsInOrder(s), total = ordered.length, shown = ordered.filter(mpass);
     const idDone = new Set(), mains = mainKeys(s);
     const rowHTML = (r, sub, others) => {
@@ -1372,7 +1447,6 @@ window.REPORT = D;
       const open = MS.open.has(r.arm);
       let x = `<tr class="${sub ? "sub" : "main"}" data-mkey="${esc(r.key)}"${sub ? ` data-arm-row="${esc(r.arm)}"${open ? "" : " hidden"}` : idAttr}>`;
       x += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, famC(r.family))}${modelTerm(r.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(r.arm)}" aria-expanded="${open}">${open ? "hide" : moreLabel(r.arm, others)}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
-      x += `<td class="what">${sub ? "" : esc(descOf(r.arm))}</td>`;
       groups.forEach((g) => {
         const v = r.groups[g];
         x += `<td class="g">` + (!v ? `<span class="ch none" role="img" aria-label="no question of this group in these runs">–</span>`
@@ -2031,49 +2105,72 @@ window.REPORT = D;
   }
 
   /* ---------- Figure 6: unit plate in ladder order (one set) ---------- */
-  const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  const OUTN = { "0": "right", "1": "declined", "2": "wrong", "4": "confident-wrong" }; // unclear is drawn as wrong
   let plateState = null;
-  function swatch(ch) { return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`}</svg>`; }
+  // One outcome's mark in a cell of side s at (x, y), as path data: [paint token, "fill" or "ring", path]. The kit's
+  // status shapes (marks.css), drawn as paths so a row of marks is a few paths: right a filled circle, declined a ring,
+  // wrong a square (unclear runs among them), confident-wrong a diamond, not run a small dot.
+  const circ = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
+  const box = (x, y, w) => `M${x} ${y}h${w}v${w}h${-w}z`;
+  function outMark(ch, x, y, s) {
+    const cx = x + s / 2, cy = y + s / 2, t = Math.max(1.2, s / 6), q = s * .86, d = s / 2 + .5;
+    if (ch === "0") return ["o-right", "fill", circ(cx, cy, s / 2)];
+    if (ch === "1") return ["o-decl", "ring", circ(cx, cy, s / 2) + circ(cx, cy, s / 2 - t)];
+    if (ch === "2") return ["o-wrong", "fill", box(cx - q / 2, cy - q / 2, q)];
+    if (ch === "4") return ["o-cw", "fill", `M${cx} ${cy - d}L${cx + d} ${cy}L${cx} ${cy + d}L${cx - d} ${cy}z`];
+    return ["o-none", "fill", box(cx - 1, cy - 1, 2)];
+  }
+  function swatch(ch) { const [c, k, d] = outMark(ch, 1, 1, 10); return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path fill="var(--${c})"${k === "ring" ? ' fill-rule="evenodd"' : ""} d="${d}"/></svg>`; }
+  // a group label's width in the head's type, measured once per label and text size (the head is laid out in px)
+  const bhW = new Map();
+  function bandLabelW(b) { const bk = D.buckets.find((x) => x.key === b) || { label: b }; return labelW(bk.label); }
+  function labelW(text) {
+    const bk = { label: text }, key = bk.label + "|" + getComputedStyle(document.documentElement).fontSize + "|" + (document.fonts ? document.fonts.status : "");
+    if (bhW.has(key)) return bhW.get(key);
+    const pr = document.createElement("span"); pr.className = "bh"; pr.style.visibility = "hidden"; pr.textContent = bk.label;
+    $("#plate-head").appendChild(pr); const w = Math.ceil(pr.getBoundingClientRect().width); pr.remove(); bhW.set(key, w); return w;
+  }
   function plateGeom(s, avail) {
     const cases = S(s).cases; const narrow = avail < 700;
     const floor = byId(S(s).floor);
     const score = (ci) => { if (!floor) return 0; const u = floor.units.slice(ci * 3, ci * 3 + 3); let v = 0; for (const ch of u) { if (ch === "0") v += 100; else if (ch === "1") v += 1; else if (ch === "4") v -= 1; } return v; };
     const bOrder = D.buckets.map((b) => b.key);
     const order = cases.map((c, i) => i).sort((a, b) => bOrder.indexOf(cases[a].b) - bOrder.indexOf(cases[b].b) || score(a) - score(b) || a - b);
-    const LW = narrow ? 156 : 232, IW = narrow ? 120 : 168, CWW = narrow ? 110 : 150, gap = narrow ? 5 : 7;
-    const nb = new Set(cases.map((c) => c.b)).size;
-    let pitch = Math.floor((avail - LW - IW - CWW - 16 - nb * gap) / Math.max(1, cases.length));
-    pitch = Math.max(5, Math.min(9, pitch));
-    const xs = new Map(); const bands = []; let x = 0, prev = null;
-    order.forEach((ci) => { const b = cases[ci].b; if (prev !== null && b !== prev) x += gap; if (b !== prev) bands.push({ b, x, n: 0 }); bands[bands.length - 1].n++; xs.set(ci, x); x += pitch; prev = b; });
-    bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
-    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
+    // the columns that hold text grow with the reader's text size (k: the root size over 16 px); the marks keep theirs,
+    // at 7 to 9 px a question so each outcome's shape stays legible (narrower, the plate scrolls sideways)
+    const k = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16;
+    // the two interval columns are at least as wide as their heads, so a head never wraps
+    let LW = Math.round((narrow ? 184 : 232) * k); const gap = narrow ? 8 : 12;
+    const IW = Math.max(Math.round((narrow ? 112 : 136) * k), labelW("Over the floor") + 24), CWW = Math.max(Math.round((narrow ? 112 : 136) * k), labelW("Confident-wrong") + 24);
+    // each group of questions is one band, its marks from its left edge, at least as wide as its label, so the group
+    // names sit on one line over their bands; the pitch is the largest of 9, 8 and 7 px at which the plate fits
+    const groups = [];
+    order.forEach((ci) => { const b = cases[ci].b; if (!groups.length || groups[groups.length - 1].b !== b) groups.push({ b, cis: [] }); groups[groups.length - 1].cis.push(ci); });
+    const lw = groups.map((g) => bandLabelW(g.b));
+    const lay = (p) => {
+      const xs = new Map(), bands = []; let x = 0;
+      groups.forEach((g, i) => { if (i) x += gap; const x0 = x; g.cis.forEach((ci, j) => xs.set(ci, x0 + j * p)); x = x0 + Math.max(g.cis.length * p, lw[i] + 4); bands.push({ b: g.b, x: x0, n: g.cis.length, x1: x }); });
+      return { xs, bands, UW: x };
+    };
+    let pitch = 9, L = lay(pitch);
+    while (pitch > 7 && LW + L.UW + 16 + IW + CWW > avail) L = lay(--pitch);
+    // a few px over at the smallest pitch come off the label column rather than scroll the plate
+    const over = LW + L.UW + 16 + IW + CWW - avail; if (over > 0 && over <= 24) LW -= over;
+    const { xs, bands } = L, x = L.UW;
+    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow, k };
   }
-  // One row of squares as a Plot on pixel (identity) scales: three runs per question, stacked.
-  // The squares are drawn as one path per outcome paint (a few paths per row instead of a rect per
-  // square), which keeps the plate's redraw fast; the shapes are the canvas plate's, pixel for pixel.
-  const sqr = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
+  // One row of marks as a Plot on pixel (identity) scales: three runs per question, stacked. The marks are drawn
+  // as one path per outcome paint (a few paths per row instead of a shape per run), which keeps the redraw fast.
   function unitsPlot(r, G) {
-    const s = G.pitch - 1, F = {}, K = {}; // solid and outline path data per colour token
-    // an outline is drawn as a 1 px ring (outer square less inner square, even-odd), which covers
-    // exactly the pixels the canvas's strokeRect at half-pixel offsets covered, corners included
-    const ring = (x, y) => sqr(x, y, s, s) + sqr(x + 1, y + 1, s - 2, s - 2);
-    const add = (o, c, d) => { o[c] = (o[c] || "") + d; };
-    G.order.forEach((ci, j) => {
+    const s = G.pitch - 1, P2 = {}; // path data per paint and kind
+    G.order.forEach((ci) => {
       const x = G.xs.get(ci);
       for (let k = 0; k < 3; k++) {
-        const y = G.h - (k + 1) * G.pitch + 1, ch = r.units[ci * 3 + k] || ".";
-        if (ch === ".") add(F, "o-none", sqr(x + s / 2 - 1, y + s / 2 - 1, 2, 2));
-        else if (ch === "0") add(F, "o-right", sqr(x, y, s, s));
-        else if (ch === "1") add(K, "o-decl", ring(x, y));
-        else if (ch === "2") { add(F, "o-wrong", sqr(x, y + s / 2, s, s / 2)); add(K, "o-wrong", ring(x, y)); }
-        else if (ch === "3") { add(K, "o-decl", ring(x, y)); add(F, "o-decl", sqr(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5)); }
-        // confident-wrong squares overhang their cell by half a pixel and meet their neighbours' on the
-        // gap; the canvas blended the two halves, so neighbours go to separate paths to blend the same way
-        else add(F, `o-cw#${k}${j % 2}`, sqr(x - .5, y - .5, s + 1, s + 1));
+        const y = G.h - (k + 1) * G.pitch + 1, [c, kind, d] = outMark(r.units[ci * 3 + k] || ".", x, y, s);
+        P2[c + "|" + kind] = (P2[c + "|" + kind] || "") + d;
       }
     });
-    const paths = Object.entries(F).map(([c, d]) => `<path fill="var(--${c.split("#")[0]})" d="${d}"/>`).join("") + Object.entries(K).map(([c, d]) => `<path fill="var(--${c})" fill-rule="evenodd" d="${d}"/>`).join("");
+    const paths = Object.entries(P2).map(([ck, d]) => { const [c, kind] = ck.split("|"); return `<path fill="var(--${c})"${kind === "ring" ? ' fill-rule="evenodd"' : ""} d="${d}"/>`; }).join("");
     const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
       raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
     ] });
@@ -2092,60 +2189,52 @@ window.REPORT = D;
   // The small interval charts beside each row: a Plot gives the x scale and the zero rule; the interval,
   // its mean and the value are one function mark on that scale (four Plot marks per chart cost the
   // plate's set switch about 12 ms across its 60-odd charts, one mark costs about 2).
-  function miniIv(v, w, h, dom, kind, partial) {
-    const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const yc = h / 2;
-    const val = (t, fill, fs) => `<text x="${w - 6}" y="${yc + 4}" text-anchor="end" fill="${fill}" font-size="${fs}" font-family="var(--label)">${t}</text>`;
-    const body = ({ x }) => !v ? val("–", "var(--ink-3)", 12)
+  function miniIv(v, w, h, dom, kind, partial, k) {
+    const fs = 16 * k; h = Math.max(h, Math.ceil(fs * 1.6)); // the row grows to hold the value at a large text size
+    const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--bad)" : "var(--ink)"; const yc = h / 2;
+    const val = (t, fill, wt) => `<text x="${w - 6}" y="${yc}" dominant-baseline="central" text-anchor="end" fill="${fill}" font-size="${fs}" font-weight="${wt}" font-family="var(--sans)">${t}</text>`;
+    const body = ({ x }) => !v ? val("–", "var(--ink)", 400)
       : `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${yc}" y2="${yc}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`
       + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
-      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 12.5);
-    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
-      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" }), raw(body)] });
+      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 700);
+    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: Math.round(46 * k), marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
+      Plot.ruleX([0], { stroke: "var(--ink)" }), raw(body)] }); // both charts' zero in full ink (owner, 2026-11-07)
     svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
     return svg;
   }
   /* ---------- Figure 6: one question highlighted on every row ---------- */
   // The selected question's column keeps its colours on every row and every other column fades; the head's tick strip
-  // marks it too. A click on a square or a tick, or Enter on a row or the strip, selects; the same question again,
-  // Escape or "Show every question" clears; another question moves it. The live line says what is shown.
+  // marks it too. A click on a mark or a tick, or Enter on a row or the strip, selects and pins the question's tooltip
+  // (its turns and expected answers, its groups, what makes it hard, a link to it in the question guide); the same
+  // question again, Escape, the tooltip's close mark or a click elsewhere clears it. A hidden live line tells screen readers.
   function caseLine(ci) {
     const c = S(plateState.s).cases[ci], bk = D.buckets.find((x) => x.key === c.b);
     const qg = D.questionGuide && D.questionGuide.q[c.id];
     return { q: c.q || c.id, g: bk ? bk.label : c.b, name: qg ? qg.name : c.id };
   }
-  const PLATE_IDLE = "Click a square, or a question's tick above the rows, to highlight that question on every row.";
-  // The strip above the plate: the highlighted question as the question guide's card shows it (its turns with the
-  // expected answers, its groups and what makes it hard, the same terms), and a link to it in the guide. It keeps the
-  // height of the set's tallest question at its width, so moving between questions never moves the plate.
-  const stripHTML = (id) => {
-    const R = window.__qsRender; if (!R || !id) return "";
-    const asked = R("asked", id); if (!asked) return "";
-    return `<div class="ps-asked">${asked}</div><div class="ps-side"><dl class="ps-dl"><dt>${term("groups", "Groups")}</dt><dd>${R("groups", id, plateState && plateState.s)}</dd><dt>What makes it hard</dt><dd>${R("hard", id)}</dd></dl>` +
-      `<a class="ps-open" href="#question-guide" data-qid="${esc(id)}">Open in the question guide</a></div>`;
-  };
-  function fillStrip(id) { const box = $("#ps-q"); const h = stripHTML(id); box.innerHTML = h; box.classList.toggle("empty", !h); }
-  function reserveStrip() {
-    const box = $("#ps-q"); if (!plateState || !window.__qsRender) return;
-    const w = box.getBoundingClientRect().width; if (!w) return;
-    const probe = box.cloneNode(false); probe.removeAttribute("id"); probe.setAttribute("aria-hidden", "true"); probe.inert = true;
-    Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: w + "px", minHeight: "0", pointerEvents: "none" });
-    probe.classList.remove("empty"); box.parentNode.appendChild(probe);
-    let max = 0; S(plateState.s).cases.forEach((c) => { probe.innerHTML = stripHTML(c.id); max = Math.max(max, probe.getBoundingClientRect().height); });
-    probe.remove(); box.style.minHeight = Math.ceil(max) + "px";
+  // the question as the guide's card shows it, for the tooltip: its turns with the expected answers, then its groups and
+  // what makes it hard as words (each a term the glossary defines), and the guide's link, shown once the tooltip is pinned
+  function qCard(ci) {
+    const set = plateState.s, c = S(set).cases[ci], R = window.__qsRender, q = D.questionGuide && D.questionGuide.q[c.id];
+    const asked = R ? R("asked", c.id) : "";
+    const words = (keys) => keys.map((k) => TK(k)).filter(Boolean).map((k) => esc(TERM[k].label)).join(", ");
+    const rows = q ? tRows([["Groups", words(q.groups[set] || []) || "None"], ["What makes it hard", words(q.kinds.concat(q.rubric)) || "Nothing listed"]]) : "";
+    return {
+      asked: asked ? `<div class="qs tq-asked">${asked}</div>` : `<p class="tq">${esc(c.q || "")}</p>`,
+      rows, link: q ? `<div class="tipjump"><a href="#question-guide" data-qid="${esc(c.id)}">Open in the question guide</a></div>` : "",
+    };
   }
-  $("#ps-q").addEventListener("click", (e) => {
-    const a = e.target.closest && e.target.closest("a.ps-open"); if (!a) return;
+  tip.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("a[data-qid]"); if (!a) return;
     e.preventDefault(); e.stopPropagation(); unpin(false);
     if (window.__qsOpen) window.__qsOpen(a.dataset.qid);
   });
-  // the guide's chips open their kind inside the guide; here they are terms, so Enter pins their tooltip like any term
-  $("#ps-q").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest(".qs-chip")) { e.preventDefault(); const b = e.target.getBoundingClientRect(); pin(e.target, b.left, b.bottom - 8); } });
   function drawTicks() {
     const G = plateState.G, strip = $("#pqs"); if (!strip) return;
     let h = "";
     G.order.forEach((ci) => { const x = G.xs.get(ci), on = plateState.sel === ci, k = plateState.kq === ci;
-      h += `<rect x="${x}" y="${on ? 1 : 4}" width="${Math.max(2, G.pitch - 1)}" height="${on ? 10 : 6}" fill="var(${on ? "--ink" : k ? "--ink-2" : "--grid-major"})"/>`; });
-    if (plateState.kq != null) { const x = G.xs.get(plateState.kq); h += `<rect class="kq" x="${x - 1.5}" y=".5" width="${G.pitch + 2}" height="11" fill="none" stroke="var(--ink-2)" stroke-width="1" rx="1"/>`; }
+      h += `<rect x="${x}" y="${on ? 1 : 4}" width="${Math.max(2, G.pitch - 1)}" height="${on ? 10 : 6}" fill="${on || k ? "var(--ink)" : "var(--tick)"}"/>`; });
+    if (plateState.kq != null) { const x = G.xs.get(plateState.kq); h += `<rect class="kq" x="${x - 2}" y="0" width="${G.pitch + 3}" height="12" fill="none" stroke="var(--line)" stroke-width="2" rx="2"/>`; }
     strip.innerHTML = `<svg width="${G.UW}" height="12" aria-hidden="true" style="display:block;overflow:visible">${h}</svg>`;
   }
   function selectQ(ci, quiet) {
@@ -2163,32 +2252,32 @@ window.REPORT = D;
         `<rect x="${x + 0.5}" y="0.5" width="${w - 1}" height="${G.h - 1}" fill="none" stroke="var(--ink)" stroke-width="1"/>`;
     });
     drawTicks();
-    fillStrip(on ? S(plateState.s).cases[ci].id : null);
-    $("#plate-clear").classList.toggle("off", !on);
-    if (quiet && !on) { $("#plate-live").textContent = PLATE_IDLE; return; }
+    if (quiet) return;
     if (on) {
       const L = caseLine(ci), rows = S(plateState.s).rows.filter((r) => r.units);
       const us = rows.map((r) => r.units.slice(ci * 3, ci * 3 + 3)).filter((u) => u.replace(/\./g, "").length);
       const all = us.filter((u) => /^0+$/.test(u.replace(/\./g, ""))).length;
-      $("#plate-live").textContent = `Highlighted: “${L.name}”, a ${L.g.toLowerCase()} question; right on every run for ${all} of ${us.length} setups and models. Click it again or press Escape to show every question.`;
-    } else $("#plate-live").textContent = "Every question shown. " + PLATE_IDLE;
+      $("#plate-live").textContent = `Highlighted: “${L.name}”, ${/^[aeiou]/i.test(L.g) ? "an" : "a"} ${L.g.toLowerCase()} question; right on every run for ${all} of ${us.length} setups and models.`;
+    } else $("#plate-live").textContent = "Every question shown.";
   }
-  const toggleQ = (ci) => selectQ(plateState && plateState.sel === ci ? null : ci);
-  $("#plate-clear").addEventListener("click", (e) => { e.stopPropagation(); unpin(false); selectQ(null); const st = $("#pqs"); if (st) st.focus({ preventScroll: true }); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && plateState && plateState.sel != null) selectQ(null); });
-  // a click anywhere but a question (its squares, its tick), the strip or a tooltip shows every question again
+  // a click anywhere but a question (its marks, its tick) or a tooltip shows every question again
   document.addEventListener("click", (e) => {
     if (!plateState || plateState.sel == null) return;
     const t = e.target;
-    if (t.closest && (t.closest("#plate .pu") || t.closest("#pqs") || t.closest("#pstrip") || t.closest(".tip"))) return;
+    if (t.closest && (t.closest("#plate .pu") || t.closest("#pqs") || t.closest(".tip"))) return;
     unpin(false); selectQ(null);
   });
   // the head's tick strip: hover names a question, a click selects it; by keyboard, arrows move, Enter selects
   const tickAt = (ev) => { const G = plateState.G, b = $("#pqs").getBoundingClientRect(), x = ev.clientX - b.left; for (const [ci, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) return ci; return null; };
-  const tickTip = (ci, x, y) => { const L = caseLine(ci); tipEl = $("#pqs"); showTipHTML(tKick(esc(L.g) + " question") + `<p class="tq">${esc(L.q)}</p><p class="qid">${plateState.sel === ci ? "Highlighted; click to show every question" : "Click to highlight it on every row"}</p>`, x, y); };
+  const qAbout = (C) => C.rows ? `<div class="ts">${C.rows}</div>` : "";
+  const tickHTML = (ci) => { const L = caseLine(ci), C = qCard(ci); return tKick(esc(L.g) + " question") + C.asked + qAbout(C) + C.link; };
+  const tickTip = (ci, x, y) => { tipEl = $("#pqs"); showTipHTML(tickHTML(ci), x, y); };
+  // a click or Enter on a tick highlights its question and pins its tooltip; the same tick again clears both
+  const tickPick = (ci, x, y) => { const was = plateState.sel === ci; unpin(false); selectQ(was ? null : ci); if (was) tickTip(ci, x, y); else pin($("#pqs"), x, y, tickHTML(ci)); };
   $("#plate-head").addEventListener("pointermove", (ev) => { if (pinned || !ev.target.closest("#pqs")) return; const ci = tickAt(ev); if (ci == null) return hideTip(); tickTip(ci, ev.clientX, ev.clientY); });
   $("#plate-head").addEventListener("pointerleave", () => { if (!pinned && tipEl && tipEl.id === "pqs") hideTip(); });
-  $("#plate-head").addEventListener("click", (ev) => { if (!ev.target.closest("#pqs")) return; const ci = tickAt(ev); if (ci == null) return; toggleQ(ci); if (!pinned) tickTip(ci, ev.clientX, ev.clientY); });
+  $("#plate-head").addEventListener("click", (ev) => { if (!ev.target.closest("#pqs")) return; const ci = tickAt(ev); if (ci == null) return; ev.stopPropagation(); tickPick(ci, ev.clientX, ev.clientY); });
   $("#plate-head").addEventListener("focusin", (ev) => { if (!ev.target.closest("#pqs") || !plateState) return; if (plateState.kq == null) plateState.kq = plateState.sel != null ? plateState.sel : plateState.G.order[0]; drawTicks(); keyTip(); });
   $("#plate-head").addEventListener("focusout", (ev) => { if (!ev.target.closest("#pqs") || !plateState) return; plateState.kq = null; drawTicks(); if (!pinned) hideTip(); });
   function keyTip() { const st = $("#pqs"), G = plateState.G, b = st.getBoundingClientRect(); tickTip(plateState.kq, b.left + G.xs.get(plateState.kq), b.bottom - 6); }
@@ -2198,7 +2287,7 @@ window.REPORT = D;
     let j = null;
     if (ev.key === "ArrowRight") j = Math.min(G.order.length - 1, i + 1); else if (ev.key === "ArrowLeft") j = Math.max(0, i - 1);
     else if (ev.key === "Home") j = 0; else if (ev.key === "End") j = G.order.length - 1;
-    else if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleQ(plateState.kq); keyTip(); return; }
+    else if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); const st = $("#pqs"), b = st.getBoundingClientRect(); tickPick(plateState.kq, b.left + plateState.G.xs.get(plateState.kq), b.bottom - 6); return; }
     if (j == null) return; ev.preventDefault();
     plateState.kq = G.order[j]; drawTicks();
     // keep the tick in view in the sideways-scrolling plate
@@ -2206,6 +2295,16 @@ window.REPORT = D;
     if (x < body.scrollLeft + G.LW + 8 || x > body.scrollLeft + body.clientWidth - 20) { body.scrollLeft = Math.max(0, x - body.clientWidth / 2); $("#plate-head").scrollLeft = body.scrollLeft; }
     keyTip();
   });
+  // the group labels, each over its group's first tick, on as many tiers as they need: a label goes on the first tier
+  // where it clears the label before it, and moves left when it would run past the column; the ticks sit under them.
+  // Measured, so it runs again once the web font is in.
+  // the head's height from its labels' measured line (again once the web font is in): the labels on one row, the ticks under them
+  function layoutHead() {
+    const head = $("#plate-head"), bhs = head.querySelector(".bhs"); if (!bhs || !plateState) return;
+    let lh = 0; bhs.querySelectorAll(".bh").forEach((sp) => { lh = Math.max(lh, sp.offsetHeight); });
+    const tq = 8 + lh + 6;
+    bhs.style.height = tq + 20 + "px"; bhs.querySelector("#pqs").style.top = tq + "px";
+  }
   function renderPlate() {
     const s = view.plate; const body = $("#plate-body"), head = $("#plate-head");
     const G = plateGeom(s, body.clientWidth || 1100);
@@ -2217,21 +2316,22 @@ window.REPORT = D;
     let total = G.LW + G.UW + 16 + G.IW + G.CWW;
     const availW = body.clientWidth || total; if (total < availW) { G.CWW += availW - total; total = availW; }
     $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
-    const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
-    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:58px">`;
-    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} q</small></span>`; });
+    // the head: one word per column; what each column holds is in its tooltip ("In this column"), not under it
+    const noted = (t, label, note) => `<span class="term" data-term="${t}" data-note="${esc(note)}" tabindex="0">${label}</span>`;
+    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">${noted("setup", "Setup", "Each row is one setup on the model it ran on.")}</div><div class="bhs" style="width:${G.UW + 16}px">`;
+    G.bands.forEach((b) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }, n = `${b.n} ${b.n === 1 ? "question" : "questions"} in this set.`;
+      hh += `<span class="bh" style="left:${b.x + 8}px">${TK(b.b) ? noted(TK(b.b), esc(bk.label), n) : esc(bk.label)}</span>`; });
     hh += `<div class="pqs" id="pqs" tabindex="0" role="group" aria-label="Questions, one tick each: arrow keys move, Enter highlights a question on every row, Escape shows every question" style="width:${G.UW}px"></div>`;
-    hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
+    hh += `</div><div style="width:${G.IW}px">${noted("over-the-floor", "Over the floor", "Each row: how many points more often it is right than the floor, paired by question, with its 95% interval.")}</div>` +
+      `<div style="width:${G.CWW}px">${noted("confident-wrong", "Confident-wrong", "Each row: its share of runs confidently wrong, with its 95% interval.")}</div></div>`;
     head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
-    // narrow bands: a column label that would run into the previous label on its tier moves right past it
-    const tierEnd = {};
-    head.querySelectorAll(".bh").forEach((sp) => { const t = sp.style.top, left = parseFloat(sp.style.left); if (tierEnd[t] != null && left < tierEnd[t] + 6) sp.style.left = (tierEnd[t] + 6) + "px"; tierEnd[t] = parseFloat(sp.style.left) + sp.offsetWidth; });
     let bh = ""; const minis = [];
     D.ladder.forEach((L) => {
-      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div>Rung 8. ${esc(L.label)}</div></div>`; return; }
+      // a rung's title wraps inside the visible width, so it stays readable while the rows scroll sideways under it
+      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div style="max-width:${availW}px">Rung 8. ${esc(L.label)}</div></div>`; return; }
       const rs = rowsAll.filter((r) => L.arms.includes(r.arm)).sort((a, b) => L.arms.indexOf(a.arm) - L.arms.indexOf(b.arm) || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs);
       if (!rs.length) return;
-      bh += `<div class="prow step" style="width:${total}px"><div>${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
+      bh += `<div class="prow step" style="width:${total}px"><div style="max-width:${availW}px">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
       rs.forEach((r) => {
         const tg = tagText(r);
         bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}" data-term="${r.status === "pending" ? "pending" : "partial"}" tabindex="0">${esc(tg)}</span>` : ""}</div>`;
@@ -2245,16 +2345,18 @@ window.REPORT = D;
     });
     body.innerHTML = `<div style="width:${total}px">${bh}</div>`;
     const cellOf = (id, sel) => body.querySelector(`[data-tip="${CSS.escape(id)}"][data-mini="${sel}"]`);
-    minis.forEach(([id, kind, v, w, dom]) => { const r = byId(id); cellOf(id, kind).append(miniIv(v, w, G.h + 8, dom, kind, r.major)); });
+    minis.forEach(([id, kind, v, w, dom]) => { const r = byId(id); cellOf(id, kind).append(miniIv(v, w - 1, G.h + 8, dom, kind, r.major, G.k)); }); // the cell's left border takes 1 px
     const svgs = [];
     body.querySelectorAll(".pu[data-units]").forEach((pu) => {
       const r = byId(pu.dataset.units); const sv = unitsPlot(r, G);
-      attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
+      attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${Object.values(OUTN).map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
       pu.append(sv); svgs.push(sv);
     });
     const keepSel = plateState && plateState.s === s ? plateState.sel : null;
     plateState = { G, s, hover: null, svgs, sel: null, kq: null };
-    body.onscroll = () => { head.scrollLeft = body.scrollLeft; };
+    layoutHead();
+    body.onscroll = () => { if (head.scrollLeft !== body.scrollLeft) head.scrollLeft = body.scrollLeft; };
+    head.onscroll = () => { if (body.scrollLeft !== head.scrollLeft) body.scrollLeft = head.scrollLeft; };
     head.scrollLeft = body.scrollLeft;
     svgs.forEach((sv) => {
       const r = byId(sv.dataset.row);
@@ -2262,8 +2364,10 @@ window.REPORT = D;
         const c = S(s).cases[ci]; const u = r.units.slice(ci * 3, ci * 3 + 3); const ch = u[k] || ".";
         const right = [...u].filter((q) => q === "0").length, ran = [...u].filter((q) => q !== ".").length;
         const bk = D.buckets.find((x) => x.key === c.b);
-        return tKick(esc(bk ? bk.label : c.b) + " question") + `<p class="tq">${esc(c.q || "")}</p><p class="qid"><span class="id">${esc(c.id)}</span></p>` +
-          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[+ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]]));
+        const C = qCard(ci);
+        return tKick(esc(bk ? bk.label : c.b) + " question") + C.asked +
+          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])) +
+          qAbout(C) + C.link;
       };
       const at = (ci, k, cx, cy) => {
         if (pinned) return; // a pinned square stays as it is while the pointer moves over others
@@ -2280,7 +2384,13 @@ window.REPORT = D;
         at(ci, 0, b.left + G.xs.get(ci), b.bottom);
       };
       // a click on a square, or Enter on the row, highlights its question on every row; the same question again clears it
-      sv.addEventListener("keydown", (ev) => { if (ev.key !== "Enter") return; ev.preventDefault(); toggleQ(plateState.hover == null ? G.order[0] : plateState.hover); });
+      sv.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter") return; ev.preventDefault();
+        const ci = plateState.hover == null ? G.order[0] : plateState.hover, b = sv.getBoundingClientRect();
+        if (plateState.sel === ci) { unpin(false); selectQ(null); return; }
+        unpin(false); selectQ(ci); plateState.hover = ci; bandAt(ci); tipEl = sv;
+        pin(sv, b.left + G.xs.get(ci), b.bottom, squareHTML(ci, 0));
+      });
       sv.addEventListener("click", (ev) => {
         const h = hit(ev); if (h.ci == null) return;
         ev.stopPropagation(); // this handler pins; the page's delegated click would pin whatever the tooltip last showed
@@ -2291,8 +2401,8 @@ window.REPORT = D;
       });
     });
     drawTicks(); selectQ(keepSel, true);
-    window.reportReady(() => requestAnimationFrame(reserveStrip));
-    $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
+    $("#leg6").innerHTML = [["0", "outcome-right", "Right"], ["1", "declined", "Declined"], ["2", "outcome-wrong", "Wrong"], ["4", "confident-wrong", "Confident-wrong"], [".", "", "Not run yet"]]
+      .map(([c, t, l]) => `<li>${swatch(c)}${t ? term(t, l) : l}</li>`).join("");
   }
 
   /* ---------- the Decision map's column heads stay on screen while its rows scroll by ---------- */
@@ -2335,8 +2445,7 @@ window.REPORT = D;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
   syncThemeBtn(); renderSwitches(); renderAll();
   // Figures 2 and 5 wrap labels to a measured width: once the web font is in, they are drawn again with its measure.
-  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); reserveStrip(); });
-  document.addEventListener("report-view", (e) => { if (e.detail === "every-run") requestAnimationFrame(reserveStrip); });
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); renderPlate(); });
 
   window.__reportMarkReady();
 })();

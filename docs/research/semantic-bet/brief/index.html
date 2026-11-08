@@ -16,9 +16,14 @@
   --midnight: #0a1430; --cloud: #edf1f8; --cobalt-lt: #86a4ff; --green-lt: #3fcf8e; --amber-lt: #f2b23e;
   --scarlet-lt: #ff6a5c; --petrol-lt: #6cc4e0; --vermilion-lt: #ff8f6b; --teal-lt: #4fd1c5; --plum-lt: #e39ad0;
   --slate: #6f778a; --cobalt-md: #5b7de8; --slate-dk: #666e82; --vermilion-md: #e0663c;
+  --white: #ffffff; --dusk: #1c2640;
 
   /* semantic: surfaces and ink (no muted ink: every word is read at full contrast) */
   --paper: var(--porcelain); --ink: var(--navy); --line: var(--cobalt);
+  /* the one raised surface (a side column beside a stage): a step lighter than the ground in both themes, about
+     1.1:1 on light and 1.2:1 on dark (a dark step must be larger to be seen); ink, status and series colours keep
+     their contrast on it */
+  --panel: var(--white);
   --hair: color-mix(in srgb, var(--ink) 16%, transparent);
   --row: color-mix(in srgb, var(--line) 6%, transparent);
   --tip: var(--ink); --tip-ink: var(--paper);
@@ -42,6 +47,9 @@
 
   /* space, on a 4px step */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  /* the space around each level inside a page: a step down in rank is a step down in space, and what sits inside
+     a level is never looser than the space around it */
+  --gap-section: calc(var(--s7) + var(--s4)); --gap-part: var(--s6); --gap-item: var(--s3);
   --gutter-l: max(16px, env(safe-area-inset-left, 0px)); --gutter-r: max(16px, env(safe-area-inset-right, 0px));
   --measure: 40rem; --page: 80rem;
 
@@ -51,7 +59,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+    --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt); --panel: var(--dusk);
     --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
     --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
     --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
@@ -61,7 +69,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt);
+  --paper: var(--midnight); --ink: var(--cloud); --line: var(--cobalt-lt); --panel: var(--dusk);
   --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
   --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
   --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
@@ -86,12 +94,12 @@ p { text-wrap: pretty }
 .rk-title { margin: 0 0 var(--s2); font-family: var(--sans); font-size: var(--t-title); font-weight: var(--w-head); line-height: 1.15 }
 .rk-lede { margin: 0 0 var(--s6); max-width: var(--measure) }
 @media (prefers-reduced-motion: reduce) { *, ::before, ::after { scroll-behavior: auto !important } }
-/* report-kit section head: every section's heading in one style, 1.375rem bold over a 2px ink rule, with the
+/* report-kit section head: every section's heading in one style, 1.5rem bold over a 2px ink rule, with the
    one control that changes only this section (a switch) beside it, wrapping under it when narrow. Headings rank
    above their text by size, weight and space, never by a paler body: a finding's headline is a size step above
    its sentence (--t-find), both heading levels are --w-head (heavier on a dark ground), and a headline sits
    closer to its own sentence than to the row above. */
-.rk-section + .rk-section { margin-top: calc(var(--s7) + var(--s4)) }
+.rk-section + .rk-section { margin-top: var(--gap-section) }
 .rk-head { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: flex-end; justify-content: space-between;
   padding-bottom: var(--s3); border-bottom: 2px solid var(--ink); margin-bottom: var(--s5) }
 /* more than one control beside a head (a switch and a filter) sit together, wrapping as one group */
@@ -111,6 +119,36 @@ p { text-wrap: pretty }
 .rk-glossary > div { padding: var(--s3) 0; border-bottom: 1px solid var(--hair); scroll-margin-top: var(--s7) }
 .rk-glossary dt { font-weight: 700 }
 .rk-glossary dd { margin: var(--s1) 0 0 }
+/* levels inside a section: section, part, item. A part is a sub-part with its own head (h3 in the section, h4 in a
+   stage under the stage's h3) over a 1px ink rule, the 2px section rule's smaller echo, with --gap-part above it;
+   an item is a 1rem bold head with --gap-item above it and no rule. Right under a section head the head's own rule
+   is the part's. Parts side by side (.rk-parts) each keep their own rule, broken by the column gap, so two parts
+   never share one line; narrow, they stack with the same rule and gap. */
+.rk-section h4 { margin: 0 0 6px; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3 }
+.rk-section * + h4 { margin-top: var(--gap-item) }
+.rk-section :is(h3, h4) + :is(p, ul, ol) { margin-top: 0 }
+.rk-part { border-top: 1px solid var(--ink); padding-top: var(--s3); min-width: 0 }
+* + .rk-part, * + .rk-parts { margin-top: var(--gap-part) }
+.rk-head + .rk-part { border-top: 0; padding-top: 0; margin-top: 0 }
+.rk-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--gap-part) var(--s6); align-items: start }
+.rk-parts > .rk-part { margin-top: 0 }
+.rk-part > :last-child { margin-bottom: 0 }
+/* a side column beside a stage: the column (a picker, a list to choose from, a contents) on the one raised surface,
+   the stage (what the choice shows) on the page's ground. The column wraps above the stage once the stage would
+   fall under 60% of the row. Its chosen item is a reversed plate, so the choice shows without colour alone. */
+.rk-split { display: flex; flex-wrap: wrap; gap: var(--gap-part) var(--s6); align-items: flex-start }
+.rk-aside { flex: 1 1 16rem; padding: var(--s4); border-radius: 4px; background: var(--panel) }
+.rk-stage { flex: 999 1 0; min-inline-size: 60% }
+.rk-aside > :is(ul, ol) { list-style: none; margin: 0; padding: 0 }
+.rk-aside li > a { display: block; padding: var(--s1) var(--s2); margin: 0 calc(-1 * var(--s2)); border-radius: 4px; text-decoration: none }
+.rk-aside li > a:hover { background: var(--row) }
+.rk-aside :is([aria-current="true"], [aria-current="page"]) { background: var(--ink); color: var(--paper); font-weight: 700 }
+.rk-aside :is([aria-current="true"], [aria-current="page"]):hover { background: var(--ink) }
+/* a figure with its key and caption in one <figure>: the key against the drawing, a reading note last, both a
+   short step from the drawing, so the next part's larger gap reads as the end of the figure */
+.rk-fig { margin: 0; min-width: 0 }
+.rk-fig > .rk-key, .rk-fig > figcaption { margin-top: var(--s2) }
+.rk-fig > figcaption { max-width: var(--measure) }
 /* report-kit marks: one shape per status, so no state is told by colour alone. data-k on any element:
    ok a filled circle, no a ring, warn a square, bad a diamond, info a triangle. Dots, slopes, keys, table
    heads and the highlight all use these. */

@@ -140,6 +140,108 @@ def test_the_see_all_buttons_exist_one_per_category_visible_and_wired_to_the_bro
     assert "dlg.showModal()" in page
 
 
+def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
+    """Both setup sections are kit sections (a kit head each), their words at 1rem in the kit's
+    family and full ink, every control wears the kit's focus ring, and no text says how to use
+    them."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    for sec, h in (("sm", "sm-h"), ("sxb", "sxb-h")):
+        assert f'<section class="{sec} rk-section"' in panel, sec
+        assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
+    # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
+    assert ".mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
+    rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
+    html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
+    small = [r for r in html_rules if re.search(r"font-size: 1[0-5](\.\d)?px", r)]
+    assert not small, small  # words at 1rem
+    # the sheets: every label at the chart size (14px, ids in mono at 13px), drawn one unit a pixel
+    assert ".sm .sm-sheet text { fill: var(--ink); font-size: 14px; letter-spacing: 0; }" in styles
+    assert ".sxb svg text { font-family: var(--sans); font-size: 14px; letter-spacing: 0;" in styles
+    sizes = {float(x) for x in re.findall(r"font-size: (\d+(?:\.\d+)?)px", styles)}
+    assert sizes and min(sizes) >= 13, sorted(sizes)
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert "svg.style.width = K.W" in script and "MINW = 944" in script  # the map at full size
+    assert 'style="width:${W}px"' in script  # the sequence too
+    assert "(h - 16 - 8 - rh)" not in script  # no shrinking the map to the screen's height
+    assert not [r for r in html_rules if "outline: 2px solid var(--mf)" in r]
+    assert "g[tabindex]:focus-visible { outline: 2.5px solid var(--line)" in styles
+    for gone in (
+        "Hover or tap",
+        "Escape lets go",
+        "scrolls sideways.</p>",
+        "Arrow keys move",
+        "Pick a setup",
+    ):
+        assert gone not in panel, gone
+
+
+def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
+    """Owner, 2026-11-08: the parts of each setup section read apart at a glance. The ladders sit
+    on the kit's raised side column, each sheet is a figure holding its key, the explorer's two
+    parts and the map's readout are kit parts (an h4 over a 1px ink rule), and each fact is said
+    once: no change summary over the list of changes, no tag line repeating the rung's name, no
+    caption restating its sequence, no map lede repeating the readout."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    assert '<div class="sxb-wrap rk-split">' in panel
+    assert '<div class="sxb-pick rk-aside">' in panel and '<h3 class="sxb-pick-h"' in panel
+    assert '<div class="sxb-stage rk-stage">' in panel
+    assert (
+        '<figure class="sxb-fig rk-fig"><svg' in panel and '<ul class="sxb-legend rk-key"' in panel
+    )
+    assert (
+        '<div class="sxb-panel rk-parts"><div class="sxb-change rk-part"></div>'
+        '<div class="sxb-seq rk-part"></div></div>' in panel
+    )
+    assert '<div class="sm-aside rk-aside">' in panel
+    fig = panel.index('<figure class="sm-fig rk-fig">')
+    assert (
+        fig
+        < panel.index('<ul class="sm-legend rk-key"')
+        < panel.index('<div class="sm-read rk-part"')
+    )
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert "<h4>What changes from" in script and "<h4>On one question</h4>" in script
+    assert 'why: "' not in script and "S.why" not in script
+    assert '"rung " + m[1] + ": "' not in script  # the tag line names the rung by number only
+    assert "MetricFlow turns the definition into SQL" not in script
+    lede = re.search(r'<p class="sm-lede">(.*?)</p>', panel, re.S).group(1)
+    assert (
+        "write their own SQL" not in lede and "never writes SQL" not in lede
+    )  # the readout says it
+    # the kit carries the levels the tab uses (vendored from upstream, never copied into the page)
+    kit = (BUILD.parent.parent / "report-kit/kit/section.css").read_text(encoding="utf-8")
+    assert ".rk-aside {" in kit and ".rk-part {" in kit and ".rk-fig {" in kit
+
+
+def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
+    """Owner, 2026-11-08 (the trial's misses): stacked above their stage, both ladders fold behind
+    a button naming the current choice; pointing at a setup lights its row on a band instead of
+    fading the rest to grey; the explorer's chips are rows of the panel, not boxes inside it."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
+    assert "window.reportFold = function (btn, panel, stage)" in page
+    assert panel.count('class="fold-btn" aria-controls=') == 2
+    assert 'aria-controls="sxb-ladder"' in panel and 'aria-controls="sm-rungs"' in panel
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert script.count("window.reportFold(") == 2 and script.count("fold.setCurrent(") == 2
+    styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
+    assert ".sm-s:not(.on) { opacity" not in styles and ".sm-rhd { opacity" not in styles
+    assert not re.search(r"\.sm-rungs[^{]*\{[^}]*opacity", styles)
+    chip = re.search(r"\.sxb \.sxb-chip \{[^}]*\}", styles).group(0)
+    assert "border: 0;" in chip
+
+
+def test_the_page_folds_unclear_runs_into_wrong(tmp_path):
+    _, data = _built(tmp_path)
+    rows = [r for st in data["sets"].values() for r in st["rows"]]
+    assert rows and not [r for r in rows if "3" in r["units"] or "unclear" in r["outcomes"]]
+    assert not [r for r in rows if r.get("example") and r["example"]["outcome"] == "unclear"]
+    assert build.shown_outcomes({"wrong": 2, "unclear": 3, "right": 1}) == {"wrong": 5, "right": 1}
+
+
 def test_every_list_title_and_category_of_the_section_is_a_typed_glossary_term(tmp_path):
     _, data = _built(tmp_path)
     terms = {k for k, _, _ in build.TERMS}
@@ -224,9 +326,9 @@ def test_the_maps_scores_match_the_runs_they_come_from(tmp_path):
 
 
 def test_each_setup_leads_with_its_default_model_never_its_best_one(tmp_path):
-    """A setup's main row is the model it would ship on, fixed before any score: Gemini's default for
-    Google's agent even where another mode holds the managed best (the owner saw 67 in a chart and
-    80 in the map for one setup, 2026-11-07)."""
+    """A setup's main row is the model it would ship on, fixed before any score: Gemini's default
+    for Google's agent even where another mode holds the managed best (the owner saw 67 in a chart
+    and 80 in the map for one setup, 2026-11-07)."""
     _, data = _built(tmp_path)
     for st in data["mapOrder"]:
         rows = data["sets"][st]["rows"]
@@ -234,7 +336,8 @@ def test_each_setup_leads_with_its_default_model_never_its_best_one(tmp_path):
             mine = [r for r in rows if r["arm"] == arm and r["plotted"]]
             default = [r for r in mine if r["model"].endswith("(MODEL_UNSPECIFIED)")]
             if default:
-                assert [r["model"] for r in mine if r["primary"]] == [default[0]["model"]], (st, arm)
+                main = [r["model"] for r in mine if r["primary"]]
+                assert main == [default[0]["model"]], (st, arm)
         assert any(r["managedBest"] for r in rows) or not any(r["family"] == "da" for r in rows)
     assert "main-model" in {k for k, _, _ in build.TERMS}
 
@@ -441,11 +544,13 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     assert '<section class="view on rk-kit rk-js" id="summary"' in page
     assert '<section class="view rk-kit" id="decision-map"' in page
     assert '<section class="view rk-kit mfa" id="metricflow"' in page
+    assert '<section class="view rk-kit er" id="every-run"' in page
     # the shared chrome moved with the second tab; the tabs still to move keep the report's own look
     moved = ('class="memo rk-kit"', 'class="tabs rk-kit"', 'class="tip rk-kit" id="tip"')
     for part in moved:
         assert part in page, part
-    for part in ("every-run", "setups", "question-sets", "method"):
+    assert '<section class="view rk-kit st" id="setups"' in page
+    for part in ("question-sets", "method"):
         assert f'<section class="view" id="{part}"' in page, part
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
@@ -519,3 +624,87 @@ def test_the_metricflow_tab_is_on_the_kit_its_charts_on_the_kits_type_and_tokens
     # no winner marks: the only "best" is the managed best, the bar every setup is paired against
     plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
     assert "best" not in plain
+
+
+def test_the_every_run_tab_is_on_the_kit_its_marks_the_kits_status_shapes(tmp_path):
+    """The Every run tab on the kit (2026-11-07): the kit's head with the set switch beside it,
+    no figure number, a key of defined outcomes, every outcome a kit status shape and token, the
+    plate's text columns scaled with the reader's text size, a head that scrolls (not clips)
+    sideways, and the kit's focus ring."""
+    page, _ = _built(tmp_path)
+    start = page.index('id="every-run" data-view')
+    panel = page[page.rindex("<section", 0, start) : page.index('id="setups" data-view')]
+    assert panel.count('class="rk-head"') == 1 and 'class="rk-switch" role="group"' in panel
+    assert 'data-view="plate"' in panel and 'class="seg"' not in panel
+    assert 'class="rk-key er-key" id="leg6"' in panel
+    assert "fignum" not in panel and not re.search(r"Figure \d", panel)
+    # the plate and a hidden live line; no strip, button, caption or how-to line around the chart
+    # (owner, 2026-11-07): the question's card and its guide link are in the mark's tooltip
+    for name in ("plate-live", "plate-head", "plate-body"):
+        assert f'id="{name}"' in panel, name
+    assert '<p class="vh" id="plate-live"' in panel
+    for gone in (
+        'id="pstrip"',
+        'id="plate-clear"',
+        "Show every question",
+        "<figcaption",
+        "Click a ",
+    ):
+        assert gone not in panel, gone
+    # outcomes on the kit's status tokens, wherever the kit reaches (the tab and the tooltip)
+    tokens = "--o-right: var(--ok); --o-decl: var(--ink); "
+    tokens += "--o-wrong: var(--warn); --o-cw: var(--bad)"
+    assert ".rk-kit { " + tokens in page
+    script = page[page.index("Figure 6: unit plate") : page.index("column heads stay on screen")]
+    marks = script[script.index("function outMark(") :]
+    marks = marks[: marks.index("\n  }\n")]
+    shapes = {"0": ("o-right", "fill"), "1": ("o-decl", "ring"), "2": ("o-wrong", "fill")}
+    shapes |= {"4": ("o-cw", "fill")}
+    for ch, (paint, kind) in shapes.items():
+        assert f'if (ch === "{ch}") return ["{paint}", "{kind}"' in marks, ch
+    # unclear is folded into wrong (owner): no mark, no key entry, no count of its own on the page
+    assert 'ch === "3"' not in marks and '"unclear"' not in script
+    assert "circ(cx, cy, s / 2)" in marks  # right and declined are round, as the kit's ok and no
+    assert "function swatch(ch) { const [c, k, d] = outMark(ch" in script
+    assert "outMark(r.units[" in script
+    assert "function qCard(ci)" in script and "Open in the question guide" in script
+    assert "PLATE_IDLE" not in script and "reserveStrip" not in script
+    # the head: one word per column, what a column holds in its tooltip, no subtitles
+    assert "<small>" not in script and "data-note=" in script
+    # legible marks: never under 7 px a question; text columns grow with the root size
+    assert "let pitch = 9, L = lay(pitch);" in script
+    assert "while (pitch > 7 && LW + L.UW + 16 + IW + CWW > avail)" in script
+    assert "getComputedStyle(document.documentElement).fontSize" in script
+    assert "function layoutHead()" in script
+    raw = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
+    assert not raw.search(script), "a raw colour in the plate's code"
+    css = page[page.index("/* run outcomes on the kit's status tokens") :]
+    css = css[: css.index("/* the report's own tooltip")]
+    assert not raw.search(css), "a raw colour in the tab's rules"
+    assert "#every-run .plate-head { overflow-x: auto;" in css
+    assert "#every-run .plate [tabindex]:focus-visible" in css
+    assert "outline: 2.5px solid var(--line)" in css
+    plain = re.sub(r"managed[ -]?[bB]est", "", script + panel)
+    assert "best" not in plain
+
+
+def test_one_type_standard_and_no_how_to_text_on_the_page(tmp_path):
+    """Owner, 2026-11-07: one standard for every tab (the kit's family, every word in full ink,
+    words at 1rem), only the last-updated time under the title, column heads without subtitles,
+    and no text that explains how to use a chart."""
+    page, _ = _built(tmp_path)
+    css = page[: page.index("</style>")]
+    assert "STIX" not in page and "Barlow" not in page
+    assert "--ink-2: var(--ink); --ink-3: var(--ink);" in css
+    assert '--serif: "Atkinson Hyperlegible Next"' in css and "--label: var(--serif);" in css
+    assert "font-size: 16px; line-height: 1.45;" in css
+    # the header: one line, when the numbers were written
+    assert '<p class="updated" id="updated"></p>' in page and "byline" not in page
+    assert "living memo" not in page and "Evidence as of" not in page
+    assert 'Updated <time datetime="${esc(D.written)}">' in page
+    # the Decision map: one-word heads (notes in their tooltips), words at 1rem, no how-to line
+    assert "min-width: 64rem; font: 400 var(--t-word)/1.4 var(--sans);" in page
+    assert 'class="dm-note"' not in page and "A column's head sorts" not in page
+    assert "What this setup is" not in page and '<p class="vh" id="map-live"' in page
+    assert "Hover a line or a label" not in page
+    assert 'tSec("In this column"' in page
