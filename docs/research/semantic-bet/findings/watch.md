@@ -25,3 +25,5 @@ Each check also runs `python3 -I docs/research/semantic-bet/probes/349_kc_compil
 - 2026-11-07 (`stated`, read 2026-11-07T00:25Z): catalog MCP `compile_query` still fails (`Method not found.`, HTTP 404; `349_kc_compile.py`); dbt-metricflow 0.15.0, dbt-core 1.12.6 and dbt-mcp 2.10.1 (2026-11-02) are still the latest on PyPI and in the changelog.
   - BigQuery release notes: 2026-11-05 and 2026-11-06 entries only on graph queries, query-execution-graph views and model organization policy; nothing on semantic layers, agents or Knowledge Catalog ([release notes](https://docs.cloud.google.com/bigquery/docs/release-notes)).
   - Knowledge Catalog (Dataplex) and Conversational Analytics API release notes: not read today (both pages redirect, the CA API's to the data-agents path).
+- 2026-11-08 (`stated`, read 2026-11-08T09:35Z): catalog MCP `compile_query` still fails (`Method not found.`, HTTP 404; `349_kc_compile.py`); dbt-metricflow 0.15.0, dbt-core 1.12.6 and dbt-mcp 2.10.1 are still the latest on PyPI.
+  - BigQuery, Knowledge Catalog and Conversational Analytics API release notes: not re-read today.
