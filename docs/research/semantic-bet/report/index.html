@@ -1142,7 +1142,7 @@ button[data-tip], a[data-tip] { cursor: pointer }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
 
 /* the sheet */
-.sxb svg text { font-family: var(--label); }
+.sxb svg text { font-family: var(--label); letter-spacing: 0; } /* laid out by measuring without the kit's dark-ground tracking */
 .sxb .s-c { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
 .sxb .s-c.add { stroke: var(--sxb-pencil); stroke-width: 2; }
 .sxb .s-c.gone { fill: none; stroke: var(--rule); stroke-dasharray: 3 3; }
@@ -1920,7 +1920,7 @@ window.reportReady(() => {
 .sm .sm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 2px; }
 .sm .sm-scroll:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
 .sm svg.sm-sheet { display: block; width: 100%; min-width: 1080px; height: auto; font-family: var(--label); overflow: visible; }
-.sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; }
+.sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; letter-spacing: 0; }
 .sm .sm-sheet .t-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .sm .sm-sheet .t-mono { font-family: var(--code); font-size: 11px; fill: var(--ink); }
 .sm .sm-sheet .t-mtitle { font-family: var(--code); font-size: 12px; font-weight: 600; fill: var(--ink); }
