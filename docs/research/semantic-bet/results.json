@@ -1,5 +1,5 @@
 {
- "written": "2026-11-08T10:50Z",
+ "written": "2026-11-08T11:04Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4909,13 +4909,13 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 3,
-   "cases": 41,
+   "cases": 55,
    "of_cases": 55,
-   "runs": 41,
+   "runs": 55,
    "accuracy": [
-    0.90243902439,
-    0.80487804878,
-    0.975609756098
+    0.927272727273,
+    0.854545454545,
+    0.981818181818
    ],
    "confident_wrong": [
     0.0,
@@ -4924,16 +4924,16 @@
    ],
    "groups": {
     "composable": [
-     0.9285714285714286,
-     14
+     0.9523809523809523,
+     21
     ],
     "conversation": [
      0.625,
      8
     ],
     "covered": [
-     0.8636363636363636,
-     22
+     0.8695652173913043,
+     23
     ],
     "trap": [
      1.0,
@@ -4941,17 +4941,34 @@
     ],
     "uncovered": [
      1.0,
-     5
+     11
     ]
    },
-   "pass_all": 0.9024390243902439,
+   "pass_all": 0.9272727272727272,
    "outcomes": {
-    "right": 37,
+    "right": 51,
     "wrong": 3,
     "unclear": 1
    },
-   "model_calls": 290,
-   "new": {},
+   "model_calls": 385,
+   "new": {
+    "all": [
+     1.0,
+     14
+    ],
+    "composable": [
+     1.0,
+     7
+    ],
+    "covered": [
+     1.0,
+     1
+    ],
+    "uncovered": [
+     1.0,
+     6
+    ]
+   },
    "carried_runs": 41
   },
   {
@@ -7910,12 +7927,12 @@
    "set": "hard-v2",
    "arm": "native-mcp",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 41,
-   "runs": 41,
+   "cases": 55,
+   "runs": 55,
    "accuracy": [
-    -0.040650406504,
-    -0.121951219512,
-    0.016260162602
+    -0.012121212121,
+    -0.078787878788,
+    0.048484848485
    ],
    "confident_wrong": [
     0.0,
@@ -8228,7 +8245,8 @@
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
    "native-context-python on google-data-agent (MODEL_UNSPECIFIED)",
-   "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)"
+   "native-kc-max on google-data-agent (MODEL_UNSPECIFIED)",
+   "native-mcp on nvidia/nemotron-3.5-super-vl:free"
   ]
  },
  "managed_best": {
