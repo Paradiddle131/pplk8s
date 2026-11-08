@@ -8,6 +8,12 @@
 [data-k="warn"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--warn); border-radius: 1px; transform: scale(.86) }
 [data-k="bad"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--bad); border-radius: 1px; transform: rotate(45deg) scale(.8) }
 [data-k="info"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--info); clip-path: polygon(50% 4%, 100% 96%, 0 96%) }
+/* a run: a few outcomes of one thing in a row (three tries, four weeks), each in its own slot so runs line up from row
+   to row; a slot with no outcome (not run, no data) is a small ink dot, not a sixth status. The run says itself in
+   words: role="img" and an aria-label on .rk-marks. */
+.rk-marks { display: inline-flex; gap: 6px; align-items: center; vertical-align: -1px; white-space: nowrap }
+.rk-marks > .rk-mark { width: 10px; height: 10px }
+.rk-mark:not([data-k]) { background: var(--ink); border-radius: 50%; transform: scale(.36) }
 /* a key: marks with their names, each name defined in the bubble */
 .rk-key { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); margin: var(--s4) 0 0; padding: 0; list-style: none }
 .rk-key > *, .rk-key > * > [data-tip] { display: inline-flex; gap: var(--s2); align-items: center; min-height: 28px; font-weight: 600 }

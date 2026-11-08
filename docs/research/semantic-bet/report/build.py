@@ -778,15 +778,21 @@ def question_guide(qsets, sets, order):
 
 
 def questions_html(guide, qsets, sts):
+    """The Question sets tab on report-kit: two kit sections. The first holds one part per set (its name, its count,
+    what it holds, its questions per group on the kit's bars as shares of the set); the second is the kit's split, the
+    kinds of question in a side column (folding on a phone) beside a stage that steps through one real question of the
+    chosen kind at a time (the kit's step row, then the question as a part: its name, then its fields)."""
     e = html_escape
     term = lambda key, text=None: '<span class="term" data-term="%s" tabindex="0">%s</span>' % (
         e(key), e(text if text is not None else next(l for t, l, _ in TERMS if t == key)))
-    out = ['<section class="qs" id="question-guide" aria-labelledby="qs-h">',
-           '<h2 id="qs-h">The questions</h2>',
-           '<p class="qs-lede">Every setup answers the same questions about one test shop, in sets. '
-           'Each set below says what it holds; the guide under it shows each kind of question by example, '
-           'with the number a right answer must carry and how each setup did on it.</p>',
-           '<div class="qs-sets">']
+    chev = lambda d: ('<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="%s" fill="none" '
+                      'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' % d)
+    out = ['<div class="qs" id="question-guide">',
+           '<section class="rk-section qs-about-sets" aria-labelledby="qs-h">',
+           '<div class="rk-head"><h2 id="qs-h">The questions</h2></div>',
+           '<p class="qs-lede">Every setup answers the same questions about one test shop, in the sets below. '
+           'A question can sit in two groups, so a set’s groups add up to more than its questions.</p>',
+           '<div class="qs-sets rk-parts">']
     gorder = QS_GROUP_ORDER + sorted({g for st in sts for gs in qsets[st]["groups"].values() for g in gs} - set(QS_GROUP_ORDER))
     for st in sts:
         groups = qsets[st]["groups"]
@@ -794,52 +800,51 @@ def questions_html(guide, qsets, sts):
         extra = len([i for i in groups if not any(i in qsets[o]["groups"] for o in sts if o != st)])
         mix = [(g, sum(1 for gs in groups.values() if g in gs)) for g in gorder]
         mix = [(g, c) for g, c in mix if c]
-        out.append('<article class="qs-set" id="qs-%s" aria-labelledby="qs-%s-h">' % (e(st), e(st)))
+        out.append('<article class="qs-set rk-part" id="qs-%s" aria-labelledby="qs-%s-h">' % (e(st), e(st)))
         out.append('<h3 id="qs-%s-h">%s</h3>' % (e(st), term(term_key(st), set_label(st)) if term_key(st) in TERM_TYPE else e(set_label(st))))
-        out.append('<p class="qs-about">%s</p>' % e(SET_ABOUT.get(st, "").format(extra=extra)))
         out.append('<p class="qs-n"><b>%d</b> questions</p>' % n)
+        out.append('<p class="qs-about">%s</p>' % e(SET_ABOUT.get(st, "").format(extra=extra)))
         out.append('<dl class="qs-mix" aria-label="Questions per group in the %s">' % e(set_label(st).lower()))
-        top = max((c for _, c in mix), default=1)
         for g, c in mix:
-            out.append('<dt>%s</dt><dd><span class="bar" aria-hidden="true"><i style="width:%.1f%%"></i></span><span class="c">%d</span></dd>'
-                       % (term(term_key(g)), 100.0 * c / top, c))
-        out.append('</dl><p class="qs-mixnote">A question can sit in two groups.</p>')
-        out.append('</article>')
-    out.append('</div>')
-    out.append('<h3 class="qs-gh" id="qs-guide-h">Questions by kind</h3>')
-    out.append('<p class="qs-sub">Pick a kind of question to see a real one of that kind; '
-               'Previous and Next, or the arrow keys, step through the others.</p>')
-    out.append('<div class="qs-guide">')
-    out.append('<nav class="qs-nav" id="qs-nav" aria-labelledby="qs-guide-h">')
+            out.append('<dt>%s</dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:%.1f"></span></span>'
+                       '<b>%d</b><span class="rk-sr"> of %d questions</span></span></dd>' % (term(term_key(g)), 100.0 * c / max(n, 1), c, n))
+        out.append('</dl></article>')
+    out.append('</div></section>')
+    out.append('<section class="rk-section qs-by" aria-labelledby="qs-guide-h">')
+    out.append('<div class="rk-head"><h2 id="qs-guide-h">Questions by kind</h2></div>')
+    out.append('<p class="qs-lede">One real question of each kind at a time: how it is asked, the number a right answer '
+               'must carry, and how each setup did on it.</p>')
+    out.append('<div class="qs-guide rk-split">')
+    out.append('<nav class="qs-nav rk-aside rk-dense" id="qs-nav" aria-label="Kinds of question">')
+    out.append('<button type="button" class="rk-fold" aria-controls="qs-kinds" hidden>Kind of question<span class="rk-fold-cur"></span></button>')
+    out.append('<div id="qs-kinds">')
     for li, (lk, ll) in enumerate(QS_LISTS):
-        out.append('<div class="qs-list"><h4 id="qs-l%d">%s</h4><ul aria-labelledby="qs-l%d">' % (li, term(lk, ll), li))
+        out.append('<div class="qs-list"><h3 id="qs-l%d">%s</h3><ul aria-labelledby="qs-l%d">' % (li, term(lk, ll), li))
         for c in guide["cats"]:
             if c["list"] == li:
-                out.append('<li><button type="button" class="qs-cat" data-cat="%s" aria-pressed="false" tabindex="-1">'
+                out.append('<li><button type="button" class="qs-cat" data-cat="%s" aria-pressed="false" tabindex="-1" data-rk-fold-pick>'
                            '<span class="l">%s</span><span class="c">%d</span></button></li>' % (e(c["key"]), e(c["label"]), len(c["ids"])))
         out.append('</ul></div>')
-    out.append('</nav>')
-    out.append('<div class="qs-panel" id="qs-panel" aria-labelledby="qs-cat-h">')
-    out.append('<div class="qs-head"><h4 id="qs-cat-h" tabindex="-1"></h4><p class="qs-def" id="qs-def"></p></div>')
-    out.append('<div class="qs-step" id="qs-step">'
-               '<button type="button" class="qs-btn" data-step="-1" aria-label="Previous example">'
-               '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button>'
-               '<span class="qs-pos" id="qs-pos" aria-live="polite"></span>'
-               '<button type="button" class="qs-btn" data-step="1" aria-label="Next example">Next'
-               '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>')
+    out.append('</div></nav>')
+    out.append('<div class="qs-panel rk-stage" id="qs-panel">')
+    out.append('<div class="qs-head"><h3 id="qs-cat-h" tabindex="-1"></h3><p class="qs-def" id="qs-def"></p></div>')
+    out.append('<div class="rk-step qs-step" id="qs-step"><span class="rk-step-pair">'
+               '<button type="button" data-step="-1" aria-label="Previous example">%sPrevious</button>'
+               '<button type="button" data-step="1" aria-label="Next example">Next%s</button></span>'
+               '<span class="rk-step-pos" id="qs-pos" aria-live="polite"></span>' % (chev("M7.5 2.5L4 6l3.5 3.5"), chev("M4.5 2.5L8 6 4.5 9.5")))
     # One "See all N" per category opens every question of it in the question browser (#397); the guide shows the
     # current category's button only, and each dispatches CustomEvent("qs:see-all", {detail: {category}}).
-    out.append('<span class="qs-seeall-set">')
+    out.append('<span class="rk-step-end qs-seeall-set">')
     for c in guide["cats"]:
         out.append('<button type="button" class="qs-seeall" data-category="%s">See all %d</button>' % (e(c["key"]), len(c["ids"])))
     out.append('</span></div>')
     fields = [("asked", "Asked"), ("groups", term("groups", "Groups")), ("hard", "What makes it hard"),
               ("sql", term("obvious-sql", "Obvious SQL")), ("runs", "How each setup did")]
-    out.append('<article class="qs-card" id="qs-card" aria-labelledby="qs-name">'
-               '<div class="qs-title" data-field="title"><h5 class="qs-name" id="qs-name"></h5><p class="qs-in"></p></div><dl class="qs-dl">')
+    out.append('<article class="qs-card rk-part" id="qs-card" aria-labelledby="qs-name" data-hl="4">'
+               '<div class="qs-title" data-field="title"><h4 class="qs-name" id="qs-name"></h4><p class="qs-in"></p></div><dl class="qs-dl">')
     for k, lab in fields:
-        out.append('<dt>%s</dt><dd data-field="%s"></dd>' % (lab, k))
-    out.append('</dl></article></div></div></section>')
+        out.append('<div class="qs-f"><dt>%s</dt><dd data-field="%s"></dd></div>' % (lab, k))
+    out.append('</dl></article></div></div></section></div>')
     return "\n".join(out)
 
 

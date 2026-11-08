@@ -150,7 +150,7 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert f'<section class="{sec} rk-section"' in panel, sec
         assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
     # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
-    assert ".mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    assert ".mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
@@ -180,7 +180,7 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
 def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
     """Owner, 2026-11-08: the parts of each setup section read apart at a glance. The ladders sit
     on the kit's raised side column, each sheet is a figure holding its key, the explorer's two
-    parts and the map's readout are kit parts (an h4 over a 1px ink rule), and each fact is said
+    parts and the map's readout are kit parts (a head over a 1px ink rule), and each fact is said
     once: no change summary over the list of changes, no tag line repeating the rung's name, no
     caption restating its sequence, no map lede repeating the readout."""
     page, _ = _built(tmp_path)
@@ -214,6 +214,32 @@ def test_the_setups_tab_sets_its_parts_apart_with_the_kits_levels(tmp_path):
     # the kit carries the levels the tab uses (vendored from upstream, never copied into the page)
     kit = (BUILD.parent.parent / "report-kit/kit/section.css").read_text(encoding="utf-8")
     assert ".rk-aside {" in kit and ".rk-part {" in kit and ".rk-fig {" in kit
+
+
+def test_the_question_sets_tab_is_on_the_kit(tmp_path):
+    """The Question sets tab on report-kit: two kit sections (the sets as parts, the guide as the
+    kit's split with a folding side column and the kit's step row); outcomes as the kit's status
+    marks, as the rest of the page draws them; one runs table, never split side by side; headings
+    step down one level at a time, in the guide and in the question browser."""
+    page, _ = _built(tmp_path)
+    panel = page[page.index('id="question-sets" data-view') : page.index('id="method" data-view')]
+    assert 'class="view rk-kit rk-js qs-v" id="question-sets"' in page
+    assert panel.count('<section class="rk-section') == 2
+    assert panel.count('<article class="qs-set rk-part"') >= 2
+    assert '<div class="qs-guide rk-split">' in panel and 'rk-aside' in panel
+    assert '<button type="button" class="rk-fold" aria-controls="qs-kinds" hidden>' in panel
+    assert '<div class="rk-step qs-step" id="qs-step">' in panel
+    assert '<h3 id="qs-cat-h"' in panel and 'data-hl="4"' in panel and "<h5" not in panel
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    # the kit's marks: right ok, declined no, wrong warn, confident-wrong bad, not run a dot
+    assert 'const KIND = { "0": "ok", "1": "no", "2": "warn", "4": "bad", ".": "" };' in script
+    assert "function swatch(" not in script and "<rect" not in script
+    assert 'class="rk-table qs-rt"' in script and "cells.slice(0, half)" not in script
+    # the item takes its own height: no field reserves the tallest content
+    assert "minHeight" not in script and "function measure(" not in script
+    # the browser is the kit's dialog, its question an h3 under its h2, no eyebrow over the h2
+    assert 'dlg.className = "qs qb rk-dialog"' in script and 'bc.dataset.hl = "3"' in script
+    assert "qb-kick" not in script
 
 
 def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
@@ -550,14 +576,14 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     for part in moved:
         assert part in page, part
     assert '<section class="view rk-kit st" id="setups"' in page
-    for part in ("question-sets", "method"):
-        assert f'<section class="view" id="{part}"' in page, part
+    assert '<section class="view rk-kit rk-js qs-v" id="question-sets"' in page
+    assert '<section class="view" id="method"' in page
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
-    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter)
+    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter, Question sets' fold)
     assert "/* report-kit:css " in page and "scope=.rk-kit */" in page
     assert "scope=.rk-js */" in page and '.root = ".rk-js";' in page
-    assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 2
+    assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 3
 
 
 def test_each_tab_names_its_panel_by_the_hash_it_opens(tmp_path):

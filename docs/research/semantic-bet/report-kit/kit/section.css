@@ -41,11 +41,16 @@
    the stage (what the choice shows) on the page's ground. The column wraps above the stage once the stage would
    fall under 60% of the row. Its chosen item is a reversed plate, so the choice shows without colour alone. */
 .rk-split { display: flex; flex-wrap: wrap; gap: var(--gap-part) var(--s6); align-items: flex-start }
-.rk-aside { flex: 1 1 16rem; padding: var(--s4); border-radius: 4px; background: var(--panel) }
+/* --aside sets the column's width (16rem unless the longest item needs more); .rk-dense halves its padding for a
+   column that must leave its stage the room */
+.rk-aside { flex: 1 1 var(--aside, 16rem); padding: var(--s4); border-radius: 4px; background: var(--panel) }
+.rk-aside.rk-dense { padding: var(--s3) var(--s2) }
 .rk-stage { flex: 999 1 0; min-inline-size: 60% }
 .rk-aside > :is(ul, ol) { list-style: none; margin: 0; padding: 0 }
 .rk-aside li > a { display: block; padding: var(--s1) var(--s2); margin: 0 calc(-1 * var(--s2)); border-radius: 4px; text-decoration: none }
 .rk-aside li > a:hover { background: var(--row) }
+/* items in the column are rows of it, never boxes inside its box: no border, a hover band, the chosen one reversed */
+.rk-aside :is(button, a):not(.rk-fold) { border: 0 }
 .rk-aside :is([aria-current="true"], [aria-current="page"]) { background: var(--ink); color: var(--paper); font-weight: 700 }
 .rk-aside :is([aria-current="true"], [aria-current="page"]):hover { background: var(--ink) }
 /* a figure with its key and caption in one <figure>: the key against the drawing, a reading note last, both a

@@ -1,6 +1,6 @@
 # report-kit, vendored
 
-A copy of the report kit the semantic-bet pages are built with: loadout `skills/report-kit` (the owner's shared collection, which claude-dotfiles became) at commit d266b33, which adds the levels inside a section (parts, a side column on the raised surface, a figure with its key).
+A copy of the report kit the semantic-bet pages are built with: loadout `skills/report-kit` (the owner's shared collection, which claude-dotfiles became) at commit 68e2c02, which adds stepping one item at a time, browsing a long list, a modal dialog, a side column's fold, runs of status marks and a heading-outline check to the levels inside a section.
 Only what the pages need is here: the components (`kit/`), the build that inlines them (`bin/build.cjs`) and the checker (`bin/check.cjs`).
 The kit's docs (`SKILL.md`, `STANDARDS.md`, `REFERENCE.md`) stay upstream; read them there.
 
