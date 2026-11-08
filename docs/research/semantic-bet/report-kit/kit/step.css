@@ -1,0 +1,15 @@
+/* report-kit step: one item of a list at a time. Previous and Next sit side by side above the item, so neither moves
+   while the reader keeps pressing it, whatever height the item takes; the position ("Order 3 of 12") follows them,
+   and any further control in the row (a "See all 12") wears the same look. At an end the button is disabled and
+   keeps its place, an empty slot, so the other never shifts. */
+.rk-step { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: 0 0 var(--s4) }
+.rk-step-pair { display: inline-flex; gap: var(--s2) }
+.rk-step :is(button, a.rk-step-btn) { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: transparent;
+  border: 1px solid var(--hair); border-radius: 10px; min-height: 44px; padding: 0 var(--s4); display: inline-flex; gap: var(--s2);
+  align-items: center; cursor: pointer; text-decoration: none; transition: background-color var(--t-fast) ease-out }
+.rk-step :is(button, a.rk-step-btn):hover { background: var(--row) }
+.rk-step :is(button, a.rk-step-btn) svg { width: 12px; height: 12px; flex: none }
+.rk-step button:disabled { visibility: hidden }
+.rk-step-pos { font-weight: 600 }
+.rk-step-end { margin-left: auto }
+@media (prefers-reduced-motion: reduce) { .rk-step :is(button, a.rk-step-btn) { transition: none } }

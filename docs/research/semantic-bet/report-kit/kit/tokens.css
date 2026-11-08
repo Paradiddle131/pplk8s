@@ -20,6 +20,8 @@
   --hair: color-mix(in srgb, var(--ink) 16%, transparent);
   --row: color-mix(in srgb, var(--line) 6%, transparent);
   --tip: var(--ink); --tip-ink: var(--paper);
+  /* the scrim behind a modal dialog: the page dimmed toward the dark ground in both themes */
+  --scrim: color-mix(in srgb, var(--navy) 45%, transparent);
   --shadow: 0 6px 18px color-mix(in srgb, var(--navy) 22%, transparent); /* none on dark grounds, where a shadow reads as a glow */
   /* status: each is also a mark shape (marks.css), never a colour alone */
   --ok: var(--green); --warn: var(--amber); --bad: var(--scarlet); --info: var(--petrol);
@@ -56,7 +58,7 @@
     --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
     --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
     --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
-    --shadow: none;
+    --shadow: none; --scrim: color-mix(in srgb, black 60%, transparent);
     --w-head: 800; --lh-word: 1.5; --track-word: .01em;
     color-scheme: dark;
   }
@@ -66,7 +68,7 @@
   --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
   --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
   --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
-  --shadow: none;
+  --shadow: none; --scrim: color-mix(in srgb, black 60%, transparent);
   --w-head: 800; --lh-word: 1.5; --track-word: .01em;
   color-scheme: dark;
 }

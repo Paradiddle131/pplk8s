@@ -6,7 +6,10 @@
    handle (or moved with the arrow keys) and closed; data-tip-more="#id" on the element adds a link to a fuller
    entry, labelled by data-tip-more-label. A bubble on an element the keyboard rests on stays through a scroll and
    follows it; the pointer's bubble closes on a scroll. With the kit scoped to part of a page, each root has its
-   own bubble, inside the root (so it wears the root's tokens). API: ReportKit.tip.show(el), .hide(), .unpin(). */
+   own bubble, inside the root (so it wears the root's tokens). Inside an open modal <dialog> the bubble moves into
+   the dialog while it shows (the rest of the page is inert and under the dialog's top layer), goes home when the
+   dialog closes, and the first Escape closes the bubble, not the dialog. API: ReportKit.tip.show(el), .hide(),
+   .unpin(). */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   const GRIP = '<svg viewBox="0 0 8 12" width="8" height="12" aria-hidden="true" fill="currentColor"><circle cx="2" cy="2" r="1.1"/>' +
@@ -26,6 +29,12 @@
       (whole ? document.body : root).append(box);
     }
     box.setAttribute("aria-hidden", "true");
+    const home = box.parentElement;
+    // an element inside an open modal dialog gets the bubble inside that dialog, so it is drawn above the dialog
+    const lodge = el => {
+      const into = (el.closest && el.closest("dialog[open]")) || home;
+      if (box.parentElement !== into) into.append(box);
+    };
     const canPin = box.hasAttribute("data-pin");
     const texts = document.createElement("div");
     texts.hidden = true;
@@ -58,13 +67,21 @@
       const vw = document.documentElement.clientWidth, vh = innerHeight, b = box.getBoundingClientRect();
       left = Math.max(8, Math.min(left, vw - 8 - b.width));
       top = Math.max(8, Math.min(top, Math.max(8, vh - 8 - b.height)));
-      box.style.left = Math.round(left + (pinned ? scrollX : 0)) + "px";
-      box.style.top = Math.round(top + (pinned ? scrollY : 0)) + "px";
+      // a pinned bubble is placed against the page, or against its dialog (the dialog is its containing block)
+      let ox = 0, oy = 0;
+      if (pinned) {
+        const d = box.parentElement.closest("dialog");
+        if (d) { const r = d.getBoundingClientRect(); ox = d.scrollLeft - r.left - d.clientLeft; oy = d.scrollTop - r.top - d.clientTop; }
+        else { ox = scrollX; oy = scrollY; }
+      }
+      box.style.left = Math.round(left + ox) + "px";
+      box.style.top = Math.round(top + oy) + "px";
     }
     function show(el) {
       if (pinned) return;
       clearTimeout(timer);
       owner = el;
+      lodge(el);
       box.textContent = el.dataset.tip;
       box.hidden = false;
       place(el);
@@ -79,6 +96,8 @@
       unpin(false);
       clearTimeout(timer);
       owner = el;
+      if (box.parentElement !== ((el.closest && el.closest("dialog[open]")) || home)) box.hidden = true; // placed afresh in its new home
+      lodge(el);
       const title = (el.dataset.tipTitle || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 48);
       box.innerHTML = `<div class="rk-tip-bar"><span class="rk-tip-handle" role="button" tabindex="0" aria-label="Move this definition: drag it, or use the arrow keys">${GRIP}<span></span></span>` +
         `<button type="button" class="rk-tip-close" aria-label="Close">${CROSS}</button></div><p class="rk-tip-body"></p>`;
@@ -148,7 +167,12 @@
     });
     // Tab from a pinned element goes into its bubble, so the keyboard can move and close it
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape") { if (pinned) unpin(true); else hide(true); return; }
+      if (e.key === "Escape") {
+        // inside a modal dialog, one Escape closes the innermost thing: the bubble first, then the dialog
+        if ((pinned || !box.hidden) && box.parentElement.closest("dialog[open]")) e.preventDefault();
+        if (pinned) unpin(true); else hide(true);
+        return;
+      }
       if (e.key === "Tab" && !e.shiftKey && pinned && document.activeElement === owner) {
         e.preventDefault();
         box.querySelector(".rk-tip-handle").focus({ preventScroll: true });
@@ -156,10 +180,16 @@
     });
     // a scroll closes the pointer's bubble; the keyboard's stays on its element (the browser scrolls a focused
     // element into view, which would otherwise close the bubble it just opened) and follows it
+    // (captured, so a scroll inside a box, a dialog's list included, counts too)
     addEventListener("scroll", () => {
       if (pinned || !owner) return;
       if (document.activeElement === owner && owner.matches(":focus-visible") && !box.hidden) place(owner); else hide(true);
-    }, { passive: true });
+    }, { passive: true, capture: true });
+    // a closing dialog takes no bubble with it: the bubble closes and goes home
+    document.addEventListener("close", e => {
+      if (!(e.target instanceof HTMLDialogElement) || !e.target.contains(box)) return;
+      unpin(false); hide(true); home.append(box);
+    }, true);
     addEventListener("resize", () => { if (pinned) { const b = box.getBoundingClientRect(); moveTo(b.left, b.top); } });
     document.addEventListener("rk:tab", () => unpin(false));
     RK.tip = { show, hide: () => hide(true), unpin: () => unpin(false), pin };

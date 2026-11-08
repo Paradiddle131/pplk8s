@@ -32,7 +32,9 @@
 /* the readout: a part under the figure (.rk-part: its own head over a 1px ink rule, a part's gap above), its head
    the setup, rung or part it reads; a tag line places it, then its description once, then its facts */
 .sm .sm-read { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
-.sm .sm-read h4 .id { font-family: var(--code); font-size: var(--t-find); font-weight: 700; }
+/* the readout is a part of the section: its head an h3 (the outline steps down from the section's h2), in the look of the kit's item head */
+.sm .sm-read h3 { margin: 0 0 6px; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; }
+.sm .sm-read h3 .id { font-family: var(--code); font-size: var(--t-find); font-weight: 700; }
 .sm .sm-read .sm-tag { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sm .sm-read .sm-tag i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; flex: none; }
 .sm .sm-read .sm-desc { max-width: 44rem; margin-top: var(--s2); }
@@ -523,7 +525,7 @@
     }
     const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
     function restText() {
-      return `<h4>Two shapes run through the map</h4>
+      return `<h3>Two shapes run through the map</h3>
         <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
         <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>`;
     }
@@ -539,7 +541,7 @@
     function setupText(a) {
       const f = famOf(a); const l = rungOfArm(a);
       const where = l ? (/^L\d+$/.test(l.key) ? RUNG_KEY(l.key).toLowerCase() : l.label.replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase())) : "";
-      return `<h4><span class="id">${esc(a)}</span></h4><p class="sm-tag"><i style="background:var(--${f})"></i>${esc(famLabel(f))}${where ? ", " + esc(where) : ""}</p>` +
+      return `<h3><span class="id">${esc(a)}</span></h3><p class="sm-tag"><i style="background:var(--${f})"></i>${esc(famLabel(f))}${where ? ", " + esc(where) : ""}</p>` +
         `<p class="sm-desc">${esc(descOf(a))}</p>` + factsOf(a);
     }
     function listParts(ids, all) {
@@ -551,7 +553,7 @@
     function rungText(key) {
       const l = ladder.find((x) => x.key === key); if (!l) return "";
       const arms = l.arms;
-      const head = `<h4>${esc(RUNG_KEY(key))}: ${esc(l.label)}</h4><p class="sm-tag">${arms.length ? nameList(arms) : "No setup yet"}</p>`;
+      const head = `<h3>${esc(RUNG_KEY(key))}: ${esc(l.label)}</h3><p class="sm-tag">${arms.length ? nameList(arms) : "No setup yet"}</p>`;
       if (arms.length < 2) return head + (arms[0] ? factsOf(arms[0]) : "");
       const count = {}; arms.forEach((a) => pathOf(a).forEach((id) => (count[id] = (count[id] || 0) + 1)));
       const ids = Object.keys(count);
@@ -564,7 +566,7 @@
     }
     function partText(id) {
       const users = USERS[id] || [];
-      return `<h4>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</h4>` +
+      return `<h3>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</h3>` +
         (users.length ? `<p>Used by ${nameList(users)}.</p>` : `<p>No setup on the map uses it.</p>`);
     }
     function apply() {

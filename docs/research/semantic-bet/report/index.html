@@ -397,7 +397,7 @@ table.gl-t { border-collapse: separate; border-spacing: 0; width: 100%; font-siz
    size, so text scales with the reader's), its own tooltip, pinning, hover-to-focus and Figure 2's gliders. Inside the
    tab the report's paler inks and graph-paper rules map onto the kit's: every word in ink, grids and frames on --hair,
    the hover band on --row, so the figures' existing marks restyle without a second set of rules. */
-.mfa, .er, .st { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
+.mfa, .er, .st, .qs { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair); --grid: color-mix(in srgb, var(--ink) 7%, transparent); --grid-major: var(--hair); --band: var(--row) }
 #metricflow figure { margin: 0 }
 /* a section head that wraps keeps its defined words' boxes apart (the kit's 1.2 leading lets a term's box meet the next line's) */
 #metricflow .rk-head h2 { line-height: 1.4 }
@@ -589,7 +589,7 @@ window.REPORT = D;
   /* The parts on report-kit (the Summary, the Decision map, the header, the tab strip, the tooltip): the kit's own
      scope nests its CSS under every element carrying .rk-kit, so the tabs not yet moved keep the report's look; then
      the Approaches sections' own styles, nested the same way by build.py (scope_to_panel). */
-  /* report-kit:css tokens base section marks dots bar range tint slope switch filter table-sort tip highlight plot-theme scope=.rk-kit */
+  /* report-kit:css tokens base section marks dots bar range tint slope switch filter fold step dialog table-sort tip highlight plot-theme scope=.rk-kit */
 .rk-kit {
 /* report-kit tokens. Two layers: primitives (raw values, named for what they are) and semantic tokens
    (named for their job), which components use alone. Light is the default; dark follows the system unless
@@ -613,6 +613,8 @@ window.REPORT = D;
   --hair: color-mix(in srgb, var(--ink) 16%, transparent);
   --row: color-mix(in srgb, var(--line) 6%, transparent);
   --tip: var(--ink); --tip-ink: var(--paper);
+  /* the scrim behind a modal dialog: the page dimmed toward the dark ground in both themes */
+  --scrim: color-mix(in srgb, var(--navy) 45%, transparent);
   --shadow: 0 6px 18px color-mix(in srgb, var(--navy) 22%, transparent); /* none on dark grounds, where a shadow reads as a glow */
   /* status: each is also a mark shape (marks.css), never a colour alone */
   --ok: var(--green); --warn: var(--amber); --bad: var(--scarlet); --info: var(--petrol);
@@ -649,7 +651,7 @@ window.REPORT = D;
     --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
     --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
     --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
-    --shadow: none;
+    --shadow: none; --scrim: color-mix(in srgb, black 60%, transparent);
     --w-head: 800; --lh-word: 1.5; --track-word: .01em;
     color-scheme: dark;
   }
@@ -659,7 +661,7 @@ window.REPORT = D;
   --ok: var(--green-lt); --warn: var(--amber-lt); --bad: var(--scarlet-lt); --info: var(--petrol-lt);
   --viz-2: var(--vermilion-lt); --viz-3: var(--teal-lt); --viz-4: var(--plum-lt);
   --grade-hi: var(--cobalt-md); --grade-mid: var(--slate-dk); --grade-lo: var(--vermilion-md);
-  --shadow: none;
+  --shadow: none; --scrim: color-mix(in srgb, black 60%, transparent);
   --w-head: 800; --lh-word: 1.5; --track-word: .01em;
   color-scheme: dark;
 }
@@ -723,11 +725,16 @@ p { text-wrap: pretty }
    the stage (what the choice shows) on the page's ground. The column wraps above the stage once the stage would
    fall under 60% of the row. Its chosen item is a reversed plate, so the choice shows without colour alone. */
 .rk-split { display: flex; flex-wrap: wrap; gap: var(--gap-part) var(--s6); align-items: flex-start }
-.rk-aside { flex: 1 1 16rem; padding: var(--s4); border-radius: 4px; background: var(--panel) }
+/* --aside sets the column's width (16rem unless the longest item needs more); .rk-dense halves its padding for a
+   column that must leave its stage the room */
+.rk-aside { flex: 1 1 var(--aside, 16rem); padding: var(--s4); border-radius: 4px; background: var(--panel) }
+.rk-aside.rk-dense { padding: var(--s3) var(--s2) }
 .rk-stage { flex: 999 1 0; min-inline-size: 60% }
 .rk-aside > :is(ul, ol) { list-style: none; margin: 0; padding: 0 }
 .rk-aside li > a { display: block; padding: var(--s1) var(--s2); margin: 0 calc(-1 * var(--s2)); border-radius: 4px; text-decoration: none }
 .rk-aside li > a:hover { background: var(--row) }
+/* items in the column are rows of it, never boxes inside its box: no border, a hover band, the chosen one reversed */
+.rk-aside :is(button, a):not(.rk-fold) { border: 0 }
 .rk-aside :is([aria-current="true"], [aria-current="page"]) { background: var(--ink); color: var(--paper); font-weight: 700 }
 .rk-aside :is([aria-current="true"], [aria-current="page"]):hover { background: var(--ink) }
 /* a figure with its key and caption in one <figure>: the key against the drawing, a reading note last, both a
@@ -745,6 +752,12 @@ p { text-wrap: pretty }
 [data-k="warn"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--warn); border-radius: 1px; transform: scale(.86) }
 [data-k="bad"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--bad); border-radius: 1px; transform: rotate(45deg) scale(.8) }
 [data-k="info"]:is(.rk-mark, .rk-dots i, .rk-pt) { background: var(--info); clip-path: polygon(50% 4%, 100% 96%, 0 96%) }
+/* a run: a few outcomes of one thing in a row (three tries, four weeks), each in its own slot so runs line up from row
+   to row; a slot with no outcome (not run, no data) is a small ink dot, not a sixth status. The run says itself in
+   words: role="img" and an aria-label on .rk-marks. */
+.rk-marks { display: inline-flex; gap: 6px; align-items: center; vertical-align: -1px; white-space: nowrap }
+.rk-marks > .rk-mark { width: 10px; height: 10px }
+.rk-mark:not([data-k]) { background: var(--ink); border-radius: 50%; transform: scale(.36) }
 /* a key: marks with their names, each name defined in the bubble */
 .rk-key { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); margin: var(--s4) 0 0; padding: 0; list-style: none }
 .rk-key > *, .rk-key > * > [data-tip] { display: inline-flex; gap: var(--s2); align-items: center; min-height: 28px; font-weight: 600 }
@@ -859,6 +872,55 @@ p { text-wrap: pretty }
   border-radius: 6px; cursor: pointer; text-decoration: underline 1.5px var(--line); text-underline-offset: 4px }
 .rk-filter-reset:disabled { cursor: default; text-decoration: none }
 @media (prefers-reduced-motion: reduce) { .rk-filter > summary { transition: none } }
+/* report-kit fold: a long side column (.rk-aside) folds behind one full-width button once it stacks above its stage,
+   so the stage starts on the first screen; side by side, the button hides and the column stays open. The button
+   names the column and its current choice, with a chevron that turns when open; the folded part is gone, not
+   hidden behind a scroll. */
+.rk-fold { appearance: none; display: flex; width: 100%; align-items: center; gap: var(--s3); min-height: 44px; padding: var(--s2) var(--s3);
+  border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); font: 700 var(--t-word)/1.3 var(--sans); text-align: left; cursor: pointer }
+.rk-fold[hidden] { display: none }
+.rk-fold:hover { background: var(--row) }
+.rk-fold:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+.rk-fold-cur { margin-left: auto; font-weight: 600; overflow-wrap: anywhere; text-align: right }
+.rk-fold::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 4px; border: solid currentColor; border-width: 0 2px 2px 0;
+  transform: rotate(45deg); transition: transform var(--t-fast) ease-out }
+.rk-fold[aria-expanded="true"]::after { transform: translateY(4px) rotate(-135deg) }
+.rk-fold:not([hidden]) + * { margin-top: var(--s3) }
+.rk-folded { display: none !important }
+@media (prefers-reduced-motion: reduce) { .rk-fold::after { transition: none } }
+/* report-kit step: one item of a list at a time. Previous and Next sit side by side above the item, so neither moves
+   while the reader keeps pressing it, whatever height the item takes; the position ("Order 3 of 12") follows them,
+   and any further control in the row (a "See all 12") wears the same look. At an end the button is disabled and
+   keeps its place, an empty slot, so the other never shifts. */
+.rk-step { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: 0 0 var(--s4) }
+.rk-step-pair { display: inline-flex; gap: var(--s2) }
+.rk-step :is(button, a.rk-step-btn) { font: 600 var(--t-word)/1.1 var(--sans); color: var(--ink); background: transparent;
+  border: 1px solid var(--hair); border-radius: 10px; min-height: 44px; padding: 0 var(--s4); display: inline-flex; gap: var(--s2);
+  align-items: center; cursor: pointer; text-decoration: none; transition: background-color var(--t-fast) ease-out }
+.rk-step :is(button, a.rk-step-btn):hover { background: var(--row) }
+.rk-step :is(button, a.rk-step-btn) svg { width: 12px; height: 12px; flex: none }
+.rk-step button:disabled { visibility: hidden }
+.rk-step-pos { font-weight: 600 }
+.rk-step-end { margin-left: auto }
+@media (prefers-reduced-motion: reduce) { .rk-step :is(button, a.rk-step-btn) { transition: none } }
+/* report-kit dialog: a modal <dialog> for a short, direct exchange (a method note, a definition too long for the
+   bubble), opened by showModal so the page behind is inert. Its head is the section head's (an h2 over the 2px ink
+   rule) with a close button beside it; its own headings go on from that h2 without skipping a level. It sits on the
+   page's ground over a scrim, with a full-ink edge in both themes, since a shadow does not lift on a dark ground. */
+.rk-dialog { width: min(40rem, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: var(--s5); border: 1px solid var(--ink);
+  border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; letter-spacing: inherit; box-shadow: var(--shadow);
+  overscroll-behavior: contain }
+.rk-dialog::backdrop { background: var(--scrim) }
+.rk-dialog-top { display: flex; gap: var(--s3); align-items: flex-start; justify-content: space-between; padding-bottom: var(--s3);
+  border-bottom: 2px solid var(--ink); margin-bottom: var(--s4) }
+.rk-dialog-top h2 { margin: 0; font-size: var(--t-head); font-weight: var(--w-head); line-height: 1.2 }
+.rk-dialog-top h2:focus { outline: none }
+.rk-dialog h3 { margin: var(--gap-item) 0 6px; font-size: var(--t-find); font-weight: var(--w-head); line-height: 1.25 }
+.rk-dialog :is(h2, h3) + p { margin-top: 0 }
+.rk-dialog p { max-width: var(--measure) }
+.rk-dialog-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; margin: -6px -6px 0 0; padding: 0; border: 0;
+  border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer }
+.rk-dialog-close:hover { background: var(--row) }
 /* report-kit table: a real <table>; words left, numbers right in the number size; every sortable header is one
    button across the whole cell, its words flowing inline so a wrapped label keeps its column's mark on its first
    word and the direction mark on its last. A table marked rk-stack turns each row into a block when its wrap is
@@ -2003,7 +2065,9 @@ window.reportReady(() => {
 /* the readout: a part under the figure (.rk-part: its own head over a 1px ink rule, a part's gap above), its head
    the setup, rung or part it reads; a tag line places it, then its description once, then its facts */
 .sm .sm-read { font: 400 var(--t-word)/1.45 var(--sans); color: var(--ink); min-height: 9.6em; }
-.sm .sm-read h4 .id { font-family: var(--code); font-size: var(--t-find); font-weight: 700; }
+/* the readout is a part of the section: its head an h3 (the outline steps down from the section's h2), in the look of the kit's item head */
+.sm .sm-read h3 { margin: 0 0 6px; font-family: var(--sans); font-size: var(--t-word); font-weight: 700; line-height: 1.3; }
+.sm .sm-read h3 .id { font-family: var(--code); font-size: var(--t-find); font-weight: 700; }
 .sm .sm-read .sm-tag { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sm .sm-read .sm-tag i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; flex: none; }
 .sm .sm-read .sm-desc { max-width: 44rem; margin-top: var(--s2); }
@@ -2494,7 +2558,7 @@ window.reportReady(() => {
     }
     const nameList = (arms) => arms.map((a) => `<span class="id">${esc(a)}</span>`).join(", ");
     function restText() {
-      return `<h4>Two shapes run through the map</h4>
+      return `<h3>Two shapes run through the map</h3>
         <p><b>Google's data agents</b> (rungs 1 to 4) sit beside the tables and <b>write their own SQL</b>; the rungs differ only in what context and which warehouse objects each agent is given.</p>
         <p><b>Our ADK agent on MetricFlow</b> makes three calls, <span class="id">list_metrics</span>, <span class="id">describe_metric</span>, <span class="id">query_metrics</span>, and <b>MetricFlow writes the SQL</b>; the agent never does.</p>`;
     }
@@ -2510,7 +2574,7 @@ window.reportReady(() => {
     function setupText(a) {
       const f = famOf(a); const l = rungOfArm(a);
       const where = l ? (/^L\d+$/.test(l.key) ? RUNG_KEY(l.key).toLowerCase() : l.label.replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase())) : "";
-      return `<h4><span class="id">${esc(a)}</span></h4><p class="sm-tag"><i style="background:var(--${f})"></i>${esc(famLabel(f))}${where ? ", " + esc(where) : ""}</p>` +
+      return `<h3><span class="id">${esc(a)}</span></h3><p class="sm-tag"><i style="background:var(--${f})"></i>${esc(famLabel(f))}${where ? ", " + esc(where) : ""}</p>` +
         `<p class="sm-desc">${esc(descOf(a))}</p>` + factsOf(a);
     }
     function listParts(ids, all) {
@@ -2522,7 +2586,7 @@ window.reportReady(() => {
     function rungText(key) {
       const l = ladder.find((x) => x.key === key); if (!l) return "";
       const arms = l.arms;
-      const head = `<h4>${esc(RUNG_KEY(key))}: ${esc(l.label)}</h4><p class="sm-tag">${arms.length ? nameList(arms) : "No setup yet"}</p>`;
+      const head = `<h3>${esc(RUNG_KEY(key))}: ${esc(l.label)}</h3><p class="sm-tag">${arms.length ? nameList(arms) : "No setup yet"}</p>`;
       if (arms.length < 2) return head + (arms[0] ? factsOf(arms[0]) : "");
       const count = {}; arms.forEach((a) => pathOf(a).forEach((id) => (count[id] = (count[id] || 0) + 1)));
       const ids = Object.keys(count);
@@ -2535,7 +2599,7 @@ window.reportReady(() => {
     }
     function partText(id) {
       const users = USERS[id] || [];
-      return `<h4>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</h4>` +
+      return `<h3>${esc(NAME[id] ? NAME[id].charAt(0).toUpperCase() + NAME[id].slice(1) : id)}</h3>` +
         (users.length ? `<p>Used by ${nameList(users)}.</p>` : `<p>No setup on the map uses it.</p>`);
     }
     function apply() {
@@ -2631,84 +2695,85 @@ window.reportReady(() => {
 
   </section>
 
-  <section class="view" id="question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
-<section class="qs" id="question-guide" aria-labelledby="qs-h">
-<h2 id="qs-h">The questions</h2>
-<p class="qs-lede">Every setup answers the same questions about one test shop, in sets. Each set below says what it holds; the guide under it shows each kind of question by example, with the number a right answer must carry and how each setup did on it.</p>
-<div class="qs-sets">
-<article class="qs-set" id="qs-frozen" aria-labelledby="qs-frozen-h">
+  <section class="view rk-kit rk-js qs-v" id="question-sets" data-view="question-sets" role="tabpanel" aria-labelledby="tab-question-sets" tabindex="-1">
+<div class="qs" id="question-guide">
+<section class="rk-section qs-about-sets" aria-labelledby="qs-h">
+<div class="rk-head"><h2 id="qs-h">The questions</h2></div>
+<p class="qs-lede">Every setup answers the same questions about one test shop, in the sets below. A question can sit in two groups, so a set’s groups add up to more than its questions.</p>
+<div class="qs-sets rk-parts">
+<article class="qs-set rk-part" id="qs-frozen" aria-labelledby="qs-frozen-h">
 <h3 id="qs-frozen-h"><span class="term" data-term="frozen" tabindex="0">Frozen set</span></h3>
-<p class="qs-about">Everyday questions a shop owner asks about orders, revenue, marketing, service and hiring. Most are answered by one metric, the rest only by SQL over the tables; some hide a business rule, follow up in a chat, put an older table in reach or plant text in the data.</p>
 <p class="qs-n"><b>76</b> questions</p>
+<p class="qs-about">Everyday questions a shop owner asks about orders, revenue, marketing, service and hiring. Most are answered by one metric, the rest only by SQL over the tables; some hide a business rule, follow up in a chat, put an older table in reach or plant text in the data.</p>
 <dl class="qs-mix" aria-label="Questions per group in the frozen set">
-<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:100.0%"></i></span><span class="c">61</span></dd>
-<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:16.4%"></i></span><span class="c">10</span></dd>
-<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:24.6%"></i></span><span class="c">15</span></dd>
-<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:11.5%"></i></span><span class="c">7</span></dd>
-<dt><span class="term" data-term="distractor" tabindex="0">Distractor</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:1.6%"></i></span><span class="c">1</span></dd>
-<dt><span class="term" data-term="planted" tabindex="0">Planted</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:6.6%"></i></span><span class="c">4</span></dd>
-</dl><p class="qs-mixnote">A question can sit in two groups.</p>
-</article>
-<article class="qs-set" id="qs-hard" aria-labelledby="qs-hard-h">
+<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:80.3"></span></span><b>61</b><span class="rk-sr"> of 76 questions</span></span></dd>
+<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:13.2"></span></span><b>10</b><span class="rk-sr"> of 76 questions</span></span></dd>
+<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:19.7"></span></span><b>15</b><span class="rk-sr"> of 76 questions</span></span></dd>
+<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:9.2"></span></span><b>7</b><span class="rk-sr"> of 76 questions</span></span></dd>
+<dt><span class="term" data-term="distractor" tabindex="0">Distractor</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:1.3"></span></span><b>1</b><span class="rk-sr"> of 76 questions</span></span></dd>
+<dt><span class="term" data-term="planted" tabindex="0">Planted</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:5.3"></span></span><b>4</b><span class="rk-sr"> of 76 questions</span></span></dd>
+</dl></article>
+<article class="qs-set rk-part" id="qs-hard" aria-labelledby="qs-hard-h">
 <h3 id="qs-hard-h"><span class="term" data-term="hard" tabindex="0">Hard set</span></h3>
-<p class="qs-about">Questions in a business user's own words: jargon, relative and fiscal periods, several metrics at once, segments, unsaid definitions and follow-ups. Its uncovered questions are mostly ratios and differences of two measures.</p>
 <p class="qs-n"><b>41</b> questions</p>
+<p class="qs-about">Questions in a business user's own words: jargon, relative and fiscal periods, several metrics at once, segments, unsaid definitions and follow-ups. Its uncovered questions are mostly ratios and differences of two measures.</p>
 <dl class="qs-mix" aria-label="Questions per group in the hard set">
-<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:100.0%"></i></span><span class="c">22</span></dd>
-<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:22.7%"></i></span><span class="c">5</span></dd>
-<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:86.4%"></i></span><span class="c">19</span></dd>
-<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:36.4%"></i></span><span class="c">8</span></dd>
-</dl><p class="qs-mixnote">A question can sit in two groups.</p>
-</article>
-<article class="qs-set" id="qs-hard-v2" aria-labelledby="qs-hard-v2-h">
+<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:53.7"></span></span><b>22</b><span class="rk-sr"> of 41 questions</span></span></dd>
+<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:12.2"></span></span><b>5</b><span class="rk-sr"> of 41 questions</span></span></dd>
+<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:46.3"></span></span><b>19</b><span class="rk-sr"> of 41 questions</span></span></dd>
+<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:19.5"></span></span><b>8</b><span class="rk-sr"> of 41 questions</span></span></dd>
+</dl></article>
+<article class="qs-set rk-part" id="qs-hard-v2" aria-labelledby="qs-hard-v2-h">
 <h3 id="qs-hard-v2-h"><span class="term" data-term="hard-v2" tabindex="0">Extended hard set</span></h3>
-<p class="qs-about">The hard set's questions plus 14 that are hard to write in SQL, where the obvious query gives another number. Questions that arithmetic over a few metric results answers form their own group.</p>
 <p class="qs-n"><b>55</b> questions</p>
+<p class="qs-about">The hard set's questions plus 14 that are hard to write in SQL, where the obvious query gives another number. Questions that arithmetic over a few metric results answers form their own group.</p>
 <dl class="qs-mix" aria-label="Questions per group in the extended hard set">
-<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:100.0%"></i></span><span class="c">23</span></dd>
-<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:21.7%"></i></span><span class="c">5</span></dd>
-<dt><span class="term" data-term="composable" tabindex="0">Composable</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:91.3%"></i></span><span class="c">21</span></dd>
-<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:47.8%"></i></span><span class="c">11</span></dd>
-<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="bar" aria-hidden="true"><i style="width:34.8%"></i></span><span class="c">8</span></dd>
-</dl><p class="qs-mixnote">A question can sit in two groups.</p>
-</article>
-</div>
-<h3 class="qs-gh" id="qs-guide-h">Questions by kind</h3>
-<p class="qs-sub">Pick a kind of question to see a real one of that kind; Previous and Next, or the arrow keys, step through the others.</p>
-<div class="qs-guide">
-<nav class="qs-nav" id="qs-nav" aria-labelledby="qs-guide-h">
-<div class="qs-list"><h4 id="qs-l0"><span class="term" data-term="groups" tabindex="0">Groups</span></h4><ul aria-labelledby="qs-l0">
-<li><button type="button" class="qs-cat" data-cat="covered" aria-pressed="false" tabindex="-1"><span class="l">Covered</span><span class="c">84</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="hidden-rule" aria-pressed="false" tabindex="-1"><span class="l">Hidden-rule</span><span class="c">15</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="composable" aria-pressed="false" tabindex="-1"><span class="l">Composable</span><span class="c">21</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="uncovered" aria-pressed="false" tabindex="-1"><span class="l">Uncovered</span><span class="c">40</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="conversation" aria-pressed="false" tabindex="-1"><span class="l">Conversation</span><span class="c">15</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="distractor" aria-pressed="false" tabindex="-1"><span class="l">Distractor</span><span class="c">1</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="planted" aria-pressed="false" tabindex="-1"><span class="l">Planted</span><span class="c">4</span></button></li>
+<dt><span class="term" data-term="covered" tabindex="0">Covered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:41.8"></span></span><b>23</b><span class="rk-sr"> of 55 questions</span></span></dd>
+<dt><span class="term" data-term="hidden-rule" tabindex="0">Hidden-rule</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:9.1"></span></span><b>5</b><span class="rk-sr"> of 55 questions</span></span></dd>
+<dt><span class="term" data-term="composable" tabindex="0">Composable</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:38.2"></span></span><b>21</b><span class="rk-sr"> of 55 questions</span></span></dd>
+<dt><span class="term" data-term="uncovered" tabindex="0">Uncovered</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:20.0"></span></span><b>11</b><span class="rk-sr"> of 55 questions</span></span></dd>
+<dt><span class="term" data-term="conversation" tabindex="0">Conversation</span></dt><dd><span class="rk-bar"><span class="rk-track" aria-hidden="true"><span class="rk-fill" style="--v:14.5"></span></span><b>8</b><span class="rk-sr"> of 55 questions</span></span></dd>
+</dl></article>
+</div></section>
+<section class="rk-section qs-by" aria-labelledby="qs-guide-h">
+<div class="rk-head"><h2 id="qs-guide-h">Questions by kind</h2></div>
+<p class="qs-lede">One real question of each kind at a time: how it is asked, the number a right answer must carry, and how each setup did on it.</p>
+<div class="qs-guide rk-split">
+<nav class="qs-nav rk-aside rk-dense" id="qs-nav" aria-label="Kinds of question">
+<button type="button" class="rk-fold" aria-controls="qs-kinds" hidden>Kind of question<span class="rk-fold-cur"></span></button>
+<div id="qs-kinds">
+<div class="qs-list"><h3 id="qs-l0"><span class="term" data-term="groups" tabindex="0">Groups</span></h3><ul aria-labelledby="qs-l0">
+<li><button type="button" class="qs-cat" data-cat="covered" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Covered</span><span class="c">84</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="hidden-rule" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Hidden-rule</span><span class="c">15</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="composable" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Composable</span><span class="c">21</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="uncovered" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Uncovered</span><span class="c">40</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="conversation" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Conversation</span><span class="c">15</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="distractor" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Distractor</span><span class="c">1</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="planted" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Planted</span><span class="c">4</span></button></li>
 </ul></div>
-<div class="qs-list"><h4 id="qs-l1"><span class="term" data-term="hard-to-interpret" tabindex="0">Hard to interpret</span></h4><ul aria-labelledby="qs-l1">
-<li><button type="button" class="qs-cat" data-cat="jargon" aria-pressed="false" tabindex="-1"><span class="l">Jargon</span><span class="c">13</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="period" aria-pressed="false" tabindex="-1"><span class="l">Period</span><span class="c">18</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="ambiguous-followup" aria-pressed="false" tabindex="-1"><span class="l">Ambiguous follow-up</span><span class="c">8</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="implicit" aria-pressed="false" tabindex="-1"><span class="l">Implicit definition</span><span class="c">10</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="segment" aria-pressed="false" tabindex="-1"><span class="l">Segment</span><span class="c">15</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="multi-metric" aria-pressed="false" tabindex="-1"><span class="l">Several metrics</span><span class="c">13</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="multi-step" aria-pressed="false" tabindex="-1"><span class="l">Multi-step</span><span class="c">11</span></button></li>
+<div class="qs-list"><h3 id="qs-l1"><span class="term" data-term="hard-to-interpret" tabindex="0">Hard to interpret</span></h3><ul aria-labelledby="qs-l1">
+<li><button type="button" class="qs-cat" data-cat="jargon" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Jargon</span><span class="c">13</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="period" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Period</span><span class="c">18</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="ambiguous-followup" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Ambiguous follow-up</span><span class="c">8</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="implicit" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Implicit definition</span><span class="c">10</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="segment" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Segment</span><span class="c">15</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="multi-metric" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Several metrics</span><span class="c">13</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="multi-step" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Multi-step</span><span class="c">11</span></button></li>
 </ul></div>
-<div class="qs-list"><h4 id="qs-l2"><span class="term" data-term="sql-hard" tabindex="0">Hard in SQL</span></h4><ul aria-labelledby="qs-l2">
-<li><button type="button" class="qs-cat" data-cat="fan-out-join" aria-pressed="false" tabindex="-1"><span class="l">Fan-out join</span><span class="c">2</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="ratio-of-sums" aria-pressed="false" tabindex="-1"><span class="l">Ratio of sums</span><span class="c">3</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="window" aria-pressed="false" tabindex="-1"><span class="l">Window</span><span class="c">3</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="median-percentile" aria-pressed="false" tabindex="-1"><span class="l">Median or percentile</span><span class="c">2</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="anti-join" aria-pressed="false" tabindex="-1"><span class="l">Anti-join</span><span class="c">3</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="date-spine" aria-pressed="false" tabindex="-1"><span class="l">Date spine</span><span class="c">4</span></button></li>
-<li><button type="button" class="qs-cat" data-cat="fiscal-timezone" aria-pressed="false" tabindex="-1"><span class="l">Fiscal or time-zone boundary</span><span class="c">2</span></button></li>
+<div class="qs-list"><h3 id="qs-l2"><span class="term" data-term="sql-hard" tabindex="0">Hard in SQL</span></h3><ul aria-labelledby="qs-l2">
+<li><button type="button" class="qs-cat" data-cat="fan-out-join" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Fan-out join</span><span class="c">2</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="ratio-of-sums" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Ratio of sums</span><span class="c">3</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="window" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Window</span><span class="c">3</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="median-percentile" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Median or percentile</span><span class="c">2</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="anti-join" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Anti-join</span><span class="c">3</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="date-spine" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Date spine</span><span class="c">4</span></button></li>
+<li><button type="button" class="qs-cat" data-cat="fiscal-timezone" aria-pressed="false" tabindex="-1" data-rk-fold-pick><span class="l">Fiscal or time-zone boundary</span><span class="c">2</span></button></li>
 </ul></div>
-</nav>
-<div class="qs-panel" id="qs-panel" aria-labelledby="qs-cat-h">
-<div class="qs-head"><h4 id="qs-cat-h" tabindex="-1"></h4><p class="qs-def" id="qs-def"></p></div>
-<div class="qs-step" id="qs-step"><button type="button" class="qs-btn" data-step="-1" aria-label="Previous example"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button><span class="qs-pos" id="qs-pos" aria-live="polite"></span><button type="button" class="qs-btn" data-step="1" aria-label="Next example">Next<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-<span class="qs-seeall-set">
+</div></nav>
+<div class="qs-panel rk-stage" id="qs-panel">
+<div class="qs-head"><h3 id="qs-cat-h" tabindex="-1"></h3><p class="qs-def" id="qs-def"></p></div>
+<div class="rk-step qs-step" id="qs-step"><span class="rk-step-pair"><button type="button" data-step="-1" aria-label="Previous example"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button><button type="button" data-step="1" aria-label="Next example">Next<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><span class="rk-step-pos" id="qs-pos" aria-live="polite"></span>
+<span class="rk-step-end qs-seeall-set">
 <button type="button" class="qs-seeall" data-category="covered">See all 84</button>
 <button type="button" class="qs-seeall" data-category="hidden-rule">See all 15</button>
 <button type="button" class="qs-seeall" data-category="composable">See all 21</button>
@@ -2731,258 +2796,195 @@ window.reportReady(() => {
 <button type="button" class="qs-seeall" data-category="date-spine">See all 4</button>
 <button type="button" class="qs-seeall" data-category="fiscal-timezone">See all 2</button>
 </span></div>
-<article class="qs-card" id="qs-card" aria-labelledby="qs-name"><div class="qs-title" data-field="title"><h5 class="qs-name" id="qs-name"></h5><p class="qs-in"></p></div><dl class="qs-dl">
-<dt>Asked</dt><dd data-field="asked"></dd>
-<dt><span class="term" data-term="groups" tabindex="0">Groups</span></dt><dd data-field="groups"></dd>
-<dt>What makes it hard</dt><dd data-field="hard"></dd>
-<dt><span class="term" data-term="obvious-sql" tabindex="0">Obvious SQL</span></dt><dd data-field="sql"></dd>
-<dt>How each setup did</dt><dd data-field="runs"></dd>
-</dl></article></div></div></section>
+<article class="qs-card rk-part" id="qs-card" aria-labelledby="qs-name" data-hl="4"><div class="qs-title" data-field="title"><h4 class="qs-name" id="qs-name"></h4><p class="qs-in"></p></div><dl class="qs-dl">
+<div class="qs-f"><dt>Asked</dt><dd data-field="asked"></dd></div>
+<div class="qs-f"><dt><span class="term" data-term="groups" tabindex="0">Groups</span></dt><dd data-field="groups"></dd></div>
+<div class="qs-f"><dt>What makes it hard</dt><dd data-field="hard"></dd></div>
+<div class="qs-f"><dt><span class="term" data-term="obvious-sql" tabindex="0">Obvious SQL</span></dt><dd data-field="sql"></dd></div>
+<div class="qs-f"><dt>How each setup did</dt><dd data-field="runs"></dd></div>
+</dl></article></div></div></section></div>
 <style>
-/* ---------- the question sets part: set profiles, then a guide by kind of question ---------- */
-.qs .qs-lede { max-width: 36rem; margin: 0 0 18px; text-wrap: pretty; }
-.qs h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; line-height: 1.3; margin: 0 0 4px; }
-.qs button { font: inherit; color: inherit; }
-.qs .id { font-family: var(--code); font-size: 12.5px; letter-spacing: -.01em; color: var(--ink); }
+/* ---------- the Question sets tab on report-kit ----------
+   Two kit sections: the sets, one part each (its name, its count in the number size, what it holds, its questions per
+   group on the kit's bars as shares of the set), then the guide, the kit's split: the kinds of question in a side
+   column on the raised surface (folding behind the kit's fold on a phone) beside a stage that steps through one real
+   question at a time (the kit's step row, then the question as a part). Every word in the kit's family at 1rem in full
+   ink; numbers bold; outcomes as the kit's status marks, as the Every run tab draws them. The tab maps the report's
+   paler inks and rules onto the kit's (.qs beside .mfa, .er and .st in the template). */
+.qs .rk-head h2 { line-height: 1.4 }
+.qs .qs-lede { max-width: 40rem; margin: 0 0 var(--s5); text-wrap: pretty }
+.qs button { font: inherit; color: inherit }
+.qs .id { font-family: var(--code); font-size: .9375rem; font-weight: 600; color: var(--ink) }
+.qs :is(button, .term, [tabindex]):focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; border-radius: 4px }
 
-/* the set profiles */
-.qs .qs-sets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 32px; }
-.qs .qs-set { border-top: 2px solid var(--ink); padding-top: 10px; min-width: 0; display: flex; flex-direction: column; }
-/* the profiles share rows, so each set's count, groups and note line up across the three */
-@supports (grid-template-rows: subgrid) { .qs .qs-set { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
-.qs .qs-about { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 10px; text-wrap: pretty; }
-.qs .qs-n { font-family: var(--label); font-size: 14px; color: var(--ink-3); margin: 0 0 6px; padding-top: 8px; border-top: 1px solid var(--rule); }
-.qs .qs-n b { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
-.qs .qs-mix { align-content: start; display: grid; grid-template-columns: max-content minmax(48px, 1fr); gap: 3px 10px; align-items: center; font-family: var(--label); font-size: 13.5px; margin: 0; }
-.qs .qs-mix dt { color: var(--ink); }
-.qs .qs-mix dd { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) 2.2em; gap: 8px; align-items: center; }
-.qs .qs-mix .bar { height: 6px; background: var(--grid-major); border-radius: 1px; position: relative; }
-.qs .qs-mix .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink-3); border-radius: 1px; }
-.qs .qs-mix .c { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
-.qs .qs-mixnote { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 4px 0 0; }
-.qs .qs-where { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--rule); }
-.qs .qs-where a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
-
-/* the guide: three lists on the left, the chosen kind and one example on the right */
-.qs .qs-gh { font-size: 1.3rem; margin: 44px 0 4px; }
-.qs .qs-sub { font-size: 15.5px; color: var(--ink-2); max-width: 38rem; margin: 0 0 14px; text-wrap: pretty; }
-.qs .qs-guide { display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); gap: 0 32px; border-top: 1px solid var(--ink); padding-top: 12px; }
-.qs .qs-nav { font-family: var(--label); min-width: 0; }
-.qs .qs-list + .qs-list { margin-top: 16px; }
-.qs .qs-list h4 { font-family: var(--label); font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 4px; line-height: 1.3; }
-.qs .qs-list ul { list-style: none; margin: 0; padding: 0; }
-.qs .qs-cat { appearance: none; border: 0; background: transparent; display: flex; justify-content: space-between; align-items: center; gap: 10px; width: calc(100% + 12px); margin: 0 -6px; padding: 3px 6px; min-height: 30px; text-align: left; cursor: pointer; border-radius: 2px; font-family: var(--label); font-size: 14.5px; color: var(--ink); }
-.qs .qs-cat .c { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
-.qs .qs-cat:hover { background: var(--row-band); }
-.qs .qs-cat[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.qs .qs-cat[aria-pressed="true"] .c { color: var(--paper); }
-.qs .qs-cat:focus-visible { outline-offset: 1px; }
-.qs .qs-panel { min-width: 0; }
-.qs .qs-head h4 { display: inline-block; font-family: var(--serif); font-size: 1.16rem; font-weight: 600; line-height: 1.25; margin: 0; }
-.qs .qs-head h4:focus { outline: none; }
-.qs .qs-head h4:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
-.qs .qs-head h4 .n { font-family: var(--label); font-size: 14px; font-weight: 400; color: var(--ink-3); margin-left: 10px; font-variant-numeric: tabular-nums; }
-.qs .qs-def { font-size: 16px; line-height: 1.5; margin: 4px 0 0; max-width: 38rem; text-wrap: pretty; }
-.qs .qs-step { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; font-family: var(--label); font-size: 14px; color: var(--ink-2); }
-.qs .qs-pos { font-variant-numeric: tabular-nums; min-width: 7.6em; text-align: center; }
-.qs .qs-btn { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 3px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; gap: 4px; }
-.qs .qs-btn:hover { background: var(--row-band); }
-.qs .qs-seeall-set { margin-left: auto; }
-.qs .qs-seeall { appearance: none; border: 0; background: none; padding: 2px 0; min-height: 28px; cursor: pointer; font-family: var(--label); font-size: 14px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
-.qs .qs-seeall[hidden] { display: none; }
-
-/* one example: the same fields in the same places for every question; a field a question lacks stays empty */
-.qs .qs-card { container-type: inline-size; border-top: 1px solid var(--ink-2); border-bottom: 1px solid var(--rule); background: var(--paper-2); padding: 12px 14px 14px; margin: 10px 0 0; }
-.qs .qs-title { margin: 0 0 10px; }
-.qs .qs-name { font-family: var(--serif); font-size: 1.04rem; font-weight: 600; line-height: 1.3; margin: 0; }
-.qs .qs-in { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 1px 0 0; }
-.qs .qs-dl { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); gap: 0 16px; margin: 0; }
-.qs .qs-dl > dt { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); padding: 9px 0 0; border-top: 1px solid var(--rule); }
-.qs .qs-dl > dd { margin: 0; min-width: 0; padding: 8px 0 8px; border-top: 1px solid var(--rule); }
-.qs .qs-turns { list-style: none; margin: 0; padding: 0; }
-.qs .qs-turns > li + li { margin-top: 8px; }
-.qs .qs-turns.conv > li { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); }
-.qs .qs-turns.conv > li > .k { font-family: var(--label); font-size: 13px; color: var(--ink-3); padding-top: 2px; }
-.qs .qs-q { font-family: var(--serif); font-size: 16px; line-height: 1.45; margin: 0; color: var(--ink); text-wrap: pretty; }
-.qs .qs-exp { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 2px 0 0; }
-.qs .qs-exp b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.qs .qs-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-family: var(--label); font-size: 13.5px; margin: 0; }
-.qs .qs-chips + .qs-chips { margin-top: 5px; }
-.qs .qs-chips .by { color: var(--ink-2); margin: 0 10px 0 1px; }
-.qs .qs-chip { appearance: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; padding: 0 7px; line-height: 1.5; min-height: 26px; cursor: pointer; font-family: var(--label); font-size: 13.5px; color: var(--ink); }
-.qs .qs-chip:hover { border-color: var(--ink-3); }
-.qs .qs-chip[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.qs .qs-note { font-family: var(--label); font-size: 13.5px; line-height: 1.45; color: var(--ink-2); margin: 6px 0 0; max-width: 40rem; }
-.qs .qs-plain { font-family: var(--label); font-size: 14px; color: var(--ink); margin: 0; padding-top: 1px; }
-.qs .qs-none { font-family: var(--label); font-size: 14px; color: var(--ink-3); }
-
-/* how each setup did: one row per setup on the model the figures read it on, its three runs as the plate's squares */
-.qs .qs-key { display: flex; flex-wrap: wrap; gap: 2px 14px; font-family: var(--label); font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
-.qs .qs-key .k { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.qs .qs-sum { font-family: var(--label); font-size: 14px; color: var(--ink); margin: 0 0 6px; font-variant-numeric: tabular-nums; }
-.qs .qs-sum b { font-weight: 600; }
-.qs .qs-rts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 24px; }
-@container (min-width: 600px) { .qs .qs-rts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.qs .qs-rt { border-collapse: collapse; width: 100%; table-layout: fixed; font-family: var(--label); font-size: 13.5px; }
-.qs .qs-rt col.m { width: 8.6em; }
-.qs .qs-rt col.r { width: 3.4em; }
-/* one column of rows on a narrow card: the second table continues the first, under the same head */
-@container (max-width: 599.98px) { .qs .qs-rt + .qs-rt thead { display: none; } }
-.qs .qs-rt th { font-weight: 500; color: var(--ink-2); text-align: left; padding: 2px 6px 3px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
-.qs .qs-rt td { padding: 2px 6px 2px 0; border-bottom: 1px dotted var(--grid-major); vertical-align: middle; line-height: 1.3; }
-.qs .qs-rt td.s .id { font-size: 12px; overflow-wrap: anywhere; }
-.qs .qs-rt td.m { color: var(--ink-2); }
-.qs .qs-rt td.r, .qs .qs-rt th.r { padding-right: 0; white-space: nowrap; }
-.qs .qs-rt .fam { display: inline-block; width: 9px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: 3px; }
-.qs .qs-runs { display: inline-flex; gap: 1px; vertical-align: -2px; }
-.qs .qs-runs svg, .qs .qs-key svg { display: block; }
-
-@media (max-width: 760px) {
-  .qs .qs-sets { grid-template-columns: minmax(0, 1fr); }
-  .qs .qs-set { display: flex; }
-  .qs .qs-guide { grid-template-columns: minmax(0, 1fr); }
-  .qs .qs-list ul { display: flex; flex-wrap: wrap; gap: 5px; }
-  .qs .qs-cat { width: auto; margin: 0; border: 1px solid var(--rule); padding: 2px 8px; gap: 6px; min-height: 32px; }
-  .qs .qs-cat[aria-pressed="true"] { border-color: var(--ink); }
-  .qs .qs-panel { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 12px; }
+/* the sets: one part each, side by side; wide, their rows line up across the parts */
+.qs .qs-set h3 { margin: 0 0 6px }
+.qs .qs-n { margin: 0 0 var(--s2); font-variant-numeric: tabular-nums }
+.qs .qs-n b { font: 700 var(--t-num)/1.1 var(--sans); margin-right: 4px }
+.qs .qs-about { margin: 0 0 var(--s4); text-wrap: pretty }
+.qs .qs-mix { display: grid; grid-template-columns: max-content minmax(4rem, 1fr); gap: var(--s1) var(--s3); align-items: center; align-content: start; margin: 0 }
+.qs .qs-mix dd { margin: 0; min-width: 0 }
+.qs .qs-mix .rk-bar { margin: 0; grid-template-columns: minmax(0, 1fr) 2.25rem }
+.qs .qs-mix .rk-bar b { font-size: var(--t-word); font-variant-numeric: tabular-nums }
+.qs .qs-mix .rk-track { height: 8px }
+@media (min-width: 60rem) {
+  .qs .qs-sets { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) }
+  @supports (grid-template-rows: subgrid) { .qs .qs-set { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; align-content: start } }
 }
-@media (max-width: 560px) {
-  .qs .qs-dl { grid-template-columns: minmax(0, 1fr); }
-  .qs .qs-dl > dt { padding: 8px 0 0; }
-  .qs .qs-dl > dd { border-top: 0; padding-top: 3px; }
-  .qs .qs-card { padding: 10px 12px 12px; }
-  .qs .qs-step .qs-btn { flex: 1 1 0; justify-content: center; }
-  .qs .qs-pos { flex: 1 1 auto; }
-  .qs .qs-seeall-set { margin-left: 0; flex-basis: 100%; }
-}
-/* ---------- the question browser: "See all N" opens a centred modal ----------
-   A native <dialog class="qs qb">: the list of a kind's questions on the left, the guide's own card on the right;
-   a full-screen sheet with a list step and a card step on a phone. Its markup is made by the script below. */
-.qs .qs-seeall:not([data-current]) { display: none; }
 
-html.qb-open { overflow: hidden; }
-.qb { padding: 0; border: 1px solid var(--ink-2); border-top: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink);
-  font-family: var(--serif); font-size: 17px; line-height: 1.5; box-shadow: var(--tip-shadow);
-  width: min(76rem, calc(100vw - 64px)); height: min(54rem, calc(100dvh - 64px)); max-width: none; max-height: none; overflow: hidden; }
-.qb[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.qb::backdrop { background: color-mix(in srgb, var(--paper) 62%, transparent); backdrop-filter: blur(2px) saturate(.6); }
-@media (prefers-reduced-motion: no-preference) {
-  .qb[open] { animation: qb-in .16s ease-out; }
-  .qb[open]::backdrop { animation: qb-fade .16s ease-out; }
+/* the guide: the kinds in the side column, rows of it; the chosen kind a reversed plate */
+.qs .qs-nav { --aside: 16rem }
+.qs .qs-list + .qs-list { margin-top: var(--s4) }
+.qs .qs-list h3 { margin: 0 0 var(--s1); padding: 0 var(--s2) }
+.qs .qs-list ul { list-style: none; margin: 0; padding: 0 }
+.qs :is(.qs-cat, .qb-kind) { appearance: none; display: flex; justify-content: space-between; align-items: center; gap: var(--s3); width: 100%;
+  min-height: 36px; padding: var(--s1) var(--s2); border: 0; border-radius: 4px; background: transparent; color: var(--ink);
+  font: 400 var(--t-word)/1.3 var(--sans); text-align: left; cursor: pointer }
+.qs :is(.qs-cat, .qb-kind) .c { font-weight: 700; font-variant-numeric: tabular-nums }
+.qs :is(.qs-cat, .qb-kind):hover { background: var(--row) }
+.qs .qs-cat[aria-pressed="true"], .qs .qb-kind[aria-current="true"] { background: var(--ink); color: var(--paper); font-weight: 700 }
+
+.qs .qs-head h3 { margin: 0 }
+.qs .qs-head h3:focus { outline: none }
+.qs .qs-head h3:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px }
+.qs .qs-head h3 .n { margin-left: var(--s3); font: 400 var(--t-word)/1.3 var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap }
+.qs .qs-def { margin: 6px 0 0; max-width: 40rem; text-wrap: pretty }
+.qs .qs-step { margin: var(--s4) 0 var(--s4) }
+.qs .rk-step-pos { font-variant-numeric: tabular-nums }
+/* at an end the button stays in sight, dimmed and inert (to 4.8:1 on light, the most the kit checker allows), so the row never
+   opens on an empty slot; the kit hides it (proposed upstream) */
+.qs .rk-step button:disabled { visibility: visible; opacity: .64; cursor: default }
+.qs .rk-step button:disabled:hover { background: transparent }
+.qs .rk-step .qs-seeall:not([data-current]) { display: none }
+.qs .qs-step + .qs-card { margin-top: 0 }
+
+/* one question: its name, where it is asked, then its fields on hairlines; it takes its own height */
+.qs .qs-card { container-type: inline-size }
+.qs .qs-title { margin: 0 0 var(--s3) }
+/* the question's name heads its part: a size step and two weight steps over its field labels (1rem, 600) */
+.qs .qs-title .qs-name { margin: 0; font: var(--w-head) var(--t-find)/1.3 var(--sans) }
+.qs .qs-name:focus { outline: none }
+.qs .qs-in { margin: 2px 0 0 }
+.qs .qs-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 var(--s5); margin: 0 }
+.qs .qs-f { display: contents }
+.qs .qs-dl dt { font-weight: 600; padding: var(--s3) 0 0; border-top: 1px solid var(--hair) }
+.qs .qs-dl dd { margin: 0; min-width: 0; padding: var(--s3) 0; border-top: 1px solid var(--hair) }
+@container (max-width: 34rem) {
+  .qs .qs-dl { grid-template-columns: minmax(0, 1fr) }
+  .qs .qs-dl dd { border-top: 0; padding-top: var(--s1) }
 }
-@keyframes qb-in { from { opacity: 0; } }
-@keyframes qb-fade { from { opacity: 0; } }
-.qb :focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.qs .qs-turns { list-style: none; margin: 0; padding: 0 }
+.qs .qs-turns > li + li { margin-top: var(--s3) }
+.qs .qs-turns.conv > li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) }
+.qs .qs-turns.conv > li > .k { font-weight: 700; font-variant-numeric: tabular-nums }
+.qs .qs-q { margin: 0; text-wrap: pretty }
+.qs .qs-exp { margin: 2px 0 0 }
+.qs .qs-exp b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap }
+.qs .qs-chips { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: 0 }
+.qs .qs-chips + .qs-chips { margin-top: var(--s2) }
+.qs .qs-chips .by { margin: 0 var(--s3) 0 0 }
+.qs .qs-chip { appearance: none; background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 2px var(--s2); min-height: 32px;
+  cursor: pointer; font: 400 var(--t-word)/1.3 var(--sans); color: var(--ink) }
+.qs .qs-chip:hover { background: var(--row) }
+.qs .qs-chip[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700 }
+.qs .qs-note { margin: var(--s2) 0 0; max-width: 40rem }
+.qs :is(.qs-plain, .qs-none) { margin: 0 }
+
+/* how each setup did: one table, a row per setup on the model the figures read it on, its three runs the kit's marks */
+.qs .qs-sum { margin: 0; font-variant-numeric: tabular-nums }
+.qs .qs-sum b { font-weight: 700 }
+.qs .qs-key { margin: var(--s2) 0 var(--s3) }
+.qs .qs-key li > span { display: inline-flex; gap: var(--s2); align-items: center }
+.qs .qs-rt { width: auto; min-width: min(100%, 30rem) }
+.qs .qs-rt thead th { padding-right: var(--s5) }
+.qs .qs-rt tbody :is(th, td) { padding: 6px var(--s5) 6px 0; line-height: 1.3 }
+.qs .qs-rt tbody th { font-weight: 400 }
+.qs .qs-rt .id { overflow-wrap: anywhere }
+.qs .qs-rt .fam { display: inline-block; width: 3px; height: 14px; border-radius: 1px; margin-right: var(--s2); vertical-align: -2px }
+
+/* ---------- the question browser: "See all N" opens the kit's dialog ----------
+   A native <dialog class="qs qb rk-dialog"> inside the tab (so the kit's scope reaches it): the kit's head (the kind
+   over the 2px ink rule, a close button beside it), then the kit's split: the list on the raised surface, with the
+   switch of scope, a find box and its count, beside the chosen question under the kit's step row; a full-screen sheet
+   with a list step and a question step on a phone. Its markup is made by the script below. */
+html.qb-open { overflow: hidden }
+.qs.qb.rk-dialog { width: min(76rem, calc(100vw - 48px)); height: min(54rem, calc(100dvh - 48px)); max-width: none; max-height: none;
+  padding: var(--s4) var(--s5) 0; overflow: hidden }
+.qb[open] { display: grid; grid-template-rows: auto auto minmax(0, 1fr) }
+.qb .rk-dialog-top { margin-bottom: var(--s2) }
+.qb .qb-def { margin: 0 0 var(--s4); max-width: 46rem; text-wrap: pretty }
 /* the page's one tooltip moves in here while the dialog is open (the rest of the page is inert);
    the host sits at the page's origin, so a pinned tooltip's page coordinates land where they should */
-.qb-tiphost { position: fixed; left: 0; top: 0; width: 100vw; height: 0; overflow: visible; z-index: 30; pointer-events: none; }
+.qb-tiphost { position: fixed; left: 0; top: 0; width: 100vw; height: 0; overflow: visible; z-index: 30; pointer-events: none }
+.qb .qb-body { display: grid; grid-template-columns: 22rem minmax(0, 1fr); gap: 0 var(--s6); min-height: 0 }
+.qb .qb-side.rk-aside { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; padding: 0; border-radius: 4px 4px 0 0 }
+.qb .qb-main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 4px var(--s5) }
+.qb .qb-tools { padding: var(--s3) var(--s3) var(--s2) }
+.qb .qb-scope { display: flex; width: 100% }
+.qb .qb-scope button { flex: 1 1 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; padding: 4px var(--s3); line-height: 1.25; text-align: left }
+.qb .qb-scope button .c { font-weight: 400; font-variant-numeric: tabular-nums }
+.qb .qb-findl { display: block; margin: var(--s3) 0 var(--s1); font-weight: 600 }
+.qb .qb-row { display: flex; align-items: stretch; gap: var(--s2) }
+.qb .qb-find { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--s2); border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper); padding: 0 var(--s2); min-height: 44px; color: var(--ink) }
+.qb .qb-find:focus-within { outline: 2.5px solid var(--line); outline-offset: 2px }
+.qb .qb-find input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; color: var(--ink); font: 400 var(--t-word)/1.3 var(--sans); padding: 8px 0; outline: none }
+.qb .qb-find svg { flex: none }
+.qb :is(.qb-kbtn, .qb-empty button) { appearance: none; flex: none; border: 1px solid var(--hair); border-radius: 10px; background: transparent; color: var(--ink);
+  font: 600 var(--t-word)/1.1 var(--sans); min-height: 44px; padding: 0 var(--s3); display: inline-flex; align-items: center; gap: var(--s2); cursor: pointer }
+.qb :is(.qb-kbtn, .qb-empty button):hover { background: var(--row) }
+.qb .qb-kbtn[aria-expanded="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink) }
+.qb .qb-kbtn svg { transition: transform var(--t-fast) ease-out }
+.qb .qb-kbtn[aria-expanded="true"] svg { transform: rotate(180deg) }
+.qb .qb-count { margin: var(--s2) 0 0; font-variant-numeric: tabular-nums; min-height: 1.45em }
+.qb .qb-count b { font-weight: 700 }
 
-/* the head: what is listed, what it means, and the way out */
-.qb-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; align-items: start; padding: 14px 18px 12px 22px; border-bottom: 1px solid var(--ink-2); }
-.qb-kick { margin: 0 0 1px; font-family: var(--label); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
-.qb-h { margin: 0; font-family: var(--serif); font-size: 1.42rem; font-weight: 600; line-height: 1.2; }
-.qb-h:focus { outline: none; }
-.qb-def { margin: 4px 0 0; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); max-width: 46rem; text-wrap: pretty; }
-.qb-x { appearance: none; border: 1px solid transparent; background: transparent; color: var(--ink); width: 40px; height: 40px; border-radius: 3px; cursor: pointer; display: grid; place-items: center; margin: -4px -6px 0 0; }
-.qb-x:hover { background: var(--row-band); border-color: var(--rule); }
-
-.qb-body { display: grid; grid-template-columns: 22.5rem minmax(0, 1fr); min-height: 0; }
-.qb-side { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; border-right: 1px solid var(--rule); background: var(--paper); }
-.qb-main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 22px 22px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
-
-/* the tools: this kind or every kind, another kind, and a find box */
-.qb-tools { padding: 12px 14px 10px 22px; border-bottom: 1px solid var(--rule); font-family: var(--label); }
-.qb-scope { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; }
-.qb-scope button { appearance: none; border: 0; background: transparent; color: var(--ink); font-family: var(--label); text-align: left; padding: 5px 10px 6px; cursor: pointer; min-height: 44px; display: flex; flex-direction: column; justify-content: center; line-height: 1.2; }
-.qb-scope button + button { border-left: 1px solid var(--ink-2); }
-.qb-scope button .l { font-size: 14.5px; font-weight: 600; }
-.qb-scope button .c { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.qb-scope button:hover { background: var(--row-band); }
-.qb-scope button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.qb-scope button[aria-pressed="true"] .c { color: var(--paper); opacity: .82; }
-.qb-scope button:focus-visible { outline-offset: -4px; outline-color: var(--paper); }
-.qb-scope button[aria-pressed="false"]:focus-visible { outline-color: var(--mf); }
-.qb-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.qb-find { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper-2); padding: 0 8px; min-height: 36px; color: var(--ink-3); }
-.qb-find:focus-within { border-color: var(--ink-2); }
-.qb-find input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; color: var(--ink); font-family: var(--label); font-size: 15px; padding: 6px 0; outline: none; }
-.qb-find input:focus-visible { outline: none; }
-.qb-find input::placeholder { color: var(--ink-3); }
-.qb-find:has(input:focus-visible) { outline: 2px solid var(--mf); outline-offset: 1px; }
-.qb-kbtn { appearance: none; flex: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; border-radius: 3px; min-height: 36px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
-.qb-kbtn:hover { background: var(--row-band); }
-.qb-kbtn[aria-expanded="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.qb-kbtn svg { transition: transform .12s; }
-.qb-kbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
-.qb-count { margin: 7px 0 0; font-size: 13.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-height: 1.3em; }
-.qb-count b { color: var(--ink); font-weight: 600; }
-
-/* the list: scrolls inside its pane, one row per question, its name and how it is first asked */
-.qb-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
-.qb-list { list-style: none; margin: 0; padding: 4px 0 18px; }
-.qb-list:focus { outline: none; }
-.qb-opt { position: relative; padding: 8px 14px 9px 22px; cursor: pointer; border-bottom: 1px solid var(--grid-major); }
-.qb-opt:hover { background: var(--row-band); }
-.qb-opt[aria-selected="true"] { background: var(--paper-2); }
-.qb-opt[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: -1px; bottom: -1px; width: 4px; background: var(--ink); }
-.qb-opt:focus { outline: none; }
-.qb-opt:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
-.qb-on { display: block; font-family: var(--serif); font-size: 15.5px; font-weight: 600; line-height: 1.3; color: var(--ink); }
-.qb-ot { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin-top: 2px; font-family: var(--label); font-size: 13.5px; line-height: 1.35; color: var(--ink-2); }
-.qb-ot .more { color: var(--ink-3); }
-.qb-opt mark { background: var(--sel); color: inherit; border-radius: 1px; padding: 0 1px; }
-.qb-empty { padding: 18px 14px 18px 22px; font-family: var(--label); font-size: 14.5px; color: var(--ink-2); }
-.qb-empty button { appearance: none; border: 0; background: none; padding: 0; margin-top: 6px; display: block; font: inherit; color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; cursor: pointer; min-height: 28px; }
+/* the list: scrolls inside its column, one row per question, its name and how it is first asked; the chosen one reversed */
+.qb .qb-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--s2) var(--s4) }
+.qb .qb-list { list-style: none; margin: 0; padding: 0 }
+.qb .qb-opt { padding: var(--s2); border-radius: 4px; cursor: pointer }
+.qb .qb-opt + .qb-opt { margin-top: 2px }
+.qb .qb-opt:hover { background: var(--row) }
+.qb .qb-opt[aria-selected="true"] { background: var(--ink); color: var(--paper) }
+.qb .qb-opt:focus { outline: none }
+.qb .qb-opt:focus-visible { outline: 2.5px solid var(--line); outline-offset: 1px }
+.qb .qb-on { display: block; font-weight: 700; line-height: 1.3 }
+.qb .qb-ot { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin-top: 2px; line-height: 1.35 }
+.qb .qb-opt mark { background: var(--row); color: inherit; font-weight: 700; text-decoration: underline 2px var(--line); text-underline-offset: 3px }
+.qb .qb-opt[aria-selected="true"] mark { background: transparent; text-decoration-color: currentColor }
+.qb .qb-empty { padding: var(--s3) var(--s2) }
+.qb .qb-empty p { margin: 0 0 var(--s3) }
+.qb .qb-empty .qb-acts { display: flex; flex-wrap: wrap; gap: var(--s2) }
 
 /* another kind: the guide's three lists at once, in place of the list until one is picked */
-.qb-kinds { padding: 12px 14px 18px 22px; font-family: var(--label); }
-.qb-kinds[hidden] { display: none; }
-.qb-kinds > p { margin: 0 0 10px; font-size: 13.5px; color: var(--ink-3); }
-.qb-kinds h3 { font-family: var(--label); font-size: 14.5px; font-weight: 600; margin: 0 0 5px; line-height: 1.3; }
-.qb-kinds ul { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
-.qb-kind { appearance: none; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 2px; font-family: var(--label); font-size: 14px; min-height: 32px; padding: 2px 8px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
-.qb-kind .c { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
-.qb-kind:hover { border-color: var(--ink-3); }
-.qb-kind[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.qb-kind[aria-current="true"] .c { color: var(--paper); }
-.qb-side[data-kinds] .qb-scroll > .qb-list, .qb-side[data-kinds] .qb-scroll > .qb-empty { display: none; }
+.qb .qb-kinds { padding: 0 0 var(--s4) }
+.qb .qb-kinds[hidden] { display: none }
+.qb .qb-kinds h3 { margin: var(--s3) 0 var(--s1); padding: 0 var(--s2); font-size: var(--t-word); line-height: 1.3 }
+.qb .qb-kinds ul { list-style: none; margin: 0; padding: 0 }
+.qb .qb-side[data-kinds] .qb-scroll > .qb-list, .qb .qb-side[data-kinds] .qb-scroll > .qb-empty { display: none }
 
-/* the chosen question: where it sits in the list, and the guide's own card */
-.qb-step { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px 10px; padding: 12px 0 10px; background: var(--paper); font-family: var(--label); font-size: 14px; color: var(--ink-2); }
-.qb-step .qb-pos { font-variant-numeric: tabular-nums; margin-right: auto; }
-.qb-step .qs-btn { min-height: 36px; }
-.qb-step .qs-btn[disabled] { opacity: .45; cursor: default; }
-.qb-step .qs-btn[disabled]:hover { background: transparent; }
-.qb.qs .qb-back { display: none; }
-.qb .qs-card { margin: 0; }
-.qb .qs-name:focus { outline: none; }
+/* the chosen question: the kit's step row above it, then the guide's own card */
+.qb .qb-step { position: sticky; top: 0; z-index: 1; background: var(--paper); margin: 0; padding: 0 0 var(--s3) }
+.qs.qb .rk-step button.qb-back { display: none }
+.qb .qs-card { margin: 0 }
 
-@media (max-width: 900px) { .qb-body { grid-template-columns: 18rem minmax(0, 1fr); } }
+@media (max-width: 900px) { .qb .qb-body { grid-template-columns: 18rem minmax(0, 1fr); gap: 0 var(--s5) } }
 
-/* a phone: a full-screen sheet in two steps, the list, then the card with a way back to it */
+/* a phone: a full-screen sheet in two steps, the list, then the question with a way back to the list */
 @media (max-width: 640px) {
-  .qb { width: 100vw; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
-  .qb-top { padding: 10px 8px 10px 16px; }
-  .qb-h { font-size: 1.24rem; }
-  .qb-def { font-size: 14.5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
-  .qb-x { margin: -2px 0 0; }
-  .qb-body { grid-template-columns: minmax(0, 1fr); }
-  .qb-side { border-right: 0; }
-  .qb-tools { padding: 10px 16px 8px; }
-  .qb-opt { padding: 10px 16px 11px; }
-  .qb-kinds, .qb-empty { padding-left: 16px; padding-right: 16px; }
-  .qb-main { padding: 0 16px 24px; }
-  .qb[data-pane="list"] .qb-main, .qb[data-pane="card"] .qb-side { display: none; }
-  .qb.qs .qb-back { display: inline-flex; }
-  .qb-step { flex-wrap: wrap; }
-  .qb-step .qb-pos { order: 3; flex-basis: 100%; margin: 0; }
-  .qb-step .qb-back { margin-right: auto; }
+  .qs.qb.rk-dialog { width: 100vw; height: 100dvh; border: 0; border-radius: 0; padding: var(--s3) var(--s4) 0 }
+  .qb .qb-def { margin-bottom: var(--s3) }
+  .qb .qb-body { grid-template-columns: minmax(0, 1fr) }
+  .qb[data-pane="list"] .qb-main, .qb[data-pane="card"] .qb-side { display: none }
+  .qs.qb .rk-step button.qb-back { display: inline-flex }
+  .qb .qb-step .rk-step-pos { flex-basis: 100% }
 }
+@media (prefers-reduced-motion: reduce) { .qb .qb-kbtn svg { transition: none } }
 </style>
 <script>
 /* ---------- the question sets part ---------- */
-// Every example renders into one card whose fields keep the same places and heights: the tallest content each
-// field takes over every question is measured once per card width, and each field reserves that height.
+// One question at a time under the kit's step row: Previous and Next sit above it, so neither moves however tall the
+// question is, and the question takes its own height (the kit's step standard: no field reserves the tallest content).
 window.reportReady(function () {
   "use strict";
   const D = window.REPORT, G = D && D.questionGuide, root = document.getElementById("question-guide");
@@ -3010,16 +3012,12 @@ window.reportReady(function () {
     return (parts.length === 1 ? "Expected " : "Must carry ") + and(parts);
   }
 
-  /* ---------- the plate's run squares ---------- */
+  /* ---------- runs as the kit's status marks, as the Every run tab draws them ---------- */
+  // right a green circle, declined an ink ring, wrong an amber square, confident-wrong a scarlet diamond, not run a dot
   const OUT = { "0": "right", "1": "declined", "2": "wrong", "4": "confident-wrong", ".": "not run" };
-  function swatch(ch) {
-    const b = ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>`
-      : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>`
-      : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>`
-      : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`;
-    return `<svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">${b}</svg>`;
-  }
-  const KEY = `<p class="qs-key">${["0", "1", "2", "4", "."].map((ch) => `<span class="k">${swatch(ch)}${term(OUT[ch], OUT[ch])}</span>`).join("")}</p>`;
+  const KIND = { "0": "ok", "1": "no", "2": "warn", "4": "bad", ".": "" };
+  const mark = (ch) => `<i class="rk-mark"${KIND[ch] ? ` data-k="${KIND[ch]}"` : ""} aria-hidden="true"></i>`;
+  const KEY = `<ul class="rk-key qs-key">${["0", "1", "2", "4", "."].map((ch) => `<li><span>${mark(ch)}${term(OUT[ch], OUT[ch].replace(/^./, (c) => c.toUpperCase()))}</span></li>`).join("")}</ul>`;
   const famC = (f) => `var(--${["da", "gt", "mf", "ref"].includes(f) ? f : "other"})`;
   // each setup once, on the row the figures read it on, in the cost ladder's order (cheapest first)
   const ladder = {}; (D.ladder || []).forEach((L, i) => L.arms.forEach((a, j) => (ladder[a] = i * 100 + j)));
@@ -3040,12 +3038,13 @@ window.reportReady(function () {
     const ran = cells.filter((c) => c.u !== "...");
     const allRight = ran.filter((c) => /^0+\.*$/.test(c.u.replace(/\./g, "")) && c.u.replace(/\./g, "").length).length;
     const cw = ran.filter((c) => c.u.includes("4")).length;
-    const half = Math.ceil(cells.length / 2);
-    const table = (part) => `<table class="qs-rt"><colgroup><col><col class="m"><col class="r"></colgroup><thead><tr><th scope="col">Setup</th><th scope="col">Model</th><th scope="col" class="r">Runs</th></tr></thead><tbody>${part.map((c) =>
-      `<tr><td class="s"><span class="fam" style="background:${famC(c.r.family)}" aria-hidden="true"></span><span class="id" data-setup="${esc(c.r.arm)}">${esc(c.r.arm)}</span></td><td class="m">${esc(c.r.modelLabel)}</td>` +
-      `<td class="r"><span class="qs-runs" role="img" aria-label="${esc([...c.u].map((ch) => OUT[ch]).join(", "))}">${[...c.u].map(swatch).join("")}</span></td></tr>`).join("")}</tbody></table>`;
+    // one table, never split side by side (the kit's long-table standard); columns take their width from their content
+    const table = `<div class="rk-table-wrap"><table class="rk-table qs-rt"><caption class="rk-sr">Each setup's three runs on this question</caption>` +
+      `<thead><tr><th scope="col">Setup</th><th scope="col">Model</th><th scope="col">Runs</th></tr></thead><tbody>${cells.map((c) =>
+      `<tr><th scope="row"><span class="fam" style="background:${famC(c.r.family)}" aria-hidden="true"></span><span class="id" data-setup="${esc(c.r.arm)}">${esc(c.r.arm)}</span></th><td>${esc(c.r.modelLabel)}</td>` +
+      `<td><span class="rk-marks" role="img" aria-label="${esc([...c.u].map((ch) => OUT[ch]).join(", "))}">${[...c.u].map(mark).join("")}</span></td></tr>`).join("")}</tbody></table></div>`;
     return `<p class="qs-sum">Right on every run: <b>${allRight}</b> of ${ran.length} setups · ${term("confident-wrong", "Confidently wrong")} at least once: <b>${cw}</b></p>` +
-      KEY + `<div class="qs-rts">${table(cells.slice(0, half))}${cells.length > half ? table(cells.slice(half)) : ""}</div>`;
+      KEY + table;
   }
 
   /* ---------- one question in the card ---------- */
@@ -3062,8 +3061,9 @@ window.reportReady(function () {
       : "The two sets group this question differently."}</p>`;
   }
   const RENDER = {
-    // the name carries the id its card is labelled by (the guide's card or the browser's), none in a probe
-    title: (q, cur, card) => `<h5 class="qs-name"${card && card.id ? ` id="${esc(card.getAttribute("aria-labelledby"))}"` : ""}>${esc(q.name)}</h5><p class="qs-in">In ${and(q.sets.map((s) => "the " + esc(lowerSet(s))))}</p>`,
+    // the name carries the id its card is labelled by (the guide's card or the browser's), at its card's heading level
+    // (data-hl: an h4 under the guide's kind, an h3 under the browser's h2), so the outline steps down one at a time
+    title: (q, cur, card) => { const h = "h" + ((card && card.dataset.hl) || 4); return `<${h} class="qs-name"${card && card.id ? ` id="${esc(card.getAttribute("aria-labelledby"))}"` : ""}>${esc(q.name)}</${h}><p class="qs-in">In ${and(q.sets.map((s) => "the " + esc(lowerSet(s))))}</p>`; },
     asked: (q) => {
       const conv = q.turns.length > 1;
       return `<ol class="qs-turns${conv ? " conv" : ""}">${q.turns.map((t, i) => `<li>${conv ? `<span class="k" aria-hidden="true">${i + 1}</span>` : ""}<div><p class="qs-q">${esc(t)}</p><p class="qs-exp">${expected(q.expected[i], t + " " + q.turns[0])}</p></div></li>`).join("")}</ol>`;
@@ -3075,37 +3075,21 @@ window.reportReady(function () {
   };
   const FIELDS = Object.keys(RENDER);
   function fill(card, q, cur) { FIELDS.forEach((f) => { const el = card.querySelector(`[data-field="${f}"]`); if (el) el.innerHTML = RENDER[f](q, cur, card); }); }
-  // The tallest each field gets over some questions, for a card at its present width: a hidden copy is filled
-  // with each in turn. The guide's card measures every question, so no step or kind ever moves its fields.
-  function measure(card, ids) {
-    const w = card.getBoundingClientRect().width;
-    if (!w) return null;
-    const probe = card.cloneNode(true);
-    probe.removeAttribute("id"); probe.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id"));
-    probe.setAttribute("aria-hidden", "true"); probe.inert = true; probe.hidden = false;
-    Object.assign(probe.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", width: w + "px", pointerEvents: "none" });
-    const fields = [...probe.querySelectorAll("[data-field]")];
-    fields.forEach((f) => (f.style.minHeight = ""));
-    card.parentElement.appendChild(probe);
-    const max = {};
-    ids.forEach((id) => {
-      fill(probe, G.q[id], null);
-      fields.forEach((f) => { const k = f.dataset.field; max[k] = Math.max(max[k] || 0, f.getBoundingClientRect().height); });
-    });
-    probe.remove();
-    return max;
-  }
-  const holdFields = (card, max) => card.querySelectorAll("[data-field]").forEach((f) => (f.style.minHeight = Math.ceil(max[f.dataset.field] || 0) + "px"));
-
   /* ---------- state: the open kind and its example ---------- */
   const card = $("#qs-card"), head = $("#qs-cat-h"), def = $("#qs-def"), pos = $("#qs-pos"), cats = [...root.querySelectorAll(".qs-cat")];
+  const prev = $('[data-step="-1"]'), next = $('[data-step="1"]');
   const st = { cat: G.cats[0].key, i: 0 };
   function render(focusHead) {
     const c = CAT[st.cat], q = G.q[c.ids[st.i]];
     cats.forEach((b) => { const on = b.dataset.cat === st.cat; b.setAttribute("aria-pressed", String(on)); b.tabIndex = on ? 0 : -1; });
-    head.innerHTML = `${term(st.cat, c.label)}<span class="n">${c.ids.length} question${c.ids.length === 1 ? "" : "s"}</span>`;
+    head.innerHTML = term(st.cat, c.label); // its count is on its row in the list and on "See all", once each
     def.textContent = TERM[st.cat] ? TERM[st.cat].text : "";
     pos.textContent = `Example ${st.i + 1} of ${c.ids.length}`;
+    // at an end the button is disabled and keeps its slot (the kit's step row); the focus passes to the other
+    const was = document.activeElement;
+    prev.disabled = st.i <= 0; next.disabled = st.i >= c.ids.length - 1;
+    if (was && was.disabled) (was === prev ? next : prev).focus({ preventScroll: true });
+    if (window.ReportKit && ReportKit.fold) ReportKit.fold.current(cats[0], c.label);
     root.querySelectorAll(".qs-seeall").forEach((b) => b.toggleAttribute("data-current", b.dataset.category === st.cat));
     fill(card, q, st.cat);
     if (focusHead) {
@@ -3115,7 +3099,7 @@ window.reportReady(function () {
     }
   }
   function choose(key, focusHead) { if (!CAT[key]) return; st.cat = key; st.i = 0; render(focusHead); }
-  function step(d) { const n = CAT[st.cat].ids.length; st.i = (st.i + d + n) % n; render(false); }
+  function step(d) { const n = CAT[st.cat].ids.length, i = Math.max(0, Math.min(n - 1, st.i + d)); if (i === st.i) return; st.i = i; render(false); }
   // a hover tooltip left over a control that the render replaced goes with it
   const dropTip = () => document.dispatchEvent(new FocusEvent("focusout"));
 
@@ -3124,7 +3108,7 @@ window.reportReady(function () {
     const open = t.closest(".qs-chip[data-open]");
     if (open) { e.stopPropagation(); dropTip(); choose(open.dataset.open, true); return; }
     const cat = t.closest(".qs-cat");
-    if (cat) { choose(cat.dataset.cat, false); if (matchMedia("(max-width: 760px)").matches) { const r = $("#qs-panel").getBoundingClientRect(); if (r.top > window.innerHeight * .6) $("#qs-panel").scrollIntoView({ block: "start" }); } return; }
+    if (cat) { choose(cat.dataset.cat, false); return; } // on a phone the kit's fold closes the column and focuses its button
     const b = t.closest("[data-step]");
     if (b) { step(+b.dataset.step); return; }
     const all = t.closest(".qs-seeall");
@@ -3148,30 +3132,7 @@ window.reportReady(function () {
     }
   });
 
-  /* ---------- the fixed layout: each field reserves the height its tallest content takes ---------- */
-  const heads = [head.parentElement];
-  let lastW = 0;
-  function reserve() {
-    const w = card.getBoundingClientRect().width;
-    if (!w || Math.abs(w - lastW) < 1) return;
-    lastW = w;
-    holdFields(card, measure(card, Object.keys(G.q)));
-    // the kind's heading and definition too, so the card starts at the same place for every kind
-    const h = heads[0], keepH = head.innerHTML, keepD = def.textContent; let hmax = 0;
-    h.style.minHeight = "";
-    G.cats.forEach((c) => {
-      head.innerHTML = `${esc(c.label)}<span class="n">${c.ids.length} questions</span>`;
-      def.textContent = TERM[c.key] ? TERM[c.key].text : "";
-      hmax = Math.max(hmax, h.getBoundingClientRect().height);
-    });
-    head.innerHTML = keepH; def.textContent = keepD; h.style.minHeight = Math.ceil(hmax) + "px";
-  }
   render(false);
-  const again = () => { lastW = 0; reserve(); };
-  if (window.ResizeObserver) new ResizeObserver(() => reserve()).observe(card);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
-  document.addEventListener("report-view", (e) => { if (e.detail === "question-sets") requestAnimationFrame(reserve); });
-  reserve();
 
   /* ---------- for Figure 6's question strip: the card's own renderers, and opening the guide at one question ---------- */
   // `set`: the groups of that set only (the plate shows one set), not the card's per-set comparison
@@ -3203,38 +3164,41 @@ window.reportReady(function () {
 
     /* ---------- the markup ---------- */
     const dlg = document.createElement("dialog");
-    dlg.className = "qs qb"; dlg.id = "qb"; dlg.setAttribute("aria-labelledby", "qb-h"); dlg.setAttribute("aria-describedby", "qb-def"); dlg.dataset.pane = "list";
+    dlg.className = "qs qb rk-dialog"; dlg.id = "qb"; dlg.setAttribute("aria-labelledby", "qb-h"); dlg.setAttribute("aria-describedby", "qb-def"); dlg.dataset.pane = "list";
     const lists = G.lists.map((L, li) => `<h3>${term(L.key, L.label)}</h3><ul>${G.cats.filter((c) => c.list === li).map((c) =>
       `<li><button type="button" class="qb-kind" data-kind="${esc(c.key)}"${TERM[c.key] ? ` data-term="${esc(c.key)}"` : ""}><span>${esc(c.label)}</span><span class="c">${c.ids.length}</span></button></li>`).join("")}</ul>`).join("");
     dlg.innerHTML =
       `<div class="qb-tiphost"></div>` +
-      `<header class="qb-top"><div><p class="qb-kick">The questions</p><h2 class="qb-h" id="qb-h" tabindex="-1"></h2><p class="qb-def" id="qb-def"></p></div>` +
-      `<button type="button" class="qb-x" aria-label="Close the question list"><svg viewBox="0 0 14 14" width="16" height="16" aria-hidden="true"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></header>` +
+      `<div class="rk-dialog-top"><h2 class="qb-h" id="qb-h" tabindex="-1"></h2>` +
+      `<button type="button" class="rk-dialog-close qb-x" aria-label="Close the question list"><svg viewBox="0 0 14 14" width="16" height="16" aria-hidden="true"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>` +
+      `<p class="qb-def" id="qb-def"></p>` +
       `<div class="qb-body">` +
-        `<section class="qb-side" aria-label="The list">` +
-          `<div class="qb-tools"><div class="qb-scope" role="group" aria-label="Which questions to list">` +
+        `<section class="qb-side rk-aside" aria-label="The list">` +
+          `<div class="qb-tools"><div class="qb-scope rk-switch" role="group" aria-label="Which questions to list">` +
             `<button type="button" data-scope="kind" aria-pressed="true"><span class="l">This kind</span><span class="c"></span></button>` +
             `<button type="button" data-scope="all" aria-pressed="false"><span class="l">Every kind</span><span class="c">${plural(ALL.length, "question")}</span></button></div>` +
-            `<div class="qb-row"><label class="qb-find">${`<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9.2 9.2L12.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`}` +
-              `<input type="search" placeholder="Find by name or wording" aria-label="Find a question in this list" autocomplete="off" spellcheck="false"></label>` +
+            `<label class="qb-findl" for="qb-q">Find by name or wording</label>` +
+            `<div class="qb-row"><span class="qb-find">${`<svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.2 9.2L12.5 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`}` +
+              `<input type="search" id="qb-q" autocomplete="off" spellcheck="false"></span>` +
               `<button type="button" class="qb-kbtn" aria-expanded="false" aria-controls="qb-kinds">Another kind${chev("M2.5 4.5L6 8l3.5-3.5")}</button></div>` +
-            `<p class="qb-count" aria-live="polite"></p></div>` +
-          `<div class="qb-scroll"><div class="qb-kinds" id="qb-kinds" hidden><p>Each kind with its number of questions</p>${lists}</div>` +
+            `<p class="qb-count" role="status"></p></div>` +
+          `<div class="qb-scroll"><div class="qb-kinds" id="qb-kinds" hidden>${lists}</div>` +
             `<ul class="qb-list" role="listbox" aria-label="Questions"></ul><div class="qb-empty" hidden></div></div>` +
         `</section>` +
         `<section class="qb-main" aria-label="The chosen question">` +
-          `<div class="qb-step"><button type="button" class="qs-btn qb-back">${chev("M7.5 2.5L4 6l3.5 3.5")}The list</button>` +
-            `<span class="qb-pos" aria-live="polite"></span>` +
-            `<button type="button" class="qs-btn" data-go="-1" aria-label="Previous question">${chev("M7.5 2.5L4 6l3.5 3.5")}Previous</button>` +
-            `<button type="button" class="qs-btn" data-go="1" aria-label="Next question">Next${chev("M4.5 2.5L8 6 4.5 9.5")}</button></div>` +
+          `<div class="qb-step rk-step"><button type="button" class="qb-back">${chev("M7.5 2.5L4 6l3.5 3.5")}The list</button>` +
+            `<span class="rk-step-pair"><button type="button" data-go="-1" aria-label="Previous question">${chev("M7.5 2.5L4 6l3.5 3.5")}Previous</button>` +
+            `<button type="button" data-go="1" aria-label="Next question">Next${chev("M4.5 2.5L8 6 4.5 9.5")}</button></span>` +
+            `<span class="qb-pos rk-step-pos" aria-live="polite"></span></div>` +
         `</section>` +
       `</div>`;
-    // the guide's own card, cloned: the same fields in the same places, filled by the guide's own renderers
+    // the guide's own card, cloned: the same fields, filled by the guide's own renderers; its name an h3 under the h2
     const bc = $g("#qs-card").cloneNode(true);
-    bc.id = "qb-card"; bc.querySelectorAll("[id]").forEach((x) => (x.id = "qb-" + x.id.replace(/^qs-/, "")));
-    bc.setAttribute("aria-labelledby", "qb-name"); bc.querySelectorAll("[data-field]").forEach((f) => (f.style.minHeight = ""));
+    bc.id = "qb-card"; bc.dataset.hl = "3"; bc.querySelectorAll("[id]").forEach((x) => (x.id = "qb-" + x.id.replace(/^qs-/, "")));
+    bc.setAttribute("aria-labelledby", "qb-name");
     dlg.querySelector(".qb-main").appendChild(bc);
-    document.body.appendChild(dlg);
+    // inside the tab, so the kit's scope (its tokens and components) reaches it; a modal dialog draws in the top layer
+    root.closest(".rk-kit").appendChild(dlg);
 
     const $ = (s) => dlg.querySelector(s); // the dialog's own, inside this function
     const bh = $("#qb-h"), bd = $("#qb-def"), listEl = $(".qb-list"), empty = $(".qb-empty"), count = $(".qb-count"), bp = $(".qb-pos");
@@ -3277,17 +3241,19 @@ window.reportReady(function () {
       }).join("");
       listEl.hidden = !bs.ids.length;
       empty.hidden = !!bs.ids.length;
-      if (!bs.ids.length) empty.innerHTML = `No question in ${esc(where)} has “${esc(bs.q.trim())}” in its name or wording.` + (bs.all ? "" : `<button type="button" data-widen="1">Look in every kind</button>`);
+      // nothing found: a sentence that says so, a button that clears the box, and one that looks in every kind
+      if (!bs.ids.length) empty.innerHTML = `<p>No question in ${esc(where)} has “${esc(bs.q.trim())}” in its name or wording.</p>` +
+        `<p class="qb-acts"><button type="button" data-clear="1">Clear the search</button>${bs.all ? "" : `<button type="button" data-widen="1">Look in every kind</button>`}</p>`;
     }
     function renderCard() {
       const n = bs.ids.length, i = bs.ids.indexOf(bs.sel);
-      dlg.querySelector('[data-go="-1"]').disabled = i <= 0;
-      dlg.querySelector('[data-go="1"]').disabled = i < 0 || i >= n - 1;
+      const pv = dlg.querySelector('[data-go="-1"]'), nx = dlg.querySelector('[data-go="1"]'), was = document.activeElement;
+      pv.disabled = i <= 0; nx.disabled = i < 0 || i >= n - 1;
+      if (was && was.disabled && (was === pv || was === nx)) { const o = was === pv ? nx : pv; if (!o.disabled) o.focus({ preventScroll: true }); }
       if (!bs.sel) { bp.textContent = "No question chosen"; bc.hidden = true; return; }
       bc.hidden = false;
       bp.textContent = `Question ${i + 1} of ${n}`;
       fill(bc, G.q[bs.sel], bs.all ? null : bs.kind);
-      hold();
     }
     function select(id, how) { // how: {focus, reveal, open}
       if (!id) return;
@@ -3331,10 +3297,10 @@ window.reportReady(function () {
       adoptTip(true);
       document.documentElement.classList.add("qb-open");
       dlg.showModal();
-      hold();
       scroller.scrollTop = 0;
       const o = listEl.querySelector('[aria-selected="true"]');
-      if (o) { o.scrollIntoView({ block: "center" }); o.focus({ preventScroll: true }); }
+      if (o) o.scrollIntoView({ block: "center" });
+      bh.focus({ preventScroll: true }); // the kit's dialog: the focus starts on its heading
     }
     let quiet = false; // closed by a tooltip's jump into the page: the jump places focus itself
     dlg.addEventListener("close", () => {
@@ -3370,6 +3336,7 @@ window.reportReady(function () {
       const sc = t.closest("[data-scope]");
       if (sc) { rescope(null, sc.dataset.scope === "all", sc); return; }
       if (t.closest("[data-widen]")) { rescope(null, true, find); return; }
+      if (t.closest("[data-clear]")) { find.value = ""; bs.q = ""; renderList(); renderCard(); find.focus(); return; }
       if (t.closest(".qb-kbtn")) { if (kinds.hidden) openKinds(); else closeKinds(true); return; }
       const kd = t.closest(".qb-kind");
       if (kd) { e.stopPropagation(); dropTip(); rescope(kd.dataset.kind, false, null); const o = listEl.querySelector('[aria-selected="true"]'); (o || kbtn).focus({ preventScroll: true }); return; }
@@ -3418,20 +3385,6 @@ window.reportReady(function () {
     });
     dlg.addEventListener("cancel", (e) => { if (document.querySelector("#tip.pinned")) e.preventDefault(); });
 
-    /* the browser's card holds each field at the tallest it takes over the questions listed, at the card's width:
-       stepping through a list never moves a field, and a narrow card or a short kind carries no empty space */
-    const held = {};
-    function hold() {
-      if (bc.hidden || !dlg.open) return;
-      const w = Math.round(bc.getBoundingClientRect().width); if (!w) return;
-      const key = w + "|" + (bs.all ? "" : bs.kind);
-      if (bc.dataset.held === key) return;
-      const max = held[key] || (held[key] = measure(bc, scopeIds()));
-      if (!max) return;
-      holdFields(bc, max); bc.dataset.held = key;
-    }
-    if (window.ResizeObserver) new ResizeObserver(hold).observe(bc);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { Object.keys(held).forEach((k) => delete held[k]); delete bc.dataset.held; hold(); });
   })(st, $);
 });
 </script>
@@ -3652,7 +3605,7 @@ window.reportReady(function () {
 /* report-kit's scripts, wired only inside what carries .rk-js (the Summary panel and the Decision map's filter): the
    Decision map's cells and the other tabs keep the report's own tooltip on their data-tip. plot-theme only defines
    ReportKit.plotTheme, which the MetricFlow agent's figures read for their type as they draw, so it runs before them. */
-/* report-kit:js switch filter table-sort tip highlight plot-theme scope=.rk-js */
+/* report-kit:js switch filter fold table-sort tip highlight plot-theme scope=.rk-js */
 (window.ReportKit = window.ReportKit || {}).root = ".rk-js";
 /* report-kit switch. Markup: <div class="rk-switch" role="group" aria-label="..." data-rk-switch="name"> with
    <button type="button" data-value="v" aria-pressed="true|false"> segments; every element carrying
@@ -3743,6 +3696,46 @@ window.reportReady(function () {
     }
   }
   RK.filter = { count };
+  (RK.inits = RK.inits || []).push(init);
+})();
+/* report-kit fold. Markup: inside a .rk-split, <div class="rk-aside"> holding the column's head, then
+   <button type="button" class="rk-fold" aria-controls="ID" hidden>Its name<span class="rk-fold-cur"></span></button>,
+   then the part it folds (id="ID"); the stage is the split's .rk-stage. Once the stage sits under the column, the
+   button shows and the part folds; side by side, the button hides and the part stays open. A click on an element
+   marked data-rk-fold-pick inside the part (a choice) folds it again and gives the button the focus.
+   ReportKit.fold.current(el, text) names the current choice on the button of the column holding el. */
+(() => {
+  const RK = (window.ReportKit = window.ReportKit || {});
+  function init(root) {
+    for (const btn of root.querySelectorAll(".rk-aside > .rk-fold")) {
+      if (btn.dataset.rkFoldOn) continue;
+      btn.dataset.rkFoldOn = "";
+      const aside = btn.parentElement, part = document.getElementById(btn.getAttribute("aria-controls"));
+      const stage = aside.parentElement.querySelector(":scope > .rk-stage");
+      if (!part || !stage) continue;
+      let stacked = null;
+      const set = (open) => { part.classList.toggle("rk-folded", !open); btn.setAttribute("aria-expanded", String(open)); };
+      const sync = () => {
+        const s = stage.getBoundingClientRect().top >= aside.getBoundingClientRect().bottom - 1;
+        if (s === stacked) return;
+        stacked = s; btn.hidden = !s; set(!s);
+      };
+      btn.addEventListener("click", () => set(part.classList.contains("rk-folded")));
+      part.addEventListener("click", (e) => {
+        if (stacked && e.target.closest && e.target.closest("[data-rk-fold-pick]")) { set(false); setTimeout(() => btn.focus(), 0); } // after a link's own navigation
+      });
+      if (window.ResizeObserver) new ResizeObserver(sync).observe(aside.parentElement); else window.addEventListener("resize", sync);
+      sync();
+    }
+  }
+  RK.fold = {
+    init,
+    current(el, text) {
+      const a = el && el.closest && el.closest(".rk-aside");
+      const c = a && a.querySelector(":scope > .rk-fold .rk-fold-cur");
+      if (c) c.textContent = text || "";
+    },
+  };
   (RK.inits = RK.inits || []).push(init);
 })();
 /* report-kit sortable table. Markup: <table class="rk-table" data-rk-sort> whose header cells carry
@@ -3890,7 +3883,10 @@ window.reportReady(function () {
    handle (or moved with the arrow keys) and closed; data-tip-more="#id" on the element adds a link to a fuller
    entry, labelled by data-tip-more-label. A bubble on an element the keyboard rests on stays through a scroll and
    follows it; the pointer's bubble closes on a scroll. With the kit scoped to part of a page, each root has its
-   own bubble, inside the root (so it wears the root's tokens). API: ReportKit.tip.show(el), .hide(), .unpin(). */
+   own bubble, inside the root (so it wears the root's tokens). Inside an open modal <dialog> the bubble moves into
+   the dialog while it shows (the rest of the page is inert and under the dialog's top layer), goes home when the
+   dialog closes, and the first Escape closes the bubble, not the dialog. API: ReportKit.tip.show(el), .hide(),
+   .unpin(). */
 (() => {
   const RK = (window.ReportKit = window.ReportKit || {});
   const GRIP = '<svg viewBox="0 0 8 12" width="8" height="12" aria-hidden="true" fill="currentColor"><circle cx="2" cy="2" r="1.1"/>' +
@@ -3910,6 +3906,12 @@ window.reportReady(function () {
       (whole ? document.body : root).append(box);
     }
     box.setAttribute("aria-hidden", "true");
+    const home = box.parentElement;
+    // an element inside an open modal dialog gets the bubble inside that dialog, so it is drawn above the dialog
+    const lodge = el => {
+      const into = (el.closest && el.closest("dialog[open]")) || home;
+      if (box.parentElement !== into) into.append(box);
+    };
     const canPin = box.hasAttribute("data-pin");
     const texts = document.createElement("div");
     texts.hidden = true;
@@ -3942,13 +3944,21 @@ window.reportReady(function () {
       const vw = document.documentElement.clientWidth, vh = innerHeight, b = box.getBoundingClientRect();
       left = Math.max(8, Math.min(left, vw - 8 - b.width));
       top = Math.max(8, Math.min(top, Math.max(8, vh - 8 - b.height)));
-      box.style.left = Math.round(left + (pinned ? scrollX : 0)) + "px";
-      box.style.top = Math.round(top + (pinned ? scrollY : 0)) + "px";
+      // a pinned bubble is placed against the page, or against its dialog (the dialog is its containing block)
+      let ox = 0, oy = 0;
+      if (pinned) {
+        const d = box.parentElement.closest("dialog");
+        if (d) { const r = d.getBoundingClientRect(); ox = d.scrollLeft - r.left - d.clientLeft; oy = d.scrollTop - r.top - d.clientTop; }
+        else { ox = scrollX; oy = scrollY; }
+      }
+      box.style.left = Math.round(left + ox) + "px";
+      box.style.top = Math.round(top + oy) + "px";
     }
     function show(el) {
       if (pinned) return;
       clearTimeout(timer);
       owner = el;
+      lodge(el);
       box.textContent = el.dataset.tip;
       box.hidden = false;
       place(el);
@@ -3963,6 +3973,8 @@ window.reportReady(function () {
       unpin(false);
       clearTimeout(timer);
       owner = el;
+      if (box.parentElement !== ((el.closest && el.closest("dialog[open]")) || home)) box.hidden = true; // placed afresh in its new home
+      lodge(el);
       const title = (el.dataset.tipTitle || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 48);
       box.innerHTML = `<div class="rk-tip-bar"><span class="rk-tip-handle" role="button" tabindex="0" aria-label="Move this definition: drag it, or use the arrow keys">${GRIP}<span></span></span>` +
         `<button type="button" class="rk-tip-close" aria-label="Close">${CROSS}</button></div><p class="rk-tip-body"></p>`;
@@ -4032,7 +4044,12 @@ window.reportReady(function () {
     });
     // Tab from a pinned element goes into its bubble, so the keyboard can move and close it
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape") { if (pinned) unpin(true); else hide(true); return; }
+      if (e.key === "Escape") {
+        // inside a modal dialog, one Escape closes the innermost thing: the bubble first, then the dialog
+        if ((pinned || !box.hidden) && box.parentElement.closest("dialog[open]")) e.preventDefault();
+        if (pinned) unpin(true); else hide(true);
+        return;
+      }
       if (e.key === "Tab" && !e.shiftKey && pinned && document.activeElement === owner) {
         e.preventDefault();
         box.querySelector(".rk-tip-handle").focus({ preventScroll: true });
@@ -4040,10 +4057,16 @@ window.reportReady(function () {
     });
     // a scroll closes the pointer's bubble; the keyboard's stays on its element (the browser scrolls a focused
     // element into view, which would otherwise close the bubble it just opened) and follows it
+    // (captured, so a scroll inside a box, a dialog's list included, counts too)
     addEventListener("scroll", () => {
       if (pinned || !owner) return;
       if (document.activeElement === owner && owner.matches(":focus-visible") && !box.hidden) place(owner); else hide(true);
-    }, { passive: true });
+    }, { passive: true, capture: true });
+    // a closing dialog takes no bubble with it: the bubble closes and goes home
+    document.addEventListener("close", e => {
+      if (!(e.target instanceof HTMLDialogElement) || !e.target.contains(box)) return;
+      unpin(false); hide(true); home.append(box);
+    }, true);
     addEventListener("resize", () => { if (pinned) { const b = box.getBoundingClientRect(); moveTo(b.left, b.top); } });
     document.addEventListener("rk:tab", () => unpin(false));
     RK.tip = { show, hide: () => hide(true), unpin: () => unpin(false), pin };
