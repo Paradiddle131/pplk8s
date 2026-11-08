@@ -52,18 +52,19 @@
 .sxb .sxb-diff li.gone { color: var(--ink-3); }
 .sxb .sxb-diff li.gone span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
 .sxb .sxb-q { font-style: italic; }
-.sxb .sxb-seq svg { display: block; width: 100%; max-width: 390px; height: auto; }
+.sxb .sxb-seq svg { display: block; max-width: none; height: auto; }
 .sxb .sxb-fade { animation: sxb-in .32s ease-out; }
 @keyframes sxb-in { from { opacity: .15; } to { opacity: 1; } }
 
-/* the sheet */
-.sxb svg text { font-family: var(--label); letter-spacing: 0; } /* laid out by measuring without the kit's dark-ground tracking */
+/* the sheet: every label at the page's chart size, 14px (ids in the mono face at 13px), drawn one unit a pixel */
+.sxb svg text { font-family: var(--sans); font-size: 14px; letter-spacing: 0; fill: var(--ink); } /* laid out by measuring without the kit's dark-ground tracking */
 .sxb .s-c { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
 .sxb .s-c.add { stroke: var(--sxb-pencil); stroke-width: 2; }
 .sxb .s-c.gone { fill: none; stroke: var(--rule); stroke-dasharray: 3 3; }
-.sxb .s-t { font-size: 13px; font-weight: 600; fill: var(--ink); }
-.sxb .s-l { font-size: 12px; fill: var(--ink-2); }
-.sxb .s-m { font-family: var(--code) !important; font-size: 11px; fill: var(--ink); }
+.sxb .s-t { font-weight: 700; fill: var(--ink); }
+.sxb .s-l { fill: var(--ink-2); }
+.sxb .s-mt { font-weight: 700; }
+.sxb .s-m { font-family: var(--code) !important; font-size: 13px; fill: var(--ink); }
 .sxb .s-gone text { fill: var(--ink-3); text-decoration: line-through; }
 .sxb .s-hb { fill: url(#sxb-hatch); stroke: var(--ink-2); stroke-width: 1; }
 .sxb .s-hl { stroke: var(--grid-major); stroke-width: 1.2; }
@@ -74,23 +75,23 @@
 .sxb .s-sb { fill: var(--paper); }
 .sxb .s-sd { fill: var(--grid-major); }
 .sxb .s-k { fill: var(--paper); }
-.sxb .s-ft { font-size: 12px; font-weight: 600; fill: var(--ink); }
-.sxb .s-fn { font-size: 11.5px; fill: var(--ink-3); }
+.sxb .s-ft { font-weight: 700; fill: var(--ink); }
+.sxb .s-fn { fill: var(--ink-3); }
 .sxb .s-e { fill: none; stroke: var(--ink); stroke-width: 1.2; }
 .sxb .s-e.rd { stroke-dasharray: 4 3; stroke: var(--ink-2); }
 .sxb .s-e.add { stroke: var(--sxb-pencil); stroke-width: 2; }
 .sxb .s-ah { fill: var(--ink); }
 .sxb .s-ah.rd { fill: var(--ink-2); }
 .sxb .s-ah.add { fill: var(--sxb-pencil); }
-.sxb .s-note { font-size: 11.5px; fill: var(--ink-3); font-style: italic; }
-.sxb .s-sql { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.sxb .s-note { fill: var(--ink-3); font-style: italic; }
+.sxb .s-sql { font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
 .sxb .s-sql.add { fill: var(--sxb-pencil); }
 .sxb .s-ll { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
-.sxb .s-lh { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.sxb .s-lh { font-weight: 700; fill: var(--ink); }
 .sxb .s-n { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1; }
-.sxb .s-nt { font-size: 11px; font-weight: 600; fill: var(--ink); }
-.sxb .s-sl { font-size: 12px; fill: var(--ink); }
-.sxb .s-sl.m { font-family: var(--code) !important; font-size: 11px; }
+.sxb .s-nt { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.sxb .s-sl { fill: var(--ink); }
+.sxb .s-sl.m { font-family: var(--code) !important; font-size: 13px; }
 .sxb .s-sl.r { fill: var(--ink-2); }
 
 @media (max-width: 860px) {
@@ -276,10 +277,12 @@ window.reportReady(() => {
   const css = getComputedStyle(document.documentElement);
   const FL = (css.getPropertyValue("--label") || "sans-serif").trim();
   const FC = (css.getPropertyValue("--code") || "monospace").trim();
-  const fontOf = (cls) => cls === "t" ? `600 13px ${FL}` : cls === "m" ? `11px ${FC}` : cls === "ft" ? `600 12px ${FL}` : cls === "sql" ? `600 12px ${FL}` : cls === "note" ? `italic 11.5px ${FL}` : cls === "lh" ? `600 12px ${FL}` : `12px ${FL}`;
+  // the page's chart size: every label at 14px (.875rem), ids in the mono face at 13px; drawn one unit a pixel
+  const fontOf = (cls) => cls === "t" || cls === "ft" || cls === "sql" || cls === "lh" ? `700 14px ${FL}` : cls === "mt" ? `700 13px ${FC}` : cls === "m" ? `400 13px ${FC}` : cls === "note" ? `italic 400 14px ${FL}` : `400 14px ${FL}`;
   const tw = (s, cls) => { cv.font = fontOf(cls); return cv.measureText(s).width; };
   function wrap(s, w, cls) {
-    const words = String(s).split(/(?<=[ ,])/); const out = []; let cur = "";
+    // an id in the mono face may also break after "_" or "(", where a word would run past its card
+    const words = String(s).split(cls === "m" || cls === "mt" ? /(?<=[ ,_(])/ : /(?<=[ ,])/); const out = []; let cur = "";
     words.forEach((wd) => { const t = cur + wd; if (cur && tw(t.trimEnd(), cls) > w) { out.push(cur.trimEnd()); cur = wd.trimStart(); } else cur = t; });
     if (cur.trim()) out.push(cur.trimEnd());
     return out.length ? out : [""];
@@ -287,11 +290,11 @@ window.reportReady(() => {
 
   /* ---------- drawing primitives (each node: key, kind, geometry, inner markup) ---------- */
   // line steps for the report's one family (Atkinson Hyperlegible Next): its line box is taller than a condensed face's
-  const LH = { t: 17, l: 16, m: 16 };
+  const LH = { t: 19, l: 19, m: 19 };
   function cardBox(p, w, opt) {
     opt = opt || {};
-    const padR = p.logo ? 30 : 10; const inner = w - 10 - padR;
-    const tl = wrap((opt.gone ? "dropped: " : "") + p.title, inner, p.mono ? "m" : "t");
+    const padR = p.logo ? 32 : 10; const inner = w - 10 - padR;
+    const tl = wrap((opt.gone ? "dropped: " : "") + p.title, inner, p.mono ? "mt" : "t");
     const ls = []; (p.lines || []).forEach((ln) => { const mono = typeof ln === "object"; wrap(mono ? ln.m : ln, w - 20, mono ? "m" : "l").forEach((t) => ls.push({ t, c: mono ? "m" : "l" })); });
     const ml = opt.model ? wrap(opt.model.t, w - 32, "t").map((t) => ({ t, c: "t" })).concat(opt.model.extra ? wrap(opt.model.extra, w - 32, "l").map((t) => ({ t, c: "l" })) : []) : [];
     let h = 8 + tl.length * LH.t + ls.length * LH.l + (opt.model ? 8 + 10 + ml.length * LH.l : 0) + 8;
@@ -303,25 +306,25 @@ window.reportReady(() => {
     const b = cardBox(p, w, opt);
     let s = `<rect class="s-c${opt.add ? " add" : ""}${opt.gone ? " gone" : ""}" x=".5" y=".5" width="${w - 1}" height="${b.h - 1}" rx="2"/>`;
     let yy = 8;
-    b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m" : "s-t"}" x="10" y="${yy - 4}"${p.mono ? ' style="font-weight:600;font-size:12px"' : ""}>${esc(t)}</text>`; });
+    b.tl.forEach((t, i) => { yy += LH.t; s += `<text class="${p.mono ? "s-m s-mt" : "s-t"}" x="10" y="${yy - 4}">${esc(t)}</text>`; });
     b.ls.forEach((l) => { yy += LH.l; s += `<text class="s-${l.c}" x="10" y="${yy - 3}">${esc(l.t)}</text>`; });
     if (opt.model) {
       const my = yy + 8; const mh = 10 + b.ml.length * LH.l;
       s += `<rect class="s-hb" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/><rect class="s-c${opt.modelAdd ? " add" : ""}" style="fill:none" x="8" y="${my}" width="${w - 16}" height="${mh}" rx="1"/>`;
-      b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 16 + i * LH.l}"${l.c === "t" ? ' style="font-size:12px"' : ""}>${esc(l.t)}</text>`; });
+      b.ml.forEach((l, i) => { s += `<text class="s-${l.c} s-halo" x="16" y="${my + 18 + i * LH.l}">${esc(l.t)}</text>`; });
     }
-    if (p.logo && LOGOS[p.logo]) s += `<svg x="${w - 22}" y="${8 + LH.t / 2 - 9}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[p.logo]}</svg>`;
+    if (p.logo && LOGOS[p.logo]) s += `<svg x="${w - 24}" y="${8 + LH.t / 2 - 9}" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[p.logo]}</svg>`;
     return { key, kind: "g", x, y, w, h: b.h, html: s, cls: opt.gone ? "s-gone" : "" };
   }
   function frameNode(key, x, y, w, h, title, opt) {
     opt = opt || {};
-    const x0 = opt.tx || 10; const tx = x0 + (opt.logo ? 18 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
+    const x0 = opt.tx || 10; const tx = x0 + (opt.logo ? 22 : 0); const ttw = tw(title, "ft"); const nw = opt.note ? tw(opt.note, "note") + 8 : 0;
     let s = `<rect class="s-f${opt.screen ? " scr" : ""}${opt.ph ? " ph" : ""}" data-r="1" x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="2"/>`;
     const by = opt.bottom ? h : 0;
-    s += `<rect class="s-k" x="${x0 - 4}" y="${by - 8}" width="${tx - x0 + ttw + nw + 8}" height="16"/>`;
-    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="${x0}" y="${by - 7}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
-    s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="${by + 4}">${esc(title)}</text>`;
-    if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="${by + 4}">${esc(opt.note)}</text>`;
+    s += `<rect class="s-k" x="${x0 - 4}" y="${by - 11}" width="${tx - x0 + ttw + nw + 8}" height="22"/>`;
+    if (opt.logo && LOGOS[opt.logo]) s += `<svg x="${x0}" y="${by - 8}" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[opt.logo]}</svg>`;
+    s += `<text class="s-ft${opt.add ? " s-sql add" : ""}" x="${tx}" y="${by + 5}">${esc(title)}</text>`;
+    if (opt.note) s += `<text class="s-note" x="${tx + ttw + 6}" y="${by + 5}">${esc(opt.note)}</text>`;
     return { key, kind: "f", x, y, w, h, html: s };
   }
   function edgeNode(key, pts, opt) {
@@ -339,11 +342,10 @@ window.reportReady(() => {
   const pkey = (slot, p, extra) => slot + ":" + p.k + ":" + H32(JSON.stringify([p.title, p.lines, extra || ""]));
 
   /* ---------- the sheet's layout: wide (left to right) and narrow (top to bottom) ---------- */
-  function build(S, wide) {
+  function build(S, wide, W) {
     const df = diffOf(S); const isAdd = (slot, p) => !!(df && df.added.has(slot + ":" + p.k));
     const gone = (slot) => (df && df.removed.length <= 2 ? df.removed.filter((x) => x.slot === slot).map((x) => x.p) : []);
     const N = []; const E = []; const F = [];
-    const W = wide ? 840 : 360;
     const sideName = { g: "Google Cloud", o: "Our side" };
     const whSide = S.wh === "bq" ? "g" : "o";
     const model = { t: S.model.title, extra: (S.model.lines || [])[0] };
@@ -360,9 +362,12 @@ window.reportReady(() => {
     };
     let H = 0;
     if (wide) {
-      const C = { agent: { x: 12, w: 196 }, tools: { x: 248, w: 168 }, server: { x: 456, w: 160 }, wh: { x: 656, w: 172 } };
-      const qab = qa(12, 116, 92);
-      const Y = 108, EY = Y + 20;
+      // four columns share the width past their gutters (12 at each side, 40 between)
+      const u = (W - 144) / 696, cw = { agent: Math.round(184 * u), tools: Math.round(184 * u), server: Math.round(156 * u) }; cw.wh = W - 144 - cw.agent - cw.tools - cw.server;
+      const C = { agent: { x: 12, w: cw.agent } }; C.tools = { x: C.agent.x + C.agent.w + 40, w: cw.tools }; C.server = { x: C.tools.x + C.tools.w + 40, w: cw.server }; C.wh = { x: C.server.x + C.server.w + 40, w: cw.wh };
+      const qw = (C.agent.w - 12) / 2, qx = 12, ax = 12 + qw + 12;
+      const qab = qa(qx, ax, qw);
+      const Y = Math.max(...qab) + 32, EY = Y + 22, FY = Y - 16;
       const ag = cardNode(pkey("agent", S.agent, model), S.agent, C.agent.x, Y, C.agent.w, { add: isAdd("agent", S.agent), model, modelAdd: isAdd("model", S.model) });
       N.push(ag); bounds.agent = ag;
       let tb = Y; let tcards = [];
@@ -404,8 +409,8 @@ window.reportReady(() => {
       // the warehouse
       let wb = Y;
       if (S.wh) {
-        const fx = C.wh.x, fy = Y; let y = fy + 22; const items = [];
-        if (S.wh === "pg") { items.push(textNode("whnote", fx + 12, y, wrap("stands in for BigQuery", C.wh.w - 24, "note"), "s-note")); y += 18; }
+        const fx = C.wh.x, fy = Y; let y = fy + 26; const items = [];
+        if (S.wh === "pg") { const nl = wrap("stands in for BigQuery", C.wh.w - 24, "note"); items.push(textNode("whnote", fx + 12, y, nl, "s-note")); y += nl.length * LH.l + 4; }
         sqlLines.forEach((s, i) => { const ls = wrap(s.p.title, C.wh.w - 24, "sql"); items.push(Object.assign(textNode("sql:" + s.p.k, fx + 12, y, ls, "s-sql" + (s.add ? " add" : "")), {})); y += ls.length * LH.l + 4; });
         y += 6;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, fx + 12, y, C.wh.w - 24, { add: c.add, gone: c.gone }); items.push(n); y += n.h + 8; });
@@ -415,8 +420,8 @@ window.reportReady(() => {
         N.push(...items); wb = y + 4;
       }
       // Q and A
-      E.push(edgeNode("e-q", [[98, qab[0]], [98, Y]]));
-      E.push(edgeNode("e-a", [[162, Y], [162, qab[1]]]));
+      E.push(edgeNode("e-q", [[qx + qw - 10, qab[0]], [qx + qw - 10, Y]]));
+      E.push(edgeNode("e-a", [[ax + qw / 2, Y], [ax + qw / 2, qab[1]]]));
       // location frames
       const cols = [["agent", S.side.agent || "o", C.agent.x, C.agent.x + C.agent.w], ["tools", S.side.tools || S.side.agent, C.tools.x, C.tools.x + C.tools.w],
         ["server", S.side.server || S.side.agent, C.server.x, C.server.x + C.server.w]];
@@ -424,14 +429,15 @@ window.reportReady(() => {
       if (!bounds.tools) cols[1][1] = cols[0][1]; if (!sv) cols[2][1] = cols[1][1];
       const bottom = Math.max(cb, tb, sv ? sv.y + sv.h : 0, wb) + 12;
       const groups = []; cols.forEach((c) => { const g = groups[groups.length - 1]; if (g && g.side === c[1]) g.r = c[3]; else groups.push({ side: c[1], l: c[2], r: c[3] }); });
-      groups.forEach((g) => F.unshift(frameNode("loc:" + g.side, g.l - 10, 92, g.r - g.l + 20, bottom - 92, sideName[g.side])));
+      groups.forEach((g) => F.unshift(frameNode("loc:" + g.side, g.l - 10, FY, g.r - g.l + 20, bottom - FY, sideName[g.side])));
       H = bottom + 4;
       return { N, E, F, W, H };
     }
     // narrow: top to bottom
-    const qab = qa(12, 192, 156);
-    const GX = 28; const CW = 336;
-    let y = 108; const rowsV = [];
+    const CW = W - 24, GX = 28, nqw = (CW - 24) / 2, nqx = 12, nax = 12 + nqw + 24;
+    const qab = qa(nqx, nax, nqw);
+    const Y0 = Math.max(...qab) + 32;
+    let y = Y0; const rowsV = [];
     const rowSide = (slot) => (slot === "wh" ? whSide : S.side[slot] || S.side.agent || "o");
     const slotsV = ["agent"]; if (toolList.length) slotsV.push("tools"); if (S.server) slotsV.push("server"); if (S.wh) slotsV.push("wh");
     let prevSide = null; let prevBottom = 0; const marks = [];
@@ -448,7 +454,7 @@ window.reportReady(() => {
           const fy = bottom + 24; let yy = fy + 16; const cards = [];
           ctxList.forEach((c) => { const n = cardNode(pkey("ctx", c.p, c.gone ? "g" : ""), c.p, 52, yy, CW - 48, { add: c.add, gone: c.gone }); cards.push(n); yy += n.h + 8; });
           F.push(frameNode("ctxf", 44, fy, CW - 32, yy - fy + 2, "Given to it", { screen: true }));
-          N.push(...cards); E.push(edgeNode("e-ctx", [[200, fy], [200, ag.y + ag.h]], { reads: true }));
+          N.push(...cards); E.push(edgeNode("e-ctx", [[Math.round(12 + CW * .56), fy], [Math.round(12 + CW * .56), ag.y + ag.h]], { reads: true }));
           bottom = yy + 2;
         }
       } else if (slot === "tools") {
@@ -460,8 +466,8 @@ window.reportReady(() => {
       } else if (slot === "server") {
         const n = cardNode(pkey("server", S.server), S.server, 12, y, mainW, { add: isAdd("server", S.server) }); N.push(n); mainBottom = bottom = n.y + n.h;
       } else {
-        const fy = y; let yy = fy + 20; const items = [];
-        if (S.wh === "pg") { items.push(textNode("whnote", 24, yy, ["stands in for BigQuery"], "s-note")); yy += 18; }
+        const fy = y; let yy = fy + 24; const items = [];
+        if (S.wh === "pg") { const nl = wrap("stands in for BigQuery", CW - 24, "note"); items.push(textNode("whnote", 24, yy, nl, "s-note")); yy += nl.length * LH.l + 4; }
         sqlLines.forEach((s) => { const ls = wrap(s.p.title, CW - 24, "sql"); items.push(textNode("sql:" + s.p.k, 24, yy, ls, "s-sql" + (s.add ? " add" : ""))); yy += ls.length * LH.l + 4; });
         yy += 6; const cw2 = (CW - 24 - 10) / 2; let col = 0; let rowH = 0; const rowY = () => yy;
         reachList.forEach((c) => { const n = cardNode(pkey("reach", c.p, c.gone ? "g" : ""), c.p, 24 + col * (cw2 + 10), rowY(), cw2, { add: c.add, gone: c.gone }); items.push(n); rowH = Math.max(rowH, n.h); col++; if (col === 2) { yy += rowH + 8; col = 0; rowH = 0; } });
@@ -481,8 +487,8 @@ window.reportReady(() => {
       const whRow = rowsV.find((r) => r.slot === "wh"); const x = rowsV.fbCard.x + rowsV.fbCard.w / 2;
       if (whRow) E.push(edgeNode("e-fb", [[x, rowsV.fbCard.y + rowsV.fbCard.h], [x, whRow.mainTop]], { add: isAdd("sql", SQL.fb) }));
     }
-    E.push(edgeNode("e-q", [[140, qab[0]], [140, 108]]));
-    E.push(edgeNode("e-a", [[270, 108], [270, qab[1]]]));
+    E.push(edgeNode("e-q", [[nqx + nqw - 16, qab[0]], [nqx + nqw - 16, Y0]]));
+    E.push(edgeNode("e-a", [[nax + nqw / 2, Y0], [nax + nqw / 2, qab[1]]]));
     marks.forEach((m, j) => {
       const endRow = j + 1 < marks.length ? marks[j + 1].i - 1 : rowsV.length - 1;
       const top = m.top; const bottom = rowsV[endRow].bottom + 12;
@@ -633,7 +639,9 @@ window.reportReady(() => {
     return null;
   }
   function drawSeq(Q) {
-    const W = 360; const n = Q.lanes.length; const xs = n === 2 ? [44, 300] : [44, 178, 312];
+    // drawn at its box's width (300 to 420 px), one unit a pixel
+    const box = root.querySelector(".sxb-seq"), W = Math.floor(Math.max(300, Math.min(420, (box && box.clientWidth) || 360)));
+    const n = Q.lanes.length; const xs = n === 2 ? [44, W - 60] : [44, Math.round(W / 2 - 2), W - 48];
     let o = ""; let y = 8;
     // a lane's name is centred on its lifeline, so it wraps to the room on its narrower side, and a word too long
     // for that room moves inward rather than running past the sheet's edge
@@ -648,7 +656,7 @@ window.reportReady(() => {
       const num = !s.ret || s.num; if (num) k++;
       y += 6;
       ls.forEach((t, j) => { body += `<text class="s-sl${s.m ? " m" : ""}${s.ret ? " r" : ""} s-halo" x="${lx}" y="${y + 10 + j * LH.l}">${esc(t)}</text>`; });
-      if (num) body += `<circle class="s-n" cx="12" cy="${y + 6}" r="8"/><text class="s-nt" x="12" y="${y + 10}" text-anchor="middle">${k}</text>`;
+      if (num) body += `<circle class="s-n" cx="12" cy="${y + 6}" r="9"/><text class="s-nt" x="12" y="${y + 10.5}" text-anchor="middle">${k}</text>`;
       y += ls.length * LH.l + 4;
       const cls = (s.ret ? " rd" : "") + (s.add ? " add" : "");
       if (self) {
@@ -661,7 +669,7 @@ window.reportReady(() => {
     });
     y += 6;
     const lifelines = xs.map((x) => `<line class="s-ll" x1="${x}" y1="${top - 2}" x2="${x}" y2="${y}"/>`).join("");
-    return `<svg viewBox="0 0 ${W} ${y + 2}" role="img" aria-label="${esc(Q.steps.map((s, i) => s.t).join("; "))}">${o}${lifelines}${body}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${y + 2}" style="width:${W}px" role="img" aria-label="${esc(Q.steps.map((s, i) => s.t).join("; "))}">${o}${lifelines}${body}</svg>`;
   }
 
   /* ---------- the stage ---------- */
@@ -709,7 +717,9 @@ window.reportReady(() => {
 
   let wide = true; let sel = null; let Hmax = { w: 0, n: 0 };
   const models = {};
-  function sheetOf(a, w) { const k = a + (w ? "|w" : "|n"); if (!models[k]) models[k] = build(setupOf(a), w); return models[k]; }
+  // the sheet is drawn at the figure's own width, one unit a pixel (the narrow sheet at 420 px at most)
+  const sheetW = (w) => Math.floor(w ? Math.max(700, fig.clientWidth) : Math.max(320, Math.min(420, fig.clientWidth)));
+  function sheetOf(a, w) { const k = a + (w ? "|w" : "|n"); if (!models[k]) models[k] = build(setupOf(a), w, sheetW(w)); return models[k]; }
   function computeHmax() { const k = wide ? "w" : "n"; Hmax[k] = Math.max(...order.map((a) => sheetOf(a, wide).H), 200); }
   function steadyPanel() {
     // the panel keeps the height of its tallest setup at this width, so the page never jumps
@@ -739,7 +749,9 @@ window.reportReady(() => {
     if (!(a in rungOf)) a = order[0];
     const S = setupOf(a); sel = a;
     root.style.setProperty("--sxb-pencil", `var(--${famOf(a)})`);
-    const m = sheetOf(a, wide); render(Object.assign({}, m, { Hmax: Hmax[wide ? "w" : "n"] }), animate);
+    // each sheet takes its own height: the ladder and the step buttons sit above or beside it, so nothing a reader
+    // points at moves, and a short setup leaves no empty band under its sheet
+    const m = sheetOf(a, wide); render(Object.assign({}, m, { Hmax: m.H }), animate);
     svg.setAttribute("aria-label", ariaOf(S));
     const fade = animate && !reduce();
     head.innerHTML = headHTML(a); change.innerHTML = changeHTML(S); seqEl.innerHTML = seqHTML(S);

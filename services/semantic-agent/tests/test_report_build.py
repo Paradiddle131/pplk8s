@@ -155,9 +155,16 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
     small = [r for r in html_rules if re.search(r"font-size: 1[0-5](\.\d)?px", r)]
-    assert not small, (
-        small
-    )  # words at 1rem (the sheets' own text, .s- and .sm-sheet, keeps its drawn size)
+    assert not small, small  # words at 1rem
+    # the sheets: every label at the chart size (14px, ids in mono at 13px), drawn one unit a pixel
+    assert ".sm .sm-sheet text { fill: var(--ink); font-size: 14px; letter-spacing: 0; }" in styles
+    assert ".sxb svg text { font-family: var(--sans); font-size: 14px; letter-spacing: 0;" in styles
+    sizes = {float(x) for x in re.findall(r"font-size: (\d+(?:\.\d+)?)px", styles)}
+    assert sizes and min(sizes) >= 13, sorted(sizes)
+    script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
+    assert "svg.style.width = K.W" in script and "MINW = 944" in script  # the map at full size
+    assert 'style="width:${W}px"' in script  # the sequence too
+    assert "(h - 16 - 8 - rh)" not in script  # no shrinking the map to the screen's height
     assert not [r for r in html_rules if "outline: 2px solid var(--mf)" in r]
     assert "g[tabindex]:focus-visible { outline: 2.5px solid var(--line)" in styles
     for gone in (

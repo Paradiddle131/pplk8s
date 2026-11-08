@@ -38,14 +38,15 @@
 /* the sheet */
 .sm .sm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 2px; }
 .sm .sm-scroll:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
-.sm svg.sm-sheet { display: block; width: 100%; min-width: 1080px; height: auto; font-family: var(--label); overflow: visible; }
-.sm .sm-sheet text { fill: var(--ink-2); font-size: 11.5px; letter-spacing: 0; }
-.sm .sm-sheet .t-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
-.sm .sm-sheet .t-mono { font-family: var(--code); font-size: 11px; fill: var(--ink); }
-.sm .sm-sheet .t-mtitle { font-family: var(--code); font-size: 12px; font-weight: 600; fill: var(--ink); }
-.sm .sm-sheet .t-hdr { fill: var(--ink-3); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
-.sm .sm-sheet .t-frame { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
-.sm .sm-sheet .t-note { fill: var(--ink-3); font-size: 11.5px; }
+.sm svg.sm-sheet { display: block; height: auto; max-width: none; font-family: var(--sans); overflow: visible; }
+/* one label size, the page's chart size, drawn one unit a pixel (the sheet's width is set by its script) */
+.sm .sm-sheet text { fill: var(--ink); font-size: 14px; letter-spacing: 0; }
+.sm .sm-sheet .t-title { font-weight: 700; }
+.sm .sm-sheet .t-mono { font-family: var(--code); font-size: 13px; }
+.sm .sm-sheet .t-mtitle { font-family: var(--code); font-size: 13px; font-weight: 700; }
+.sm .sm-sheet .t-hdr { font-weight: 700; }
+.sm .sm-sheet .t-frame { font-weight: 700; }
+.sm .sm-sheet .t-sql { font-weight: 700; }
 .sm .sm-sheet .halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
 .sm .sm-frame { fill: none; stroke: var(--rule); stroke-width: 1; }
 .sm .sm-frame.band { fill: url(#sm-dots); }
@@ -80,7 +81,6 @@
 .sm svg.focusing .sm-row.on rect.sm-bar { fill: var(--hl); }
 .sm svg.focusing .sm-row.on.part rect.sm-band { fill: color-mix(in srgb, var(--hl) 7%, var(--paper)); }
 .sm svg.focusing .sm-row.on text { fill: var(--ink); }
-.sm svg.focusing .sm-row.on .t-sql { font-weight: 600; }
 .sm svg.focusing .sm-cardg:not(.on) .sm-row, .sm svg.focusing .sm-cardg.on .sm-row:not(.on) { opacity: .45; }
 .sm svg.focusing .sm-cardg:not(.on) .sm-row { opacity: 1; }
 .sm svg.focusing .sm-fr.on .sm-frame { stroke: var(--hl); stroke-width: 1.6; }
@@ -97,23 +97,22 @@
 @media (max-width: 460px) {
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 }
-/* wide screens: the rungs as one list on the left, scrolling in its own column as tall as the map's, and
-   the map and its readout on the right; both columns stay in view while the page scrolls through. The body leaves the page column (up to 1456 px, centred, inside the
-   viewport's 16 px gutters; --sm-vw is the viewport's width without its scrollbar, set by the script)
-   so the map keeps close to its size. Narrower screens keep the stacked layout. */
-@media (min-width: 1180px) {
+/* wide screens: the rungs as one list on the left, sticky, scrolling in its own column as tall as the room under
+   the part strip, and the map (drawn at full size, 944 px at least) with its readout on the right. The body leaves the
+   page column (up to 1456 px, centred, inside the viewport's 16 px gutters; --sm-vw is the viewport's width without
+   its scrollbar, set by the script) so the map has its room. Narrower screens stack them, the map scrolling sideways. */
+@media (min-width: 1260px) {
   .sm .sm-body { --sm-w: min(1456px, calc(var(--sm-vw, 100%) - 32px)); width: var(--sm-w); margin-left: calc(50% - var(--sm-w) / 2); display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 0 16px; align-items: start; }
   .sm .sm-rungs { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; position: sticky; top: calc(var(--tabh, 0px) + 8px); max-height: calc(100vh - var(--tabh, 0px) - 16px); overflow-y: auto; padding: 0 6px 0 4px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
   .sm .sm-rungs:focus-visible { outline: 2.5px solid var(--line); outline-offset: 2px; }
-  .sm .sm-side { position: sticky; top: calc(var(--tabh, 0px) + 8px); display: flex; flex-direction: column; min-width: 0; }
-  .sm .sm-scroll { order: 1; overflow: visible; }
+  .sm .sm-side { display: flex; flex-direction: column; min-width: 0; }
+  .sm .sm-scroll { order: 1; }
   .sm .sm-read { order: 2; margin: 8px 0 0; min-height: 0; padding: 6px 0 6px; }
   .sm .sm-read .sm-rt { margin-bottom: 4px; }
   /* each fact's name runs in before it, a line saved per row of facts */
   .sm .sm-grid dt, .sm .sm-grid dd { display: inline; }
   .sm .sm-grid dt { margin-right: 5px; }
   .sm .sm-legend { order: 3; margin-top: 6px; }
-  .sm svg.sm-sheet { min-width: 0; max-width: 1200px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sm .sm-x, .sm .sm-s, .sm .sm-rung { transition: none; }
@@ -276,37 +275,57 @@
     }
     const allArms = []; ladder.forEach((l) => l.arms.forEach((a) => { if (!allArms.includes(a)) allArms.push(a); }));
 
-    /* ---------- the sheet ---------- */
+    /* ---------- the sheet ----------
+       Drawn at the page's chart size, one unit a pixel: labels at .875rem (14px; ids in the mono face at 13px), every
+       label measured and wrapped to its card, so a card grows to hold its words instead of shrinking them. The
+       columns share the width the map has (MINW to MAXW px); narrower, the map scrolls sideways inside its box. */
     const svg = document.getElementById("sm-svg");
     const NAME = {}, PARENT = {}, G = {};
-    const out = { frames: [], edges: [], cards: [], knocks: [] };
+    const MINW = 944, MAXW = 1200, FS = 14, FM = 13, LHT = 19, LHL = 19, ROWH = 24;
+    let out;
     const T = (x, y, s, cls, extra) => `<text x="${x}" y="${y}"${cls ? ` class="${cls}"` : ""}${extra || ""}>${esc(s)}</text>`;
-    const logoSvg = (id, x, y) => (LOGOS && LOGOS[id] ? `<svg x="${x}" y="${y}" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[id]}</svg>` : "");
+    const logoSvg = (id, x, y) => (LOGOS && LOGOS[id] ? `<svg x="${x}" y="${y}" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">${LOGOS[id]}</svg>` : "");
+    // text measurement in the sheet's own faces
+    const cv = document.createElement("canvas").getContext("2d");
+    const faces = () => { const cs = getComputedStyle(svg); return { s: cs.fontFamily, m: (getComputedStyle(document.documentElement).getPropertyValue("--code") || "monospace").trim() }; };
+    let F = faces();
+    const FONT = (k) => ({ t: `700 ${FS}px ${F.s}`, l: `400 ${FS}px ${F.s}`, sql: `700 ${FS}px ${F.s}`, m: `400 ${FM}px ${F.m}`, mt: `700 ${FM}px ${F.m}` })[k];
+    const tw = (s, k) => { cv.font = FONT(k); return cv.measureText(s).width; };
+    function wrap(s, w, k) {
+      const words = String(s).split(" "), lines = []; let cur = "";
+      words.forEach((wd) => { const nx = cur ? cur + " " + wd : wd; if (!cur || tw(nx, k) <= w) cur = nx; else { lines.push(cur); cur = wd; } });
+      if (cur) lines.push(cur);
+      return lines;
+    }
     function frame(o) {
       G[o.id] = o; if (o.name) NAME[o.id] = o.name;
-      const tx = o.x + 12 + (o.logo ? 20 : 0);
+      const tx = o.x + 12 + (o.logo ? 22 : 0);
       out.frames.push(`<g class="sm-fr${o.c ? " sm-x" : ""}"${o.c ? ` data-c="${o.id}"` : ""}><rect class="sm-frame${o.band ? " band" : ""}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/></g>`);
-      out.knocks.push(`<g class="sm-knockg"${o.c ? ` data-c="${o.id}"` : ""} data-kx="${o.x + 6}" data-ky="${o.y}"><rect class="sm-knock" x="${o.x + 6}" y="${o.y - 8}" width="10" height="16"/>${o.logo ? logoSvg(o.logo, o.x + 12, o.y - 7) : ""}${T(tx, o.y + 4.5, o.title, "t-frame")}${o.note ? T(0, o.y + 4.5, o.note, "t-note", ' data-note="1"') : ""}</g>`);
+      out.knocks.push(`<g class="sm-knockg"${o.c ? ` data-c="${o.id}"` : ""} data-kx="${o.x + 6}" data-ky="${o.y}"><rect class="sm-knock" x="${o.x + 6}" y="${o.y - 11}" width="10" height="22"/>${o.logo ? logoSvg(o.logo, o.x + 12, o.y - 8) : ""}${T(tx, o.y + 5, o.title, "t-frame")}</g>`);
+      // a frame's note sits on its own line under the title, where a narrow frame still holds it
+      if (o.note) out.knocks.push(`<g class="sm-fnote"${o.c ? ` data-c="${o.id}"` : ""}>${T(o.x + 12, o.y + 26, o.note, "t-note")}</g>`);
     }
     function card(o) {
-      let y = o.y + 19; const body = [];
-      const titleCls = o.mono ? "t-mtitle" : "t-title";
-      body.push(T(o.x + 10, y, o.title, titleCls + (o.hatch ? " halo" : "")));
-      if (o.logo) body.push(logoSvg(o.logo, o.x + o.w - 8 - 14, y - 11));
-      (o.lines || []).forEach((ln, i) => {
-        y += i === 0 ? 16 : 15;
+      const body = [], room = o.w - 20, lk = o.mono ? "mt" : "t";
+      const tl = wrap(o.title, room - (o.logo ? 22 : 0), lk);
+      let y = o.y + 6;
+      tl.forEach((t) => { y += LHT; body.push(T(o.x + 10, y - 1, t, (o.mono ? "t-mtitle" : "t-title") + (o.hatch ? " halo" : ""))); });
+      if (o.logo) body.push(logoSvg(o.logo, o.x + o.w - 8 - 16, o.y + 7));
+      (o.lines || []).forEach((ln) => {
         const mono = typeof ln === "object";
-        body.push(T(o.x + 10, y, mono ? ln.mono : ln, (mono ? "t-mono" : "") + (o.hatch ? " halo" : "")));
+        wrap(mono ? ln.mono : ln, room, mono ? "m" : "l").forEach((t) => { y += LHL; body.push(T(o.x + 10, y - 1, t, (mono ? "t-mono" : "") + (o.hatch ? " halo" : ""))); });
       });
-      let rt = o.rowTop != null ? o.rowTop : y + 7;
+      let rt = o.rowTop != null ? o.rowTop : y + 9;
       const rowsOut = [];
       (o.rows || []).forEach((r) => {
         NAME[r.id] = r.name || r.text; PARENT[r.id] = o.id;
-        G[r.id] = { cy: rt + 9.5, top: rt };
-        rowsOut.push(`<g class="sm-row sm-x" data-c="${r.id}"><rect class="sm-band" x="${o.x + 4}" y="${rt}" width="${o.w - 8}" height="19" rx="1"/><rect class="sm-bar" x="${o.x + 4}" y="${rt + 2}" width="2.5" height="15"/>${T(o.x + 12, rt + 13.5, r.text, (r.mono ? "t-mono" : "") + (r.sql ? " t-sql" : ""))}</g>`);
-        rt += 19;
+        const ls = wrap(r.text, o.w - 20, r.mono ? "m" : r.sql ? "sql" : "l"), rh = ROWH + (ls.length - 1) * LHL;
+        G[r.id] = { cy: rt + rh / 2, top: rt };
+        const txt = ls.map((t, i) => T(o.x + 12, rt + 17 + i * LHL, t, (r.mono ? "t-mono" : "") + (r.sql ? " t-sql" : ""))).join("");
+        rowsOut.push(`<g class="sm-row sm-x" data-c="${r.id}"><rect class="sm-band" x="${o.x + 4}" y="${rt}" width="${o.w - 8}" height="${rh}" rx="1"/><rect class="sm-bar" x="${o.x + 4}" y="${rt + 3}" width="2.5" height="${rh - 6}"/>${txt}</g>`);
+        rt += rh;
       });
-      const end = (o.rows && o.rows.length) ? rt + 6 : y + 10;
+      const end = (o.rows && o.rows.length) ? rt + 6 : y + 11;
       const h = Math.max(o.minH || 0, end - o.y);
       G[o.id] = { x: o.x, y: o.y, w: o.w, h, r: o.x + o.w, b: o.y + h };
       NAME[o.id] = o.name || o.title;
@@ -318,112 +337,123 @@
       const d = pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join("");
       const [a, b] = [pts[pts.length - 2], pts[pts.length - 1]];
       const dx = Math.sign(b[0] - a[0]), dy = Math.sign(b[1] - a[1]);
-      const L = 7, W = 3.5;
+      const L = 8, Wd = 4;
       const bx = b[0] - dx * L, by = b[1] - dy * L;
-      const ah = `M${b[0]} ${b[1]}L${bx - dy * W} ${by + dx * W}L${bx + dy * W} ${by - dx * W}Z`;
+      const ah = `M${b[0]} ${b[1]}L${bx - dy * Wd} ${by + dx * Wd}L${bx + dy * Wd} ${by - dx * Wd}Z`;
       const dd = pts.map((p, i) => { const q = i === pts.length - 1 ? [bx + dx * 1, by + dy * 1] : p; return (i ? "L" : "M") + q[0] + " " + q[1]; }).join("");
       out.edges.push(`<g class="sm-x" data-c="${id}"><path class="sm-e${reads ? " r" : ""}" d="${dd}"/><path class="sm-ah" d="${ah}"/><path class="sm-hit" d="${d}"/></g>`);
     }
+    // the columns: fixed gutters, and the widths share what the map has beyond MINW
+    function columns(W) {
+      const x = W - MINW, c = { model: 116, who: 126 + .15 * x, tools: 176 + .2 * x, ctx: 170 + .3 * x, tab: 168 + .35 * x };
+      Object.keys(c).forEach((k) => (c[k] = Math.round(c[k])));
+      const m = { x: 8 }; const model = 24; m.r = model + c.model + 12;
+      const o = m.r + 12, who = o + 16, tools = who + c.who + 32, ctx = tools + c.tools + 32, bqx = ctx + c.ctx + 20, tab = bqx + 16;
+      return { c, mR: m.r, oX: o, model, who, tools, ctx, bqx, tab, W: tab + c.tab + 16 + 8 };
+    }
+    function draw(W) {
+      F = faces();
+      Object.keys(G).forEach((k) => delete G[k]); Object.keys(NAME).forEach((k) => delete NAME[k]); Object.keys(PARENT).forEach((k) => delete PARENT[k]);
+      out = { frames: [], edges: [], cards: [], knocks: [] };
+      const K = columns(W), c = K.c;
+      const heads = [[K.model, "Model"], [K.who, "Who asks"], [K.tools, "Tools"], [K.ctx, "Context, semantic layer"], [K.tab, "Tables in reach"]];
+      // --- Google Cloud ---
+      const gem = card({ id: "gem", x: K.model, y: 72, w: c.model, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini" });
+      const ctx = card({ id: "ctx", x: K.ctx, y: 72, w: c.ctx, title: "Context we give the agent", name: "the context we give the data agent", rows: [
+        { id: "ctx.gen", text: "instruction, glossary from MetricFlow", name: "an instruction and glossary generated from MetricFlow" },
+        { id: "ctx.vq", text: "verified example queries", name: "verified example queries" },
+        { id: "ctx.tf", text: "verified queries on table functions", name: "verified queries calling table functions" }] });
+      const sqlLane = ctx.b + 8 + ROWH / 2, kcY = sqlLane + 22, kcIn = kcY + 26;
+      const da = card({ id: "da", x: K.who, y: 72, w: c.who, title: "BigQuery data agent", lines: ["Google's managed agent", "Conversational Analytics"], name: "Google's BigQuery data agent",
+        rowTop: ctx.b + 8, minH: kcIn + 18 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "Google's data agent, writing its own SQL" }] });
+      const kc = card({ id: "kc", x: K.ctx, y: kcY, w: c.ctx, title: "Knowledge Catalog", name: "Knowledge Catalog", rows: [
+        { id: "kc.import", text: "dbt metrics, imported", name: "the dbt metrics Knowledge Catalog imported" },
+        { id: "kc.gloss", text: "glossary linked to columns", name: "a catalog glossary linked to the columns" }] });
+      const mcp = card({ id: "mcp", x: K.tools, y: Math.max(kcIn + 18, da.b + 12), w: c.tools, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries" }, { mono: "lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
+        rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "Google's MCP servers, our agent writing the SQL" }] });
+      const mcpIn = Math.max(mcp.y + 60, da.b + 20);
+      // BigQuery objects, one column; table functions last, so the Toolbox's arrow reaches them from below
+      const bqTop = 64, tx = K.tab, tw0 = c.tab;
+      const bqs = card({ id: "bq.s", x: tx, y: bqTop + 24, w: tw0, title: "silver", mono: true, name: "silver, in BigQuery", rows: [
+        { id: "bq.s.t", text: "the tables", name: "the silver tables" },
+        { id: "bq.s.desc", text: "copies with descriptions", name: "copies of the silver tables with column descriptions" },
+        { id: "bq.s.bare", text: "copies, no descriptions", name: "copies of the silver tables with no descriptions" }] });
+      const gov = card({ id: "bq.gov", x: tx, y: bqs.b + 12, w: tw0, title: "Governed tables", lines: ["built from metrics"], name: "governed tables" });
+      const leg = card({ id: "bq.legacy", x: tx, y: gov.b + 12, w: tw0, title: "legacy", mono: true, lines: ["older, replaced"], name: "the legacy tables" });
+      const gr = card({ id: "bq.graph", x: tx, y: leg.b + 12, w: tw0, title: "Property graph", lines: ["with measures"], name: "a property graph with measures" });
+      const tf = card({ id: "bq.tf", x: tx, y: gr.b + 12, w: tw0, title: "Table functions", lines: ["one per saved query"], name: "table functions" });
+      const bqBot = Math.max(tf.b, G["mcp.sql"].cy + 12) + 16;
+      const gTop = 40, gBot = Math.max(mcp.b, bqBot) + 16;
+      frame({ id: "g", x: 8, y: gTop, w: K.W - 16, h: gBot - gTop, title: "Google Cloud, the lab project" });
+      frame({ id: "bq", x: K.bqx, y: bqTop, w: K.W - 8 - K.bqx, h: bqBot - bqTop, title: "BigQuery", logo: "googlebigquery", band: true, c: true, name: "BigQuery" });
+      edge("e-da-gem", [[da.x, gem.y + 28], [gem.r, gem.y + 28]]);
+      edge("e-da-ctx", [[da.r, ctx.y + 28], [ctx.x, ctx.y + 28]], true);
+      edge("e-da-bq", [[da.r, sqlLane], [K.bqx, sqlLane]]);
+      edge("e-da-kc", [[da.r, kcIn], [kc.x, kcIn]], true);
+      edge("e-mcp-kc", [[mcp.r, mcp.y + 16], [kc.x, mcp.y + 16]], true);
+      edge("e-mcp-bq", [[mcp.r, G["mcp.sql"].cy], [K.bqx, G["mcp.sql"].cy]]);
 
-    // column heads
-    const heads = [[24, "Model"], [192, "Who asks"], [384, "Tools"], [620, "Context, semantic layer"], [864, "Tables in reach"]];
-    // --- Google Cloud ---
-    const gem = card({ id: "gem", x: 24, y: 72, w: 128, title: "Gemini", lines: ["inside Google's agent"], hatch: true, name: "Gemini" });
-    const ctx = card({ id: "ctx", x: 620, y: 72, w: 212, title: "Context we give the agent", name: "the context we give the data agent", rows: [
-      { id: "ctx.gen", text: "instruction, glossary from MetricFlow", name: "an instruction and glossary generated from MetricFlow" },
-      { id: "ctx.vq", text: "verified example queries", name: "verified example queries" },
-      { id: "ctx.tf", text: "verified queries on table functions", name: "verified queries calling table functions" }] });
-    const sqlLane = ctx.b + 8 + 9.5, kcY = sqlLane + 18, kcIn = kcY + 22;
-    const da = card({ id: "da", x: 192, y: 72, w: 160, title: "BigQuery data agent", lines: ["Google's managed agent", "Conversational Analytics"], name: "Google's BigQuery data agent",
-      rowTop: ctx.b + 8, minH: kcIn + 16 - 72, rows: [{ id: "da.sql", text: "writes its own SQL", sql: true, name: "Google's data agent, writing its own SQL" }] });
-    const kc = card({ id: "kc", x: 620, y: kcY, w: 212, title: "Knowledge Catalog", name: "Knowledge Catalog", rows: [
-      { id: "kc.import", text: "dbt metrics, imported", name: "the dbt metrics Knowledge Catalog imported" },
-      { id: "kc.gloss", text: "glossary linked to columns", name: "a catalog glossary linked to the columns" }] });
-    const mcp = card({ id: "mcp", x: 384, y: kcIn + 16, w: 204, title: "Google's MCP servers", name: "Google's MCP servers", lines: ["Knowledge Catalog", { mono: "search_entries" }, { mono: "lookup_context" }, "BigQuery", { mono: "execute_sql_readonly" }],
-      rows: [{ id: "mcp.sql", text: "our agent writes the SQL", sql: true, name: "Google's MCP servers, our agent writing the SQL" }] });
-    const mcpIn = mcp.y + 56;
-    const gTop = 40, gBot = mcp.b + 16;
-    // BigQuery objects
-    const bqs = card({ id: "bq.s", x: 872, y: 88, w: 160, title: "silver", mono: true, name: "silver, in BigQuery", rows: [
-      { id: "bq.s.t", text: "the tables", name: "the silver tables" },
-      { id: "bq.s.desc", text: "copies with descriptions", name: "copies of the silver tables with column descriptions" },
-      { id: "bq.s.bare", text: "copies, no descriptions", name: "copies of the silver tables with no descriptions" }] });
-    const tf = card({ id: "bq.tf", x: 872, y: bqs.b + 16, w: 160, title: "Table functions", lines: ["one per saved query"], name: "table functions" });
-    const gov = card({ id: "bq.gov", x: 1048, y: 88, w: 120, title: "Governed tables", lines: ["built from metrics"], name: "governed tables" });
-    const leg = card({ id: "bq.legacy", x: 1048, y: gov.b + 16, w: 120, title: "legacy", mono: true, lines: ["older, replaced"], name: "the legacy tables" });
-    const gr = card({ id: "bq.graph", x: 1048, y: leg.b + 16, w: 120, title: "Property graph", lines: ["with measures"], name: "a property graph with measures" });
-    const bqTop = 64, bqBot = gBot - 16;
-    frame({ id: "g", x: 8, y: gTop, w: 1184, h: gBot - gTop, title: "Google Cloud, the lab project" });
-    frame({ id: "bq", x: 856, y: bqTop, w: 328, h: bqBot - bqTop, title: "BigQuery", logo: "googlebigquery", band: true, c: true, name: "BigQuery" });
-    // Google-side arrows
-    edge("e-da-gem", [[da.x, gem.y + 26], [gem.r, gem.y + 26]]);
-    edge("e-da-ctx", [[da.r, ctx.y + 26], [ctx.x, ctx.y + 26]], true);
-    edge("e-da-bq", [[da.r, sqlLane], [856, sqlLane]]);
-    edge("e-da-kc", [[da.r, kcIn], [kc.x, kcIn]], true);
-    edge("e-mcp-kc", [[mcp.r, mcp.y + 14], [kc.x, mcp.y + 14]], true);
-    edge("e-mcp-bq", [[mcp.r, G["mcp.sql"].cy], [856, G["mcp.sql"].cy]]);
+      // --- our machine ---
+      const oTop = gBot + 28, y0 = oTop + 36;
+      const free = card({ id: "free", x: K.model, y: y0, w: c.model, title: "Free model", lines: ["OpenRouter"], hatch: true, name: "the lab's free model" });
+      const cla = card({ id: "claude", x: K.model, y: free.b + 16, w: c.model, title: "Claude", lines: ["Anthropic API"], hatch: true, name: "Claude, through the API" });
+      const tbx = card({ id: "tbx", x: K.tools, y: y0, w: c.tools, title: "MCP Toolbox", lines: ["tools generated, one per table function"], name: "MCP Toolbox",
+        rows: [{ id: "tbx.sql", text: "fixed SQL; the agent picks dates", sql: true, name: "the fixed SQL inside each Toolbox tool" }] });
+      const ldt = card({ id: "ldt", x: K.tools, y: tbx.b + 20, w: c.tools, title: "Lightdash tool", lines: ["one metric-query tool, ours"], name: "our Lightdash tool" });
+      const ld = card({ id: "ld", x: K.ctx, y: ldt.y, w: c.ctx, title: "Lightdash", lines: ["self-hosted, free API"], name: "Lightdash",
+        rows: [{ id: "ld.sql", text: "compiles the SQL", sql: true, name: "the SQL Lightdash compiles" }] });
+      const sq = card({ id: "sql", x: K.tools, y: Math.max(ldt.b, ld.b) + 20, w: c.tools, title: "execute_sql", mono: true, lines: ["one read-only statement"], name: "the read-only execute_sql tool",
+        rows: [{ id: "sql.w", text: "the agent writes the SQL", sql: true, name: "SQL the agent writes" }] });
+      const mft = card({ id: "mft", x: K.tools, y: sq.b + 24, w: c.tools, title: "MetricFlow tools", name: "the three MetricFlow tools", rows: [
+        { id: "mft.1", text: "1  list_metrics", mono: true, name: "list_metrics" },
+        { id: "mft.2", text: "2  describe_metric", mono: true, name: "describe_metric" },
+        { id: "mft.3", text: "3  query_metrics", mono: true, name: "query_metrics" }] });
+      const mf = card({ id: "mf", x: K.ctx, y: mft.y, w: c.ctx, title: "MetricFlow", logo: "dbt", lines: ["dbt's semantic layer"], name: "MetricFlow",
+        rows: [{ id: "mf.def", text: "metrics, dimensions, glossary", name: "the metric definitions" }, { id: "mf.sql", text: "writes the SQL", sql: true, name: "the SQL MetricFlow writes" }] });
+      const adk = card({ id: "adk", x: K.who, y: y0, w: c.who, title: "Our ADK agent", logo: "adk", lines: ["Agent Development Kit", "model through an API"], name: "our ADK agent", minH: mft.y + 18 + 16 - y0 });
+      const cc = card({ id: "cc", x: K.who, y: Math.max(adk.b, mft.b - 44) + 24, w: c.who, title: "Claude Code", lines: ["headless, only these tools"], name: "Claude Code, run headless" });
+      const ccm = card({ id: "ccm", x: K.model, y: cc.y, w: c.model, title: "Claude", lines: ["subscription"], hatch: true, name: "Claude on a Claude Code subscription" });
+      // the warehouse stand-in
+      const lwTop = ld.y + 8, half = (tw0 - 12) / 2;
+      const lws = card({ id: "lw.silver", x: tx, y: lwTop + 40, w: tw0, title: "silver", mono: true, lines: ["what MetricFlow's semantic models read"], name: "the stand-in's silver tables" });
+      const lwg = card({ id: "lw.gold", x: tx, y: lws.b + 12, w: half, title: "gold", mono: true, name: "the stand-in's gold tables" });
+      const lwe = card({ id: "lw.exposed", x: tx + half + 12, y: lws.b + 12, w: half, title: "exposed", mono: true, name: "the stand-in's exposed tables" });
+      const lwl = card({ id: "lw.legacy", x: tx, y: Math.max(lwg.b, lwe.b) + 12, w: tw0, title: "legacy", mono: true, lines: ["older, replaced"], name: "the stand-in's legacy tables" });
+      const lwBot = Math.max(lwl.b + 16, G["mf.sql"].cy + 16);
+      const oBot = Math.max(cc.b, ccm.b, lwBot) + 16;
+      frame({ id: "o", x: K.oX, y: oTop, w: K.W - 8 - K.oX, h: oBot - oTop, title: "Our machine, the local lab" });
+      frame({ id: "m", x: 8, y: oTop, w: K.mR - 8, h: oBot - oTop, title: "Model APIs" });
+      frame({ id: "lw", x: K.bqx, y: lwTop, w: K.W - 8 - K.bqx, h: lwBot - lwTop, title: "Warehouse stand-in", note: "Postgres", logo: "postgresql", band: true, c: true, name: "the warehouse stand-in" });
+      const l1 = adk.r - 16, l2 = adk.r + 10, l3 = adk.r + 20, tfx = tf.x + tf.w / 2;
+      edge("e-adk-free", [[adk.x, free.y + 28], [free.r, free.y + 28]]);
+      edge("e-adk-claude", [[adk.x, cla.y + 28], [cla.r, cla.y + 28]]);
+      edge("e-adk-mcp", [[l1, adk.y], [l1, mcpIn], [mcp.x, mcpIn]]);
+      edge("e-adk-tbx", [[adk.r, tbx.y + 16], [tbx.x, tbx.y + 16]]);
+      edge("e-tbx-bq", [[tbx.r, tbx.y + 16], [tfx, tbx.y + 16], [tfx, tf.b]]);
+      edge("e-adk-ldt", [[adk.r, ldt.y + 28], [ldt.x, ldt.y + 28]]);
+      edge("e-ldt-ld", [[ldt.r, ldt.y + 28], [ld.x, ldt.y + 28]]);
+      edge("e-ld-lw", [[ld.r, G["ld.sql"].cy], [K.bqx, G["ld.sql"].cy]]);
+      edge("e-adk-sql", [[adk.r, sq.y + 28], [sq.x, sq.y + 28]]);
+      edge("e-sql-lw", [[sq.r, G["sql.w"].cy], [K.bqx, G["sql.w"].cy]]);
+      edge("e-adk-mft", [[adk.r, mft.y + 18], [mft.x, mft.y + 18]]);
+      edge("e-mft-1", [[mft.r, G["mft.1"].cy], [mf.x, G["mft.1"].cy]], true);
+      edge("e-mft-2", [[mft.r, G["mft.2"].cy], [mf.x, G["mft.2"].cy]], true);
+      edge("e-mft-3", [[mft.r, G["mft.3"].cy], [mf.x, G["mft.3"].cy]]);
+      edge("e-mf-lw", [[mf.r, G["mf.sql"].cy], [K.bqx, G["mf.sql"].cy]]);
+      edge("e-cc-mft", [[cc.r, cc.y + 28], [l2, cc.y + 28], [l2, mft.b - 10], [mft.x, mft.b - 10]]);
+      edge("e-cc-mcp", [[cc.r, cc.y + 14], [l3, cc.y + 14], [l3, mcpIn + 14], [mcp.x, mcpIn + 14]]);
+      edge("e-cc-ccm", [[cc.x, cc.y + 28], [ccm.r, cc.y + 28]]);
 
-    // --- our machine ---
-    const oTop = gBot + 24;
-    const y0 = oTop + 32;
-    const free = card({ id: "free", x: 24, y: y0, w: 120, title: "Free model", lines: ["OpenRouter"], hatch: true, name: "the lab's free model" });
-    const cla = card({ id: "claude", x: 24, y: free.b + 16, w: 120, title: "Claude", lines: ["Anthropic API"], hatch: true, name: "Claude, through the API" });
-    const tbx = card({ id: "tbx", x: 384, y: y0, w: 204, title: "MCP Toolbox", lines: ["tools generated, one per", "table function"], name: "MCP Toolbox",
-      rows: [{ id: "tbx.sql", text: "fixed SQL; the agent picks dates", sql: true, name: "the fixed SQL inside each Toolbox tool" }] });
-    const ldt = card({ id: "ldt", x: 384, y: tbx.b + 20, w: 204, title: "Lightdash tool", lines: ["one metric-query tool, ours"], name: "our Lightdash tool" });
-    const ld = card({ id: "ld", x: 620, y: ldt.y, w: 212, title: "Lightdash", lines: ["self-hosted, free API"], name: "Lightdash",
-      rows: [{ id: "ld.sql", text: "compiles the SQL", sql: true, name: "the SQL Lightdash compiles" }] });
-    const sq = card({ id: "sql", x: 384, y: Math.max(ldt.b, ld.b) + 20, w: 204, title: "execute_sql", mono: true, lines: ["one read-only statement"], name: "the read-only execute_sql tool",
-      rows: [{ id: "sql.w", text: "the agent writes the SQL", sql: true, name: "SQL the agent writes" }] });
-    const mft = card({ id: "mft", x: 384, y: sq.b + 24, w: 204, title: "MetricFlow tools", name: "the three MetricFlow tools", rows: [
-      { id: "mft.1", text: "1  list_metrics", mono: true, name: "list_metrics" },
-      { id: "mft.2", text: "2  describe_metric", mono: true, name: "describe_metric" },
-      { id: "mft.3", text: "3  query_metrics", mono: true, name: "query_metrics" }] });
-    const mf = card({ id: "mf", x: 620, y: mft.y, w: 212, title: "MetricFlow", logo: "dbt", lines: ["dbt's semantic layer"], name: "MetricFlow",
-      rows: [{ id: "mf.def", text: "metrics, dimensions, glossary", name: "the metric definitions" }, { id: "mf.sql", text: "writes the SQL", sql: true, name: "the SQL MetricFlow writes" }] });
-    // align the tool rows' arrows on MetricFlow
-    const adk = card({ id: "adk", x: 192, y: y0, w: 160, title: "Our ADK agent", logo: "adk", lines: ["Agent Development Kit", "model through an API"], name: "our ADK agent", minH: mft.y + 16 + 14 - y0 });
-    const cc = card({ id: "cc", x: 192, y: Math.max(adk.b, mft.b - 40) + 24, w: 160, title: "Claude Code", lines: ["headless, only these tools"], name: "Claude Code, run headless" });
-    const ccm = card({ id: "ccm", x: 24, y: cc.y, w: 120, title: "Claude", lines: ["subscription"], hatch: true, name: "Claude on a Claude Code subscription" });
-    // the warehouse stand-in
-    const lwTop = ld.y + 8;
-    const lws = card({ id: "lw.silver", x: 872, y: lwTop + 24, w: 296, title: "silver", mono: true, lines: ["what MetricFlow's semantic models read"], name: "the stand-in's silver tables" });
-    const lwg = card({ id: "lw.gold", x: 872, y: lws.b + 16, w: 140, title: "gold", mono: true, name: "the stand-in's gold tables" });
-    const lwe = card({ id: "lw.exposed", x: 1028, y: lws.b + 16, w: 140, title: "exposed", mono: true, name: "the stand-in's exposed tables" });
-    const lwl = card({ id: "lw.legacy", x: 872, y: lwg.b + 16, w: 296, title: "legacy", mono: true, lines: ["older, replaced"], name: "the stand-in's legacy tables" });
-    const lwBot = Math.max(lwl.b + 16, G["mf.sql"].cy + 16);
-    const oBot = Math.max(cc.b, ccm.b, lwBot) + 16;
-    frame({ id: "o", x: 176, y: oTop, w: 1016, h: oBot - oTop, title: "Our machine, the local lab" });
-    frame({ id: "m", x: 8, y: oTop, w: 152, h: oBot - oTop, title: "Model APIs" });
-    frame({ id: "lw", x: 856, y: lwTop, w: 328, h: lwBot - lwTop, title: "Warehouse stand-in", note: "Postgres", logo: "postgresql", band: true, c: true, name: "the warehouse stand-in" });
-    // our arrows
-    edge("e-adk-free", [[adk.x, free.y + 26], [free.r, free.y + 26]]);
-    edge("e-adk-claude", [[adk.x, cla.y + 26], [cla.r, cla.y + 26]]);
-    edge("e-adk-mcp", [[336, adk.y], [336, mcpIn], [mcp.x, mcpIn]]);
-    edge("e-adk-tbx", [[adk.r, tbx.y + 16], [tbx.x, tbx.y + 16]]);
-    edge("e-tbx-bq", [[tbx.r, tbx.y + 16], [952, tbx.y + 16], [952, tf.b]]);
-    edge("e-adk-ldt", [[adk.r, ldt.y + 26], [ldt.x, ldt.y + 26]]);
-    edge("e-ldt-ld", [[ldt.r, ldt.y + 26], [ld.x, ldt.y + 26]]);
-    edge("e-ld-lw", [[ld.r, G["ld.sql"].cy], [856, G["ld.sql"].cy]]);
-    edge("e-adk-sql", [[adk.r, sq.y + 26], [sq.x, sq.y + 26]]);
-    edge("e-sql-lw", [[sq.r, G["sql.w"].cy], [856, G["sql.w"].cy]]);
-    edge("e-adk-mft", [[adk.r, mft.y + 16], [mft.x, mft.y + 16]]);
-    edge("e-mft-1", [[mft.r, G["mft.1"].cy], [mf.x, G["mft.1"].cy]], true);
-    edge("e-mft-2", [[mft.r, G["mft.2"].cy], [mf.x, G["mft.2"].cy]], true);
-    edge("e-mft-3", [[mft.r, G["mft.3"].cy], [mf.x, G["mft.3"].cy]]);
-    edge("e-mf-lw", [[mf.r, G["mf.sql"].cy], [856, G["mf.sql"].cy]]);
-    edge("e-cc-mft", [[cc.r, cc.y + 26], [368, cc.y + 26], [368, mft.b - 10], [mft.x, mft.b - 10]]);
-    edge("e-cc-mcp", [[cc.r, cc.y + 12], [376, cc.y + 12], [376, mcpIn + 12], [mcp.x, mcpIn + 12]]);
-    edge("e-cc-ccm", [[cc.x, cc.y + 26], [ccm.r, cc.y + 26]]);
-
-    const H = oBot + 8;
-    svg.setAttribute("viewBox", `0 0 1200 ${H}`);
-    const defs = `<defs><pattern id="sm-dots" width="6" height="6" patternUnits="userSpaceOnUse"><rect class="sm-dotbg" width="6" height="6"/><circle class="sm-dot" cx="1.5" cy="1.5" r=".75"/></pattern><pattern id="sm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="sm-hline" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>`;
-    const headsSvg = heads.map(([x, s]) => T(x, 20, s, "t-hdr")).join("");
+      const H = oBot + 8;
+      svg.setAttribute("viewBox", `0 0 ${K.W} ${H}`);
+      svg.style.width = K.W + "px";
+      const defs = `<defs><pattern id="sm-dots" width="6" height="6" patternUnits="userSpaceOnUse"><rect class="sm-dotbg" width="6" height="6"/><circle class="sm-dot" cx="1.5" cy="1.5" r=".75"/></pattern><pattern id="sm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="sm-hline" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>`;
+      const headsSvg = heads.map(([x, s]) => T(x, 22, s, "t-hdr")).join("");
+      svg.innerHTML = title + defs + headsSvg + out.frames.join("") + out.edges.join("") + out.cards.join("") + out.knocks.join("");
+      fitKnocks();
+    }
     const title = svg.querySelector("title").outerHTML;
-    svg.innerHTML = title + defs + headsSvg + out.frames.join("") + out.edges.join("") + out.cards.join("") + out.knocks.join("");
-
-    // knock-outs: size each title's paper behind its text
+    // knock-outs: size each frame title's paper behind its text
     function fitKnocks() {
       svg.querySelectorAll(".sm-knockg").forEach((g) => {
         const t = g.querySelector(".t-frame"), n = g.querySelector("[data-note]"), r = g.querySelector(".sm-knock");
@@ -433,8 +463,11 @@
         r.setAttribute("width", Math.ceil(x1 - x0 + 6));
       });
     }
-    fitKnocks();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitKnocks);
+    const scroller = svg.parentElement;
+    const sheetW = () => Math.max(MINW, Math.min(MAXW, Math.floor(scroller.clientWidth)));
+    let drawnW = 0;
+    function redraw(force) { const w = sheetW(); if (!force && w === drawnW) return false; drawnW = w; draw(w); return true; }
+    redraw(true);
 
     /* ---------- who uses what ---------- */
     const USERS = {};
@@ -565,12 +598,10 @@
     document.addEventListener("click", (e) => { if (pinned && !listEl.contains(e.target) && !svg.contains(e.target) && !(e.target.closest && e.target.closest(".tip"))) { pinned = null; preview = null; apply(); } });
     apply();
 
-    // Wide layout: the map and its readout fit the viewport together. The readout keeps the height of its
-    // longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves.
-    // The map takes the rest of the height under the part strip, never under 66% of the 1148 px it has in the page
-    // column (the size at which the longest readout still fits a 1280 x 800 screen below the strip) and
-    // never over its column's width; the legend comes last, the first to go below the fold.
-    const wide = window.matchMedia("(min-width: 1180px)"), scroller = svg.parentElement, side = scroller.parentElement;
+    // Wide layout: the rung list keeps to its own column, as tall as the room under the part strip, and scrolls
+    // there; the map beside it is drawn at its full size (the sheet above), its readout under it keeps the height
+    // of its longest text (any setup, rung or part, measured off-screen at the column's width), so it never moves.
+    const wide = window.matchMedia("(min-width: 1260px)"), side = scroller.parentElement;
     function readMax() {
       const probe = document.createElement("div");
       probe.className = "sm-read"; probe.setAttribute("aria-hidden", "true");
@@ -584,20 +615,17 @@
     }
     // the room under the page's sticky part strip (--tabh, its height; 0 on a page without one)
     const room = () => window.innerHeight - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0);
-    function fit() {
-      syncVw(); svg.style.width = ""; listEl.style.maxHeight = ""; read.style.minHeight = "";
+    function fit(force) {
+      syncVw(); listEl.style.maxHeight = ""; read.style.minHeight = "";
+      if (redraw(force)) apply();
       if (!wide.matches) return;
-      const rh = readMax(); read.style.minHeight = rh + "px";
-      const vb = svg.viewBox.baseVal, col = scroller.clientWidth, h = room();
-      const w = Math.min(col, Math.max((h - 16 - 8 - rh) * vb.width / vb.height, 0.66 * 1148));
-      if (w < col - 0.5) svg.style.width = Math.floor(w) + "px";
-      // the list's own column is as tall as the map and its readout, within the viewport
-      listEl.style.maxHeight = Math.min(h - 16, scroller.offsetHeight + 8 + rh) + "px";
+      read.style.minHeight = readMax() + "px";
+      listEl.style.maxHeight = (room() - 16) + "px";
     }
     let ft = 0;
-    window.addEventListener("resize", () => { clearTimeout(ft); ft = setTimeout(fit, 100); });
-    fit();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    window.addEventListener("resize", () => { clearTimeout(ft); ft = setTimeout(() => fit(false), 100); });
+    fit(false);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fit(true));
   });
 })();
 </script>
