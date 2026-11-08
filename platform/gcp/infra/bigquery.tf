@@ -1,6 +1,6 @@
 # BigQuery on the lab project (#205): the datasets dbt builds, one service account per workload with
 # dataset-level grants and, on the `ops` tables that exist, table-level ones (platform/gcp/access.yaml, #209),
-# and the daily query quota that is the hard stop.
+# and the daily query fence, a per-day brake on query bytes.
 # Storage is free up to 10 GiB and queries up to 1 TiB a month; load jobs and DML are free, streaming
 # inserts are not (platform/gcp/README.md).
 
@@ -101,8 +101,9 @@ resource "google_bigquery_table_iam_member" "grant" {
   member     = "serviceAccount:${google_service_account.workload[each.value.sa].email}"
 }
 
-# The hard stop on query spend: bytes a day for the project and for each user, in MiB. 31 days of it stay
-# under the free 1 TiB a month (check_free_path.py), so no month can bill a query; never raised.
+# The per-day brake on query spend: bytes a day for the project and for each user, in MiB. The month's free 1 TiB
+# is the limit, held by `make gcp-usage-check` before every live step at half of it; one day's fence fits in the
+# other half (check_free_path.py). Only the owner raises it (2026-11-03, #370: free-path.yaml `caps`).
 # Quota preferences cannot be deleted, so tofu.sh passes the ones that exist (created in the console,
 # #226, or by an earlier gcp-up) and they are imported, not created twice; `make gcp-down` leaves them in place.
 # Cloud Run's (infra/run.tf) come the same way.

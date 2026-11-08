@@ -1,0 +1,6 @@
+## 2026-11-06 — Semantic track — the emulator checks name whatever holds host port 9050 (#292)
+
+- Done: `tests/e2e/lib/host-port.sh` (`host_port_free <port> <service>`), sourced by `bigquery-run-check.sh` (emulator target only) and `gcp-image-check.sh`, fails before any build or load with `FAIL: host port 9050 is taken by container <name> (docker stop <name>, then rerun)`, or by `<process> (pid N)` from ss or lsof for a host process.
+- It stays quiet when the port is free or held by the lab's own `bigquery-api`, which both checks recreate anyway (`up --force-recreate`), so a second run after the first left the emulator up still passes.
+- A failing `compose up` now prints its last lines (the daemon's `Bind for 127.0.0.1:9050 failed: port is already allocated`) instead of discarding them.
+- Evidence: with a throwaway container on 127.0.0.1:9050, before: `bigquery-run-check.sh` failed with a bare `FAIL: the emulator did not come up` after 21 s, `gcp-image-check.sh` after 644 s with both images built; after: both, and `make -o services-up` of both targets, fail in 0 s naming `port-squatter`; a host `python3 -m http.server` is named `python3 (pid N)` through ss and through lsof; squatter removed, `bigquery-run-check.sh` PASS (654 s), then `gcp-image-check.sh` PASS (175 s) with the first run's `pplk8s-bigquery-api-1` still on 9050; shellcheck 0.11.0 clean.

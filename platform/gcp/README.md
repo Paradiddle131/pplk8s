@@ -24,11 +24,14 @@ The project is held to the Always Free tier: one cent of spend stops the work, a
 
 - Use only what `free-path.yaml` lists; a new API or resource type joins it, with its source, in the PR that needs it, and `make gcp-validate` (in `make lint`) refuses anything else.
 - Run `make gcp-cost-check` before and after every live step; exit 1 (a cost) or 3 (not provable yet) means no live GCP work until the owner says so.
+- Incidental charges are accepted under $1.00 a month (owner, 2026-11-03, [#338](../../../../issues/338)): a free-path service can still bill a fraction of a cent (Artifact Registry's intercontinental egress billed $0.000010 in November 2026), so the cost check passes while the month's total after credits stays under `GCP_COST_TOLERANCE_USD` (default 1.00) and lists each costly SKU; a total at or above it is exit 1.
+  The tolerance is not a budget: the free path, the caps and the kill switch stay as they are, and a costly SKU it lists is still a mistake to trace; `GCP_COST_TOLERANCE_USD=0` is the strict check.
 - Dry-run a query before running it, and keep `maximum_bytes_billed` on every job; no streaming inserts (no free tier).
 - Artifact Registry holds at most 0.5 GiB-month across the billing account: images go there only to be pulled by Cloud Run in us-central1, never pulled to a laptop or a cloud session (internet egress), and the Container Scanning and On-Demand Scanning APIs stay off (billed per image).
 - Never raise a quota, a cap or the budget, and never test a permission by attempting the action: ask with `testIamPermissions`.
+  The one exception is the owner's own: the daily query fence, which the owner raised to 209,715 MiB (0.2 TiB) on 2026-11-03 ([#370](../../../../issues/370)); an agent records it and never changes it.
 - Cloud Run serves only IAM callers (no public member, invoker IAM on) and bills per request: a public URL would spend the free requests and vCPU-seconds of anyone who finds it.
-- Cloud sessions also carry claude-dotfiles' GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
+- Cloud sessions also carry loadout's GCP kit (its `cloud/gcp/README.md`): a guard in front of every Bash command and a session-start line with the month-to-date cost.
 
 ## Identities
 
@@ -44,7 +47,9 @@ The cloud sessions' credential holds no role that can enable an API, change IAM 
 
 ## Guard rails in place
 
-- BigQuery query usage per day and per user: 31,457 MiB (`free-path.yaml` `caps`; set by hand in #226, imported and held by `infra/bigquery.tf`): 31 days of it stay under the free 1 TiB, and `make gcp-validate` fails a higher cap.
+- BigQuery query usage per day and per user, the daily query fence: 209,715 MiB (0.2 TiB; `free-path.yaml` `caps`; set by hand in #226 at 31,457, raised by the owner on 2026-11-03, #370; imported and held by `infra/bigquery.tf`).
+  It is a per-day brake, not the month's limit: the month's free 1 TiB is the limit, guarded by `make gcp-usage-check` before every live step (fails past half of it), and `make gcp-validate` fails a fence that does not fit in the other half (512 GiB).
+  A spent fence refuses every query until 00:00 Pacific, the cost check's included, which then reads UNKNOWN and names the fence (#369).
 - Firestore: only the `(default)` database, which is the free one, with point-in-time recovery off; no TTL policies or backups (billed from the first byte).
 - Cloud Run (#209): the agent's service scales from 0 to `caps.cloud_run_max_instances` (1) with CPU only during requests, inside the free 180,000 vCPU-seconds, 360,000 GiB-seconds and 2 million requests a month; each Job runs one task with no retry, and `make gcp-validate` holds the scheduled Jobs' worst month (every run for its whole timeout: 197,160 vCPU-seconds) under the Jobs' free 240,000.
 - Cloud Scheduler: at most `caps.cloud_scheduler_jobs` (3, the billing account's free ones); the dbt Jobs take two, #228 the third.
