@@ -416,13 +416,102 @@ def logged(setup: str, model: str, name: str) -> set[tuple[str, int]]:
     }
 
 
+# Recorded answers a fault of the setup's server spoiled (#432): each one's SHA-256, so the runner asks its run
+# again and the scorer never reads it; the answers files themselves are never edited.
+STALE = OUT / "stale.jsonl"
+
+
+def stale_answers() -> set[str]:
+    if not STALE.exists():
+        return set()
+    return {
+        json.loads(line)["answer_sha"]
+        for line in STALE.read_text().splitlines()
+        if line.strip()
+    }
+
+
+def answer_sha(line: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(line.encode()).hexdigest()
+
+
+def answer_rows(path: Path) -> list[dict[str, Any]]:
+    """An answers file's rows, less the stale ones."""
+    if not path.exists():
+        return []
+    gone = stale_answers()
+    return [
+        json.loads(line)
+        for line in path.read_text().splitlines()
+        if line.strip() and answer_sha(line) not in gone
+    ]
+
+
 def recorded_runs(path: Path) -> set[tuple[str, int]]:
-    rows = (
-        [json.loads(line) for line in path.read_text().splitlines()]
-        if path.exists()
-        else []
+    return {(r["case"], int(r["run"])) for r in answer_rows(path)}
+
+
+def filter_fault(row: dict[str, Any]) -> bool:
+    """A recorded run with a filtered query_metrics call the semantic MCP server failed: until #432 its audit
+    write could not hold `filters` (Filter models in a jsonb column), so every such call answered "Error executing
+    tool query_metrics", whatever the query."""
+    return any(
+        c.get("tool", "").endswith("query_metrics")
+        and (c.get("args") or {}).get("filters")
+        and str(c.get("result", "")).startswith("Error executing tool")
+        for t in row.get("turns") or []
+        for c in t.get("calls") or []
     )
-    return {(r["case"], int(r["run"])) for r in rows}
+
+
+def mark_filter_faults(dry: bool = False) -> int:
+    """#432: every recorded answer with a filter fault becomes stale, and its logged run gets a `run` row in
+    redacted.jsonl as a test fault, so the runner asks it again and the page never shows it."""
+    sys.path.insert(0, str(ROOT / "services/semantic-agent/src"))
+    from semantic_agent.bet_eval import OVERLAY, read_overlay, run_key
+
+    _, redacted = read_overlay(RESEARCH)
+    gone = stale_answers()
+    stale, rows = [], []
+    for path in sorted((OUT / "answers").glob("*.jsonl")):
+        setup, model, name = _parts(path.stem)
+        faults = set()
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if filter_fault(row) and answer_sha(line) not in gone:
+                stale.append(
+                    {"setup": setup, "model": model, "set": name, "case": row["case"], "run": row["run"],
+                     "answer_sha": answer_sha(line), "issue": 432}
+                )  # fmt: skip
+                faults.add((row["case"], int(row["run"])))
+        log = RESEARCH / f"{SETS[name][1]}{setup}.jsonl"
+        label = f"claude-code-strict ({model})"
+        for line in log.read_text().splitlines() if log.exists() else []:
+            r = json.loads(line)
+            key = run_key({"arm": setup, **r})
+            if (
+                r["model"] == label
+                and (r["case"], int(r["run"])) in faults
+                and key not in redacted
+            ):
+                rows.append(
+                        {"kind": "run", "arm": setup, "model": label, "case": r["case"], "run": r["run"], "at": r["at"],
+                         "class": "test_fault", "reason": "the semantic MCP server failed every filtered query_metrics "
+                         "call (its audit write could not hold the filters)", "issue": 432, "date": "2026-11-09"}
+                    )  # fmt: skip
+    print(
+        f"432: {len(stale)} recorded answers with a filter fault; {len(rows)} logged runs to redact"
+    )
+    if not dry:
+        with STALE.open("a") as out:
+            out.writelines(json.dumps(r) + "\n" for r in stale)
+        with (RESEARCH / OVERLAY).open("a") as out:
+            out.writelines(json.dumps(r) + "\n" for r in rows)
+    return 0
 
 
 async def run_pass(args: argparse.Namespace) -> int:
@@ -519,8 +608,7 @@ def recorded(arm: str, name: str) -> dict[str, list[dict[str, Any]]]:
         else []
     ):
         done = logged(arm, model, name)
-        for line in path.read_text().splitlines():
-            row = json.loads(line)
+        for row in answer_rows(path):
             # One answer a (case, run): two processes on one set could both answer it; the first stands.
             if (row["case"], row["run"]) not in done:
                 done.add((row["case"], row["run"]))
@@ -655,7 +743,8 @@ def mismatched() -> int:
 
 def _parts(stem: str) -> tuple[str, str, str]:
     """An answers file's setup, model and set from `<setup>-<model>-<set>`."""
-    for setup in SERVERS:
+    # The longest name first: `cc-metricflow-compute-...` is not `cc-metricflow` with model `compute`.
+    for setup in sorted(SERVERS, key=len, reverse=True):
         if stem.startswith(setup + "-"):
             model, _, name = stem[len(setup) + 1 :].partition("-")
             return setup, model, name
@@ -679,9 +768,13 @@ def main() -> int:
     s.add_argument("case")
     sub.add_parser("clients")
     sub.add_parser("redact")
+    f = sub.add_parser("filter-faults")
+    f.add_argument("--dry", action="store_true")
     args = parser.parse_args()
     if args.cmd == "redact":
         return redact_faults()
+    if args.cmd == "filter-faults":
+        return mark_filter_faults(args.dry)
     if args.cmd == "clients":
         print(clients())
         return 0

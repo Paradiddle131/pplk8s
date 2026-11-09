@@ -1,91 +1,115 @@
 # The bet's local arms on the hard set v2
 
-Written 2026-11-09T03:30Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl), the log of every run, under [the rule](RULE.md): 55 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T11:03Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl), the log of every run, under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
-A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-176 of `baseline`'s 176 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
+172 of `baseline`'s 172 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `claude-haiku-5-5`
 
-Scored on partial: 1 run(s) of 41 of 55 cases; runs finished: baseline 121 of 165, custom-metricflow 123 of 165, custom-hybrid 123 of 165; model responses spent: baseline 476, custom-metricflow 416, custom-hybrid 458.
+Scored on partial: 1 run(s) of 40 of 54 cases; runs finished: baseline 118 of 162, custom-metricflow 120 of 162, custom-hybrid 120 of 162; model responses spent: baseline 467, custom-metricflow 407, custom-hybrid 449.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
-| Accuracy | 58.5% | 70.7% | 82.9% |
-| Confident-wrong | 12.2% | 7.3% | 2.4% |
-| pass^1 | 58.5% | 70.7% | 82.9% |
+| Accuracy | 60.0% | 72.5% | 85.0% |
+| Confident-wrong | 10.0% | 5.0% | 2.5% |
+| pass^1 | 60.0% | 72.5% | 85.0% |
 | `composable` (14) accuracy | 64.3% | 64.3% | 92.9% |
-| `conversation` (8) accuracy | 50.0% | 62.5% | 62.5% |
-| `covered` (22) accuracy | 68.2% | 86.4% | 86.4% |
+| `conversation` (7) accuracy | 57.1% | 71.4% | 71.4% |
+| `covered` (21) accuracy | 71.4% | 90.5% | 90.5% |
 | `trap` (5) accuracy | 60.0% | 100.0% | 100.0% |
 | `uncovered` (5) accuracy | 0.0% | 20.0% | 40.0% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
-- Accuracy: +0.122 [-0.024, +0.268]: no difference.
-- Confident-wrong: -0.049 [-0.195, +0.098]: no difference.
+- Accuracy: +0.125 [-0.025, +0.275]: no difference.
+- Confident-wrong: -0.050 [-0.150, +0.050]: no difference.
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 4 (`custom-metricflow` 4 confident-wrong to wrong).
 
-Turns judged: 6 (0 the code left unclear, 6 confident-wrong with a hedge outside the list); verdicts that stood: 2.
-Confident-wrong turns the judge moved: 6 of 6 (2 to wrong, hedged; 4 to unclear).
+Turns judged: 7 (0 the code left unclear, 7 confident-wrong with a hedge outside the list); verdicts that stood: 5.
+Confident-wrong turns the judge moved: 7 of 7 (5 to wrong, hedged; 2 to unclear).
 
 Turns still unclear after judging (counted as wrong):
 
-- `baseline` `hard_candidates_still_in_running` run 1 turn 1: right / right
-- `baseline` `hard_candidates_still_in_running` run 3 turn 1: right / wrong
-- `baseline` `hard_revenue_per_session` run 3 turn 1: wrong / right
-- `custom-metricflow` `hard_candidates_still_in_running` run 2 turn 1: right / right
+- `baseline` `hard_basket_size_week` run 1 turn 1: confident-wrong / wrong
+- `custom-metricflow` `hard_weekend_vs_weekday` run 1 turn 1: right / right
+
+Confident-wrong turns with a hedge outside the list, awaiting the judge:
+
+- `baseline` `hard_candidates_still_in_running` run 1 turn 1: not judged yet
+- `baseline` `hard_candidates_still_in_running` run 3 turn 1: not judged yet
+- `baseline` `hard_repeat_rate_october` run 2 turn 1: not judged yet
+- `custom-hybrid` `hard_august_signups_bought` run 3 turn 1: not judged yet
+- `custom-hybrid` `hard_candidates_still_in_running` run 1 turn 1: not judged yet
+- `custom-hybrid` `hard_candidates_still_in_running` run 2 turn 1: not judged yet
+- `custom-metricflow` `hard_august_signups_bought` run 2 turn 1: not judged yet
+- `custom-metricflow` `hard_august_signups_bought` run 3 turn 1: not judged yet
+- `custom-metricflow` `hard_candidates_still_in_running` run 1 turn 1: not judged yet
+- `custom-metricflow` `hard_candidates_still_in_running` run 2 turn 1: not judged yet
+- `custom-metricflow` `hard_repeat_rate_october` run 3 turn 1: not judged yet
 
 ## `claude-sonnet-5-5`
 
-Scored on partial: 1 run(s) of 41 of 55 cases; runs finished: custom-metricflow 123 of 165; model responses spent: custom-metricflow 421.
+Scored on partial: 1 run(s) of 40 of 54 cases; runs finished: custom-metricflow 120 of 162; model responses spent: custom-metricflow 412.
 
 | | `custom-metricflow` |
 |---|---|
-| Accuracy | 53.7% |
-| Confident-wrong | 2.4% |
-| pass^1 | 53.7% |
+| Accuracy | 55.0% |
+| Confident-wrong | 2.5% |
+| pass^1 | 55.0% |
 | `composable` (14) accuracy | 21.4% |
-| `conversation` (8) accuracy | 62.5% |
-| `covered` (22) accuracy | 81.8% |
+| `conversation` (7) accuracy | 71.4% |
+| `covered` (21) accuracy | 85.7% |
 | `trap` (5) accuracy | 100.0% |
 | `uncovered` (5) accuracy | 20.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 6 (`custom-metricflow` 6 confident-wrong to wrong).
 
-Turns judged: 3 (1 the code left unclear, 2 confident-wrong with a hedge outside the list); verdicts that stood: 2.
-Confident-wrong turns the judge moved: 2 of 2 (1 to wrong, hedged; 1 to unclear).
+Turns judged: 2 (1 the code left unclear, 1 confident-wrong with a hedge outside the list); verdicts that stood: 2.
+Confident-wrong turns the judge moved: 1 of 1 (1 to wrong, hedged; 0 to unclear).
 
-Turns still unclear after judging (counted as wrong):
+Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
-- `custom-metricflow` `hard_candidates_still_in_running` run 1 turn 1: wrong / confident-wrong
+- `custom-metricflow` `hard_candidates_still_in_running` run 3 turn 1: not judged yet
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 55 of 55 cases; runs finished: baseline 55 of 165, custom-metricflow 165 of 165, custom-hybrid 165 of 165, custom-metricflow-compute 165 of 165; model responses spent: baseline 264, custom-metricflow 628, custom-hybrid 746, custom-metricflow-compute 610.
+Scored on partial: 1 run(s) of 54 of 54 cases; runs finished: baseline 54 of 162, custom-metricflow 162 of 162, custom-hybrid 162 of 162, custom-metricflow-compute 162 of 162; model responses spent: baseline 261, custom-metricflow 616, custom-hybrid 735, custom-metricflow-compute 598.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
-| Accuracy | 45.5% | 67.3% | 76.4% | 74.5% |
-| Confident-wrong | 25.5% | 10.9% | 3.6% | 7.3% |
-| pass^1 | 45.5% | 67.3% | 76.4% | 74.5% |
+| Accuracy | 46.3% | 68.5% | 77.8% | 75.9% |
+| Confident-wrong | 24.1% | 9.3% | 5.6% | 5.6% |
+| pass^1 | 46.3% | 68.5% | 77.8% | 75.9% |
 | `composable` (21) accuracy | 57.1% | 71.4% | 90.5% | 90.5% |
-| `conversation` (8) accuracy | 12.5% | 62.5% | 62.5% | 62.5% |
-| `covered` (23) accuracy | 52.2% | 82.6% | 87.0% | 87.0% |
+| `conversation` (7) accuracy | 14.3% | 71.4% | 71.4% | 71.4% |
+| `covered` (22) accuracy | 54.5% | 86.4% | 90.9% | 90.9% |
 | `trap` (5) accuracy | 60.0% | 100.0% | 100.0% | 100.0% |
 | `uncovered` (11) accuracy | 9.1% | 27.3% | 27.3% | 18.2% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
-- Accuracy: +0.218 [+0.055, +0.382]: a difference.
-- Confident-wrong: -0.145 [-0.291, -0.018]: a difference.
+- Accuracy: +0.222 [+0.056, +0.389]: a difference.
+- Confident-wrong: -0.148 [-0.278, -0.019]: a difference.
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
-Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 6 (`baseline` 1 unclear to confident-wrong; `custom-hybrid` 1 unclear to wrong; `custom-hybrid` 1 wrong to declined; `custom-metricflow` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to wrong).
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 9 (`baseline` 1 unclear to confident-wrong; `custom-hybrid` 1 unclear to wrong; `custom-hybrid` 3 wrong to confident-wrong; `custom-hybrid` 1 wrong to declined; `custom-metricflow` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to wrong).
 
-Turns judged: 3 (3 the code left unclear, 0 confident-wrong with a hedge outside the list); verdicts that stood: 3.
+Turns judged: 11 (3 the code left unclear, 8 confident-wrong with a hedge outside the list); verdicts that stood: 8.
+Confident-wrong turns the judge moved: 6 of 8 (3 to wrong, hedged; 3 to unclear).
+
+Turns still unclear after judging (counted as wrong):
+
+- `baseline` `hard_cost_per_booking_rise` run 1 turn 1: right / right
+- `custom-metricflow` `hv2_signups_never_ordered` run 1 turn 1: right / right
+- `custom-metricflow-compute` `hard_cost_per_booking_rise` run 1 turn 1: right / right
+
+Confident-wrong turns with a hedge outside the list, awaiting the judge:
+
+- `custom-metricflow` `hard_august_signups_bought` run 2 turn 1: not judged yet
+- `custom-metricflow` `hard_candidates_still_in_running` run 2 turn 1: not judged yet

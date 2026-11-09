@@ -1,6 +1,7 @@
 """The strict headless runner's transcript audit (#387): offline, on hand-made turns."""
 
 import importlib.util
+import json
 from pathlib import Path
 
 PROBE = Path(__file__).resolve().parents[3] / "docs/research/semantic-bet/probes/387_cc_strict.py"
@@ -57,3 +58,35 @@ def test_a_call_written_as_text_without_a_real_one_is_flagged():
         "cc-metricflow", [turn("€10.", text='query_metrics(metrics=["x"])')], TOOLS, TOOLS
     )
     assert got["fabricated_turns"] == [0] and got["uncited"] == [[0, 10.0]]
+
+
+def test_an_answers_file_name_reads_its_longest_setup_first():
+    assert cc._parts("cc-metricflow-compute-haiku-hard-v2") == (
+        "cc-metricflow-compute",
+        "haiku",
+        "hard-v2",
+    )
+    assert cc._parts("cc-metricflow-sonnet-frozen") == ("cc-metricflow", "sonnet", "frozen")
+
+
+def test_a_filtered_query_the_server_failed_is_a_filter_fault():
+    """#432: until the fix, every filtered query_metrics call answered "Error executing tool"."""
+    failed = {
+        "tool": "mcp__semantic__query_metrics",
+        "args": {"metrics": ["revenue_eur"], "filters": [{"dimension": "customer__country"}]},
+        "result": "Error executing tool query_metrics",
+    }
+    plain = {**failed, "args": {"metrics": ["revenue_eur"]}}
+    assert cc.filter_fault({"turns": [{"calls": [failed]}]})
+    assert not cc.filter_fault({"turns": [{"calls": [plain]}]})
+    assert not cc.filter_fault({"turns": [{"calls": [{**failed, "result": '{"rows": []}'}]}]})
+
+
+def test_a_stale_answer_is_never_read(tmp_path, monkeypatch):
+    line = '{"case": "c", "run": 1, "turns": []}'
+    answers = tmp_path / "a.jsonl"
+    answers.write_text(line + "\n" + '{"case": "c", "run": 2, "turns": []}\n')
+    stale = tmp_path / "stale.jsonl"
+    stale.write_text(json.dumps({"answer_sha": cc.answer_sha(line)}) + "\n")
+    monkeypatch.setattr(cc, "STALE", stale)
+    assert cc.recorded_runs(answers) == {("c", 2)}
