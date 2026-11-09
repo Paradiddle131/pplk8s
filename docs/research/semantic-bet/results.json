@@ -1,5 +1,5 @@
 {
- "written": "2026-11-09T01:36Z",
+ "written": "2026-11-09T01:40Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4644,10 +4644,10 @@
    "pass_all": 0.5818181818181818,
    "outcomes": {
     "right": 105,
-    "declined": 20,
+    "declined": 21,
     "wrong": 13,
     "confident-wrong": 8,
-    "unclear": 6
+    "unclear": 5
    },
    "model_calls": 585,
    "new": {
