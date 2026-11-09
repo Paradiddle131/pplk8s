@@ -1140,3 +1140,16 @@ def test_a_run_without_logged_calls_is_marked_unchecked():
     assert bet_eval.tools_checked(checked)
     assert not bet_eval.tools_checked(old) and not bet_eval.tools_checked(half)
     assert not bet_eval.tools_checked({"error": "x"})
+
+
+def test_an_ask_beside_a_figure_no_reading_holds_stays_wrong():
+    """#430: an offer of the other reading is right beside a reading's figure, never beside
+    another figure."""
+    turn = Turn("What was our revenue in Q3 2026?", "select 1, 2", ambiguous=["revenue_eur"])
+    meanings = [[17656.25], [19793.59]]
+    offer = "Revenue in calendar Q3 was €17,656.25. Let me know if you meant fiscal Q3."
+    assert score_turn(turn, meanings, offer, HEDGES, {}) is Outcome.RIGHT
+    other = "Revenue in calendar Q3 was €19,395.75. Let me know if you meant fiscal Q3."
+    assert score_turn(turn, meanings, other, HEDGES, {}) is not Outcome.RIGHT
+    ask = "Do you mean the calendar or the fiscal quarter?"
+    assert score_turn(turn, meanings, ask, HEDGES, {}) is Outcome.RIGHT

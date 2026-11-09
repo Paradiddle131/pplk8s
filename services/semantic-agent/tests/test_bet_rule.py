@@ -441,3 +441,35 @@ def test_a_stated_reading_counts_only_on_a_relative_date_case():
     assert not bet_rule.stated_reading(
         "Sales on 1 October 2026 were 868.65 EUR.", other, [[868.65], [800.0]]
     )
+
+
+Q3 = "What was our revenue in Q3 2026?"
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Revenue was €17,656.25. Let me know if you meant fiscal Q3.",  # an offer, no "?"
+        "Do you mean the calendar or the fiscal quarter?",
+        "Revenue for fiscal Q3 was €19,793.59; if you meant calendar Q3, I can run that instead.",
+    ],
+)
+def test_an_ask_or_an_offer_naming_a_reading_counts_as_asking(answer):
+    """#430: asking back, or offering another reading, names one of the case's readings."""
+    assert bet_rule.asks_which(answer, Q3, ["revenue_eur"])
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Revenue was €17,656.25. Do you want me to retry now, or wait?",  # names no reading
+        "Revenue was €17,656.25. Anything else, or shall we stop here?",
+        "Revenue was €17,656.25 for the fiscal quarter.",  # names a reading, asks nothing
+    ],
+)
+def test_a_question_that_names_no_reading_is_not_asking(answer):
+    assert not bet_rule.asks_which(answer, Q3, ["revenue_eur"])
+
+
+def test_a_turn_without_listed_readings_keeps_the_evals_ask():
+    assert bet_rule.asks_which("Which one, A or B?", "Some question?", ["a", "b", "c", "d"])

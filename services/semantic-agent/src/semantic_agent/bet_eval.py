@@ -73,6 +73,7 @@ from semantic_agent.bet_rule import (
     Outcome,
     answer_hash,
     arm_score,
+    asks_which,
     at_risk,
     declines,
     define_prompt,
@@ -96,7 +97,6 @@ from semantic_agent.evaluation import (
     Turn,
     _answer,
     _words,
-    asks_or_gives_each,
     carries,
     obeys_or_repeats,
 )
@@ -293,8 +293,18 @@ def score_turn(
             return Outcome.UNCLEAR
     else:
         # #435: on a relative-date ambiguity, one reading's figure with that reading's dates.
-        right = asks_or_gives_each(text, numbers) or stated_reading(text, turn.question, numbers)
+        # #430: a clarifying ask names one of the case's readings (bet_rule.asks_which).
+        # An ask beside a figure counts only when the figure is one reading's (#430): "I assumed
+        # an eight-day window ... let me know if you prefer seven" stays wrong.
         own = stated(text, turn.question)
+        right = (
+            (
+                asks_which(text, turn.question, turn.ambiguous)
+                and (not own or any(carries(text, m) for m in numbers))
+            )
+            or all(carries(text, m) for m in numbers)
+            or stated_reading(text, turn.question, numbers)
+        )
         if not right and own and not any(carries(text, m) for m in numbers):
             return turn_outcome(text, False, hedges, turn.question)
     if right:

@@ -312,6 +312,54 @@ def stated_reading(text: str, question: str, meanings: Sequence[Sequence[float]]
     return False
 
 
+# A clarifying ask on an `ambiguous` turn (#430, RULE.md § Changes since freezing, 2026-11-09):
+# a sentence that asks back (it ends in "?") or offers another reading ("let me know if you meant
+# ...") counts only when it names one of the case's readings; any "... or ...?" sentence no longer
+# does, and an offer without a question mark now does. The words naming each reading, by the turn's
+# ambiguous metrics, or by its question where the readings share a metric.
+READING_WORDS: dict[tuple[str, ...] | str, tuple[str, ...]] = {
+    ("revenue_eur", "net_revenue_eur"): (
+        "gross", "net", "before returns", "after returns", "less returns", "minus returns",
+        "returns deducted", "excluding returns", "including returns",
+    ),
+    ("signups", "customers_distinct", "customers_to_date"): (
+        "sign", "new customer", "registered", "placed", "ordered", "order", "purchas", "bought",
+        "buying", "active", "to date", "all-time", "all time", "cumulative", "total customer",
+        "base", "ever",
+    ),
+    ("customers_distinct", "engaged_customers_7d"): (
+        "order", "purchas", "bought", "engaged", "action", "visit", "activity",
+    ),
+    "What was our revenue in Q3 2026?": ("calendar", "fiscal", "financial year", "fy"),
+    "Today is 1 October 2026. How much revenue did we make over the last 7 days?": (
+        "today", "complete", "full day", "full days", "partial", "including", "excluding",
+        "24", "25", "30 sep", "1 oct",
+    ),
+}  # fmt: skip
+OFFER = re.compile(
+    r"\b(?:let me know if|tell me if|if you (?:meant|mean|want|wanted|would like|'d like|prefer|"
+    r"'d prefer|need)|did you mean|do you mean|would you (?:like|prefer)|should i|"
+    r"i can (?:also )?(?:give|show|compute|run|break))\b",
+    re.IGNORECASE,
+)
+SENTENCE = re.compile(r"[^.!?\n]+[.!?]?")
+
+
+def asks_which(text: str, question: str, ambiguous: Sequence[str]) -> bool:
+    """An answer that asks which reading is meant, or offers another one, naming a reading. A turn
+    with no listed readings keeps the eval's ASKS_WHICH."""
+    words = READING_WORDS.get(question) or READING_WORDS.get(tuple(ambiguous))
+    if words is None:
+        return bool(ASKS_WHICH.search(text))
+    for sentence in SENTENCE.findall(fold(text)):
+        if not (sentence.rstrip().endswith("?") or OFFER.search(sentence)):
+            continue
+        low = sentence.lower()
+        if any(re.search(rf"\b{re.escape(w)}", low) for w in words):
+            return True
+    return False
+
+
 def run_outcome(turns: Sequence[Outcome]) -> Outcome:
     """A run of a case over its turns: confident-wrong wins, then right needs every turn right."""
     if Outcome.CONFIDENT_WRONG in turns:
