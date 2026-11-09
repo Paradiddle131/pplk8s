@@ -108,7 +108,9 @@ def test_the_kinds_takeaway_draws_each_rows_setup_by_kind_and_names_no_winner():
         for r, (_, _, names, _) in zip(s["rows"], build.APPROACHES, strict=True):
             arm = build.stands_for(data["arms"], names, s["set"])
             for k, *_ in build.KINDS:
-                assert r["v"][k] == round(100 * arm["groups"][k][0])
+                # An approach with no complete setup on the set (a pass under way) has no cells.
+                expected = round(100 * arm["groups"][k][0]) if arm and k in arm["groups"] else None
+                assert r["v"][k] == expected
         for k, *_ in build.KINDS:
             lo, hi = s["ranges"][k]
             assert f"{lo} to {hi}" in s["body"]
