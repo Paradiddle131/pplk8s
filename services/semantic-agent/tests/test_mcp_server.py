@@ -165,3 +165,17 @@ def test_a_client_without_a_known_token_is_refused(url, audit, token):
 def test_the_client_list_must_name_every_client_once(spec, problem):
     with pytest.raises(ValueError, match=problem):
         mcp_server.ClientTokens.parse(spec)
+
+
+def test_a_filtered_query_is_audited_with_its_filters_as_json(url, audit):
+    """#432: MCP hands `filters` over as Filter models; the audit row stores them as JSON, so a
+    filtered query must reach the audit as plain data, never fail its write."""
+    filtered = {
+        **QUERY,
+        "filters": [{"dimension": "customer__country", "operator": "=", "values": ["TR"]}],
+    }
+    (query,) = asyncio.run(calls(url, "token-b", ("query_metrics", filtered)))
+    assert not query.is_error
+    (row,) = audit
+    assert row["filters"] == filtered["filters"]
+    json.dumps(row)  # what the real writer does for the jsonb columns

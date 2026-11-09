@@ -28,6 +28,7 @@ from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic_core import to_jsonable_python
 
 from semantic_agent import tools
 from semantic_agent.audit import Caller
@@ -88,7 +89,12 @@ def served(tool: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]
         response = tool(**args)
         if tool.__name__ in tools.CATALOG_TOOLS:
             return response
-        sent = {name: value for name, value in args.items() if value is not None}
+        # The arguments as JSON, as an ADK agent sends them: MCP validates `filters` into Filter
+        # models, which the audit row's jsonb cannot hold, so every filtered query failed its
+        # audit write and was withheld as "Error executing tool" (#432).
+        sent = {
+            name: to_jsonable_python(value) for name, value in args.items() if value is not None
+        }
         return guarded(tool.__name__, sent, response, caller(ctx), tools.catalog)
 
     context = inspect.Parameter("ctx", inspect.Parameter.KEYWORD_ONLY, annotation=Context)
