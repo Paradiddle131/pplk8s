@@ -1190,3 +1190,32 @@ def test_step_two_can_leave_out_the_cases_either_arm_cannot_reach():
     _, _, within = bet_eval.step_two(bet, rows, 1, {"custom-metricflow": ["b"]})
     assert every[0].cases == 2 and every[0].accuracy.mean == -0.5
     assert within[0].cases == 1 and within[0].accuracy.mean == 0.0
+
+
+def test_a_reach_row_supersedes_the_runs_logged_before_the_new_reach(tmp_path):
+    """#448: on a touched case, a run logged without the new reach leaves the scores and the
+    resume (asked again), stays in the log, and is never a redaction."""
+    rows = [
+        {"arm": "baseline", "model": "m", "case": "c", "run": 1, "outcome": "declined"},
+        {
+            "arm": "baseline",
+            "model": "m",
+            "case": "c",
+            "run": 1,
+            "outcome": "right",
+            "reach": "silver",
+        },
+        {"arm": "baseline", "model": "m", "case": "d", "run": 1, "outcome": "right"},
+        {"arm": "baseline", "model": "other", "case": "c", "run": 1, "outcome": "wrong"},
+    ]
+    log = tmp_path / "eval-local.jsonl"
+    log.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    row = {"kind": "reach", "arms": ["baseline"], "model": "m", "cases": {"frozen": ["c"]}}
+    (tmp_path / "redacted.jsonl").write_text(json.dumps({**row, "reach": "silver"}) + "\n")
+    kept = bet_eval.read_log(log)
+    assert [(r["case"], r["model"], r["outcome"]) for r in kept] == [
+        ("c", "m", "right"),
+        ("d", "m", "right"),
+        ("c", "other", "wrong"),
+    ]
+    assert len(bet_eval.read_log(log, raw=True)) == 4

@@ -464,6 +464,30 @@ def read_overlay(directory: Path = RESEARCH) -> tuple[set[str], set[tuple]]:
     return cases, runs
 
 
+def read_superseded(directory: Path = RESEARCH) -> dict[tuple[str, str, str, str], str]:
+    """The `reach` rows in force (#448): (set, arm, model, case) -> the reach a run must carry.
+    A run of such a key logged without that reach (before the policy changed what the setup could
+    read) is superseded, never redacted: it stays in the log, and the scores and the resume read
+    only the runs asked under the new reach, as a set version's runs replace the last one's."""
+    out: dict[tuple[str, str, str, str], str] = {}
+    path = directory / OVERLAY
+    if not path.exists():
+        return out
+    for line in path.read_text().splitlines():
+        row = json.loads(line) if line.strip() else {}
+        if row.get("kind") != "reach":
+            continue
+        for name, cases in row["cases"].items():
+            for arm in row["arms"]:
+                for case in cases:
+                    key = (name, arm, row["model"], case)
+                    if row.get("undo"):
+                        out.pop(key, None)
+                    else:
+                        out[key] = row["reach"]
+    return out
+
+
 def read_labels(directory: Path = RESEARCH, name: str = FROZEN) -> dict[str, list[str]]:
     """A set's corrected group labels from the overlay ({"kind": "label", "set", "case",
     "groups"}): a frozen set file is never edited, so a wrong label found later is fixed here
@@ -488,7 +512,8 @@ def read_log(path: Path = LOG, raw: bool = False) -> list[dict[str, Any]]:
     if raw or not path.name.startswith("eval-"):
         return rows
     cases, runs = read_overlay(path.parent)
-    if not cases and not runs:
+    superseded = read_superseded(path.parent)
+    if not cases and not runs and not superseded:
         return rows
     # A per-arm log's rows may not name the arm; the file name does (`<prefix><arm>.jsonl`).
     arm = None
@@ -499,8 +524,20 @@ def read_log(path: Path = LOG, raw: bool = False) -> list[dict[str, Any]]:
             default="eval-",
         )
         arm = path.stem.removeprefix(prefix)
+    name = next(
+        (n for n, f in sorted(SETS.items(), key=lambda x: -len(x[1].prefix))
+         if path.name.startswith(f.prefix)),
+        FROZEN,
+    )  # fmt: skip
+
+    def current(r: Mapping[str, Any]) -> bool:
+        wanted = superseded.get((name, r.get("arm") or arm, r.get("model"), r.get("case")))
+        return wanted is None or r.get("reach") == wanted
+
     return [
-        r for r in rows if r.get("case") not in cases and run_key({"arm": arm, **r}) not in runs
+        r
+        for r in rows
+        if r.get("case") not in cases and run_key({"arm": arm, **r}) not in runs and current(r)
     ]
 
 

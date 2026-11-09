@@ -12,6 +12,7 @@
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/../../../../.." && pwd)
 SA=$REPO/services/semantic-agent
+S0=$REPO/docs/research/semantic-bet
 S=${LANE_DIR:-${TMPDIR:-/tmp}/semantic-bet-lanes}; mkdir -p "$S"
 CAP=${CAP:-990}
 export DBT_DBNAME=dbt_dev DBT_HOST=localhost DBT_PORT=5433 GCP_PROJECT=pplk8s-lab-001 BET_MCP_TOKEN=proxy-injected
@@ -137,7 +138,27 @@ backlog() {
   carry
   push "the judge's backlog (Claude Haiku)"
 }
+# #448: while baseline and custom-hybrid are held, the lane asks them again on the cases #445's reach touched (the
+# redacted.jsonl `reach` row; their earlier runs are superseded, not redacted), k = 3, every set, before the rounds.
+touched() {
+  python3 -c "import json,sys; rows=[json.loads(l) for l in open('$S0/redacted.jsonl') if l.strip()]; \
+r=[x for x in rows if x.get('kind')=='reach' and not x.get('undo')][-1]; print(' '.join(r['cases'][sys.argv[1]]))" "$1"
+}
+reach_reruns() {
+  local s arm left
+  for s in hard-v2 frozen hard; do
+    for arm in baseline custom-hybrid; do
+      left=$((CAP - $(used))); [ $left -gt 30 ] || return 0
+      log "start $arm $s touched by #445's reach k=3: free count $(used)"
+      # shellcheck disable=SC2046
+      cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --arms $arm --set $s --runs 3 \
+        --requests $left $(touched $s) 2>&1 | grep -v -i "warning\|MetricEvaluatorRegistry" | tail -2
+      push "$arm $s, the cases #445's reach touched (#448)"
+    done
+  done
+}
 backlog
+[ -n "$HELD" ] && reach_reruns
 round 1 hard
 hard_v2 1
 hard_v2 3
