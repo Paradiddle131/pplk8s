@@ -136,6 +136,34 @@ def turn_of(question: str, summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# A result's head in the log, as the local setups keep their tool results (bet_eval.RESULT_HEAD).
+RESULT_HEAD = 400
+
+
+def trace_of(stream: Any) -> dict[str, Any]:
+    """What a turn's stream holds besides its answer (#440): each result's head, the BigQuery job
+    ids and the follow-up questions the agent offered; logged beside the answer, never scored."""
+    results, jobs, followups = [], [], []
+    for message in stream if isinstance(stream, list) else [stream]:
+        system = message.get("systemMessage") if isinstance(message, dict) else None
+        if not isinstance(system, dict):
+            continue
+        data = system.get("data") or {}
+        if "result" in data:
+            rows = (data["result"] or {}).get("data")
+            results.append(json.dumps(rows, default=str)[:RESULT_HEAD])
+        if job := (data.get("bigQueryJob") or {}).get("jobId"):
+            jobs.append(job)
+        text = system.get("text") or {}
+        if text.get("textType") == "FOLLOWUP_QUESTIONS":
+            followups += list(text.get("parts") or [])
+    return {
+        k: v
+        for k, v in (("results", results), ("jobs", jobs), ("followups", followups))
+        if v
+    }
+
+
 def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]]:
     """The runner's `ask` for this arm: every question of a case in one stateless conversation."""
     agent_id = AGENTS.get(arm) or sys.exit(
@@ -172,6 +200,7 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
             ]
             turn = {
                 **turn_of(question, shaped.summarise(stream)),
+                **trace_of(stream),
                 "model_calls": attempts,
             }
             if failed := quota_failure(turn["answer"]):

@@ -1130,3 +1130,13 @@ def test_a_run_joins_its_audit_rows_by_session():
     ]
     joined = bet_eval.audit_join(entries, audit)
     assert joined == {("baseline", "m", "c", 1, "t"): [audit[0]]}
+
+
+def test_a_run_without_logged_calls_is_marked_unchecked():
+    """#441: only a run whose every turn logged its calls was checked against its tools."""
+    checked = {"turns": [{"text": "a", "outcome": "right", "calls": []}]}
+    old = {"turns": [{"text": "a", "outcome": "right"}], "carried_from": "hard"}
+    half = {"turns": [{"text": "a", "calls": []}, {"text": "b"}]}
+    assert bet_eval.tools_checked(checked)
+    assert not bet_eval.tools_checked(old) and not bet_eval.tools_checked(half)
+    assert not bet_eval.tools_checked({"error": "x"})

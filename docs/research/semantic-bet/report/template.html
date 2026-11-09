@@ -1451,6 +1451,7 @@ window.REPORT = D;
       // a sort lays every model out flat: a model that is not its setup's main one says so
       if (MS.col && !mains.has(r.key)) tags.push(`<span class="flag" data-term="main-model" tabindex="0">not its main model</span>`);
       if (r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${esc(r.partial)}</span>`);
+      if (r.unchecked) tags.push(`<span class="flag" data-term="unchecked" tabindex="0">${r.unchecked}% calls not recorded</span>`);
       if (r.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
       if (r.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
       if (r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best</span>`);

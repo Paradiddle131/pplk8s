@@ -1703,7 +1703,14 @@ def write_scored_runs(directory: Path = RESEARCH) -> Path:
                 for t in e.get("turns") or []
             ]
             keep = ("arm", "model", "case", "run", "at", "outcome", "carried_from")
-            rows.append({"set": name, **{k: e[k] for k in keep if k in e}, "turns": turns})
+            rows.append(
+                {
+                    "set": name,
+                    **{k: e[k] for k in keep if k in e},
+                    "tools_checked": tools_checked(e),
+                    "turns": turns,
+                }
+            )
     path = directory / SCORED_RUNS
     path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
     return path
@@ -1741,6 +1748,13 @@ def session_kind(model: str) -> str:
     if model.startswith("claude-code"):
         return "shared per batch"
     return "fresh per run"
+
+
+def tools_checked(entry: Mapping[str, Any]) -> bool:
+    """A run whose every turn logged its tool calls (#388 on), so they were checked against its
+    setup's declared tools; a run logged before, or carried from one, was never checked (#441)."""
+    turns = entry.get("turns") or []
+    return bool(turns) and all("calls" in t for t in turns)
 
 
 def arm_result(
@@ -1802,6 +1816,15 @@ def arm_result(
             else {}
         ),
         **({"carried_runs": carried} if carried else {}),
+        "unchecked_runs": sum(
+            1
+            for e in entries
+            if e["arm"] == arm
+            and e["model"] == model
+            and e["run"] <= runs
+            and e.get("turns")
+            and not tools_checked(e)
+        ),
     }
 
 
