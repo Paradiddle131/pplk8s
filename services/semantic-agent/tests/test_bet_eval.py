@@ -926,6 +926,13 @@ def test_a_pass_does_not_start_when_the_audit_database_is_unreachable(monkeypatc
     assert problem is not None and problem.startswith("the audit database is unreachable")
 
 
+def test_a_sql_pass_does_not_start_without_the_whole_reach():
+    silver = ("silver.orders", "silver.customers")
+    assert "no silver table" in bet_eval.reach_problem(("semantic.time_spine",))
+    assert "semantic.time_spine" in bet_eval.reach_problem(silver)
+    assert bet_eval.reach_problem((*silver, "semantic.time_spine")) is None
+
+
 def test_results_hold_every_arm_with_its_intervals(tmp_path, monkeypatch):
     cases = [f"c{i}" for i in range(6)]
     qs = [Question.single(c, f"Question {c}?", "", []) for c in cases]

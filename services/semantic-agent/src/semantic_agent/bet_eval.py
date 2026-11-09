@@ -149,6 +149,24 @@ def reach_tables(url: str | None = None) -> tuple[str, ...]:
     return tuple(r[0] for r in rows)
 
 
+# The reach policy's one table outside `silver` (#436): `make dbt-catalog` rebuilds it and drops the
+# fixture's grant, so a pass checks it is still in reach.
+FISCAL_CALENDAR = "semantic.time_spine"
+
+
+def reach_problem(sql_reach: Sequence[str]) -> str | None:
+    """Why a pass of a SQL-writing setup cannot start: `agent_sql` lacks part of the reach policy
+    (#445), so its runs would be logged as `"reach": REACH` without that reach."""
+    if not any(t.startswith("silver.") for t in sql_reach):
+        return "agent_sql reads no silver table; rebuild the fixture (#445)"
+    if FISCAL_CALENDAR not in sql_reach:
+        return (
+            f"agent_sql cannot read {FISCAL_CALENDAR} (make dbt-catalog drops its grant); "
+            "rerun tests/e2e/agent-fixture.sh (#436)"
+        )
+    return None
+
+
 # RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
 RUNG = {
     "native-context": 1,
@@ -2370,8 +2388,8 @@ async def main(argv: Sequence[str]) -> int:
         described = evaluation.definitions(asked.questions)
         # custom-metricflow's tools read only the semantic models: legacy stays out of its reach.
         sql_reach = (*LEGACY_TABLES, *(reach_tables() if LEGACY_REACH & set(args.arms) else ()))
-        if LEGACY_REACH & set(args.arms) and not any(t.startswith("silver.") for t in sql_reach):
-            print("stopped: agent_sql reads no silver table; rebuild the fixture (#445)")
+        if LEGACY_REACH & set(args.arms) and (problem := reach_problem(sql_reach)):
+            print(f"stopped: {problem}")
             return 2
         builders = {
             "baseline": lambda: build_baseline(extra_tables=sql_reach),
