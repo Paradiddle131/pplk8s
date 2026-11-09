@@ -494,6 +494,98 @@ Judge = Callable[[str], Awaitable[str]]
 TurnKey = tuple[str, str, str, int, int]
 
 
+class JudgeLimit(RuntimeError):
+    """The judge's subscription refused for its usage limit: no later verdict can be had until it
+    resets, so the pass stops as on a spent quota and scores no turn (#427)."""
+
+
+# The Claude judge (#427, RULE.md § Scoring a run): one fresh `claude -p` process a verdict, with
+# no tool, no MCP server, no settings and nothing persisted, so it sees only the judge prompt (the
+# orchestrating session has read every setup's results; this process has not). The flags are the
+# strict runner's (probes/387_cc_strict.py), less its MCP tools.
+CLAUDE_JUDGE_ASK = "Grade the answer now, ending with the VERDICT line."
+CLAUDE_JUDGE_TIMEOUT_S = 180.0
+# Words of a usage-limit refusal in the result of a `claude -p` process (387_cc_strict.LIMIT_WORDS).
+CLAUDE_LIMIT_WORDS = ("usage limit", "rate limit", "limit reached", "quota")
+
+
+def claude_judge_args(model: str, system_prompt: Path) -> list[str]:
+    """The `claude -p` arguments for one verdict, after the command itself."""
+    return [
+        "-p",
+        "--model",
+        model,
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--setting-sources",
+        "",
+        "--no-session-persistence",
+        "--system-prompt-file",
+        str(system_prompt),
+        "--output-format",
+        "json",
+    ]
+
+
+def claude_judge(model: str | None = None, command: Sequence[str] = ("claude",)) -> Judge:
+    """The judge as one headless Claude Code process per call: the judge prompt is its system
+    prompt, the question its only message, and its reply the `result` of the JSON it prints.
+    A usage-limit refusal raises JudgeLimit; any other failure (a non-zero exit, an error result,
+    unreadable output, a timeout) raises RuntimeError, a failed request the pass may skip."""
+    from semantic_agent.model import claude_judge_model
+
+    model = model or claude_judge_model()
+
+    async def ask(prompt: str) -> str:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            system = Path(tmp, "judge.md")
+            system.write_text(prompt)
+            proc = await asyncio.create_subprocess_exec(
+                *command,
+                *claude_judge_args(model, system),
+                cwd=tmp,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            try:
+                out, err = await asyncio.wait_for(
+                    proc.communicate(CLAUDE_JUDGE_ASK.encode()), CLAUDE_JUDGE_TIMEOUT_S
+                )
+            except TimeoutError:
+                proc.kill()
+                await proc.wait()
+                raise RuntimeError(
+                    f"claude -p gave no verdict in {CLAUDE_JUDGE_TIMEOUT_S:.0f} s"
+                ) from None
+        try:
+            event = json.loads(out.decode() or "{}")
+        except json.JSONDecodeError:
+            event = {}
+        result = str(event.get("result") or "")
+        said = " ".join((result + " " + err.decode(errors="replace")).split())
+        if any(w in said.lower() for w in CLAUDE_LIMIT_WORDS) and (
+            event.get("is_error") or proc.returncode or not parse_verdict(result)
+        ):
+            raise JudgeLimit(said[:300])
+        if proc.returncode or event.get("is_error") or not event:
+            raise RuntimeError(f"claude -p failed (exit {proc.returncode}): {said[:300]}")
+        return result
+
+    return ask
+
+
+def build_judge(backend: str | None = None) -> Judge:
+    """The judge on its backend (model.judge_backend: `claude` by default, `openrouter` behind
+    the switch)."""
+    from semantic_agent.model import judge_backend
+
+    return claude_judge() if (backend or judge_backend()) == "claude" else model_judge()
+
+
 def model_judge() -> Judge:
     """The judge on the model factory's judge model (model.build_judge), one request per call."""
     from semantic_agent.model import build_judge
@@ -599,76 +691,125 @@ async def judge_turns(
     judge_model: str,
     path: Path = JUDGE_LOG,
     requests: int | None = None,
+    concurrency: int = 1,
 ) -> tuple[str, int]:
     """Ask the judge each verdict the cache lacks for an unclear turn, appending each to `path` as
-    it comes; returns why it stopped (`done`, `requests`, `quota` or `unavailable`) and the
-    requests sent. `JUDGE_FAILURES` failed requests in a row that are not a spent quota (the judge
-    model down upstream, #371) stop the pass with "judge unavailable: <error>" printed."""
+    it comes; returns why it stopped (`done`, `requests`, `quota`, `limit` or `unavailable`) and
+    the requests sent. `JUDGE_FAILURES` failed requests in a row that are not a spent quota (the
+    judge model down upstream, #371) stop the pass with "judge unavailable: <error>" printed; a
+    usage limit (JudgeLimit) stops it as `limit`. Up to `concurrency` verdicts are asked at once,
+    in log order."""
     from semantic_agent.model import classify
 
     questions = {q.id: q for q in bet.questions}
     described = evaluation.definitions(bet.questions)
-    spent = 0
-    failures = 0
+    cached = read_verdicts(path, judge_model, bet.name)
+    asks: list[tuple[TurnKey, str, str, int]] = []
     for (arm, model, case, run, i), text in undecided_turns(entries, bet.hedges):
         if case not in questions:
             continue
         digest = answer_hash(text)
-        key = (arm, model, case, run, i, digest)
-        cached = read_verdicts(path, judge_model, bet.name).get(key, [None] * VERDICTS)
+        have = cached.get((arm, model, case, run, i, digest), [None] * VERDICTS)
         for n in range(1, VERDICTS + 1):
-            if cached[n - 1] is not None:
-                continue
+            if have[n - 1] is None:
+                asks.append(((arm, model, case, run, i), text, digest, n))
+    spent = 0
+    failures = 0
+    stop: list[str] = []
+    queue = iter(asks)
+
+    async def one(key: TurnKey, text: str, digest: str, n: int) -> None:
+        nonlocal failures
+        arm, model, case, run, i = key
+        turn = questions[case].turns[i]
+        if turn.kind == "define":
+            definition = " ".join(described.get(name, name) for name in turn.define)
+            prompt = define_prompt(turn.question, definition, text)
+        else:
+            prompt = judge_prompt(turn.question, expected[case][i], text)
+        try:
+            reply = await judge(prompt)
+        except JudgeLimit as limit:
+            print(f"judge stopped: {limit}")
+            stop.append("limit")
+            return
+        except Exception as error:  # a failed request: asked again on a later pass
+            failure = classify(error)
+            if failure.ends_run:
+                stop.append("quota")
+                return
+            failures += 1
+            if failures >= JUDGE_FAILURES:
+                print(f"judge unavailable: {failure.message}")
+                stop.append("unavailable")
+            return
+        failures = 0
+        verdict = parse_verdict(reply)
+        row = {
+            "set": bet.name,
+            "arm": arm,
+            "model": model,
+            "case": case,
+            "run": run,
+            "turn": i,
+            "answer": digest,
+            "judge": judge_model,
+            "n": n,
+            "verdict": verdict.value if verdict else None,
+            "reply": " ".join(reply.split())[-300:],
+            "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        append_log(row, path)
+
+    async def worker() -> None:
+        nonlocal spent
+        while not stop:
+            item = next(queue, None)
+            if item is None:
+                return
             if requests is not None and spent >= requests:
-                return "requests", spent
-            turn = questions[case].turns[i]
-            if turn.kind == "define":
-                definition = " ".join(described.get(name, name) for name in turn.define)
-                prompt = define_prompt(turn.question, definition, text)
-            else:
-                prompt = judge_prompt(turn.question, expected[case][i], text)
+                stop.append("requests")
+                return
             spent += 1
-            try:
-                reply = await judge(prompt)
-            except Exception as error:  # a failed request: asked again on a later pass
-                failure = classify(error)
-                if failure.ends_run:
-                    return "quota", spent
-                failures += 1
-                if failures >= JUDGE_FAILURES:
-                    print(f"judge unavailable: {failure.message}")
-                    return "unavailable", spent
-                continue
-            failures = 0
-            verdict = parse_verdict(reply)
-            row = {
-                "set": bet.name,
-                "arm": arm,
-                "model": model,
-                "case": case,
-                "run": run,
-                "turn": i,
-                "answer": digest,
-                "judge": judge_model,
-                "n": n,
-                "verdict": verdict.value if verdict else None,
-                "reply": " ".join(reply.split())[-300:],
-                "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }
-            append_log(row, path)
-    return "done", spent
+            await one(*item)
+
+    await asyncio.gather(*(worker() for _ in range(max(1, concurrency))))
+    return (stop[0] if stop else "done"), spent
+
+
+def scored_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]:
+    """Every arm's runs on `bet`'s set scored on read under the current wordings (`recode`), from
+    the cached expected numbers when they exist: the one scoring both the report (`judged_logs`)
+    and the judge's selection of turns (`--judge`) read, so every turn the report leaves unclear is
+    a turn the judge is asked about (#426)."""
+    expected = read_expected(bet.name, directory)
+    described = evaluation.definitions(bet.questions) if expected is not None else None
+    return recode(bet, read_logs(directory, bet.name), expected, described)
+
+
+def pending_verdicts(
+    bet: BetSet, entries: Sequence[dict[str, Any]], judge_model: str, path: Path = JUDGE_LOG
+) -> list[tuple[TurnKey, str]]:
+    """The judgeable turns (`undecided_turns`) that lack one of their verdicts from `judge_model`
+    in the cache at `path`: what a `--judge` pass would ask about."""
+    cached = read_verdicts(path, judge_model, bet.name)
+    cases = {q.id for q in bet.questions}
+    out = []
+    for key, text in undecided_turns(entries, bet.hedges):
+        if key[2] not in cases:
+            continue
+        if None in cached.get((*key, answer_hash(text)), [None] * VERDICTS):
+            out.append((key, text))
+    return out
 
 
 def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]:
-    """Every arm's runs on `bet`'s set scored on read under the current wordings (`recode`), with
-    the current judge model's verdicts on that set applied."""
+    """Every arm's runs on `bet`'s set as scored now (`scored_logs`), with the current judge
+    model's verdicts on that set applied."""
     from semantic_agent.model import judge_model_id
 
     verdicts = read_verdicts(directory / JUDGE_LOG.name, judge_model_id(), bet.name)
-    expected = read_expected(bet.name, directory)
-    described = evaluation.definitions(bet.questions) if expected is not None else None
-    entries = recode(bet, read_logs(directory, bet.name), expected, described)
-    return apply_verdicts(entries, verdicts)
+    return apply_verdicts(scored_logs(bet, directory), verdicts)
 
 
 # Each set's expected numbers, read once from the fixture warehouse (`--write-expected`), so the
@@ -1647,6 +1788,10 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
             for name, files in SETS.items()
         },
     }
+    from semantic_agent.model import judge_model_id
+
+    judge = judge_model_id()
+    out["judge"] = judge
     out["sets"] = {}
     retired, _ = read_overlay(directory)
     for name in SETS:
@@ -1658,6 +1803,11 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
             "retired": sorted(c for c in retired if c in yaml_ids(SETS[name].questions)),
             **question_set(name, directory),
         }
+        # Turns no verdict of the current judge has settled yet (#426): each counts as wrong, and a
+        # confident-wrong one waiting on its hedge as confident-wrong, until it is judged.
+        out["sets"][name]["judge_waiting"] = len(
+            pending_verdicts(bet, scored_logs(bet, directory), judge, directory / JUDGE_LOG.name)
+        )
         entries = judged_logs(bet, directory)
         for model in dict.fromkeys(e["model"] for e in entries):
             for arm in arms_of(entries, model):
@@ -1739,6 +1889,18 @@ async def main(argv: Sequence[str]) -> int:
         "--judge", action="store_true", help="ask the blind judge about every unclear turn"
     )
     parser.add_argument(
+        "--judge-backend",
+        choices=("claude", "openrouter"),
+        default=None,
+        help="the judge's backend: claude (Haiku through claude -p, the default) or openrouter",
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=1, help="verdicts asked at once by --judge"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="with --judge: count the turns waiting, ask none"
+    )
+    parser.add_argument(
         "--write-expected",
         action="store_true",
         help="read every set's expected numbers from the warehouse into expected.json (#382)",
@@ -1751,6 +1913,9 @@ async def main(argv: Sequence[str]) -> int:
         help="the set asked, logged and scored (default: the frozen set)",
     )
     args = parser.parse_args(argv)
+    if args.judge_backend:
+        # The report written below reads this backend's verdicts too (model.judge_model_id).
+        os.environ["BET_JUDGE_BACKEND"] = args.judge_backend
 
     from semantic_agent.model import DEFAULT_MODEL_ID, MissingKey, claude_key, judge_model_id
 
@@ -1769,18 +1934,34 @@ async def main(argv: Sequence[str]) -> int:
         print(f"expected numbers: written to {write_expected(url)}")
         return 0
     if args.judge:
-        logs = recode(bet, read_logs(name=args.which))
-        pending = {key[2] for key, _ in undecided_turns(logs, bet.hedges)}
+        # The turns the report leaves unclear, scored as it scores them (#426): from the cached
+        # expected numbers (`--write-expected`), which the prompts show too.
+        logs = scored_logs(bet)
+        judge_id = judge_model_id()
+        waiting = pending_verdicts(bet, logs, judge_id, JUDGE_LOG)
+        print(
+            f"judge: {len(waiting)} turn(s) of {args.which} wait for a verdict of {judge_id} "
+            f"({len(undecided_turns(logs, bet.hedges))} judgeable)"
+        )
+        if args.dry_run:
+            return 0
+        pending = {key[2] for key, _ in waiting}
         asked = load_set(args.which, sorted(pending)) if pending else BetSet([], {}, [], args.which)
-        database = os.environ.get("DBT_DBNAME", "dbt_dev")
-        owner_url = os.environ.get(
-            "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
-        )
-        expected = evaluation.expected_numbers(asked.questions, owner_url) if pending else {}
+        expected = read_expected(args.which) or {}
+        if pending and not expected:
+            print("stopped: no expected.json; write it first (--write-expected)")
+            return 2
         why, spent = await judge_turns(
-            asked, logs, expected, model_judge(), judge_model_id(), JUDGE_LOG, args.requests
+            asked,
+            logs,
+            expected,
+            build_judge(),
+            judge_id,
+            JUDGE_LOG,
+            args.requests,
+            args.concurrency,
         )
-        print(f"judge: {spent} request(s) sent to {judge_model_id()}")
+        print(f"judge: {spent} request(s) sent to {judge_id}; stopped: {why}")
     elif args.rescore:
         database = os.environ.get("DBT_DBNAME", "dbt_dev")
         owner_url = os.environ.get(

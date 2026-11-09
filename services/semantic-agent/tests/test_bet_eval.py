@@ -438,9 +438,129 @@ def test_an_unjudged_turn_is_listed_as_not_judged_yet():
     assert "- `native-kc` `bet_median_order` run 1 turn 1: not judged yet" in text
 
 
+RISE = Question.single(
+    "hard_cost_per_booking_rise", "How much did the cost per booking rise in October?", "", []
+)
+RISE_BET = BetSet([RISE], {"hard_cost_per_booking_rise": ["composable"]}, HEDGES)
+
+
+def test_the_judge_selects_the_turns_the_report_leaves_unclear(tmp_path):
+    """#426: a small expected number that is not the answer's own first figure is unclear under
+    the full rescore (#382); the judge's selection reads the same scoring as the report, so it
+    asks about that turn instead of leaving it to count as wrong."""
+    answer = "It rose from 98.00 EUR to 125.00 EUR, an increase of 27.00 EUR."
+    row = {"arm": "baseline", "model": "m", "run": 1, "case": RISE.id, "outcome": "right"}
+    row["turns"] = [{"text": answer, "outcome": "right"}]  # as logged before #382
+    (tmp_path / "eval-local.jsonl").write_text(json.dumps(row) + "\n")
+    (tmp_path / "expected.json").write_text(
+        json.dumps({"sets": {"frozen": {RISE.id: [[as_expected(27.0)]]}}})
+    )
+
+    # Without the expected numbers the log's "right" stands and nothing would be judged.
+    assert bet_eval.undecided_turns(bet_eval.recode(RISE_BET, [row]), HEDGES) == []
+
+    scored = bet_eval.scored_logs(RISE_BET, tmp_path)
+    assert scored[0]["turns"][0]["outcome"] == "unclear"
+    cache = tmp_path / "judge.jsonl"
+    waiting = bet_eval.pending_verdicts(RISE_BET, scored, "j", cache)
+    assert waiting == [(("baseline", "m", RISE.id, 1, 0), answer)]
+    # judged_logs reads that same scoring: the report's unclear turn is the judge's pending one.
+    assert bet_eval.judged_logs(RISE_BET, tmp_path)[0]["outcome"] == "unclear"
+
+    judge = StubJudge({answer: ["right", "right"]})
+    expected = bet_eval.read_expected("frozen", tmp_path)
+    asyncio.run(bet_eval.judge_turns(RISE_BET, scored, expected, judge, "j", cache))
+    assert "27" in judge.prompts[0]
+    assert bet_eval.pending_verdicts(RISE_BET, scored, "j", cache) == []
+    judged = bet_eval.apply_verdicts(scored, bet_eval.read_verdicts(cache, "j"))
+    assert judged[0]["outcome"] == "right"
+
+
+def _stub_claude(tmp_path: Path, payload: dict, code: int = 0) -> list[str]:
+    """A stand-in `claude` that records its arguments and stdin, then prints `payload`."""
+    script = tmp_path / "claude_stub.py"
+    script.write_text(
+        "import json, sys, pathlib\n"
+        f"pathlib.Path({str(tmp_path / 'args.json')!r}).write_text(json.dumps("
+        "{'argv': sys.argv[1:], 'stdin': sys.stdin.read(), "
+        "'system': pathlib.Path(sys.argv[sys.argv.index('--system-prompt-file') + 1]).read_text()"
+        "}))\n"
+        f"print(json.dumps({payload!r}))\n"
+        f"sys.exit({code})\n"
+    )
+    import sys
+
+    return [sys.executable, str(script)]
+
+
+def test_the_claude_judge_is_one_tool_less_claude_p_process_a_verdict(tmp_path):
+    """#427: the judge prompt is the system prompt of a fresh `claude -p` with no tool, no MCP
+    server, no settings and no saved session; its reply is the JSON's `result`."""
+    command = _stub_claude(tmp_path, {"result": "Fine.\nVERDICT: right", "is_error": False})
+    judge = bet_eval.claude_judge("haiku", command)
+    reply = asyncio.run(judge(bet_rule.judge_prompt("Revenue?", [[868.65]], "868.65 EUR")))
+    assert bet_rule.parse_verdict(reply) is Outcome.RIGHT
+    seen = json.loads((tmp_path / "args.json").read_text())
+    argv = seen["argv"]
+    assert argv[:3] == ["-p", "--model", "haiku"]
+    assert argv[argv.index("--tools") + 1] == ""
+    assert argv[argv.index("--setting-sources") + 1] == ""
+    assert "--strict-mcp-config" in argv and "--no-session-persistence" in argv
+    assert "868.65 EUR" in seen["system"] and "VERDICT" in seen["stdin"]
+
+
+def test_a_spent_subscription_limit_stops_the_claude_judge_and_scores_nothing(tmp_path):
+    command = _stub_claude(
+        tmp_path, {"result": "Claude AI usage limit reached|1762700000", "is_error": True}, code=1
+    )
+    entries = [_unclear("native-kc", "bet_median_order", "Nothing on medians here.")]
+    cache = tmp_path / "judge.jsonl"
+    judge = bet_eval.claude_judge("haiku", command)
+    why, spent = asyncio.run(
+        bet_eval.judge_turns(BET, entries, EXPECTED, judge, "claude -p (haiku)", cache)
+    )
+    assert (why, spent) == ("limit", 1)
+    assert not cache.exists()  # no verdict written, so no turn is scored by it
+
+
+def test_a_failed_claude_process_is_a_failed_request(tmp_path):
+    command = _stub_claude(tmp_path, {"result": "boom", "is_error": True}, code=1)
+    with pytest.raises(RuntimeError, match="claude -p failed"):
+        asyncio.run(bet_eval.claude_judge("haiku", command)("prompt"))
+
+
+def test_the_judge_asks_several_verdicts_at_once_and_writes_each(tmp_path):
+    entries = [
+        _unclear("native-kc", "bet_median_order", f"Nothing on medians here, try {n}.", run=n)
+        for n in (1, 2, 3)
+    ]
+    judge = StubJudge({f"try {n}": ["declined", "declined"] for n in (1, 2, 3)})
+    cache = tmp_path / "judge.jsonl"
+    why, spent = asyncio.run(
+        bet_eval.judge_turns(BET, entries, EXPECTED, judge, "j", cache, concurrency=4)
+    )
+    assert (why, spent) == ("done", 6)
+    judged = bet_eval.apply_verdicts(entries, bet_eval.read_verdicts(cache, "j"))
+    assert [e["outcome"] for e in judged] == ["declined"] * 3
+
+
+def test_the_judge_backend_switch(monkeypatch):
+    from semantic_agent import model
+
+    monkeypatch.delenv("BET_JUDGE_BACKEND", raising=False)
+    assert model.judge_backend() == "claude"
+    assert model.judge_model_id() == "claude -p (haiku)"
+    monkeypatch.setenv("BET_JUDGE_BACKEND", "openrouter")
+    assert model.judge_model_id().endswith(":free")
+    monkeypatch.setenv("BET_JUDGE_BACKEND", "gemini")
+    with pytest.raises(ValueError, match="BET_JUDGE_BACKEND"):
+        model.judge_backend()
+
+
 def test_the_judge_is_a_free_openrouter_model_from_the_factory(monkeypatch):
     from semantic_agent import model
 
+    monkeypatch.setenv("BET_JUDGE_BACKEND", "openrouter")
     monkeypatch.setenv("MODEL_BACKEND", "gemini")  # the arms' backend never moves the judge
     assert model.judge_model_id().endswith(":free")
     assert model.build_judge().model == f"openrouter/{model.judge_model_id()}"

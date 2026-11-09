@@ -97,15 +97,38 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
     )
 
 
-def judge_model_id() -> str:
-    """The blind judge's model: `JUDGE_MODEL_ID`, by default a free OpenRouter model."""
+# The judge's backends (#427, RULE.md § Scoring a run): Claude Haiku through `claude -p` on the
+# owner's subscription by default, so the free OpenRouter quota goes to answering; the OpenRouter
+# judge stays behind `BET_JUDGE_BACKEND=openrouter` (`bet_eval --judge-backend openrouter`).
+JUDGE_BACKENDS = ("claude", "openrouter")
+JUDGE_BACKEND_VAR = "BET_JUDGE_BACKEND"
+CLAUDE_JUDGE_MODEL = "haiku"
+
+
+def judge_backend() -> str:
+    backend = os.environ.get(JUDGE_BACKEND_VAR, "claude")
+    if backend not in JUDGE_BACKENDS:
+        raise ValueError(f"{JUDGE_BACKEND_VAR} must be one of {JUDGE_BACKENDS}, got {backend!r}")
+    return backend
+
+
+def claude_judge_model() -> str:
+    """The `claude -p --model` the Claude judge runs on (`CLAUDE_JUDGE_MODEL`, Haiku by default)."""
+    return os.environ.get("CLAUDE_JUDGE_MODEL", CLAUDE_JUDGE_MODEL)
+
+
+def judge_model_id(backend: str | None = None) -> str:
+    """The blind judge's name in its verdicts, so the cache keeps the judges apart: `claude -p
+    (<model>)` on the Claude backend, else `JUDGE_MODEL_ID`, a free OpenRouter model."""
+    if (backend or judge_backend()) == "claude":
+        return f"claude -p ({claude_judge_model()})"
     return os.environ.get("JUDGE_MODEL_ID", JUDGE_MODEL_ID)
 
 
 def build_judge() -> BaseLlm:
-    """The bet's blind judge, always on OpenRouter's free tier, whatever `MODEL_BACKEND` the arms
-    use."""
-    return build_model("openrouter", judge_model_id())
+    """The bet's OpenRouter judge, always on OpenRouter's free tier, whatever `MODEL_BACKEND` the
+    arms use."""
+    return build_model("openrouter", judge_model_id("openrouter"))
 
 
 class MissingKey(RuntimeError):

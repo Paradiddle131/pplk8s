@@ -150,7 +150,10 @@ def test_the_setups_tab_is_on_the_kit_in_the_one_type_standard(tmp_path):
         assert f'<section class="{sec} rk-section"' in panel, sec
         assert f'<div class="rk-head"><h2 id="{h}">' in panel, sec
     # the tab maps the report's paler inks and rules onto the kit's, as the other kit tabs do
-    assert ".mfa, .er, .st, .qs, .mg { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);" in page
+    inks = (
+        ".mfa, .er, .st, .qs, .mg { --ink-2: var(--ink); --ink-3: var(--ink); --rule: var(--hair);"
+    )
+    assert inks in page
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     rules = [r for r in styles.split("\n") if r.startswith((".sm .sm-", ".sxb .sxb-"))]
     html_rules = [r for r in rules if not r.startswith(".sm .sm-sheet")]
@@ -226,7 +229,7 @@ def test_the_question_sets_tab_is_on_the_kit(tmp_path):
     assert 'class="view rk-kit rk-js qs-v" id="question-sets"' in page
     assert panel.count('<section class="rk-section') == 2
     assert panel.count('<article class="qs-set rk-part"') >= 2
-    assert '<div class="qs-guide rk-split">' in panel and 'rk-aside' in panel
+    assert '<div class="qs-guide rk-split">' in panel and "rk-aside" in panel
     assert '<button type="button" class="rk-fold" aria-controls="qs-kinds" hidden>' in panel
     assert '<div class="rk-step qs-step" id="qs-step">' in panel
     assert '<h3 id="qs-cat-h"' in panel and 'data-hl="4"' in panel and "<h5" not in panel
@@ -244,8 +247,8 @@ def test_the_question_sets_tab_is_on_the_kit(tmp_path):
 
 def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
     """Owner, 2026-11-08 (the trial's misses): stacked above their stage, both ladders fold behind
-    the kit's button naming the current choice; pointing at a setup lights its row on a band instead of
-    fading the rest to grey; the explorer's chips are rows of the panel, not boxes inside it."""
+    the kit's button naming the current choice; pointing at a setup lights its row on a band instead
+    of fading the rest to grey; the explorer's chips are rows of the panel, not boxes inside it."""
     page, _ = _built(tmp_path)
     panel = page[page.index('id="setups" data-view') : page.index('id="question-sets" data-view')]
     # the kit's fold (.rk-fold), the page's own (window.reportFold, .fold-btn) gone
@@ -253,7 +256,8 @@ def test_the_setups_ladders_fold_on_a_phone_and_never_grey_out(tmp_path):
     assert panel.count('class="rk-fold" aria-controls=') == 2
     assert 'aria-controls="sxb-ladder"' in panel and 'aria-controls="sm-rungs"' in panel
     script = "".join(re.findall(r"<script>(.*?)</script>", panel, re.S))
-    assert script.count("ReportKit.fold.init(") == 2 and script.count("ReportKit.fold.current(") == 2
+    assert script.count("ReportKit.fold.init(") == 2
+    assert script.count("ReportKit.fold.current(") == 2
     assert "data-rk-fold-pick" in script
     styles = "".join(re.findall(r"<style>(.*?)</style>", panel, re.S))
     assert ".sm-s:not(.on) { opacity" not in styles and ".sm-rhd { opacity" not in styles
@@ -584,7 +588,8 @@ def test_the_kit_reaches_only_the_parts_moved_onto_it(tmp_path):
     assert "a type's heading folds it" not in page and 'class="gl-label">Find a term' in page
     assert not re.search(r"(?m)^\s*(:root[^{&]*|body|html)\s*\{", css), "a kit rule left unscoped"
     assert page.count('<div class="rk-tip" id="rk-tip" hidden></div>') == 1
-    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter, Question sets' fold)
+    # the kit's own scopes: its look on .rk-kit, its scripts on .rk-js (Summary, map filter,
+    # Question sets' fold)
     assert "/* report-kit:css " in page and "scope=.rk-kit */" in page
     assert "scope=.rk-js */" in page and '.root = ".rk-js";' in page
     assert len(re.findall(r'class="[^"]*\brk-js\b', page)) == 3

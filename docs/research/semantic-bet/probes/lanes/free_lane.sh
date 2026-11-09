@@ -24,15 +24,23 @@ push() {
     git pull -q --rebase --autostash origin claude/semantic-bet && git push -q origin claude/semantic-bet
   log "pushed: $1 ($(git -C "$REPO" log -1 --format=%h))"
 }
+# The judge on Claude Haiku through `claude -p` (#427, #458): no free OpenRouter request goes to judging.
 judge() {
-  local left=$((CAP - $(used))); [ $left -gt 10 ] || return 0
-  cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --judge --requests $((left < 40 ? left : 40)) 2>&1 | grep -v Warning | tail -2
-  cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set hard --judge --requests 20 2>&1 | grep -v Warning | tail -2
-  cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set hard-v2 --judge --requests 20 2>&1 | grep -v Warning | tail -2
+  local s
+  for s in frozen hard hard-v2; do
+    cd "$SA" && uv run --quiet python -m semantic_agent.bet_eval --set $s --judge --judge-backend claude \
+      --concurrency 4 2>&1 | grep -v Warning | tail -1
+  done
 }
+# Setups whose reach #445 changes are held until their reruns (#448) land: a new free run of them now would be
+# asked again under the new reach. Clear HELD once #448 is closed.
+HELD="${BET_FREE_HELD-baseline custom-hybrid}"
 # One pass: name, budget estimate, command (run from services/semantic-agent).
 pass() {
   local name=$1 est=$2; shift 2
+  local h; for h in $HELD; do
+    case "$name" in "$h "*) log "skip $name: held until #448 (its reach changes, #445)"; return 0 ;; esac
+  done
   local u; u=$(used); local left=$((CAP - u))
   if [ $left -lt 30 ]; then log "skip $name: free count $u of $CAP"; return 1; fi
   local req=$left
@@ -117,18 +125,17 @@ hard_v2() {
   gcp_gate || { log "ANOMALY: GCP gate failed after native-mcp hard-v2"; exit 1; }
   pass "baseline hard-v2 k=$k" 250 "${BE[@]}" --arms baseline --set hard-v2 --runs $k || exit 0
 }
-# The judge's backlog first (#382): the fixed scorer sends a small expected number that is not the answer's own
-# first figure, and a definition put in the answer's own words, to the blind judge; until judged they count as
-# wrong, so the day's quota clears them before any new pass (about 530 requests once, then a few a pass).
+# The judge's backlog first (#382, #426): every turn the report leaves unclear, on all three sets, goes to the
+# blind judge; until judged it counts as wrong. The judge is Claude Haiku through `claude -p` on the subscription
+# (#427, #458), so it spends none of the day's free OpenRouter quota, which goes to answering.
 backlog() {
-  local s left
-  for s in frozen hard; do
-    left=$((CAP - $(used))); [ $left -gt 30 ] || return 0
-    cd "$SA" && flock "$S/openrouter.lock" uv run --quiet python -m semantic_agent.bet_eval --set $s --judge \
-      --requests $((left < 300 ? left - 20 : 300)) 2>&1 | grep -v -i "warning\|MetricEvaluatorRegistry" | tail -2
+  local s
+  for s in frozen hard hard-v2; do
+    cd "$SA" && uv run --quiet python -m semantic_agent.bet_eval --set $s --judge --judge-backend claude \
+      --concurrency 4 2>&1 | grep -v -i "warning\|MetricEvaluatorRegistry" | tail -2
   done
   carry
-  push "the judge's backlog after the #382 scorer fix"
+  push "the judge's backlog (Claude Haiku)"
 }
 backlog
 round 1 hard

@@ -128,6 +128,7 @@ Each turn of a run gets one outcome:
 
 The code decides where it can ([`semantic_agent/bet_rule.py`](../../../services/semantic-agent/src/semantic_agent/bet_rule.py), #340): the number parses (the eval's own parser), and a hedge is one of the phrases in the set's `hedges` list, matched case-insensitively.
 Where the code cannot decide (no number parses but the answer is not a decline, or a hedge is phrased outside the list), a blind judge decides twice: a free model shown the question, the expected number and the answer, never the arm; two equal verdicts stand, two different ones make the turn **unclear**, counted as wrong and listed in the report.
+The judge is Claude Haiku through `claude -p` (one fresh process a verdict, no tool, no MCP server, no settings, nothing kept), the free OpenRouter judge behind a switch (`--judge-backend openrouter`); only the current judge's verdicts are applied (2026-11-09, #427, § Changes since freezing).
 A run of a case is right when every turn is right; it is confident-wrong when any turn is.
 
 On an `uncovered` case, only the number is right: a decline is not right, and not confident-wrong either.
@@ -216,3 +217,11 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Order: the extended hard set at k = 1, then the frozen set at k = 1, then k = 3 if the first round shows a difference worth its runs.
   Why: every data agent so far ran with Python off (the parity finding); whether Google's Python step changes accuracy or confident-wrong answers is a question the work platform will face.
   The owner's words, 2026-11-07, in a session, on the recommendation to add it: "go for native-context-python".
+- 2026-11-09T10:29Z ([#427](../../../../../issues/427), [#426](../../../../../issues/426), epic [#424](../../../../../issues/424)): the blind judge of § Scoring a run is Claude Haiku through `claude -p` on the owner's subscription, not a free OpenRouter model: one fresh headless process a verdict with no tool, no MCP server, no settings and no saved session (`bet_eval.claude_judge`, the strict runner's flags less its tools), the judge prompt as its system prompt, two verdicts a turn as before; the OpenRouter judge stays behind `--judge-backend openrouter`.
+  The verdict's `judge` field names the judge (`claude -p (haiku)`), so the two judges' verdicts never mix; only the current judge's are applied, and the Nemotron rows stay in `judge.jsonl` as history.
+  A spent subscription limit stops a judge pass and scores no turn.
+  The judge now asks about the turns the report leaves unclear, scored as the report scores them (`bet_eval.scored_logs`, from the cached expected numbers): before, it re-read the logs without them, so 408 of 416 unclear turns never reached it and counted as wrong.
+  Why: the 2026-11-09 audit found the OpenRouter judge to be the larger sibling of the model answering every daily setup, and its requests spent the free quota the passes need.
+  Every judgeable answer is judged once by Haiku ([#428](../../../../../issues/428)); an answer with Haiku's verdicts is never asked again unless a full refresh is asked for (the cache key holds the answer's hash and the judge).
+  Haiku also judges the Claude Code rows Haiku answered; the owner accepts that as negligible.
+  The owner's decision, 2026-11-09, in a session (recorded on #424): Claude Haiku through `claude -p` is the default judge, the OpenRouter judge behind a switch, and the free OpenRouter quota goes to answering questions, not judging.

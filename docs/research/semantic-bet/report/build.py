@@ -200,14 +200,14 @@ TERMS = [
     ("adk", "ADK", "Google's Agent Development Kit, the open-source framework our own agents are built with."),
     ("mcp", "MCP", "Model Context Protocol: a standard way to hand an agent a set of tools; Google offers MCP servers for BigQuery and Knowledge Catalog, and MCP Toolbox generates tools from SQL."),
     ("harness", "Harness", "The program that runs a model as an agent: it passes the question, calls the tools the model asks for and returns their results."),
-    ("nemotron", "Nemotron free", "NVIDIA's open Nemotron model, used through OpenRouter's free tier; the model our setups are judged on."),
+    ("nemotron", "Nemotron free", "NVIDIA's open Nemotron model, used through OpenRouter's free tier; the model our setups answer on."),
     ("gemini", "Gemini", "Google's model, the only one its data agent runs on; \u201cdefault\u201d is the agent's own choice, \u201clatest GA\u201d the newest generally available model, \u201cthinking\u201d and \u201cfast\u201d its slower reasoning and quicker modes."),
     ("claude-models", "Haiku, Sonnet, Opus", "Anthropic's Claude models, smallest and cheapest to largest; \u201cCC\u201d before a name means it ran inside Claude Code."),
     ("rung", "Rung", "One step on the ladder of setups, ordered from the least work to build and run to the most."),
     ("points", "Points", "Percentage points: 80% against 70% is a gap of 10 points."),
     ("tolerance", "Tolerance", "How far a number may sit from the expected one and still count as right, such as a rounding difference."),
     ("hedge", "Hedge", "Words that flag a number as uncertain or ask to confirm it; a wrong number with a hedge is wrong, not confident-wrong."),
-    ("judge", "Blind judge", "A separate model that reads an answer without knowing which setup gave it and decides whether it is right when the scoring code cannot."),
+    ("judge", "Blind judge", "Claude Haiku, a separate model that reads an answer without knowing which setup gave it and decides whether it is right when the scoring code cannot."),
     # The Summary tab's words (the Approaches sections): its question sets, its outcomes and its approaches
     ("everyday", "Everyday", "The Summary's name for the frozen set: plain business questions across the domains, follow-ups, and some no metric answers."),
     ("approach", "Approach", "A way of letting an AI answer business questions, as the Summary groups the setups: each pools the setups that build it, and the one with the most right answers on a set stands for it."),
@@ -264,7 +264,7 @@ TERM_MORE = {
     "adk": [("Used for", "every setup named custom-, and native-mcp.")],
     "mcp": [("Setups", "native-mcp, custom-toolbox and cc-native-mcp.")],
     "harness": [("Here", "our ADK agent, Google's data agent, and Claude Code for comparison.")],
-    "nemotron": [("Role", "decides: every one of our setups is judged on it."),
+    "nemotron": [("Role", "decides: every one of our setups is compared on it."),
                  ("Why free", "anyone can repeat the runs at no cost.")],
     "gemini": [("Runs", "Google's data agent setups, the native- rows.")],
     "claude-models": [("Role", "the check: whether a gap closes with a stronger model.")],
@@ -977,6 +977,10 @@ def strict_view(arms):
 
 def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(), template=None):
     R = json.load(open(results_path, encoding="utf-8"))
+    waiting = sum((v or {}).get("judge_waiting", 0) for v in (R.get("sets") or {}).values())
+    TERM_MORE["judge"] = [m for m in TERM_MORE["judge"] if m[0] != "Waiting"] + [
+        ("Waiting", "%d answer%s not judged yet; until then each counts as wrong, or as confident-wrong when its doubt is worded outside the scoring list."
+         % (waiting, "" if waiting == 1 else "s"))]
     R["arms"] = [a for a in R.get("arms", []) if a.get("arm") not in HIDDEN_ARMS]
     R["step_two"] = [x for x in R.get("step_two", []) if x.get("arm") not in HIDDEN_ARMS]
     arms_all = strict_view(R.get("arms", []))
