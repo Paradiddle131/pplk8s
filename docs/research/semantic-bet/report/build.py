@@ -146,6 +146,7 @@ TERMS = [
     ("check", "Check", "Claude Haiku, Sonnet and Opus repeat our setups, as a check on whether a gap is the model's."),
     ("pending", "Pending", "A setup that has run on Claude only, the check; it enters headlines and the winners once its deciding run exists."),
     ("partial", "Partial", "Rests on fewer questions than the set, or on fewer than three runs per question, so its interval is wider."),
+    ("reach-limit", "Out of reach", "A question whose data the setup's tools cannot read: a metric-only setup where no metric answers it, or an agent whose tables lack what it needs. Its runs still count, as a limit of the setup's reach."),
     ("unchecked", "Calls not recorded", "Runs whose tool calls were not recorded, so nothing checked that they used only the tools the setup may use."),
     ("accuracy", "Accuracy", "How often a setup is right: the share of its runs whose answer carries the expected number."),
     ("coverage", "Coverage", "How often a setup commits to an answer instead of declining; not the same as covered questions."),
@@ -232,7 +233,7 @@ TERM_TYPE = {
     "setup": 4, "floor": 4, "managed-best": 4, "decides": 4, "main-model": 4, "check": 4, "pending": 4, "family-da": 4,
     "family-gt": 4, "family-mf": 4, "family-ref": 4, "claude-code": 4,
     "accuracy": 5, "coverage": 5, "selective-accuracy": 5, "pass-3": 5,
-    "confident-wrong": 5, "declined": 5, "unclear": 5, "over-the-floor": 5, "partial": 5, "unchecked": 5, "interval": 5, "exact": 5,
+    "confident-wrong": 5, "declined": 5, "unclear": 5, "over-the-floor": 5, "partial": 5, "unchecked": 5, "reach-limit": 5, "interval": 5, "exact": 5,
     "points": 5, "tolerance": 5, "hedge": 5, "judge": 5, "rung": 4, "harness": 4,
     "nemotron": 4, "gemini": 4, "claude-models": 4,
     "semantic-layer": 6, "dbt": 6, "metricflow": 6, "lightdash": 6, "knowledge-catalog": 6, "adk": 6, "mcp": 6,
@@ -334,6 +335,8 @@ TERM_MORE = {
                  ("Scored", "not right on a question that needs a number, and never confident-wrong.")],
     "unclear": [("Counts as", "wrong, in every measure."),
                 ("Decided by", "the blind judge twice; two different verdicts make it unclear.")],
+    "reach-limit": [("Shown as", "a dashed box round the question's three runs, on the setup's row."),
+                    ("Read from", "the tables the question's expected answer needs, against the tables or metrics each setup can read.")],
     "unchecked": [("Shown when", "some of a setup's runs did not record their tool calls."),
                   ("Effect", "those answers are scored as given; only the recorded runs were checked for tools outside the setup.")],
     "partial": [("Shown when", "a setup ran fewer questions than the set, or clearly fewer than three runs a question."),
@@ -1031,6 +1034,8 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                   "q": " / ".join(q["questions"].get(c, []))[:240]} for c in ids]
         mbr = (R.get("managed_best") or {}).get(st) or [None, None, None]
         rows = []
+        # The questions each setup cannot reach (results.json's reach_limits, bet_reach.py): a reach limit, not a loss.
+        out_of_reach = {k: set(v) for k, v in ((R.get("sets") or {}).get(st, {}).get("reach_limits") or {}).items()}
         for a in arms_all:
             if a["set"] != st:
                 continue
@@ -1080,6 +1085,7 @@ def build(results_path, log_dir, sets_dir, out_path, show=None, extra_sections=(
                 "managedBest": a["arm"] == mbr[0] and a["model"] == mbr[1],
                 "exact": {k: exact(a[f], a["cases"]) for k, f in (("acc", "accuracy"), ("cw", "confident_wrong")) if exact(a[f], a["cases"])},
                 "step2": step2.get((st, a["arm"], a["model"])), "units": units, "_pc": pc,
+                "outOfReach": [i for i, c in enumerate(ids) if c in out_of_reach.get(a["arm"], ())],
                 **run_scores(pc, asked),
             })
         for arm in {r["arm"] for r in rows}:
@@ -1212,6 +1218,12 @@ def make_parts(st, rows, mb, floor, mf):
     if sl:
         drops = [g(r, "covered") - g(r, "uncovered") for r in sl]
         P["drop"] = [min(drops), max(drops), len(sl)]
+    # The same-model pair (#451): MetricFlow against our agent on Google's own tools, both on the free model, the
+    # cleanest comparison (the model is the largest confound left); the managed best on Gemini is read beside it.
+    same = next((r for r in rows if r["arm"] == "native-mcp" and r["model"] == FREE and r["plotted"]), None)
+    if mf and same:
+        d = pct(mf["acc"][0]) - pct(same["acc"][0])
+        P["same"] = {"d": d, "rel": "level with" if abs(d) <= 5 else ("%d points above" % d if d > 0 else "%d points below" % -d)}
     rung_of = {a: k for k, _, arms in LADDER for a in arms}
     climb = [r for r in rows if r["deciding"] and rung_of.get(r["arm"], "").startswith("L") and r["vsFloor"] and r["vsFloor"]["acc"]]
     if climb and floor:
@@ -1242,6 +1254,19 @@ def make_twins(sets, order):
         tail = (", and falls behind on uncovered ones, which no single metric answers, on every set." if unc_below else
                 ", and on uncovered questions, which no single metric answers, it is not behind on every set.")
         T["mapLead"] = "On the free model, MetricFlow " + head + tail
+    pairs = [(sets[s]["parts"]["label"], sets[s]["parts"]["same"]["rel"]) for s in order if sets[s]["parts"].get("same")]
+    if pairs:
+        # The lead opens with the same-model pair; Google's managed agent, on its own model, follows (#451).
+        rels = {r for _, r in pairs}
+        if len(rels) == 1:
+            same = pairs[0][1] + " Google's own tools on the same model" + (" on every set" if len(pairs) > 1 else "")
+        else:
+            first, *more = pairs
+            same = "%s Google's own tools on the same model on the %s" % (first[1], first[0].lower()) + "".join(
+                " and %s on the %s" % ("level with them" if r == "level with" else r, lab.lower()) for lab, r in more)
+        rest = T.get("mapLead", "")
+        T["mapLead"] = "On the free model, MetricFlow is " + same + "." + (
+            " Beside them, against Google's managed agent on its own model, it " + rest.split("MetricFlow ", 1)[1] if rest else "")
     st = T["strip"]
     if st:
         gap = all(r["unc"] < r["cov"] - 15 for r in st)

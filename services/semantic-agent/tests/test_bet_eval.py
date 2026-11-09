@@ -1153,3 +1153,22 @@ def test_an_ask_beside_a_figure_no_reading_holds_stays_wrong():
     assert score_turn(turn, meanings, other, HEDGES, {}) is not Outcome.RIGHT
     ask = "Do you mean the calendar or the fiscal quarter?"
     assert score_turn(turn, meanings, ask, HEDGES, {}) is Outcome.RIGHT
+
+
+def test_only_complete_rounds_are_scored():
+    """#450: a pass cut mid-round scores every case on the same number of runs."""
+
+    def row(case, run, outcome):
+        return {"arm": "baseline", "model": "m", "case": case, "run": run, "outcome": outcome}
+
+    entries = [
+        row("a", 1, "right"),
+        row("a", 2, "wrong"),  # run 2 reached case a only
+        row("b", 1, "wrong"),
+    ]
+    right, wrong, ran = bet_eval.case_shares(entries, "baseline", "m")
+    assert right == {"a": 1.0, "b": 0.0} and ran == 2
+    bet = BetSet([], {"a": ["covered"], "b": ["covered"]}, [], "frozen")
+    result = bet_eval.arm_result(bet, entries, "baseline", "m", 3)
+    assert result["runs"] == 2 and result["runs_beyond_rounds"] == 1
+    assert result["outcomes"] == {"right": 1, "wrong": 1}

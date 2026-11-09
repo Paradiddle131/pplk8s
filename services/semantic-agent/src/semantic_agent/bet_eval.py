@@ -937,16 +937,29 @@ def arms_of(entries: Sequence[dict[str, Any]], model: str) -> list[str]:
     return [a for a in ARMS if a in seen] + [a for a in seen if a not in ARMS]
 
 
+def round_outcomes(
+    entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int = RUNS
+) -> dict[str, list[Outcome]]:
+    """Each case's outcomes over the arm's complete rounds (case_shares)."""
+    done = finished(entries, model)
+    by_case: dict[str, list[tuple[int, Outcome]]] = {}
+    for (a, run, case), outcome in done.items():
+        if a == arm and run <= runs:
+            by_case.setdefault(case, []).append((run, Outcome(outcome)))
+    if not by_case:
+        return {}
+    rounds = min(len(r) for r in by_case.values())
+    return {c: [o for _, o in sorted(r)[:rounds]] for c, r in by_case.items()}
+
+
 def case_shares(
     entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int = RUNS
 ) -> tuple[dict[str, float], dict[str, float], int]:
-    """One arm on one model, per case it finished: the share of its finished runs (up to `runs`)
-    that are right and that are confident-wrong; and how many runs that is in all."""
-    done = finished(entries, model)
-    outcomes: dict[str, list[Outcome]] = {}
-    for (a, run, case), outcome in done.items():
-        if a == arm and run <= runs:
-            outcomes.setdefault(case, []).append(Outcome(outcome))
+    """One arm on one model, per case it finished: the share of its finished runs that are right
+    and that are confident-wrong; and how many runs that is in all. Complete rounds only (#450):
+    each case counts its first r finished runs (by run number, up to `runs`), r the fewest any of
+    its cases has, so a pass cut mid-round never averages cases over different run counts."""
+    outcomes = round_outcomes(entries, arm, model, runs)
     right = {c: sum(o is Outcome.RIGHT for o in r) / len(r) for c, r in outcomes.items()}
     wrong = {c: sum(o is Outcome.CONFIDENT_WRONG for o in r) / len(r) for c, r in outcomes.items()}
     return right, wrong, sum(len(r) for r in outcomes.values())
@@ -963,6 +976,7 @@ class Paired:
     confident_wrong: Interval
     ran: int
     worth: bool
+    paired_runs: int = 0  # runs of both arms on the paired cases (#450)
 
 
 def step_two(
@@ -1009,7 +1023,10 @@ def step_two(
         acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
         cw = paired_interval({c: best_wrong[c] for c in cases}, {c: wrong[c] for c in cases})
         worth = (acc.differs and acc.mean > 0) or (not acc.differs and cw.differs and cw.mean < 0)
-        paired.append(Paired(arm, model, len(cases), acc, cw, ran, worth))
+        mine = round_outcomes(entries, arm, model, runs)
+        theirs = round_outcomes(entries, best, best_model, runs)
+        both = sum(len(mine[c]) + len(theirs[c]) for c in cases)
+        paired.append(Paired(arm, model, len(cases), acc, cw, ran, worth, both))
     return (best, best_model, accuracy), ours, paired
 
 
@@ -1775,13 +1792,15 @@ def arm_result(
     right, wrong, ran = case_shares(entries, arm, model, runs)
     zero = dict.fromkeys(right, 0.0)
     acc, cw = paired_interval(zero, right), paired_interval(zero, wrong)
-    done = finished(entries, model)
     outcomes: dict[str, int] = {}
     per_case: dict[str, list[str]] = {}
-    for (a, run, case), outcome in done.items():
-        if a == arm and run <= runs:
-            outcomes[outcome] = outcomes.get(outcome, 0) + 1
-            per_case.setdefault(case, []).append(outcome)
+    for case, rows in round_outcomes(entries, arm, model, runs).items():
+        for outcome in rows:
+            outcomes[outcome.value] = outcomes.get(outcome.value, 0) + 1
+            per_case.setdefault(case, []).append(outcome.value)
+    finished_runs = sum(
+        1 for (a, run, _), _o in finished(entries, model).items() if a == arm and run <= runs
+    )
     groups: dict[str, list[float]] = {}
     for case, share in right.items():
         for group in bet.groups.get(case, []):
@@ -1819,6 +1838,8 @@ def arm_result(
         if per_case
         else None,
         "outcomes": outcomes,
+        # Runs finished beyond the complete rounds scored (#450): a pass cut mid-round.
+        **({"runs_beyond_rounds": finished_runs - ran} if finished_runs > ran else {}),
         "model_calls": calls,
         **(
             {"new": {g: [sum(v) / len(v), len(v)] for g, v in sorted(new.items())}}
@@ -1928,6 +1949,12 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
         }
         # Turns no verdict of the current judge has settled yet (#426): each counts as wrong, and a
         # confident-wrong one waiting on its hedge as confident-wrong, until it is judged.
+        # The cases each setup cannot reach (#446, bet_reach): reach limits, labelled on the page.
+        from semantic_agent import bet_reach
+
+        out["sets"][name]["reach_limits"] = bet_reach.reach_limits(
+            bet.questions, bet.groups, bet_reach.read_lineage(directory)
+        )
         out["sets"][name]["judge_waiting"] = len(
             pending_verdicts(bet, scored_logs(bet, directory), judge, directory / JUDGE_LOG.name)
         )
@@ -1946,6 +1973,7 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
                     "model": p.model,
                     "cases": p.cases,
                     "runs": p.ran,
+                    "paired_runs": p.paired_runs,
                     "accuracy": [p.accuracy.mean, p.accuracy.low, p.accuracy.high],
                     "confident_wrong": [
                         p.confident_wrong.mean,

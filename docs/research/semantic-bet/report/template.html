@@ -2183,8 +2183,11 @@ window.REPORT = D;
       }
     });
     const paths = Object.entries(P2).map(([ck, d]) => { const [c, kind] = ck.split("|"); return `<path fill="var(--${c})"${kind === "ring" ? ' fill-rule="evenodd"' : ""} d="${d}"/>`; }).join("");
+    // a question out of the setup's reach (its tools cannot read the data it needs): a dashed box round its column
+    const out = new Set(r.outOfReach || []);
+    const boxes = G.order.filter((ci) => out.has(ci)).map((ci) => `<rect x="${G.xs.get(ci) - 0.5}" y="0.5" width="${G.pitch}" height="${G.h - 1}" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="2 2"/>`).join("");
     const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
-      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
+      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}${boxes}`),
     ] });
     trueSize(svg, G.UW, G.h); svg.style.overflow = "hidden"; // clipped to its box, as the canvas was
     return svg;
@@ -2378,7 +2381,7 @@ window.REPORT = D;
         const bk = D.buckets.find((x) => x.key === c.b);
         const C = qCard(ci);
         return tKick(esc(bk ? bk.label : c.b) + " question") + C.asked +
-          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`]])) +
+          tSec("Run " + (k + 1) + " of 3", tRows([["This run", ch === "." ? `<span class="iv">not run yet</span>` : tOut(OUTN[ch])], ["This question", `<b>${right}</b> of ${ran} runs right`], ["Setup", `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`], ...((r.outOfReach || []).includes(ci) ? [["Reach", "out of reach: this setup's tools cannot read the data this question needs"]] : [])])) +
           qAbout(C) + C.link;
       };
       const at = (ci, k, cx, cy) => {
@@ -2414,7 +2417,8 @@ window.REPORT = D;
     });
     drawTicks(); selectQ(keepSel, true);
     $("#leg6").innerHTML = [["0", "outcome-right", "Right"], ["1", "declined", "Declined"], ["2", "outcome-wrong", "Wrong"], ["4", "confident-wrong", "Confident-wrong"], [".", "", "Not run yet"]]
-      .map(([c, t, l]) => `<li>${swatch(c)}${t ? term(t, l) : l}</li>`).join("");
+      .map(([c, t, l]) => `<li>${swatch(c)}${t ? term(t, l) : l}</li>`).join("") +
+      `<li><svg width="12" height="14" aria-hidden="true"><rect x="0.5" y="0.5" width="11" height="13" fill="none" stroke="var(--ink)" stroke-dasharray="2 2"/></svg>${term("reach-limit", "Out of reach")}</li>`;
   }
 
   /* ---------- the Decision map's column heads stay on screen while its rows scroll by ---------- */
