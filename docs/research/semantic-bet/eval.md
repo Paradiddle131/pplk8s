@@ -4,7 +4,7 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-09T14:04Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T16:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -47,11 +47,11 @@ Scored on partial: 1 run(s) of 70 of 74 cases; runs finished: baseline 214 of 22
 | Confident-wrong | 2.9% | 0.0% | 0.0% | 1.4% | 0.0% |
 | pass^1 | 68.6% | 91.4% | 92.9% | 55.7% | 100.0% |
 | `conversation` (6) accuracy | 100.0% | 100.0% | 100.0% | 83.3% | 100.0% |
-| `covered` (57) accuracy | 78.9% | 100.0% | 100.0% | 59.6% | 100.0% |
+| `covered` (58) accuracy | 77.6% | 98.3% | 98.3% | 58.6% | 100.0% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 100.0% | 100.0% | 100.0% | 75.0% | 100.0% |
 | `trap` (9) accuracy | 66.7% | 100.0% | 100.0% | 66.7% | 100.0% |
-| `uncovered` (13) accuracy | 23.1% | 53.8% | 61.5% | 38.5% | 100.0% |
+| `uncovered` (12) accuracy | 25.0% | 58.3% | 66.7% | 41.7% | 100.0% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
@@ -79,11 +79,11 @@ Scored on all 3 runs of every case; runs finished: custom-metricflow 222 of 222,
 | Confident-wrong | 0.0% | 1.8% | 0.0% |
 | pass^3 | 83.8% | 51.4% | 98.6% |
 | `conversation` (7) accuracy | 100.0% | 66.7% | 100.0% |
-| `covered` (61) accuracy | 100.0% | 55.2% | 98.9% |
+| `covered` (62) accuracy | 98.4% | 54.3% | 98.9% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 100.0% | 50.0% | 83.3% |
 | `trap` (10) accuracy | 100.0% | 60.0% | 100.0% |
-| `uncovered` (13) accuracy | 17.9% | 38.5% | 100.0% |
+| `uncovered` (12) accuracy | 19.4% | 41.7% | 100.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 26 (`custom-metricflow` 2 confident-wrong to right; `custom-metricflow` 1 confident-wrong to wrong; `custom-metricflow` 2 unclear to right; `custom-metricflow` 1 wrong to right; `custom-toolbox` 1 confident-wrong to right; `custom-toolbox` 5 wrong to unclear; `native-mcp` 7 right to unclear; `native-mcp` 1 unclear to right; `native-mcp` 6 wrong to unclear).
 
@@ -100,11 +100,11 @@ Scored on partial: 1 run(s) of 73 of 74 cases; runs finished: custom-metricflow 
 | Confident-wrong | 1.4% |
 | pass^1 | 83.6% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 98.4% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (12) accuracy | 0.0% |
+| `uncovered` (11) accuracy | 0.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 5 (`custom-metricflow` 4 right to unclear; `custom-metricflow` 1 unclear to right).
 
@@ -120,11 +120,11 @@ Scored on all 3 runs of every case; runs finished: cc-metricflow-compute 222 of 
 | Confident-wrong | 0.0% | 0.5% | 0.5% |
 | pass^3 | 91.9% | 89.2% | 95.9% |
 | `conversation` (7) accuracy | 100.0% | 100.0% | 95.2% |
-| `covered` (61) accuracy | 100.0% | 100.0% | 98.4% |
+| `covered` (62) accuracy | 98.4% | 98.4% | 98.4% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 100.0% | 100.0% | 91.7% |
 | `trap` (10) accuracy | 100.0% | 100.0% | 100.0% |
-| `uncovered` (13) accuracy | 53.8% | 48.7% | 100.0% |
+| `uncovered` (12) accuracy | 58.3% | 52.8% | 100.0% |
 
 Turns judged: 21 (21 the code left unclear, 0 confident-wrong with a hedge outside the list); verdicts that stood: 20.
 
@@ -142,11 +142,11 @@ Scored on all 3 runs of every case; runs finished: cc-metricflow-compute 222 of 
 | Confident-wrong | 0.0% | 0.5% | 0.0% |
 | pass^3 | 91.9% | 85.1% | 100.0% |
 | `conversation` (7) accuracy | 100.0% | 100.0% | 100.0% |
-| `covered` (61) accuracy | 100.0% | 99.5% | 100.0% |
+| `covered` (62) accuracy | 98.4% | 97.8% | 100.0% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 100.0% | 100.0% | 100.0% |
 | `trap` (10) accuracy | 100.0% | 100.0% | 100.0% |
-| `uncovered` (13) accuracy | 61.5% | 30.8% | 100.0% |
+| `uncovered` (12) accuracy | 66.7% | 33.3% | 100.0% |
 
 Turns judged: 20 (20 the code left unclear, 0 confident-wrong with a hedge outside the list); verdicts that stood: 20.
 
@@ -160,11 +160,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 74 o
 | Confident-wrong | 2.7% |
 | pass^1 | 77.0% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 93.4% |
+| `covered` (62) accuracy | 91.9% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 75.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 0.0% |
+| `uncovered` (12) accuracy | 0.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 4 (`cc-metricflow` 1 confident-wrong to wrong; `cc-metricflow` 3 unclear to declined).
 
@@ -178,11 +178,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 74 o
 | Confident-wrong | 1.4% |
 | pass^1 | 82.4% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 98.4% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 0.0% |
+| `uncovered` (12) accuracy | 0.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`cc-metricflow` 1 unclear to declined; `cc-metricflow` 1 wrong to declined).
 
@@ -196,11 +196,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 74 o
 | Confident-wrong | 1.4% |
 | pass^1 | 82.4% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 98.4% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 0.0% |
+| `uncovered` (12) accuracy | 0.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 3 (`cc-metricflow` 2 confident-wrong to wrong; `cc-metricflow` 1 unclear to declined).
 
@@ -214,11 +214,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 221 
 | Confident-wrong | 1.4% |
 | pass^1 | 83.8% |
 | `conversation` (7) accuracy | 85.7% |
-| `covered` (61) accuracy | 98.4% |
+| `covered` (62) accuracy | 96.8% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 15.4% |
+| `uncovered` (12) accuracy | 16.7% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 4 (`cc-metricflow` 1 confident-wrong to right; `cc-metricflow` 2 confident-wrong to wrong; `cc-metricflow` 1 right to unclear).
 
@@ -234,11 +234,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 221 
 | Confident-wrong | 1.4% |
 | pass^1 | 82.4% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 98.4% |
+| `covered` (62) accuracy | 96.8% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 75.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 7.7% |
+| `uncovered` (12) accuracy | 8.3% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 3 (`cc-metricflow` 3 confident-wrong to wrong).
 
@@ -252,11 +252,11 @@ Scored on partial: 1 run(s) of 37 of 74 cases; runs finished: cc-metricflow 37 o
 | Confident-wrong | 0.0% |
 | pass^1 | 86.5% |
 | `conversation` (4) accuracy | 100.0% |
-| `covered` (32) accuracy | 100.0% |
+| `covered` (33) accuracy | 97.0% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (2) accuracy | 100.0% |
 | `trap` (6) accuracy | 100.0% |
-| `uncovered` (5) accuracy | 0.0% |
+| `uncovered` (4) accuracy | 0.0% |
 
 ### `claude-code (subject-haiku)`
 
@@ -268,11 +268,11 @@ Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: cc-metricflow 74 o
 | Confident-wrong | 4.1% |
 | pass^1 | 79.7% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 95.1% |
+| `covered` (62) accuracy | 93.5% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 7.7% |
+| `uncovered` (12) accuracy | 8.3% |
 
 ### `google-data-agent (MODEL_UNSPECIFIED)`
 
@@ -284,11 +284,11 @@ Scored on partial: 1 run(s) of 73 of 74 cases; runs finished: native-bare 221 of
 | Confident-wrong | 20.5% | 2.7% | 1.4% | 2.7% | 1.4% | 8.2% | 6.8% | 8.2% | 4.1% | 5.5% |
 | pass^1 | 78.1% | 97.3% | 98.6% | 95.9% | 84.9% | 68.5% | 93.2% | 89.0% | 72.6% | 69.9% |
 | `conversation` (7) accuracy | 42.9% | 100.0% | 100.0% | 100.0% | 100.0% | 71.4% | 71.4% | 42.9% | 85.7% | 57.1% |
-| `covered` (60) accuracy | 75.0% | 100.0% | 100.0% | 98.3% | 93.3% | 68.3% | 91.7% | 88.3% | 73.3% | 68.3% |
+| `covered` (61) accuracy | 73.8% | 100.0% | 100.0% | 98.4% | 93.4% | 67.2% | 91.8% | 86.9% | 72.1% | 68.9% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 75.0% | 100.0% | 100.0% | 100.0% | 75.0% | 75.0% | 100.0% | 100.0% | 100.0% | 100.0% |
 | `trap` (9) accuracy | 55.6% | 100.0% | 100.0% | 100.0% | 100.0% | 55.6% | 88.9% | 88.9% | 55.6% | 44.4% |
-| `uncovered` (13) accuracy | 92.3% | 84.6% | 92.3% | 84.6% | 46.2% | 69.2% | 100.0% | 92.3% | 69.2% | 76.9% |
+| `uncovered` (12) accuracy | 100.0% | 83.3% | 91.7% | 83.3% | 41.7% | 75.0% | 100.0% | 100.0% | 75.0% | 75.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 102 (`native-bare` 7 right to unclear; `native-bare` 6 wrong to unclear; `native-context` 6 right to unclear; `native-context` 6 wrong to unclear; `native-context-bare` 4 right to unclear; `native-context-bare` 6 wrong to unclear; `native-governed` 3 right to unclear; `native-governed` 6 wrong to unclear; `native-graph` 4 right to unclear; `native-graph` 1 wrong to right; `native-graph` 6 wrong to unclear; `native-kc` 3 right to unclear; `native-kc` 6 wrong to unclear; `native-kc-max` 5 right to unclear; `native-kc-max` 6 wrong to unclear; `native-kc-reach` 6 right to unclear; `native-kc-reach` 1 wrong to right; `native-kc-reach` 6 wrong to unclear; `native-shaped` 1 confident-wrong to wrong; `native-shaped` 5 right to unclear; `native-shaped` 2 unclear to declined; `native-shaped` 6 wrong to unclear).
 
@@ -311,11 +311,11 @@ Scored on all 3 runs of every case; runs finished: native-context-bare 222 of 22
 | Confident-wrong | 1.4% |
 | pass^3 | 97.3% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 100.0% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 92.3% |
+| `uncovered` (12) accuracy | 91.7% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 10 (`native-context-bare` 4 right to unclear; `native-context-bare` 6 wrong to unclear).
 
@@ -332,11 +332,11 @@ Scored on all 3 runs of every case; runs finished: native-context-bare 222 of 22
 | Confident-wrong | 0.0% |
 | pass^3 | 100.0% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 100.0% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 100.0% |
+| `uncovered` (12) accuracy | 100.0% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 12 (`native-context-bare` 6 right to unclear; `native-context-bare` 6 wrong to unclear).
 
@@ -352,11 +352,11 @@ Scored on all 3 runs of every case; runs finished: native-context-bare 222 of 22
 | Confident-wrong | 2.7% |
 | pass^3 | 95.9% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 99.5% |
+| `covered` (62) accuracy | 99.5% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 96.7% |
-| `uncovered` (13) accuracy | 84.6% |
+| `uncovered` (12) accuracy | 83.3% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 10 (`native-context-bare` 4 right to unclear; `native-context-bare` 6 wrong to unclear).
 
@@ -404,7 +404,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set
 
-Written 2026-11-09T14:04Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T16:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -749,7 +749,7 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set v2
 
-Written 2026-11-09T14:04Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T16:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -875,22 +875,23 @@ Confident-wrong turns the judge moved: 4 of 6 (4 to wrong, hedged; 0 to unclear)
 
 ### `claude-code-strict (opus)`
 
-Scored on partial: 1 run(s) of 34 of 54 cases; runs finished: cc-metricflow-compute 35 of 162, cc-metricflow 36 of 162, cc-native-mcp 49 of 162; model responses spent: cc-metricflow-compute 37, cc-metricflow 38, cc-native-mcp 53.
+Scored on partial: 1 run(s) of 49 of 54 cases; runs finished: cc-metricflow-compute 162 of 162, cc-metricflow 162 of 162, cc-native-mcp 49 of 162; model responses spent: cc-metricflow-compute 174, cc-metricflow 174, cc-native-mcp 53.
 
 | | `cc-metricflow-compute` | `cc-metricflow` | `cc-native-mcp` |
 |---|---|---|---|
-| Accuracy | 79.4% | 50.0% | 91.2% |
-| Confident-wrong | 0.0% | 5.9% | 0.0% |
-| pass^1 | 79.4% | 50.0% | 91.2% |
-| `composable` (11) accuracy | 90.9% | 0.0% | 81.8% |
-| `conversation` (5) accuracy | 100.0% | 100.0% | 100.0% |
-| `covered` (15) accuracy | 100.0% | 100.0% | 100.0% |
-| `trap` (3) accuracy | 100.0% | 100.0% | 100.0% |
+| Accuracy | 85.7% | 49.0% | 89.8% |
+| Confident-wrong | 0.0% | 4.1% | 0.0% |
+| pass^1 | 85.7% | 49.0% | 89.8% |
+| `composable` (19) accuracy | 94.7% | 5.3% | 84.2% |
+| `conversation` (7) accuracy | 100.0% | 100.0% | 100.0% |
+| `covered` (22) accuracy | 100.0% | 95.5% | 95.5% |
+| `trap` (5) accuracy | 100.0% | 100.0% | 100.0% |
 | `uncovered` (8) accuracy | 25.0% | 25.0% | 87.5% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`cc-metricflow` 1 wrong to right; `cc-native-mcp` 1 wrong to right).
 
-Turns judged: 4 (4 the code left unclear, 0 confident-wrong with a hedge outside the list); verdicts that stood: 4.
+Turns judged: 13 (12 the code left unclear, 1 confident-wrong with a hedge outside the list); verdicts that stood: 13.
+Confident-wrong turns the judge moved: 1 of 1 (1 to wrong, hedged; 0 to unclear).
 
 ### `claude-code (haiku)`
 
@@ -1106,8 +1107,8 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 - `cc-metricflow-compute` (rung 4) on `claude-code-strict (sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.191 [-0.296, -0.093], confident-wrong +0.062 [+0.012, +0.123]: not worth building (the check; 162 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code-strict (sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.346 [-0.469, -0.228], confident-wrong +0.049 [+0.012, +0.099]: not worth building (the check; 162 runs finished).
 - `cc-native-mcp` (rung 3) on `claude-code-strict (sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.049 [-0.111, -0.006], confident-wrong +0.006 [+0.000, +0.019]: not worth building (the check; 162 runs finished).
-- `cc-metricflow-compute` (rung 4) on `claude-code-strict (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 35 of 54 cases: accuracy -0.190 [-0.333, -0.067], confident-wrong +0.000 [+0.000, +0.000]: not worth building (the check; 35 runs finished).
-- `cc-metricflow` (rung 4) on `claude-code-strict (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 36 of 54 cases: accuracy -0.519 [-0.685, -0.352], confident-wrong +0.056 [+0.000, +0.139]: not worth building (the check; 36 runs finished).
+- `cc-metricflow-compute` (rung 4) on `claude-code-strict (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.130 [-0.222, -0.049], confident-wrong +0.006 [+0.000, +0.019]: not worth building (the check; 162 runs finished).
+- `cc-metricflow` (rung 4) on `claude-code-strict (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.525 [-0.654, -0.395], confident-wrong +0.019 [+0.000, +0.049]: not worth building (the check; 162 runs finished).
 - `cc-native-mcp` (rung 3) on `claude-code-strict (opus)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 49 of 54 cases: accuracy -0.095 [-0.190, -0.020], confident-wrong +0.000 [+0.000, +0.000]: not worth building (the check; 49 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (haiku)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.642 [-0.765, -0.512], confident-wrong +0.130 [+0.056, +0.222]: not worth building (the check; 54 runs finished).
 - `cc-metricflow` (rung 4) on `claude-code (sonnet)` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 54 of 54 cases: accuracy -0.586 [-0.722, -0.451], confident-wrong +0.130 [+0.037, +0.222]: not worth building (the check; 54 runs finished).

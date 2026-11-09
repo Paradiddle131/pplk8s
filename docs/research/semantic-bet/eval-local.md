@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-09T14:04Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T16:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -41,11 +41,11 @@ Scored on partial: 1 run(s) of 71 of 74 cases; runs finished: baseline 214 of 22
 | Confident-wrong | 5.6% | 1.4% | 4.2% |
 | pass^1 | 63.4% | 87.3% | 81.7% |
 | `conversation` (6) accuracy | 66.7% | 100.0% | 100.0% |
-| `covered` (58) accuracy | 72.4% | 94.8% | 86.2% |
+| `covered` (59) accuracy | 71.2% | 93.2% | 84.7% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% |
 | `planted` (4) accuracy | 100.0% | 100.0% | 100.0% |
 | `trap` (9) accuracy | 66.7% | 100.0% | 100.0% |
-| `uncovered` (13) accuracy | 23.1% | 53.8% | 61.5% |
+| `uncovered` (12) accuracy | 25.0% | 58.3% | 66.7% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
@@ -111,11 +111,11 @@ Scored on all 3 runs of every case; runs finished: custom-metricflow 222 of 222;
 | Confident-wrong | 0.9% |
 | pass^3 | 79.7% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 97.8% |
+| `covered` (62) accuracy | 96.2% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (13) accuracy | 15.4% |
+| `uncovered` (12) accuracy | 16.7% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 1 (`custom-metricflow` 1 confident-wrong to wrong).
 
@@ -139,11 +139,11 @@ Scored on partial: 1 run(s) of 73 of 74 cases; runs finished: custom-metricflow 
 | Confident-wrong | 1.4% |
 | pass^1 | 83.6% |
 | `conversation` (7) accuracy | 100.0% |
-| `covered` (61) accuracy | 100.0% |
+| `covered` (62) accuracy | 98.4% |
 | `distractor` (1) accuracy | 100.0% |
 | `planted` (4) accuracy | 100.0% |
 | `trap` (10) accuracy | 100.0% |
-| `uncovered` (12) accuracy | 0.0% |
+| `uncovered` (11) accuracy | 0.0% |
 
 Turns still unclear after judging (counted as wrong):
 
