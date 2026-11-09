@@ -65,7 +65,8 @@ The runner printed its count before asking; the session read only the pass's las
 The 226 runs are valid strict runs on the fixed server and are kept in the logs and judged, but the scores and pages were not rebuilt with them: whether they count is the owner's decision (#432, #452).
 `387_cc_strict.py` now refuses an Opus pass without `--limit`, and one that would ask more than it (`over_budget`, `test_an_opus_pass_names_its_size_and_never_asks_more`).
 
+**Kept** (owner, 2026-11-09, in a session: "#432 can keep as recommended"): the 226 runs count, so hard-v2's two MetricFlow setups have a whole strict Opus row at k = 3; `results.json` and the pages are rebuilt with them.
+
 ## What stays unknown
 
-- Whether the 226 Opus runs past the go count: kept, they give hard-v2's two MetricFlow setups a whole strict Opus row at k = 3 (part of #452's ask); left out, they need a new kind of exclusion row, since redaction is only for a faulty setup.
 - The earlier subagent `claude-code (...)` rows used the same server; their transcripts are self-reported, so the fault cannot be counted there; they leave the page once strict rows replace them (#452).

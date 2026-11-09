@@ -56,6 +56,7 @@ The evidence for every row below is in [the audit's reports](findings/382-case-a
 Confirmed by the owner, 2026-11-06, in a session: "Retire all, make sure the final report doesn't care about what happened earlier and uses the latest the freshest data points only".
 `hard_active_customers_week` confirmed by the owner, 2026-11-09, in a session (on #434): "retire the case".
 `bet_median_order_september` and `bet_peak_checkout_hour` confirmed by the owner, 2026-11-09, in a session (on #437): "retire what's needed". The frozen set then scores 74 cases, 13 of them `uncovered` (17.6%).
+`median_order_value` relabelled `covered` by the owner, 2026-11-09, in a session (on #437): "it is labelled uncovered although the metric median_order_value_eur answers it on BigQuery" (a `label` row; groups follow the BigQuery setups). The frozen set then scores 74 cases, 12 of them `uncovered` (16.2%).
 After these retirements the frozen set scores 76 cases, 15 of them `uncovered` (19.7%, under § The set's 30%): its uncovered group is reported with its n and this reason, and a later version on a richer fixture rebuilds it.
 
 ## The set
