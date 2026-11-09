@@ -1264,3 +1264,19 @@ def test_a_cut_last_line_is_skipped_and_a_duplicate_run_is_reported(tmp_path, ca
     log.write_text('{"bad"\n' + json.dumps(row) + "\n")
     with pytest.raises(json.JSONDecodeError):
         bet_eval.read_log(log)
+
+
+def test_a_whole_pass_is_read_from_its_log_alone(tmp_path):
+    """#454: the runs a pass would ask, with no agent, model or warehouse."""
+    bet = BetSet([REVENUE, MEDIAN], {"revenue_one_day": ["covered"], "bet_median_order": []}, [])
+    row = {
+        "arm": "native-mcp",
+        "model": "m",
+        "case": "revenue_one_day",
+        "run": 1,
+        "outcome": "right",
+    }
+    (tmp_path / "eval-native-mcp.jsonl").write_text(json.dumps(row) + "\n")
+    assert bet_eval.remaining(bet, "native-mcp", "m", 1, directory=tmp_path) == 1
+    assert bet_eval.remaining(bet, "native-mcp", "m", 1, ["revenue_one_day"], tmp_path) == 0
+    assert bet_eval.remaining(bet, "baseline", "m", 2, directory=tmp_path) == 4

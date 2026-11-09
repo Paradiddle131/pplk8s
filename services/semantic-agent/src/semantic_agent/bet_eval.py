@@ -1328,6 +1328,24 @@ async def within(
     raise CaseTimeout(f"the case-run stalled: no answer in {limit:.0f} s, {tries} times")
 
 
+def remaining(
+    bet: BetSet,
+    arm: str,
+    model: str,
+    runs: int,
+    ids: Sequence[str] = (),
+    directory: Path = RESEARCH,
+) -> int:
+    """The (run, case) pairs `arm`'s log on `bet`'s set has not finished on `model`, read from the
+    log alone (no agent, no model, no warehouse), so a whole pass is skipped without starting its
+    runner (#454). A local arm reads the set's local log, any other arm its own."""
+    files = SETS[bet.name]
+    path = files.local_log(directory) if arm in ARMS else files.arm_log(arm, directory)
+    done = finished([{"arm": arm, **e} for e in read_log(path)], model)
+    cases = [q.id for q in bet.questions if not ids or q.id in ids]
+    return sum((arm, r, c) not in done for r in range(1, runs + 1) for c in cases)
+
+
 def unretried_errors(entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     """The error rows with no later answered row of the same run (#457), in log order."""
     answered = {
@@ -1566,6 +1584,8 @@ async def run_bet(
                 ]
                 entry["outcome"] = run_outcome([o for _, o in turns]).value
                 append_log(entry, log)
+                # One line per case-run, so a lane log shows a pass's progress (#456).
+                print(f"{question.id} run {run}: {arm} {entry['outcome']}", flush=True)
     return "done"
 
 
@@ -2228,6 +2248,12 @@ async def main(argv: Sequence[str]) -> int:
         "--dry-run", action="store_true", help="with --judge: count the turns waiting, ask none"
     )
     parser.add_argument(
+        "--remaining",
+        metavar="ARM",
+        default=None,
+        help="print the runs ARM's log lacks on --set at --runs, on MODEL_ID; ask none (#454)",
+    )
+    parser.add_argument(
         "--export-audit",
         action="store_true",
         help="append the fixture's new ops.agent_queries rows to audit-queries.jsonl (#439)",
@@ -2269,6 +2295,9 @@ async def main(argv: Sequence[str]) -> int:
     owner = os.environ.get(
         "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{owner_db}"
     )
+    if args.remaining:
+        print(remaining(bet, args.remaining, model, args.runs, args.ids))
+        return 0
     if args.export_audit:
         print(f"audit: {export_audit(owner)} row(s) appended to {RESEARCH / AUDIT}")
         return 0

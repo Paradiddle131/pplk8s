@@ -1,5 +1,5 @@
 {
- "written": "2026-11-09T11:52Z",
+ "written": "2026-11-09T11:59Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -108,7 +108,7 @@
    },
    "runs_beyond_rounds": 13,
    "model_calls": 343,
-   "unchecked_runs": 76
+   "unchecked_runs": 89
   },
   {
    "set": "frozen",
@@ -438,7 +438,7 @@
    },
    "runs_beyond_rounds": 146,
    "model_calls": 785,
-   "unchecked_runs": 74
+   "unchecked_runs": 220
   },
   {
    "set": "frozen",
@@ -549,7 +549,7 @@
    },
    "runs_beyond_rounds": 149,
    "model_calls": 805,
-   "unchecked_runs": 76
+   "unchecked_runs": 225
   },
   {
    "set": "frozen",
@@ -884,7 +884,7 @@
    },
    "runs_beyond_rounds": 74,
    "model_calls": 743,
-   "unchecked_runs": 152
+   "unchecked_runs": 226
   },
   {
    "set": "frozen",
@@ -2377,7 +2377,7 @@
    },
    "runs_beyond_rounds": 78,
    "model_calls": 467,
-   "unchecked_runs": 40
+   "unchecked_runs": 118
   },
   {
    "set": "hard",
@@ -4187,7 +4187,7 @@
    "model_calls": 467,
    "new": {},
    "carried_runs": 118,
-   "unchecked_runs": 40
+   "unchecked_runs": 118
   },
   {
    "set": "hard-v2",
@@ -4613,8 +4613,8 @@
     "confident-wrong": 5,
     "wrong": 3
    },
-   "runs_beyond_rounds": 28,
-   "model_calls": 401,
+   "runs_beyond_rounds": 51,
+   "model_calls": 516,
    "new": {
     "all": [
      1.0,

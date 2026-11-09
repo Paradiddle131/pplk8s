@@ -9,8 +9,12 @@
 # Run from anywhere: bash docs/research/semantic-bet/probes/lanes/free_lane.sh (needs make services-up and the agents fixture).
 # Stops for the day once OpenRouter's free count reaches CAP (default 990 of 1,000: a pass checks its share before
 # each case, so the last case may overrun it by its own calls), or on an anomaly (exit 1: a gate; exit 2: canary).
+# --until HH:MMZ (#454): the lane stops cleanly before that time today (UTC): each pass gets --minutes up to 5 minutes
+# before it, and none starts with less than 10 left, so a wake's 2-hour background job is never killed mid-pass.
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/../../../../.." && pwd)
+UNTIL=""
+[ "${1:-}" = "--until" ] && UNTIL=$(date -u -d "${2%Z}" +%s)
 SA=$REPO/services/semantic-agent
 S0=$REPO/docs/research/semantic-bet
 S=${LANE_DIR:-${TMPDIR:-/tmp}/semantic-bet-lanes}; mkdir -p "$S"
@@ -42,23 +46,50 @@ pass() {
   local h; for h in $HELD; do
     case "$name" in "$h "*) log "skip $name: held until #448 (its reach changes, #445)"; return 0 ;; esac
   done
+  # A whole pass is read from its log alone, without starting its runner (#454): the name is "<arm> <set> k=<k>".
+  local arm=${name%% *} rest=${name#* }; local set=${rest%% *} k=${name##*k=}
+  local rem; rem=$(remaining "$arm" "$set" "$k")
+  if [ "$rem" = 0 ]; then log "whole $name"; return 0; fi
   local u; u=$(used); local left=$((CAP - u))
   if [ $left -lt 30 ]; then log "skip $name: free count $u of $CAP"; return 1; fi
-  local req=$left
-  log "start $name: free count $u, --requests $req (about $est for a whole pass)"
-  cd "$SA" && flock "$S/openrouter.lock" "$@" --requests $req 2>&1 | grep -v -i "warning\|MetricEvaluatorRegistry" | tail -4
+  local req=$left minutes=()
+  if [ -n "$UNTIL" ]; then
+    local m=$(( (UNTIL - $(date -u +%s)) / 60 - 5 ))
+    if [ $m -lt 5 ]; then log "stop before --until: $name not started"; exit 0; fi
+    minutes=(--minutes "$m")
+  fi
+  log "start $name: $rem runs to ask, free count $u, --requests $req (about $est for a whole pass)"
+  echo "$name $(date -u +%FT%H:%MZ)" >"$S/current-pass"
+  # One line per case-run (#456), so the log shows a pass's progress and where a cut stopped it.
+  cd "$SA" && flock "$S/openrouter.lock" "$@" --requests $req "${minutes[@]}" 2>&1 |
+    grep -v -i "warning\|MetricEvaluatorRegistry\|Provider List" | grep -E " run [0-9]+: |^stopped|canary|ANOMAL|judge"
   local rc=${PIPESTATUS[0]}
+  rm -f "$S/current-pass"
   log "end $name: exit $rc, free count $(used)"
   [ $rc -eq 2 ] && { log "ANOMALY: $name missed its canary twice; lane stopped"; push "$name stopped at its canary"; exit 2; }
   judge
+  rebuild
   push "$name (exit $rc)"
   return 0
+}
+# How many runs a pass's log lacks (bet_eval --remaining: the log only, no model, no agent).
+remaining() {
+  cd "$SA" && uv run --quiet python -m semantic_agent.bet_eval --remaining "$1" --set "$2" --runs "$3" 2>/dev/null | tail -1
+}
+# Every handoff rebuilds what the page reads (#455): results.json, scored-runs.jsonl and eval.md for every set, then
+# both pages; the wake republishes both and #336's artifact 4 after the push.
+rebuild() {
+  cd "$SA" && uv run --quiet python -m semantic_agent.bet_eval --report-only >/dev/null 2>&1 || log "rebuild: report-only failed"
+  cd "$S0" && python3.12 report/build.py results.json >/dev/null && python3.12 brief/build.py results.json >/dev/null ||
+    log "rebuild: a page build failed"
 }
 gcp_gate() { cd "$REPO" && make -s gcp-cost-check | tail -2 && make -s gcp-usage-check | tail -1; }
 
 BE=(uv run --quiet python -m semantic_agent.bet_eval)
 LIVE=(uv run --quiet python ../../docs/research/semantic-bet/probes/328_mcp_live.py)
-log "free lane: free count $(used)"
+log "free lane: free count $(used)${UNTIL:+, until $(date -u -d @"$UNTIL" +%H:%MZ)}"
+# A pass the last lane did not finish (#456): a background limit or a restart cut it.
+[ -f "$S/current-pass" ] && log "CUT: the last lane's pass did not finish: $(cat "$S/current-pass")" && rm -f "$S/current-pass"
 
 # The Toolbox for custom-toolbox (#330): pinned and checksum-checked as probes/330_toolbox_check.sh does,
 # started once, stopped when the lane leaves.
@@ -101,7 +132,14 @@ round() {
   pass "baseline frozen k=$k" 450 "${BE[@]}" --arms baseline --runs $k || exit 0
   [[ $v1 = hard ]] && { pass "baseline hard k=$k" 200 "${BE[@]}" --arms baseline --set hard --runs $k || exit 0; }
   [[ $k = 3 ]] && { pass "custom-metricflow frozen k=3" 400 "${BE[@]}" --arms custom-metricflow --runs 3 || exit 0; }
-  if lightdash; then
+  # The 15 GB Lightdash image is pulled only when one of its passes has work (#454).
+  LIGHTDASH_OFF=""
+  if [ "$(remaining custom-lightdash frozen "$k")" != 0 ] || { [[ $v1 = hard ]] && [ "$(remaining custom-lightdash hard "$k")" != 0 ]; }; then
+    lightdash || LIGHTDASH_OFF=1
+  else
+    LIGHTDASH_OFF=1
+  fi
+  if [ -z "${LIGHTDASH_OFF:-}" ]; then
     pass "custom-lightdash frozen k=$k" 400 "${LIVE[@]}" --agent 363_lightdash_agent.py --runs $k || exit 0
     [[ $v1 = hard ]] && { pass "custom-lightdash hard k=$k" 180 "${LIVE[@]}" --agent 363_lightdash_agent.py --runs $k --set hard || exit 0; }
   fi
