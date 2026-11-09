@@ -1,38 +1,37 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-09T11:26Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T11:52Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 76 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-34 of `baseline`'s 296 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+14 of `baseline`'s 262 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 76 of 76 cases; runs finished: baseline 76 of 228, custom-metricflow 89 of 228, custom-hybrid 76 of 228, custom-metricflow-compute 94 of 228; model responses spent: baseline 347, custom-metricflow 343, custom-hybrid 311, custom-metricflow-compute 346.
+Scored on partial: 1 run(s) of 42 of 76 cases; runs finished: baseline 42 of 228, custom-metricflow 89 of 228, custom-hybrid 42 of 228, custom-metricflow-compute 94 of 228; model responses spent: baseline 161, custom-metricflow 343, custom-hybrid 165, custom-metricflow-compute 346.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
-| Accuracy | 59.2% | 89.5% | 89.5% | 89.5% |
-| Confident-wrong | 9.2% | 0.0% | 0.0% | 0.0% |
-| pass^1 | 59.2% | 89.5% | 89.5% | 89.5% |
-| `conversation` (7) accuracy | 42.9% | 100.0% | 100.0% | 100.0% |
-| `covered` (61) accuracy | 68.9% | 100.0% | 100.0% | 100.0% |
+| Accuracy | 85.7% | 100.0% | 100.0% | 100.0% |
+| Confident-wrong | 4.8% | 0.0% | 0.0% | 0.0% |
+| pass^1 | 85.7% | 100.0% | 100.0% | 100.0% |
+| `conversation` (6) accuracy | 50.0% | 100.0% | 100.0% | 100.0% |
+| `covered` (42) accuracy | 85.7% | 100.0% | 100.0% | 100.0% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
-| `planted` (4) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
-| `trap` (10) accuracy | 60.0% | 100.0% | 100.0% | 100.0% |
-| `uncovered` (15) accuracy | 20.0% | 46.7% | 46.7% | 46.7% |
+| `planted` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
+| `trap` (8) accuracy | 75.0% | 100.0% | 100.0% | 100.0% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
-- Accuracy: +0.303 [+0.197, +0.408]: a difference.
-- Confident-wrong: -0.092 [-0.158, -0.039]: a difference.
+- Accuracy: +0.143 [+0.048, +0.262]: a difference.
+- Confident-wrong: -0.048 [-0.119, +0.000]: no difference.
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
-Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`baseline` 1 unclear to confident-wrong; `custom-metricflow` 1 unclear to declined).
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 1 (`custom-metricflow` 1 unclear to declined).
 
-Turns judged: 3 (0 the code left unclear, 3 confident-wrong with a hedge outside the list); verdicts that stood: 3.
-Confident-wrong turns the judge moved: 0 of 3 (0 to wrong, hedged; 0 to unclear).
+Turns judged: 1 (0 the code left unclear, 1 confident-wrong with a hedge outside the list); verdicts that stood: 1.
+Confident-wrong turns the judge moved: 0 of 1 (0 to wrong, hedged; 0 to unclear).
 
 ## `claude-haiku-5-5`
 
@@ -156,7 +155,3 @@ Confident-wrong turns the judge moved: 1 of 1 (1 to wrong, hedged; 0 to unclear)
 Turns still unclear after judging (counted as wrong):
 
 - `custom-metricflow` `cancelled_total` run 2 turn 1: not judged yet
-
-## Errors
-
-- No answer: the model call failed (litellm.APIError: APIError: OpenrouterException - Response payload is not completed: <TransferEncodingError: 400, message='Not enough data to satisfy transfer length header.'> LiteLLM Retried: 2 times).

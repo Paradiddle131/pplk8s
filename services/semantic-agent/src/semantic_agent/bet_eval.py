@@ -1927,6 +1927,24 @@ def session_kind(model: str) -> str:
     return "fresh per run"
 
 
+def unchecked_runs(entries: Sequence[dict[str, Any]], arm: str, model: str, runs: int) -> int:
+    """How many of the arm's scored runs (complete rounds, the run that stands for each key) never
+    had their calls checked (#441)."""
+    latest: dict[tuple[str, int], dict[str, Any]] = {}
+    for e in entries:
+        if e["arm"] == arm and e["model"] == model and e["run"] <= runs and not e.get("error"):
+            latest[(e["case"], e["run"])] = e
+    by_case: dict[str, list[int]] = {}
+    for case, run in latest:
+        by_case.setdefault(case, []).append(run)
+    if not by_case:
+        return 0
+    rounds = min(len(r) for r in by_case.values())
+    return sum(
+        not tools_checked(latest[(c, r)]) for c, rs in by_case.items() for r in sorted(rs)[:rounds]
+    )
+
+
 def tools_checked(entry: Mapping[str, Any]) -> bool:
     """A run whose every turn logged its tool calls (#388 on), so they were checked against its
     setup's declared tools; a run logged before, or carried from one, was never checked (#441)."""
@@ -1997,15 +2015,7 @@ def arm_result(
             else {}
         ),
         **({"carried_runs": carried} if carried else {}),
-        "unchecked_runs": sum(
-            1
-            for e in entries
-            if e["arm"] == arm
-            and e["model"] == model
-            and e["run"] <= runs
-            and e.get("turns")
-            and not tools_checked(e)
-        ),
+        "unchecked_runs": unchecked_runs(entries, arm, model, runs),
     }
 
 
