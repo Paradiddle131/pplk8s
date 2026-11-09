@@ -1,6 +1,6 @@
 # The bet's local arms on the hard set
 
-Written 2026-11-09T00:16Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-09T00:18Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 41 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 1 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `nvidia/nemotron-3-ultra-550b-a55b:free` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -8,7 +8,7 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ## `claude-haiku-5-5`
 
-Scored on partial: 1 run(s) of 41 of 41 cases; runs finished: baseline 121 of 123, custom-metricflow 123 of 123, custom-hybrid 123 of 123; model responses spent: baseline 476, custom-metricflow 416, custom-hybrid 458.
+Scored on all 1 runs of every case; runs finished: baseline 121 of 41, custom-metricflow 123 of 41, custom-hybrid 123 of 41; model responses spent: baseline 476, custom-metricflow 416, custom-hybrid 458.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
@@ -41,17 +41,17 @@ Turns still unclear after judging (counted as wrong):
 
 ## `claude-sonnet-5-5`
 
-Scored on all 3 runs of every case; runs finished: custom-metricflow 123 of 123; model responses spent: custom-metricflow 421.
+Scored on all 1 runs of every case; runs finished: custom-metricflow 123 of 41; model responses spent: custom-metricflow 421.
 
 | | `custom-metricflow` |
 |---|---|
-| Accuracy | 55.3% |
-| Confident-wrong | 0.8% |
-| pass^3 | 53.7% |
+| Accuracy | 53.7% |
+| Confident-wrong | 2.4% |
+| pass^1 | 53.7% |
 | `conversation` (8) accuracy | 62.5% |
 | `covered` (22) accuracy | 81.8% |
 | `trap` (5) accuracy | 100.0% |
-| `uncovered` (19) accuracy | 24.6% |
+| `uncovered` (19) accuracy | 21.1% |
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 6 (`custom-metricflow` 6 confident-wrong to wrong).
 
@@ -64,7 +64,7 @@ Turns still unclear after judging (counted as wrong):
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 41 of 41 cases; runs finished: baseline 41 of 123, custom-metricflow 123 of 123, custom-hybrid 41 of 123; model responses spent: baseline 195, custom-metricflow 480, custom-hybrid 180.
+Scored on all 1 runs of every case; runs finished: baseline 41 of 41, custom-metricflow 123 of 41, custom-hybrid 41 of 41; model responses spent: baseline 195, custom-metricflow 480, custom-hybrid 180.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
