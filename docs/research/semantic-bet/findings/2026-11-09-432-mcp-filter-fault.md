@@ -45,7 +45,27 @@ In all: 419 runs, right 327 before and 389 after, confident-wrong 27 before and 
 - With the fix, those rows gain about 15 points on the touched runs; they stay descriptive (RULE.md: outside § The rule's decision), and their Opus rows keep 27 redacted runs until the owner says go.
 - The main track's MCP server (the deployed semantic agent's) had the same fault for any MCP client that filters; it is fixed there too.
 
+## Opus, asked again (2026-11-09T14:35Z-14:51Z)
+
+The owner said go for the 27 Opus runs, 2026-11-09, in a session.
+A smoke case through the fixed server first (`cc-metricflow`, `hard_cpa_search_september`): its filtered `query_metrics` call returned a row, €124.84 per booking, with a clean audit.
+
+The 27 spoiled runs against their reruns (logged outcomes before, scored and judged by Haiku after; the redacted runs were never judged, so their unclear turns stay unclear):
+
+| Set | Setup | Model | Runs | Right before | Right after | Confident-wrong before | Confident-wrong after | Unclear before |
+|---|---|---|---|---|---|---|---|---|
+| hard-v2 | cc-metricflow | opus | 13 | 6 | 7 | 0 | 0 | 1 |
+| hard-v2 | cc-metricflow-compute | opus | 14 | 10 | 14 | 1 | 0 | 2 |
+
+In all: 27 runs, right 16 before and 21 after, confident-wrong 1 before and 0 after.
+
+**The pass asked more than the go covered.**
+`387_cc_strict.py run <setup> opus hard-v2 --runs 3` fills every case up to three runs, not only the stale ones: it asked 126 `cc-metricflow` and 127 `cc-metricflow-compute` runs, 253 in all, 226 of them beyond the 27 approved (about $27.58 of `claude -p` subscription usage as the streams report it; no API billing).
+The runner printed its count before asking; the session read only the pass's last lines.
+The 226 runs are valid strict runs on the fixed server and are kept in the logs and judged, but the scores and pages were not rebuilt with them: whether they count is the owner's decision (#432, #452).
+`387_cc_strict.py` now refuses an Opus pass without `--limit`, and one that would ask more than it (`over_budget`, `test_an_opus_pass_names_its_size_and_never_asks_more`).
+
 ## What stays unknown
 
-- Opus: 27 runs (`cc-metricflow` 13, `cc-metricflow-compute` 14, hard-v2) wait for the owner.
+- Whether the 226 Opus runs past the go count: kept, they give hard-v2's two MetricFlow setups a whole strict Opus row at k = 3 (part of #452's ask); left out, they need a new kind of exclusion row, since redaction is only for a faulty setup.
 - The earlier subagent `claude-code (...)` rows used the same server; their transcripts are self-reported, so the fault cannot be counted there; they leave the page once strict rows replace them (#452).

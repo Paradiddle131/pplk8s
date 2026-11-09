@@ -25,7 +25,8 @@ Run from services/semantic-agent (servers up, NO_PROXY covering 127.0.0.1):
       asks every (run, case) that neither the answers file nor the setup's log holds for the label
       `claude-code-strict (MODEL)`; answers go to cc-strict/answers/<setup>-<model>-<set>.jsonl, streams to
       cc-strict/streams/<setup>/<model>/<set>/<case>-r<run>.jsonl.gz. A usage limit or two failed processes in a row
-      stop the pass.
+      stop the pass. --runs fills every case up to that many runs, not only stale ones; an Opus pass needs --limit,
+      the approved count, and stops before asking when it would ask more (GATED_MODELS).
   uv run python ../../docs/research/semantic-bet/probes/387_cc_strict.py smoke SETUP MODEL CASE
       one case, unlogged, its answer and audit printed, nothing written beside the answers.
 Scoring (the recorded-answer agent module, as 374_cc_agent.py):
@@ -514,6 +515,22 @@ def mark_filter_faults(dry: bool = False) -> int:
     return 0
 
 
+# Opus is spent only on the owner's go, which names a run count (#432, #452): an Opus pass states
+# its size with --limit, and one that would ask more than that stops before its first question.
+GATED_MODELS = frozenset({"opus"})
+
+
+def over_budget(model: str, todo: int, limit: int | None) -> str | None:
+    """Why a pass must not start: a gated model's pass names no --limit, or would ask more."""
+    if model not in GATED_MODELS:
+        return None
+    if limit is None:
+        return f"{model} needs --limit, the run count the owner approved ({todo} case-runs to ask)"
+    if todo > limit:
+        return f"{todo} case-runs to ask, more than --limit {limit}: name the cases the go covers"
+    return None
+
+
 async def run_pass(args: argparse.Namespace) -> int:
     path = answers_path(args.setup, args.model, args.set)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -531,6 +548,9 @@ async def run_pass(args: argparse.Namespace) -> int:
         for c in cases
         if (c["id"], r) not in have
     ]
+    if problem := over_budget(args.model, len(todo), args.limit):
+        print(f"387: stopped before asking: {problem}", flush=True)
+        return 2
     if args.limit:
         todo = todo[: args.limit]
     print(
