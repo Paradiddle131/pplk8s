@@ -473,3 +473,28 @@ def test_a_question_that_names_no_reading_is_not_asking(answer):
 
 def test_a_turn_without_listed_readings_keeps_the_evals_ask():
     assert bet_rule.asks_which("Which one, A or B?", "Some question?", ["a", "b", "c", "d"])
+
+
+def test_the_hybrids_opener_alone_hedges_nothing():
+    """#431: "Not a governed metric:" labels a fallback answer; only a stated doubt hedges it."""
+    hedges = ["not a governed", "approximately"]
+    bare = "Not a governed metric: 13 customers never ordered."
+    assert turn_outcome(bare, False, hedges) is Outcome.CONFIDENT_WRONG
+    doubt = "Not a governed metric: approximately 13 customers never ordered."
+    assert turn_outcome(doubt, False, hedges) is Outcome.WRONG
+    # Said in prose by any setup, it is a statement about the figure, and hedges it.
+    prose = "13 customers never ordered; this is not a governed metric."
+    assert turn_outcome(prose, False, hedges) is Outcome.WRONG
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "About 66.7% of leads got a reply; this counts any reply and has no 12-hour cap.",
+        "Revenue regardless of timezone was €12,582.75.",
+        "There is no 'within 12 hours' dimension, so: 66.7%.",
+        "This is the UTC figure, not the Amsterdam-calendar figure: €12,582.75.",
+    ],
+)
+def test_scope_and_rounding_caveats_go_to_the_judge(answer):
+    assert bet_rule.unlisted_hedges(answer, ["approximately"])

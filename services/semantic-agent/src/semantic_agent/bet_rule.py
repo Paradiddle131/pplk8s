@@ -189,12 +189,22 @@ def stated(text: str, question: str = "") -> list[float]:
     return [n for n in (float(m.replace(",", "")) for m in NUMBER.findall(text)) if n not in asked]
 
 
+# The hybrid's required opener for a fallback answer (hybrid.py): a label every such answer
+# carries, not a statement of doubt, so it hedges nothing by itself (#431); the same answer's
+# own caveat still does, as for every setup.
+OPENER = re.compile(r"^\W*not a governed metric\s*:\s*", re.IGNORECASE)
+
+
+def without_opener(text: str) -> str:
+    return OPENER.sub("", fold(text), count=1)
+
+
 def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = "") -> Outcome:
     """One turn's outcome, given whether the eval's own scorer found it right."""
     if right:
         return Outcome.RIGHT
     if stated(text, question):
-        lowered = fold(text).lower()
+        lowered = without_opener(text).lower()
         # A decline beside the number says it is not from governed definitions: a hedge too.
         hedged = any(h.lower() in lowered for h in hedges) or declines(text)
         return Outcome.WRONG if hedged else Outcome.CONFIDENT_WRONG
@@ -465,7 +475,10 @@ HEDGE_LIKE = re.compile(
     r"no (?:\w+ )?(?:column|table|field|data)|limited to|only (?:includes?|covers?|counts?)|"
     # Scope caveats (#367): the figure is for a wider scope than asked, which the answer says.
     r"(?:cannot|can't|unable to) (?:split|filter|isolate|break)|covers? all|"
-    r"not broken (?:down|out))\b",
+    r"not broken (?:down|out)|"
+    # #431: a rounded figure, a scope the answer says it ignores, a dimension it lacks, a figure
+    # it says is another one.
+    r"about|regardless of|no\b[^.]{0,40}?\bdimension|not the\b[^.]{0,40}?\bfigure)\b",
     re.IGNORECASE,
 )
 
@@ -473,7 +486,7 @@ HEDGE_LIKE = re.compile(
 def unlisted_hedges(text: str, hedges: Sequence[str]) -> list[str]:
     """The hedge-like phrases an answer holds that the set's `hedges` list does not."""
     listed = [fold(h).lower() for h in hedges]
-    found = [m.group(0) for m in HEDGE_LIKE.finditer(fold(text))]
+    found = [m.group(0) for m in HEDGE_LIKE.finditer(without_opener(text))]
     return [f for f in found if not any(f.lower() in h or h in f.lower() for h in listed)]
 
 
