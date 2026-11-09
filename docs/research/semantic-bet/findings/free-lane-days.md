@@ -212,3 +212,28 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   The hybrid's k = 3 move (74.5% to 76.4%) is inside the interval; MetricFlow with arithmetic matches the hybrid on this set, as on 2026-11-07.
 - Report: rebuilt after the judge backlog, `custom-metricflow-compute` frozen, the hard-v2 k = 1 round and the final pass (build with `python3.12`: the session's `python3` is 3.11 and `build.py` needs 3.12 f-strings); claude.ai artifact published, #336's artifact 4 read back with the same SHA-256 after each rebuild.
 - Next: tomorrow's wake starts with `custom-metricflow` hard-v2 k = 3 (28 runs left), then `custom-metricflow-compute` hard-v2 k = 3, `native-mcp` and `baseline` hard-v2 k = 3, then the frozen set's k = 3 round; #380 and the merges of #410 and #411 wait on those.
+
+## 2026-11-09, 2026-11-09T03:45Z (the daily wake: the free lane from 00:12Z, stopped by the session's 2-hour background limit)
+
+- Free count 0 at the start, 595 of 1,000 at the end (read from `/api/v1/key`); 405 of the day's requests unspent.
+- Gates at the start and again after a container restart at about 01:30Z: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-08) and `gcp-usage-check` ok; no GCP work in the lane.
+- Anomalies: none from the lane (no exit 1 or 2; exit 3 on the hard-v2 k = 3 passes is "log not whole for the set as scored" at the pass's start, and each log is whole now).
+  Two interruptions that cost requests but no data: the container restarted at about 01:30Z mid `custom-metricflow` hard-v2 k = 3 (its 15 whole lines pushed, the lane restarted and spent about an hour re-skipping the whole passes and re-pulling the Lightdash image); then the session's runner stopped the restarted lane at its 2-hour background limit at 03:41Z, mid `custom-metricflow-compute` frozen k = 3, and a job already given the longest limit is not restarted.
+  A wake's lane therefore gets at most 2 hours from its start, and the v1 round of whole passes takes about 45 minutes of that before any request is spent.
+- Passes (Nemotron free; cases of the set as scored: frozen 76, hard 41, hard-v2 55, read from `results.json`):
+
+| Pass | Logged today | Log's total now |
+|---|---|---|
+| v1 k = 1 round and hard-v2 k = 1 round (every arm) | none (all whole; the Lightdash image started) | as on 2026-11-08 |
+| `custom-hybrid` hard-v2 k = 3 | none (whole) | 165 of 165 runs |
+| `custom-metricflow` hard-v2 k = 3 | 28 runs | 165 of 165 runs (55 cases x 3) |
+| `custom-metricflow-compute` hard-v2 k = 3 | 110 runs | 165 of 165 runs |
+| `custom-metricflow-compute` frozen k = 3 | 18 runs | 94 of 228 runs (76 cases x 3) |
+
+- Mid-way: `custom-metricflow-compute` frozen k = 3, stopped at 94 of 228 runs (run 2 under way); its partial runs are in `eval-local.jsonl` and `results.json` still shows its k = 1 reading.
+- Figures that moved (Nemotron free, right / confident-wrong): hard-v2 `custom-metricflow` 66.7% / 6.1% at k = 3 (was 68.5% / 4.8% with 137 of 165 runs); hard-v2 `custom-metricflow-compute` 76.4% / 5.5% at k = 3 (was 74.5% / 5.5% at k = 1).
+  Unchanged: hard-v2 `native-mcp` 92.7% / 0.0% and `baseline` 45.5% / 23.6% (k = 1), `custom-hybrid` 76.4% / 4.8% (k = 3); frozen and hard v1 rows as on 2026-11-08.
+- What the numbers say: on the extended hard set the managed best, `native-mcp`, still leads at 92.7% with no confident-wrong answer (k = 1 so far); MetricFlow with arithmetic now ties the hybrid exactly at k = 3 (76.4%), both about 16 points under it, while plain MetricFlow's k = 3 reading slipped to 66.7% with more confident-wrong answers (6.1%), so arithmetic is worth about 10 points on this set.
+  `native-mcp` and `baseline` at k = 3 on hard-v2 decide whether the 16-point gap holds.
+- Report: rebuilt and republished after the judge backlog, `custom-hybrid` frozen, `custom-metricflow` hard-v2 k = 3 and `custom-metricflow-compute` hard-v2 k = 3 (page versions 47 to 50, built with `python3.12`); #336's artifact 4 read back with the same SHA-256 each time (the PATCH answer now carries `body` at its top level, not under `.artifact`); the Approaches page's build was unchanged by these passes and was not republished.
+- Next: tomorrow's wake starts with `custom-metricflow-compute` frozen k = 3 (134 runs left), then `native-mcp` and `baseline` hard-v2 k = 3, then the rest of the frozen set's k = 3 round; with the 2-hour limit, a wake that restarts the lane after the limit would finish the day's quota (owner's call).
