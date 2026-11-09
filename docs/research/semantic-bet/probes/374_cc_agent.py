@@ -7,7 +7,9 @@ command, and a batch of cases shares one subagent session, where RULE.md asks a 
 names it as its own setup for those reasons; it answers "how does the same model do through the same semantic
 layer in another agent harness", not the rule's adopt-or-build question.
 
-Two halves, both offline:
+Retired 2026-11-09 (#452): the halves that wrote batches and prompts for subagents are gone, and the script refuses
+to run; the strict runner (387_cc_strict.py) asks every Claude Code run. What stays is the agent module that scores
+the subagents' recorded answers. The retired halves were:
   python3 -I docs/research/semantic-bet/probes/374_cc_agent.py --batches frozen|hard RUN SIZE OUT_DIR MODEL
       writes OUT_DIR/<set>-run<RUN>-<n>.json, the cases whose run RUN the log lacks for `claude-code (MODEL)`,
       SIZE cases a batch: each case's id and its turns' questions, never an expected number (SIZE 1: one fresh
@@ -55,32 +57,6 @@ def questions(name: str) -> list[dict[str, Any]]:
     return out
 
 
-def batches(name: str, run: int, size: int, out: Path, model: str) -> int:
-    log = RESEARCH / SETS[name][1]
-    label = f"claude-code ({model})"
-    done = set()
-    if log.exists():
-        for line in log.read_text().splitlines():
-            row = json.loads(line)
-            if row["model"] == label and row["run"] == run and row.get("outcome"):
-                done.add(row["case"])
-    todo = [c for c in questions(name) if c["id"] not in done]
-    out.mkdir(parents=True, exist_ok=True)
-    for n in range(0, len(todo), size):
-        path = out / f"{name}-run{run}-{n // size + 1:02d}.json"
-        path.write_text(
-            json.dumps(
-                {"set": name, "run": run, "model": model, "cases": todo[n : n + size]},
-                indent=1,
-            )
-        )
-        print(path)
-    print(
-        f"374_cc_agent: {len(todo)} cases of {name} run {run} in {(len(todo) + size - 1) // size} batches"
-    )
-    return 0
-
-
 def scored_runs(label: str) -> set[tuple[str, int]]:
     """The (case, run) pairs both sets' logs already hold for this model."""
     done = set()
@@ -92,26 +68,6 @@ def scored_runs(label: str) -> set[tuple[str, int]]:
                 if row["model"] == label and row.get("outcome"):
                     done.add((row["case"], int(row["run"])))
     return done
-
-
-def render(batch_dir: Path, answers: Path, model: str) -> int:
-    """One prompt per batch file (`<set>-run<R>-<NN>.json`), from 374_cc_prompt.md: the subagent is
-    handed only the path of its prompt; its answers go to answers/<model>-<set>-run<R>-<NN>.jsonl."""
-    template = (HERE / "374_cc_prompt.md").read_text()
-    for batch in sorted(batch_dir.glob("*-run*-*.json")):
-        stem = batch.stem
-        run = json.loads(batch.read_text())["run"]
-        prompt = (
-            template.replace("{MODEL}", model)
-            .replace("{SESSION}", f"{model}-{stem}")
-            .replace("{BATCH}", str(batch))
-            .replace("{OUT}", str(answers / f"{model}-{stem}.jsonl"))
-            .replace("{RUN}", str(run))
-        )
-        out = batch.with_suffix(".prompt.md")
-        out.write_text(prompt)
-        print(out)
-    return 0
 
 
 def recorded() -> dict[str, list[dict[str, Any]]]:
@@ -173,13 +129,9 @@ def asker(arm: str) -> Callable[[Sequence[str]], Awaitable[list[dict[str, Any]]]
     return ask
 
 
+# Retired (owner, 2026-11-09, on #452: "we no longer need to add more runs with subagents"): every Claude Code
+# row comes from 387_cc_strict.py; the subagent rows stay in the logs, and no new batch is written or rendered.
+RETIRED = "374_cc_agent: the subagent lane is retired; ask Claude Code runs through 387_cc_strict.py"
+
 if __name__ == "__main__":
-    a = sys.argv[1:]
-    if a[:1] == ["--batches"] and len(a) == 6:
-        raise SystemExit(batches(a[1], int(a[2]), int(a[3]), Path(a[4]), a[5]))
-    if a[:1] == ["--render"] and len(a) == 4:
-        raise SystemExit(render(Path(a[1]), Path(a[2]), a[3]))
-    sys.exit(
-        "usage: 374_cc_agent.py --batches frozen|hard RUN SIZE OUT_DIR MODEL"
-        " | --render BATCH_DIR ANSWERS_DIR MODEL"
-    )
+    sys.exit(RETIRED)
