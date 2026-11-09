@@ -1172,3 +1172,21 @@ def test_only_complete_rounds_are_scored():
     result = bet_eval.arm_result(bet, entries, "baseline", "m", 3)
     assert result["runs"] == 2 and result["runs_beyond_rounds"] == 1
     assert result["outcomes"] == {"right": 1, "wrong": 1}
+
+
+def test_step_two_can_leave_out_the_cases_either_arm_cannot_reach():
+    """#447: the pair on the cases both setups can reach, the managed best chosen as before."""
+    rows = []
+    for case, best, ours in (("a", "right", "right"), ("b", "right", "declined")):
+        rows.append(
+            {"arm": "native-context", "model": "g", "case": case, "run": 1, "outcome": best}
+        )
+        rows.append(
+            {"arm": "custom-metricflow", "model": "m", "case": case, "run": 1, "outcome": ours}
+        )
+    bet = BetSet([], {"a": ["covered"], "b": ["uncovered"]}, [], "frozen")
+    bet.questions.extend(Question.single(c, c, "", []) for c in ("a", "b"))
+    _, _, every = bet_eval.step_two(bet, rows, 1)
+    _, _, within = bet_eval.step_two(bet, rows, 1, {"custom-metricflow": ["b"]})
+    assert every[0].cases == 2 and every[0].accuracy.mean == -0.5
+    assert within[0].cases == 1 and within[0].accuracy.mean == 0.0

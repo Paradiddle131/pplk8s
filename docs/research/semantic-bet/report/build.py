@@ -1201,6 +1201,8 @@ def make_parts(st, rows, mb, floor, mf):
         if mf["step2"]:
             P["mf"]["vsBest"] = mf["step2"]["accuracy"]
             P["mf"]["vsBestCw"] = mf["step2"].get("confident_wrong")
+            if mf["step2"].get("reachable"):
+                P["mf"]["vsBestReach"] = mf["step2"]["reachable"]
         rel = []
         for k in ("covered", "trap", "uncovered"):
             # Against the managed best, the one Google setup every comparison on the page uses (owner, 2026-11-07, #409);
@@ -1297,6 +1299,17 @@ def combine(sets, order):
             f.append("%s on the %s (%s)" % ("level with the managed best" if tie else "%d points %s the managed best" % (abs(round(100 * a[0])), "below" if a[0] < 0 else "above"),
                                            P["label"].lower(), "a tie within the interval" if tie else "the interval excludes a tie"))
     S["forest"] = ("Paired by question, MetricFlow on the free model is " + ", and ".join(f) + ".") if f else "Accuracy and confident-wrong per setup and model."
+    # #447: the same pair on the questions both can reach; the verdict still reads every question (RULE.md § The rule, 2).
+    rf = []
+    for P in parts:
+        rr = P.get("mf", {}).get("vsBestReach")
+        if rr:
+            a = rr["accuracy"]
+            tie = a[1] <= 0 <= a[2]
+            rf.append("%s on the %d %s questions both can reach" % ("level with it" if tie else "%d points %s" % (abs(round(100 * a[0])), "below" if a[0] < 0 else "above"),
+                                                                    rr["cases"], P["label"].lower().replace(" set", "")))
+    if f and rf:
+        S["forest"] += " The rule's verdict reads every question; on the ones in both setups' reach, MetricFlow is " + ", and ".join(rf) + "."
     sc = {}
     for s in order:
         P = sets[s]["parts"]

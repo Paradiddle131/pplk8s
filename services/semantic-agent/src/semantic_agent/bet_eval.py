@@ -980,11 +980,16 @@ class Paired:
 
 
 def step_two(
-    bet: BetSet, entries: Sequence[dict[str, Any]], runs: int = RUNS
+    bet: BetSet,
+    entries: Sequence[dict[str, Any]],
+    runs: int = RUNS,
+    limits: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[tuple[str, str, float] | None, list[tuple[str, str]], list[Paired]]:
     """RULE.md § The rule, 1 and 2, on one set's logs: the managed best (arm, model, accuracy),
     every arm of ours logged (arm, model), and each one paired against the best on the cases both
-    reached (none paired when no case is shared)."""
+    reached (none paired when no case is shared). With `limits` (bet_reach.reach_limits: the
+    cases out of each setup's reach), the pairs leave out every case out of either arm's reach
+    (#447); the managed best is chosen as without them."""
     models = list(dict.fromkeys(e["model"] for e in entries))
     every = {q.id for q in bet.questions}
     managed: list[tuple[float, int, str, str]] = []
@@ -1017,7 +1022,8 @@ def step_two(
     paired = []
     for arm, model in ours:
         right, wrong, ran = case_shares(entries, arm, model, runs)
-        cases = sorted(set(right) & set(best_right))
+        out = set((limits or {}).get(arm, ())) | set((limits or {}).get(best, ()))
+        cases = sorted((set(right) & set(best_right)) - out)
         if not cases:
             continue
         acc = paired_interval({c: best_right[c] for c in cases}, {c: right[c] for c in cases})
@@ -1983,6 +1989,22 @@ def results(directory: Path = RESEARCH, runs: int = RUNS) -> dict[str, Any]:
                     "worth": p.worth,
                 }
             )
+        # #447: the same pairs again, on the cases both setups of a pair can reach.
+        _, _, within = step_two(bet, entries, runs, out["sets"][name]["reach_limits"])
+        by_pair = {(p.arm, p.model): p for p in within}
+        for row in out["step_two"]:
+            p = by_pair.get((row["arm"], row["model"])) if row["set"] == name else None
+            if p is not None and p.cases != row["cases"]:
+                row["reachable"] = {
+                    "cases": p.cases,
+                    "accuracy": [p.accuracy.mean, p.accuracy.low, p.accuracy.high],
+                    "confident_wrong": [
+                        p.confident_wrong.mean,
+                        p.confident_wrong.low,
+                        p.confident_wrong.high,
+                    ],
+                    "worth": p.worth,
+                }
         ties = ties_with_best(bet, entries, runs)
         out["step_three"][name] = sorted(f"{a} on {m}" for a, m in ties) if ties else None
     spend: dict[str, dict[str, Any]] = {}
