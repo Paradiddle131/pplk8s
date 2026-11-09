@@ -90,3 +90,10 @@ def test_a_stale_answer_is_never_read(tmp_path, monkeypatch):
     stale.write_text(json.dumps({"answer_sha": cc.answer_sha(line)}) + "\n")
     monkeypatch.setattr(cc, "STALE", stale)
     assert cc.recorded_runs(answers) == {("c", 2)}
+
+
+def test_an_opus_pass_names_its_size_and_never_asks_more():
+    assert "needs --limit" in cc.over_budget("opus", 253, None)
+    assert "more than --limit 27" in cc.over_budget("opus", 253, 27)
+    assert cc.over_budget("opus", 27, 27) is None
+    assert cc.over_budget("haiku", 253, None) is None
