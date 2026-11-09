@@ -1,5 +1,5 @@
 {
- "written": "2026-11-09T11:59Z",
+ "written": "2026-11-09T12:04Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -108,7 +108,7 @@
    },
    "runs_beyond_rounds": 13,
    "model_calls": 343,
-   "unchecked_runs": 89
+   "unchecked_runs": 76
   },
   {
    "set": "frozen",
@@ -438,7 +438,7 @@
    },
    "runs_beyond_rounds": 146,
    "model_calls": 785,
-   "unchecked_runs": 220
+   "unchecked_runs": 74
   },
   {
    "set": "frozen",
@@ -549,7 +549,7 @@
    },
    "runs_beyond_rounds": 149,
    "model_calls": 805,
-   "unchecked_runs": 225
+   "unchecked_runs": 76
   },
   {
    "set": "frozen",
@@ -884,7 +884,7 @@
    },
    "runs_beyond_rounds": 74,
    "model_calls": 743,
-   "unchecked_runs": 226
+   "unchecked_runs": 152
   },
   {
    "set": "frozen",
@@ -2377,7 +2377,7 @@
    },
    "runs_beyond_rounds": 78,
    "model_calls": 467,
-   "unchecked_runs": 118
+   "unchecked_runs": 40
   },
   {
    "set": "hard",
@@ -4187,7 +4187,7 @@
    "model_calls": 467,
    "new": {},
    "carried_runs": 118,
-   "unchecked_runs": 118
+   "unchecked_runs": 40
   },
   {
    "set": "hard-v2",
@@ -15143,7 +15143,7 @@
      "hv2_spend_on_days_without_email_booking"
     ]
    },
-   "judge_waiting": 1
+   "judge_waiting": 0
   }
  },
  "claude_spend_by_pass": {
