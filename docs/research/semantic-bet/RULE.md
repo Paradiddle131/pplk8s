@@ -50,9 +50,12 @@ The evidence for every row below is in [the audit's reports](findings/382-case-a
 | `hard_orders_last_fiscal_quarter` | hard, hard-v2 | 2026-11-06 | fixture | 217 is every order row: no fiscal boundary falls inside the data |
 | `hv2_first_order_value_october` | hard-v2 | 2026-11-06 | readings | 'the first week of October' reads as 1-7 Oct (36.5), 5-11 Oct (42.5) or the week holding 1 Oct (32.0); only 36.5 accepted |
 | `hard_active_customers_week` | hard, hard-v2 | 2026-11-09 | expected_sql | the governed "Active customers" (`customers_distinct`) makes 10 the answer, but the case wants 10 and 9 or a question back ([finding](findings/2026-11-09-434-retire-active-customers-week.md), #434) |
+| `bet_median_order_september` | frozen | 2026-11-09 | readings | 110 orders: only the interpolated 117.375 is accepted; `percentile_disc` gives 116.75 and the governed median a middle amount ([sweep](findings/2026-11-09-437-case-sweep.md), #437) |
+| `bet_peak_checkout_hour` | frozen | 2026-11-09 | fixture | two checkouts in the window, both at 09:00: 2 is every checkout by construction ([sweep](findings/2026-11-09-437-case-sweep.md), #437) |
 
 Confirmed by the owner, 2026-11-06, in a session: "Retire all, make sure the final report doesn't care about what happened earlier and uses the latest the freshest data points only".
 `hard_active_customers_week` confirmed by the owner, 2026-11-09, in a session (on #434): "retire the case".
+`bet_median_order_september` and `bet_peak_checkout_hour` confirmed by the owner, 2026-11-09, in a session (on #437): "retire what's needed". The frozen set then scores 74 cases, 13 of them `uncovered` (17.6%).
 After these retirements the frozen set scores 76 cases, 15 of them `uncovered` (19.7%, under § The set's 30%): its uncovered group is reported with its n and this reason, and a later version on a richer fixture rebuilds it.
 
 ## The set

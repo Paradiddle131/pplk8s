@@ -89,8 +89,10 @@ def test_a_covered_score_under_100_explains_its_unclear_answers_on_hover():
     rules = next(
         t for t in build.takeaways(data, build.scored_runs(RESULTS, data)) if t["key"] == "rules"
     )
+    # A note only explains a gap made of unjudged answers; with every answer judged (#428) a score
+    # under 100 may carry none, but a note never sits on a full score.
     for m in rules["models"]:
-        assert bool(m["covered_note"]) == (m["covered"] < 100)
+        assert not m["covered_note"] or m["covered"] < 100
     page = build.build(RESULTS)
     assert all(
         f'data-tip="{html.escape(m["covered_note"])}"' in page
