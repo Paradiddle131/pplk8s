@@ -145,11 +145,40 @@ def refused_attempts(arm: str, turns: Sequence[Mapping[str, Any]]) -> list[str]:
     ]
 
 
-def write_fault(row: Mapping[str, Any], calls: Sequence[str], directory: Path) -> None:
-    """A run left unscored because it called outside its setup's tools."""
+# A run is asked again at most once after it broke its tool rule (#443): asking until a compliant
+# answer appears would select the answers; the second fault of a run is logged as its outcome.
+FAULT_TRIES = 2
+
+
+def write_fault(row: Mapping[str, Any], calls: Sequence[str], directory: Path) -> int:
+    """A run left unscored because it called outside its setup's tools; returns how many times this
+    run (arm, model, case, run) has faulted so far, this one included."""
     at = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with (directory / FAULTS).open("a") as out:
+    path = directory / FAULTS
+    key = tuple(row.get(k) for k in ("arm", "model", "case", "run"))
+    before = sum(
+        1
+        for line in (path.read_text().splitlines() if path.exists() else [])
+        if line.strip()
+        and tuple(json.loads(line).get(k) for k in ("arm", "model", "case", "run")) == key
+    )
+    with path.open("a") as out:
         out.write(json.dumps({**row, "fault": "tools", "outside": list(calls), "at": at}) + "\n")
+    return before + 1
+
+
+def fault_outcome(
+    entry: Mapping[str, Any], turns: Sequence[Mapping[str, Any]], calls: Sequence[str]
+) -> dict[str, Any]:
+    """The logged row of a run that faulted FAULT_TRIES times: wrong, every turn wrong, the calls
+    outside its tools named; never right, so a compliant re-ask cannot replace it."""
+    return {
+        **entry,
+        "fault": "tools",
+        "outside": list(calls),
+        "turns": [{**t, "outcome": "wrong"} for t in turns],
+        "outcome": "wrong",
+    }
 
 
 def check(directory: Path | None = None) -> tuple[list[dict[str, Any]], list[str]]:
@@ -172,7 +201,7 @@ def check(directory: Path | None = None) -> tuple[list[dict[str, Any]], list[str
                 {"log": path.name, "setup": arm, "model": run["model"], "runs": 0, "with_calls": 0}
                 | {"outside": {}, "refused": {}},
             )
-            if "turns" not in run:
+            if "turns" not in run or run.get("fault"):  # a fault logged as its outcome (#443)
                 continue
             entry["runs"] += 1
             turns = run["turns"]

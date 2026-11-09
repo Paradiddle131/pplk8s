@@ -1219,3 +1219,48 @@ def test_a_reach_row_supersedes_the_runs_logged_before_the_new_reach(tmp_path):
         ("c", "other", "wrong"),
     ]
     assert len(bet_eval.read_log(log, raw=True)) == 4
+
+
+def test_only_errors_never_answered_later_are_listed():
+    """#457: an error retried and answered is not an error of the pass."""
+    rows = [
+        {"arm": "a", "model": "m", "case": "c", "run": 1, "error": "transfer", "at": "t1"},
+        {"arm": "a", "model": "m", "case": "c", "run": 1, "outcome": "right", "at": "t2"},
+        {"arm": "a", "model": "m", "case": "d", "run": 1, "error": "timeout", "at": "t3"},
+    ]
+    assert [e["case"] for e in bet_eval.unretried_errors(rows)] == ["d"]
+
+
+def test_a_stalled_case_run_is_asked_once_more_then_stops_as_a_timeout():
+    """#459: a stub that never answers holds no pass."""
+    asked = []
+
+    async def never():
+        asked.append(1)
+        await asyncio.sleep(10)
+
+    with pytest.raises(bet_eval.CaseTimeout, match="stalled"):
+        asyncio.run(bet_eval.within(never, seconds=0.05))
+    assert len(asked) == 2
+
+    async def quick():
+        return "answer"
+
+    assert asyncio.run(bet_eval.within(quick, seconds=1)) == "answer"
+
+
+def test_a_cut_last_line_is_skipped_and_a_duplicate_run_is_reported(tmp_path, capsys):
+    """#442: a partial last line never stops a pass; two answered rows of one run are named."""
+    log = tmp_path / "eval-local.jsonl"
+    row = {"arm": "baseline", "model": "m", "case": "c", "run": 1, "outcome": "right"}
+    bet_eval.append_log(row, log)
+    bet_eval.append_log({**row, "outcome": "wrong"}, log)
+    log.write_text(log.read_text() + '{"arm": "baseline", "mod')
+    rows = bet_eval.read_log(log)
+    assert [r["outcome"] for r in rows] == ["right", "wrong"]
+    assert "unreadable last line" in capsys.readouterr().err
+    bet_eval.read_logs(tmp_path)
+    assert "logged twice" in capsys.readouterr().err
+    log.write_text('{"bad"\n' + json.dumps(row) + "\n")
+    with pytest.raises(json.JSONDecodeError):
+        bet_eval.read_log(log)

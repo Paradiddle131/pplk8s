@@ -81,7 +81,11 @@ def build_model(backend: str | None = None, model_id: str | None = None) -> Base
         return build_claude(model_id, timeout, retries)
 
     if backend == "openrouter":
+        import litellm
         from google.adk.models.lite_llm import LiteLlm
+
+        # The red "Provider List" line litellm prints on every call carries nothing (#457).
+        litellm.suppress_debug_info = True
 
         # The key comes from OPENROUTER_API_KEY, or a cloud network secret that replaces it in
         # flight (the proxy then needs only a placeholder).

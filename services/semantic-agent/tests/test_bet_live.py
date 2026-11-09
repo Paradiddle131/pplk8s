@@ -278,3 +278,34 @@ def test_a_logged_run_keeps_its_session_and_each_turns_trace(tmp_path):
         "results": [[{"revenue": 868.65}]],
         "jobs": ["job_1"],
     }
+
+
+def test_a_run_that_breaks_its_tool_rule_twice_is_logged_wrong_and_not_asked_again(tmp_path):
+    """#443: one re-ask after a tool fault, then the fault is the run's outcome."""
+    log = tmp_path / "eval-native-mcp.jsonl"
+    bet = BetSet([REVENUE], {"revenue_one_day": ["covered"]}, [])
+
+    async def cheat(questions):
+        return [
+            {
+                "question": questions[0],
+                "calls": [{"tool": "Bash"}],
+                "answer": RIGHT,
+                "model_calls": 1,
+            }
+        ]
+
+    def ask():
+        return asyncio.run(
+            bet_live.run_live(
+                bet, EXPECTED, DESCRIBED, "native-mcp", cheat, "m", 1, log, say=lambda _: None
+            )
+        )
+
+    ask()
+    assert bet_eval.read_log(log) == []  # the first fault: unlogged, asked again
+    ask()
+    (row,) = bet_eval.read_log(log)
+    assert row["outcome"] == "wrong" and row["fault"] == "tools" and row["outside"] == ["Bash"]
+    ask()  # finished: no third ask
+    assert len((tmp_path / "faults.jsonl").read_text().splitlines()) == 2

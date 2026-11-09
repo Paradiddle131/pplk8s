@@ -215,11 +215,15 @@ async def run_live(
             # #388: a run that called outside its setup's tools is a test fault, never scored.
             if strays := bet_tools.outside(arm, turns):
                 say(f"{question.id} run {run}: not scored, calls outside {arm}'s tools: {strays}")
-                bet_tools.write_fault(
-                    {"arm": arm, "model": model, "run": run, "case": question.id, "turns": turns},
-                    strays,
-                    log.parent,
-                )
+                row = {"arm": arm, "model": model, "run": run, "case": question.id}
+                if (
+                    bet_tools.write_fault({**row, "turns": turns}, strays, log.parent)
+                    >= bet_tools.FAULT_TRIES
+                ):
+                    # #443: the run's second fault is its outcome, wrong; it is not asked again.
+                    at = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    texts = [{"text": t.get("answer", ""), "calls": t["calls"]} for t in turns]
+                    append_log(bet_tools.fault_outcome({**row, "at": at}, texts, strays), log)
                 continue
             scored = score_case(
                 question,

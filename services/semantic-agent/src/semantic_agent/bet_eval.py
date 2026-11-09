@@ -508,7 +508,16 @@ def read_log(path: Path = LOG, raw: bool = False) -> list[dict[str, Any]]:
     sees them."""
     if not path.exists():
         return []
-    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    lines = [line for line in path.read_text().splitlines() if line.strip()]
+    rows = []
+    for i, line in enumerate(lines):
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            if i < len(lines) - 1:
+                raise
+            # A cut write (#442): the last line only; its run is asked again.
+            print(f"warning: {path.name}: an unreadable last line is skipped", file=sys.stderr)
     if raw or not path.name.startswith("eval-"):
         return rows
     cases, runs = read_overlay(path.parent)
@@ -559,6 +568,18 @@ def read_logs(directory: Path = RESEARCH, name: str = FROZEN) -> list[dict[str, 
             continue
         arm = path.stem.removeprefix(files.prefix)
         entries += [{"arm": arm, **e} for e in read_log(path)]
+    # Two answered rows of one run after the overlay (#442): the later stands; say so.
+    seen: dict[tuple, int] = {}
+    for e in entries:
+        if e.get("outcome") and not e.get("error"):
+            key = (e.get("arm"), e.get("model"), e.get("case"), e.get("run"))
+            seen[key] = seen.get(key, 0) + 1
+    dupes = [k for k, n in seen.items() if n > 1]
+    if dupes:
+        print(
+            f"warning: {name}: {len(dupes)} run(s) logged twice, the later kept, e.g. {dupes[0]}",
+            file=sys.stderr,
+        )
     return entries
 
 
@@ -1270,8 +1291,56 @@ def tool_calls(invocation: Invocation) -> list[dict[str, Any]]:
 
 
 def append_log(entry: dict[str, Any], path: Path = LOG) -> None:
+    """One row appended under the log's lock, flushed and synced to disk (#442), so a cut leaves at
+    most a partial last line and two writers never interleave."""
+    import fcntl
+
     with path.open("a") as out:
-        out.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        fcntl.flock(out, fcntl.LOCK_EX)
+        try:
+            out.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            out.flush()
+            os.fsync(out.fileno())
+        finally:
+            fcntl.flock(out, fcntl.LOCK_UN)
+
+
+# A case-run's wall clock (#459): a model call can stall with no error and hold the pass; litellm's
+# own per-call timeout (MODEL_TIMEOUT_S) does not cover every stall. One retry, then an error row.
+CASE_TIMEOUT_S = float(os.environ.get("BET_CASE_TIMEOUT_S", "600"))
+CASE_TRIES = 2
+
+
+class CaseTimeout(RuntimeError):
+    """A case-run that did not finish within CASE_TIMEOUT_S, CASE_TRIES times."""
+
+
+async def within(
+    ask: Callable[[], Awaitable[Any]], seconds: float | None = None, tries: int = CASE_TRIES
+) -> Any:
+    """`ask()` under the case-run's wall clock, asked again once when it stalls."""
+    limit = CASE_TIMEOUT_S if seconds is None else seconds
+    for _ in range(tries):
+        try:
+            return await asyncio.wait_for(ask(), limit)
+        except TimeoutError:
+            continue
+    raise CaseTimeout(f"the case-run stalled: no answer in {limit:.0f} s, {tries} times")
+
+
+def unretried_errors(entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The error rows with no later answered row of the same run (#457), in log order."""
+    answered = {
+        (e.get("arm"), e.get("model"), e.get("case"), e.get("run"))
+        for e in entries
+        if not e.get("error") and e.get("outcome")
+    }
+    return [
+        e
+        for e in entries
+        if e.get("error")
+        and (e.get("arm"), e.get("model"), e.get("case"), e.get("run")) not in answered
+    ]
 
 
 def finished(entries: Sequence[dict[str, Any]], model: str) -> dict[tuple[str, int, str], str]:
@@ -1419,9 +1488,31 @@ async def run_bet(
                     [question], dict(expected), agents[arm].name, semantic, dict(described)
                 )
                 mark = spend.METER.begin_case(model, arm=arm, run=run, case=question.id)
-                outcome = (await evaluation.evaluate(agents[arm], cases, [ANSWER_CORRECT]))[
-                    question.id
-                ]
+                try:
+                    outcome = (
+                        await within(
+                            lambda a=arm, c=cases: evaluation.evaluate(
+                                agents[a], c, [ANSWER_CORRECT]
+                            )
+                        )
+                    )[question.id]
+                except CaseTimeout as stalled:
+                    # A stalled model call (#459): an error row, under the two-error rule.
+                    spend.METER.end_case(mark)
+                    append_log(
+                        {
+                            "arm": arm,
+                            "model": model,
+                            "run": run,
+                            "case": question.id,
+                            "at": datetime.datetime.now(datetime.UTC).strftime(
+                                "%Y-%m-%dT%H:%M:%SZ"
+                            ),
+                            "error": str(stalled),
+                        },
+                        log,
+                    )
+                    continue
                 usage = spend.METER.end_case(mark)
                 spent += outcome.model_calls
                 if outcome.skipped or outcome.ends_run:
@@ -1447,9 +1538,15 @@ async def run_bet(
                 calls = [tool_calls(i) for i in outcome.inferences]
                 if strays := bet_tools.outside(arm, [{"calls": c} for c in calls]):
                     print(f"{question.id} run {run}: not scored, outside {arm}'s tools: {strays}")
-                    bet_tools.write_fault(
+                    faulted = bet_tools.write_fault(
                         {**entry, "turns": [{"calls": c} for c in calls]}, strays, log.parent
                     )
+                    if faulted >= bet_tools.FAULT_TRIES:
+                        texts = [
+                            {"text": _answer(i), "calls": c}
+                            for i, c in zip(outcome.inferences, calls, strict=False)
+                        ]
+                        append_log(bet_tools.fault_outcome(entry, texts, strays), log)
                     continue
                 turns = score_case(
                     question, expected[question.id], outcome.inferences, bet.hedges, described
@@ -1708,9 +1805,19 @@ def report(
         lines += judge_lines(entries, model, bet.hedges)
     if every_arm:
         lines += managed_comparison(bet, entries, runs, depth=depth)
-    errors = sorted({e["error"] for e in entries if e.get("error")})
+    errors = unretried_errors(entries)
     if errors:
-        lines += ["", f"{h2} Errors", ""] + [f"- {e}" for e in errors]
+        lines += [
+            "",
+            f"{h2} Errors",
+            "",
+            f"Errors with no later answer of the same run (a run that errors {MAX_ERRORS} times "
+            "is scored wrong; one retried and answered is not listed):",
+            "",
+        ] + [
+            f"- {e.get('at', '?')} `{e['arm']}` `{e['case']}` run {e['run']}: {e['error']}"
+            for e in errors
+        ]
     return "\n".join(lines) + "\n"
 
 
