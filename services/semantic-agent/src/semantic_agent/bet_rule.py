@@ -203,6 +203,115 @@ def turn_outcome(text: str, right: bool, hedges: Sequence[str], question: str = 
     return Outcome.UNCLEAR
 
 
+# A stated reading of an ambiguous relative date (#435, RULE.md § Changes since freezing,
+# 2026-11-09): on an `ambiguous` turn whose readings differ only in their dates, a figure that
+# matches one reading is right when the answer names that reading's dates. Keyed by the turn's
+# question; each reading is the (month, day) of its first and last day, in the order of the case's
+# expected columns. An unstated pick, or a window that matches no reading, stays wrong.
+DATE_READINGS: dict[str, list[tuple[tuple[int, int], tuple[int, int]]]] = {
+    # hard_last_seven_days (hard, hard-v2): the seven days before today, or the seven to today.
+    "Today is 1 October 2026. How much revenue did we make over the last 7 days?": [
+        ((9, 24), (9, 30)),
+        ((9, 25), (10, 1)),
+    ],
+}
+MONTH_NUMBER = {
+    name: n
+    for n, names in enumerate(
+        [
+            ("january", "jan"),
+            ("february", "feb"),
+            ("march", "mar"),
+            ("april", "apr"),
+            ("may",),
+            ("june", "jun"),
+            ("july", "jul"),
+            ("august", "aug"),
+            ("september", "sept", "sep"),
+            ("october", "oct"),
+            ("november", "nov"),
+            ("december", "dec"),
+        ],
+        start=1,
+    )
+    for name in names
+}
+_MONTH = r"(january|february|march|april|may|june|july|august|september|sept|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\.?"  # noqa: E501
+_DAY = r"(\d{1,2})(?:st|nd|rd|th)?"
+_TO = rf"\s*(?:[{HYPHENS}]|to|through|until|till|and)\s*"
+# "24 to 30 September", "25 Sep - 1 Oct", "24-30 Sep"
+DAY_RANGE = re.compile(rf"\b{_DAY}(?:\s+(?:of\s+)?{_MONTH})?{_TO}{_DAY}\s+(?:of\s+)?{_MONTH}", re.I)
+# "September 24-30", "Sep 25 - Oct 1"
+MONTH_RANGE = re.compile(rf"\b{_MONTH}\s+{_DAY}{_TO}(?:{_MONTH}\s+)?{_DAY}\b", re.I)
+DAY_MONTH = re.compile(rf"\b{_DAY}\s+(?:of\s+)?{_MONTH}", re.I)
+MONTH_DAY = re.compile(rf"\b{_MONTH}\s+{_DAY}\b", re.I)
+ISO_DAY = re.compile(rf"\b\d{{4}}[{HYPHENS}](\d{{1,2}})[{HYPHENS}](\d{{1,2}})\b")
+# "the seven days to 1 October", "the week ending 30 September": the last day names the window.
+ENDING = re.compile(
+    rf"\b(?:ending|ended|ends|up to|to|through|until|till)\s+(?:on\s+)?(?:\w+day,?\s+)?"
+    rf"(?:{_DAY}\s+(?:of\s+)?{_MONTH}|{_MONTH}\s+{_DAY}\b|\d{{4}}[{HYPHENS}](\d{{1,2}})"
+    rf"[{HYPHENS}](\d{{1,2}})\b)",
+    re.I,
+)
+SEVEN_DAYS = re.compile(r"\b(?:7|seven)[\s-]+(?:full\s+|complete\s+)?days?\b|\bweek\b", re.I)
+
+
+def _month(name: str) -> int:
+    return MONTH_NUMBER[name.lower().rstrip(".")]
+
+
+def named_days(text: str) -> set[tuple[int, int]]:
+    """Every (month, day) the answer names, a range's first day with its month."""
+    text = fold(text)
+    days: set[tuple[int, int]] = set()
+    for m in DAY_RANGE.finditer(text):
+        first, its_month, last, month = m.groups()
+        days |= {(_month(its_month or month), int(first)), (_month(month), int(last))}
+    for m in MONTH_RANGE.finditer(text):
+        month, first, its_month, last = m.groups()
+        days |= {(_month(month), int(first)), (_month(its_month or month), int(last))}
+    days |= {(_month(m[2]), int(m[1])) for m in DAY_MONTH.finditer(text)}
+    days |= {(_month(m[1]), int(m[2])) for m in MONTH_DAY.finditer(text)}
+    days |= {(int(m[1]), int(m[2])) for m in ISO_DAY.finditer(text)}
+    return days
+
+
+def window_ends(text: str) -> set[tuple[int, int]]:
+    """The last days an answer gives a seven-day window ("the seven days to 1 October")."""
+    text = fold(text)
+    if not SEVEN_DAYS.search(text):
+        return set()
+    # A range's last day ("24 September to 1 October") is not a window's end: its first day says
+    # which days it holds.
+    ranges = [m.span() for r in (DAY_RANGE, MONTH_RANGE) for m in r.finditer(text)]
+    ends = set()
+    for m in ENDING.finditer(text):
+        if any(a < m.end() and m.start() < b for a, b in ranges):
+            continue
+        day, month, month2, day2, iso_month, iso_day = m.groups()
+        if day:
+            ends.add((_month(month), int(day)))
+        elif day2:
+            ends.add((_month(month2), int(day2)))
+        else:
+            ends.add((int(iso_month), int(iso_day)))
+    return ends
+
+
+def stated_reading(text: str, question: str, meanings: Sequence[Sequence[float]]) -> bool:
+    """An answer to a relative-date `ambiguous` turn (DATE_READINGS) that gives one reading's
+    figure and names that reading's dates: its first and last day, or its last day as the end of
+    the seven days."""
+    readings = DATE_READINGS.get(question)
+    if not readings or len(readings) != len(meanings):
+        return False
+    days, ends = named_days(text), window_ends(text)
+    for (first, last), forms in zip(readings, meanings, strict=True):
+        if carries(text, list(forms)) and ({first, last} <= days or last in ends):
+            return True
+    return False
+
+
 def run_outcome(turns: Sequence[Outcome]) -> Outcome:
     """A run of a case over its turns: confident-wrong wins, then right needs every turn right."""
     if Outcome.CONFIDENT_WRONG in turns:

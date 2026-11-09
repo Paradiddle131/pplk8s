@@ -49,8 +49,10 @@ The evidence for every row below is in [the audit's reports](findings/382-case-a
 | `hard_happiest_call_topic` | hard, hard-v2 | 2026-11-06 | fixture | 0.75 by construction in every period and reading |
 | `hard_orders_last_fiscal_quarter` | hard, hard-v2 | 2026-11-06 | fixture | 217 is every order row: no fiscal boundary falls inside the data |
 | `hv2_first_order_value_october` | hard-v2 | 2026-11-06 | readings | 'the first week of October' reads as 1-7 Oct (36.5), 5-11 Oct (42.5) or the week holding 1 Oct (32.0); only 36.5 accepted |
+| `hard_active_customers_week` | hard, hard-v2 | 2026-11-09 | expected_sql | the governed "Active customers" (`customers_distinct`) makes 10 the answer, but the case wants 10 and 9 or a question back ([finding](findings/2026-11-09-434-retire-active-customers-week.md), #434) |
 
 Confirmed by the owner, 2026-11-06, in a session: "Retire all, make sure the final report doesn't care about what happened earlier and uses the latest the freshest data points only".
+`hard_active_customers_week` confirmed by the owner, 2026-11-09, in a session (on #434): "retire the case".
 After these retirements the frozen set scores 76 cases, 15 of them `uncovered` (19.7%, under § The set's 30%): its uncovered group is reported with its n and this reason, and a later version on a richer fixture rebuilds it.
 
 ## The set
@@ -115,6 +117,10 @@ Frozen 2026-11-06T09:33Z by [#377](../../../../../issues/377), before any arm ra
 The arms of [the register](README.md#the-arms), each built by its own issue: `native-context`, `native-governed`, `native-kc`, `native-shaped`, `native-graph`, `native-mcp`, `custom-metricflow`, `custom-metricflow-compute` (#400), `custom-toolbox`, and `baseline` (the reference, text-to-SQL that reads the generated docs).
 Every arm that writes SQL is given the `legacy` schema beside the trusted layers (#185), with the descriptions it already carries ("replaced by …"); an arm that cannot read it (`custom-metricflow`) says so in the report.
 An arm is scored with each model it is run with, and every comparison names each arm's model (§ The rule, 2, changed 2026-11-03 by #359).
+The reach policy (2026-11-09T10:44Z, [#445](../../../../../issues/445), [#436](../../../../../issues/436)): every setup that writes SQL reaches the row-level data Google's data agents and `native-mcp` reach: `agent_sql`, the role of `baseline` and of `custom-hybrid`'s fallback, reads `silver` as `agent_metrics` does, column by column (the personal columns stay refused), and the fiscal calendar (`semantic.time_spine`), granted in the fixture's database only (`tests/e2e/agent-fixture.sh`) and checked by `probes/388_parity.py --grants`; `native-mcp` keeps `BET_SQL_DENY` unset.
+The MetricFlow setups stay metrics-only by design: their declines on a case no metric covers are labelled reach limits ([#446](../../../../../issues/446)).
+Runs logged with that reach carry `"reach": "silver"`; `baseline` and `custom-hybrid` are asked again, k = 3, on the cases the new reach touches ([#448](../../../../../issues/448)), and the runs before stay in the logs.
+The owner's decision, 2026-11-09, in a session (recorded on #445): option (a), grant `agent_sql` read access to `silver`, so the baseline and the hybrid's SQL fallback reach the row-level data `native-mcp` and Google's data agents reach; and for #436, the fiscal calendar under the same policy, since the native setups read it (`native-context` publishes `semantic.time_spine`, `native-mcp` reads the `semantic` dataset; the parity finding).
 
 ## Scoring a run
 
@@ -225,3 +231,8 @@ Within a rung, the arm with the fewer moving parts named in its finding wins a t
   Every judgeable answer is judged once by Haiku ([#428](../../../../../issues/428)); an answer with Haiku's verdicts is never asked again unless a full refresh is asked for (the cache key holds the answer's hash and the judge).
   Haiku also judges the Claude Code rows Haiku answered; the owner accepts that as negligible.
   The owner's decision, 2026-11-09, in a session (recorded on #424): Claude Haiku through `claude -p` is the default judge, the OpenRouter judge behind a switch, and the free OpenRouter quota goes to answering questions, not judging.
+- 2026-11-09T10:39Z ([#435](../../../../../issues/435)): on an `ambiguous` turn whose readings differ only in their dates (a relative date such as "the last 7 days"), a figure that matches one accepted reading is right when the answer names that reading's dates: its first and last day, or its last day as the end of the seven days ("the seven days to 1 October"); an unstated pick, or a window that matches no reading (an eight-day window), stays wrong.
+  The rule is `bet_rule.stated_reading`, its readings `bet_rule.DATE_READINGS`, keyed by the turn's question; it touches one case, `hard_last_seven_days` (`hard` and `hard-v2`: 24-30 September or 25 September-1 October); no other relative-date case is `ambiguous` in any set, and `hard_ambiguous_q3` (a calendar or a fiscal quarter, not a relative date) is left to #436 and #437.
+  Every log is scored again on read; on that case 84 runs on `hard` and 93 on `hard-v2` move from wrong to right, every one of them a stated reading, and the eight-day and unmatched windows stay wrong.
+  Why: no setup's instruction asks for both readings of a relative window, and § Retiring a defective case calls a case defective when it does not accept each reasonable reading.
+  The owner's decision, 2026-11-09, in a session (recorded on #435): accept a stated reading on every ambiguous relative-date case, not this one only.

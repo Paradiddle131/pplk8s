@@ -397,3 +397,47 @@ def test_a_small_expected_number_stands_only_as_the_answers_first_figure():
     )
     listed = "13 customers never ordered: 11, 13, 14, 16, 17."
     assert not bet_rule.first_figure_is_expected(listed, [[16.0]], "How many?")
+
+
+SEVEN = "Today is 1 October 2026. How much revenue did we make over the last 7 days?"
+SEVEN_MEANINGS = [[3360.75], [3800.44]]
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Revenue for the last 7 days, 24 to 30 September 2026, was €3,360.75.",
+        "Revenue over the last 7 days (24–30 September 2026) was 3,360.75 EUR.",
+        "Revenue was €3,800.44 over the last 7 days (25 September – 1 October 2026).",
+        "I assumed 25 Sep–1 Oct: €3,800.44.",
+        "Revenue (Sep 25 - Oct 1, 2026) was 3800.44 EUR.",
+        "From 2026-09-24 to 2026-09-30 revenue was 3,360.75 EUR.",
+        "Revenue in the seven days to 1 October was €3,800.44.",
+        "The week ending 30 September brought €3,360.75.",
+    ],
+)
+def test_one_relative_date_reading_with_its_dates_is_right(answer):
+    """#435: a figure matching one reading of an ambiguous relative date is right when the
+    answer names that reading's dates."""
+    assert bet_rule.stated_reading(answer, SEVEN, SEVEN_MEANINGS)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Revenue over the last 7 days was €3,800.44.",  # an unstated pick
+        "Revenue over the last 7 days (24 September – 1 October 2026): €4,342.44.",  # 8 days
+        "Revenue over the last 7 days (24 September to 1 October 2026) was €3,800.44.",
+        "Revenue for 24 to 30 September 2026 was €3,800.44.",  # the other reading's figure
+        "Revenue in the seven days to 1 October was €3,360.75.",
+    ],
+)
+def test_an_unstated_pick_or_a_window_no_reading_holds_stays_wrong(answer):
+    assert not bet_rule.stated_reading(answer, SEVEN, SEVEN_MEANINGS)
+
+
+def test_a_stated_reading_counts_only_on_a_relative_date_case():
+    other = "What were our sales on 1 October 2026?"
+    assert not bet_rule.stated_reading(
+        "Sales on 1 October 2026 were 868.65 EUR.", other, [[868.65], [800.0]]
+    )

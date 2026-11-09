@@ -551,6 +551,7 @@ class CaseOutcome:
     inferences: list[Invocation] = field(default_factory=list)
     model_calls: int = 0
     ends_run: bool = False  # its failure (a spent quota, a refused key) ends the run
+    session_id: str | None = None  # the ADK session the case ran in (the bet's trace, #439)
 
 
 # A rate-limited question waits out the limit once, at most this long, then runs again.
@@ -622,6 +623,7 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
             spent = failure if failure.ends_run else None
         else:
             succeeded.append(result)
+    session_ids = {r.eval_case_id: r.session_id for r in succeeded}
     answers = {
         r.eval_case_id: " → ".join(_text(i.final_response) for i in r.inferences or [])
         for r in succeeded
@@ -650,6 +652,7 @@ async def evaluate(agent: LlmAgent, cases: list[EvalCase], metrics: list[EvalMet
                 scores,
                 read_planted=shown.get(result.eval_id, False),
                 inferences=inferred.get(result.eval_id, []),
+                session_id=session_ids.get(result.eval_id),
             )
     for case_id, outcome in outcomes.items():
         outcome.model_calls = calls.get(case_id, 0)

@@ -84,6 +84,7 @@ from semantic_agent.bet_rule import (
     parse_verdict,
     run_outcome,
     stated,
+    stated_reading,
     turn_outcome,
     two_verdicts,
     unlisted_hedges,
@@ -123,6 +124,31 @@ DEFAULT_ARMS = ("baseline", "custom-metricflow")
 # so a report can tell the two apart.
 LEGACY_TABLES = ("legacy.channel_daily", "legacy.country_sales", "legacy.daily_net_sales")
 LEGACY_REACH = frozenset({"baseline", "custom-hybrid"})
+# RULE.md § The arms, the reach policy (2026-11-09, #445): every SQL-writing setup reaches the
+# row-level data Google's agents and `native-mcp` reach, so `baseline` and the hybrid's fallback
+# read `silver` (column by column as `agent_metrics` does, personal columns refused) and the fiscal
+# calendar (`semantic.time_spine`, #436), granted in the fixture (tests/e2e/agent-fixture.sh).
+# Their runs logged since carry `"reach": REACH`; the runs before it carry none.
+SQL_REACH_SCHEMAS = ("silver", "semantic")
+REACH = "silver"
+
+
+def reach_tables(url: str | None = None) -> tuple[str, ...]:
+    """The `silver` and `semantic` tables `agent_sql` may read in the fixture, as `schema.table`
+    (information_schema shows a role only what it holds a privilege on)."""
+    import psycopg
+
+    from sql_baseline.agent import _url
+
+    with psycopg.connect(url or _url()) as conn:
+        rows = conn.execute(
+            "select table_schema || '.' || table_name from information_schema.tables "
+            "where table_schema = any(%s) order by 1",
+            [list(SQL_REACH_SCHEMAS)],
+        ).fetchall()
+    return tuple(r[0] for r in rows)
+
+
 # RULE.md's cost ladder: rungs 1 and 2 are managed agents, 3 and 4 are ours; a tie goes lower.
 RUNG = {
     "native-context": 1,
@@ -266,7 +292,8 @@ def score_turn(
         if not right and text.strip() and not declines(text):
             return Outcome.UNCLEAR
     else:
-        right = asks_or_gives_each(text, numbers)
+        # #435: on a relative-date ambiguity, one reading's figure with that reading's dates.
+        right = asks_or_gives_each(text, numbers) or stated_reading(text, turn.question, numbers)
         own = stated(text, turn.question)
         if not right and own and not any(carries(text, m) for m in numbers):
             return turn_outcome(text, False, hedges, turn.question)
@@ -812,6 +839,59 @@ def judged_logs(bet: BetSet, directory: Path = RESEARCH) -> list[dict[str, Any]]
     return apply_verdicts(scored_logs(bet, directory), verdicts)
 
 
+# The warehouse audit beside the logs (#439): `ops.agent_queries` keeps every query_metrics and
+# execute_sql call by its ADK session and invocation, but lives in the fixture's database, which a
+# rebuild drops; each local pass appends the rows it has not exported yet, so a run's calls join
+# to it (`audit_join`) from the repo alone.
+AUDIT = "audit-queries.jsonl"
+AUDIT_COLUMNS = (
+    "called_at",
+    "agent",
+    "tool",
+    "session_id",
+    "invocation_id",
+    "call_id",
+    "metrics",
+    "filters",
+    "arguments",
+    "sql",
+    "rows_returned",
+    "freshness",
+    "error",
+)
+
+
+def export_audit(url: str, directory: Path = RESEARCH) -> int:
+    """Append the audit rows newer than the last one exported; returns how many."""
+    import psycopg
+
+    path = directory / AUDIT
+    last = max((r["called_at"] for r in read_log(path)), default=None)
+    query = f"select {', '.join(AUDIT_COLUMNS)} from ops.agent_queries"
+    params: list[Any] = []
+    if last is not None:
+        query += " where called_at > %s::timestamptz"
+        params.append(last)
+    with psycopg.connect(url) as conn:
+        rows = conn.execute(query + " order by called_at", params).fetchall()
+    for row in rows:
+        out = dict(zip(AUDIT_COLUMNS, row, strict=True))
+        out["called_at"] = out["called_at"].isoformat()
+        append_log(json.loads(json.dumps(out, default=str)), path)
+    return len(rows)
+
+
+def audit_join(
+    entries: Sequence[dict[str, Any]], audit: Sequence[dict[str, Any]]
+) -> dict[tuple, list[dict[str, Any]]]:
+    """Each logged run that names its session, with the audit rows of that session."""
+    by_session: dict[str, list[dict[str, Any]]] = {}
+    for row in audit:
+        if row.get("session_id"):
+            by_session.setdefault(row["session_id"], []).append(row)
+    return {run_key(e): by_session.get(e["session_id"], []) for e in entries if e.get("session_id")}
+
+
 # Each set's expected numbers, read once from the fixture warehouse (`--write-expected`), so the
 # logs are scored again on read in full whenever the reading of an answer changes (#382). The
 # fixture is deterministic; the file names the database it was read from.
@@ -1215,8 +1295,8 @@ async def run_bet(
     `canary` before it spends on the rest. Returns why it stopped: `done`, `quota`
     (the model's quota or key ended the run), `time` (past the deadline), `requests` (this pass
     spent its share of the shared free quota) or `budget` (its Claude dollars, spend.METER).
-    The runs of an arm in `legacy` (its agent has the legacy tables in reach) are logged with
-    `"legacy": true`."""
+    The runs of an arm in `legacy` (its agent has the legacy tables in reach, and `silver` since
+    #445) are logged with `"legacy": true` and `"reach": REACH`."""
     spent = 0
     probe = canary_case(bet) if canary else None
     for arm in [a for a in ARMS if a in agents] if probe else []:
@@ -1286,6 +1366,7 @@ async def run_bet(
                 }
                 if arm in legacy:
                     entry["legacy"] = True
+                    entry["reach"] = REACH
                 if usage.calls:
                     entry["usage"] = usage.as_dict()
                 if outcome.error:
@@ -1303,9 +1384,18 @@ async def run_bet(
                 turns = score_case(
                     question, expected[question.id], outcome.inferences, bet.hedges, described
                 )
+                # #439: the ADK session and each turn's invocation, which ops.agent_queries keys
+                # its rows on, so the warehouse audit joins to the run.
+                if outcome.session_id:
+                    entry["session_id"] = outcome.session_id
                 entry["turns"] = [
-                    {"text": t, "outcome": o.value, "calls": c}
-                    for (t, o), c in zip(turns, calls, strict=False)
+                    {
+                        "text": t,
+                        "outcome": o.value,
+                        "calls": c,
+                        **({"invocation_id": i.invocation_id} if i.invocation_id else {}),
+                    }
+                    for (t, o), c, i in zip(turns, calls, outcome.inferences, strict=False)
                 ]
                 entry["outcome"] = run_outcome([o for _, o in turns]).value
                 append_log(entry, log)
@@ -1901,6 +1991,11 @@ async def main(argv: Sequence[str]) -> int:
         "--dry-run", action="store_true", help="with --judge: count the turns waiting, ask none"
     )
     parser.add_argument(
+        "--export-audit",
+        action="store_true",
+        help="append the fixture's new ops.agent_queries rows to audit-queries.jsonl (#439)",
+    )
+    parser.add_argument(
         "--write-expected",
         action="store_true",
         help="read every set's expected numbers from the warehouse into expected.json (#382)",
@@ -1932,6 +2027,13 @@ async def main(argv: Sequence[str]) -> int:
             "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{database}"
         )
         print(f"expected numbers: written to {write_expected(url)}")
+        return 0
+    owner_db = os.environ.get("DBT_DBNAME", "dbt_dev")
+    owner = os.environ.get(
+        "WAREHOUSE_OWNER_URL", f"postgresql://warehouse:warehouse@localhost:5433/{owner_db}"
+    )
+    if args.export_audit:
+        print(f"audit: {export_audit(owner)} row(s) appended to {RESEARCH / AUDIT}")
         return 0
     if args.judge:
         # The turns the report leaves unclear, scored as it scores them (#426): from the cached
@@ -2001,10 +2103,14 @@ async def main(argv: Sequence[str]) -> int:
         expected = evaluation.expected_numbers(asked.questions, owner_url)
         described = evaluation.definitions(asked.questions)
         # custom-metricflow's tools read only the semantic models: legacy stays out of its reach.
+        sql_reach = (*LEGACY_TABLES, *(reach_tables() if LEGACY_REACH & set(args.arms) else ()))
+        if LEGACY_REACH & set(args.arms) and not any(t.startswith("silver.") for t in sql_reach):
+            print("stopped: agent_sql reads no silver table; rebuild the fixture (#445)")
+            return 2
         builders = {
-            "baseline": lambda: build_baseline(extra_tables=LEGACY_TABLES),
+            "baseline": lambda: build_baseline(extra_tables=sql_reach),
             "custom-metricflow": build_semantic,
-            "custom-hybrid": lambda: build_hybrid(extra_tables=LEGACY_TABLES),
+            "custom-hybrid": lambda: build_hybrid(extra_tables=sql_reach),
             "custom-metricflow-compute": lambda: build_semantic(toolset=toolset_compute()),
         }
         agents = {arm: builders[arm]() for arm in args.arms}
@@ -2027,6 +2133,10 @@ async def main(argv: Sequence[str]) -> int:
             legacy=LEGACY_REACH,
             canary=not args.no_canary,
         )
+        try:
+            print(f"audit: {export_audit(owner)} row(s) appended to {RESEARCH / AUDIT}")
+        except Exception as error:  # the runs are logged either way; the next pass exports
+            print(f"audit: not exported ({error})")
         if claude:
             found = spend.finish_pass(note=f"stopped: {why}")
             usage = spend.total(u for _, u in spend.METER.pass_calls)

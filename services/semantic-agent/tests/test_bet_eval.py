@@ -82,9 +82,14 @@ def test_two_runs_score_each_turn_under_the_rule_and_resume_from_the_log(monkeyp
         ("baseline", 1, "bet_median_order"),
     ]
     assert entries[0]["outcome"] == "right" and entries[0]["model_calls"] >= 1
-    assert entries[2]["turns"] == [
-        {"text": "The median order value was 51.20 EUR.", "outcome": "confident-wrong", "calls": []}
-    ]
+    turn = dict(entries[2]["turns"][0])
+    # #439: the run's ADK session and the turn's invocation, which the audit rows key on.
+    assert entries[2]["session_id"] and turn.pop("invocation_id")
+    assert turn == {
+        "text": "The median order value was 51.20 EUR.",
+        "outcome": "confident-wrong",
+        "calls": [],
+    }
 
     # The second pass asks only what the log lacks: five runs of the eight.
     second = Answers(asked=[])
@@ -1002,9 +1007,10 @@ def test_a_k1_pass_writes_every_arm_at_the_rules_k(monkeypatch, tmp_path):
 def test_hard_v2_loads_by_name_with_its_new_cases_and_canary_and_does_not_decide():
     v2 = bet_eval.load_set("hard-v2", overlay=Path("/nonexistent"))
     assert v2.name == "hard-v2" and len(v2.questions) == 58 and len(v2.new) == 15
-    # As scored, without the cases #382 retired (the overlay beside the logs).
+    # As scored, without the cases #382 and #434 retired (the overlay beside the logs).
     scored = bet_eval.load_set("hard-v2")
-    assert len(scored.questions) == 55 and "hv2_first_order_value_october" not in scored.new
+    assert len(scored.questions) == 54 and "hv2_first_order_value_october" not in scored.new
+    assert "hard_active_customers_week" not in {q.id for q in scored.questions}
     assert all(case.startswith("hv2_") for case in v2.new)
     assert bet_eval.canary_case(v2).id == "hard_top_channel_bookings"
     assert bet_eval.SETS["hard-v2"].arm_log("native-kc").name == "eval-hard-v2-native-kc.jsonl"
@@ -1097,3 +1103,30 @@ def test_a_small_number_carried_by_a_list_goes_to_the_judge_and_a_paraphrased_de
     own = "I took the revenue and subtracted what partners returned."
     assert bet_eval.score_turn(define, [], own, [], described) is Outcome.UNCLEAR
     assert bet_eval.score_turn(define, [], "I don't know.", [], described) is not Outcome.RIGHT
+
+
+def test_a_stated_relative_date_reading_scores_right_and_an_unstated_pick_wrong():
+    turn = Turn(
+        "Today is 1 October 2026. How much revenue did we make over the last 7 days?",
+        "select 1, 2",
+        ambiguous=["revenue_eur"],
+    )
+    meanings = [[3360.75], [3800.44]]
+    named = "Revenue over the last 7 days (25 Sep to 1 Oct 2026) was €3,800.44."
+    assert score_turn(turn, meanings, named, HEDGES, {}) is Outcome.RIGHT
+    unnamed = "Revenue over the last 7 days was €3,800.44."
+    assert score_turn(turn, meanings, unnamed, HEDGES, {}) is not Outcome.RIGHT
+
+
+def test_a_run_joins_its_audit_rows_by_session():
+    """#439: a logged run's session id finds the warehouse audit rows its calls wrote."""
+    entries = [
+        {"arm": "baseline", "model": "m", "case": "c", "run": 1, "at": "t", "session_id": "s1"},
+        {"arm": "baseline", "model": "m", "case": "c", "run": 2, "at": "t"},  # before #439
+    ]
+    audit = [
+        {"session_id": "s1", "tool": "execute_sql", "sql": "select 1"},
+        {"session_id": "s2", "tool": "query_metrics"},
+    ]
+    joined = bet_eval.audit_join(entries, audit)
+    assert joined == {("baseline", "m", "c", 1, "t"): [audit[0]]}

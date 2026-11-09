@@ -31,6 +31,26 @@ make -s -C "$REPO" agent-warehouse DBT_DBNAME="$DB" >"$OUT/agent-warehouse.log" 
 # The semantic bet's baseline reads the legacy tables too (docs/research/semantic-bet/RULE.md: every SQL arm has
 # them in reach, #357); only here, in the fixture's database, never in agent_warehouse's grants.
 psql_dev -c "GRANT USAGE ON SCHEMA legacy TO agent_sql; GRANT SELECT ON ALL TABLES IN SCHEMA legacy TO agent_sql;"
+# The bet's reach policy (RULE.md § The arms, 2026-11-09, #445): every SQL-writing setup reaches the row-level data
+# Google's agents reach, so agent_sql reads silver as agent_metrics does, column by column (the personal columns stay
+# refused), and the fiscal calendar (semantic.time_spine, #436); only here, in the fixture's database.
+psql_dev <<'SQL'
+GRANT USAGE ON SCHEMA silver, semantic TO agent_sql;
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT table_name, string_agg(quote_ident(column_name), ', ') AS cols
+    FROM information_schema.column_privileges
+    WHERE grantee = 'agent_metrics' AND table_schema = 'silver' AND privilege_type = 'SELECT'
+    GROUP BY table_name
+  LOOP
+    EXECUTE format('GRANT SELECT (%s) ON silver.%I TO agent_sql', r.cols, r.table_name);
+  END LOOP;
+END
+$$;
+GRANT SELECT ON semantic.time_spine TO agent_sql;
+SQL
 # The fixture's days as the DAGs would record them, so every answer states a freshness (SL-4):
 # sales.silver, marketing.silver, customer_actions.silver, partner_outreach.silver, recruitment.silver and call_transcripts.silver take their pipelines' deadlines (36 h) and
 # are long late; returns.silver has none.

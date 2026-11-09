@@ -59,6 +59,12 @@ def log_path(arm: str, directory: Path = RESEARCH, name: str = FROZEN) -> Path:
     return SETS[name].arm_log(arm, directory)
 
 
+# What a logged turn keeps of its trace besides its answer and calls (#439, #440): the model's
+# reasoning, the turn's invocation id, and for a data agent its result heads and BigQuery jobs.
+# Never scored.
+TRACE_KEYS = ("thought", "invocation_id", "results", "jobs", "followups")
+
+
 async def converse(agent: LlmAgent, questions: Sequence[str]) -> list[dict[str, Any]]:
     """Ask every question in one session, in order, as a user's follow-ups.
 
@@ -101,6 +107,9 @@ async def converse(agent: LlmAgent, questions: Sequence[str]) -> list[dict[str, 
                 "answer": answer.strip(),
                 "thought": thought.strip(),
                 "model_calls": model_responses(events),
+                # #439: the run's ADK session and the turn's invocation, so a trace joins to it.
+                "session_id": session.id,
+                "invocation_id": next((e.invocation_id for e in events if e.invocation_id), None),
             }
             # A failed model call ends the turn with an answer naming it: never score that.
             if failure := failure_of(events):
@@ -220,6 +229,7 @@ async def run_live(
                 described,
             )
             outcome = run_outcome([o for _, o in scored])
+            session = next((t["session_id"] for t in turns if t.get("session_id")), None)
             append_log(
                 {
                     "arm": arm,
@@ -229,8 +239,14 @@ async def run_live(
                     "at": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "model_calls": sum(t["model_calls"] for t in turns),
                     **({"usage": usage.as_dict()} if usage.calls else {}),
+                    **({"session_id": session} if session else {}),
                     "turns": [
-                        {"text": text, "outcome": o.value, "calls": t["calls"]}
+                        {
+                            "text": text,
+                            "outcome": o.value,
+                            "calls": t["calls"],
+                            **{k: t[k] for k in TRACE_KEYS if t.get(k)},
+                        }
                         for (text, o), t in zip(scored, turns, strict=False)
                     ],
                     "outcome": outcome.value,

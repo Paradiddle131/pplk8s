@@ -4,8 +4,9 @@ and a read-only SQL fallback for what no metric answers, its answer then saying 
 It measures the setup the eval's first verdict points at: `custom-metricflow` ties the managed
 best where a metric covers the question and loses only where none does (it declines by design),
 while the data agents write SQL there. The fallback is the baseline's `execute_sql` over the same
-tables and role (`agent_sql`: gold, exposed and the `legacy` schema, one read-only statement under
-a timeout). A fallback answer opens with "Not a governed metric:", a phrase the bet's `hedges` list
+tables and role (`agent_sql`: gold, exposed, the `legacy` schema and, in the bet's fixture,
+`silver` and the fiscal calendar (#445), one read-only statement under a timeout). A fallback
+answer opens with "Not a governed metric:", a phrase the bet's `hedges` list
 holds, so a wrong fallback number is scored wrong (hedged), never confident-wrong, and a right one
 counts (docs/research/semantic-bet/RULE.md). Never deployed: the bet's runner builds it in-process
 (`python -m semantic_agent.bet_eval --arms custom-hybrid`).

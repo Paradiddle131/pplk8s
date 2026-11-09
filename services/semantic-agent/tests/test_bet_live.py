@@ -237,3 +237,44 @@ def test_a_setup_named_in_canary_set_takes_that_sets_canary(monkeypatch, tmp_pat
 def test_other_setups_keep_their_sets_canary():
     probe, probe_set, _, _ = bet_eval.arm_canary(BET, "native-mcp", EXPECTED, DESCRIBED)
     assert probe is REVENUE and probe_set is BET
+
+
+def test_a_logged_run_keeps_its_session_and_each_turns_trace(tmp_path):
+    """#439, #440: the session id on the run; each turn's invocation id, reasoning, result heads
+    and BigQuery jobs beside its answer, never scored."""
+    turns = asyncio.run(bet_live.converse(agent(ScriptedLlm(steps=[RIGHT])), ["Revenue?"]))
+    assert turns[0]["session_id"] and turns[0]["invocation_id"]
+
+    async def traced(questions):
+        return [
+            {
+                "question": questions[0],
+                "calls": [],
+                "answer": RIGHT,
+                "model_calls": 1,
+                "session_id": "s-1",
+                "invocation_id": "e-1",
+                "thought": "Sum the day's orders.",
+                "results": [[{"revenue": 868.65}]],
+                "jobs": ["job_1"],
+            }
+        ]
+
+    log = tmp_path / "eval-native-context.jsonl"
+    bet = BetSet([REVENUE], {"revenue_one_day": ["covered"]}, [])
+    asyncio.run(
+        bet_live.run_live(
+            bet, EXPECTED, DESCRIBED, "native-context", traced, "m", 1, log, say=lambda _: None
+        )
+    )
+    (row,) = bet_eval.read_log(log)
+    assert row["session_id"] == "s-1" and row["outcome"] == "right"
+    assert row["turns"][0] | {} == {
+        "text": RIGHT,
+        "outcome": "right",
+        "calls": [],
+        "thought": "Sum the day's orders.",
+        "invocation_id": "e-1",
+        "results": [[{"revenue": 868.65}]],
+        "jobs": ["job_1"],
+    }
