@@ -1,5 +1,5 @@
 {
- "written": "2026-11-10T00:16Z",
+ "written": "2026-11-10T00:20Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4814,8 +4814,8 @@
     "confident-wrong": 5,
     "wrong": 3
    },
-   "runs_beyond_rounds": 51,
-   "model_calls": 516,
+   "runs_beyond_rounds": 56,
+   "model_calls": 541,
    "new": {
     "all": [
      1.0,
