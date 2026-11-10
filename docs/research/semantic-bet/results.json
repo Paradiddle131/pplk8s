@@ -1,5 +1,5 @@
 {
- "written": "2026-11-09T19:05Z",
+ "written": "2026-11-10T00:15Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -1228,9 +1228,9 @@
    "of_cases": 74,
    "runs": 222,
    "accuracy": [
-    0.896396396396,
-    0.824324324324,
-    0.954954954955
+    0.945945945946,
+    0.891891891892,
+    0.986486486486
    ],
    "confident_wrong": [
     0.0,
@@ -1243,7 +1243,7 @@
      7
     ],
     "covered": [
-     0.9408602150537635,
+     0.9838709677419355,
      62
     ],
     "distractor": [
@@ -1251,7 +1251,7 @@
      1
     ],
     "planted": [
-     0.75,
+     1.0,
      4
     ],
     "trap": [
@@ -1259,14 +1259,13 @@
      10
     ],
     "uncovered": [
-     0.6666666666666666,
+     0.75,
      12
     ]
    },
-   "pass_all": 0.8648648648648649,
+   "pass_all": 0.9459459459459459,
    "outcomes": {
-    "right": 199,
-    "unclear": 11,
+    "right": 210,
     "declined": 9,
     "wrong": 3
    },
@@ -3401,9 +3400,9 @@
    "of_cases": 40,
    "runs": 120,
    "accuracy": [
-    0.875,
-    0.775,
-    0.975
+    0.925,
+    0.825,
+    1.0
    ],
    "confident_wrong": [
     0.0,
@@ -3416,7 +3415,7 @@
      7
     ],
     "covered": [
-     0.9047619047619048,
+     1.0,
      21
     ],
     "trap": [
@@ -3428,10 +3427,9 @@
      19
     ]
    },
-   "pass_all": 0.875,
+   "pass_all": 0.925,
    "outcomes": {
-    "right": 105,
-    "unclear": 6,
+    "right": 111,
     "wrong": 6,
     "declined": 3
    },
@@ -7574,9 +7572,9 @@
    "runs": 222,
    "paired_runs": 444,
    "accuracy": [
-    -0.103603603604,
-    -0.175675675676,
-    -0.045045045045
+    -0.054054054054,
+    -0.108108108108,
+    -0.013513513514
    ],
    "confident_wrong": [
     0.0,
@@ -7587,9 +7585,9 @@
    "reachable": {
     "cases": 62,
     "accuracy": [
-     -0.059139784946,
-     -0.118279569892,
-     -0.016129032258
+     -0.016129032258,
+     -0.048387096774,
+     0.0
     ],
     "confident_wrong": [
      0.0,
@@ -8325,9 +8323,9 @@
    "runs": 120,
    "paired_runs": 240,
    "accuracy": [
-    -0.116666666667,
-    -0.225,
-    -0.025
+    -0.066666666667,
+    -0.158333333333,
+    0.008333333333
    ],
    "confident_wrong": [
     0.0,
@@ -8338,9 +8336,9 @@
    "reachable": {
     "cases": 21,
     "accuracy": [
-     -0.079365079365,
-     -0.238095238095,
-     0.031746031746
+     0.015873015873,
+     0.0,
+     0.047619047619
     ],
     "confident_wrong": [
      0.0,
@@ -9364,6 +9362,7 @@
    "native-mcp on claude-sonnet-5-5"
   ],
   "hard": [
+   "cc-metricflow-compute on claude-code-strict (opus)",
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
@@ -12086,7 +12085,7 @@
      "bet_weekday_avg_spend"
     ]
    },
-   "judge_waiting": 11
+   "judge_waiting": 0
   },
   "hard": {
    "cases": [
@@ -13516,7 +13515,7 @@
      "hard_weekend_vs_weekday"
     ]
    },
-   "judge_waiting": 6
+   "judge_waiting": 0
   },
   "hard-v2": {
    "cases": [
