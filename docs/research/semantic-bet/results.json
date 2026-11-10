@@ -1,5 +1,5 @@
 {
- "written": "2026-11-10T01:10Z",
+ "written": "2026-11-10T01:34Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -9,27 +9,27 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": null,
-   "cases": 42,
+   "cases": 74,
    "of_cases": 74,
-   "runs": 42,
+   "runs": 74,
    "accuracy": [
-    0.904761904762,
-    0.809523809524,
-    0.97619047619
+    0.891891891892,
+    0.810810810811,
+    0.959459459459
    ],
    "confident_wrong": [
-    0.047619047619,
-    0.0,
-    0.119047619048
+    0.054054054054,
+    0.013513513514,
+    0.108108108108
    ],
    "groups": {
     "conversation": [
-     0.8333333333333334,
-     6
+     0.7142857142857143,
+     7
     ],
     "covered": [
-     0.9047619047619048,
-     42
+     0.8870967741935484,
+     62
     ],
     "distractor": [
      1.0,
@@ -37,21 +37,27 @@
     ],
     "planted": [
      1.0,
-     1
+     4
     ],
     "trap": [
-     0.75,
-     8
+     0.8,
+     10
+    ],
+    "uncovered": [
+     0.9166666666666666,
+     12
     ]
    },
-   "pass_all": 0.9047619047619048,
+   "pass_all": 0.8918918918918919,
    "outcomes": {
-    "right": 38,
+    "right": 66,
     "declined": 1,
-    "confident-wrong": 2,
-    "wrong": 1
+    "confident-wrong": 4,
+    "wrong": 2,
+    "unclear": 1
    },
-   "model_calls": 161,
+   "runs_beyond_rounds": 64,
+   "model_calls": 550,
    "unchecked_runs": 35
   },
   {
@@ -12095,7 +12101,7 @@
      "bet_weekday_avg_spend"
     ]
    },
-   "judge_waiting": 0
+   "judge_waiting": 6
   },
   "hard": {
    "cases": [

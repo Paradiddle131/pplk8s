@@ -1,14 +1,14 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-10T00:43Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-10T01:34Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-14 of `baseline`'s 256 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+110 of `baseline`'s 352 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 42 of 74 cases; runs finished: baseline 42 of 222, custom-metricflow 87 of 222, custom-hybrid 42 of 222, custom-metricflow-compute 92 of 222; model responses spent: baseline 161, custom-metricflow 337, custom-hybrid 165, custom-metricflow-compute 341.
+Scored on partial: 1 run(s) of 42 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 87 of 222, custom-hybrid 42 of 222, custom-metricflow-compute 92 of 222; model responses spent: baseline 550, custom-metricflow 337, custom-hybrid 165, custom-metricflow-compute 341.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
@@ -28,8 +28,20 @@ Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`baseline` 2 unclear to confident-wrong).
+
 Turns judged: 1 (0 the code left unclear, 1 confident-wrong with a hedge outside the list); verdicts that stood: 1.
 Confident-wrong turns the judge moved: 0 of 1 (0 to wrong, hedged; 0 to unclear).
+
+Turns still unclear after judging (counted as wrong):
+
+- `baseline` `planted_campaign_least_spend` run 2 turn 1: not judged yet
+- `baseline` `planted_campaign_least_spend` run 3 turn 1: not judged yet
+
+Confident-wrong turns with a hedge outside the list, awaiting the judge:
+
+- `baseline` `bet_sessions_per_order` run 3 turn 1: not judged yet
+- `baseline` `median_order_value` run 3 turn 1: not judged yet
 
 ## `claude-haiku-5-5`
 
