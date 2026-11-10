@@ -1,5 +1,5 @@
 {
- "written": "2026-11-10T00:20Z",
+ "written": "2026-11-10T00:46Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -4915,55 +4915,65 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 4,
-   "cases": 26,
+   "cases": 54,
    "of_cases": 54,
-   "runs": 78,
+   "runs": 54,
    "accuracy": [
-    0.961538461538,
-    0.884615384615,
-    1.0
+    0.907407407407,
+    0.814814814815,
+    0.981481481481
    ],
    "confident_wrong": [
+    0.037037037037,
     0.0,
-    0.0,
-    0.0
+    0.092592592593
    ],
    "groups": {
     "composable": [
-     1.0,
-     9
+     0.8571428571428571,
+     21
     ],
     "conversation": [
-     0.8,
-     5
+     0.8571428571428571,
+     7
     ],
     "covered": [
-     0.9411764705882353,
-     17
+     0.9545454545454546,
+     22
     ],
     "trap": [
      1.0,
-     4
+     5
+    ],
+    "uncovered": [
+     0.9090909090909091,
+     11
     ]
    },
-   "pass_all": 0.9615384615384616,
+   "pass_all": 0.9074074074074074,
    "outcomes": {
-    "right": 75,
-    "wrong": 3
+    "right": 49,
+    "wrong": 3,
+    "confident-wrong": 2
    },
-   "model_calls": 304,
+   "runs_beyond_rounds": 65,
+   "model_calls": 494,
    "new": {
     "all": [
-     1.0,
-     3
+     0.7857142857142857,
+     14
     ],
     "composable": [
-     1.0,
-     2
+     0.7142857142857143,
+     7
     ],
     "covered": [
      1.0,
      1
+    ],
+    "uncovered": [
+     0.8333333333333334,
+     6
     ]
    },
    "carried_runs": 23,
@@ -8777,18 +8787,18 @@
    "set": "hard-v2",
    "arm": "custom-hybrid",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 26,
-   "runs": 78,
-   "paired_runs": 156,
+   "cases": 54,
+   "runs": 54,
+   "paired_runs": 216,
    "accuracy": [
-    -0.025641025641,
-    -0.115384615385,
-    0.038461538462
+    -0.086419753086,
+    -0.166666666667,
+    -0.018518518519
    ],
    "confident_wrong": [
+    0.037037037037,
     0.0,
-    0.0,
-    0.0
+    0.092592592593
    ],
    "worth": false
   },
