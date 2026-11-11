@@ -79,7 +79,10 @@ remaining() {
 # Every handoff rebuilds what the page reads (#455): results.json, scored-runs.jsonl and eval.md for every set, then
 # both pages; the wake republishes both and #336's artifact 4 after the push.
 rebuild() {
-  cd "$SA" && uv run --quiet python -m semantic_agent.bet_eval --report-only >/dev/null 2>&1 || log "rebuild: report-only failed"
+  # exit 3 is "a log is not whole yet" (a pass mid-way), with every file written all the same: not a failure
+  local rc=0
+  cd "$SA" && { uv run --quiet python -m semantic_agent.bet_eval --report-only >/dev/null 2>&1 || rc=$?; }
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] || log "rebuild: report-only failed (exit $rc)"
   cd "$S0" && python3.12 report/build.py results.json >/dev/null && python3.12 brief/build.py results.json >/dev/null ||
     log "rebuild: a page build failed"
 }
