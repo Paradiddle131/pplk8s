@@ -1,5 +1,5 @@
 {
- "written": "2026-11-11T00:52Z",
+ "written": "2026-11-11T01:12Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -2936,43 +2936,45 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": 4,
-   "cases": 23,
+   "cases": 40,
    "of_cases": 40,
-   "runs": 23,
+   "runs": 40,
    "accuracy": [
-    0.95652173913,
-    0.869565217391,
+    0.925,
+    0.825,
     1.0
    ],
    "confident_wrong": [
+    0.025,
     0.0,
-    0.0,
-    0.0
+    0.075
    ],
    "groups": {
     "conversation": [
-     0.8,
-     5
+     0.8571428571428571,
+     7
     ],
     "covered": [
-     0.9375,
-     16
+     0.9523809523809523,
+     21
     ],
     "trap": [
      1.0,
-     4
+     5
     ],
     "uncovered": [
-     1.0,
-     7
+     0.8947368421052632,
+     19
     ]
    },
-   "pass_all": 0.9565217391304348,
+   "pass_all": 0.925,
    "outcomes": {
-    "right": 22,
-    "wrong": 1
+    "right": 37,
+    "wrong": 2,
+    "confident-wrong": 1
    },
-   "model_calls": 90,
+   "runs_beyond_rounds": 34,
+   "model_calls": 320,
    "unchecked_runs": 23
   },
   {
@@ -8080,18 +8082,18 @@
    "set": "hard",
    "arm": "custom-hybrid",
    "model": "nvidia/nemotron-3.5-super-vl:free",
-   "cases": 23,
-   "runs": 23,
-   "paired_runs": 92,
+   "cases": 40,
+   "runs": 40,
+   "paired_runs": 160,
    "accuracy": [
-    -0.028985507246,
-    -0.130434782609,
-    0.04347826087
+    -0.066666666667,
+    -0.166666666667,
+    0.008333333333
    ],
    "confident_wrong": [
+    0.025,
     0.0,
-    0.0,
-    0.0
+    0.075
    ],
    "worth": false
   },
@@ -9385,6 +9387,7 @@
   ],
   "hard": [
    "cc-metricflow-compute on claude-code-strict (opus)",
+   "custom-hybrid on nvidia/nemotron-3.5-super-vl:free",
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (LATEST_GA_MODEL)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED)",
@@ -13537,7 +13540,7 @@
      "hard_weekend_vs_weekday"
     ]
    },
-   "judge_waiting": 0
+   "judge_waiting": 1
   },
   "hard-v2": {
    "cases": [
