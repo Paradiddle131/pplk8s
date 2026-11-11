@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-11T00:36Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-11T01:37Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -8,7 +8,7 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 87 of 222, custom-hybrid 138 of 222, custom-metricflow-compute 92 of 222; model responses spent: baseline 550, custom-metricflow 337, custom-hybrid 557, custom-metricflow-compute 341.
+Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 87 of 222, custom-hybrid 138 of 222, custom-metricflow-compute 160 of 222; model responses spent: baseline 550, custom-metricflow 337, custom-hybrid 557, custom-metricflow-compute 595.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
@@ -31,15 +31,13 @@ Both local arms are on rung 3 or 4 and none is the managed best, so this pair is
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`baseline` 2 unclear to confident-wrong).
 
-Turns judged: 7 (2 the code left unclear, 5 confident-wrong with a hedge outside the list); verdicts that stood: 5.
+Turns judged: 10 (5 the code left unclear, 5 confident-wrong with a hedge outside the list); verdicts that stood: 8.
 Confident-wrong turns the judge moved: 2 of 5 (0 to wrong, hedged; 2 to unclear).
 
 Turns still unclear after judging (counted as wrong):
 
 - `baseline` `bet_median_days_to_return` run 2 turn 1: right / right
 - `baseline` `bet_median_signup_to_first_order` run 1 turn 1: right / right
-- `custom-hybrid` `planted_campaign_least_spend` run 2 turn 1: not judged yet
-- `custom-hybrid` `planted_campaign_least_spend` run 3 turn 1: not judged yet
 
 ## `claude-haiku-5-5`
 

@@ -1,5 +1,5 @@
 {
- "written": "2026-11-11T01:12Z",
+ "written": "2026-11-11T01:37Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -179,7 +179,7 @@
    "rung": 4,
    "cases": 74,
    "of_cases": 74,
-   "runs": 74,
+   "runs": 148,
    "accuracy": [
     0.918918918919,
     0.851351351351,
@@ -218,12 +218,12 @@
    },
    "pass_all": 0.918918918918919,
    "outcomes": {
-    "right": 68,
-    "declined": 5,
-    "wrong": 1
+    "right": 136,
+    "declined": 10,
+    "wrong": 2
    },
-   "runs_beyond_rounds": 18,
-   "model_calls": 341,
+   "runs_beyond_rounds": 12,
+   "model_calls": 595,
    "unchecked_runs": 0
   },
   {
@@ -7124,8 +7124,8 @@
    "arm": "custom-metricflow-compute",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 74,
-   "runs": 74,
-   "paired_runs": 296,
+   "runs": 148,
+   "paired_runs": 370,
    "accuracy": [
     -0.081081081081,
     -0.148648648649,
@@ -12110,7 +12110,7 @@
      "bet_weekday_avg_spend"
     ]
    },
-   "judge_waiting": 2
+   "judge_waiting": 0
   },
   "hard": {
    "cases": [
@@ -13540,7 +13540,7 @@
      "hard_weekend_vs_weekday"
     ]
    },
-   "judge_waiting": 1
+   "judge_waiting": 0
   },
   "hard-v2": {
    "cases": [
