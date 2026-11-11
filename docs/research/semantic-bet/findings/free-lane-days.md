@@ -269,3 +269,33 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   The hybrid's hard-v2 fall (96.2% to 91.4%) comes with its whole log under the new reach, so the earlier figure read a favourable half of the set; the hard (v1) reach reruns and the frozen ones still to finish decide its other two rows.
 - Report: rebuilt after the judge backlog and after the reach reruns (`bet_eval --report-only`, then both pages with `python3.12`); the report republished (page versions 55 to 59), the Approaches page twice (versions 13 and 14), #336's artifact 4 read back with the same SHA-256 after each rebuild.
 - Next: tomorrow's wake starts with the rest of `custom-hybrid` frozen's reach reruns, then the hard (v1) reach reruns of `baseline` and `custom-hybrid`, then `custom-metricflow-compute` frozen k = 3 (94 of 222 runs), `native-mcp` hard-v2 k = 3 and the frozen set's k = 3 round; `HELD` stays until #448 closes.
+
+## 2026-11-11, 2026-11-11T01:44Z (the daily wake: the free lane from 00:12Z, the day's quota spent by 01:32Z)
+
+- Free count 0 at the start, 991 of 1,000 at the end (read from `/api/v1/key`); the lane stopped itself at its cap (`skip native-mcp hard-v2 k=3: free count 991 of 990`) and exited 0 in its first chunk (`--until 02:02Z`).
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-10) and `gcp-usage-check` ok; the lane's own cost and usage checks after its last two passes read the same; no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2, no container restart).
+  The lane logged `rebuild: report-only failed` after `custom-metricflow-compute` frozen k = 3: a false alarm, since `bet_eval --report-only` exits 3 whenever a log is not whole yet (a pass mid-way) and writes every file all the same; `free_lane.sh`'s `rebuild` now accepts exit 3 and names any other exit code.
+- The day finished #448's reach reruns on every set (00:17Z to 01:13Z), then the rounds: every v1 and hard-v2 round pass was whole or `HELD` up to `custom-metricflow-compute` frozen k = 3, which ran until the cap.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog | no turn waiting but one (`custom-metricflow` `cancelled_total` run 2, frozen) |
+| `baseline` and `custom-hybrid` hard-v2, cases the reach touched | none | whole since 2026-11-10 |
+| `baseline` frozen, cases the reach touched | none | whole since 2026-11-10 |
+| `custom-hybrid` frozen, cases the reach touched, k = 3 | 56 runs | whole: 96 runs on the 32 touched cases |
+| `baseline` hard (v1), cases the reach touched, k = 3 | 51 runs on 17 cases | whole; the arm now reads all 40 cases |
+| `custom-hybrid` hard (v1), cases the reach touched, k = 3 | 51 runs on 17 cases | whole; the arm now reads all 40 cases |
+| `custom-metricflow-compute` frozen k = 3 | 68 runs | 162 of 222 runs (74 cases x 3), stopped on the cap; run 2 whole |
+
+- Mid-way: `custom-metricflow-compute` frozen k = 3, 60 runs left (run 3); then `native-mcp` hard-v2 k = 3 and the rest of the frozen set's k = 3 round.
+- #448's "Done when" now holds on the free lane (the touched cases of `baseline` and `custom-hybrid` whole at k = 3 on frozen, hard and hard-v2, the report rebuilt); `HELD` in `free_lane.sh` clears when #448 closes, and until then both setups sit out every round.
+- Figures that moved (Nemotron free, right / confident-wrong):
+  hard (v1) `baseline` 72.5% / 20.0% on 40 of 40 cases (was 78.3% / 13.0% on 23); hard (v1) `custom-hybrid` 92.5% / 2.5% on 40 of 40 (was 95.7% / 0.0% on 23); hard-v2 `custom-hybrid` 92.6% / 3.7% (was 91.4% / 3.7%, after today's judge verdicts); frozen `baseline` 90.5% / 5.4% (was 89.2% / 5.4%, judge verdicts).
+  Unchanged: frozen `custom-hybrid` 98.6% / 1.4%, `custom-metricflow-compute` 91.9% / 0.0% (its k = 1 reading until the k = 3 log is whole); hard-v2 `native-mcp` 98.1% / 0.0%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%, `baseline` 85.2% / 9.3%.
+- What the numbers say: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%, hard 99.2%, hard-v2 99.4%), the hybrid now reads 98.6%, 92.5% and 92.6% on the three sets, about 7 points under it on both hard sets, with 2.5% to 3.7% confident-wrong answers where the managed best has none.
+  In the same-model pair `native-mcp` (rung 3, our agent on Google's tools) leads the hybrid on both hard sets (97.5% hard, 98.1% hard-v2), by 5 to 6 points; with its whole reach the hybrid's hard (v1) reading fell 3 points, as its hard-v2 one did on 2026-11-10, so the earlier half-set figures read a favourable part of each set.
+  Plain text-to-SQL `baseline` on the hard (v1) set fell to 72.5% with 20% confident-wrong, the worst confident-wrong rate on the page for this model.
+- Report: rebuilt after every push (page versions 60 to 64, built with `python3.12`), the Approaches page republished (versions 15 to 17), #336's artifact 4 read back equal to the file after each rebuild.
+- Next: tomorrow's wake starts with `custom-metricflow-compute` frozen k = 3 (60 runs left), then `native-mcp` hard-v2 k = 3 (54 cases x 3) and the rest of the frozen set's k = 3 round; closing #448 (its "Done when" holds) clears `HELD`, which puts `baseline` and `custom-hybrid` back in the rounds (`baseline` hard-v2 k = 3 first).
