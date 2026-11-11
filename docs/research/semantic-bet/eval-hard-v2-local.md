@@ -1,6 +1,6 @@
 # The bet's local arms on the hard set v2
 
-Written 2026-11-10T01:09Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl), the log of every run, under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-11T00:16Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl), the log of every run, under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -100,12 +100,14 @@ Both local arms are on rung 3 or 4 and none is the managed best, so this pair is
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 7 (`baseline` 1 unclear to confident-wrong; `custom-hybrid` 2 unclear to confident-wrong; `custom-hybrid` 1 unclear to wrong; `custom-metricflow` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to confident-wrong; `custom-metricflow-compute` 1 unclear to wrong).
 
-Turns judged: 14 (3 the code left unclear, 11 confident-wrong with a hedge outside the list); verdicts that stood: 11.
-Confident-wrong turns the judge moved: 8 of 11 (5 to wrong, hedged; 3 to unclear).
+Turns judged: 16 (3 the code left unclear, 13 confident-wrong with a hedge outside the list); verdicts that stood: 11.
+Confident-wrong turns the judge moved: 10 of 13 (5 to wrong, hedged; 5 to unclear).
 
 Turns still unclear after judging (counted as wrong):
 
 - `baseline` `hard_cost_per_booking_rise` run 1 turn 1: right / right
+- `custom-hybrid` `hv2_median_gap_between_orders` run 3 turn 1: right / right
+- `custom-hybrid` `hv2_signups_never_ordered` run 3 turn 1: right / right
 - `custom-metricflow` `hv2_signups_never_ordered` run 1 turn 1: right / right
 - `custom-metricflow-compute` `hard_cost_per_booking_rise` run 1 turn 1: right / right
 
