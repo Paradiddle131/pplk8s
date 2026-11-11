@@ -1,5 +1,5 @@
 {
- "written": "2026-11-11T00:37Z",
+ "written": "2026-11-11T00:52Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -2840,44 +2840,45 @@
    "harness": "adk-openrouter",
    "session": "fresh per run",
    "rung": null,
-   "cases": 23,
+   "cases": 40,
    "of_cases": 40,
-   "runs": 23,
+   "runs": 40,
    "accuracy": [
-    0.782608695652,
-    0.608695652174,
-    0.95652173913
+    0.725,
+    0.575,
+    0.85
    ],
    "confident_wrong": [
-    0.130434782609,
-    0.0,
-    0.304347826087
+    0.2,
+    0.075,
+    0.325
    ],
    "groups": {
     "conversation": [
-     0.4,
-     5
+     0.42857142857142855,
+     7
     ],
     "covered": [
-     0.75,
-     16
+     0.7142857142857143,
+     21
     ],
     "trap": [
-     0.75,
-     4
+     0.6,
+     5
     ],
     "uncovered": [
-     0.8571428571428571,
-     7
+     0.7368421052631579,
+     19
     ]
    },
-   "pass_all": 0.782608695652174,
+   "pass_all": 0.725,
    "outcomes": {
-    "right": 18,
-    "confident-wrong": 3,
-    "wrong": 2
+    "right": 29,
+    "confident-wrong": 8,
+    "wrong": 3
    },
-   "model_calls": 105,
+   "runs_beyond_rounds": 34,
+   "model_calls": 371,
    "unchecked_runs": 0
   },
   {

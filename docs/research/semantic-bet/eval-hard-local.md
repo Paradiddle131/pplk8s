@@ -1,10 +1,10 @@
 # The bet's local arms on the hard set
 
-Written 2026-11-11T00:15Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-11T00:52Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl), the log of every run, under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-141 of `baseline`'s 141 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+192 of `baseline`'s 192 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
 
 ## `claude-haiku-5-5`
 
@@ -76,7 +76,7 @@ Confident-wrong turns with a hedge outside the list, awaiting the judge:
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 23 of 40 cases; runs finished: baseline 23 of 120, custom-metricflow 120 of 120, custom-hybrid 23 of 120; model responses spent: baseline 105, custom-metricflow 468, custom-hybrid 90.
+Scored on partial: 1 run(s) of 23 of 40 cases; runs finished: baseline 74 of 120, custom-metricflow 120 of 120, custom-hybrid 23 of 120; model responses spent: baseline 371, custom-metricflow 468, custom-hybrid 90.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` |
 |---|---|---|---|
