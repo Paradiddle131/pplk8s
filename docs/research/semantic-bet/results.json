@@ -1,5 +1,5 @@
 {
- "written": "2026-11-12T00:26Z",
+ "written": "2026-11-12T00:54Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -179,7 +179,7 @@
    "rung": 4,
    "cases": 74,
    "of_cases": 74,
-   "runs": 148,
+   "runs": 222,
    "accuracy": [
     0.918918918919,
     0.851351351351,
@@ -218,12 +218,11 @@
    },
    "pass_all": 0.918918918918919,
    "outcomes": {
-    "right": 136,
-    "declined": 10,
-    "wrong": 2
+    "right": 204,
+    "declined": 15,
+    "wrong": 3
    },
-   "runs_beyond_rounds": 12,
-   "model_calls": 595,
+   "model_calls": 833,
    "unchecked_runs": 0
   },
   {
@@ -7124,8 +7123,8 @@
    "arm": "custom-metricflow-compute",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 74,
-   "runs": 148,
-   "paired_runs": 370,
+   "runs": 222,
+   "paired_runs": 444,
    "accuracy": [
     -0.081081081081,
     -0.148648648649,
