@@ -1,5 +1,5 @@
 {
- "written": "2026-11-12T00:54Z",
+ "written": "2026-11-12T02:04Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -5178,28 +5178,28 @@
    "rung": 3,
    "cases": 54,
    "of_cases": 54,
-   "runs": 54,
+   "runs": 108,
    "accuracy": [
-    0.981481481481,
-    0.944444444444,
-    1.0
+    0.935185185185,
+    0.87962962963,
+    0.981481481481
    ],
    "confident_wrong": [
+    0.027777777778,
     0.0,
-    0.0,
-    0.0
+    0.064814814815
    ],
    "groups": {
     "composable": [
-     1.0,
+     0.9761904761904762,
      21
     ],
     "conversation": [
-     0.8571428571428571,
+     0.7142857142857143,
      7
     ],
     "covered": [
-     0.9545454545454546,
+     0.9090909090909091,
      22
     ],
     "trap": [
@@ -5207,23 +5207,25 @@
      5
     ],
     "uncovered": [
-     1.0,
+     0.9090909090909091,
      11
     ]
    },
-   "pass_all": 0.9814814814814815,
+   "pass_all": 0.8888888888888888,
    "outcomes": {
-    "right": 53,
-    "wrong": 1
+    "right": 101,
+    "wrong": 4,
+    "confident-wrong": 3
    },
-   "model_calls": 377,
+   "runs_beyond_rounds": 3,
+   "model_calls": 764,
    "new": {
     "all": [
-     1.0,
+     0.8928571428571429,
      14
     ],
     "composable": [
-     1.0,
+     0.9285714285714286,
      7
     ],
     "covered": [
@@ -5231,7 +5233,7 @@
      1
     ],
     "uncovered": [
-     1.0,
+     0.8333333333333334,
      6
     ]
    },
@@ -8904,17 +8906,17 @@
    "arm": "native-mcp",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 54,
-   "runs": 54,
-   "paired_runs": 216,
+   "runs": 108,
+   "paired_runs": 270,
    "accuracy": [
-    -0.012345679012,
-    -0.055555555556,
-    0.018518518519
+    -0.058641975309,
+    -0.114197530864,
+    -0.015432098765
    ],
    "confident_wrong": [
+    0.027777777778,
     0.0,
-    0.0,
-    0.0
+    0.064814814815
    ],
    "worth": false
   },
@@ -9399,8 +9401,7 @@
    "cc-native-mcp on claude-code-strict (haiku)",
    "native-context on google-data-agent (MODEL_UNSPECIFIED)",
    "native-context-bare on google-data-agent (MODEL_UNSPECIFIED, THINKING)",
-   "native-context-python on google-data-agent (MODEL_UNSPECIFIED)",
-   "native-mcp on nvidia/nemotron-3.5-super-vl:free"
+   "native-context-python on google-data-agent (MODEL_UNSPECIFIED)"
   ]
  },
  "managed_best": {
