@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fold ledger.d/ fragments into LEDGER.md, oldest first, and delete them.
-# Each PR adds its own fragment (ledger.d/YYYY-MM-DD-<n>-<slug>.md), so parallel
-# PRs never conflict on LEDGER.md; run `make ledger` on main after merges.
+# The ledger is frozen history: earlier PRs each added a fragment so parallel PRs
+# never conflicted on LEDGER.md, and no new fragments are added (CLAUDE.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
