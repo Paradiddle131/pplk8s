@@ -299,3 +299,31 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   Plain text-to-SQL `baseline` on the hard (v1) set fell to 72.5% with 20% confident-wrong, the worst confident-wrong rate on the page for this model.
 - Report: rebuilt after every push (page versions 60 to 65, built with `python3.12`), the Approaches page republished (versions 15 to 17), #336's artifact 4 read back equal to the file after each rebuild.
 - Next: tomorrow's wake starts with `custom-metricflow-compute` frozen k = 3 (60 runs left), then `native-mcp` hard-v2 k = 3 (54 cases x 3) and the rest of the frozen set's k = 3 round; closing #448 (its "Done when" holds) clears `HELD`, which puts `baseline` and `custom-hybrid` back in the rounds (`baseline` hard-v2 k = 3 first).
+
+## 2026-11-12, 2026-11-12T03:20Z (the daily wake: the free lane from 00:12Z, the day's quota spent by 03:09Z)
+
+- Free count 0 at the start, 993 of 1,000 at the end (read from `/api/v1/key`); the lane stopped itself at its cap (`skip native-mcp frozen k=3: free count 993 of 990`) and exited 0 in its second chunk.
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-11) and `gcp-usage-check` ok; the lane's own cost and usage checks after its last pass read the same; no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2, no container restart).
+  Two chunks: the first (`--until 02:02Z`) stopped on time mid `native-mcp` hard-v2 k = 3 (`stopped: time`, 57 runs logged), the second (`--until 03:58Z`) resumed from the log and finished it.
+  Each chunk spends about 10 minutes reading the whole reach reruns again (no request) while `HELD` stands.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog, twice | no turn waiting |
+| #448's reach reruns, `baseline` and `custom-hybrid`, every set | none | whole since 2026-11-11 |
+| `custom-metricflow-compute` frozen k = 3 | 60 runs | whole: 222 of 222 runs (74 cases x 3) |
+| `native-mcp` hard-v2 k = 3 | 108 runs | whole: 162 of 162 runs (54 cases x 3) |
+| `native-mcp` frozen k = 3 | none | not started (148 runs to ask, 74 x 3 less its k = 1 run), stopped on the cap |
+
+- Mid-way: no pass; the next round pass, `native-mcp` frozen k = 3, has not started.
+- Figures that moved (Nemotron free, right / confident-wrong):
+  hard-v2 `native-mcp` 90.7% / 4.9% at k = 3 on all 54 cases (was 98.1% / 0.0%, its k = 1 reading; interval 84.6% to 96.3%), 8 confident-wrong runs of 162 and every case right in all three runs on 81.5% of cases.
+  Frozen `custom-metricflow-compute` holds 91.9% / 0.0% now that its k = 3 log is whole.
+  Unchanged: hard-v2 `custom-hybrid` 92.6% / 3.7%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%, `baseline` 85.2% / 9.3% (k = 1); frozen `custom-hybrid` 98.6% / 1.4%, `native-mcp` 94.6% / 2.7% (k = 1).
+- What the numbers say: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%, hard 99.2%, hard-v2 99.4%), every Nemotron setup reads 7 points or more under it on hard-v2, all with confident-wrong answers where the managed best has none.
+  In the same-model pair on hard-v2, `native-mcp` (rung 3, our agent on Google's tools) fell from 98.1% at k = 1 to 90.7% at k = 3, under the hybrid's 92.6% (both at k = 3); the two intervals overlap almost entirely (84.6% to 96.3% against 85.8% to 98.1%), so neither leads now, where the k = 1 reading had `native-mcp` 6 points ahead.
+  The single run had read a lucky draw: on this free model one run per case overstated `native-mcp` by about 7 points, as half-set readings had overstated the hybrid; MetricFlow with arithmetic (80.9%) stays about 10 points under both.
+- Report: rebuilt by the lane after every pass (`python3.12`), the report republished (page versions 66 to 68), the Approaches page republished (version 17, unchanged), #336's artifact 4 read back equal to the file after each rebuild that moved a figure.
+- Next: tomorrow's wake starts with `native-mcp` frozen k = 3 (148 runs), then the rest of the frozen set's k = 3 round; `baseline` and `custom-hybrid` sit out every round until #448 closes (its "Done when" has held since 2026-11-11, so closing it is the owner's call), which clears `HELD` and puts `baseline` hard-v2 k = 3 first.
