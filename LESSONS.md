@@ -1,5 +1,7 @@
 # LESSONS — experience to carry into Airflow on GKE and Cloud Composer
 
+Frozen history: read, never appended to; new progress, decisions and lessons go on the tracker (`CLAUDE.md` § Where things are recorded).
+
 This file distils what the pplk8s lab taught, for agents and engineers building the real platform.
 The lab itself is Stage 1 in [`PLAN.md`](PLAN.md): a local rehearsal on stand-ins.
 These lessons target Stage 2 (self-managed Airflow on GKE) and Stage 3 (Cloud Composer), which run the same DAGs on the same Airflow line, with EL Factory on Cloud Run, dbt as a Cloud Run Job, BigQuery, GCS, Pub/Sub/Eventarc, Terraform, and GitHub Actions.

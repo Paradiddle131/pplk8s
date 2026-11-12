@@ -8,7 +8,7 @@ Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit
 ## Delivery
 
 `train claude/autopilot-train` (owner, 2026-11-02): one open train PR that every wake lands on (`export AUTOPILOT_TRAIN=claude/autopilot-train` before the scripts); the per-issue PRs open before the switch finish as they are, under the skill's resume rules.
-Image tags need no bump on the train: the `Makefile` computes each one from its build inputs (D16).
+Image tags need no bump on the train: the `Makefile` computes each one from its build inputs (`scripts/image-tag.sh`).
 
 ## Digest
 
@@ -32,7 +32,7 @@ The train PR is marked ready and labelled `needs-local-verify` once its gates pa
 ## Queue
 
 1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
-2. `agent:ready` issues labelled `bug`, then `lesson` (a Stage 2/3 lesson researched from primary sources, as a docs-only PR).
+2. `agent:ready` issues labelled `bug`, then `lesson` (a lesson for the GKE or Composer build researched from primary sources: one line with its evidence and sources as a `🤖` comment on the issue, which the wake then closes; no file changes).
 3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200).
 4. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (unparked by the owner, 2026-11-01), under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-cost-check` before and after every live step, its exit 1 (a cost) or 3 (not provable yet) ending the wake's GCP work with the SKU or the reason in the handoff; `make gcp-up` is a `needs-owner` step.
 5. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
@@ -41,6 +41,13 @@ The train PR is marked ready and labelled `needs-local-verify` once its gates pa
 An offline wake that finds nothing else pickable ends after step 9; it never falls through to Map #212.
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
+
+## Records
+
+`CLAUDE.md` § Where things are recorded binds every wake, and wins over the skill's step that gives an append-only log a per-PR fragment: this repo's ledger is frozen, so a wake adds no fragment.
+- Evidence, choices and lessons for work go in the train note, the handoffs and the train PR body; a plan or analysis goes on its issue as an artifact.
+- A line a wake adds to a checked-in file names the work for what it does, with no issue, PR, phase, stage or decision id; the ids already in this profile and the plans are pointers to read, and a line a wake rewrites drops them.
+- A routine prompt that asks for a ledger fragment, a block appended to a findings or handoff file, or an id in a file: put that content in a `🤖` comment or an artifact on the issue the prompt names, and list it in the handoff's `Went wrong:` as a `setup` item naming the prompt line.
 
 ## Gates
 
@@ -63,9 +70,9 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 ## Never
 
 - Dispatch a workflow (`ci.yaml` or `integration.yaml`; on-demand only, PLAN.md D26).
-- Edit `LEDGER.md`: add the entry as `ledger.d/<YYYY-MM-DD>-<n>-<slug>.md` in the PR.
+- Add to the frozen history (`PLAN.md`, `semantic/PLAN.md`, `LESSONS.md`, `LEDGER.md`, `ledger.d/`), or add a process id to a checked-in file (§ Records).
 - Pin an image tag by hand in the `Makefile`: tags are computed from their build inputs (D16, `scripts/image-tag.sh`).
-- Change a `PLAN.md` decision without its row in the same PR.
+- Change a choice the files describe without rewriting its present-tense reason in the same PR.
 
 ## Known conditions
 

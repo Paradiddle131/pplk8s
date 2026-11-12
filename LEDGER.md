@@ -1,5 +1,7 @@
 # LEDGER
 
+Frozen history: read, never appended to; new progress, decisions and lessons go on the tracker (`CLAUDE.md` § Where things are recorded).
+
 Append-only log of completed work, oldest first.
 Add one entry at the end of every working session that changed the repo; never rewrite past entries, correct them with a new one.
 

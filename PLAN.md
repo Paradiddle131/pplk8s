@@ -1,5 +1,7 @@
 # PLAN — local Airflow-on-Kubernetes lab
 
+Frozen history: read, never appended to; new progress, decisions and lessons go on the tracker (`CLAUDE.md` § Where things are recorded).
+
 Status of each phase lives in its heading line.
 History of what was done lives in [`LEDGER.md`](LEDGER.md).
 

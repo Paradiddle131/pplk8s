@@ -386,7 +386,7 @@ grafana-ui: ## Port-forward Grafana to http://localhost:3000 (admin/admin)
 prometheus-ui: ## Port-forward Prometheus to http://localhost:9090
 	kubectl --context kind-pplk8s -n monitoring port-forward svc/kps-prometheus 9090:9090
 
-ledger: ## Fold ledger.d/ fragments into LEDGER.md (run on main after merges)
+ledger: ## Fold the frozen ledger.d/ fragments into LEDGER.md (no new fragments are added)
 	scripts/ledger-fold.sh
 
 lint: ## Lint shell scripts (shellcheck via uvx), the dbt helper scripts, the e2e checks' Python helpers and the BigQuery emulator shim (ruff via uvx)
