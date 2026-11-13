@@ -1,5 +1,5 @@
 {
- "written": "2026-11-13T01:48Z",
+ "written": "2026-11-13T02:00Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -334,7 +334,8 @@
     "declined": 32,
     "wrong": 3
    },
-   "model_calls": 127,
+   "runs_beyond_rounds": 45,
+   "model_calls": 202,
    "unchecked_runs": 0
   },
   {
