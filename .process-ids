@@ -1,0 +1,3 @@
+# Recorded agent runs: a model's answers quote list ranks and the fixture's own keys,
+# data the check would read as references; the logs are data, never prose.
+path: docs/research/semantic-bet/*.jsonl
