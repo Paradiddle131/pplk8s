@@ -1,0 +1,9 @@
+/* report-kit highlight: pointing at a category (a head, a key entry) lights its marks across every row in its
+   scope and steps the other marks back; leaving resets them. */
+[data-rk-lit="ok"] [data-k]:not([data-k="ok"]):is(i, .rk-mark, .rk-pt),
+[data-rk-lit="no"] [data-k]:not([data-k="no"]):is(i, .rk-mark, .rk-pt),
+[data-rk-lit="warn"] [data-k]:not([data-k="warn"]):is(i, .rk-mark, .rk-pt),
+[data-rk-lit="bad"] [data-k]:not([data-k="bad"]):is(i, .rk-mark, .rk-pt),
+[data-rk-lit="info"] [data-k]:not([data-k="info"]):is(i, .rk-mark, .rk-pt) { opacity: .14 }
+/* the trigger's own mark stays lit */
+[data-rk-lit] [data-lit] .rk-mark { opacity: 1 !important }

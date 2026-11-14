@@ -1,0 +1,493 @@
+<section class="qsi" id="question-sets" aria-labelledby="qsi-h">
+<style>
+.qsi { margin-top: 60px; }
+.qsi h2 { margin-top: 0; }
+.qsi .qsi-lede { max-width: 46rem; font-size: 16px; line-height: 1.5; color: var(--ink-2); margin: 0 0 16px; }
+
+/* the ledger: one card per set, like the winners band */
+.qsi .qsi-ledger { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 0; }
+@supports (grid-template-rows: subgrid) { .qsi .qsi-set { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
+.qsi .qsi-set { border-top: 2px solid var(--ink); padding-top: 10px; font-family: var(--label); scroll-margin-top: 16px; }
+.qsi .qsi-set h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.qsi .qsi-set h3 .qsi-v { font-family: var(--label); font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.qsi .qsi-what { font-family: var(--serif); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 10px; }
+.qsi .qsi-nums { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 16px; border-top: 1px solid var(--rule); padding: 8px 0 6px; margin: 0; font-variant-numeric: tabular-nums; }
+.qsi .qsi-nums > span { display: inline-flex; align-items: baseline; gap: 4px; color: var(--ink-3); font-size: 13px; }
+.qsi .qsi-nums b { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+.qsi .qsi-nums .qsi-arrow { color: var(--ink-3); font-size: 15px; }
+.qsi .qsi-ret { margin: 0 0 8px; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.qsi .qsi-ret ul { list-style: none; padding: 0; margin: 2px 0 0; }
+.qsi .qsi-ret li { display: flex; gap: 6px; align-items: baseline; }
+.qsi .qsi-ret li b { font-weight: 600; color: var(--ink); min-width: 1.4em; text-align: right; font-variant-numeric: tabular-nums; }
+.qsi .qsi-link { appearance: none; background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; min-height: 24px; text-align: left; }
+.qsi .qsi-link:hover { text-decoration-color: var(--ink); }
+
+/* group mix: one bar, proportional, drawn in ink only (fill, hatch, dots, outline) */
+.qsi .qsi-mix { border-top: 1px solid var(--rule); padding: 8px 0 8px; }
+.qsi .qsi-mixh { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.qsi .qsi-bar { display: flex; height: 12px; gap: 2px; }
+.qsi .qsi-bar i { display: block; height: 100%; min-width: 2px; }
+.qsi .g-cov { background: var(--ink-2); }
+.qsi .g-trap { background: repeating-linear-gradient(135deg, var(--ink-2) 0 1.6px, transparent 1.6px 4px); box-shadow: inset 0 0 0 1px var(--ink-2); }
+.qsi .g-comp { background: radial-gradient(circle, var(--ink-2) 1.05px, transparent 1.35px) 0 0 / 4px 4px; box-shadow: inset 0 0 0 1px var(--ink-2); }
+.qsi .g-unc { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+.qsi .qsi-mixk { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 6px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.qsi .qsi-mixk > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.qsi .qsi-mixk i { display: inline-block; width: 11px; height: 11px; flex: none; }
+.qsi .qsi-mixk b { font-weight: 600; color: var(--ink); }
+.qsi .qsi-also { font-size: 12.5px; color: var(--ink-3); margin: 4px 0 0; line-height: 1.35; }
+
+.qsi .qsi-meta { border-top: 1px solid var(--rule); padding: 7px 0 0; margin: 0; font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-variant-numeric: tabular-nums; }
+.qsi .qsi-badge { display: inline-block; font-size: 12.5px; line-height: 1.35; padding: 0 5px; border: 1px solid var(--ink-2); border-radius: 2px; color: var(--ink); white-space: nowrap; }
+.qsi .qsi-badge.apx { border-style: dashed; color: var(--ink-2); text-decoration: none; }
+.qsi a.qsi-badge.apx:hover { border-color: var(--ink); color: var(--ink); }
+.qsi .qsi-hash { appearance: none; background: none; border: 0; border-bottom: 1px dotted var(--ink-3); padding: 0; font-family: var(--code); font-size: 12px; color: var(--ink-2); cursor: pointer; min-height: 24px; }
+.qsi .qsi-hash:hover { color: var(--ink); }
+.qsi .qsi-full { display: block; flex-basis: 100%; font-family: var(--code); font-size: 11.5px; color: var(--ink); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; background: var(--paper-2); padding: 3px 6px; border-radius: 2px; }
+.qsi [hidden] { display: none !important; }
+.qsi .qsi-sup { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); border-left: 2px solid var(--ink-2); padding: 1px 0 1px 9px; }
+.qsi .qsi-sup b { color: var(--ink); font-weight: 600; }
+.qsi .qsi-go { margin: 8px 0 0; font-size: 13.5px; }
+
+/* the browse control */
+.qsi .qsi-browse { margin: 22px 0 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.qsi .qsi-toggle { appearance: none; display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: 0; color: var(--ink); padding: 10px 2px; cursor: pointer; text-align: left; font-family: var(--label); min-height: 44px; }
+.qsi .qsi-toggle:hover { background: var(--band); }
+.qsi .qsi-toggle .qsi-tt { font-size: 16px; font-weight: 600; }
+.qsi .qsi-toggle .qsi-th { font-size: 13.5px; color: var(--ink-3); }
+.qsi .qsi-chev { flex: none; width: 12px; height: 12px; transition: transform .12s ease-out; }
+.qsi [aria-expanded="true"] > .qsi-chev, .qsi details[open] > summary .qsi-chev { transform: rotate(90deg); }
+
+.qsi .qsi-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 0 10px; border-top: 1px solid var(--rule); font-family: var(--label); font-size: 14px; }
+.qsi .qsi-row1, .qsi .qsi-row2 { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.qsi .qsi-search { position: relative; flex: 1 1 18rem; min-width: 0; max-width: 30rem; }
+.qsi .qsi-search input { width: 100%; font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 6px 10px 6px 30px; min-height: 36px; }
+.qsi .qsi-search input::placeholder { color: var(--ink-3); opacity: 1; }
+.qsi .qsi-search svg { position: absolute; left: 9px; top: 50%; margin-top: -7px; color: var(--ink-3); pointer-events: none; }
+.qsi .qsi-seg { display: inline-flex; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; }
+.qsi .qsi-seg button { appearance: none; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 4px 10px; cursor: pointer; min-height: 32px; white-space: nowrap; }
+.qsi .qsi-seg button + button { border-left: 1px solid var(--ink-2); }
+.qsi .qsi-seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.qsi .qsi-sel { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
+.qsi select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; padding: 4px 6px; min-height: 32px; max-width: 13rem; }
+.qsi .qsi-chip { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font: inherit; padding: 4px 10px; border-radius: 16px; cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; }
+.qsi .qsi-chip::before { content: ""; width: 9px; height: 9px; border: 1.5px solid var(--ink-2); border-radius: 50%; }
+.qsi .qsi-chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.qsi .qsi-chip[aria-pressed="true"]::before { background: var(--paper); border-color: var(--paper); }
+.qsi .qsi-reset { appearance: none; background: none; border: 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; font: inherit; cursor: pointer; padding: 0 2px; min-height: 32px; }
+.qsi .qsi-reset[hidden] { display: none; }
+.qsi .qsi-count { color: var(--ink-2); margin: 0; font-variant-numeric: tabular-nums; }
+.qsi .qsi-count b { color: var(--ink); font-weight: 600; }
+.qsi .qsi-key { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12.5px; color: var(--ink-3); align-items: center; }
+.qsi .qsi-key span { display: inline-flex; align-items: center; gap: 5px; }
+.qsi .qsi-key i { display: inline-block; width: 7px; height: 7px; }
+
+/* the list */
+.qsi .qsi-list { border-top: 1px solid var(--ink-2); }
+.qsi .qsi-seth { position: sticky; top: 0; z-index: 2; background: var(--paper-2); margin: 0; padding: 5px 8px; font-family: var(--label); font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--grid-major); }
+.qsi .qsi-seth small { font-weight: 400; color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.qsi .qsi-q { border-bottom: 1px solid var(--grid-major); scroll-margin-top: 40px; }
+.qsi .qsi-q > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 12px minmax(0, 14.5rem) minmax(0, 1fr) minmax(0, 13rem) 116px; gap: 0 12px; align-items: center; padding: 5px 6px; font-family: var(--label); font-size: 14px; line-height: 1.35; min-height: 32px; }
+.qsi .qsi-q > summary::-webkit-details-marker { display: none; }
+.qsi .qsi-q > summary:hover { background: var(--band); }
+.qsi .qsi-q[open] > summary { background: var(--row-band); }
+.qsi .qsi-q > summary:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+.qsi .qsi-id { font-family: var(--code); font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em; }
+.qsi .qsi-q.ret .qsi-id { text-decoration: line-through; text-decoration-color: var(--ink-3); color: var(--ink-2); }
+.qsi .qsi-txt { font-family: var(--serif); font-size: 15px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qsi .qsi-q.ret .qsi-txt { color: var(--ink-2); }
+.qsi .qsi-tags { display: flex; gap: 4px; overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.qsi .qsi-tag { flex: none; font-size: 12px; line-height: 1.35; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; }
+.qsi .qsi-tag.k { border-color: transparent; color: var(--ink-3); padding: 0 2px; }
+.qsi .qsi-tag.new { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.qsi .qsi-tag.ret { border-style: dashed; border-color: var(--ink-3); color: var(--ink-2); }
+.qsi .qsi-strip { display: flex; align-items: center; justify-content: flex-end; min-height: 12px; }
+.qsi .qsi-strip svg { display: block; }
+.qsi .qsi-strip .na { font-size: 12px; color: var(--ink-3); }
+.qsi mark { background: var(--sel); color: inherit; border-radius: 1px; }
+
+/* an open question */
+.qsi .qsi-body { padding: 6px 6px 16px 30px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; background: var(--row-band); }
+.qsi .qsi-turns { list-style: none; padding: 0; margin: 0; counter-reset: t; }
+.qsi .qsi-turns li { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) minmax(8rem, max-content); gap: 2px 14px; padding: 6px 0; border-bottom: 1px solid var(--grid-major); align-items: baseline; }
+.qsi .qsi-turns li:first-child { border-top: 1px solid var(--grid-major); }
+.qsi .qsi-tn { font-family: var(--label); font-size: 12.5px; color: var(--ink-3); }
+.qsi .qsi-tq { font-family: var(--serif); font-size: 16px; line-height: 1.45; color: var(--ink); margin: 0; }
+.qsi .qsi-ex { font-family: var(--label); font-size: 13px; color: var(--ink-3); text-align: right; line-height: 1.35; }
+.qsi .qsi-ex .v { display: block; font-size: 16px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.qsi .qsi-ex .v .or { font-weight: 400; color: var(--ink-3); font-size: 13px; }
+.qsi .qsi-facts { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 4px 14px; margin: 0; font-family: var(--label); font-size: 14px; line-height: 1.4; max-width: 52rem; }
+.qsi .qsi-facts dt { color: var(--ink-3); }
+.qsi .qsi-facts dd { margin: 0; color: var(--ink); }
+.qsi .qsi-facts dd .p { color: var(--ink-2); }
+.qsi .qsi-facts dd ul { list-style: none; padding: 0; margin: 0; }
+.qsi .qsi-facts .term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; cursor: help; }
+.qsi .qsi-runs h4 { font-family: var(--label); font-size: 14px; font-weight: 600; margin: 0 0 2px; color: var(--ink); }
+.qsi .qsi-runs .qsi-rsum { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 0 0 6px; font-variant-numeric: tabular-nums; }
+.qsi .qsi-fams { columns: 2 330px; column-gap: 28px; }
+.qsi .qsi-fam { break-inside: avoid; margin: 0 0 10px; font-family: var(--label); }
+.qsi .qsi-famh { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink); margin: 0 0 2px; padding-bottom: 2px; border-bottom: 1px solid var(--rule); }
+.qsi .qsi-famh i { width: 3px; height: 13px; border-radius: 1px; display: inline-block; }
+.qsi .qsi-run { display: grid; grid-template-columns: minmax(0, 1fr) auto 4.6rem; gap: 8px; align-items: center; font-size: 13px; line-height: 1.3; padding: 2px 0; border-bottom: 1px solid var(--grid); }
+.qsi .qsi-run .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qsi .qsi-run .who .id { font-size: 12px; }
+.qsi .qsi-run .who .m { color: var(--ink-2); margin-left: 4px; }
+.qsi .qsi-run .sw { display: inline-flex; gap: 1px; }
+.qsi .qsi-run .sw svg { display: block; }
+.qsi .qsi-run .n { text-align: right; color: var(--ink-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.qsi .qsi-runs .qsi-leg { display: flex; flex-wrap: wrap; gap: 2px 12px; font-family: var(--label); font-size: 12.5px; color: var(--ink-2); margin: 0 0 8px; }
+.qsi .qsi-runs .qsi-leg span { display: inline-flex; align-items: center; gap: 4px; }
+.qsi .qsi-none { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 0; }
+.qsi .qsi-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 14px 6px; margin: 0; }
+
+@media (max-width: 900px) {
+  .qsi .qsi-q > summary { grid-template-columns: 12px minmax(0, 12rem) minmax(0, 1fr) 116px; }
+  .qsi .qsi-q > summary .qsi-tags { display: none; }
+}
+@media (max-width: 760px) {
+  .qsi .qsi-ledger { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .qsi .qsi-set { grid-row: auto; display: block; }
+}
+@media (max-width: 640px) {
+  .qsi .qsi-q > summary { grid-template-columns: 12px minmax(0, 1fr) auto; grid-template-areas: "c id st" ". tx tx" ". tg tg"; gap: 2px 8px; padding: 6px 2px; }
+  .qsi .qsi-q > summary .qsi-chev { grid-area: c; }
+  .qsi .qsi-q > summary .qsi-id { grid-area: id; }
+  .qsi .qsi-q > summary .qsi-strip { grid-area: st; }
+  .qsi .qsi-q > summary .qsi-txt { grid-area: tx; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 14.5px; line-height: 1.35; }
+  .qsi .qsi-q > summary .qsi-tags { grid-area: tg; display: flex; }
+  .qsi .qsi-body { padding: 6px 2px 14px 2px; }
+  .qsi .qsi-turns li { grid-template-columns: minmax(0, 1fr); }
+  .qsi .qsi-ex { text-align: left; }
+  .qsi .qsi-ex .v { display: inline; margin-right: 6px; }
+  .qsi .qsi-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .qsi .qsi-facts dd { margin-bottom: 6px; }
+  .qsi .qsi-search { flex-basis: 100%; max-width: none; }
+  .qsi select { max-width: 100%; }
+  .qsi .qsi-toggle .qsi-th { display: block; }
+  .qsi .qsi-toggle > span { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { .qsi .qsi-chev { transition: none; } }
+</style>
+
+<h2 id="qsi-h">What the setups were asked: the question sets</h2>
+<p class="qsi-lede">Every setup answers the same business questions, gathered in sets. A set is frozen before any setup runs on it and never edited afterwards: a question found faulty is retired, not rewritten, and stops counting everywhere; a better set is a new version beside the old one.</p>
+<div class="qsi-ledger" id="qsi-ledger"></div>
+<div class="qsi-browse">
+  <button type="button" class="qsi-toggle" id="qsi-toggle" aria-expanded="false" aria-controls="qsi-panel">
+    <svg class="qsi-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span><span class="qsi-tt" id="qsi-tt">Every question</span> <span class="qsi-th">search, filter, and open any one for its turns, expected numbers and every run</span></span>
+  </button>
+  <div id="qsi-panel" hidden>
+    <div class="qsi-tools" role="search" aria-label="Filter the questions">
+      <div class="qsi-row1">
+        <label class="qsi-search"><span class="qsi-vh" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search questions</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.3 9.3l3.2 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input type="search" id="qsi-q" placeholder="Search question text or id" autocomplete="off" spellcheck="false"></label>
+        <div class="qsi-seg" role="group" aria-label="Question set" id="qsi-sets"></div>
+      </div>
+      <div class="qsi-row2">
+        <label class="qsi-sel">Group <select id="qsi-group"></select></label>
+        <label class="qsi-sel">Kind <select id="qsi-kind"></select></label>
+        <button type="button" class="qsi-chip" id="qsi-new" aria-pressed="false">New in v2</button>
+        <button type="button" class="qsi-chip" id="qsi-ret" aria-pressed="false">Retired</button>
+        <button type="button" class="qsi-reset" id="qsi-reset" hidden>Clear filters</button>
+      </div>
+      <div class="qsi-row2"><p class="qsi-count" id="qsi-count" aria-live="polite"></p><div class="qsi-key" id="qsi-key"></div></div>
+    </div>
+    <div class="qsi-list" id="qsi-list"></div>
+  </div>
+</div>
+
+<script>
+window.reportReady(() => {
+  "use strict";
+  const D = window.REPORT; const QS = D && D.questionSets; if (!QS) return;
+  const root = document.getElementById("question-sets");
+  const $ = (s) => root.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const SETKEYS = Object.keys(QS);
+  const supersededBy = {}; SETKEYS.forEach((k) => { if (QS[k].supersedes) supersededBy[QS[k].supersedes] = k; });
+  const setName = (k) => QS[k].label + (supersededBy[k] ? " v1" : "");
+  const setShort = (k) => setName(k).replace(/ set/, "").replace(/^Hard v2$/, "Hard v2");
+
+  /* ---------- words (from the rule and the sets' own headers) ---------- */
+  const GROUP = {
+    covered: ["covered", "covered", "one metric of the semantic layer answers it"],
+    trap: ["hidden-rule", "hidden-rule", "covered, but the obvious SQL gives another number: a business rule the table does not show"],
+    composable: ["composable", null, "no single metric answers it, but arithmetic over at most three metric results does (a ratio, a difference, a share)"],
+    uncovered: ["uncovered", "uncovered", "no metric answers it; only SQL over the tables can"],
+    conversation: ["conversation", "conversation", "a follow-up or an ambiguous term inside a multi-turn chat"],
+    distractor: ["legacy table", null, "covered, with a legacy table in reach that gives another number"],
+    planted: ["planted text", null, "covered, with instruction-like text planted in the data"],
+  };
+  (D.groupsAll || []).forEach((g) => { if (GROUP[g.key]) GROUP[g.key][2] = g.help.replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase()); });
+  const KIND = {
+    jargon: ["jargon", "business jargon (AOV, CPA, MQL, ROAS, burn)"],
+    period: ["period", "a relative or fiscal period"],
+    multi_metric: ["several metrics", "several metrics at once, or a metric of a metric"],
+    segment: ["segment", "a segment comparison or a ranking"],
+    multi_step: ["several steps", "a multi-step question"],
+    implicit: ["implicit definition", "an implicit definition the user does not spell out"],
+    ambiguous_followup: ["ambiguous follow-up", "an ambiguous term or follow-up"],
+    sql_hard: ["hard in SQL", "hard in SQL: the obvious query gives another number, for a reason in the rubric"],
+  };
+  const RUBRIC = {
+    fan_out_join: "a join that fans out and double counts",
+    distinct_across_join: "a distinct count across a join",
+    ratio_of_sums: "a ratio of sums, not a mean of ratios",
+    window: "a window: a rank with ties, a running total, a lag, a first event",
+    median_percentile: "a median or a percentile",
+    sessions_gaps_islands: "sessions, or gaps and islands",
+    cohort_retention: "a cohort or retention over two periods",
+    anti_join: "an anti-join (“never did …”)",
+    date_spine: "a date spine: days with nothing count as zero",
+    fiscal_timezone: "a fiscal calendar or a timezone boundary",
+  };
+  const RCLASS = { expected_sql: "wrong expected SQL", fixture: "the fixture fixes the answer", readings: "more than one reasonable reading" };
+  const WHAT = {
+    frozen: "Everyday shop questions. Most are answered by one metric of the semantic layer; the rest only by SQL over the tables (medians, times between events, peaks, ratios of two measures). Some hide a business rule, put a legacy table in reach, follow up in a chat or plant text in the data.",
+    hard: "The language a business user really speaks: jargon, relative and fiscal periods, several metrics at once, segment comparisons and rankings, multi-step questions, implicit definitions, ambiguous terms and follow-ups. Its uncovered questions are mostly ratios and differences of two measures.",
+  };
+  const plainKey = (k) => (GROUP[k] ? GROUP[k][0] : k.replace(/_/g, " "));
+  const termOr = (k, text) => { const t = GROUP[k] && GROUP[k][1]; return t ? `<span class="term" data-term="${t}" tabindex="0">${esc(text)}</span>` : esc(text); };
+  const clean = (s) => String(s || "").replace(/\s*\(#\d+\)/g, "").replace(/\b[\w-]+\.(sql|ya?ml|py|jsonl?|md)\b/g, "the fixture").replace(/\bdbt_dev\b/g, "the test warehouse");
+
+  /* ---------- numbers: rates as percentages, money with two decimals ---------- */
+  const RATE_CUE = /share|rate|percent|percentage|grow|growth|how far through/i;
+  const MONEY_CUE = /revenue|sales|spen[dt]|euro|\bEUR\b|budget|\bcost|\bAOV\b|basket|\bGMV\b|\bCPA\b|price|amount|burn|order value|average order|per order/i;
+  const COUNT_CUE = /^\s*(?:it's[^.?]*[.?]\s*)?how many (?!euros)/i;
+  const nf = (x, min, max) => x.toLocaleString("en-US", { minimumFractionDigits: min, maximumFractionDigits: max });
+  const numTxt = (x, money) => (money ? nf(x, 2, 2) : Number.isInteger(x) ? nf(x, 0, 0) : nf(x, 0, 2));
+  function fmtAlt(alt, ctx) {
+    const rate = alt.length === 2 && Math.abs(alt[1] - alt[0] * 100) < 1e-6 * Math.max(1, Math.abs(alt[1])) && RATE_CUE.test(ctx);
+    if (rate) { const v = alt[0] * 100; const t = nf(v, 0, 2) + "%"; return `<span title="exact: ${esc(v)}%">${t}</span>`; }
+    const money = MONEY_CUE.test(ctx) && !COUNT_CUE.test(ctx);
+    return alt.map((x) => { const t = numTxt(x, money); return `<span${String(x) !== t.replace(/,/g, "") ? ` title="exact: ${esc(x)}"` : ""}>${t}</span>`; }).join(' <span class="or">or</span> ');
+  }
+
+  /* ---------- runs: rows in the plate's ladder order, gathered by family ---------- */
+  const lad = {}; (D.ladder || []).forEach((L, i) => L.arms.forEach((a, j) => (lad[a] = [i, j])));
+  const SHOWN = {};
+  Object.keys(D.sets || {}).forEach((s) => {
+    const S = D.sets[s];
+    const rows = S.rows.slice().sort((a, b) => { const la = lad[a.arm] || [99, 0], lb = lad[b.arm] || [99, 0]; return la[0] - lb[0] || la[1] - lb[1] || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs; });
+    const fams = []; rows.forEach((r) => { if (!fams.includes(r.family)) fams.push(r.family); });
+    const ordered = fams.flatMap((f) => rows.filter((r) => r.family === f));
+    const ci = {}; S.cases.forEach((c, i) => (ci[typeof c === "string" ? c : c.id] = i));
+    SHOWN[s] = { rows: ordered, fams, ci };
+  });
+  const OUT = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  const FAMS = ["da", "gt", "mf", "ref", "other"];
+  const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
+  function swatch(ch) { return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`}</svg>`; }
+  const unitsOf = (r, i) => (r.units || "").slice(i * 3, i * 3 + 3).padEnd(3, ".");
+  function tally(s, i) {
+    const t = { n: 0, ran: 0, o: [0, 0, 0, 0, 0] };
+    SHOWN[s].rows.forEach((r) => { t.n++; for (const ch of unitsOf(r, i)) if (ch !== ".") { t.ran++; t.o[+ch]++; } });
+    return t;
+  }
+  // the closed row's strip: one column per setup and model, its three runs stacked as on the plate
+  const SP = 3, SC = 2, FG = 3;
+  const STRIPC = { 0: "o-right", 1: "o-decl", 2: "o-wrong", 3: "o-decl", 4: "o-cw" };
+  function strip(s, i) {
+    const sh = SHOWN[s]; const P = {}; let x = 0, prev = null;
+    sh.rows.forEach((r) => {
+      if (prev !== null && r.family !== prev) x += FG; prev = r.family;
+      const u = unitsOf(r, i);
+      for (let k = 0; k < 3; k++) { const ch = u[k]; const y = 9 - (k + 1) * SP + 1; const c = ch === "." ? "o-none" : STRIPC[ch]; P[c] = (P[c] || "") + (ch === "." ? `M${x + .5} ${y + .5}h1v1h-1z` : `M${x} ${y}h${SC}v${SC}h-${SC}z`); }
+      x += SP;
+    });
+    const t = tally(s, i);
+    const lab = `Runs on this question: ${t.o[0]} right, ${t.o[1]} declined, ${t.o[2] + t.o[3]} wrong or unclear, ${t.o[4]} confident-wrong, of ${t.ran} runs by ${t.n} setups and models`;
+    return `<svg width="${x}" height="9" viewBox="0 0 ${x} 9" role="img" aria-label="${lab}">${Object.entries(P).map(([c, d]) => `<path fill="var(--${c})" d="${d}"/>`).join("")}</svg>`;
+  }
+
+  /* ---------- the questions, one entry per set and question ---------- */
+  const ALLQ = [];
+  SETKEYS.forEach((s) => QS[s].questions.forEach((q) => {
+    const scored = !q.retired && QS[s].groups && QS[s].groups[q.id];
+    const groups = scored || q.groups;
+    const hay = (q.id + " " + q.turns.join(" ")).toLowerCase();
+    const shownIdx = SHOWN[s] && !q.retired && SHOWN[s].ci[q.id] != null ? SHOWN[s].ci[q.id] : null;
+    ALLQ.push({ s, q, groups, written: q.groups, hay, idx: shownIdx, key: s + "|" + q.id, el: null });
+  }));
+
+  /* ---------- the ledger ---------- */
+  function partition(k) {
+    const g = Object.values(QS[k].groups || {}); const c = { covered: 0, trap: 0, composable: 0, uncovered: 0, conversation: 0, distractor: 0, planted: 0 };
+    g.forEach((gs) => { gs.forEach((x) => { if (x in c) c[x]++; }); });
+    return { c, n: g.length };
+  }
+  function ledger() {
+    const html = SETKEYS.map((k) => {
+      const Q = QS[k]; const qs = Q.questions; const ret = qs.filter((q) => q.retired); const scored = qs.length - ret.length;
+      const { c, n } = partition(k);
+      const byClass = {}; ret.forEach((q) => { const cl = q.retired.class; byClass[cl] = (byClass[cl] || 0) + 1; });
+      const nNew = qs.filter((q) => q.new).length, nNewRet = qs.filter((q) => q.new && q.retired).length, carried = qs.length - nNew;
+      const what = WHAT[k] || (k === "hard-v2" || Q.supersedes ? null : (D.terms.find((t) => t.key === k) || {}).text);
+      const whatV = Q.supersedes ? `${esc(QS[Q.supersedes] ? setName(Q.supersedes) : Q.supersedes)}’s ${carried} questions unchanged, regrouped so that arithmetic over metric results counts as composable and only row-level SQL as uncovered, plus ${nNew} new questions that are hard to write in SQL: on each, the obvious query gives another number.` : esc(what || "");
+      const seg = [["covered", c.covered - c.trap, "g-cov"], ["trap", c.trap, "g-trap"], ["composable", c.composable, "g-comp"], ["uncovered", c.uncovered, "g-unc"]].filter((x) => x[1] > 0);
+      const bar = seg.map(([g, v, cl]) => `<i class="${cl}" style="flex:${v} 1 0"></i>`).join("");
+      const key = [`<span><i class="g-cov"></i>${termOr("covered", "Covered")} <b>${c.covered}</b></span>`]
+        .concat(c.trap ? [`<span><i class="g-trap"></i>of them ${termOr("trap", "hidden-rule")} <b>${c.trap}</b></span>`] : [])
+        .concat(c.composable ? [`<span><i class="g-comp"></i>Composable <b>${c.composable}</b></span>`] : [])
+        .concat([`<span><i class="g-unc"></i>${termOr("uncovered", "Uncovered")} <b>${c.uncovered}</b></span>`]).join("");
+      const also = [["conversation", c.conversation], ["distractor", c.distractor], ["planted", c.planted]].filter((x) => x[1]).map(([g, v]) => `${v} ${g === "conversation" ? termOr("conversation", "conversation" + (v > 1 ? "s" : "")) : esc(plainKey(g))}`);
+      const shown = Q.shown ? `<span class="qsi-badge">In the figures</span>` : `<a class="qsi-badge apx" href="#other-set-versions">${Q.appendix ? "Appendix only" : "Not shown"}</a>`;
+      const termK = k === "frozen" || k === "hard" ? k : null;
+      const title = termK ? `<span class="term" data-term="${termK}" tabindex="0">${esc(Q.label)}</span>` : esc(Q.label);
+      return `<article class="qsi-set" id="qs-${esc(k)}" aria-labelledby="qsi-h-${esc(k)}">
+        <h3 id="qsi-h-${esc(k)}">${title}${supersededBy[k] ? `<span class="qsi-v">v1</span>` : ""}${Q.supersedes ? `<span class="qsi-v">supersedes v1</span>` : ""}</h3>
+        <p class="qsi-what">${whatV}</p>
+        <div><p class="qsi-nums"><span><b>${qs.length}</b> written</span><span class="qsi-arrow" aria-hidden="true">→</span><span><b>${scored}</b> scored</span></p>
+        <div class="qsi-ret">${ret.length ? `<button type="button" class="qsi-link" data-go="${esc(k)}" data-ret="1">${ret.length} retired</button>, the test itself faulty:<ul>${Object.keys(RCLASS).filter((cl) => byClass[cl]).map((cl) => `<li><b>${byClass[cl]}</b><span>${esc(RCLASS[cl])}</span></li>`).join("")}</ul>` : "None retired."}${nNew ? `<p style="margin:4px 0 0"><button type="button" class="qsi-link" data-go="${esc(k)}" data-new="1">${nNew} new in this version</button>${nNewRet ? `, ${nNewRet} of them retired` : ""}; ${carried} carried unchanged.</p>` : ""}</div></div>
+        <div class="qsi-mix"><p class="qsi-mixh">Group mix of the ${n} scored</p><div class="qsi-bar" role="img" aria-label="Covered ${c.covered}${c.trap ? `, of them hidden-rule ${c.trap}` : ""}${c.composable ? `, composable ${c.composable}` : ""}, uncovered ${c.uncovered}">${bar}</div><div class="qsi-mixk">${key}</div>${also.length ? `<p class="qsi-also">Inside covered: ${also.join(", ")}.</p>` : ""}</div>
+        <p class="qsi-meta"><span>Frozen ${esc(Q.frozen || "–")}</span>${Q.sha256 ? `<button type="button" class="qsi-hash" aria-expanded="false" aria-label="SHA-256 ${esc(Q.sha256.slice(0, 8))}, show in full">sha256 ${esc(Q.sha256.slice(0, 8))}…</button><code class="qsi-full" hidden>${esc(Q.sha256)}</code>` : ""}${shown}</p>
+        <div>${Q.supersedes ? `<p class="qsi-sup"><b>Why it supersedes ${esc(setName(Q.supersedes))}:</b> ${esc(clean(Q.supersedes_why))} The report keeps showing v1 until this version is adopted.</p>` : ""}
+        <p class="qsi-go"><button type="button" class="qsi-link" data-go="${esc(k)}">Browse its ${qs.length} questions</button></p></div>
+      </article>`;
+    }).join("");
+    $("#qsi-ledger").innerHTML = html;
+  }
+
+  /* ---------- filters ---------- */
+  const st = { q: "", set: "all", group: "", kind: "", nw: false, ret: false };
+  const DEF = JSON.stringify(st);
+  function controls() {
+    $("#qsi-sets").innerHTML = [["all", "All"]].concat(SETKEYS.map((k) => [k, setShort(k)])).map(([k, l]) => `<button type="button" data-set="${esc(k)}" aria-pressed="${st.set === k}">${esc(l)}</button>`).join("");
+    const gseen = new Set(); ALLQ.forEach((e) => e.groups.forEach((g) => gseen.add(g)));
+    const gorder = Object.keys(GROUP).filter((g) => gseen.has(g)).concat([...gseen].filter((g) => !GROUP[g]));
+    $("#qsi-group").innerHTML = `<option value="">any</option>` + gorder.map((g) => `<option value="${esc(g)}">${esc(plainKey(g))}</option>`).join("");
+    const kseen = new Set(), rseen = new Set(); ALLQ.forEach((e) => { (e.q.kinds || []).forEach((x) => kseen.add(x)); (e.q.rubric || []).forEach((x) => rseen.add(x)); });
+    const kl = (x) => (KIND[x] ? KIND[x][0] : x.replace(/_/g, " "));
+    $("#qsi-kind").innerHTML = `<option value="">any</option><optgroup label="What makes it hard">${[...kseen].sort((a, b) => kl(a).localeCompare(kl(b))).map((x) => `<option value="k:${esc(x)}">${esc(kl(x))}</option>`).join("")}</optgroup>` +
+      (rseen.size ? `<optgroup label="Its SQL needs">${[...rseen].sort().map((x) => `<option value="r:${esc(x)}">${esc((RUBRIC[x] || x.replace(/_/g, " ")).replace(/:.*/, "").replace(/ \(.*/, ""))}</option>`).join("")}</optgroup>` : "");
+    $("#qsi-key").innerHTML = `<span>Strip: one column per setup and model, three runs stacked, by family</span>` +
+      [["o-right", "right"], ["o-decl", "declined or unclear"], ["o-wrong", "wrong"], ["o-cw", "confident-wrong"]].map(([c, l]) => `<span><i style="background:var(--${c})"></i>${l}</span>`).join("");
+  }
+  const total = ALLQ.length;
+  let built = false;
+  function build() {
+    const list = $("#qsi-list"); let h = "";
+    SETKEYS.forEach((s) => {
+      h += `<h3 class="qsi-seth" data-sethead="${esc(s)}"><span>${esc(setName(s))}${QS[s].shown ? "" : ", appendix only: no runs drawn"}</span><small data-setn="${esc(s)}"></small></h3>`;
+      ALLQ.filter((e) => e.s === s).forEach((e, j) => {
+        const q = e.q;
+        const tags = e.groups.map((g) => `<span class="qsi-tag">${esc(plainKey(g))}</span>`).join("") +
+          (q.new ? `<span class="qsi-tag new">new in v2</span>` : "") + (q.retired ? `<span class="qsi-tag ret">retired</span>` : "") +
+          (q.kinds || []).map((k) => `<span class="qsi-tag k">${esc(KIND[k] ? KIND[k][0] : k)}</span>`).join("");
+        const stripH = e.idx != null ? strip(s, e.idx) : q.retired && QS[s].shown ? `<span class="na">not scored</span>` : "";
+        h += `<details class="qsi-q${q.retired ? " ret" : ""}" data-k="${ALLQ.indexOf(e)}" id="qsi-${esc(s)}-${esc(q.id)}"><summary>
+          <svg class="qsi-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="qsi-id" title="${esc(q.id)}">${esc(q.id)}</span><span class="qsi-txt">${esc(q.turns[0])}${q.turns.length > 1 ? ` <span style="color:var(--ink-3);font-family:var(--label);font-size:12.5px">+${q.turns.length - 1} turn${q.turns.length > 2 ? "s" : ""}</span>` : ""}</span>
+          <span class="qsi-tags">${tags}</span><span class="qsi-strip">${stripH}</span></summary></details>`;
+      });
+    });
+    h += `<p class="qsi-empty" id="qsi-empty" hidden>No question matches. <button type="button" class="qsi-reset" data-reset>Clear the filters</button></p>`;
+    list.innerHTML = h;
+    ALLQ.forEach((e, i) => { e.el = list.querySelector(`details[data-k="${i}"]`); e.txt = e.el.querySelector(".qsi-txt"); e.id = e.el.querySelector(".qsi-id"); e.txt0 = e.txt.innerHTML; e.id0 = e.id.innerHTML; });
+    list.addEventListener("toggle", (ev) => { const d = ev.target; if (d.matches && d.matches("details.qsi-q") && d.open && !d.dataset.filled) { fill(d, ALLQ[+d.dataset.k]); d.dataset.filled = "1"; } }, true);
+    built = true;
+  }
+  function hl(html, toks) {
+    if (!toks.length) return html;
+    // highlight inside text nodes only
+    const tmp = document.createElement("span"); tmp.innerHTML = html;
+    const re = new RegExp("(" + toks.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+    const walk = (n) => { [...n.childNodes].forEach((c) => { if (c.nodeType === 3) { if (re.test(c.data)) { re.lastIndex = 0; const f = document.createElement("span"); f.innerHTML = esc(c.data).replace(re, "<mark>$1</mark>"); c.replaceWith(...f.childNodes); } re.lastIndex = 0; } else walk(c); }); };
+    walk(tmp); return tmp.innerHTML;
+  }
+  function apply() {
+    if (!built) return;
+    const toks = st.q.toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0; const per = {};
+    ALLQ.forEach((e) => {
+      const q = e.q; let ok = st.set === "all" || e.s === st.set;
+      if (ok && st.group) ok = e.groups.includes(st.group);
+      if (ok && st.kind) ok = st.kind.startsWith("k:") ? (q.kinds || []).includes(st.kind.slice(2)) : (q.rubric || []).includes(st.kind.slice(2));
+      if (ok && st.nw) ok = !!q.new;
+      if (ok && st.ret) ok = !!q.retired;
+      if (ok && toks.length) ok = toks.every((t) => e.hay.includes(t));
+      e.el.hidden = !ok;
+      per[e.s] = per[e.s] || [0, 0]; per[e.s][1]++;
+      if (ok) { shown++; per[e.s][0]++; }
+      if (ok) { e.txt.innerHTML = hl(e.txt0, toks); e.id.innerHTML = hl(e.id0, toks); }
+    });
+    SETKEYS.forEach((s) => { const hd = root.querySelector(`[data-sethead="${CSS.escape(s)}"]`); hd.hidden = !per[s][0]; hd.querySelector("small").textContent = per[s][0] === per[s][1] ? `${per[s][1]} questions` : `${per[s][0]} of ${per[s][1]}`; });
+    $("#qsi-empty").hidden = shown > 0;
+    $("#qsi-count").innerHTML = shown === total ? `<b>${total}</b> questions in ${SETKEYS.length} sets` : `Showing <b>${shown}</b> of ${total} questions`;
+    $("#qsi-reset").hidden = JSON.stringify(st) === DEF;
+    root.querySelectorAll("#qsi-sets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.set === st.set)));
+    $("#qsi-new").setAttribute("aria-pressed", String(st.nw)); $("#qsi-ret").setAttribute("aria-pressed", String(st.ret));
+    $("#qsi-group").value = st.group; $("#qsi-kind").value = st.kind; if ($("#qsi-q").value !== st.q) $("#qsi-q").value = st.q;
+  }
+
+  /* ---------- an open question ---------- */
+  function fill(d, e) {
+    const q = e.q, s = e.s; let ctx = "";
+    const turns = q.turns.map((t, i) => {
+      ctx += " " + t;
+      const ex = (q.expected || [])[i] || [];
+      const exH = !ex.length ? `<span class="v" style="font-weight:400;color:var(--ink-3);font-size:13.5px">no number</span>` :
+        ex.length === 1 ? `<span class="v">${fmtAlt(ex[0], t + " " + ctx)}</span>` :
+        `<span class="v">${ex.map((a) => fmtAlt(a, t + " " + ctx)).join(' <span class="or">or</span> ')}</span>${ex.length} readings, each accepted`;
+      return `<li><span class="qsi-tn">${q.turns.length > 1 ? `Turn ${i + 1}` : "Question"}</span><p class="qsi-tq">${esc(t)}</p><span class="qsi-ex">${ex.length ? "Expected " : ""}${exH}</span></li>`;
+    }).join("");
+    const gl = (gs) => gs.map((g) => `${termOr(g, plainKey(g))} <span class="p">(${esc(GROUP[g] ? GROUP[g][2] : "")})</span>`).join("<br>");
+    const changed = JSON.stringify([...e.written].sort()) !== JSON.stringify([...e.groups].sort());
+    const facts = [];
+    facts.push(["Groups", gl(e.groups) + (changed ? `<br><span class="p">Written as ${esc(e.written.map(plainKey).join(", "))}; a label correction scores it as above.</span>` : "")]);
+    if ((q.kinds || []).length) facts.push(["What makes it hard", `<ul>${q.kinds.map((k) => `<li>${esc(KIND[k] ? KIND[k][1] : k.replace(/_/g, " "))}</li>`).join("")}</ul>`]);
+    if ((q.rubric || []).length) facts.push(["Its SQL needs", `<ul>${q.rubric.map((k) => `<li>${esc(RUBRIC[k] || k.replace(/_/g, " "))}</li>`).join("")}</ul>`]);
+    facts.push(["Obvious SQL", q.naive ? "Gives another number than the expected one: checked on the data before any setup ran." : `<span class="p">Not marked as giving another number.</span>`]);
+    if (QS[s].supersedes) facts.push(["In this version", q.new ? "New in v2." : `Carried from ${esc(setName(QS[s].supersedes))}, unchanged.`]);
+    if (q.retired) facts.push(["Retired", `${esc(q.retired.date || "")}: ${esc(RCLASS[q.retired.class] || q.retired.class)}. <span class="p">${esc(clean(q.retired.reason))}.</span> Not scored in any set; its runs stay in the logs.`]);
+    let runs = "";
+    if (e.idx != null) {
+      const sh = SHOWN[s], t = tally(s, e.idx);
+      runs = `<div class="qsi-runs"><h4>Every run on it, ${esc(setName(s).toLowerCase())}</h4><p class="qsi-rsum">${t.o[0]} of ${t.ran} runs right; ${t.o[4]} confident-wrong, ${t.o[2] + t.o[3]} wrong or unclear, ${t.o[1]} declined; ${t.n} setups and models.</p>
+        <div class="qsi-leg">${[["0", "right"], ["1", "declined"], ["2", "wrong"], ["3", "unclear"], ["4", "confident-wrong"], [".", "not run"]].map(([c, l]) => `<span>${swatch(c)}${l}</span>`).join("")}</div>
+        <div class="qsi-fams">${sh.fams.map((f) => `<div class="qsi-fam"><p class="qsi-famh"><i style="background:${famC(f)}"></i>${esc((D.familyLabel || {})[f] || f)}</p>${sh.rows.filter((r) => r.family === f).map((r) => {
+          const u = unitsOf(r, e.idx); const ran = [...u].filter((c) => c !== ".").length, right = [...u].filter((c) => c === "0").length;
+          return `<div class="qsi-run"><span class="who"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span></span><span class="sw" role="img" aria-label="${[...u].map((c) => (c === "." ? "not run" : OUT[+c])).join(", ")}">${[...u].map(swatch).join("")}</span><span class="n">${ran ? `${right} of ${ran} right` : "not run"}</span></div>`;
+        }).join("")}</div>`).join("")}</div></div>`;
+    } else if (q.retired) {
+      runs = `<p class="qsi-none">Retired, so no run on it counts and the figures leave it out.</p>`;
+    } else if (!QS[s].shown) {
+      const twin = QS[s].supersedes && !q.new && ALLQ.find((x) => x.s === QS[s].supersedes && x.q.id === q.id && x.idx != null);
+      runs = `<p class="qsi-none">This set is kept in the appendix, so its runs are not drawn here.${twin ? ` <button type="button" class="qsi-link" data-jump="${ALLQ.indexOf(twin)}">See its runs in ${esc(setName(twin.s).toLowerCase())}</button>, where the same question was asked.` : ""}</p>`;
+    }
+    d.insertAdjacentHTML("beforeend", `<div class="qsi-body"><ol class="qsi-turns">${turns}</ol><dl class="qsi-facts">${facts.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl>${runs}</div>`);
+  }
+
+  /* ---------- wiring ---------- */
+  const panel = $("#qsi-panel"), tog = $("#qsi-toggle");
+  function open(v) {
+    if (v && !built) { build(); }
+    panel.hidden = !v; tog.setAttribute("aria-expanded", String(v));
+    if (v) apply();
+  }
+  $("#qsi-tt").textContent = `Every question, all ${total}`;
+  tog.addEventListener("click", () => open(tog.getAttribute("aria-expanded") !== "true"));
+  ledger(); controls();
+  const reduce = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  root.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button"); if (!b || !root.contains(b)) return;
+    if (b.classList.contains("qsi-hash")) { const full = b.nextElementSibling; const on = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", String(on)); full.hidden = !on; return; }
+    if (b.dataset.go) { Object.assign(st, JSON.parse(DEF), { set: b.dataset.go, ret: !!b.dataset.ret, nw: !!b.dataset.new }); open(true); apply(); tog.scrollIntoView({ block: "start", behavior: reduce() ? "auto" : "smooth" }); return; }
+    if (b.dataset.set) { st.set = b.dataset.set; apply(); return; }
+    if (b.id === "qsi-new") { st.nw = !st.nw; apply(); return; }
+    if (b.id === "qsi-ret") { st.ret = !st.ret; apply(); return; }
+    if (b.id === "qsi-reset" || b.hasAttribute("data-reset")) { Object.assign(st, JSON.parse(DEF)); apply(); $("#qsi-q").focus(); return; }
+    if (b.dataset.jump) {
+      const e = ALLQ[+b.dataset.jump]; if (e.el.hidden) { Object.assign(st, JSON.parse(DEF)); apply(); }
+      e.el.open = true; e.el.scrollIntoView({ block: "start", behavior: reduce() ? "auto" : "smooth" }); e.el.querySelector("summary").focus({ preventScroll: true });
+    }
+  });
+  $("#qsi-q").addEventListener("input", (ev) => { st.q = ev.target.value.trim(); apply(); });
+  $("#qsi-q").addEventListener("keydown", (ev) => { if (ev.key === "Escape" && ev.target.value) { ev.stopPropagation(); ev.target.value = ""; st.q = ""; apply(); } });
+  $("#qsi-group").addEventListener("change", (ev) => { st.group = ev.target.value; apply(); });
+  $("#qsi-kind").addEventListener("change", (ev) => { st.kind = ev.target.value; apply(); });
+});
+</script>
+</section>

@@ -1,0 +1,1 @@
+{"case": "hard_real_revenue", "run": 2, "turns": [{"question": "What was our real revenue in the first ten days of October 2026?", "answer": "Revenue was 2,137.34 EUR for 1 to 10 October 2026 (ten days; gross revenue from non-cancelled orders). Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "query_metrics"]}]}

@@ -1,7 +1,7 @@
 """Fail when the dbt project strays from the agent-ready warehouse standard (docs/agent-ready-warehouse.md).
 
 Checks, offline against the manifests `dbt parse` writes (semantic/PLAN.md SL-3, SL-4):
-- naming: every model sits in a layer folder and builds in that layer's schema; a bronze, silver, gold,
+- naming: every model sits in a layer folder and builds in that layer's schema; a bronze, silver, gold, governed,
   exposed or legacy model carries the layer's prefix and its relation is the name without it; models, columns,
   semantic models, their entities and dimensions, and metrics are snake case;
 - trust: gold and exposed models, and only they, are public in the analytics group, each with an enforced
@@ -29,7 +29,7 @@ import re
 import sys
 from pathlib import Path
 
-PREFIXES = {"bronze": "brz_", "silver": "slv_", "gold": "gld_", "exposed": "exp_", "legacy": "lgc_"}
+PREFIXES = {"bronze": "brz_", "silver": "slv_", "gold": "gld_", "exposed": "exp_", "legacy": "lgc_", "governed": "gov_"}
 LAYERS = (*PREFIXES, "semantic", "migration")
 PUBLIC_LAYERS = {"gold", "exposed"}
 

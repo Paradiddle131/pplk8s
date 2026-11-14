@@ -1,0 +1,8 @@
+/* report-kit dot array: a share out of 100 as 100 marks in a 20-wide grid, in the order of the columns
+   that count them; a narrow container lets the marks shrink to fit. */
+.rk-dots { display: grid; grid-template-columns: repeat(var(--cols, 20), 9px); gap: 3px; width: max-content; max-width: 100% }
+.rk-dots i { display: block }
+@container (max-width: 30rem) {
+  .rk-dots { grid-template-columns: repeat(var(--cols, 20), minmax(0, 11px)); width: 100% }
+  .rk-dots i { width: 100%; height: auto; aspect-ratio: 1 }
+}

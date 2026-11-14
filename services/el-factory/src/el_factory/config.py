@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from el_factory.warehouse import IMPLEMENTATIONS
@@ -11,6 +11,9 @@ DEFAULT_OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
 DEFAULT_MAX_RUN_TIME = 45.0
 # NYC TLC trip files (D34); the one host the TLC page links to (issue #36).
 DEFAULT_TLC_BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data"
+# Bytes one BigQuery query job may bill: platform/gcp/free-path.yaml's
+# caps.bigquery_maximum_bytes_billed (1 GiB), as dbt's `gcp` output and the agent.
+DEFAULT_MAXIMUM_BYTES_BILLED = 1073741824
 
 
 class ConfigError(ValueError):
@@ -32,6 +35,12 @@ class Config:
     port: int
     # The warehouse implementation (warehouse.py, SL-19); warehouse_dsn is its Postgres DSN.
     warehouse: str = "postgres"
+    # BigQuery (ELF_WAREHOUSE=bigquery, warehouse_bigquery.py): the emulator's endpoint
+    # (BQ_API_ENDPOINT), an access token a proxy injects (GCP_ACCESS_TOKEN; else application
+    # default credentials), and every query job's byte cap (BQ_MAXIMUM_BYTES_BILLED).
+    bigquery_endpoint: str | None = None
+    gcp_access_token: str | None = field(default=None, repr=False)
+    bigquery_maximum_bytes_billed: int = DEFAULT_MAXIMUM_BYTES_BILLED
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] = os.environ) -> Config:
@@ -43,6 +52,11 @@ class Config:
         warehouse_dsn = env.get("WAREHOUSE_DSN", "").strip()
         if warehouse == "postgres" and not warehouse_dsn:
             raise ConfigError("WAREHOUSE_DSN is required")
+        if warehouse == "bigquery" and not env.get("GCP_PROJECT", "").strip():
+            raise ConfigError("GCP_PROJECT is required: the BigQuery warehouse loads that project")
+        maximum_bytes_billed = _int(env, "BQ_MAXIMUM_BYTES_BILLED", DEFAULT_MAXIMUM_BYTES_BILLED)
+        if maximum_bytes_billed < 1:
+            raise ConfigError("BQ_MAXIMUM_BYTES_BILLED must be at least 1")
         fail_rate = _float(env, "FAIL_RATE", 0.0)
         if not 0.0 <= fail_rate <= 1.0:
             raise ConfigError("FAIL_RATE must be between 0 and 1")
@@ -58,7 +72,7 @@ class Config:
             warehouse_dsn=warehouse_dsn,
             storage_emulator_host=env.get("STORAGE_EMULATOR_HOST") or None,
             gcs_bucket=env.get("GCS_BUCKET", "staging"),
-            gcp_project=env.get("GCP_PROJECT", "pplk8s"),
+            gcp_project=env.get("GCP_PROJECT", "").strip() or "pplk8s",
             page_size=page_size,
             fail_rate=fail_rate,
             max_run_time=max_run_time,
@@ -66,6 +80,9 @@ class Config:
             open_meteo_url=env.get("OPEN_METEO_URL", DEFAULT_OPEN_METEO_URL),
             tlc_base_url=env.get("TLC_BASE_URL", DEFAULT_TLC_BASE_URL),
             port=_int(env, "PORT", 8080),
+            bigquery_endpoint=env.get("BQ_API_ENDPOINT") or None,
+            gcp_access_token=env.get("GCP_ACCESS_TOKEN") or None,
+            bigquery_maximum_bytes_billed=maximum_bytes_billed,
         )
 
 

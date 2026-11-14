@@ -15,6 +15,7 @@ Each layer is one folder under `dbt/models/` and one schema in the warehouse, wh
 | gold | `gold` | `gld_` | Business aggregates at a stated grain | yes, `access: public` |
 | exposed | `exposed` | `exp_` | What a consumer reads: gold joined or reshaped for one use | yes, `access: public`, unless it holds personal data |
 | semantic | `semantic` | none | MetricFlow's `time_spine`, `metrics` (one row per metric) and `glossary` (one row per term) | `metrics` and `glossary` |
+| governed | `governed` | `gov_` | BigQuery only: the metrics as MetricFlow computes them, `<home>_daily` (additive, by day and dimensions) and `<home>_by_period` (the rest, one row per period), generated from MetricFlow's SQL by `scripts/build_governed.py`, never edited ([`semantic/PLAN.md`](../semantic/PLAN.md) SL-24) | SQL that cannot call MetricFlow: a fallback tool or a data agent |
 | legacy | `legacy` | `lgc_` | During a migration only: what a consumer read before the layers, rebuilt as it was, in the consumer's column names | no |
 | migration | `migration` | none | During a migration only: `parity`, each consumer's legacy table against its new model ([`migration-rehearsal.md`](migration-rehearsal.md)) | no |
 
@@ -23,7 +24,7 @@ The landing dataset (`ds_source`) belongs to the extraction service; dbt reads i
 
 ## Naming
 
-- A model in bronze, silver, gold, exposed or legacy starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
+- A model in bronze, silver, gold, governed, exposed or legacy starts with its layer's prefix, and its relation is the name without it: `gld_daily_sales` builds `gold.daily_sales` (`alias`).
   The prefix keeps names unique across the project; the dataset already says the layer, so the table does not repeat it.
   An ephemeral model builds no relation and needs only the prefix.
 - A dbt snapshot starts with `snp_` and builds in silver, its relation named for what it keeps (`snp_candidate_stages` builds `silver.candidate_stage_snapshots`); a silver model renames its columns for the semantic layer (semantic/PLAN.md SL-17).

@@ -1,0 +1,432 @@
+tools/list: 17 tools: compile_query, create_entry_group, delete_entry, delete_entry_link, execute_query, get_entry_group_iam_policy, get_glossary, get_operation, list_entries, lookup_context, lookup_entry, lookup_entry_links, search_entries, set_entry_group_iam_policy, update_entry_group, upsert_entry, upsert_entry_link
+--- compile_query
+{
+ "annotations": {
+  "destructiveHint": false,
+  "idempotentHint": true,
+  "openWorldHint": false,
+  "readOnlyHint": true
+ },
+ "description": "Compiles a query against a Knowledge Catalog semantic model into SQL, without running it.\n\nWHEN TO USE: Prefer this tool over writing raw SQL when a semantic model covers the question. The model defines the approved joins and metric calculations.\n\nCompilation reads no table data and always returns the same SQL for the same request.\n",
+ "inputSchema": {
+  "$defs": {
+   "Filter": {
+    "description": "A condition on one field.",
+    "properties": {
+     "expression": {
+      "description": "Required. A Looker filter expression for `field`, for example `shipped`, `-returned` (not returned), or `>30`.",
+      "type": "string"
+     },
+     "field": {
+      "description": "Required. The field to filter on, for example `orders.status`.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "field",
+     "expression"
+    ],
+    "type": "object"
+   },
+   "Sort": {
+    "description": "A sort applied to the query results.",
+    "properties": {
+     "descending": {
+      "description": "Optional. Whether to sort in descending order. Defaults to ascending.",
+      "type": "boolean"
+     },
+     "field": {
+      "description": "Required. The field to sort by. It must also appear in the request's `fields`. For example, `orders.created_date`.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "field"
+    ],
+    "type": "object"
+   }
+  },
+  "description": "Request message for CompileQuery.",
+  "properties": {
+   "fields": {
+    "description": "Required. The dimensions and metrics to return, in result order: dataset-qualified dimensions such as `customers.region` and metric names as defined in the model, such as `total_revenue`.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "filters": {
+    "description": "Optional. Conditions on model fields, all of which must hold. Set at most one filter per field.",
+    "items": {
+     "$ref": "#/$defs/Filter"
+    },
+    "type": "array"
+   },
+   "location": {
+    "description": "Required. The Google Cloud location used for billing and quota, for example `us-central1`.",
+    "type": "string"
+   },
+   "modelEntry": {
+    "description": "Required. The resource name of the Knowledge Catalog entry that contains the semantic model; inspect the entry for its exact dataset, dimension, and metric names before setting `fields`. Format: `projects/{project}/locations/{location}/entryGroups/{entry_group}/entries/{entry}`",
+    "type": "string"
+   },
+   "projectId": {
+    "description": "Required. The Google Cloud project ID used for billing and quota.",
+    "type": "string"
+   },
+   "rowLimit": {
+    "description": "Optional. The maximum number of rows the SQL returns. Unset or 0 means the default of 1000.",
+    "format": "int32",
+    "type": "integer"
+   },
+   "sorts": {
+    "description": "Optional. The sorts applied to the results, in priority order; every sort field must also appear in `fields`.",
+    "items": {
+     "$ref": "#/$defs/Sort"
+    },
+    "type": "array"
+   }
+  },
+  "required": [
+   "projectId",
+   "location",
+   "modelEntry",
+   "fields"
+  ],
+  "type": "object"
+ },
+ "name": "compile_query",
+ "outputSchema": {
+  "$defs": {
+   "Field": {
+    "description": "The mapping from one SQL result alias to the semantic field that produced it.",
+    "properties": {
+     "alias": {
+      "description": "The alias the field has in the SQL result.",
+      "type": "string"
+     },
+     "name": {
+      "description": "The semantic field name. For example, `orders.status`.",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "description": "Response message for CompileQuery.",
+  "properties": {
+   "fields": {
+    "description": "The selected fields, in result order, with their SQL result aliases.",
+    "items": {
+     "$ref": "#/$defs/Field"
+    },
+    "type": "array"
+   },
+   "sql": {
+    "description": "The compiled SQL statement.",
+    "type": "string"
+   },
+   "warnings": {
+    "description": "Non-fatal compiler warnings.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   }
+  },
+  "type": "object"
+ }
+}
+--- execute_query
+{
+ "annotations": {
+  "destructiveHint": false,
+  "idempotentHint": true,
+  "openWorldHint": false,
+  "readOnlyHint": true
+ },
+ "description": "Runs a query against a Knowledge Catalog semantic model on BigQuery and returns the rows, along with the SQL that ran.\n\nWHEN TO USE: Prefer this tool over writing and running raw SQL when a semantic model covers the question. The model defines the approved joins and metric calculations. Use compile_query instead when you only need the SQL.\n\nThe query runs as the caller, so it can only read data the caller can read, and BigQuery bills it to the project.\n",
+ "inputSchema": {
+  "$defs": {
+   "BigQuerySettings": {
+    "description": "The BigQuery settings for query execution.",
+    "properties": {
+     "datasetId": {
+      "description": "Optional. The ID of the dataset in `project_id` that holds tables the model leaves unqualified, for example `sales`.",
+      "type": "string"
+     },
+     "maximumBilledBytes": {
+      "description": "Optional. The most bytes the BigQuery job may bill. Unset or 0 means no limit.",
+      "format": "int64",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "Filter": {
+    "description": "A condition on one field.",
+    "properties": {
+     "expression": {
+      "description": "Required. A Looker filter expression for `field`, for example `shipped`, `-returned` (not returned), or `>30`.",
+      "type": "string"
+     },
+     "field": {
+      "description": "Required. The field to filter on, for example `orders.status`.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "field",
+     "expression"
+    ],
+    "type": "object"
+   },
+   "Sort": {
+    "description": "A sort applied to the query results.",
+    "properties": {
+     "descending": {
+      "description": "Optional. Whether to sort in descending order. Defaults to ascending.",
+      "type": "boolean"
+     },
+     "field": {
+      "description": "Required. The field to sort by. It must also appear in the request's `fields`. For example, `orders.created_date`.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "field"
+    ],
+    "type": "object"
+   }
+  },
+  "description": "Request message for ExecuteQuery.",
+  "properties": {
+   "bigquery": {
+    "$ref": "#/$defs/BigQuerySettings",
+    "description": "Optional. The BigQuery settings. Queries run on BigQuery."
+   },
+   "fields": {
+    "description": "Required. The dimensions and metrics to return, in result order: dataset-qualified dimensions such as `customers.region` and metric names as defined in the model, such as `total_revenue`.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   },
+   "filters": {
+    "description": "Optional. Conditions on model fields, all of which must hold. Set at most one filter per field.",
+    "items": {
+     "$ref": "#/$defs/Filter"
+    },
+    "type": "array"
+   },
+   "location": {
+    "description": "Required. The Google Cloud location used for billing and quota, for example `us-central1`. The query runs in this location.",
+    "type": "string"
+   },
+   "modelEntry": {
+    "description": "Required. The resource name of the Knowledge Catalog entry that contains the semantic model; inspect the entry for its exact dataset, dimension, and metric names before setting `fields`. Format: `projects/{project}/locations/{location}/entryGroups/{entry_group}/entries/{entry}` This name is typically obtained from the `dataplexEntry.name` field in the response of a `SearchEntries` call (for example when searching for semantic models) or `lookup_entry`.",
+    "type": "string"
+   },
+   "projectId": {
+    "description": "Required. The Google Cloud project ID used for billing and quota. The BigQuery job runs and is billed in this project.",
+    "type": "string"
+   },
+   "rowLimit": {
+    "description": "Optional. The maximum number of rows to return, at most 1000. Unset or 0 returns at most 50 rows.",
+    "format": "int32",
+    "type": "integer"
+   },
+   "sorts": {
+    "description": "Optional. The sorts applied to the results, in priority order; every sort field must also appear in `fields`.",
+    "items": {
+     "$ref": "#/$defs/Sort"
+    },
+    "type": "array"
+   }
+  },
+  "required": [
+   "projectId",
+   "location",
+   "modelEntry",
+   "fields"
+  ],
+  "type": "object"
+ },
+ "name": "execute_query",
+ "outputSchema": {
+  "$defs": {
+   "Column": {
+    "description": "Describes a single column in the result set.",
+    "properties": {
+     "name": {
+      "description": "The name of the column.",
+      "type": "string"
+     },
+     "type": {
+      "description": "The data type of the column.",
+      "enum": [
+       "DATA_TYPE_UNSPECIFIED",
+       "BIN",
+       "DATE",
+       "DATE_TIME",
+       "DISTANCE",
+       "LOCATION",
+       "NUMBER",
+       "STRING",
+       "TIER",
+       "YES_NO",
+       "ZIP_CODE",
+       "AVERAGE",
+       "AVERAGE_DISTINCT",
+       "COUNT",
+       "COUNT_DISTINCT",
+       "LIST",
+       "MAX",
+       "MEDIAN",
+       "MEDIAN_DISTINCT",
+       "MIN",
+       "PERCENT_OF_PREVIOUS",
+       "PERCENT_OF_TOTAL",
+       "PERCENTILE",
+       "PERCENTILE_DISTINCT",
+       "RUNNING_TOTAL",
+       "PERIOD_OVER_PERIOD",
+       "SUM",
+       "SUM_DISTINCT",
+       "INT"
+      ],
+      "type": "string",
+      "x-google-enum-descriptions": [
+       "The data type is unknown or has no Looker equivalent.",
+       "Numbers grouped into ranges.",
+       "Dates.",
+       "Dates and times.",
+       "The straight-line distance between two locations.",
+       "A latitude and longitude.",
+       "Numbers.",
+       "Text.",
+       "Numbers grouped into ranges, like `BIN`.",
+       "Yes or no (true or false) values.",
+       "ZIP codes.",
+       "A measure that averages values.",
+       "A measure that averages values without double counting rows that a join repeats.",
+       "A measure that counts rows.",
+       "A measure that counts distinct values.",
+       "A measure that lists distinct values.",
+       "A measure that takes the maximum value.",
+       "A measure that takes the median value.",
+       "A measure that takes the median value without double counting rows that a join repeats.",
+       "A measure that takes the minimum value.",
+       "A measure that gives the percent difference from the previous row.",
+       "A measure that gives each row's percent of the total.",
+       "A measure that takes the value at a given percentile.",
+       "A measure that takes the value at a given percentile without double counting rows that a join repeats.",
+       "A measure that gives the running total across rows.",
+       "A measure that refers to an aggregation from an earlier time period.",
+       "A measure that sums values.",
+       "A measure that sums values without double counting rows that a join repeats.",
+       "Whole numbers. A legacy Looker type, replaced by `NUMBER`."
+      ]
+     }
+    },
+    "type": "object"
+   },
+   "Field": {
+    "description": "The mapping from one SQL result alias to the semantic field that produced it.",
+    "properties": {
+     "alias": {
+      "description": "The alias the field has in the SQL result.",
+      "type": "string"
+     },
+     "name": {
+      "description": "The semantic field name. For example, `orders.status`.",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "Row": {
+    "description": "Represents a single row in the result set.",
+    "properties": {
+     "values": {
+      "description": "The values in the row, corresponding positionally to the columns.",
+      "items": {
+       "$ref": "#/$defs/Value"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "Value": {
+    "description": "Represents a single value within a row.",
+    "properties": {
+     "value": {
+      "description": "The cell value, represented in string format.",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "description": "Response message for ExecuteQuery.",
+  "properties": {
+   "columns": {
+    "description": "The columns, in result order, each with its name and data type.",
+    "items": {
+     "$ref": "#/$defs/Column"
+    },
+    "type": "array"
+   },
+   "fields": {
+    "description": "The selected fields, in result order, with their SQL result aliases.",
+    "items": {
+     "$ref": "#/$defs/Field"
+    },
+    "type": "array"
+   },
+   "rows": {
+    "description": "The rows, at most the request's `row_limit`. Each row's values are in the order of `columns`; a SQL NULL is the empty string.",
+    "items": {
+     "$ref": "#/$defs/Row"
+    },
+    "type": "array"
+   },
+   "sql": {
+    "description": "The SQL that ran.",
+    "type": "string"
+   },
+   "totalSize": {
+    "description": "The total number of rows the query produced, when the database reports it. It can exceed the number of rows returned.",
+    "format": "int64",
+    "type": "string"
+   },
+   "warnings": {
+    "description": "Non-fatal compiler warnings.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   }
+  },
+  "type": "object"
+ }
+}
+compile_query [us] full name, dbt fields: error An internal error has occurred (48d152cb-2846-49f3-bfb1-c4b4d8b7c8ca)
+compile_query [us] full name, Looker-style fields: error An internal error has occurred (0c350d39-b412-4804-bc67-d4c904fddd17)
+compile_query [us] full name, one metric: error An internal error has occurred (eb8c548e-3037-457b-91e0-e96243ace6bb)
+compile_query [us] bare entry id: error An internal error has occurred (de9f8972-69b5-4bcb-a17c-1fc47facf650)
+compile_query [us] dbt fully qualified name: error An internal error has occurred (3aa4c9c3-35d4-431c-bf91-3338a5351939)
+compile_query [us] a BigQuery table's entry: error An internal error has occurred (8209ebed-0532-451e-b3f2-15cb712ecf89)
+compile_query [us] no fields: error An internal error has occurred (ddda54a0-0611-4d7a-aa59-d9ebb2e66e21)
+compile_query [us] no modelEntry: error An internal error has occurred (3760efc9-3f4b-418b-8060-2e9f321b598a)
+compile_query [us] rowLimit as a string: error Request contains an invalid argument.
+compile_query [global] full name, dbt fields: error An internal error has occurred (3c780661-b30b-4f24-9aed-18e23d1b9215)
+compile_query [global] full name, Looker-style fields: error An internal error has occurred (deb9e28b-e192-47f8-9ce5-3b59fa4699a5)
+compile_query [global] full name, one metric: error An internal error has occurred (bd145668-7ded-4d73-b87e-be39da8508a4)
+compile_query [global] bare entry id: error An internal error has occurred (63691b7d-7476-4a40-b66a-4fcb09505c64)
+compile_query [global] dbt fully qualified name: error An internal error has occurred (54ffe7ce-bf15-4fd9-9987-a38dc31d9e7e)
+compile_query [global] a BigQuery table's entry: error An internal error has occurred (ccb9c8b5-07ef-4418-b565-9544aafc5c6f)
+compile_query [global] no fields: error An internal error has occurred (cd735d16-7081-415b-9541-624ecdb39871)
+compile_query [global] no modelEntry: error An internal error has occurred (11d2d4d9-c5ff-4d60-9430-e9a890c0a2c1)
+compile_query [global] rowLimit as a string: error Request contains an invalid argument.

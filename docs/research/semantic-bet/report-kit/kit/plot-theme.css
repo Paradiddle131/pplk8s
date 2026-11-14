@@ -1,0 +1,6 @@
+/* report-kit charts: an Observable Plot chart drawn by ReportKit.plot into a .rk-chart element, in the page's
+   one family at the chart size, its axes and grid in ink. */
+.rk-chart { margin: 0; font-size: var(--t-chart); min-width: 0 }
+.rk-chart svg { display: block; max-width: 100%; height: auto; overflow: visible }
+.rk-chart figcaption { font-size: var(--t-word); font-weight: 600; margin-bottom: var(--s2) }
+.rk-chart-plot { min-height: 4rem }

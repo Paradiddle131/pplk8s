@@ -1,0 +1,1 @@
+{"case": "hard_aov_last_month", "run": 3, "turns": [{"question": "It's 5 October 2026. What was our AOV last month?", "answer": "Average order value (EUR) for September 2026 (1 to 30 September, non-cancelled orders) was 114.39 EUR per order. Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "query_metrics"]}]}

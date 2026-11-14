@@ -43,7 +43,7 @@ SOURCES = (
     "synthetic_call_transcripts",
 )
 # ops: the agent's audit table (macros/agent_warehouse.sql); the emulator takes `create schema` but creates nothing.
-DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "legacy", "migration", "ops")
+DATASETS = ("ds_source", "bronze", "silver", "gold", "exposed", "semantic", "governed", "legacy", "migration", "ops")
 # Emptied before the copy: what a build reads or writes, never the audit (`ops`).
 EMPTIED = tuple(d for d in DATASETS if d != "ops")
 TYPES = {

@@ -1,0 +1,18 @@
+/* report-kit dialog: a modal <dialog> for a short, direct exchange (a method note, a definition too long for the
+   bubble), opened by showModal so the page behind is inert. Its head is the section head's (an h2 over the 2px ink
+   rule) with a close button beside it; its own headings go on from that h2 without skipping a level. It sits on the
+   page's ground over a scrim, with a full-ink edge in both themes, since a shadow does not lift on a dark ground. */
+.rk-dialog { width: min(40rem, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: var(--s5); border: 1px solid var(--ink);
+  border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; letter-spacing: inherit; box-shadow: var(--shadow);
+  overscroll-behavior: contain }
+.rk-dialog::backdrop { background: var(--scrim) }
+.rk-dialog-top { display: flex; gap: var(--s3); align-items: flex-start; justify-content: space-between; padding-bottom: var(--s3);
+  border-bottom: 2px solid var(--ink); margin-bottom: var(--s4) }
+.rk-dialog-top h2 { margin: 0; font-size: var(--t-head); font-weight: var(--w-head); line-height: 1.2 }
+.rk-dialog-top h2:focus { outline: none }
+.rk-dialog h3 { margin: var(--gap-item) 0 6px; font-size: var(--t-find); font-weight: var(--w-head); line-height: 1.25 }
+.rk-dialog :is(h2, h3) + p { margin-top: 0 }
+.rk-dialog p { max-width: var(--measure) }
+.rk-dialog-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; margin: -6px -6px 0 0; padding: 0; border: 0;
+  border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer }
+.rk-dialog-close:hover { background: var(--row) }

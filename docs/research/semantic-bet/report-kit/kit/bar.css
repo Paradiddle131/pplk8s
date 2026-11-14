@@ -1,0 +1,17 @@
+/* report-kit bar: the track is the whole 0-100 scale, the fill the value, the number beside it in the
+   number size. data-k on the fill takes a status colour; the default is the line colour. */
+.rk-bar { display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem; gap: var(--s3); align-items: center; margin-top: 6px }
+.rk-track { display: block; height: 10px; border-radius: 5px; background: var(--hair); overflow: hidden }
+.rk-fill { display: block; height: 100%; width: calc(var(--v) * 1%); border-radius: 5px; background: var(--line) }
+.rk-fill[data-k="ok"] { background: var(--ok) } .rk-fill[data-k="warn"] { background: var(--warn) }
+.rk-fill[data-k="bad"] { background: var(--bad) } .rk-fill[data-k="info"] { background: var(--info) }
+.rk-bar b, .rk-pic .rk-end { font: 700 var(--t-num)/1 var(--sans); text-align: right }
+.rk-pic { min-width: 0; padding-top: 2px }
+.rk-pic .rk-pl { display: block; font-weight: 600; line-height: 1.3 }
+.rk-pic ul:not(.rk-key) { list-style: none; margin: 0; padding: 0 }
+.rk-pic ul:not(.rk-key) > li + li { margin-top: var(--s3) }
+/* a meter: a number over a thin bar, for a cell in a dense grid where many values sit side by side */
+.rk-meter { display: grid; gap: 5px; min-width: 3.5rem }
+.rk-meter b { font: 700 var(--t-num)/1.2 var(--sans); text-align: right }
+.rk-meter .rk-track { height: 5px; border-radius: 3px }
+.rk-meter .rk-fill { border-radius: 3px }

@@ -1,0 +1,1 @@
+{"case": "median_order_value", "run": 2, "turns": [{"question": "What was the median order value on 1 October 2026?", "answer": "The semantic layer has no median order value metric, so I can't give that figure. The closest metric is Average order value (EUR), the average amount of a non-cancelled order, which I have not queried for 1 October 2026.", "calls": ["list_metrics"]}]}

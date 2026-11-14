@@ -6,8 +6,8 @@ import pytest
 
 from el_factory.errors import BadRequest, UpstreamError
 from el_factory.model import Interval
-from el_factory.remote_file import FileChanged, NotPublished, RangeReader, head
-from el_factory.sources.tlc import (
+from el_factory.tlc.remote_file import FileChanged, NotPublished, RangeReader, head
+from el_factory.tlc.source import (
     BIGINT,
     DOUBLE,
     INTEGER,

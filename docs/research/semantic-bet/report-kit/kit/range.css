@@ -1,0 +1,22 @@
+/* report-kit range: the whole 0-100 rail, the span from --lo to --hi with a disc at each end, each end's
+   number under it at --p (pushed apart by the generator when the two are close: spread()). data-k on .rk-span
+   takes a status colour (data-g a grade, with grade); the default is the line colour. In a narrow picture the
+   two numbers turn outward from their discs, the low one to the left and the high one to the right. */
+.rk-range { container-type: inline-size }
+.rk-range + .rk-range { margin-top: var(--s2) }
+.rk-ruler { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; margin: var(--s2) 0 3rem }
+.rk-range:last-child .rk-ruler { margin-bottom: 2.25rem }
+.rk-scale { position: relative; height: 14px; background: linear-gradient(var(--hair), var(--hair)) center / 100% 2px no-repeat }
+.rk-span { --c: var(--line); position: absolute; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; background: var(--c);
+  left: calc(var(--lo) * 1%); width: calc((var(--hi) - var(--lo)) * 1%) }
+.rk-span[data-k="ok"] { --c: var(--ok) } .rk-span[data-k="warn"] { --c: var(--warn) }
+.rk-span[data-k="bad"] { --c: var(--bad) } .rk-span[data-k="info"] { --c: var(--info) }
+.rk-span::before, .rk-span::after { content: ""; position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border-radius: 50%; background: var(--c) }
+.rk-span::before { left: 0 } .rk-span::after { left: 100% }
+.rk-at { position: absolute; top: calc(50% + .8rem); left: calc(var(--p) * 1%); transform: translateX(-50%) }
+.rk-end { display: block; padding: 2px 3px }
+@container (max-width: 20rem) {
+  .rk-at:has(~ .rk-at) { left: calc(var(--lo) * 1% + 7px); transform: translateX(-100%) }
+  .rk-at ~ .rk-at { left: calc(var(--hi) * 1% - 7px); transform: none }
+}

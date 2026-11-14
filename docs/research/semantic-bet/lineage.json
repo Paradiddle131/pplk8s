@@ -1,0 +1,76 @@
+{
+"exposed.channel_performance_daily": [
+"silver.ad_spend",
+"silver.bookings",
+"silver.campaigns",
+"silver.leads"
+],
+"exposed.daily_sales_with_weather": [
+"silver.hourly_weather",
+"silver.orders"
+],
+"exposed.net_sales_daily": [
+"silver.orders",
+"silver.returns"
+],
+"exposed.outreach_activation": [
+"silver.outreach_messages",
+"silver.partner_contacts",
+"silver.partners"
+],
+"exposed.sales_by_country_daily": [
+"silver.customers",
+"silver.orders"
+],
+"exposed.tlc_daily_trips_by_borough": [
+"silver.tlc_trips"
+],
+"gold.call_signals_daily": [
+"silver.call_signals"
+],
+"gold.candidates_in_stage_daily": [
+"silver.candidate_days",
+"silver.candidate_stages"
+],
+"gold.customer_actions_daily": [
+"silver.customer_actions"
+],
+"gold.customer_engagement_daily": [
+"silver.customer_actions"
+],
+"gold.customer_lifetime": [
+"silver.customers",
+"silver.orders"
+],
+"gold.daily_sales": [
+"silver.orders"
+],
+"gold.daily_weather": [
+"silver.hourly_weather"
+],
+"gold.lead_conversion_daily": [
+"silver.bookings",
+"silver.leads"
+],
+"gold.marketing_daily": [
+"silver.ad_spend",
+"silver.bookings",
+"silver.campaigns",
+"silver.leads"
+],
+"gold.partner_outreach_daily": [
+"silver.outreach_messages",
+"silver.outreach_replies"
+],
+"gold.recruitment_daily": [
+"silver.applications"
+],
+"gold.tlc_daily_trips": [
+"silver.tlc_trips"
+],
+"semantic.glossary": [],
+"semantic.metrics": [],
+"semantic.time_spine": [
+"semantic.time_spine"
+]
+}

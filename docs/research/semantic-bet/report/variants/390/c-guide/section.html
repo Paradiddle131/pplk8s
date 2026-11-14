@@ -1,0 +1,679 @@
+<section class="qg" id="question-sets" aria-labelledby="qg-h">
+<style>
+.qg { --qg-lab: 7.5rem; }
+.qg .qg-lede { max-width: 46rem; margin: 0 0 16px; }
+.qg h3 { font-family: var(--serif); font-size: 1.16rem; font-weight: 600; line-height: 1.3; margin: 34px 0 4px; letter-spacing: -.003em; }
+.qg .qg-sub { font-size: 15.5px; color: var(--ink-2); max-width: 46rem; margin: 0 0 12px; }
+.qg button { font: inherit; color: inherit; }
+.qg .id, .qg code { font-family: var(--code); font-size: 12.5px; letter-spacing: -.01em; color: var(--ink); }
+
+/* ---------- the three set profiles ---------- */
+.qg .qg-sets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 6px 0 0; }
+.qg .qg-set { border-top: 2px solid var(--ink); padding-top: 10px; min-width: 0; scroll-margin-top: 16px; }
+.qg .qg-shead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
+.qg .qg-shead h3 { margin: 0; font-size: 1.12rem; }
+.qg .qg-flag { display: inline-block; font-family: var(--label); font-size: 12.5px; line-height: 1.35; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 5px; white-space: nowrap; }
+.qg .qg-flag.on { border-color: var(--ink-2); color: var(--ink); }
+.qg .qg-flag.dash { border-style: dashed; border-color: var(--ink-3); }
+.qg a.qg-flag { text-decoration: none; }
+.qg a.qg-flag:hover { background: var(--row-band); }
+.qg .qg-what { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 10px; }
+.qg .qg-nums { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 0 22px; margin: 0 0 8px; padding: 8px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-family: var(--label); }
+.qg .qg-nums div { display: flex; flex-direction: column; }
+.qg .qg-nums b { font-size: 1.65rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.qg .qg-nums span { font-size: 13px; color: var(--ink-3); }
+.qg .qg-carry { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 0 0 8px; }
+.qg .qg-ret { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 0 0 10px; }
+.qg .qg-ret ul { list-style: none; margin: 2px 0 0; padding: 0; }
+.qg .qg-ret li { margin: 0; }
+.qg .qg-link { appearance: none; border: 0; background: none; padding: 2px 0; min-height: 24px; text-align: left; cursor: pointer; font-family: var(--label); font-size: 13.5px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.qg .qg-link:hover { text-decoration-color: var(--ink); }
+.qg .qg-link b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.qg .qg-mixh { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 0 0 3px; }
+.qg .qg-mix { display: grid; grid-template-columns: max-content minmax(40px, 1fr) 2.6em; gap: 2px 8px; align-items: center; font-family: var(--label); font-size: 13.5px; margin: 0 0 10px; }
+.qg .qg-mix .bar { height: 6px; background: var(--grid-major); position: relative; border-radius: 1px; }
+.qg .qg-mix .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink-3); border-radius: 1px; }
+.qg .qg-mix .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 400; }
+.qg .qg-meta { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 0 0 4px; line-height: 1.5; }
+.qg .qg-hash { appearance: none; border: 1px solid var(--rule); background: transparent; border-radius: 2px; padding: 0 5px; cursor: pointer; min-height: 24px; color: var(--ink); }
+.qg .qg-hash:hover { border-color: var(--ink-3); }
+.qg .qg-full { display: block; font-family: var(--code); font-size: 12px; word-break: break-all; color: var(--ink); background: var(--paper-2); padding: 4px 6px; margin: 4px 0 0; user-select: all; -webkit-user-select: all; }
+.qg .qg-full[hidden] { display: none; }
+.qg .qg-sup { font-size: 14px; line-height: 1.45; color: var(--ink-2); margin: 8px 0 0; padding: 6px 0 0 10px; border-left: 2px solid var(--ink-3); }
+.qg .qg-sup b { color: var(--ink); font-weight: 600; font-family: var(--label); font-size: 13.5px; }
+.qg .qg-sup a { color: var(--ink); }
+
+/* ---------- the field guide ---------- */
+.qg .qg-guide { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); gap: 0 32px; border-top: 1px solid var(--ink); padding-top: 10px; }
+.qg .qg-index { font-family: var(--label); }
+.qg .qg-band + .qg-band { margin-top: 12px; }
+.qg .qg-band h4 { font-family: var(--label); font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 3px; }
+.qg .qg-band h4 small { letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 12.5px; }
+.qg .qg-band ul { list-style: none; margin: 0; padding: 0; }
+.qg .qg-ix { appearance: none; border: 0; background: transparent; display: flex; width: 100%; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer; padding: 3px 6px; margin: 0 -6px; width: calc(100% + 12px); min-height: 28px; align-items: center; border-radius: 2px; font-family: var(--label); font-size: 14px; color: var(--ink); }
+.qg .qg-ix .c { color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 13px; }
+.qg .qg-ix:hover { background: var(--row-band); }
+.qg .qg-ix[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.qg .qg-ix[aria-pressed="true"] .c { color: var(--paper); }
+.qg .qg-entry { min-width: 0; }
+.qg .qg-ehead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.qg .qg-ehead h4 { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; margin: 0; line-height: 1.25; }
+.qg .qg-ehead h4 .k { font-family: var(--label); font-size: 13px; font-weight: 400; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; margin-right: 8px; vertical-align: 2px; }
+.qg .qg-where { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.qg .qg-def { font-size: 16.5px; line-height: 1.5; margin: 4px 0 2px; max-width: 44rem; }
+.qg .qg-note { font-size: 14.5px; color: var(--ink-2); margin: 0 0 4px; max-width: 44rem; }
+.qg .qg-step { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 0; font-family: var(--label); font-size: 14px; color: var(--ink-2); }
+.qg .qg-step .pos { font-variant-numeric: tabular-nums; min-width: 6.5em; }
+.qg .qg-btn { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 3px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; gap: 4px; }
+.qg .qg-btn:hover:not(:disabled) { background: var(--row-band); }
+.qg .qg-btn:disabled { color: var(--ink-3); border-color: var(--rule); cursor: default; }
+.qg .qg-step .qg-link { margin-left: auto; }
+
+/* ---------- one question: the specimen card ---------- */
+.qg .qg-card { border-top: 1px solid var(--ink-2); border-bottom: 1px solid var(--rule); background: var(--paper-2); padding: 10px 12px 12px; margin: 8px 0 0; }
+.qg .qg-cmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 0 0 6px; }
+.qg .qg-dl { display: grid; grid-template-columns: var(--qg-lab) minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.qg .qg-dl > dt { font-family: var(--label); font-size: 13px; color: var(--ink-3); padding-top: 2px; }
+.qg .qg-dl > dd { margin: 0; min-width: 0; }
+.qg .qg-turns { list-style: none; margin: 0; padding: 0; }
+.qg .qg-turns > li + li { margin-top: 8px; }
+.qg .qg-turns.conv > li { position: relative; padding-left: 26px; }
+.qg .qg-turns.conv > li::before { content: attr(data-n); position: absolute; left: 0; top: 2px; font-family: var(--label); font-size: 12px; color: var(--ink-3); width: 18px; text-align: right; }
+.qg .qg-turns.conv > li + li::after { content: ""; position: absolute; left: 11px; top: -8px; height: 8px; border-left: 1px solid var(--rule); }
+.qg .qg-qtext { font-family: var(--serif); font-size: 16.5px; line-height: 1.45; margin: 0; color: var(--ink); }
+.qg .qg-exp { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 2px 0 0; }
+.qg .qg-exp .v { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qg .qg-exp .alt { color: var(--ink-3); font-size: 13px; }
+.qg .qg-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-family: var(--label); font-size: 13px; }
+.qg .qg-chips .by { color: var(--ink-3); margin-right: 2px; }
+.qg .qg-chip { appearance: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; padding: 0 6px; line-height: 1.5; min-height: 24px; cursor: pointer; font-family: var(--label); font-size: 13px; color: var(--ink); }
+.qg .qg-chip:hover { border-color: var(--ink-3); }
+.qg .qg-chip.sql { border-style: solid; border-color: var(--ink-3); }
+.qg .qg-chip.cur { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.qg .qg-plain { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 0; }
+.qg .qg-plain b { color: var(--ink); font-weight: 600; }
+.qg .qg-miss { color: var(--ink); }
+.qg .qg-miss::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--cw); margin-right: 6px; vertical-align: 0; transform: rotate(45deg); }
+
+/* the outcome strip: one column per setup and model, three runs each, the unit plate's squares */
+.qg .qg-strip { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 3px 2px 2px; margin: 0 -2px; outline: none; border-radius: 2px; cursor: crosshair; }
+.qg .qg-strip:focus-visible { box-shadow: 0 0 0 2px var(--mf); }
+.qg .qg-strip svg { display: block; overflow: visible; }
+.qg .qg-sum { display: flex; flex-wrap: wrap; gap: 2px 14px; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+.qg .qg-sum .k { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.qg .qg-sum .k b { color: var(--ink); font-weight: 600; }
+.qg .qg-read { font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin: 3px 0 0; min-height: 1.45em; }
+.qg .qg-read .id { font-size: 12.5px; }
+.qg .qg-read b { color: var(--ink); font-weight: 600; }
+
+/* ---------- every question ---------- */
+.qg .qg-all { margin: 30px 0 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.qg .qg-all > summary { cursor: pointer; list-style: none; padding: 10px 0; display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+.qg .qg-all > summary::-webkit-details-marker { display: none; }
+.qg .qg-all > summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); transform: rotate(-45deg); align-self: center; margin: 0 4px 0 2px; flex: none; transition: transform .12s ease-out; }
+.qg .qg-all[open] > summary::before { transform: rotate(45deg); }
+.qg .qg-all > summary .t { font-family: var(--serif); font-size: 1.16rem; font-weight: 600; }
+.qg .qg-all > summary .s { font-family: var(--label); font-size: 14px; color: var(--ink-2); }
+.qg .qg-all > summary:hover .t { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--ink-3); }
+.qg .qg-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 2px 0 10px; }
+.qg .qg-search { flex: 1 1 15rem; min-width: 0; max-width: 24rem; display: flex; align-items: center; gap: 6px; border: 1px solid var(--ink-2); border-radius: 3px; padding: 0 8px; min-height: 36px; background: var(--paper); }
+.qg .qg-search svg { flex: none; color: var(--ink-3); }
+.qg .qg-search input { appearance: none; border: 0; background: transparent; color: var(--ink); font-family: var(--label); font-size: 15px; width: 100%; min-height: 34px; outline: none; padding: 0; }
+.qg .qg-search input::placeholder { color: var(--ink-3); opacity: 1; }
+.qg .qg-search:focus-within { box-shadow: 0 0 0 2px var(--mf); border-color: transparent; }
+.qg .qg-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; font-family: var(--label); font-size: 14px; }
+.qg .qg-seg button { appearance: none; border: 0; background: transparent; color: var(--ink); padding: 3px 10px; cursor: pointer; min-height: 32px; font-family: var(--label); font-size: 14px; }
+.qg .qg-seg button + button { border-left: 1px solid var(--ink-2); }
+.qg .qg-seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.qg .qg-seg button:focus-visible { outline-offset: -3px; }
+.qg .qg-tagf { display: inline-flex; align-items: center; gap: 6px; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); }
+.qg .qg-tagf[hidden] { display: none; }
+.qg .qg-count { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 0 0 4px; font-variant-numeric: tabular-nums; }
+.qg .qg-list { list-style: none; margin: 0 0 10px; padding: 0; border-top: 1px solid var(--ink-2); }
+.qg .qg-list > li { border-bottom: 1px solid var(--grid-major); }
+.qg .qg-row { appearance: none; border: 0; background: transparent; width: 100%; text-align: left; cursor: pointer; display: grid; grid-template-columns: 1.1rem minmax(11rem, 15rem) minmax(0, 1fr) minmax(6rem, 9rem); gap: 2px 14px; padding: 7px 4px; align-items: baseline; color: var(--ink); }
+.qg .qg-row:hover { background: var(--row-band); }
+.qg .qg-row .ar { width: 7px; height: 7px; border-right: 1.5px solid var(--ink-2); border-bottom: 1.5px solid var(--ink-2); transform: rotate(-45deg); align-self: center; margin-left: 2px; transition: transform .12s ease-out; }
+.qg .qg-row[aria-expanded="true"] .ar { transform: rotate(45deg); }
+.qg .qg-row .who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.qg .qg-row .who code { overflow-wrap: anywhere; }
+.qg .qg-row .sets { font-family: var(--label); font-size: 12.5px; color: var(--ink-3); }
+.qg .qg-row .txt { font-family: var(--serif); font-size: 15px; line-height: 1.4; min-width: 0; }
+.qg .qg-row .txt .more { font-family: var(--label); font-size: 12.5px; color: var(--ink-3); }
+.qg .qg-row .st { font-family: var(--label); font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; text-align: right; }
+.qg .qg-row .st .v { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.qg .qg-list > li.retired .txt, .qg .qg-list > li.retired .who code { color: var(--ink-3); }
+.qg .qg-list > li > .qg-card { margin: 0 0 10px 0; }
+.qg mark { background: var(--paper-2); color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink-3); padding: 0; }
+.qg .qg-empty { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); padding: 12px 0; }
+
+.qg .qg-stabs { display: none; }
+@media (max-width: 760px) {
+  .qg .qg-sets { grid-template-columns: 1fr; gap: 24px; }
+  .qg .qg-stabs { display: inline-flex; margin: 0 0 10px; }
+  .qg .qg-stabs + .qg-sets .qg-set:not(.cur) { display: none; }
+  .qg .qg-guide { grid-template-columns: 1fr; }
+  .qg .qg-band ul { display: flex; flex-wrap: wrap; gap: 4px; }
+  .qg .qg-ix { width: auto; margin: 0; border: 1px solid var(--rule); padding: 2px 8px; gap: 6px; min-height: 30px; }
+  .qg .qg-ix[aria-pressed="true"] { border-color: var(--ink); }
+  .qg .qg-entry { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 10px; }
+  .qg .qg-row { grid-template-columns: 1.1rem minmax(0, 1fr); }
+  .qg .qg-row .txt, .qg .qg-row .st { grid-column: 2; }
+  .qg .qg-row .st { justify-content: flex-start; text-align: left; }
+}
+@media (max-width: 560px) {
+  .qg .qg-dl { grid-template-columns: 1fr; gap: 2px; }
+  .qg .qg-dl > dd + dt { margin-top: 8px; }
+  .qg .qg-card { padding: 8px 10px 10px; margin-left: -4px; margin-right: -4px; }
+  .qg .qg-step .qg-link { margin-left: 0; }
+  .qg .qg-nums { gap: 0 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qg .qg-all > summary::before, .qg .qg-row .ar { transition: none; }
+}
+</style>
+
+<h2 id="qg-h">The questions behind the numbers</h2>
+<p class="qg-lede">Every figure above scores answers to a fixed set of questions about one test shop. Each set was frozen before any setup ran on it and is never edited: a question found faulty is retired, not rewritten. Here is what each set holds, what makes a question in it hard, and, folded away at the end, every question with its expected answer.</p>
+<div class="qg-seg qg-stabs" role="group" aria-label="Question set" id="qg-stabs"></div>
+<div class="qg-sets" id="qg-sets"></div>
+
+<h3 id="qg-guide-h">What makes a question hard: a field guide</h3>
+<p class="qg-sub">Pick a kind of question to see what it is and a real one from the sets: its expected answer, whether the obvious SQL misses, and how every setup fared on each run. Step through to the next example of the same kind.</p>
+<div class="qg-guide">
+  <nav class="qg-index" id="qg-index" aria-labelledby="qg-guide-h"></nav>
+  <div class="qg-entry" id="qg-entry">
+    <div id="qg-ehead"></div>
+    <div class="qg-step" id="qg-step">
+      <button type="button" class="qg-btn" data-step="-1" aria-label="Previous example"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button>
+      <span class="pos" id="qg-pos" aria-live="polite"></span>
+      <button type="button" class="qg-btn" data-step="1" aria-label="Next example">Next<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="qg-link" id="qg-seeall"></button>
+    </div>
+    <div id="qg-spec"></div>
+  </div>
+</div>
+
+<details class="qg-all" id="qg-all">
+  <summary><span class="t">Every question</span><span class="s" id="qg-allsub"></span></summary>
+  <div class="qg-tools">
+    <label class="qg-search"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search the questions</span><input type="search" id="qg-q" placeholder="Search words, ids, kinds" autocomplete="off" spellcheck="false"></label>
+    <div class="qg-seg" role="group" aria-label="Set" id="qg-fset"></div>
+    <div class="qg-seg" role="group" aria-label="Status" id="qg-fstat"></div>
+    <span class="qg-tagf" id="qg-tagf" hidden></span>
+  </div>
+  <p class="qg-count" id="qg-count" aria-live="polite"></p>
+  <ol class="qg-list" id="qg-list"></ol>
+</details>
+
+<script>
+(function () {
+  "use strict";
+  window.reportReady(() => {
+    const D = window.REPORT || {};
+    const root = document.getElementById("question-sets");
+    if (!root) return;
+    const QS = D.questionSets || {};
+    const SETS = Object.keys(QS);
+    const $ = (s) => root.querySelector(s);
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    if (!SETS.length) { $("#qg-sets").innerHTML = `<p class="qg-plain">No question set is in the data yet.</p>`; return; }
+    const reduce = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+
+    /* ---------- words (definitions only; every number comes from the data) ---------- */
+    const TERMS = new Set((D.terms || []).map((t) => t.key));
+    const term = (key, text) => (TERMS.has(key) ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text}</span>` : text);
+    const HELP = {}; (D.groupsAll || []).forEach((g) => (HELP[g.key] = g.help));
+    const GROUP = {
+      covered: { name: "Covered", term: "covered", def: HELP.covered || "A metric of the semantic layer answers it." },
+      trap: { name: "Hidden-rule", term: "hidden-rule", def: HELP.trap || "Covered, but the obvious SQL gives another number: a business rule the table does not show." },
+      composable: { name: "Composable", def: "No single metric answers it, but arithmetic over at most three metric results does: a ratio, a difference or a share of two totals." },
+      uncovered: { name: "Uncovered", term: "uncovered", def: HELP.uncovered || "No metric answers it; only SQL over the tables can." },
+      conversation: { name: "Conversation", term: "conversation", def: HELP.conversation || "A follow-up or an ambiguous term inside a multi-turn chat." },
+      distractor: { name: "Distractor", def: HELP.distractor || "Covered, with a legacy table in reach that gives another number." },
+      planted: { name: "Planted", def: HELP.planted || "Covered, with instruction-like text planted in the data; the answer must ignore it." },
+    };
+    const KIND = {
+      jargon: { name: "Jargon", def: "Asked in business shorthand (AOV, CPA, MQL, ROAS) that no table or column spells out." },
+      period: { name: "Period", def: "Names a relative or fiscal period (last month, so far this quarter, a fiscal year starting in February) that has to become exact dates." },
+      ambiguous_followup: { name: "Ambiguity", def: "A follow-up that leans on the previous answer, or a term with more than one meaning that the answer must spell out." },
+      implicit: { name: "Implicit definition", def: "Leaves a definition unsaid (what counts as real revenue, which orders count) that the answer has to supply." },
+      segment: { name: "Segment", def: "Compares or ranks segments: channels, countries, customers." },
+      multi_metric: { name: "Several metrics", def: "Needs more than one metric at once, or a metric of a metric." },
+      multi_step: { name: "Multi-step", def: "Needs one result before the next step can be asked." },
+    };
+    const RUBRIC = {
+      fan_out_join: { name: "Fan-out join", def: "A join that fans out (orders to returns, sessions to events) and counts the same row twice." },
+      distinct_across_join: { name: "Distinct across a join", def: "A distinct count that a join silently inflates." },
+      ratio_of_sums: { name: "Ratio of sums", def: "A ratio of two sums, where the obvious mean of daily ratios gives another number." },
+      window: { name: "Window", def: "A window over rows: a rank with ties, a running total, the gap between events, each customer's first order." },
+      median_percentile: { name: "Median or percentile", def: "A median or a percentile, which no sum or average gives." },
+      sessions_gaps_islands: { name: "Gaps and islands", def: "Sessions, gaps and islands: runs of events split by quiet time." },
+      cohort_retention: { name: "Cohort", def: "A cohort or retention measured over two periods." },
+      anti_join: { name: "Anti-join", def: "The customers or days where something never happened, which an inner join drops." },
+      date_spine: { name: "Date spine", def: "Days with nothing on them still count, as zero, so the table alone has too few days." },
+      fiscal_timezone: { name: "Fiscal or timezone boundary", def: "A fiscal calendar or a timezone boundary that moves rows into another period." },
+    };
+    const CLASS = { expected_sql: "a wrong expected SQL", fixture: "a fixture that fixes the answer", readings: "more than one reasonable reading", scorer: "a scorer that misjudges answers" };
+    const OUT = { "0": "right", "1": "declined", "2": "wrong", "3": "unclear", "4": "confident-wrong", ".": "not run yet" };
+    const ROLE = { decides: "free model, decides", check: "Claude, the check", gemini: "Gemini in Google's agent", cc: "Claude Code, comparison only" };
+    const pretty = (k) => String(k).replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+    // The register's reasons carry tracker numbers and file names the page leaves out.
+    const clean = (s) => String(s || "").replace(/\s*\(#\d+\)/g, "").replace(/\b[\w-]+\.(sql|ya?ml|py|jsonl?|md)\b/g, "the test data").replace(/\s{2,}/g, " ").trim();
+    const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const date = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); return m ? `${+m[3]} ${MON[+m[2] - 1]} ${m[1]}` : esc(d || "not recorded"); };
+    const short = (s) => (QS[s] && QS[s].label ? QS[s].label : s).replace(/ set\b/i, "");
+    const lower = (s) => (QS[s] && QS[s].label ? QS[s].label : s).replace(/^./, (c) => c.toLowerCase());
+
+    /* ---------- one record per question id, across the sets that hold it ---------- */
+    const Q = new Map(); let n = 0;
+    SETS.forEach((s) => (QS[s].questions || []).forEach((q) => {
+      let m = Q.get(q.id);
+      if (!m) { m = { id: q.id, turns: q.turns || [], expected: q.expected || [], kinds: [], rubric: [], naive: false, newIn: [], in: [], idx: n++ }; Q.set(q.id, m); }
+      (q.kinds || []).forEach((k) => { if (!m.kinds.includes(k)) m.kinds.push(k); });
+      (q.rubric || []).forEach((k) => { if (!m.rubric.includes(k)) m.rubric.push(k); });
+      m.naive = m.naive || !!q.naive;
+      if (q.new) m.newIn.push(s);
+      const scored = QS[s].groups && QS[s].groups[q.id];
+      m.in.push({ set: s, groups: (q.retired ? q.groups : scored || q.groups) || [], retired: q.retired || null });
+    }));
+    const QL = [...Q.values()];
+    QL.forEach((m) => {
+      m.live = m.in.filter((x) => !x.retired);
+      m.retired = m.live.length ? null : m.in[0].retired;
+      m.groups = []; (m.live.length ? m.live : m.in).forEach((x) => x.groups.forEach((g) => { if (!m.groups.includes(g)) m.groups.push(g); }));
+    });
+
+    /* ---------- outcomes, for sets the report shows ---------- */
+    const ladder = {}; (D.ladder || []).forEach((L, i) => L.arms.forEach((a, j) => (ladder[a] = [i, j])));
+    const li = (r) => ladder[r.arm] || [99, 0];
+    const rowCache = {}, caseIdx = {};
+    function rowsOf(s) {
+      if (!rowCache[s]) rowCache[s] = (D.sets[s].rows || []).slice().sort((a, b) => li(a)[0] - li(b)[0] || li(a)[1] - li(b)[1] || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs);
+      return rowCache[s];
+    }
+    function outcomeOf(m) {
+      if (m.retired) return null;
+      for (const x of m.live) {
+        const s = x.set, S = D.sets && D.sets[s];
+        if (!S || !QS[s].shown) continue;
+        if (!caseIdx[s]) { caseIdx[s] = new Map(); (S.cases || []).forEach((c, i) => caseIdx[s].set(c.id, i)); }
+        const ci = caseIdx[s].get(m.id);
+        if (ci == null) continue;
+        const cols = rowsOf(s).map((r) => ({ r, u: (r.units || "").slice(ci * 3, ci * 3 + 3).padEnd(3, ".") }));
+        const c = { "0": 0, "1": 0, "2": 0, "3": 0, "4": 0, ".": 0 };
+        cols.forEach((k) => [...k.u].forEach((ch) => (c[ch in c ? ch : "."]++)));
+        const ran = cols.length * 3 - c["."];
+        const allRight = cols.filter((k) => k.u.replace(/\./g, "") && /^[0.]+$/.test(k.u)).length;
+        return { set: s, cols, c, ran, p: ran ? c["0"] / ran : null, allRight };
+      }
+      return null;
+    }
+    QL.forEach((m) => (m.outcome = outcomeOf(m)));
+
+    /* ---------- the entries of the guide, from what the data holds ---------- */
+    const countIn = (pred) => { const per = {}; let all = 0; QL.forEach((m) => { if (m.retired || !pred(m)) return; all++; m.live.forEach((x) => (per[x.set] = (per[x.set] || 0) + 1)); }); return { all, per }; };
+    const has = { group: (m, k) => m.live.some((x) => x.groups.includes(k)), kind: (m, k) => m.kinds.includes(k), rubric: (m, k) => m.rubric.includes(k) };
+    const seen = { group: [], kind: [], rubric: [] };
+    QL.forEach((m) => { m.groups.forEach((g) => !seen.group.includes(g) && seen.group.push(g)); m.kinds.forEach((g) => g !== "sql_hard" && !seen.kind.includes(g) && seen.kind.push(g)); m.rubric.forEach((g) => !seen.rubric.includes(g) && seen.rubric.push(g)); });
+    const ordered = (dict, keys) => [...Object.keys(dict).filter((k) => keys.includes(k)), ...keys.filter((k) => !(k in dict))];
+    const DICT = { group: GROUP, kind: KIND, rubric: RUBRIC };
+    const BANDS = [
+      { type: "group", title: "Where the answer lives", sub: "groups" },
+      { type: "kind", title: "How it is asked", sub: "the hard set's kinds" },
+      { type: "rubric", title: "What the SQL must get right", sub: "" },
+    ];
+    const ENTRIES = [];
+    BANDS.forEach((B) => {
+      B.entries = ordered(DICT[B.type], seen[B.type]).map((k) => {
+        const d = DICT[B.type][k] || { name: pretty(k), def: `Questions the set labels “${pretty(k).toLowerCase()}”.` };
+        const ct = countIn((m) => has[B.type](m, k));
+        return { type: B.type, key: k, name: d.name, term: d.term, def: d.def, ct };
+      }).filter((E) => E.ct.all > 0);
+      ENTRIES.push(...B.entries);
+    });
+    const sqlHard = countIn((m) => m.kinds.includes("sql_hard"));
+    const rb = BANDS[2]; rb.sub = sqlHard.all ? `${sqlHard.all} questions` : "";
+    const entryOf = (type, key) => ENTRIES.find((E) => E.type === type && E.key === key);
+
+    // Examples in a fixed, data-driven order: a question the report has runs on first, then the
+    // plainest member of a group (fewest other groups), then the one that splits the setups most
+    // (right share nearest one half), then the most confident-wrong runs, then the sets' own order.
+    function examples(E) {
+      const list = QL.filter((m) => !m.retired && has[E.type](m, E.key));
+      const split = (m) => (m.outcome && m.outcome.p != null ? Math.min(m.outcome.p, 1 - m.outcome.p) : -1);
+      return list.sort((a, b) => (!!b.outcome - !!a.outcome)
+        || (E.type === "group" ? a.groups.length - b.groups.length : 0)
+        || split(b) - split(a)
+        || ((b.outcome ? b.outcome.c["4"] : 0) - (a.outcome ? a.outcome.c["4"] : 0))
+        || a.idx - b.idx);
+    }
+
+    /* ---------- numbers ---------- */
+    const fmt = (v) => { const d = Math.abs(v) >= 1 ? 2 : 3; return Number(v.toFixed(d)).toLocaleString("en-GB", { maximumFractionDigits: d }); };
+    const exact = (v) => String(+v.toPrecision(12));
+    function formsHTML(forms) {
+      if (!forms || !forms.length) return "";
+      if (forms.length === 2 && Math.abs(forms[1] - forms[0] * 100) <= 1e-6 * Math.max(1, Math.abs(forms[1]))) {
+        return `<span class="v" title="${exact(forms[0])}">${fmt(forms[1])}%</span> <span class="alt">(${fmt(forms[0])} as a fraction)</span>`;
+      }
+      return forms.map((f) => `<span class="v" title="${exact(f)}">${fmt(f)}</span>`).join(` <span class="alt">or</span> `);
+    }
+    function expHTML(meanings) {
+      if (!meanings || !meanings.length) return `<span class="alt">No number: the answer must quote how the figure was computed.</span>`;
+      if (meanings.length === 1) return `Expected ${formsHTML(meanings[0])}`;
+      return `Must carry each of ${meanings.map(formsHTML).join(`<span class="alt">,</span> `)}`;
+    }
+
+    /* ---------- the outcome strip ---------- */
+    const STRIP = new WeakMap();
+    const famC = (f) => `var(--${["da", "gt", "mf", "ref"].includes(f) ? f : "ink-3"})`;
+    function swatch(ch, sz) {
+      sz = sz || 12;
+      const b = ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`;
+      return `<svg width="${sz}" height="${sz}" viewBox="0 0 12 12" aria-hidden="true">${b}</svg>`;
+    }
+    const sq = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
+    function stripHTML(o, uid) {
+      const P = 10, s = 8, GAP = 6, H = 3 * P;
+      const xs = []; let x = 1, prev = null;
+      o.cols.forEach((k) => { const L = li(k.r)[0]; if (prev !== null && L !== prev) x += GAP; xs.push(x); x += P; prev = L; });
+      const W = x + 1; const F = {}, K = {};
+      const add = (t, c, d) => { t[c] = (t[c] || "") + d; };
+      const ring = (x0, y0) => sq(x0, y0, s, s) + sq(x0 + 1, y0 + 1, s - 2, s - 2);
+      o.cols.forEach((k, j) => {
+        const x0 = xs[j];
+        for (let i = 0; i < 3; i++) {
+          const y0 = H - (i + 1) * P + 2, ch = k.u[i] || ".";
+          if (ch === ".") add(F, "o-none", sq(x0 + s / 2 - 1, y0 + s / 2 - 1, 2, 2));
+          else if (ch === "0") add(F, "o-right", sq(x0, y0, s, s));
+          else if (ch === "1") add(K, "o-decl", ring(x0, y0));
+          else if (ch === "2") { add(F, "o-wrong", sq(x0, y0 + s / 2, s, s / 2)); add(K, "o-wrong", ring(x0, y0)); }
+          else if (ch === "3") { add(K, "o-decl", ring(x0, y0)); add(F, "o-decl", sq(x0 + s / 2 - .75, y0 + s / 2 - .75, 1.5, 1.5)); }
+          else add(F, "o-cw", sq(x0 - .5, y0 - .5, s + 1, s + 1));
+        }
+      });
+      const paths = Object.entries(F).filter(([, d]) => d).map(([c, d]) => `<path d="${d}" fill="var(--${c})"/>`).join("")
+        + Object.entries(K).map(([c, d]) => `<path d="${d}" fill="var(--${c})" fill-rule="evenodd"/>`).join("");
+      const ticks = o.cols.map((k, j) => `<rect x="${xs[j]}" y="${H + 4}" width="${s}" height="2.5" fill="${famC(k.r.family)}"/>`).join("");
+      const svg = `<svg width="${W}" height="${H + 8}" viewBox="0 0 ${W} ${H + 8}" aria-hidden="true"><rect class="qg-hl" x="0" y="0" width="${P}" height="${H + 8}" fill="none" stroke="var(--ink)" stroke-width="1" visibility="hidden" rx="1"/>${paths}${ticks}</svg>`;
+      return { svg, xs, P };
+    }
+    function outcomesHTML(m, uid) {
+      const o = m.outcome;
+      if (m.retired) return `<p class="qg-plain">Retired, so no setup is scored on it; its runs stay in the logs.</p>`;
+      if (!o) {
+        const where = m.live.map((x) => x.set);
+        const why = where.every((s) => QS[s] && !QS[s].shown) ? `${where.map((s) => esc(QS[s].label)).join(" and ")} ${where.length > 1 ? "are" : "is"} kept in the appendix, not in the figures.` : "No run of it is in the figures yet.";
+        return `<p class="qg-plain">${why}</p>`;
+      }
+      const st = stripHTML(o, uid);
+      const order = ["0", "1", "2", "3", "4"];
+      const sum = order.filter((ch) => o.c[ch]).map((ch) => `<span class="k">${swatch(ch)}<b>${o.c[ch]}</b> ${OUT[ch]}</span>`).join("")
+        + (o.c["."] ? `<span class="k">${swatch(".")}<b>${o.c["."]}</b> not run yet</span>` : "");
+      const intro = `${o.cols.length} setup and model rows on the ${esc(lower(o.set))}, ${o.ran} runs; <b>${o.allRight}</b> ${o.allRight === 1 ? "row" : "rows"} right on every run.`;
+      const html = `<p class="qg-plain">${intro}</p>
+        <div class="qg-strip" tabindex="0" data-uid="${uid}" role="group" aria-label="Outcomes per setup and model, cheapest rung first; arrow keys read each column" aria-describedby="${uid}-read">${st.svg}</div>
+        <div class="qg-sum">${sum}</div>
+        <p class="qg-read" id="${uid}-read" aria-live="polite">One column per setup and model, cheapest rung on the left, three runs stacked; point at a column or use the arrow keys.</p>`;
+      return { html, st };
+    }
+    function wireStrips(box) {
+      box.querySelectorAll(".qg-strip").forEach((el) => {
+        const meta = STRIP.get(el); if (!meta) return;
+        const { o, st } = meta; const svg = el.querySelector("svg"); const hl = svg.querySelector(".qg-hl");
+        const read = root.querySelector("#" + el.getAttribute("aria-describedby"));
+        const idle = read.innerHTML; let cur = -1;
+        const show = (i) => {
+          cur = Math.max(0, Math.min(o.cols.length - 1, i)); const k = o.cols[cur];
+          hl.setAttribute("x", st.xs[cur] - 1); hl.setAttribute("visibility", "visible");
+          const runs = [...k.u].map((ch) => OUT[ch] || ch);
+          read.innerHTML = `<span class="id" data-setup="${esc(k.r.arm)}" tabindex="0">${esc(k.r.arm)}</span> on <b>${esc(k.r.modelLabel)}</b> <span>(${esc(ROLE[k.r.role] || "model")})</span>: ${runs.map(esc).join(", ")}`;
+        };
+        const hide = () => { cur = -1; hl.setAttribute("visibility", "hidden"); read.innerHTML = idle; };
+        const near = (ev) => { const r = svg.getBoundingClientRect(); const x = ev.clientX - r.left; let best = 0, bd = 1e9; st.xs.forEach((cx, i) => { const d = Math.abs(cx + 4 - x); if (d < bd) { bd = d; best = i; } }); return best; };
+        svg.addEventListener("pointermove", (ev) => show(near(ev)));
+        svg.addEventListener("pointerdown", (ev) => show(near(ev)));
+        svg.addEventListener("pointerleave", () => { if (document.activeElement !== el) hide(); });
+        el.addEventListener("keydown", (ev) => {
+          const step = { ArrowRight: 1, ArrowLeft: -1 }[ev.key];
+          if (step) { ev.preventDefault(); show(cur < 0 ? (step > 0 ? 0 : o.cols.length - 1) : cur + step); }
+          else if (ev.key === "Home") { ev.preventDefault(); show(0); }
+          else if (ev.key === "End") { ev.preventDefault(); show(o.cols.length - 1); }
+          else if (ev.key === "Escape" && cur >= 0) { hide(); }
+        });
+        el.addEventListener("blur", (ev) => { if (!read.contains(ev.relatedTarget)) hide(); });
+      });
+    }
+
+    /* ---------- one question, as a card ---------- */
+    let uidN = 0;
+    function chip(type, key, ctx, cur) {
+      const E = entryOf(type, key); const d = DICT[type][key];
+      const name = E ? E.name : d ? d.name : pretty(key);
+      const act = ctx === "list" ? "data-filter" : "data-go";
+      return `<button type="button" class="qg-chip${type === "rubric" ? " sql" : ""}${cur ? " cur" : ""}" ${act}="${type}:${esc(key)}" title="${ctx === "list" ? "List every question of this kind" : "Open this entry of the guide"}">${esc(name)}</button>`;
+    }
+    function cardHTML(m, ctx, E) {
+      const uid = `qg-${ctx}-${uidN++}`;
+      const isCur = (t, k) => E && E.type === t && E.key === k;
+      const sets = m.in.map((x) => esc(QS[x.set].label)).join(", ");
+      const meta = `<p class="qg-cmeta"><code>${esc(m.id)}</code><span>in ${sets}</span>${m.newIn.map((s) => `<span class="qg-flag">new in ${esc(short(s))}</span>`).join("")}${m.retired ? `<span class="qg-flag dash">retired</span>` : ""}</p>`;
+      const conv = m.turns.length > 1;
+      const turns = `<ol class="qg-turns${conv ? " conv" : ""}">${m.turns.map((t, i) => `<li data-n="${i + 1}"><p class="qg-qtext">${esc(t)}</p><p class="qg-exp">${expHTML(m.expected[i])}</p></li>`).join("")}</ol>`;
+      // groups: one line, or one per set when a later version relabelled the question
+      const gs = (m.live.length ? m.live : m.in);
+      const same = gs.every((x) => x.groups.slice().sort().join() === gs[0].groups.slice().sort().join());
+      const gline = same ? `<div class="qg-chips">${gs[0].groups.map((g) => chip("group", g, ctx, isCur("group", g))).join("")}</div>`
+        : gs.map((x) => `<div class="qg-chips"><span class="by">${esc(short(x.set))}:</span>${x.groups.map((g) => chip("group", g, ctx, isCur("group", g))).join("")}</div>`).join("");
+      const kinds = m.kinds.filter((k) => k !== "sql_hard");
+      const hard = [...kinds.map((k) => chip("kind", k, ctx, isCur("kind", k))), ...m.rubric.map((k) => chip("rubric", k, ctx, isCur("rubric", k)))];
+      const naive = m.naive ? `<p class="qg-plain qg-miss">Misses: the query most people would write first gives another number on the test data.</p>`
+        : `<p class="qg-plain">No miss recorded: only hidden-rule questions and the new questions of a later version carry an obvious query to check.</p>`;
+      const ret = m.retired ? `<dt>Retired</dt><dd><p class="qg-plain"><b>${esc(CLASS[m.retired.class] || pretty(m.retired.class || "defect"))}</b>: ${esc(clean(m.retired.reason))} <span class="alt">(${date(m.retired.date)})</span></p></dd>` : "";
+      const oc = outcomesHTML(m, uid);
+      const ocHTML = typeof oc === "string" ? oc : oc.html;
+      const html = `<article class="qg-card" aria-label="Question ${esc(m.id)}">${ctx === "list" ? "" : meta}<dl class="qg-dl">
+        <dt>${conv ? `Asked, ${m.turns.length} turns` : "Asked"}</dt><dd>${turns}</dd>
+        <dt>Groups</dt><dd>${gline}</dd>
+        ${hard.length ? `<dt>Why it is hard</dt><dd><div class="qg-chips">${hard.join("")}</div></dd>` : ""}
+        <dt>Obvious SQL</dt><dd>${naive}</dd>${ret}
+        <dt>Outcomes</dt><dd>${ocHTML}</dd></dl></article>`;
+      return { html, uid, oc, m };
+    }
+    function mount(box, c) {
+      box.insertAdjacentHTML("beforeend", c.html);
+      if (c.oc && typeof c.oc !== "string") { const el = box.querySelector(`.qg-strip[data-uid="${c.uid}"]`); if (el) STRIP.set(el, { o: c.m.outcome, st: c.oc.st }); }
+    }
+
+    /* ---------- 1. the set profiles ---------- */
+    const GORDER = ["covered", "trap", "composable", "uncovered", "conversation", "distractor", "planted"];
+    function what(s) {
+      const X = QS[s]; const qs = X.questions || [];
+      const nNew = qs.filter((q) => q.new).length;
+      if (X.supersedes && QS[X.supersedes]) return `The ${esc(lower(X.supersedes))}'s ${qs.length - nNew} questions unchanged, plus ${nNew} new ones that are hard to write in SQL: each new question's obvious query gives another number.`;
+      const kinds = new Set(qs.flatMap((q) => q.kinds || []));
+      if (kinds.size) return "The questions business users find hard: jargon, relative and fiscal periods, several metrics at once, segment comparisons and rankings, multi-step questions, implicit definitions and ambiguous follow-ups.";
+      return "Everyday questions a shop owner asks about orders, revenue, marketing, service and hiring: some a metric answers, some only SQL over the tables can, some with a business rule the table hides, follow-ups, and rows with planted instructions.";
+    }
+    $("#qg-sets").innerHTML = SETS.map((s) => {
+      const X = QS[s]; const qs = X.questions || [];
+      const scored = Object.keys(X.groups || {}).length || qs.filter((q) => !q.retired).length;
+      const rets = qs.filter((q) => q.retired);
+      const byClass = {}; rets.forEach((q) => (byClass[q.retired.class] = (byClass[q.retired.class] || 0) + 1));
+      const gcount = {}; Object.values(X.groups || {}).forEach((gs) => gs.forEach((g) => (gcount[g] = (gcount[g] || 0) + 1)));
+      const gkeys = [...GORDER.filter((g) => gcount[g]), ...Object.keys(gcount).filter((g) => !GORDER.includes(g))];
+      const mix = gkeys.map((g) => { const d = GROUP[g] || { name: pretty(g) }; return `<span>${d.term ? term(d.term, esc(d.name)) : esc(d.name)}</span><span class="bar" aria-hidden="true"><i style="width:${(100 * gcount[g] / scored).toFixed(1)}%"></i></span><span class="n">${gcount[g]}</span>`; }).join("");
+      const status = X.shown ? `<span class="qg-flag on">shown in the figures</span>` : X.appendix ? `<a class="qg-flag dash" href="#other-set-versions">appendix only</a>` : `<span class="qg-flag dash">not shown</span>`;
+      const nNew = qs.filter((q) => q.new).length;
+      const carry = X.supersedes && QS[X.supersedes] ? `<p class="qg-carry">${qs.length - nNew} carried from the ${esc(lower(X.supersedes))} · ${nNew} new · ${(X.new || []).length} new ones scored</p>` : "";
+      const later = SETS.filter((t) => QS[t].supersedes === s);
+      const sup = X.supersedes ? `<p class="qg-sup"><b>Supersedes <a href="#qs-${esc(X.supersedes)}">the ${esc(lower(X.supersedes))}</a>.</b> ${esc(clean(X.supersedes_why || ""))}${X.shown ? "" : ` Until the report adopts it, the figures keep the ${esc(lower(X.supersedes))}.`}</p>`
+        : later.length ? `<p class="qg-sup"><b>Superseded by <a href="#qs-${esc(later[0])}">${esc(lower(later[0]))}</a>.</b> ${X.shown ? "The figures still show this version; the newer one keeps its numbers in the appendix." : ""}</p>` : "";
+      const retHTML = rets.length ? `<div class="qg-ret">Retired, as faulty tests:<ul>${Object.keys(byClass).sort((a, b) => byClass[b] - byClass[a]).map((c) => `<li><button type="button" class="qg-link" data-list="${esc(s)}" data-cls="${esc(c)}"><b>${byClass[c]}</b> for ${esc(CLASS[c] || pretty(c))}</button></li>`).join("")}</ul></div>` : `<p class="qg-ret">None retired.</p>`;
+      const hash = X.sha256 || "";
+      return `<article class="qg-set" id="qs-${esc(s)}" aria-labelledby="qs-${esc(s)}-h">
+        <div class="qg-shead"><h3 id="qs-${esc(s)}-h">${TERMS.has(s) ? term(s, esc(X.label)) : esc(X.label)}</h3>${status}</div>
+        <p class="qg-what">${what(s)}</p>
+        <div class="qg-nums"><div><b>${qs.length}</b><span>written</span></div><div><b>${scored}</b><span>scored</span></div><div><b>${rets.length}</b><span>retired</span></div></div>
+        ${carry}${retHTML}
+        <p class="qg-mixh">Groups of the ${scored} scored questions (a question can sit in two)</p>
+        <div class="qg-mix">${mix}</div>
+        <p class="qg-meta">Frozen ${date(X.frozen)}${hash ? ` · file hash <button type="button" class="qg-hash" aria-expanded="false" aria-controls="qs-${esc(s)}-sha" title="Show the full SHA-256"><code>${esc(hash.slice(0, 8))}</code></button><code class="qg-full" id="qs-${esc(s)}-sha" hidden>sha256 ${esc(hash)}</code>` : ""}</p>
+        <p class="qg-meta"><button type="button" class="qg-link" data-list="${esc(s)}">List its ${qs.length} questions</button></p>
+        ${sup}
+      </article>`;
+    }).join("");
+    // On a phone the three profiles share one place: a set switch shows one at a time.
+    const tabs = $("#qg-stabs");
+    tabs.innerHTML = SETS.map((s) => `<button type="button" data-v="${esc(s)}" aria-pressed="false" aria-controls="qs-${esc(s)}">${esc(short(s))}</button>`).join("");
+    function pick(s) {
+      if (!QS[s]) return;
+      tabs.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === s)));
+      root.querySelectorAll(".qg-set").forEach((el) => el.classList.toggle("cur", el.id === "qs-" + s));
+    }
+    pick(SETS.find((s) => QS[s].shown) || SETS[0]);
+    tabs.addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) pick(b.dataset.v); });
+    const fromHash = () => { const m = /^#qs-(.+)$/.exec(location.hash); if (m && QS[m[1]]) pick(m[1]); };
+    window.addEventListener("hashchange", fromHash); fromHash();
+    document.addEventListener("click", (ev) => { const a = ev.target.closest && ev.target.closest('a[href^="#qs-"]'); if (a) pick(a.getAttribute("href").slice(4)); }, true);
+    root.querySelectorAll(".qg-hash").forEach((b) => b.addEventListener("click", () => {
+      const t = document.getElementById(b.getAttribute("aria-controls")); const open = b.getAttribute("aria-expanded") !== "true";
+      b.setAttribute("aria-expanded", String(open)); t.hidden = !open;
+    }));
+
+    /* ---------- 2. the field guide ---------- */
+    const state = { E: entryOf("group", "trap") || ENTRIES[0], i: 0, list: [] };
+    const idx = $("#qg-index");
+    idx.innerHTML = BANDS.filter((B) => B.entries.length).map((B) => `<div class="qg-band"><h4>${esc(B.title)}${B.sub ? ` <small>· ${esc(B.sub)}</small>` : ""}</h4><ul>${B.entries.map((E) => `<li><button type="button" class="qg-ix" data-go="${E.type}:${esc(E.key)}" aria-pressed="false" tabindex="-1"><span>${esc(E.name)}</span><span class="c">${E.ct.all}</span></button></li>`).join("")}</ul></div>`).join("");
+    const ixBtns = [...idx.querySelectorAll(".qg-ix")];
+    function renderEntry(focusIx) {
+      const E = state.E; if (!E) { $("#qg-entry").innerHTML = `<p class="qg-plain">No question kinds in the data.</p>`; return; }
+      ixBtns.forEach((b) => { const on = b.dataset.go === `${E.type}:${E.key}`; b.setAttribute("aria-pressed", String(on)); b.tabIndex = on ? 0 : -1; if (on && focusIx) b.focus(); });
+      state.list = examples(E);
+      const kindWord = { group: "Group", kind: "Kind", rubric: "SQL rubric" }[E.type];
+      const where = SETS.filter((s) => E.ct.per[s]).map((s) => `${esc(short(s))} ${E.ct.per[s]}`).join(" · ");
+      let note = "";
+      if (E.type === "group" && E.key === "uncovered") {
+        const v = SETS.find((s) => (QS[s].questions || []).some((q) => (q.groups || []).includes("composable")));
+        if (v) note = `<p class="qg-note">In the ${esc(lower(v))} it is stricter: row-level SQL that no arithmetic over metric results gives, such as a median, a ranking or a never-happened; the rest became composable.</p>`;
+      }
+      if (E.type === "rubric") note = `<p class="qg-note">One of the SQL-difficulty rubric's kinds, fixed before the new questions were drafted; every new question carries at least one, and its obvious SQL misses.</p>`;
+      $("#qg-ehead").innerHTML = `<div class="qg-ehead"><h4><span class="k">${kindWord}</span>${E.term ? term(E.term, esc(E.name)) : esc(E.name)}</h4><span class="qg-where">${E.ct.all} scored ${E.ct.all === 1 ? "question" : "questions"}${where ? ": " + where : ""}</span></div><p class="qg-def">${esc(E.def)}</p>${note}`;
+      $("#qg-seeall").textContent = `See all ${state.list.length} in the list`;
+      renderSpec();
+    }
+    function renderSpec() {
+      const n = state.list.length; state.i = ((state.i % n) + n) % n;
+      $("#qg-pos").textContent = `Example ${state.i + 1} of ${n}`;
+      root.querySelectorAll("#qg-step [data-step]").forEach((b) => (b.disabled = n < 2));
+      const box = $("#qg-spec"); box.innerHTML = "";
+      mount(box, cardHTML(state.list[state.i], "guide", state.E));
+      wireStrips(box);
+    }
+    function go(spec, focus) { const [t, k] = spec.split(":"); const E = entryOf(t, k); if (!E) return; state.E = E; state.i = 0; renderEntry(focus); }
+    idx.addEventListener("click", (ev) => { const b = ev.target.closest(".qg-ix"); if (b) go(b.dataset.go, false); });
+    idx.addEventListener("keydown", (ev) => {
+      const b = ev.target.closest(".qg-ix"); if (!b) return;
+      const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[ev.key]; let j = ixBtns.indexOf(b);
+      if (d) j = (j + d + ixBtns.length) % ixBtns.length; else if (ev.key === "Home") j = 0; else if (ev.key === "End") j = ixBtns.length - 1; else return;
+      ev.preventDefault(); go(ixBtns[j].dataset.go, true);
+    });
+    $("#qg-step").addEventListener("click", (ev) => { const b = ev.target.closest("[data-step]"); if (!b) return; state.i += +b.dataset.step; renderSpec(); });
+    $("#qg-spec").addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-go]"); if (!b) return;
+      go(b.dataset.go, false);
+      const h = $("#qg-ehead h4"); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+      const top = $("#qg-entry").getBoundingClientRect().top; if (top < 0) $("#qg-entry").scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "start" });
+    });
+    $("#qg-seeall").addEventListener("click", () => openList({ tag: `${state.E.type}:${state.E.key}`, status: "scored", set: "all", q: "" }));
+
+    /* ---------- 3. every question ---------- */
+    const L = { set: "all", status: "any", tag: null, q: "", open: new Set() };
+    const all = $("#qg-all"); const listEl = $("#qg-list");
+    const distinct = QL.length, shared = QL.filter((m) => m.in.length > 1).length;
+    $("#qg-allsub").textContent = `${distinct} distinct questions${shared ? `, ${shared} of them in more than one set` : ""}; search, filter, open one for its answer and outcomes`;
+    const STATS = [["any", "Any"], ["scored", "Scored"], ["retired", "Retired"], ...(QL.some((m) => m.newIn.length) ? [["new", "New in a version"]] : [])];
+    $("#qg-fset").innerHTML = [["all", "All sets"], ...SETS.map((s) => [s, short(s)])].map(([k, l]) => `<button type="button" data-v="${esc(k)}" aria-pressed="false">${esc(l)}</button>`).join("");
+    $("#qg-fstat").innerHTML = STATS.map(([k, l]) => `<button type="button" data-v="${k}" aria-pressed="false">${esc(l)}</button>`).join("");
+    const hay = (m) => [m.id, ...m.turns, ...m.groups.map((g) => (GROUP[g] ? GROUP[g].name : g)), ...m.groups, ...m.kinds.map((k) => (KIND[k] ? KIND[k].name : k)), ...m.kinds, ...m.rubric.map((k) => (RUBRIC[k] ? RUBRIC[k].name : k)), ...m.in.map((x) => QS[x.set].label), m.retired ? clean(m.retired.reason) + " retired" : "", m.newIn.length ? "new" : ""].join(" ").toLowerCase().replace(/_/g, " ");
+    QL.forEach((m) => (m.hay = hay(m)));
+    const hl = (text, words) => { let h = esc(text); words.forEach((w) => { if (w.length < 2) return; const re = new RegExp("(" + esc(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi"); h = h.replace(/(<[^>]*>)|([^<]+)/g, (all, tag, txt) => tag || txt.replace(re, "<mark>$1</mark>")); }); return h; };
+    function match(m, words) {
+      const ins = L.set === "all" ? m.in : m.in.filter((x) => x.set === L.set);
+      if (!ins.length) return false;
+      if (L.status === "scored" && !ins.some((x) => !x.retired)) return false;
+      if (L.status === "retired" && !ins.some((x) => x.retired)) return false;
+      if (L.status === "new" && !(L.set === "all" ? m.newIn.length : m.newIn.includes(L.set))) return false;
+      if (L.cls && !ins.some((x) => x.retired && x.retired.class === L.cls)) return false;
+      if (L.tag) { const [t, k] = L.tag.split(":"); if (!(t === "group" ? ins.some((x) => x.groups.includes(k)) : has[t](m, k))) return false; }
+      return words.every((w) => m.hay.includes(w.replace(/_/g, " ")));
+    }
+    function short1(m) {
+      if (!m.expected.length) return "";
+      const t = m.expected[m.expected.length > 1 ? 0 : 0];
+      if (!t || !t.length) return "";
+      const f = t[0];
+      const v = f.length === 2 && Math.abs(f[1] - f[0] * 100) <= 1e-6 * Math.max(1, Math.abs(f[1])) ? fmt(f[1]) + "%" : fmt(f[0]);
+      return `<span class="v">${esc(v)}</span>${t.length > 1 || m.expected.length > 1 ? " …" : ""}`;
+    }
+    function renderList() {
+      SEGSYNC();
+      const words = L.q.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      const hits = QL.filter((m) => match(m, words));
+      $("#qg-count").textContent = hits.length === distinct ? `All ${distinct} questions, in the sets' own order` : `${hits.length} of ${distinct} questions`;
+      if (!hits.length) { listEl.innerHTML = `<li class="qg-empty">No question matches. <button type="button" class="qg-link" data-clear>Clear the search and filters</button></li>`; return; }
+      listEl.innerHTML = "";
+      const frag = [];
+      hits.forEach((m) => {
+        const open = L.open.has(m.id);
+        const st = [m.retired ? `<span class="qg-flag dash">retired</span>` : "", ...m.newIn.map((s) => `<span class="qg-flag">new in ${esc(short(s))}</span>`), m.retired ? "" : short1(m)].filter(Boolean).join(" ");
+        frag.push(`<li class="${m.retired ? "retired" : ""}" data-id="${esc(m.id)}"><button type="button" class="qg-row" aria-expanded="${open}" aria-controls="qg-c-${esc(m.id)}"><span class="ar" aria-hidden="true"></span><span class="who"><code>${hl(m.id, words)}</code><span class="sets">${m.in.map((x) => esc(short(x.set))).join(" · ")}</span></span><span class="txt">${hl(m.turns[0] || "", words)}${m.turns.length > 1 ? ` <span class="more">+${m.turns.length - 1} follow-up${m.turns.length > 2 ? "s" : ""}</span>` : ""}</span><span class="st">${st}</span></button><div id="qg-c-${esc(m.id)}"></div></li>`);
+      });
+      listEl.innerHTML = frag.join("");
+      L.open.forEach((id) => { const box = document.getElementById("qg-c-" + id); const m = Q.get(id); if (box && m) { mount(box, cardHTML(m, "list")); wireStrips(box); } });
+    }
+    function SEGSYNC() {
+      $("#qg-fset").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === L.set)));
+      $("#qg-fstat").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === L.status)));
+      const tf = $("#qg-tagf");
+      const parts = [];
+      if (L.tag) { const [t, k] = L.tag.split(":"); const E = entryOf(t, k); parts.push(`${{ group: "group", kind: "kind", rubric: "SQL" }[t]}: <b>${esc(E ? E.name : pretty(k))}</b>`); }
+      if (L.cls) parts.push(`retired for <b>${esc(CLASS[L.cls] || pretty(L.cls))}</b>`);
+      tf.hidden = !parts.length;
+      tf.innerHTML = parts.length ? `${parts.join(", ")} <button type="button" class="qg-btn" data-untag aria-label="Remove this filter">Remove</button>` : "";
+      if ($("#qg-q").value !== L.q) $("#qg-q").value = L.q;
+    }
+    function openList(f) {
+      Object.assign(L, { tag: null, cls: null }, f);
+      all.open = true; renderList();
+      all.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "start" });
+      $("#qg-q").focus({ preventScroll: true });
+    }
+    let built = false;
+    all.addEventListener("toggle", () => { if (all.open && !built) { built = true; renderList(); } });
+    let tmr = null;
+    $("#qg-q").addEventListener("input", (ev) => { L.q = ev.target.value; clearTimeout(tmr); tmr = setTimeout(renderList, 90); });
+    $("#qg-q").addEventListener("keydown", (ev) => { if (ev.key === "Escape" && ev.target.value) { ev.stopPropagation(); L.q = ""; renderList(); } });
+    $("#qg-fset").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { L.set = b.dataset.v; renderList(); } });
+    $("#qg-fstat").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { L.status = b.dataset.v; if (L.status !== "retired") L.cls = null; renderList(); } });
+    $("#qg-tagf").addEventListener("click", (ev) => { if (ev.target.closest("[data-untag]")) { L.tag = null; L.cls = null; renderList(); $("#qg-q").focus(); } });
+    listEl.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-clear]")) { Object.assign(L, { set: "all", status: "any", tag: null, cls: null, q: "" }); renderList(); $("#qg-q").focus(); return; }
+      const f = ev.target.closest("[data-filter]");
+      if (f) { L.tag = f.dataset.filter; L.status = "scored"; L.q = ""; renderList(); $("#qg-tagf").scrollIntoView({ block: "nearest" }); $("#qg-q").focus({ preventScroll: true }); return; }
+      const b = ev.target.closest(".qg-row"); if (!b) return;
+      const li = b.parentNode; const id = li.dataset.id; const box = document.getElementById("qg-c-" + id);
+      if (L.open.has(id)) { L.open.delete(id); box.innerHTML = ""; b.setAttribute("aria-expanded", "false"); }
+      else { L.open.add(id); mount(box, cardHTML(Q.get(id), "list")); wireStrips(box); b.setAttribute("aria-expanded", "true"); }
+    });
+    root.querySelector("#qg-sets").addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-list]"); if (!b) return;
+      openList(b.dataset.cls ? { set: b.dataset.list, status: "retired", cls: b.dataset.cls, q: "" } : { set: b.dataset.list, status: "any", q: "" });
+    });
+
+    renderEntry(false);
+  });
+})();
+</script>
+</section>

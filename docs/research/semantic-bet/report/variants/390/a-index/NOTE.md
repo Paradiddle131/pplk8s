@@ -1,0 +1,12 @@
+# Variant A: the index
+
+The idea: a ledger of the three sets on top (what each tests, written → scored, retired by class, a proportional group-mix bar in ink only, frozen date, short hash with the full one on a click, in the figures or appendix only, and v2's "why it supersedes v1"), then every question (197 rows) collapsed behind one control.
+What a reader does: reads the three cards; a click on "20 retired", "15 new" or "Browse its N questions" opens the list already filtered; search (text and id, words ANDed, matches marked) and filter by set, group, kind or SQL rubric, new in v2, retired, with a live count.
+A closed row is one line: id, first turn, group and kind tags, and a strip of the unit plate's column for that question (one column per setup and model, three runs stacked, by family).
+An open row (native `details`/`summary`, so Enter and Space work) gives every turn with its expected numbers, groups/kinds/rubric in plain words, whether the obvious SQL misses, the retirement, and every run grouped by family with the plate's swatches; a v2 question carried from v1 links to its v1 row's runs.
+Trade-offs: the list is long once opened (sticky set headers help); the closed strip folds "unclear" into the declined grey and needs the open row for exact outcomes; on a phone a row takes two or three lines; the ledger stacks to about 1,850 px at 390 px.
+Formatting rules I had to infer: a two-number alternative (x, 100x) is a rate only when the question asks for a share, rate, percentage or growth (otherwise both accepted numbers are shown, e.g. sessions per order); money (two decimals) is guessed from words like revenue, spend, cost, budget, and "how many" questions stay counts; the exact value is in a hover title wherever rounding changed it.
+Retirement reasons are the register's words with issue numbers removed, a fixture file name replaced by "the fixture" and the schema name `dbt_dev` by "the test warehouse".
+Groups shown per question are the scored ones (the label corrections applied); where they differ from the written ones, the row says so.
+Verified in Chromium (Playwright) at 1280 × 900 and 390 × 844, light and dark (`colorScheme` emulation): no console errors, no horizontal scroll, search, every filter, reset, card links, hash toggle, v2-to-v1 jump, keyboard open, text contrast ≥ 4.5:1 for every text node in the section, a filter pass about 4 ms.
+Not verified: the page's own theme switch (`data-theme`) clicked through (the section uses only tokens, so it should follow), touch on a real phone, and screen-reader output.

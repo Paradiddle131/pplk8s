@@ -1,0 +1,1 @@
+{"case": "partners_engaged_one_day", "run": 1, "turns": [{"question": "How many partners replied to our outreach on 2 October 2026?", "answer": "2 partners engaged (had at least one contact reply) on 2 October 2026. Late: partner_outreach.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "query_metrics"]}]}

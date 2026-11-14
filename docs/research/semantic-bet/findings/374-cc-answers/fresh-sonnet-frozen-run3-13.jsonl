@@ -1,0 +1,1 @@
+{"case": "damaged_returns", "run": 3, "turns": [{"question": "How much did returns of damaged goods cost us?", "answer": "Returns (EUR) with reason damaged came to 62.5 EUR across all loaded days (no period was given, so all time). Fresh: returns.silver is ready up to 2026-10-03T00:00Z.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}

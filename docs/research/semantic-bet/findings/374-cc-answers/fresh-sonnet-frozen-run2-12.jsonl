@@ -1,0 +1,1 @@
+{"case": "shipped_orders", "run": 2, "turns": [{"question": "How many orders have shipped?", "answer": "86 orders have shipped (all dates loaded, no period limit). Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}

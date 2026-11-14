@@ -1,0 +1,5 @@
+## 2026-11-03 — Semantic track — the bet's local arms on the frozen set, a first budgeted pass (#341)
+
+- Done: `services/semantic-agent/src/semantic_agent/bet_eval.py` (k runs per case and arm in fresh sessions, each turn scored under RULE.md, every run appended to `docs/research/semantic-bet/eval-local.jsonl` and resumed from it, time and request budgets), `make agent-eval ARM=bet`, `tests/test_bet_eval.py`, the finding `docs/research/semantic-bet/findings/2026-11-03-341-local-arms.md` and `eval-local.md`.
+- Evidence: `make agent-test` 301 passed (10 new); `make lint` ok; a first pass on `nvidia/nemotron-3.5-super-vl:free` logged 95 runs, run 1 of cases 1–47 on both arms, in 400 model responses: accuracy `custom-metricflow` 95.7% against `baseline` 68.1%, paired difference +0.277 [+0.128, +0.426], partial and biased toward covered cases.
+- Open: the remaining runs, one budgeted pass per wake (#342); the parser over-counts the baseline's confident-wrong (#343); the baseline's `legacy` schema and the blind judge stay #333's.

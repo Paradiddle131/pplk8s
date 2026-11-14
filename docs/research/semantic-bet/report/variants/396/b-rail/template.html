@@ -1,0 +1,1806 @@
+<title>Semantic bet memo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F4F6F3; --paper-2: #EAEFEA; --row-band: #EEF2EE; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
+  --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
+  --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --other: #7E8790; --cw: #B42340;
+  --s2: #E2E9EC; --s3: #CBD9E1; --s4: #AEC4D3; --s5: #8FAEC4;
+  --o-right: #24384A; --o-decl: #7D8A94; --o-wrong: #C46A7D; --o-cw: #C0213F; --o-none: #7E8890;
+  --band: rgba(22, 32, 42, .07); --sel: #CBD9E1; --tip: #FFFFFF; --tip-shadow: 0 6px 18px rgba(22,32,42,.16);
+  --serif: "STIX Two Text", "STIX Two", Cambria, "Times New Roman", serif;
+  --label: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --code: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+    --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+    --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
+    --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+    --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #6A7680;
+    --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131A21; --paper-2: #18222B; --row-band: #161F27; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+  --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+  --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --other: #8F98A0; --cw: #E0607A;
+  --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+  --o-right: #C3D3E0; --o-decl: #7F8C96; --o-wrong: #9A5664; --o-cw: #F06A84; --o-none: #6A7680;
+  --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--rule) var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.58; font-variant-numeric: lining-nums; }
+::selection { background: var(--sel); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; border-radius: 2px; }
+code, .id { font-family: var(--code); font-size: .8em; letter-spacing: -.01em; color: var(--ink); }
+[data-setup] { cursor: help; }
+span[data-setup] { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+
+.page { max-width: 1180px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)); }
+.col { max-width: 41rem; }
+header.memo { border-bottom: 1px solid var(--ink); padding-bottom: 18px; margin-bottom: 22px; }
+h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
+.byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; max-width: 46rem; }
+.byline b { font-weight: 600; color: var(--ink); }
+.abstract { margin: 0 0 26px; max-width: 46rem; }
+.runin { font-weight: 700; }
+h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 60px 0 6px; letter-spacing: -.005em; text-wrap: balance; }
+p { margin: 0 0 1em; }
+
+/* winners band */
+.winners { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; margin: 4px 0 6px; }
+.pillar { border-top: 2px solid var(--ink); padding-top: 10px; }
+/* the pillars share rows (title, why, one per set), so each set's figure sits on one line across the band */
+@supports (grid-template-rows: subgrid) { .pillar { display: grid; grid-template-rows: subgrid; row-gap: 0; align-content: start; } }
+.pillar h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600; margin: 0 0 2px; line-height: 1.3; }
+.pillar .why { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
+.pset { border-top: 1px solid var(--rule); padding: 8px 0 8px; font-family: var(--label); font-size: 14px; line-height: 1.4; }
+.pset .sl { color: var(--ink-3); font-size: 13px; }
+.pset .lead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0; }
+.pset .num { font-size: 1.65rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+.pset .num small { font-size: 13px; font-weight: 400; color: var(--ink-3); margin-left: 3px; }
+.pset .who { font-size: 14.5px; color: var(--ink); margin: 1px 0 1px; }
+.pset .who .by { color: var(--ink-3); font-size: 13px; margin-right: 2px; }
+.pset .who .id { font-size: 13px; font-weight: 600; }
+.pset .pn { color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pset .pn .few { color: var(--ink-3); }
+.pillar .lchg { display: block; font-family: var(--label); font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
+.pset .kind { color: var(--ink-3); font-size: 13px; }
+#w-diff { margin: 0 0 8px; color: var(--ink-2); }
+.pset .tied, .pset .ctr { color: var(--ink-2); font-size: 13.5px; }
+.winners-note { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; }
+
+figure { margin: 22px 0 8px; }
+.figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 54rem; text-wrap: pretty; }
+.figtitle .fignum { font-weight: 700; margin-right: .35em; }
+.figtitle .take { font-weight: 500; }
+figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); max-width: 46rem; margin-top: 10px; }
+.figtools { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; align-items: center; margin: 4px 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 14px; color: var(--ink-2); align-items: center; }
+.legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { overflow: visible; }
+.seg { display: inline-flex; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; font-family: var(--label); font-size: 14px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 4px 11px; cursor: pointer; min-height: 32px; }
+.seg button + button { border-left: 1px solid var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 4px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; }
+
+.plot { width: 100%; position: relative; }
+.plot svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--label); }
+.plot text { fill: var(--ink-2); font-size: 12.5px; }
+/* Plot puts a mark's class on its group, so each text class also reaches the texts inside */
+.plot .t-ink, .plot .t-ink text { fill: var(--ink); }
+.plot .t-strong, .plot .t-strong text { fill: var(--ink); font-weight: 600; }
+.plot .t-mute, .plot .t-mute text { fill: var(--ink-3); }
+.plot .t-id, .plot .t-id text { font-family: var(--code); font-size: 11.5px; fill: var(--ink); }
+.plot .f11, .plot .f11 text { font-size: 11.5px; }
+.plot .f12, .plot .f12 text { font-size: 12px; }
+.plot .hit { fill: transparent; }
+.plot [data-tip]:focus, .plot [data-setup]:focus { outline: none; }
+.plot [data-tip]:focus .hit, .plot [data-tip]:hover .hit { fill: var(--band); }
+.plot.panels { display: grid; }
+.f3key { margin-top: 8px; }
+.f3key .k { cursor: help; }
+.focusable .legend .k[data-fam] { cursor: pointer; border-radius: 3px; padding: 1px 4px; margin: -1px -4px; }
+.focusable .legend .k[data-fam]:hover, .focusable .legend .k.locked { background: var(--band); color: var(--ink); }
+.focusable .legend .k.locked { box-shadow: inset 0 0 0 1px var(--ink-3); }
+.focusable .legend .k[data-fam]:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.focusable [data-fam] text, .focusable text[data-fam], .focusable g[data-fam] { cursor: pointer; }
+.f3key .k:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.plot .keyring { cursor: help; }
+.plot .direct { visibility: hidden; }
+.plot .direct.placed { visibility: visible; }
+.plot text[data-setup]:focus { text-decoration: underline; }
+.plot .frame { fill: none; stroke: var(--rule); }
+.mk { transition: opacity .12s ease-out; }
+.focusable.focusing .mk:not(.on) { opacity: .14; }
+.term { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; cursor: help; }
+.mhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.themebtn { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--ink-2); border-radius: 18px; background: transparent; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+.themebtn svg { display: block; padding: 4px; width: 26px; height: 26px; border-radius: 50%; }
+.themebtn[aria-pressed="false"] .sun, .themebtn[aria-pressed="true"] .moon { background: var(--ink); color: var(--paper); }
+.lead { margin: 0 0 12px; }
+.abwrap { overflow-x: auto; margin: 4px 0 0; }
+table.ab { border-collapse: collapse; font-family: var(--label); font-size: 14.5px; font-variant-numeric: tabular-nums; width: 100%; max-width: 36rem; }
+table.ab tbody th { font-weight: 400; color: var(--ink-2); text-align: left; padding-left: 14px; white-space: nowrap; }
+table.ab tr.grp th, table.ab tr.diff th { white-space: normal; }
+table.ab tr.grp th { font-weight: 600; color: var(--ink); padding-left: 0; padding-top: 10px; }
+table.ab tr.grp td { padding-top: 10px; }
+table.ab tr.diff th { font-weight: 600; color: var(--ink); padding-left: 0; }
+table.ab tr.diff th, table.ab tr.diff td { border-top: 1px solid var(--ink-2); padding-top: 7px; }
+table.ab thead th .sub { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+.abnote { font-family: var(--label); font-size: 13px; color: var(--ink-3); margin: 6px 0 0; }
+table.ab th, table.ab td { padding: 5px 10px 5px 0; text-align: left; border-bottom: 1px solid var(--grid-major); vertical-align: baseline; }
+table.ab thead th { font-weight: 600; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink-2); vertical-align: bottom; }
+table.ab thead tr.grp th { border-bottom: 1px solid var(--rule); font-weight: 600; }
+table.ab td.num, table.ab th.num { text-align: right; white-space: nowrap; }
+table.ab td .sub { display: block; color: var(--ink-3); font-size: 12.5px; }
+.n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.ivs { font-size: .82em; color: var(--ink-3); font-weight: 400; margin-left: 3px; white-space: nowrap; }
+.twin { overflow-x: auto; margin: -2px 0 10px; }
+table.tw { border-collapse: collapse; font-family: var(--label); font-size: 14px; font-variant-numeric: tabular-nums; }
+table.tw th, table.tw td { padding: 3px 18px 3px 0; text-align: left; border-bottom: 1px solid var(--grid-major); white-space: nowrap; }
+table.tw thead th { font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--ink-2); }
+table.tw td.num, table.tw th.num { text-align: right; }
+.tw .note { color: var(--ink-3); font-size: 13px; }
+.live { font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 8px 0 0; min-height: 1.4em; }
+.glider { cursor: ew-resize; outline: none; touch-action: none; }
+.glider .gl { stroke: var(--ink-2); stroke-width: 1.5; }
+.glider .gh { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.glider.home .gh { fill: var(--ink); }
+.gtrack { cursor: ew-resize; touch-action: none; }
+/* the live value: beside the top handle, on a paper halo so grid and rules stay behind it */
+.glider .gv { visibility: hidden; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.glider.active .gv, .glider:focus-visible .gv, .glider:not(.home) .gv { visibility: visible; }
+.glider:focus-visible .gh { stroke: var(--mf); stroke-width: 2.5; }
+.pm { transition: opacity .12s ease-out; }
+.pm.gdim, .lab.gdim { opacity: .15; }
+.lab { transition: opacity .12s ease-out; }
+.tip.pinned { pointer-events: auto; user-select: text; -webkit-user-select: text; padding-right: 30px; border-color: var(--ink-2); }
+.tipclose { display: none; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 5px; border-radius: 3px; }
+.tip.pinned .tipclose { display: block; }
+.tipclose:hover { background: var(--band); }
+.tipjump { display: none; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--rule); font-size: 13px; }
+.tip.pinned .tipjump { display: block; }
+.tipjump a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.tipjump a:focus-visible, .jumpback:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.jumped:not(tr), tr.jumped > td { animation: jumpflash 1.8s ease-out; }
+@keyframes jumpflash { 0%, 35% { background: var(--sel); } 100% { background: transparent; } }
+.jumpback { margin-left: 8px; padding: 1px 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink-2); font: 500 12.5px var(--label); cursor: pointer; vertical-align: 1px; }
+.jumpback:hover { color: var(--ink); border-color: var(--ink-3); }
+.stack + .stack { margin-top: 20px; }
+
+/* decision map */
+.maphead { position: sticky; top: 0; z-index: 4; overflow: hidden; border-top: 1px solid var(--ink); background: var(--paper); pointer-events: auto; }
+.maphead table.map { margin: 0; }
+.mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
+table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
+table.map thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); background: var(--paper); }
+table.map thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+table.map th.num, table.map td.num { text-align: right; }
+table.map td.g { text-align: center; padding: 3px 4px; white-space: nowrap; }
+table.map th.g { text-align: center; }
+.ch { display: inline-block; width: 34px; border-radius: 2px; padding: 3px 0; color: var(--ink); text-align: center; }
+.ch + .ch { margin-left: 3px; }
+.ch.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
+.ch.none { color: var(--ink-3); }
+.b1 { background: transparent; } .b2 { background: var(--s2); } .b3 { background: var(--s3); } .b4 { background: var(--s4); } .b5 { background: var(--s5); }
+table.map tr.rung th { background: var(--paper-2); font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 6px 8px; border-bottom: 1px solid var(--grid-major); }
+table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 190px; z-index: 1; }
+table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1; }
+table.map tbody tr.main:hover td, table.map tbody tr.sub:hover td { background: var(--row-band); }
+table.map td.setup .id { display: inline-block; font-size: 12.5px; }
+table.map td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+table.map td.what { color: var(--ink-2); max-width: 270px; min-width: 200px; font-size: 13.5px; }
+table.map tr.sub td.setup { padding-left: 22px; }
+table.map tr.sub[hidden] { display: none; }
+.tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
+.flag[data-term] { cursor: help; text-decoration: underline dotted var(--ink-3); text-underline-offset: 2px; }
+.flag.pend { border-style: dashed; border-color: var(--ink-3); }
+.flag.mb { border-color: var(--ink-2); }
+.ivl { white-space: nowrap; line-height: 1.45; }
+.ivl small { color: var(--ink-3); font-size: 12.5px; }
+.ivl .sk { color: var(--ink-3); font-size: 11.5px; margin-right: 4px; }
+.cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.more { white-space: nowrap; appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
+
+/* unit plate */
+.plate { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; }
+.plate-head { position: sticky; top: 0; z-index: 3; background: var(--paper); overflow: hidden; border-bottom: 1px solid var(--ink-2); }
+.plate-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.prow { display: flex; align-items: stretch; border-bottom: 1px solid var(--grid-major); }
+.prow:nth-child(even of .prow.r) { background: var(--row-band); }
+.prow.r:hover { background: var(--band); }
+.prow > div { border-left: 1px solid var(--grid-major); flex: none; }
+.prow > div:first-child { border-left: 0; }
+.prow .pl { position: sticky; left: 0; z-index: 2; background: inherit; background-color: var(--paper); padding: 4px 8px; font-family: var(--label); font-size: 13px; line-height: 1.25; }
+.prow.r:nth-child(even of .prow.r) .pl { background-color: var(--row-band); }
+.prow .pl .id { font-size: 12px; display: block; white-space: nowrap; }
+.prow .pl .m { white-space: nowrap; }
+.prow .pl .m { color: var(--ink-2); }
+.prow .pu { padding: 4px 8px; display: flex; align-items: center; }
+.prow .pu svg { display: block; }
+.prow .pc { display: flex; align-items: center; }
+.pnote { font-family: var(--label); font-size: 12.5px; padding-left: 8px; color: var(--ink-2); }
+.prow.step { background: var(--paper-2); font-family: var(--label); font-weight: 600; font-size: 13.5px; }
+.prow.step > div { border-left: 0; padding: 5px 8px; position: sticky; left: 0; }
+.prow.step.future > div { font-weight: 400; font-style: italic; font-family: var(--serif); color: var(--ink-3); font-size: 14.5px; }
+.prow.head > div { font-family: var(--label); font-size: 13px; color: var(--ink); font-weight: 600; padding: 6px 8px; position: relative; }
+.prow.head small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12px; }
+.bh { position: absolute; white-space: nowrap; font-weight: 600; font-size: 12.5px; }
+.prow.head .bh small { display: inline; margin-left: 4px; }
+
+.tip { position: fixed; z-index: 20; max-width: min(340px, calc(100vw - 16px)); background: var(--tip); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 9px 11px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; pointer-events: none; opacity: 0; transition: opacity .12s ease-out; left: 0; top: 0; }
+.tip.on { opacity: 1; }
+.tip h4 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+.tip h4 .id { font-size: 12.5px; }
+.tip dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--ink-3); } .tip dd { margin: 0; }
+.tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; margin-top: 6px; quotes: none; }
+.tip .src { font-size: 12px; color: var(--ink-3); }
+.tip p { margin: 2px 0 0; color: var(--ink-2); }
+
+.notes { font-size: 15.5px; }
+dl.gloss { display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: 6px 22px; margin: 8px 0 0; font-size: 15.5px; }
+dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 760px) {
+  .winners { grid-template-columns: 1fr; gap: 18px; }
+}
+@media (max-width: 640px) {
+  table.ab th, table.ab td { padding-right: 4px; font-size: 13.5px; }
+  table.ab tbody th { padding-left: 6px; white-space: normal; }
+  table.ab .id { font-size: 10.5px; }
+  table.ab .sub { font-size: 11.5px; }
+  body { font-size: 16.5px; }
+  .page { padding-top: 24px; }
+  dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dd { margin-bottom: 8px; }
+  table.map td.setup { min-width: 158px; }
+}
+@media (prefers-reduced-motion: reduce) { .tip, .mk, .pm, .lab { transition: none; } .jumped:not(tr), tr.jumped > td { animation: none; } .jumped { outline: 2px solid var(--sel); } }
+
+/* ---------- chapters: one view at a time, a contents rail in the margin ---------- */
+/* The open chapter is named on the root (data-ch). A closed chapter stays laid out at the column's
+   width, out of flow, clipped to nothing and invisible (and inert, set by the script), so every figure
+   inside it measures its real width, also after a resize while it was closed. */
+/* every chapter is at least a screen tall, so the page always scrolls and a classic scrollbar never comes and
+   goes (and the column's width with it) as chapters change */
+.views { position: relative; min-width: 0; min-height: 100vh; }
+html[data-ch] .view { position: absolute; top: 0; left: 0; right: 0; height: 0; overflow: hidden; visibility: hidden; }
+html[data-ch="summary"] #summary, html[data-ch="decision-map"] #decision-map, html[data-ch="metricflow"] #metricflow,
+html[data-ch="covered-uncovered"] #covered-uncovered, html[data-ch="every-run"] #every-run, html[data-ch="setups"] #setups,
+html[data-ch="question-sets"] #question-sets, html[data-ch="method"] #method { position: static; height: auto; overflow: visible; visibility: visible; }
+.view > h2:first-child, .view > section:first-child > h2:first-child, .view > section:first-child h2:first-of-type { margin-top: 4px; }
+.view:focus, [data-navfocus]:focus { outline: none; }
+.view, .view figure, .view h2, .view section, .view dt { scroll-margin-top: 16px; }
+
+.toc-h { font-family: var(--label); font-size: 12.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px; padding: 4px 0 7px; border-bottom: 1px solid var(--ink); }
+.toc, .toc ol { list-style: none; margin: 0; padding: 0; }
+.toc > li { position: relative; padding: 6px 0 7px 12px; border-bottom: 1px solid var(--grid-major); }
+.toc > li.on::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 9px; width: 2px; background: var(--ink); }
+.toc a { color: inherit; text-decoration: none; border-radius: 2px; }
+.toc a:hover { color: var(--ink); }
+.toc a:hover .ct, .toc a:hover .pd { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.toc a:focus-visible { outline: 2px solid var(--mf); outline-offset: 1px; }
+.toc .cha { display: grid; grid-template-columns: 1.15em minmax(0, 1fr); column-gap: 4px; align-items: baseline; font-family: var(--serif); font-size: 15.5px; line-height: 1.28; color: var(--ink-2); padding: 2px 0; min-height: 24px; }
+.toc .cha .no { font-variant-numeric: oldstyle-nums; color: var(--ink-3); }
+.toc li.on > .cha { color: var(--ink); font-weight: 600; }
+.toc li.on > .cha .no { color: var(--ink); }
+.toc .parts { margin: 2px 0 0 calc(1.15em + 4px); }
+.toc .pt { position: relative; display: block; font-family: var(--label); font-size: 13px; line-height: 1.3; color: var(--ink-3); padding: 3px 0; min-height: 24px; }
+.toc .pt .fn { font-weight: 600; color: var(--ink-2); margin-right: 5px; white-space: nowrap; }
+.toc li.on .pt { color: var(--ink-2); }
+.toc li.on .pt .fn { color: var(--ink); }
+/* the part in view: a short ink tick in the margin, as a reader's pencil mark */
+.toc .pt.here { color: var(--ink); }
+.toc .pt.here::before { content: ""; position: absolute; left: -12px; top: calc(.65em + 3px); width: 7px; border-top: 2px solid var(--ink); }
+
+.pager { display: flex; justify-content: space-between; align-items: stretch; gap: 16px; margin: 56px 0 0; padding-top: 12px; border-top: 1px solid var(--ink); }
+.pager a { display: flex; flex-direction: column; gap: 2px; max-width: 48%; padding: 4px 0; color: var(--ink); text-decoration: none; border-radius: 2px; }
+.pager a.nx { margin-left: auto; text-align: right; }
+.pager .pk { font-family: var(--label); font-size: 12.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.pager .pt2 { font-family: var(--serif); font-size: 17px; line-height: 1.3; }
+.pager .pt2 .no { font-variant-numeric: oldstyle-nums; color: var(--ink-3); margin-right: .35em; }
+.pager a:hover .pt2 { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+.bar { display: none; }
+@media (min-width: 900px) {
+  .page { max-width: 1440px; display: grid; grid-template-columns: 184px minmax(0, 1fr); grid-template-areas: "rail head" "rail main"; column-gap: 40px; align-items: start; }
+  header.memo { grid-area: head; min-width: 0; }
+  .views { grid-area: main; }
+  .rail { grid-area: rail; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; padding: 8px 4px 24px 2px; margin-top: -8px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  /* the setup map leaves the page column on wide screens; beside the rail it keeps to its own column */
+  .views .sm .sm-body { width: auto; margin-left: 0; }
+}
+@media (max-width: 899.98px) {
+  :root { --bar-h: 46px; }
+  header.memo { margin-bottom: 0; }
+  .bar { display: block; position: sticky; top: 0; z-index: 12; margin: 0 -16px 22px; padding: 0 16px; background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .barbtn { appearance: none; display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--bar-h); padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
+  .barbtn .bk { flex: none; font-family: var(--label); font-size: 12.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .barbtn .bt { flex: 1 1 auto; min-width: 0; font-family: var(--serif); font-size: 16px; font-weight: 600; line-height: 1.25; }
+  .barbtn .chev { flex: none; color: var(--ink-2); transition: transform .15s ease-out; }
+  .barbtn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .barbtn:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+  .rail { display: none; position: fixed; z-index: 14; left: 12px; right: 12px; top: var(--sheet-top, var(--bar-h)); max-height: calc(100vh - var(--sheet-top, var(--bar-h)) - 12px); overflow-y: auto; overscroll-behavior: contain; background: var(--paper); border: 1px solid var(--ink-2); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 10px 14px 12px; }
+  .rail.open { display: block; }
+  .rail .toc-h { display: none; }
+  .toc > li:last-child { border-bottom: 0; }
+  .toc .cha { font-size: 16.5px; min-height: 32px; align-items: center; }
+  .toc .pt { font-size: 14px; padding: 5px 0; min-height: 32px; }
+  .maphead, .plate-head { top: calc(var(--bar-h) + 1px); }
+  .view, .view figure, .view h2, .view section, .view dt, .view tr { scroll-margin-top: calc(var(--bar-h) + 12px); }
+}
+@media (prefers-reduced-motion: reduce) { .barbtn .chev { transition: none; } }
+</style>
+
+<script>
+const D = /*__DATA__*/null;
+window.REPORT = D;
+(function () {
+  try { const t = localStorage.getItem("semantic-bet-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  // The chapter a link opens, guessed before the page is parsed so the first paint shows it; the
+  // router below confirms it against the page once the views exist.
+  try {
+    let h = ""; try { h = decodeURIComponent((location.hash || "").slice(1)); } catch (e) {}
+    const CH = ["summary", "decision-map", "metricflow", "covered-uncovered", "every-run", "setups", "question-sets", "method"];
+    const ch = CH.includes(h) ? h : /^(term-|glossary$|method-briefly$)/.test(h) ? "method" : /^(map-|fig1$)/.test(h) ? "decision-map"
+      : /^fig[23]$/.test(h) ? "metricflow" : /^fig[45]$/.test(h) ? "covered-uncovered" : h === "fig6" ? "every-run"
+      : /^(setup-|one-at-a-time$)/.test(h) ? "setups" : h === "other-set-versions" ? "question-sets" : "summary";
+    document.documentElement.setAttribute("data-ch", ch);
+  } catch (e) {}
+  const q = []; let ready = false;
+  window.reportReady = function (fn) { if (typeof fn !== "function") return; if (ready) { try { fn(); } catch (e) { console.error(e); } } else q.push(fn); };
+  window.__reportMarkReady = function () { ready = true; while (q.length) { const fn = q.shift(); try { fn(); } catch (e) { console.error(e); } } };
+  window.reportTheme = function () {
+    const a = document.documentElement.getAttribute("data-theme");
+    if (a === "light" || a === "dark") return a;
+    try { return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } catch (e) { return "light"; }
+  };
+})();
+</script>
+<div class="page">
+  <header class="memo">
+    <div class="mhead">
+      <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
+      <button type="button" class="themebtn" id="themebtn" aria-label="Dark theme" aria-pressed="false">
+        <svg class="sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+        <svg class="moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6z"/></svg>
+      </button>
+    </div>
+    <p class="byline" id="byline"></p>
+  </header>
+
+  <!-- under 900 px the contents fold into this bar; it opens the same list as a sheet -->
+  <div class="bar" id="bar">
+    <button type="button" class="barbtn" id="barbtn" aria-expanded="false" aria-controls="rail">
+      <span class="bk" id="bar-k"></span><span class="bt" id="bar-t"></span>
+      <svg class="chev" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5.2L7 9.2L11 5.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <nav class="rail" id="rail" aria-label="Contents">
+    <p class="toc-h" aria-hidden="true">Contents</p>
+    <ol class="toc" id="toc"></ol>
+  </nav>
+
+  <main class="views" id="views">
+  <section class="view" id="summary" aria-label="Summary">
+    <section class="abstract"><p class="lead"><span class="runin">Abstract.</span> <span id="abstract"></span></p><div class="abwrap" id="abtable"></div></section>
+
+    <section aria-labelledby="w-h" id="who-wins">
+      <h2 id="w-h" style="margin-top:28px">Who wins each kind of question</h2>
+      <p class="winners-note" id="w-diff" hidden></p>
+      <div class="winners" id="winners"></div>
+      <p class="winners-note">Each setup enters on the model that decides for it; a setup with runs on Claude only waits, tagged pending in the tables.</p>
+    </section>
+  </section>
+
+  <section class="view" id="decision-map" aria-labelledby="h-map">
+    <h2 id="h-map">The decision map</h2>
+    <figure id="fig1">
+      <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
+      <div class="twin" id="twin1"></div>
+      <div class="figtools"><div class="legend" id="leg1"></div></div>
+      <div class="mapwrap" tabindex="0" aria-label="Decision map; scrolls sideways on small screens"><table class="map" id="map"></table></div>
+      <figcaption>Each cell holds the frozen set first and the hard set second; a boxed number is the best in its column for that set.</figcaption>
+    </figure>
+  </section>
+
+  <section class="view" id="metricflow" aria-labelledby="h-mf">
+    <h2 id="h-mf">Where the ADK agent on MetricFlow stands</h2>
+    <figure id="fig2" class="focusable">
+      <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
+      <div class="figtools"><div class="legend" id="leg2"></div></div>
+      <div class="plot" id="forest"></div>
+      <p class="live" id="glide-live" aria-live="polite"></p>
+      <figcaption>In each row the upper interval is the frozen set and the lower the hard set; dashed intervals rest on fewer questions or runs.</figcaption>
+    </figure>
+    <figure id="fig3" class="focusable">
+      <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
+      <div class="figtools"><div class="legend" id="leg3"></div><div class="seg" role="group" aria-label="Question set for Figure 3" data-view="scatter"></div></div>
+      <div class="plot" id="scatter"></div>
+      <div class="legend f3key" id="key3"></div>
+      <figcaption>Up and to the right is better; the lines through each mark are its 95% intervals on both axes.</figcaption>
+    </figure>
+  </section>
+
+  <section class="view" id="covered-uncovered" aria-labelledby="h-cu">
+    <h2 id="h-cu">Why: <span class="term" data-term="covered" tabindex="0">covered</span> questions against <span class="term" data-term="uncovered" tabindex="0">uncovered</span> ones</h2>
+    <figure id="fig4" class="focusable">
+      <p class="figtitle"><span class="fignum">Figure 4.</span><span class="take" id="t4"></span></p>
+      <div class="twin" id="twin4"></div>
+      <div class="figtools"><div class="legend" id="leg4"></div></div>
+      <div class="plot" id="strip"></div>
+      <figcaption>Each mark is one setup on one model; question groups under ten questions are drawn faint, since one answer moves them by many points.</figcaption>
+    </figure>
+    <figure id="fig5" class="focusable">
+      <p class="figtitle"><span class="fignum">Figure 5.</span><span class="take" id="t5"></span></p>
+      <div class="figtools"><div class="legend" id="leg5"></div><div class="seg" role="group" aria-label="Question set for Figure 5" data-view="slopes"></div></div>
+      <div class="plot" id="slopes"></div>
+      <figcaption>Hover a line or a label to follow one setup.</figcaption>
+    </figure>
+  </section>
+
+  <section class="view" id="every-run" aria-labelledby="h-er">
+    <h2 id="h-er">Every run, from the cheapest setup to the most custom</h2>
+    <figure id="fig6">
+      <p class="figtitle"><span class="fignum">Figure 6.</span><span class="take" id="t6"></span></p>
+      <div class="figtools"><div class="legend" id="leg6"></div><div class="seg" role="group" aria-label="Question set for Figure 6" data-view="plate"></div></div>
+      <div class="plate" id="plate"><div class="plate-head" id="plate-head"></div><div class="plate-body" id="plate-body"></div></div>
+      <figcaption>One square per run, three per question, questions in the same place on every row; hover a square for its question and outcome.</figcaption>
+    </figure>
+  </section>
+
+  <section class="view" id="setups" aria-label="The setups">
+<!--SECTIONS-->
+  </section>
+
+  <!-- the question sets: a section that names its chapter (data-chapter="question-sets") and the appendix move here -->
+  <section class="view" id="question-sets" aria-label="Question sets"></section>
+  <script>
+  (function () {
+    const from = document.getElementById("setups");
+    from.querySelectorAll(":scope > [data-chapter]").forEach((el) => { const v = document.getElementById(el.getAttribute("data-chapter")); if (v && v.classList.contains("view") && v !== from) v.appendChild(el); });
+    const apx = document.getElementById("other-set-versions"); if (apx) document.getElementById("question-sets").appendChild(apx);
+  })();
+  </script>
+
+  <section class="view" id="method" aria-label="Method and glossary">
+    <h2 id="method-briefly">Method, briefly</h2>
+    <div class="col notes">
+    <p>Each question is asked up to three times per setup and model, each run in a fresh session. A run is right when every turn carries the expected number, and confidently wrong when a number outside tolerance comes with no hedge; a blind judge model decides the turns the scoring code cannot.</p>
+    <p>Claude Code is another agent harness, so its rows are shown for comparison and never decide. It runs headless, one fresh session a run, with only its setup's tools and no shell, file or web tool, and every transcript is checked for that.</p>
+    <p>Accuracy and confident-wrong are means over questions with a 95% percentile bootstrap interval over questions. Comparisons against the managed best and the floor are paired by question; an interval that includes zero is a tie. Our setups decide on a free model and Claude repeats them as a check; Google's data agents run on Gemini only. Runs that failed for infrastructure reasons are excluded, never scored.</p>
+    </div>
+
+    <h2 id="glossary">Glossary</h2>
+    <dl class="gloss col" id="gloss"></dl>
+  </section>
+  </main>
+</div>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+<!--VENDOR-->
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const P = (x) => Math.round(x * 100);
+  const sg = (x) => { const v = Math.round(x * 100); return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v); };
+  // An interval as the page writes it: the bootstrap's [lo, hi]; or, when that has collapsed (every
+  // question all right, or none), the exact 95% bound over questions that build.py computed (ex),
+  // rounded outward and marked with the "exact" term.
+  const ivB = (v, ex) => (ex ? [Math.floor(ex[0] * 100 + 1e-9), Math.ceil(ex[1] * 100 - 1e-9)] : [P(v[1]), P(v[2])]);
+  const ivTxt = (v, ex) => { const b = ivB(v, ex); return `[${b[0]}, ${b[1]}]`; };
+  const SETS = D.setOrder;
+  const FAMS = ["da", "gt", "mf", "ref", "other"];
+  const famC = (f) => `var(--${FAMS.includes(f) ? f : "other"})`;
+  const ROLE = { decides: "free model, decides", check: "Claude through the API, the check", gemini: "Gemini in Google's agent", cc: "Claude Code, comparison only", other: "model not yet classified" };
+  const ALL = {}; SETS.forEach((s) => D.sets[s].rows.forEach((r) => (ALL[r.id] = r)));
+  const byId = (id) => ALL[id];
+  const S = (s) => D.sets[s];
+  const rowOf = (s, key) => S(s) && S(s).rows.find((r) => r.key === key);
+  const ladderIdx = {}; D.ladder.forEach((l, i) => l.arms.forEach((a) => (ladderIdx[a] = i)));
+  const descOf = (arm) => D.desc[arm] || D.undescribed;
+  const sKey = (s) => (s === "frozen" ? "F" : s === "hard" ? "H" : s.slice(0, 1).toUpperCase());
+  const short = (s) => S(s).label.replace(" set", "").toLowerCase();
+  const view = { scatter: SETS[0], slopes: SETS[0], plate: SETS.includes("hard") ? "hard" : SETS[0] };
+  try { const v = JSON.parse(localStorage.getItem("semantic-bet-views-2") || "{}"); ["scatter", "slopes"].forEach((k) => { if (SETS.includes(v[k])) view[k] = v[k]; }); } catch (e) {}
+  const showAll = false;
+
+  /* ---------- marks ---------- */
+  function shape(role, x, y, color, r, hollow) {
+    r = r || 4.5;
+    const fillSolid = hollow ? "var(--paper)" : color;
+    if (role === "decides") return `<circle cx="${x}" cy="${y}" r="${r + 0.5}" fill="${fillSolid}" stroke="${hollow ? color : "var(--paper)"}" stroke-width="${hollow ? 1.75 : 2}"/>`;
+    if (role === "check") return `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`;
+    if (role === "gemini") return `<rect x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}" fill="${fillSolid}" stroke="${hollow ? color : "var(--paper)"}" stroke-width="${hollow ? 1.75 : 2}"/>`;
+    if (role === "cc") { const d = r + 1; return `<path d="M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`; }
+    return `<path d="M${x} ${y - r - 1}L${x + r + 1} ${y + r}L${x - r - 1} ${y + r}Z" fill="${fillSolid}" stroke="var(--paper)" stroke-width="1.5"/>`;
+  }
+  const shapeKey = (role, color) => `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`;
+  const famKey = (f) => `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${famC(f)}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+  const legendRoles = () => [["decides", "free model (<span class=\"term\" data-term=\"decides\" tabindex=\"0\">decides</span>)"], ["check", "Claude API (<span class=\"term\" data-term=\"check\" tabindex=\"0\">check</span>)"], ["gemini", "Gemini in Google's agent"], ["cc", "<span class=\"term\" data-term=\"claude-code\" tabindex=\"0\">Claude Code</span>"]].map(([r, l]) => `<span class="k">${shapeKey(r)}<span>${l}</span></span>`).join("");
+  const famsPresent = (rows) => FAMS.filter((f) => rows.some((r) => r.family === f));
+  const legendFams = (rows) => famsPresent(rows).map((f) => `<span class="k" data-fam="${f}" tabindex="0" role="button" aria-pressed="false" title="Click to keep this group in focus">${famKey(f)}${esc(D.familyLabel[f] || f)}</span>`).join("");
+  const label = (r) => `${r.arm} on ${r.modelLabel}`;
+  const tagText = (r) => [r.partial ? r.partial : null, r.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", ");
+
+  /* ---------- one tooltip, delegated: hover shows, click or Enter pins ---------- */
+  const tip = $("#tip"); let tipEl = null, tipByFocus = false, pinned = false, pinEl = null, quietFocus = false;
+  let lockFor = () => {}, unlockFocus = () => {}; // set by the focus code below
+  const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
+  const term = (key, text) => TERM[key] ? `<span class="term" data-term="${esc(key)}" tabindex="0">${text == null ? esc(TERM[key].label) : text}</span>` : (text == null ? esc(key) : text);
+  // a group's, bucket's, kind's or role's key as the data spells it -> its glossary key, or null (#395)
+  const TK = (k) => { const t = (D.termAlias || {})[k] || String(k).replace(/_/g, "-"); return TERM[t] ? t : null; };
+  function termTip(key) { const t = TERM[key]; return t ? `<h4>${esc(t.label)}</h4><p>${esc(t.text)}</p>` : `<h4>${esc(key)}</h4><p>Not yet defined.</p>`; }
+  function setupTip(arm) { return `<h4><span class="id">${esc(arm)}</span></h4><p>${esc(descOf(arm))}</p>`; }
+  function rowTip(r, g) {
+    if (!r) return "";
+    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
+    const out = order.filter((k) => o[k]).map((k) => `${o[k]} ${k}`).join(", ");
+    const ex = r.example ? `<q>${esc(r.example.text)}</q><div class="src">Example: question <span class="id">${esc(r.example.case)}</span>, scored ${esc(r.example.outcome)}${r.example.tools && r.example.tools.length ? "; tools called: " + esc(r.example.tools.join(", ")) : ""}</div>` : "";
+    let gl = "";
+    if (g && r.groups[g]) { const gg = D.groupsAll.find((x) => x.key === g); gl = `<dt>${esc(gg ? gg.label : g)}</dt><dd>${P(r.groups[g][0])}% right over ${r.groups[g][1]} questions</dd>`; }
+    let s2 = "";
+    if (r.step2) { const a = r.step2.accuracy; s2 = `<dt>vs managed best</dt><dd>${sg(a[0])} points [${sg(a[1])}, ${sg(a[2])}], paired</dd>`; }
+    const vf = r.vsFloor && r.vsFloor.acc ? `<dt>vs the floor</dt><dd>${sg(r.vsFloor.acc[0])} points [${sg(r.vsFloor.acc[1])}, ${sg(r.vsFloor.acc[2])}], paired</dd>` : "";
+    return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}, ${esc(S(r.set).label.toLowerCase())}</h4>
+      <p>${esc(r.desc)}</p>
+      <dl>${gl}<dt>Right</dt><dd>${P(r.acc[0])}% ${ivTxt(r.acc, r.exact && r.exact.acc)}${r.exact && r.exact.acc ? `, exact bound over ${r.cases} questions` : ""}</dd>
+      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% ${ivTxt(r.cw, r.exact && r.exact.cw)}${r.exact && r.exact.cw ? `, exact bound over ${r.cases} questions` : ""}</dd>${s2}${vf}
+      <dt>Ran</dt><dd>${r.cases} of ${r.of} questions, ${r.runs} of ${r.expected} runs${r.status === "pending" ? "; pending: deciding run" : ""}</dd>
+      <dt>Outcomes</dt><dd>${out}</dd><dt>Model</dt><dd>${esc(ROLE[r.role] || "")}</dd><dt>Harness</dt><dd>${esc(r.harness)}</dd></dl>${ex}`;
+  }
+  function htmlFor(el) {
+    if (el.dataset.term != null) return termTip(el.dataset.term);
+    if (el.dataset.setup != null) return setupTip(el.dataset.setup);
+    if (el.dataset.tip) return rowTip(byId(el.dataset.tip), el.dataset.g);
+    return "";
+  }
+  const CLOSE = `<button type="button" class="tipclose" aria-label="Close"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>`;
+  function place(x, y) {
+    const w = tip.offsetWidth, h = tip.offsetHeight, vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    let left = x + 14, top = y + 16;
+    if (left + w > vw - 8) left = Math.max(8, Math.min(vw - w - 8, x - w - 14));
+    if (left < 8) left = 8;
+    if (top + h > vh - 8) top = Math.max(8, y - h - 12);
+    const sx = pinned ? window.scrollX : 0, sy = pinned ? window.scrollY : 0;
+    tip.style.transform = `translate(${Math.round(left + sx)}px, ${Math.round(top + sy)}px)`;
+  }
+  function showTipHTML(html, x, y) { if (!html) return hideTip(); tip.innerHTML = CLOSE + html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y); }
+  function hideTip() { if (pinned) return; tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); tipEl = null; tipByFocus = false; }
+  function pin(el, x, y, html) {
+    pinned = false; tip.classList.remove("pinned"); tip.style.position = "";
+    const h = html || (isUnits(el) ? tip.innerHTML.replace(CLOSE, "") : htmlFor(el));
+    if (!h) return;
+    pinned = true; pinEl = el; tipEl = el;
+    tip.style.position = "absolute"; tip.classList.add("pinned");
+    tip.setAttribute("role", "dialog"); tip.setAttribute("aria-label", "Pinned detail");
+    tip.innerHTML = CLOSE + h + jumpLine(el); tip.classList.add("on"); tip.setAttribute("aria-hidden", "false"); place(x, y);
+    lockFor(el);
+  }
+  /* ---------- a pinned tooltip's jump to the fuller entry behind it (#389) ---------- */
+  // Only a term with a glossary entry and a setup with a row in the decision map get one; data points never do.
+  function jumpTarget(el) {
+    if (!el || !el.dataset) return null;
+    if (el.dataset.term != null) { const t = document.getElementById("term-" + el.dataset.term); return t ? [t, "More in the glossary ↓"] : null; }
+    if (el.dataset.setup != null) { const t = document.getElementById("map-" + el.dataset.setup); return t ? [t, "See its row in the map ↓"] : null; }
+    return null;
+  }
+  function jumpLine(el) {
+    const j = jumpTarget(el);
+    if (!j || j[0].contains(el)) return "";
+    return `<div class="tipjump"><a href="#${esc(j[0].id)}" data-jump="1">${j[1]}</a></div>`;
+  }
+  // The target may sit in another chapter: the jump opens that chapter as a new history entry, so "↑ Back"
+  // (and the browser's Back) return to the chapter and the place the reader left.
+  function jump(from) {
+    const j = jumpTarget(from); if (!j) return;
+    const target = j[0], backY = window.scrollY, backX = window.scrollX, backHash = nav.hash();
+    const token = "j" + Date.now();
+    unpin(false);
+    document.querySelectorAll(".jumpback").forEach((b) => b.remove());
+    nav.go(target.id, { push: true, noScroll: true, jump: token });
+    // Instant both ways: the jump spans most of the page, and the highlight does the orienting.
+    target.scrollIntoView({ block: "center" });
+    target.classList.remove("jumped"); void target.offsetWidth; target.classList.add("jumped");
+    setTimeout(() => target.classList.remove("jumped"), 1900);
+    const back = document.createElement("button");
+    back.type = "button"; back.className = "jumpback"; back.textContent = "↑ Back";
+    back.setAttribute("aria-label", "Back to where you were reading");
+    back.addEventListener("click", (e) => {
+      e.stopPropagation(); back.remove();
+      if (history.state && history.state.jump === token) { nav.afterPop(from); history.back(); return; }
+      nav.go(backHash, { push: true, noScroll: true });
+      window.scrollTo(backX, backY);
+      if (from && from.focus && document.contains(from)) { quietFocus = true; from.focus({ preventScroll: true }); quietFocus = false; }
+    });
+    (target.matches("tr") ? target.querySelector("td") : target).appendChild(back);
+    quietFocus = true; back.focus({ preventScroll: true }); quietFocus = false;
+  }
+  function unpin(returnFocus) {
+    if (!pinned) return;
+    const el = pinEl; pinned = false; pinEl = null;
+    tip.classList.remove("pinned"); tip.style.position = ""; tip.setAttribute("role", "tooltip"); tip.removeAttribute("aria-label");
+    hideTip(); unlockFocus();
+    if (returnFocus && el && el.focus && document.contains(el)) { quietFocus = true; el.focus({ preventScroll: true }); quietFocus = false; }
+  }
+  window.__reportUnpin = unpin;
+  const TIPSEL = "[data-term],[data-setup],[data-tip]";
+  const isUnits = (el) => !!(el && el.hasAttribute && el.hasAttribute("data-row")); // a unit-plate row: its tooltip follows the hovered square
+  // A key ring in Figure 3 stands for its setup's own focusable group, whose hit area may lie under another's.
+  const closestTip = (t) => {
+    if (!t || !t.closest) return null;
+    const ring = t.closest("[data-tip-for]");
+    if (ring) { const svg = ring.ownerSVGElement; return [...svg.querySelectorAll("[data-tip]")].find((g) => g.dataset.tip === ring.dataset.tipFor) || null; }
+    return t.closest(TIPSEL);
+  };
+  document.addEventListener("pointerover", (e) => {
+    if (pinned) return;
+    const el = closestTip(e.target);
+    if (!el) { if (tipEl && !tipEl.contains(e.target)) hideTip(); return; }
+    if (el !== tipEl) { tipEl = el; tipByFocus = false; showTipHTML(htmlFor(el), e.clientX, e.clientY); }
+  });
+  document.addEventListener("pointermove", (e) => { if (!pinned && tipEl && tipEl.contains(e.target)) place(e.clientX, e.clientY); });
+  document.addEventListener("pointerout", (e) => { if (pinned) return; if (tipEl && (!e.relatedTarget || !tipEl.contains(e.relatedTarget))) { if (!closestTip(e.relatedTarget)) hideTip(); } });
+  document.addEventListener("focusin", (e) => {
+    if (pinned || quietFocus) return;
+    const el = closestTip(e.target); if (el && el === e.target) { tipEl = el; tipByFocus = true; const b = el.getBoundingClientRect(); showTipHTML(htmlFor(el), b.left, b.bottom - 8); }
+  });
+  document.addEventListener("focusout", () => { if (!pinned) hideTip(); });
+  document.addEventListener("click", (e) => {
+    if (tip.contains(e.target)) {
+      if (e.target.closest(".tipclose")) unpin(true);
+      else if (e.target.closest("[data-jump]")) { e.preventDefault(); jump(pinEl); }
+      return;
+    }
+    if (e.target.closest && e.target.closest(".jumpback")) return;
+    const el = closestTip(e.target);
+    if (el) { pin(el, e.clientX, e.clientY); return; }
+    const cv = e.target.closest && e.target.closest("[data-row]");
+    if (cv && tip.classList.contains("on") && tipEl === cv) { pin(cv, e.clientX, e.clientY); return; }
+    if (pinned) unpin(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { if (pinned) unpin(true); else hideTip(); return; }
+    if ((e.key === "Enter" || e.key === " ") && document.activeElement) {
+      const el = document.activeElement;
+      if (el.matches && el.matches(TIPSEL)) { e.preventDefault(); const b = el.getBoundingClientRect(); pin(el, b.left, b.bottom - 8); }
+    }
+  });
+  window.addEventListener("scroll", () => {
+    if (pinned) return;
+    if (tipByFocus && tipEl) { const b = tipEl.getBoundingClientRect(); place(b.left, b.bottom - 8); return; }
+    if (!tipEl || !isUnits(tipEl)) hideTip();
+  }, { passive: true });
+
+  /* ---------- focus, delegated on any .focusable: one dimming source at a time ---------- */
+  // A figure dims by one source only: the threshold glider while it sits off its home (Figure 2), else a
+  // locked focus (a clicked mark, label or legend entry, held until its pin closes or it is clicked again),
+  // else the hovered or keyboard-focused mark. A lower source never adds its own dimming on top.
+  const FSEL = "[data-key],[data-arm],[data-fam]";
+  function applyFocus(fig, el) {
+    const mks = fig.querySelectorAll(".mk");
+    fig.querySelectorAll(".k.locked").forEach((k) => { k.classList.remove("locked"); if (k.hasAttribute("aria-pressed")) k.setAttribute("aria-pressed", "false"); });
+    if (!el) { fig.classList.remove("focusing"); mks.forEach((m) => m.classList.remove("on")); return; }
+    let pred;
+    if (el.dataset.key) pred = (m) => m.dataset.key === el.dataset.key;
+    else if (el.dataset.arm) pred = (m) => m.dataset.arm === el.dataset.arm;
+    else pred = (m) => m.dataset.fam === el.dataset.fam;
+    fig.classList.add("focusing"); mks.forEach((m) => m.classList.toggle("on", pred(m)));
+  }
+  let focusFig = null, lock = null; // lock: {fig, el}, a focus fixed by a click
+  const gliding = (fig) => fig.classList.contains("gliding");
+  const focusTarget = (fig, t) => { const el = t && t.closest ? t.closest(FSEL) : null; return el && fig.contains(el) && el !== fig ? el : null; };
+  function focusAt(target) {
+    if (lock) return;
+    const fig = target && target.closest ? target.closest(".focusable") : null;
+    if (focusFig && focusFig !== fig) applyFocus(focusFig, null);
+    focusFig = fig;
+    if (!fig) return;
+    applyFocus(fig, gliding(fig) ? null : focusTarget(fig, target));
+  }
+  function setLock(fig, el) {
+    if (lock) applyFocus(lock.fig, null);
+    if (focusFig && focusFig !== fig) applyFocus(focusFig, null);
+    lock = null; focusFig = null;
+    if (!fig || !el || gliding(fig)) return;
+    lock = { fig, el }; applyFocus(fig, el);
+    if (el.classList.contains("k")) { el.classList.add("locked"); if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", "true"); }
+  }
+  function clearLock() { if (lock) { applyFocus(lock.fig, null); lock = null; } }
+  // pin() and unpin() above call these, so a pinned mark keeps the others dimmed until the pin closes
+  lockFor = (el) => { const fig = el && el.closest ? el.closest(".focusable") : null; const t = fig && focusTarget(fig, el); if (t) setLock(fig, t); else clearLock(); };
+  unlockFocus = clearLock;
+  window.__reportFocus = { lockFor: (el) => lockFor(el), clear: clearLock, gliding: (on) => {
+    const fig = $("#fig2"); if (!fig) return; fig.classList.toggle("gliding", on);
+    if (on) { if (lock && lock.fig === fig) { unpin(false); clearLock(); } applyFocus(fig, null); }
+  } };
+  // a legend entry, a family title or a label that names a group (data-fam) or a setup (data-key) and has no
+  // tooltip of its own toggles a lock by click; a legend entry also by Enter or Space
+  const lockable = (t) => {
+    if (!t || !t.closest || closestTip(t)) return null;
+    const el = t.closest(FSEL), fig = el && el.closest(".focusable");
+    return fig && el !== fig ? el : null;
+  };
+  const toggleLock = (el) => { const was = lock && lock.el === el; unpin(false); if (was) clearLock(); else setLock(el.closest(".focusable"), el); };
+  document.addEventListener("click", (e) => { const el = lockable(e.target); if (!el) return; toggleLock(el); e.stopPropagation(); }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && lock && !pinned) { clearLock(); return; }
+    const el = document.activeElement;
+    if ((e.key === "Enter" || e.key === " ") && el && el.classList && el.classList.contains("k") && lockable(el) === el) { e.preventDefault(); toggleLock(el); }
+  });
+  // a click on empty page clears a lock that no pin holds (a pin's own close goes through unpin)
+  document.addEventListener("click", (e) => { if (lock && !pinned && !lockable(e.target) && !closestTip(e.target)) clearLock(); });
+  document.addEventListener("pointerover", (e) => focusAt(e.target));
+  document.addEventListener("pointerout", (e) => { if (lock) return; if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+  document.addEventListener("focusin", (e) => { if (!quietFocus) focusAt(e.target); });
+  document.addEventListener("focusout", (e) => { if (lock) return; if (focusFig && !(e.relatedTarget && focusFig.contains(e.relatedTarget))) { applyFocus(focusFig, null); focusFig = null; } });
+
+  /* ---------- theme switch ---------- */
+  const themeBtn = $("#themebtn");
+  function syncThemeBtn() { const dark = window.reportTheme() === "dark"; themeBtn.setAttribute("aria-pressed", String(dark)); }
+  themeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const next = window.reportTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("semantic-bet-theme", next); } catch (err) {}
+    syncThemeBtn(); document.dispatchEvent(new CustomEvent("report-theme", { detail: next }));
+  });
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      const a = document.documentElement.getAttribute("data-theme");
+      if (a !== "light" && a !== "dark") { syncThemeBtn(); document.dispatchEvent(new CustomEvent("report-theme", { detail: window.reportTheme() })); }
+    });
+  } catch (e) {}
+  // The figures take their colours from CSS tokens (var(--token)), so a theme change restyles them with no redraw.
+  document.addEventListener("report-theme", () => { unpin(false); hideTip(); });
+
+  /* ---------- per-view set switches ---------- */
+  function renderSwitches() {
+    document.querySelectorAll(".seg[data-view]").forEach((seg) => {
+      const v = seg.dataset.view;
+      if (SETS.length < 2) { seg.hidden = true; return; }
+      seg.innerHTML = SETS.map((s) => `<button type="button" data-set="${s}" aria-pressed="${view[v] === s}">${esc(S(s).label)}, ${S(s).nCases} questions</button>`).join("");
+      seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        view[v] = b.dataset.set; try { localStorage.setItem("semantic-bet-views-2", JSON.stringify(view)); } catch (e) {}
+        renderSwitches(); hideTip(); ({ scatter: renderScatter, slopes: renderSlopes, plate: renderPlate })[v]();
+      }));
+    });
+  }
+
+  /* ---------- text, winners ---------- */
+  const setTerm = (s, text) => term(s === "frozen" || s === "hard" ? s : "", text == null ? esc(S(s).label) : text);
+  const exIv = (v, ex) => ex ? `<span class="term" data-term="exact" tabindex="0">${ivTxt(v, ex)}</span>` : ivTxt(v, ex);
+  const num = (v, ex) => `<span class="n">${P(v[0])}%</span><span class="ivs">${exIv(v, ex)}</span>`;
+  const dnum = (v) => v ? `<span class="n">${sg(v[0])}</span><span class="ivs">[${sg(v[1])}, ${sg(v[2])}]</span>` : `<span class="ivs">n/a</span>`;
+  function renderText() {
+    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, on ${SETS.map((s) => `the ${setTerm(s, esc(S(s).label.toLowerCase()))} (${S(s).nCases} questions)`).join(" and ")}. A living memo: it states what the runs so far show; nothing here closes the question.`;
+    const A = D.abstract || { lead: "", rows: [] };
+    $("#abstract").innerHTML = `<b>${esc(A.lead)}</b>`;
+    const ab = A.rows;
+    const lines = [
+      [`The ${term("managed-best", "managed best")}`, null, "grp"],
+      ["Setup", (r) => `<span class="id" data-setup="${esc(r.mbArm)}" tabindex="0">${esc(r.mbArm)}</span><span class="sub">${esc(r.mb.split(" on ").slice(1).join(" on "))}</span>`],
+      ["Right", (r) => num(r.mbAcc, r.mbEx && r.mbEx.acc)], [term("confident-wrong"), (r) => num(r.mbCw, r.mbEx && r.mbEx.cw)],
+      [`MetricFlow on the free model (${term("decides", "decides")})`, null, "grp"],
+      ["Right", (r) => num(r.mfAcc, r.mfEx && r.mfEx.acc)], [term("confident-wrong"), (r) => num(r.mfCw, r.mfEx && r.mfEx.cw)],
+      [`MetricFlow minus the managed best, points right, paired`, (r) => dnum(r.d), "diff"],
+    ];
+    $("#abtable").innerHTML = ab.length ? `<table class="ab"><thead><tr><th></th>${ab.map((r) => `<th class="num">${setTerm(r.set)}<span class="sub">${r.n} questions</span></th>`).join("")}</tr></thead><tbody>` +
+      lines.map(([lab, f, cls]) => f ? `<tr class="${cls || ""}"><th scope="row">${lab}</th>${ab.map((r) => `<td class="num">${f(r)}</td>`).join("")}</tr>` : `<tr class="grp"><th colspan="${ab.length + 1}" scope="rowgroup">${lab}</th></tr>`).join("") +
+      `</tbody></table><p class="abnote">Means with their ${term("interval", "95% interval")} in brackets${ab.some((r) => r.mbEx || r.mfEx) ? `, or the ${term("exact", "exact bound")} where the interval has no spread` : ""}; each column is one question set.</p>` : "";
+    $("#t1").textContent = (D.twin && D.twin.mapLead) || D.sentences.map || "";
+    const tw = D.twin || {};
+    $("#twin1").innerHTML = (tw.map || []).length ? `<table class="tw"><thead><tr><th>MetricFlow against the best managed agent</th><th>${term("covered")}</th><th>${term("hidden-rule")}</th><th>${term("uncovered")}</th></tr></thead><tbody>` +
+      tw.map.map((r) => `<tr><td>${setTerm(r.set)}</td>${r.cells.map((c) => `<td>${esc(c).replace(/^(\d+)/, '<span class="n">$1</span>')}</td>`).join("")}</tr>`).join("") + `</tbody></table>` : "";
+    $("#t2").textContent = D.sentences.forest || "";
+    $("#t4").textContent = (tw.stripLead) || D.sentences.strip || "";
+    $("#twin4").innerHTML = (tw.strip || []).length ? `<table class="tw"><thead><tr><th>% of runs right</th><th class="num">MetricFlow, ${term("covered")}</th><th class="num">${term("hidden-rule")}</th><th class="num">${term("uncovered")}</th><th class="num">${term("managed-best", "Managed best")}, uncovered</th></tr></thead><tbody>` +
+      tw.strip.map((r) => `<tr><td>${setTerm(r.set)}</td><td class="num"><span class="n">${r.cov}%</span></td><td class="num"><span class="n">${r.trap == null ? "n/a" : r.trap + "%"}</span></td><td class="num"><span class="n">${r.unc}%</span></td><td class="num"><span class="n">${r.mbUnc == null ? "n/a" : r.mbUnc + "%"}</span></td></tr>`).join("") +
+      `</tbody></table>${tw.stripNote ? `<div class="note" style="font-family:var(--label);font-size:13px;color:var(--ink-3);margin-top:4px">${esc(tw.stripNote)}</div>` : ""}` : "";
+    $("#gloss").innerHTML = (D.terms || []).map((t) => `<dt id="term-${esc(t.key)}">${esc(t.label)}</dt><dd>${esc(t.text)}</dd>`).join("");
+  }
+  const PILLAR_TERM = { "Covered questions": ["covered", "Covered", " questions"], "Uncovered questions": ["uncovered", "Uncovered", " questions"], "Least often confidently wrong": ["confident-wrong", "Least often confidently wrong", ""] };
+  // The n behind a pillar's figure: a collapsed interval becomes the exact bound over the leader's questions
+  function pillarFig(p) {
+    const L = p.lead, iv = L.iv, runs = `${L.runs} run${L.runs === 1 ? "" : "s"}`, qs = `${L.q} question${L.q === 1 ? "" : "s"}`;
+    const what = p.what === "right" ? "right" : "confidently wrong";
+    let fig, nl;
+    if (L.exact) {
+      const b = ivB(iv, L.exact), all = iv[0] === 1;
+      fig = `${P(iv[0])}%<small>${all ? `all ${runs} ${what}` : `none of ${runs} ${what}`}</small>`;
+      nl = `${term("exact", all ? "95% lower bound" : "95% upper bound")} <span class="n">${all ? b[0] : b[1]}%</span> over ${qs}`;
+    } else {
+      fig = `${P(iv[0])}%<small>${ivTxt(iv)}</small>`;
+      nl = `${qs}, ${runs}`;
+    }
+    if (L.few) nl += `<span class="few"> · few questions: reads only large gaps</span>`;
+    return { fig, nl };
+  }
+  function renderWinners() {
+    const titles = []; SETS.forEach((s) => S(s).pillars.forEach((p) => { if (!titles.includes(p.title)) titles.push(p.title); }));
+    const differs = [];
+    const html = titles.map((t) => {
+      let why = "";
+      const leads = new Set(); let nSets = 0;
+      const blocks = SETS.map((s) => {
+        const p = S(s).pillars.find((x) => x.title === t);
+        if (!p) return `<div class="pset"><div class="sl">${setTerm(s)}: no setup has a deciding run here yet</div></div>`;
+        why = p.why;
+        const L = p.lead; leads.add(L.id.split("|").slice(1).join("|")); nSets++;
+        const tied = p.tied.length ? `${term("interval", "Tied within the interval")}: ${p.tied.map((x) => `<span class="id" data-setup="${esc(x.arm)}" tabindex="0">${esc(x.arm)}</span> on ${esc(x.model)} <span class="n">${P(x.v)}%</span>`).join(", ")}.` : `No setup ties it within the ${term("interval", "interval")}.`;
+        const ctr = p.contrast ? `<div class="ctr">Against it: ${esc(p.contrast[0])}, <span class="n">${P(p.contrast[1])}%</span>.</div>` : "";
+        const f = pillarFig(p);
+        return `<div class="pset"><div class="sl">${setTerm(s)}, ${p.n} questions</div>
+          <div class="lead"><span class="num">${f.fig}</span></div>
+          <div class="who"><span class="by">Leader</span> <span class="id" data-setup="${esc(L.arm)}" tabindex="0">${esc(L.arm)}</span> on ${esc(L.model)}${L.partial ? ` <span class="flag" data-term="partial" tabindex="0">partial: ${esc(L.partial)} over the whole set</span>` : ""}</div>
+          <div class="pn">${f.nl}</div>${p.kind ? `<div class="kind">${esc(p.kind)}</div>` : ""}
+          <div class="tied">${tied}</div>${ctr}</div>`;
+      }).join("");
+      const pt = PILLAR_TERM[t];
+      const differ = nSets > 1 && leads.size > 1; differs.push(nSets > 1 ? differ : null);
+      return `<div class="pillar" style="grid-row:span ${2 + SETS.length}"><h3>${pt ? term(pt[0], esc(pt[1])) + esc(pt[2]) : esc(t)}</h3><p class="why">${esc(why)}@@DIFF${titles.indexOf(t)}@@</p>${blocks}</div>`;
+    }).join("");
+    // "a different setup leads on each set": once for the band when it holds in every pillar, else per pillar
+    const multi = differs.filter((d) => d !== null), all = multi.length > 1 && multi.every(Boolean);
+    $("#winners").innerHTML = html.replace(/@@DIFF(\d+)@@/g, (m, i) => (!all && differs[+i] ? `<span class="lchg">A different setup leads on each set.</span>` : ""));
+    const wd = $("#w-diff"); wd.hidden = !all; wd.textContent = all ? "In every pillar, a different setup leads on each set." : "";
+  }
+
+  /* ---------- Figure 1: decision map, both sets ---------- */
+  function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
+  function unionKeys() {
+    const keys = new Map();
+    SETS.forEach((s) => S(s).rows.filter((r) => r.plotted).forEach((r) => { if (!keys.has(r.key)) keys.set(r.key, { key: r.key, arm: r.arm, any: r }); }));
+    return [...keys.values()];
+  }
+  function primaryKey(arm) {
+    for (const s of SETS) { const r = S(s).rows.find((x) => x.arm === arm && x.deciding); if (r) return r.key; }
+    for (const s of SETS) { const r = S(s).rows.find((x) => x.arm === arm && x.primary); if (r) return r.key; }
+    return null;
+  }
+  function renderMap() {
+    const U = unionKeys();
+    const best = {};
+    SETS.forEach((s) => { best[s] = {}; D.groups.forEach((g) => { const v = S(s).rows.filter((r) => r.primary && r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0]); best[s][g.key] = v.length ? Math.max(...v) : null; }); });
+    const setsSub = SETS.map((s) => short(s)).join(", then ");
+    let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
+    const GT = new Proxy({}, { get: (_, k) => TK(k) });
+    D.groups.forEach((g) => (h += `<th scope="col" class="g">${GT[g.key] ? term(GT[g.key], esc(g.label)) : esc(g.label)}<small>${SETS.map((s) => S(s).groupCases[g.key] || 0).join(" and ")} questions</small></th>`));
+    h += `<th scope="col" class="num">Right<small>mean [95%], ${setsSub}</small></th><th scope="col" class="num">${term("confident-wrong")}<small>mean [95%], ${setsSub}</small></th></tr></thead><tbody>`;
+    const ncol = 4 + D.groups.length;
+    D.ladder.forEach((L) => {
+      const arms = L.arms.filter((a) => U.some((u) => u.arm === a));
+      if (L.key === "L8") { h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">Rung 8. ${esc(L.label)}</th></tr>`; return; }
+      if (!arms.length) return;
+      h += `<tr class="rung"><th colspan="${ncol}" scope="rowgroup">${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</th></tr>`;
+      arms.forEach((a) => {
+        const pk = primaryKey(a);
+        const list = U.filter((u) => u.arm === a).sort((x, y) => (y.key === pk) - (x.key === pk));
+        list.forEach((u) => {
+          const sub = u.key !== pk; const others = list.length - 1;
+          const rs = SETS.map((s) => rowOf(s, u.key));
+          const any = rs.find(Boolean);
+          const tags = [];
+          rs.forEach((r, i) => { if (r && r.partial) tags.push(`<span class="flag" data-term="partial" tabindex="0">${SETS.length > 1 ? short(SETS[i]) + ": " : ""}${esc(r.partial)}</span>`); });
+          if (any.status === "pending") tags.push(`<span class="flag pend" data-term="pending" tabindex="0">pending: deciding run</span>`);
+          if (any.status === "comparison") tags.push(`<span class="flag">comparison only</span>`);
+          rs.forEach((r, i) => { if (r && r.managedBest) tags.push(`<span class="flag mb" data-term="managed-best" tabindex="0">managed best${SETS.length > 1 ? ", " + short(SETS[i]) : ""}</span>`); });
+          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm-row="${esc(a)}" ${showAll ? "" : "hidden"}` : `id="map-${esc(a)}"`}>`;
+          h += `<td class="setup">${sub ? "" : `<span class="id" data-setup="${esc(a)}" tabindex="0">${esc(a)}</span>`}<span class="mdl">${shapeKey(any.role, famC(any.family))}${esc(any.modelLabel)}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</span>${tags.length ? `<span class="tags">${tags.join("")}</span>` : ""}</td>`;
+          h += `<td class="what">${sub ? "" : esc(descOf(a))}</td>`;
+          D.groups.forEach((g) => {
+            h += `<td class="g">` + rs.map((r, i) => {
+              const v = r && r.groups[g.key];
+              if (!v) return `<span class="ch none" title="${r ? "no question of this group in the pass" : "not run on the " + esc(short(SETS[i])) + " set"}">–</span>`;
+              const isBest = r.primary && r.family !== "ref" && v[0] === best[SETS[i]][g.key];
+              return `<span class="ch b${bin(v[0])}${isBest ? " best" : ""}" data-tip="${esc(r.id)}" data-g="${g.key}">${P(v[0])}</span>`;
+            }).join("") + `</td>`;
+          });
+          ["acc", "cw"].forEach((k) => {
+            h += `<td class="num">` + rs.map((r, i) => r ? `<div class="ivl" data-tip="${esc(r.id)}"><span class="sk">${sKey(SETS[i])}</span><span class="${k === "cw" && r.cw[0] >= 0.1 ? "cwhot" : ""}">${P(r[k][0])}%</span> <small>${exIv(r[k], r.exact && r.exact[k])}</small></div>` : `<div class="ivl"><span class="sk">${sKey(SETS[i])}</span><small>not run</small></div>`).join("") + `</td>`;
+          });
+          h += `</tr>`;
+        });
+      });
+    });
+    h += `</tbody>`;
+    const t = $("#map"); t.innerHTML = h;
+    t.querySelectorAll("button.more").forEach((b) => b.addEventListener("click", () => {
+      const a = b.dataset.arm; const open = b.getAttribute("aria-expanded") !== "true";
+      const subs = t.querySelectorAll(`tr.sub[data-arm-row="${CSS.escape(a)}"]`);
+      subs.forEach((tr) => (tr.hidden = !open));
+      b.setAttribute("aria-expanded", String(open)); b.textContent = open ? "hide" : "+" + subs.length + (subs.length > 1 ? " models" : " model");
+    }));
+    $("#leg1").innerHTML = legendRoles() + `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span>` + (SETS.length > 1 ? `<span class="k">F frozen set, H hard set</span>` : "");
+  }
+
+  /* ---------- Observable Plot: shared pieces ---------- */
+  // Every figure below is drawn by Observable Plot (inlined from vendor/). Colours are the page's
+  // CSS tokens passed as var(--token) strings, so a theme change restyles the figures without a redraw.
+  // Plot binds each element to its datum's index (el.__data__); tag() reads it to add the data-*
+  // attributes the page's delegated tooltip, pinning and hover-to-focus handlers rely on.
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const lin = (d0, d1, r0, r1) => (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0);
+  const mid = (baseline, fs) => baseline - 0.32 * fs; // Plot centres text on y (dy .32em); the old drawing set baselines
+  const famRows = (rows) => famsPresent(rows).map((f) => ({ f, rows: rows.filter((r) => r.family === f) }));
+  // Text that must fit a column is measured in the label font (the figures' font) and wrapped between words.
+  // The figures that wrap are drawn again once the web font is in, so the measure is the font's own.
+  const measure = (() => { const c = document.createElement("canvas").getContext("2d");
+    return (s, size, weight) => { c.font = `${weight || 400} ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--label").trim() || "sans-serif"}`; return c.measureText(s).width; }; })();
+  // runs: [{t, c}] (c, an optional class); a run starting with punctuation stays on the previous word's line.
+  // Returns lines of runs, each line within room unless a single word is wider.
+  function wrapRuns(runs, room, size, weight) {
+    const words = [];
+    runs.forEach((r) => (String(r.t).match(/\S+\s*|\s+/g) || []).forEach((t, i) => {
+      if (i === 0 && words.length && /^[,;.]/.test(t) && !/\s$/.test(words[words.length - 1].map((s) => s.t).join(""))) words[words.length - 1].push({ t, c: r.c || "" });
+      else words.push([{ t, c: r.c || "" }]);
+    }));
+    const lines = []; let cur = [];
+    const width = (ws) => measure(ws.flat().map((s) => s.t).join("").trimEnd(), size, weight);
+    words.forEach((w) => { if (cur.length && width(cur.concat([w])) > room) { lines.push(cur); cur = [w]; } else cur.push(w); });
+    if (cur.length) lines.push(cur);
+    return lines.map((ws) => { const out = []; ws.flat().forEach((s) => { const last = out[out.length - 1]; if (last && last.c === s.c) last.t += s.t; else out.push({ t: s.t, c: s.c }); }); out[out.length - 1].t = out[out.length - 1].t.trimEnd(); return out; });
+  }
+  // Wrapped lines as tspans under one <text> at its own origin, step px apart.
+  const linesHTML = (lines, step) => lines.map((ln, i) => `<tspan x="0"${i ? ` dy="${step}"` : ""}>${ln.map((r) => (r.c ? `<tspan class="${r.c}">${esc(r.t)}</tspan>` : esc(r.t))).join("")}</tspan>`).join("");
+  function steps(a, b, minor, major) { // minor and major grid values from a to b
+    const mi = [], ma = [];
+    for (let v = a; v <= b + 1e-9; v += minor) { const vv = +v.toFixed(4); (Math.abs(vv / major - Math.round(vv / major)) < 1e-6 ? ma : mi).push(vv); }
+    return [mi, ma];
+  }
+  function attrs(el, a) { for (const k in a) if (a[k] != null && a[k] !== false) el.setAttribute(k, a[k]); }
+  // Plot draws mark by mark; the page reads setup by setup. While Plot renders, a collector keeps each
+  // tagged element under its row's key; afterwards take() moves those elements, each inside a shallow
+  // copy of its mark's group (so it keeps that mark's styling), into per-row groups built in reading
+  // order. The figures keep the hand-drawn page's DOM: tab and screen-reader order row by row, and every
+  // mark inside a focusable group that carries its tooltip, so focus can return there.
+  function collector() {
+    const m = new Map();
+    return {
+      put: (key) => (el) => { let a = m.get(key); if (!a) m.set(key, (a = [])); a.push(el); },
+      take: (key) => (m.get(key) || []).map((el) => { const sh = el.parentNode.cloneNode(false); sh.removeAttribute("aria-label"); sh.removeAttribute("aria-hidden"); sh.append(el); return sh; }),
+    };
+  }
+  function G(a, kids) { const g = document.createElementNS(SVGNS, "g"); if (a) attrs(g, a); (kids || []).forEach((k) => k && g.append(k)); return g; }
+  const mkA = (key, arm, fam) => ({ class: "mk", "data-key": key, "data-arm": arm, "data-fam": fam });
+  const mkOf = (r) => mkA(r.key, r.arm, r.family);
+  function prune(svg) { svg.querySelectorAll(":scope > g[aria-label]").forEach((g) => { if (!g.childElementCount) g.remove(); }); }
+  function settle(svg, rows) { svg.insertBefore(rows, svg.querySelector(":scope > .over-rows")); prune(svg); }
+  function tag(data, fn) { // a Plot render transform: fn(element, datum) after the mark renders
+    return function (index, scales, values, dims, ctx, next) {
+      const g = next(index, scales, values, dims, ctx);
+      if (g) [...g.children].forEach((el) => { const i = el.__data__; const d = data[Array.isArray(i) ? i[0] : i]; if (d !== undefined) fn(el, d); });
+      return g;
+    };
+  }
+  function raw(fn) { return (index, scales, values, dims) => { const g = document.createElementNS(SVGNS, "g"); g.innerHTML = fn(scales, dims); return g; }; }
+  function plot(o) { return Plot.plot(Object.assign({ axis: null, style: "background:transparent;overflow:visible", r: { type: "identity" } }, o)); }
+  // Plot's text centres on y (lineAnchor middle) here: a top or bottom frameAnchor would otherwise hang or seat the text.
+  const txt = (data, o) => Plot.text(data, Object.assign({ lineAnchor: "middle" }, o));
+  const one = (text, o) => txt([0], Object.assign({ text: () => text }, o));
+  // The role glyphs as Plot symbols: Plot hands over size = πr², and each draws the page's shape for radius r.
+  const rOf = (size) => Math.sqrt(size / Math.PI);
+  const SYM = {
+    decides: { draw(c, size) { const r = rOf(size) + 0.5; c.moveTo(r, 0); c.arc(0, 0, r, 0, 2 * Math.PI); } },
+    check: { draw(c, size) { const r = rOf(size); c.moveTo(r, 0); c.arc(0, 0, r, 0, 2 * Math.PI); } },
+    gemini: { draw(c, size) { const r = rOf(size); c.rect(-r, -r, 2 * r, 2 * r); } },
+    cc: { draw(c, size) { const d = rOf(size) + 1; c.moveTo(0, -d); c.lineTo(d, 0); c.lineTo(0, d); c.lineTo(-d, 0); c.closePath(); } },
+    other: { draw(c, size) { const r = rOf(size); c.moveTo(0, -r - 1); c.lineTo(r + 1, r); c.lineTo(-r - 1, r); c.closePath(); } },
+  };
+  function glyphStyle(role, color, hollow) {
+    if (role === "check" || role === "cc") return { fill: "var(--paper)", stroke: color, sw: 2 };
+    if (role === "decides" || role === "gemini") return hollow ? { fill: "var(--paper)", stroke: color, sw: 1.75 } : { fill: color, stroke: "var(--paper)", sw: 2 };
+    return { fill: hollow ? "var(--paper)" : color, stroke: "var(--paper)", sw: 1.5 };
+  }
+  function glyphs(data, o) { // o: x, y, r, role(d), color(d), hollow(d), opacity, tag(el, d)
+    const st = (d) => glyphStyle(o.role(d), o.color(d), o.hollow ? o.hollow(d) : false);
+    return Plot.dot(data, { x: o.x, y: o.y, r: o.r, symbol: (d) => SYM[o.role(d)] || SYM.other, fill: (d) => st(d).fill, stroke: (d) => st(d).stroke, strokeWidth: (d) => st(d).sw, opacity: o.opacity, sort: null, render: o.tag ? tag(data, o.tag) : undefined });
+  }
+  /* ---------- Figure 2: forest, both sets, two framed panels ---------- */
+  function renderForest() {
+    const el = $("#forest"); const W = Math.max(320, el.clientWidth); const narrow = W < 700;
+    const U = unionKeys();
+    const repr = (u) => SETS.map((s) => rowOf(s, u.key)).filter((r) => r && r.plotted);
+    const groups = famRows(U.map((u) => u.any)).map((g) => ({ f: g.f, keys: U.filter((u) => u.any.family === g.f).sort((a, b) => { const ra = repr(a)[0], rb = repr(b)[0]; return rb.acc[0] - ra.acc[0]; }) }));
+    const cwMax = Math.min(1, Math.ceil(Math.max(...Object.values(ALL).filter((r) => r.plotted).map((r) => r.cw[2])) * 10 + 0.5) / 10);
+    const panels = [{ k: "acc", title: "Right, % of runs", axis: "% of runs right, mean and 95% interval", max: 1, minor: 0.02, major: 0.1, ticks: narrow ? [0, .5, 1] : [0, .2, .4, .6, .8, 1] },
+                    { k: "cw", title: "Confident-wrong, % of runs", axis: "% of runs confidently wrong, mean and 95% interval", max: cwMax, minor: 0.01, major: 0.05, ticks: [] }];
+    for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : 0.05) panels[1].ticks.push(+v.toFixed(2));
+    const rh = narrow ? 36 : 30, gh = 28;
+    const L = narrow ? 132 : 330, gap = 40;
+    const pw = (W - L - gap - 10) / 2, plotW = narrow ? W - L - 26 : pw - 16; // a panel's plot width
+    const mbLines = SETS.map((s, si) => { const mb = byId(S(s).managedBest); return mb ? { s, si, v: mb.acc[0] } : null; }).filter(Boolean);
+    const mbText = `managed best: ${mbLines.map((q) => `${short(q.s)} ${P(q.v)}`).join(", ")}`;
+    // A panel too narrow for its title and the managed best on one line takes the stacked head (title, then
+    // the managed best below it), and the short axis captions when the long ones would run past the panel.
+    const stackHead = narrow || measure(panels[0].title, 12.5, 600) + 16 + measure(mbText, 11.5) > plotW;
+    const shortAxis = narrow || panels.some((p) => measure(p.axis, 11.5) > plotW + 8);
+    const top = stackHead ? 62 : 46;
+    // The setup's model and the family names wrap within the label column; a row or header takes a line per wrap.
+    const modelRoom = narrow ? L - 6 : L - 150 - 6, modelSize = narrow ? 11.5 : 12.5, modelStep = narrow ? 13 : 15;
+    const modelLines = (u) => { const t = tgOf({ u }); return wrapRuns([{ t: u.any.modelLabel }].concat(t ? [{ t: ", " + (narrow ? t.replace("pending: deciding run", "pending") : t), c: "t-mute" }] : []), modelRoom, modelSize); };
+    // rows on a pixel layout (Plot's identity y): a header per family, then its setups
+    let y = top + (narrow ? 4 : 0); const heads = [], rows = [], seq = []; // narrow: room for the glider's value above the first header
+    groups.forEach((g) => { const hl = wrapRuns([{ t: D.familyLabel[g.f] || g.f }], L - 28, 12.5, 600); const h = { f: g.f, y: y + 18, lines: hl }; heads.push(h); seq.push(h); y += gh + (hl.length - 1) * 15;
+      g.keys.forEach((u) => { const ml = modelLines(u); const q = { u, y: y + rh / 2, lines: ml }; rows.push(q); seq.push(q); y += rh + (ml.length - 1) * modelStep; }); });
+    const H = y + 44;
+    const pts = [];
+    rows.forEach((q) => SETS.forEach((s, si) => { const r = rowOf(s, q.u.key); if (r && r.plotted) pts.push({ r, u: q.u, si, y: q.y + (SETS.length > 1 ? (si ? 6 : -6) : 0) }); }));
+    function tgOf(q) { const rs = SETS.map((s) => rowOf(s, q.u.key)); return [rs.some((r) => r && r.partial) ? "partial" : null, q.u.any.status === "pending" ? "pending: deciding run" : null].filter(Boolean).join(", "); }
+    // one panel as a Plot; its row elements stay in the collector until assemble() orders them
+    function panel(p, width, ml, mr, labels) {
+      const C = collector(), m = [];
+      m.push(Plot.frame({ stroke: "var(--rule)", rx: 2, insetLeft: -8, insetRight: -8, insetTop: -(stackHead ? 42 : 26), insetBottom: -12, ariaHidden: true }));
+      const [mi, ma] = steps(0, p.max, p.minor, p.major);
+      m.push(Plot.gridX({ ticks: mi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ma, stroke: "var(--grid-major)", strokeOpacity: 1 }));
+      m.push(Plot.axisX({ ticks: p.ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }));
+      m.push(one(shortAxis ? (p.k === "acc" ? "% right, 95% interval" : "% confidently wrong, 95%") : p.axis, { frameAnchor: "bottom-left", dy: mid(H - 8, 11.5) - (H - 40), textAnchor: "start", className: "t-mute f11" }));
+      m.push(one(p.title, { frameAnchor: "top-left", dy: mid(top - (stackHead ? 30 : 13), 12.5) - (top - 4), textAnchor: "start", className: "t-strong", render: p.k === "cw" ? tag([0], (t) => attrs(t, { "data-term": "confident-wrong", tabindex: 0 })) : undefined }));
+      if (p.k === "acc") {
+        const lines = mbLines;
+        m.push(Plot.ruleX(lines.filter((q) => !q.si), { x: "v", stroke: "var(--ink-2)", strokeWidth: 1 }));
+        m.push(Plot.ruleX(lines.filter((q) => q.si), { x: "v", stroke: "var(--ink-3)", strokeWidth: 1, strokeDasharray: "1 3" }));
+        if (lines.length) m.push(one(mbText, { frameAnchor: stackHead ? "top-left" : "top-right", textAnchor: stackHead ? "start" : "end", dy: mid(top - 13, 11.5) - (top - 4), className: "t-mute f11", render: tag([0], (t) => attrs(t, { "data-term": "managed-best", tabindex: 0 })) }));
+      }
+      if (labels) {
+        m.push(Plot.ruleY(heads, { y: (h) => h.y - 4, stroke: (h) => famC(h.f), strokeWidth: 2.5, strokeLinecap: "round", insetLeft: -ml, insetRight: width - mr - 16, render: tag(heads, (e, h) => C.put("h" + h.f)(e)) }));
+        m.push(txt(heads, { y: (h) => mid(h.y, 12.5), text: (h) => D.familyLabel[h.f] || h.f, frameAnchor: "left", dx: -ml + 22, textAnchor: "start", className: "t-strong", render: tag(heads, (e, h) => { if (h.lines.length > 1) e.innerHTML = linesHTML(h.lines, 15); C.put("h" + h.f)(e); }) }));
+        m.push(txt(rows, { y: (q) => (narrow ? mid(q.y - 3, 11.5) : mid(q.y + 4, 11.5)), text: (q) => q.u.arm, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-id",
+          render: tag(rows, (e, q) => { attrs(e, { "data-setup": q.u.arm, "data-arm": q.u.arm, tabindex: 0 }); C.put("l" + q.u.key)(e); }) }));
+        m.push(txt(rows, { y: (q) => (narrow ? mid(q.y + 11, 11.5) : mid(q.y + 4, 12.5)), text: (q) => q.u.any.modelLabel, frameAnchor: "left", dx: -ml + (narrow ? 0 : 150), textAnchor: "start", className: narrow ? "f11" : undefined,
+          render: tag(rows, (e, q) => { if (q.lines.length > 1 || q.lines[0].length > 1) e.innerHTML = linesHTML(q.lines, modelStep); C.put("l" + q.u.key)(e); }) }));
+      }
+      // per row and set: the hit band, then each interval and its glyph
+      m.push(Plot.rect(pts, { y1: (d) => d.y - 6, y2: (d) => d.y + 6, fill: "transparent", insetLeft: labels ? -12 : -ml, insetRight: -mr, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.r.id)(e); }) }));
+      const pm = (e, d) => { e.classList.add("pm"); attrs(e, { "data-panel": p.k, "data-v": d.r[p.k][0] }); C.put("t" + d.r.id)(e); };
+      [false, true].forEach((dash) => {
+        const ds = pts.filter((d) => !!d.r.major === dash);
+        m.push(Plot.link(ds, { x1: (d) => d.r[p.k][1], x2: (d) => Math.min(p.max, d.r[p.k][2]), y1: "y", y2: "y", stroke: (d) => famC(d.u.any.family), strokeWidth: (d) => (d.si ? 1.5 : 2), strokeLinecap: "round", strokeDasharray: dash ? "3 3" : undefined, render: tag(ds, pm) }));
+      });
+      m.push(glyphs(pts, { x: (d) => d.r[p.k][0], y: "y", r: (d) => (d.si ? 3.5 : 4.2), role: (d) => d.r.role, color: (d) => famC(d.u.any.family), hollow: (d) => d.si > 0, tag: pm }));
+      if (p.k === "cw" && gHome("cw") != null) m.push(Plot.ruleX([gHome("cw") / 100], { x: (v) => v, stroke: "var(--ink-2)", strokeWidth: 1, className: "over-rows" }));
+      const svg = plot({ width, height: H, marginLeft: ml, marginRight: mr, marginTop: top - 4, marginBottom: 40, x: { domain: [0, p.max] }, y: { type: "identity" }, marks: m });
+      return { p, svg, C, x: svg.scale("x") };
+    }
+    // The rows in the old order, label then one focusable group per set; a second panel's parts join the
+    // same group, shifted to where that panel sits, so each row and set is one stop over both panels.
+    function rowsOf(parts) {
+      const g = G();
+      seq.forEach((q) => {
+        if (!q.u) { const k = parts[0].C.take("h" + q.f); if (k.length) g.append(G({ "data-fam": q.f }, k)); return; }
+        const u = q.u, kids = parts[0].C.take("l" + u.key);
+        kids.forEach((k) => k.classList.add("lab")); // the row's setup and model text: dims with the row under the gliders
+        SETS.forEach((s) => {
+          const r = rowOf(s, u.key); if (!r || !r.plotted) return;
+          const inner = parts.flatMap((pt) => (pt.dx ? [G({ transform: `translate(${pt.dx},0)` }, pt.C.take("t" + r.id))] : pt.C.take("t" + r.id)));
+          kids.push(G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ", " + S(r.set).label + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, inner));
+        });
+        g.append(G(mkA(u.key, u.arm, u.any.family), kids));
+      });
+      return g;
+    }
+    // A glider: its line and two handles, in a group moved along x; and, fixed, two track strips (the
+    // band of the top handle and the band of the axis) where a press moves the glider to that value.
+    // Its hit area is 28 px wide between the handles and 18 px at the handles, so a press in the bands
+    // a few pixels off the handle jumps there instead of grabbing it.
+    function glider(pt) {
+      const p = pt.p, mx = Math.round(p.max * 100), x0 = (pt.dx || 0) + pt.x.apply(0), x1 = (pt.dx || 0) + pt.x.apply(p.max);
+      const strip = (y, h) => `<rect class="gtrack" data-panel="${p.k}" x="${x0 - 8}" y="${y}" width="${x1 - x0 + 16}" height="${h}" fill="transparent"/>`;
+      const rules = p.k === "acc" ? SETS.map((s) => byId(S(s).managedBest)).filter(Boolean).map((r) => r.acc[0] * 100) : [gHome("cw")];
+      return strip(top - 8, 18) + strip(H - 49, 30) + `<g class="glider" data-panel="${p.k}" data-rules="${rules.join(",")}" data-x0="${x0}" data-x1="${x1}" data-max="${mx}" data-top="${top - 4}" data-bot="${H - 40}" tabindex="0" role="slider" aria-label="${p.k === "acc" ? "Threshold, % right" : "Threshold, % confidently wrong"}" aria-valuemin="0" aria-valuemax="${mx}">
+        <rect class="ghit" x="0" y="${top + 10}" width="28" height="${H - 49 - top - 10}" fill="transparent"/><rect class="ghit" x="5" y="${top - 10}" width="18" height="22" fill="transparent"/><rect class="ghit" x="5" y="${H - 51}" width="18" height="22" fill="transparent"/><line class="gl" x1="14" x2="14" y1="${top - 4}" y2="${H - 40}"/>
+        <rect class="gh top" x="8" y="${top - 8}" width="12" height="18" rx="3"/><rect class="gh" x="8" y="${H - 40 - 9}" width="12" height="18" rx="3"/><text class="gv" x="24" y="${top + 5}" style="font-size:12px"></text></g>`;
+    }
+    const finish = (svg, label) => { svg.setAttribute("aria-label", `${label} per setup and model, both question sets`); svg.style.width = "100%"; };
+    el.innerHTML = "";
+    if (narrow) panels.forEach((p) => {
+      const pt = panel(p, W, L + 8, 18, true); settle(pt.svg, rowsOf([pt]));
+      pt.svg.append(G(null, [])); pt.svg.lastChild.innerHTML = glider(pt); finish(pt.svg, p.title);
+      const d = document.createElement("div"); d.className = "stack"; d.append(pt.svg); el.append(d);
+    });
+    else {
+      // two Plots, one per panel (their x scales differ), joined into one SVG as the page had it
+      const A = panel(panels[0], L + pw, L + 8, 8, true), B = panel(panels[1], gap + pw + 10, gap + 8, 18, false);
+      B.dx = L + pw;
+      const svg = A.svg; svg.setAttribute("width", W); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      const rowsG = rowsOf([A, B]); prune(A.svg); prune(B.svg);
+      const over = (s) => [...s.querySelectorAll(":scope > .over-rows")].map((e) => (e.remove(), e));
+      const overA = over(A.svg), overB = over(B.svg);
+      svg.append(G({ transform: `translate(${B.dx},0)` }, [...B.svg.children].filter((c) => c.tagName.toLowerCase() !== "style")));
+      svg.append(rowsG, ...overA, G({ transform: `translate(${B.dx},0)` }, overB), G());
+      svg.lastChild.innerHTML = glider(A) + glider(B);
+      finish(svg, panels.map((p) => p.title).join(" and ")); el.append(svg);
+    }
+    wireGliders(el); applyGlide();
+    $("#leg2").innerHTML = legendFams(Object.values(ALL)) + legendRoles() + (SETS.length > 1 ? `<span class="k">each row: upper mark frozen set, lower mark (hollow) hard set</span>` : "");
+  }
+
+  /* ---------- Figure 2's threshold gliders ---------- */
+  // Each glider moves in whole percent from 0 to its axis' end, with no snapping. Its home is the
+  // managed best: sitting exactly there, nothing is dimmed. The gliders off home make one joint
+  // filter: a row's set is out when it fails any of them, and an out set's marks dim in both panels;
+  // the row's setup and model text (every copy of it) dims when every one of its sets is out.
+  const GL = { acc: null, cw: null }; // null: at home, the managed best
+  function gHome(k) { const mb = byId(S(SETS[0]).managedBest); return mb ? Math.round(mb[k][0] * 100) : (k === "acc" ? 100 : 0); }
+  const gVal = (k) => (GL[k] == null ? gHome(k) : GL[k]);
+  const gMax = (k) => k === "acc" ? 100 : Math.round(+($(`#forest .glider[data-panel="${k}"]`) || { dataset: { max: 100 } }).dataset.max);
+  const beyond = (k, v, x) => (k === "acc" ? x * 100 < v - 1e-9 : x * 100 > v + 1e-9); // x: a share; v: the glider, in %
+  let glideRaf = 0;
+  function applyGlide() {
+    const root = $("#forest");
+    ["acc", "cw"].forEach((k) => {
+      const v = gVal(k), home = GL[k] == null;
+      root.querySelectorAll(`.glider[data-panel="${k}"]`).forEach((g) => {
+        const x0 = +g.dataset.x0, x1 = +g.dataset.x1, mx = +g.dataset.max;
+        const x = x0 + (x1 - x0) * Math.max(0, Math.min(mx, v)) / mx;
+        g.setAttribute("transform", `translate(${x - 14},0)`);
+        const t = g.querySelector(".gv"); t.textContent = `${v}%`;
+        // right of the top handle; on its left when it would leave the panel's frame or cross a
+        // managed-best rule there (and not on the left), so its halo never hides a rule it need not
+        const w = (t.getComputedTextLength ? t.getComputedTextLength() : 0) || 30;
+        const rx = (g.dataset.rules || "").split(",").filter(Boolean).map((r) => x0 + (x1 - x0) * +r / mx);
+        const hits = (a, b) => rx.some((r) => r > a - 2 && r < b + 2);
+        const R = [x + 10, x + 10 + w], Lf = [x - 10 - w, x - 10];
+        const flip = R[1] > x1 + 6 || (hits(R[0], R[1]) && !hits(Lf[0], Lf[1]) && Lf[0] >= x0 - 8);
+        t.setAttribute("x", flip ? 4 : 24); t.setAttribute("text-anchor", flip ? "end" : "start");
+        g.classList.toggle("home", home); g.setAttribute("aria-valuenow", v); g.setAttribute("aria-valuetext", `${v}%${home ? ", the managed best" : ""}`);
+      });
+    });
+    const moved = ["acc", "cw"].filter((k) => GL[k] != null);
+    if (window.__reportFocus) window.__reportFocus.gliding(moved.length > 0);
+    const isOut = (r) => moved.some((k) => beyond(k, GL[k], r[k][0]));
+    // a row's set: its marks in every panel dim when it fails any glider off home
+    root.querySelectorAll("[data-tip]").forEach((t) => { const r = byId(t.dataset.tip); const o = !!r && isOut(r); t.querySelectorAll(".pm").forEach((m) => m.classList.toggle("gdim", o)); });
+    // a row's text dims when every one of its sets is out
+    root.querySelectorAll(".mk[data-key]").forEach((row) => {
+      const rs = SETS.map((s) => rowOf(s, row.dataset.key)).filter((r) => r && r.plotted);
+      const out = moved.length > 0 && rs.length > 0 && rs.every(isOut);
+      row.querySelectorAll(":scope > .lab").forEach((l) => l.classList.toggle("gdim", out));
+    });
+    const live = $("#glide-live"); if (!live) return;
+    if (GL.acc == null && GL.cw == null) { live.textContent = `Both thresholds sit at the managed best (${gVal("acc")}% right, ${gVal("cw")}% confidently wrong); drag a handle or press on the axis, or focus a handle and use the arrow keys, to dim the rows beyond it.`; return; }
+    const conds = [GL.acc != null ? `at or above ${GL.acc}% right` : null, GL.cw != null ? `at or below ${GL.cw}% confidently wrong` : null].filter(Boolean).join(" and ");
+    const count = SETS.map((s) => { const rs = S(s).rows.filter((r) => r.plotted); return `${rs.filter((r) => !isOut(r)).length} of ${rs.length} setup rows on the ${short(s)} set`; }).join(", ");
+    const anyOut = SETS.some((s) => S(s).rows.some((r) => r.plotted && isOut(r)));
+    live.textContent = `${conds.charAt(0).toUpperCase() + conds.slice(1)}: ${count}${anyOut ? "; the others are dimmed in both panels" : "; none is dimmed"}.`;
+  }
+  function setGlide(k, v) {
+    v = Math.max(0, Math.min(gMax(k), Math.round(v)));
+    GL[k] = v === gHome(k) ? null : v;
+    if (!glideRaf) glideRaf = requestAnimationFrame(() => { glideRaf = 0; applyGlide(); });
+  }
+  function wireGliders(root) {
+    root.querySelectorAll(".glider").forEach((g) => {
+      const k = g.dataset.panel; const svg = g.ownerSVGElement;
+      const valAt = (cx) => { const r = svg.getBoundingClientRect(); const vbw = svg.viewBox.baseVal.width || r.width; const x = (cx - r.left) * vbw / r.width; const x0 = +g.dataset.x0, x1 = +g.dataset.x1; return (x - x0) / (x1 - x0) * +g.dataset.max; };
+      // a drag keeps the grab offset, so a handle taken off-centre does not jump; the clamp lets it reach 0 and the end
+      const drag = (el, absolute) => {
+        let off = 0;
+        el.addEventListener("pointerdown", (e) => {
+          if (e.button) return;
+          e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId); g.classList.add("active"); g.focus({ preventScroll: true });
+          off = absolute ? 0 : valAt(e.clientX) - gVal(k);
+          if (absolute) setGlide(k, valAt(e.clientX));
+        });
+        el.addEventListener("pointermove", (e) => { if (el.hasPointerCapture(e.pointerId)) setGlide(k, valAt(e.clientX) - off); });
+        const end = (e) => { if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId); g.classList.remove("active"); };
+        el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+        el.addEventListener("click", (e) => e.stopPropagation());
+      };
+      drag(g, false);
+      root.querySelectorAll(`.gtrack[data-panel="${k}"]`).forEach((t) => { if (t.ownerSVGElement === svg) drag(t, true); });
+      g.addEventListener("dblclick", (e) => { e.preventDefault(); GL[k] = null; applyGlide(); });
+      g.addEventListener("keydown", (e) => {
+        const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key];
+        if (step) { e.preventDefault(); setGlide(k, gVal(k) + step * (e.shiftKey && Math.abs(step) === 1 ? 5 : 1)); }
+        else if (e.key === "Home") { e.preventDefault(); GL[k] = null; applyGlide(); }
+        else if (e.key === "End") { e.preventDefault(); setGlide(k, gMax(k)); }
+      });
+    });
+  }
+
+  /* ---------- Figure 3: scatter (one set) ---------- */
+  function renderScatter() {
+    const s = view.scatter; const el = $("#scatter"); const W = Math.max(320, el.clientWidth);
+    const rows = S(s).rows.filter((r) => r.plotted);
+    const H = Math.round(W < 640 ? W * 1.0 : Math.min(560, W * 0.48));
+    const m = { t: 14, r: 16, b: 46, l: 54 };
+    const xmin = Math.max(0, Math.floor(Math.min(...rows.map((r) => r.acc[1])) * 10) / 10);
+    const ymax = Math.max(0.1, Math.ceil(Math.max(...rows.map((r) => r.cw[2])) * 20) / 20);
+    const x = lin(xmin, 1, m.l, W - m.r), y = lin(0, ymax, m.t, H - m.b); // the same mapping as Plot's scales, for label placement
+    $("#t3").textContent = (D.sentences.scatter || {})[s] || "Accuracy against confident-wrong per setup and model.";
+    const [gxi, gxa] = steps(xmin, 1, 0.02, 0.1), [gyi, gya] = steps(0, ymax, 0.01, 0.05);
+    const xt = []; for (let v = Math.ceil(xmin * 10) / 10; v <= 1 + 1e-9; v += W < 640 ? 0.2 : 0.1) xt.push(+v.toFixed(2));
+    const yt = []; for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.25 ? 0.1 : 0.05) yt.push(+v.toFixed(2));
+    const C = collector();
+    const mk = [
+      Plot.gridX({ ticks: gxi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: gxa, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+      Plot.gridY({ ticks: gyi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridY({ ticks: gya, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+      Plot.axisX({ ticks: xt, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
+      Plot.axisY({ ticks: yt, tickFormat: P, tickSize: 0, tickPadding: 6, label: null, className: "t-mute" }),
+      one("Right, % of runs", { frameAnchor: "bottom-right", dy: mid(H - 6, 12.5) - (H - m.b), textAnchor: "end", className: "t-ink" }),
+      one("Confident-wrong, % of runs (lower is safer)", { frameAnchor: "left", dx: -(m.l - 14) - 4, rotate: -90, textAnchor: "middle", className: "t-ink" }),
+    ];
+    const mb = byId(S(s).managedBest);
+    if (mb) mk.push(Plot.ruleX([mb.acc[0]], { x: (v) => v, stroke: "var(--ink-3)", strokeDasharray: "1 3" }));
+    const order = rows.slice().sort((a, b) => (b.primary - a.primary)).reverse();
+    const put = (e, r) => C.put("t" + r.id)(e);
+    [false, true].forEach((dash) => {
+      const ds = order.filter((r) => !!r.major === dash); const o = { stroke: (r) => famC(r.family), strokeWidth: 1.4, strokeDasharray: dash ? "3 3" : undefined, render: tag(ds, put) };
+      mk.push(Plot.link(ds, Object.assign({ x1: (r) => r.acc[1], x2: (r) => r.acc[2], y1: (r) => r.cw[0], y2: (r) => r.cw[0] }, o)));
+      mk.push(Plot.link(ds, Object.assign({ x1: (r) => r.acc[0], x2: (r) => r.acc[0], y1: (r) => r.cw[1], y2: (r) => r.cw[2] }, o)));
+    });
+    mk.push(Plot.dot(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 12, fill: "transparent", sort: null, render: tag(order, (e, r) => { e.setAttribute("class", "hit"); put(e, r); }) }));
+    mk.push(glyphs(order, { x: (r) => r.acc[0], y: (r) => r.cw[0], r: 5, role: (r) => r.role, color: (r) => famC(r.family), tag: (e, r) => { e.classList.add("gly"); put(e, r); } }));
+    // The two key setups are ringed on the plot (managed best solid, the deciding setup dashed) and named in
+    // a key under it; a text label goes beside a ring only where it fits touching its own mark.
+    const mf = byId(S(s).mf);
+    const keys = [[mb, "managed best", "solid"], [mf, "decides", "dashed"]].filter(([r]) => r).map(([r, role, style], i) => ({ r, role, style, i }));
+    keys.forEach((K) => {
+      mk.push(Plot.dot([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], r: 9.5, fill: "transparent", stroke: "var(--ink)", strokeWidth: 2, strokeDasharray: K.style === "dashed" ? "3 2.5" : undefined, render: tag([K.r], (e, q) => { e.classList.add("keyring"); attrs(e, { "data-tip-for": q.id }); C.put("r" + K.i)(e); }) }));
+      mk.push(txt([K.r], { x: (q) => q.acc[0], y: (q) => q.cw[0], text: (q) => `${q.arm}, ${q.modelLabel}`, textAnchor: "start",
+        stroke: "var(--paper)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke", className: "t-strong f12", render: tag([K.r], (e, q) => { e.classList.add("direct"); attrs(e, { "data-setup": q.arm, "data-arm": q.arm }); C.put("l" + K.i)(e); }) }));
+    });
+    const svg = plot({ width: W, height: H, marginTop: m.t, marginRight: m.r, marginBottom: m.b, marginLeft: m.l, x: { domain: [xmin, 1] }, y: { domain: [0, ymax], reverse: true }, ariaLabel: `Accuracy against confident-wrong, ${S(s).label}`, marks: mk });
+    const rowsG = G();
+    order.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": label(r) + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong" }, C.take("t" + r.id))])));
+    keys.forEach((K) => { K.g = G(mkOf(K.r), [...C.take("r" + K.i), ...C.take("l" + K.i)]); K.text = K.g.querySelector("text"); K.px = x(K.r.acc[0]); K.py = y(K.r.cw[0]); rowsG.append(K.g); }); // above every other mark
+    settle(svg, rowsG);
+    el.innerHTML = ""; el.append(svg);
+    const ring = (style) => `<svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><circle r="7" fill="none" stroke="var(--ink)" stroke-width="2"${style === "dashed" ? ' stroke-dasharray="3 2.5"' : ""}/></svg>`;
+    $("#key3").innerHTML = keys.map((K) => `<span class="k" data-setup="${esc(K.r.arm)}" data-key="${esc(K.r.key)}" tabindex="0">${ring(K.style)}<span>${esc(K.r.arm)}, ${esc(K.r.modelLabel)} — ${K.role}</span></span>`).join("");
+    directLabels(svg, keys, { l: m.l, r: W - m.r, t: 0, b: H - m.b });
+    $("#leg3").innerHTML = legendFams(rows) + legendRoles();
+  }
+  // A key setup's text label shows only where it fits touching its own mark: 5 px from its glyph on one side,
+  // covering no glyph, ring or other label, inside the plot, and nearer its own glyph than any other.
+  // The label is anchored on the side that touches the mark, so a change of font only changes how far it
+  // reaches away from it. Placing waits for the web font (at most 1.5 s); if the font lands later, each
+  // placed label is checked again where it stands and dropped if it no longer fits, never moved.
+  const fontsReady = (() => { let p = null; return () => p || (p = (document.fonts && document.fonts.status !== "loaded") ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve()); })();
+  function directLabels(svg, keys, fr) {
+    const scene = () => {
+      const sr = svg.getBoundingClientRect();
+      const rel = (b) => ({ l: b.left - sr.left, r: b.right - sr.left, t: b.top - sr.top, b: b.bottom - sr.top });
+      return { rel, glyphs: [...svg.querySelectorAll(".gly")].map((e) => ({ e, key: e.closest(".mk").dataset.key, b: rel(e.getBoundingClientRect()) })), rings: [...svg.querySelectorAll(".keyring")].map((e) => rel(e.getBoundingClientRect())) };
+    };
+    const meets = (a, o) => a.l < o.r && a.r > o.l && a.t < o.b && a.b > o.t;
+    const dist = (a, o) => Math.hypot(Math.max(0, o.l - a.r, a.l - o.r), Math.max(0, o.t - a.b, a.t - o.b));
+    const fits = (sc, key, b, others) => {
+      const own = sc.glyphs.find((g) => g.key === key);
+      return own && b.l >= fr.l && b.r <= fr.r && b.t >= fr.t && b.b <= fr.b
+        && !sc.glyphs.some((g) => meets(b, g.b)) && !sc.rings.some((o) => meets(b, o)) && !others.some((o) => meets(b, o))
+        && dist(b, own.b) <= 6 && sc.glyphs.every((g) => g === own || dist(b, g.b) > dist(b, own.b));
+    };
+    const drop = (t) => { t.classList.remove("placed"); t.removeAttribute("tabindex"); };
+    const run = () => {
+      if (!svg.isConnected) return;
+      const sc = scene(), placed = [];
+      keys.forEach((K) => {
+        const t = K.text; t.parentNode.removeAttribute("transform"); t.setAttribute("text-anchor", "start"); t.setAttribute("transform", "translate(0,0)");
+        const own = sc.glyphs.find((g) => g.key === K.r.key); if (!own) return drop(t);
+        const bb = t.getBBox(), w = bb.width, hgt = bb.height, gap = 5, ob = own.b;
+        // [anchor, x of the anchor, y of the text's centre line]; the box follows from the anchor
+        const spots = [["start", ob.r + gap, K.py], ["end", ob.l - gap, K.py], ["middle", K.px, ob.t - gap - (bb.y + hgt)], ["middle", K.px, ob.b + gap - bb.y]];
+        const boxOf = ([an, ax, ty]) => { const l = an === "start" ? ax : an === "end" ? ax - w : ax - w / 2; return { l, r: l + w, t: ty + bb.y, b: ty + bb.y + hgt }; };
+        const hit = spots.find((sp) => fits(sc, K.r.key, boxOf(sp), placed));
+        if (!hit) return drop(t);
+        t.setAttribute("text-anchor", hit[0]); t.setAttribute("transform", `translate(${hit[1] - bb.x * (hit[0] === "start" ? 1 : 0)},${hit[2]})`);
+        t.classList.add("placed"); t.setAttribute("tabindex", "0"); placed.push(boxOf(hit));
+      });
+    };
+    fontsReady().then(() => {
+      run();
+      if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => {
+        if (!svg.isConnected) return;
+        const sc = scene(), labels = [...svg.querySelectorAll(".direct.placed")];
+        labels.forEach((t) => { const others = labels.filter((o) => o !== t && o.classList.contains("placed")).map((o) => sc.rel(o.getBoundingClientRect()));
+          if (!fits(sc, t.closest(".mk").dataset.key, sc.rel(t.getBoundingClientRect()), others)) drop(t); });
+      });
+    });
+  }
+
+  /* ---------- Figure 4: strip plot by question group, both sets ---------- */
+  function renderStrip() {
+    const el = $("#strip"); const W = Math.max(320, el.clientWidth); const narrow = W < 640;
+    const Lw = narrow ? 104 : 150, lane = 11, ml = Lw + 10, mr = 20;
+    let y = 22; const blocks = [];
+    D.groupsAll.forEach((g) => {
+      const subs = SETS.filter((s) => S(s).rows.some((r) => r.plotted && r.groups[g.key]));
+      if (!subs.length) return;
+      const b = { g, y0: y, subs: [] }; y += 18;
+      subs.forEach((s) => { const fams = famsPresent(S(s).rows.filter((r) => r.plotted && r.groups[g.key])); b.subs.push({ s, y0: y, fams }); y += fams.length * lane + 10; });
+      b.y1 = y; y += 10; blocks.push(b);
+    });
+    const H = y + 34;
+    const GT = new Proxy({}, { get: (_, k) => TK(k) });
+    blocks.forEach((b, bi) => (b.i = bi));
+    const subs = blocks.flatMap((b) => b.subs.map((sb) => Object.assign({ b }, sb)));
+    subs.forEach((sb, i) => (sb.i = i));
+    const lanes = [], pts = [];
+    subs.forEach((sb) => {
+      const thin = (S(sb.s).groupCases[sb.b.g.key] || 0) < 10; sb.lanes = [];
+      sb.fams.forEach((f, fi) => {
+        const ln = { y: sb.y0 + fi * lane + lane / 2, i: lanes.length, pts: [] }; lanes.push(ln); sb.lanes.push(ln);
+        S(sb.s).rows.filter((r) => r.plotted && r.family === f && r.groups[sb.b.g.key]).sort((a, c) => a.primary - c.primary).forEach((r) => { const d = { r, g: sb.b.g, y: ln.y, thin, i: pts.length }; pts.push(d); ln.pts.push(d); });
+      });
+    });
+    const [gi, ga] = steps(0, 1, 0.05, 0.25), ticks = [0, .25, .5, .75, 1];
+    const C = collector();
+    const mk = [
+      Plot.gridX({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridX({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+      Plot.axisX({ anchor: "bottom", ticks, tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
+      Plot.axisX({ anchor: "top", ticks, tickFormat: P, tickSize: 0, tickPadding: 2, label: null, className: "t-mute" }),
+      one("Share of runs right, %", { frameAnchor: "bottom-right", dx: mr - 14, dy: mid(H - 4, 12.5) - (H - 34), textAnchor: "end", className: "t-ink" }), // baseline 4 px up: the comma's descender stays inside the SVG
+      Plot.ruleY(blocks, { y: (b) => b.y0 - 4, stroke: "var(--rule)", insetLeft: -ml, insetRight: -mr, render: tag(blocks, (e, b) => C.put("b" + b.i)(e)) }),
+      txt(blocks, { y: (b) => mid(b.y0 + 10, 12.5), text: (b) => b.g.label, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-strong", render: tag(blocks, (e, b) => { if (GT[b.g.key]) attrs(e, { "data-term": GT[b.g.key], tabindex: 0 }); C.put("b" + b.i)(e); }) }),
+      txt(subs, { y: (sb) => mid(sb.y0 + (sb.fams.length * lane) / 2 + 4, 12), text: (sb) => `${short(sb.s)}, ${S(sb.s).groupCases[sb.b.g.key] || 0} q`, frameAnchor: "left", dx: -ml, textAnchor: "start", className: "t-mute f12", render: tag(subs, (e, sb) => C.put("s" + sb.i)(e)) }),
+      Plot.ruleY(lanes, { y: (l) => l.y, stroke: "var(--grid)", render: tag(lanes, (e, l) => C.put("n" + l.i)(e)) }),
+      Plot.dot(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 7, fill: "transparent", sort: null, render: tag(pts, (e, d) => { e.setAttribute("class", "hit"); C.put("t" + d.i)(e); }) }),
+      glyphs(pts, { x: (d) => d.r.groups[d.g.key][0], y: "y", r: 3.6, role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: (e, d) => C.put("t" + d.i)(e) }),
+    ];
+    const svg = plot({ width: W, height: H, marginTop: 14, marginRight: mr, marginBottom: 34, marginLeft: ml, x: { domain: [0, 1] }, y: { type: "identity" }, ariaLabel: "Share right by question group, both question sets", marks: mk });
+    // reading order: each block's rule and heading, then per set its label, then each lane and its marks
+    const rowsG = G();
+    blocks.forEach((b) => {
+      rowsG.append(...C.take("b" + b.i));
+      subs.filter((sb) => sb.b === b).forEach((sb) => {
+        rowsG.append(...C.take("s" + sb.i));
+        sb.lanes.forEach((ln) => {
+          rowsG.append(...C.take("n" + ln.i));
+          ln.pts.forEach((d) => rowsG.append(G(mkOf(d.r), [G({ "data-tip": d.r.id, "data-g": d.g.key, tabindex: 0, "aria-label": label(d.r) + ", " + d.g.label + ": " + P(d.r.groups[d.g.key][0]) + "%", opacity: d.thin ? 0.5 : 1 }, C.take("t" + d.i))])));
+        });
+      });
+    });
+    settle(svg, rowsG);
+    el.innerHTML = ""; el.append(svg);
+    $("#leg4").innerHTML = legendFams(Object.values(ALL)) + legendRoles();
+  }
+
+  /* ---------- Figure 5: slopes (one set), one Plot per family ---------- */
+  const shortArm = (a) => a.replace("native-", "").replace("custom-", "");
+  const shortModel = (r) => r.modelLabel.replace("Nemotron free", "free").replace("Claude Code ", "CC ").replace("Gemini ", "").replace(", fresh sessions", " fresh");
+  function renderSlopes() {
+    const s = view.slopes; const el = $("#slopes"); const W = Math.max(320, el.clientWidth);
+    const cols = W >= 760 ? 2 : 1; const gapX = 36, gapY = 40;
+    const pw = (W - gapX * (cols - 1)) / cols, ph = cols === 2 ? 360 : 330;
+    const keys = ["covered", "trap", "uncovered"], names = ["Covered", "Hidden-rule", "Uncovered"], terms = ["covered", "hidden-rule", "uncovered"];
+    const rows = S(s).rows.filter((r) => r.plotted && keys.every((k) => r.groups[k]));
+    const mb = byId(S(s).managedBest);
+    const panels = famRows(rows);
+    $("#t5").textContent = (D.sentences.slope || {})[s] || "Share right on covered, hidden-rule and uncovered questions.";
+    // each panel row ends with the gap below it, the last one included, as the single drawing had
+    el.innerHTML = ""; el.classList.add("panels"); el.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`; el.style.gap = `${gapY}px ${gapX}px`; el.style.paddingBottom = `${gapY}px`;
+    el.setAttribute("role", "group"); el.setAttribute("aria-label", `Share right on covered, hidden-rule and uncovered questions, ${S(s).label}`);
+    panels.forEach((p) => {
+      const lw = Math.min(200, pw * 0.4); const ml = 34, mr = lw + 10, t = 44, b = ph - 36;
+      const yv = (py) => (b - py) / (b - t); // pixel to share right, the inverse of Plot's y scale here
+      const ypx = (v) => b - v * (b - t);
+      // a label wider than the label column wraps, its lines running down from its mark's height
+      const labText = (r) => `${shortArm(r.arm)} ${shortModel(r)} ${P(r.groups.uncovered[0])}${r.status === "pending" ? " (pending)" : ""}`;
+      const lab = p.rows.map((r) => ({ r, y: ypx(r.groups.uncovered[0]), lines: wrapRuns([{ t: labText(r) }], lw - 4, 11.5) }));
+      const ghost = mb && p.f !== mb.family && mb.groups.uncovered;
+      if (ghost) lab.push({ ghost: true, y: ypx(mb.groups.uncovered[0]), lines: [[{ t: "" }]] });
+      lab.sort((a, c) => c.y - a.y);
+      for (let k = 1; k < lab.length; k++) { const need = 13 * lab[k].lines.length; if (lab[k - 1].y - lab[k].y < need) lab[k].y = lab[k - 1].y - need; }
+      const over = lab.length ? Math.min(0, lab[lab.length - 1].y - (t - 6)) : 0; if (over < 0) lab.forEach((l) => (l.y -= over));
+      const [gi, ga] = steps(0, 1, 0.05, 0.25);
+      const ord = p.rows.slice().sort((a, c) => a.primary - c.primary);
+      const line = ord.flatMap((r) => keys.map((k) => ({ r, k, v: r.groups[k][0] })));
+      const aria = (r) => label(r) + ": covered " + P(r.groups.covered[0]) + "%, hidden-rule " + P(r.groups.trap[0]) + "%, uncovered " + P(r.groups.uncovered[0]) + "%";
+      const C = collector(), put = (e, d) => C.put("t" + d.r.key)(e);
+      const mk = [
+        one(D.familyLabel[p.f] || p.f, { frameAnchor: "top-left", dx: -ml, dy: mid(14, 12.5) - t, textAnchor: "start", className: "t-strong", render: tag([0], (e) => attrs(e, { "data-fam": p.f })) }),
+        one("% of runs right", { frameAnchor: "top-left", dx: -ml, dy: mid(30, 11.5) - t, textAnchor: "start", className: "t-mute f11" }),
+        Plot.gridY({ ticks: gi, stroke: "var(--grid)", strokeOpacity: 1 }), Plot.gridY({ ticks: ga, stroke: "var(--grid-major)", strokeOpacity: 1 }),
+        Plot.axisY({ ticks: [0, .25, .5, .75, 1], tickFormat: P, tickSize: 0, tickPadding: 7, label: null, className: "t-mute" }),
+        Plot.ruleX(keys, { x: (k) => k, stroke: "var(--ink-3)", insetTop: -4 }),
+        ...keys.map((k, j) => one(names[j], { x: () => k, frameAnchor: "bottom", dy: mid(b + (j === 1 ? 30 : 16), 12.5) - b, dx: j === 0 ? -8 : j === 2 ? 8 : 0, textAnchor: j === 0 ? "start" : j === 2 ? "end" : "middle", className: "t-ink", render: tag([0], (e) => attrs(e, { "data-term": terms[j], tabindex: 0 })) })),
+      ];
+      if (ghost) {
+        mk.push(Plot.line(keys.map((k) => ({ k, v: mb.groups[k][0] })), { x: "k", y: "v", stroke: "var(--ink-3)", strokeWidth: 1.25, strokeDasharray: "1 3" }));
+        const gl = lab.find((l) => l.ghost);
+        mk.push(one(`managed best ${P(mb.groups.uncovered[0])}`, { x: () => "uncovered", y: () => yv(gl.y), dx: 10, dy: 4 - 0.32 * 11.5, textAnchor: "start", className: "t-mute f11" }));
+      }
+      mk.push(Plot.line(line, { x: "k", y: "v", z: (d) => d.r.key, stroke: "transparent", strokeWidth: 12, render: tag(line, (e, d) => { e.style.pointerEvents = "stroke"; put(e, d); }) }));
+      [false, true].forEach((dash) => {
+        const ds = line.filter((d) => !!d.r.major === dash);
+        mk.push(Plot.line(ds, { x: "k", y: "v", z: (d) => d.r.key, stroke: (d) => famC(d.r.family), strokeWidth: (d) => (d.r.primary ? 2.25 : 1.5), strokeDasharray: dash ? "3 3" : undefined, strokeLinecap: "butt", render: tag(ds, put) }));
+      });
+      mk.push(glyphs(line, { x: "k", y: "v", r: (d) => (d.r.primary ? 4 : 3), role: (d) => d.r.role, color: (d) => famC(d.r.family), tag: put }));
+      const lr = lab.filter((l) => !l.ghost);
+      mk.push(txt(lr, { x: () => "uncovered", y: (l) => yv(l.y), dx: 10, dy: 4 - 0.32 * 11.5, text: (l) => labText(l.r), textAnchor: "start",
+        render: tag(lr, (e, l) => { e.setAttribute("class", `f11 ${l.r.primary ? "t-ink" : "t-mute"}`); if (l.lines.length > 1) e.innerHTML = linesHTML(l.lines, 13); attrs(e, { "data-setup": l.r.arm, "data-key": l.r.key, tabindex: 0 }); C.put("l" + l.r.key)(e); }) }));
+      const svg = plot({ width: pw, height: ph, marginTop: t, marginBottom: ph - b, marginLeft: ml, marginRight: mr, x: { type: "point", domain: keys, padding: 0 }, y: { domain: [0, 1] }, ariaLabel: `${D.familyLabel[p.f] || p.f}: share right on covered, hidden-rule and uncovered questions`, marks: mk });
+      // per setup, as before: its line, marks and hit area in one focusable group, then its label
+      const rowsG = G();
+      ord.forEach((r) => rowsG.append(G(mkOf(r), [G({ "data-tip": r.id, tabindex: 0, "aria-label": aria(r) }, C.take("t" + r.key)), ...C.take("l" + r.key)])));
+      settle(svg, rowsG);
+      el.append(svg);
+    });
+    $("#leg5").innerHTML = legendRoles() + `<span class="k"><svg width="22" height="6" aria-hidden="true"><line x1="1" y1="3" x2="21" y2="3" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/></svg>managed best</span><span class="k">labels: setup, model, % right on uncovered</span>`;
+  }
+
+  /* ---------- Figure 6: unit plate in ladder order (one set) ---------- */
+  const OUTN = ["right", "declined", "wrong", "unclear", "confident-wrong"];
+  let plateState = null;
+  function swatch(ch) { return `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">${ch === "." ? `<rect x="5" y="5" width="2" height="2" fill="var(--o-none)"/>` : ch === "0" ? `<rect x="2" y="2" width="8" height="8" fill="var(--o-right)"/>` : ch === "1" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/>` : ch === "2" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-wrong)"/><rect x="2" y="6" width="8" height="4" fill="var(--o-wrong)"/>` : ch === "3" ? `<rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="var(--o-decl)"/><rect x="5.25" y="5.25" width="1.5" height="1.5" fill="var(--o-decl)"/>` : `<rect x="1.5" y="1.5" width="9" height="9" fill="var(--o-cw)"/>`}</svg>`; }
+  function plateGeom(s, avail) {
+    const cases = S(s).cases; const narrow = avail < 700;
+    const floor = byId(S(s).floor);
+    const score = (ci) => { if (!floor) return 0; const u = floor.units.slice(ci * 3, ci * 3 + 3); let v = 0; for (const ch of u) { if (ch === "0") v += 100; else if (ch === "1") v += 1; else if (ch === "4") v -= 1; } return v; };
+    const bOrder = D.buckets.map((b) => b.key);
+    const order = cases.map((c, i) => i).sort((a, b) => bOrder.indexOf(cases[a].b) - bOrder.indexOf(cases[b].b) || score(a) - score(b) || a - b);
+    const LW = narrow ? 156 : 232, IW = narrow ? 120 : 168, CWW = narrow ? 110 : 150, gap = narrow ? 5 : 7;
+    const nb = new Set(cases.map((c) => c.b)).size;
+    let pitch = Math.floor((avail - LW - IW - CWW - 16 - nb * gap) / Math.max(1, cases.length));
+    pitch = Math.max(5, Math.min(9, pitch));
+    const xs = new Map(); const bands = []; let x = 0, prev = null;
+    order.forEach((ci) => { const b = cases[ci].b; if (prev !== null && b !== prev) x += gap; if (b !== prev) bands.push({ b, x, n: 0 }); bands[bands.length - 1].n++; xs.set(ci, x); x += pitch; prev = b; });
+    bands.forEach((bd, i) => (bd.x1 = i + 1 < bands.length ? bands[i + 1].x - gap : x));
+    return { pitch, xs, order, UW: x, LW, IW, CWW, h: pitch * 3 + 2, bands, narrow };
+  }
+  // One row of squares as a Plot on pixel (identity) scales: three runs per question, stacked.
+  // The squares are drawn as one path per outcome paint (a few paths per row instead of a rect per
+  // square), which keeps the plate's redraw fast; the shapes are the canvas plate's, pixel for pixel.
+  const sqr = (x, y, w, h) => `M${x} ${y}h${w}v${h}h${-w}z`;
+  function unitsPlot(r, G) {
+    const s = G.pitch - 1, F = {}, K = {}; // solid and outline path data per colour token
+    // an outline is drawn as a 1 px ring (outer square less inner square, even-odd), which covers
+    // exactly the pixels the canvas's strokeRect at half-pixel offsets covered, corners included
+    const ring = (x, y) => sqr(x, y, s, s) + sqr(x + 1, y + 1, s - 2, s - 2);
+    const add = (o, c, d) => { o[c] = (o[c] || "") + d; };
+    G.order.forEach((ci, j) => {
+      const x = G.xs.get(ci);
+      for (let k = 0; k < 3; k++) {
+        const y = G.h - (k + 1) * G.pitch + 1, ch = r.units[ci * 3 + k] || ".";
+        if (ch === ".") add(F, "o-none", sqr(x + s / 2 - 1, y + s / 2 - 1, 2, 2));
+        else if (ch === "0") add(F, "o-right", sqr(x, y, s, s));
+        else if (ch === "1") add(K, "o-decl", ring(x, y));
+        else if (ch === "2") { add(F, "o-wrong", sqr(x, y + s / 2, s, s / 2)); add(K, "o-wrong", ring(x, y)); }
+        else if (ch === "3") { add(K, "o-decl", ring(x, y)); add(F, "o-decl", sqr(x + s / 2 - .75, y + s / 2 - .75, 1.5, 1.5)); }
+        // confident-wrong squares overhang their cell by half a pixel and meet their neighbours' on the
+        // gap; the canvas blended the two halves, so neighbours go to separate paths to blend the same way
+        else add(F, `o-cw#${k}${j % 2}`, sqr(x - .5, y - .5, s + 1, s + 1));
+      }
+    });
+    const paths = Object.entries(F).map(([c, d]) => `<path fill="var(--${c.split("#")[0]})" d="${d}"/>`).join("") + Object.entries(K).map(([c, d]) => `<path fill="var(--${c})" fill-rule="evenodd" d="${d}"/>`).join("");
+    const svg = plot({ width: G.UW, height: G.h, margin: 0, x: { type: "identity" }, y: { type: "identity" }, marks: [
+      raw(() => `<rect class="pband" x="0" y="0" width="${G.pitch + 1}" height="${G.h}" fill="var(--band)" visibility="hidden"/>${paths}`),
+    ] });
+    trueSize(svg, G.UW, G.h); svg.style.overflow = "hidden"; // clipped to its box, as the canvas was
+    return svg;
+  }
+  // The plate's cells are 1 px narrower than their content (a left border under border-box); like the
+  // canvases before, each SVG keeps its own size and overflows by that pixel, so squares stay crisp.
+  // Each Plot carries its own <style> of class defaults; the plate sets those inline instead, which spares
+  // the browser about a hundred style sheets on a set switch.
+  function trueSize(svg, w, h) { const st = svg.querySelector(":scope > style"); if (st) st.remove(); Object.assign(svg.style, { display: "block", flex: "none", width: w + "px", height: h + "px", maxWidth: "none", overflow: "visible" }); }
+  function bandAt(ci) { // the hovered question's column, on every row
+    const G = plateState.G; const on = ci != null && G.xs.has(ci);
+    plateState.svgs.forEach((sv) => { const b = sv.querySelector(".pband"); if (!b) return; b.setAttribute("visibility", on ? "visible" : "hidden"); if (on) b.setAttribute("x", G.xs.get(ci) - 1); });
+  }
+  // The small interval charts beside each row: a Plot gives the x scale and the zero rule; the interval,
+  // its mean and the value are one function mark on that scale (four Plot marks per chart cost the
+  // plate's set switch about 12 ms across its 60-odd charts, one mark costs about 2).
+  function miniIv(v, w, h, dom, kind, partial) {
+    const cl = (q) => Math.max(dom[0], Math.min(dom[1], q)); const col = kind === "cw" ? "var(--cw)" : "var(--ink-2)"; const yc = h / 2;
+    const val = (t, fill, fs) => `<text x="${w - 6}" y="${yc + 4}" text-anchor="end" fill="${fill}" font-size="${fs}" font-family="var(--label)">${t}</text>`;
+    const body = ({ x }) => !v ? val("–", "var(--ink-3)", 12)
+      : `<line x1="${x(cl(v[1]))}" x2="${x(cl(v[2]))}" y1="${yc}" y2="${yc}" stroke="${col}" stroke-width="2" stroke-linecap="round"${partial ? ' stroke-dasharray="3 2"' : ""}/>`
+      + `<circle cx="${x(cl(v[0]))}" cy="${yc}" r="3.6" fill="${partial ? "var(--paper)" : col}" stroke="${partial ? col : "var(--paper)"}" stroke-width="1.5"/>`
+      + val(kind === "inc" ? sg(v[0]) : P(v[0]) + "%", "var(--ink)", 12.5);
+    const svg = plot({ width: w, height: h, marginLeft: 8, marginRight: 46, marginTop: 2, marginBottom: 2, x: { domain: dom }, marks: [
+      Plot.ruleX([0], { stroke: kind === "inc" ? "var(--ink-3)" : "var(--grid-major)" }), raw(body)] });
+    svg.setAttribute("aria-hidden", "true"); trueSize(svg, w, h);
+    return svg;
+  }
+  function renderPlate() {
+    const s = view.plate; const body = $("#plate-body"), head = $("#plate-head");
+    const G = plateGeom(s, body.clientWidth || 1100);
+    const rowsAll = S(s).rows;
+    const floor = byId(S(s).floor);
+    const incs = rowsAll.filter((r) => r.plotted && r.vsFloor && r.vsFloor.acc).flatMap((r) => [r.vsFloor.acc[1], r.vsFloor.acc[2]]);
+    const D1 = incs.length ? Math.min(1, Math.ceil(Math.max(...incs.map(Math.abs)) * 10) / 10) : 0.5;
+    const cwMax = Math.min(1, Math.ceil(Math.max(0.1, ...rowsAll.filter((r) => r.plotted).map((r) => r.cw[2])) * 10) / 10);
+    let total = G.LW + G.UW + 16 + G.IW + G.CWW;
+    const availW = body.clientWidth || total; if (total < availW) { G.CWW += availW - total; total = availW; }
+    $("#t6").textContent = (D.sentences.ladder || {})[s] || "Every run, in ladder order.";
+    const tierHead = (tier) => tier ? `top:${tier === 1 ? 22 : 4}px` : "";
+    let hh = `<div class="prow head" style="width:${total}px"><div style="width:${G.LW}px">Setup<small>model it ran on</small></div><div style="width:${G.UW + 16}px;height:44px">`;
+    G.bands.forEach((b, i) => { const bk = D.buckets.find((x) => x.key === b.b) || { label: b.b }; hh += `<span class="bh" style="left:${b.x + 8}px;${tierHead(i % 2 ? 1 : 2)}">${TK(b.b) ? term(TK(b.b), esc(bk.label)) : esc(bk.label)}<small>${b.n} q</small></span>`; });
+    hh += `</div><div style="width:${G.IW}px"><span class="term" data-term="over-the-floor" tabindex="0">Over the floor</span><small>points right, paired</small></div><div style="width:${G.CWW}px"><span class="term" data-term="confident-wrong" tabindex="0">Confident-wrong</span><small>% of runs, 95%</small></div></div>`;
+    head.innerHTML = `<div style="width:${total}px">${hh}</div>`;
+    // narrow bands: a column label that would run into the previous label on its tier moves right past it
+    const tierEnd = {};
+    head.querySelectorAll(".bh").forEach((sp) => { const t = sp.style.top, left = parseFloat(sp.style.left); if (tierEnd[t] != null && left < tierEnd[t] + 6) sp.style.left = (tierEnd[t] + 6) + "px"; tierEnd[t] = parseFloat(sp.style.left) + sp.offsetWidth; });
+    let bh = ""; const minis = [];
+    D.ladder.forEach((L) => {
+      if (L.key === "L8") { bh += `<div class="prow step future" style="width:${total}px"><div>Rung 8. ${esc(L.label)}</div></div>`; return; }
+      const rs = rowsAll.filter((r) => L.arms.includes(r.arm)).sort((a, b) => L.arms.indexOf(a.arm) - L.arms.indexOf(b.arm) || (b.deciding - a.deciding) || (b.primary - a.primary) || b.runs - a.runs);
+      if (!rs.length) return;
+      bh += `<div class="prow step" style="width:${total}px"><div>${L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : ""}${esc(L.label)}</div></div>`;
+      rs.forEach((r) => {
+        const tg = tagText(r);
+        bh += `<div class="prow r" style="width:${total}px"><div class="pl" style="width:${G.LW}px"><span class="id" data-setup="${esc(r.arm)}" tabindex="0">${esc(r.arm)}</span><span class="m" data-tip="${esc(r.id)}">${esc(r.modelLabel)}</span>${tg ? `<br><span class="flag${r.status === "pending" ? " pend" : ""}" data-term="${r.status === "pending" ? "pending" : "partial"}" tabindex="0">${esc(tg)}</span>` : ""}</div>`;
+        bh += `<div class="pu" style="width:${G.UW + 16}px" data-units="${esc(r.id)}"></div>`;
+        const inc = r === floor ? `<span class="pnote"><span class="term" data-term="floor" tabindex="0">floor</span>, ${P(r.acc[0])}% right</span>` : !r.plotted ? `<span class="pnote">too few questions</span>` : "";
+        if (!inc) minis.push([r.id, "inc", r.vsFloor && r.vsFloor.acc, G.IW, [-D1, D1]]);
+        if (r.plotted) minis.push([r.id, "cw", r.cw, G.CWW, [0, cwMax]]);
+        bh += `<div class="pc" style="width:${G.IW}px" data-tip="${esc(r.id)}" data-mini="inc">${inc}</div>`;
+        bh += `<div class="pc" style="width:${G.CWW}px" data-tip="${esc(r.id)}" data-mini="cw">${r.plotted ? "" : `<span class="pnote">too few questions</span>`}</div></div>`;
+      });
+    });
+    body.innerHTML = `<div style="width:${total}px">${bh}</div>`;
+    const cellOf = (id, sel) => body.querySelector(`[data-tip="${CSS.escape(id)}"][data-mini="${sel}"]`);
+    minis.forEach(([id, kind, v, w, dom]) => { const r = byId(id); cellOf(id, kind).append(miniIv(v, w, G.h + 8, dom, kind, r.major)); });
+    const svgs = [];
+    body.querySelectorAll(".pu[data-units]").forEach((pu) => {
+      const r = byId(pu.dataset.units); const sv = unitsPlot(r, G);
+      attrs(sv, { "data-row": r.id, tabindex: 0, role: "img", "aria-label": `${label(r)}: ${OUTN.map((k) => (r.outcomes[k] || 0) + " " + k).join(", ")}, of ${r.expected} runs` });
+      pu.append(sv); svgs.push(sv);
+    });
+    plateState = { G, s, hover: null, svgs };
+    body.onscroll = () => { head.scrollLeft = body.scrollLeft; };
+    head.scrollLeft = body.scrollLeft;
+    svgs.forEach((sv) => {
+      const r = byId(sv.dataset.row);
+      const at = (ci, k, cx, cy) => {
+        const c = S(s).cases[ci]; const u = r.units.slice(ci * 3, ci * 3 + 3); const ch = u[k] || ".";
+        const right = [...u].filter((q) => q === "0").length, ran = [...u].filter((q) => q !== ".").length;
+        const bk = D.buckets.find((x) => x.key === c.b);
+        if (plateState.hover !== ci) { plateState.hover = ci; bandAt(ci); }
+        tipEl = sv; showTipHTML(`<h4><span class="id">${esc(c.id)}</span>, ${esc(bk ? bk.label.toLowerCase() : c.b)}</h4><p>${esc(c.q || "")}</p><dl><dt>This run</dt><dd>${ch === "." ? "not run yet" : esc(OUTN[+ch])}</dd><dt>This question</dt><dd>${right} of ${ran} runs right</dd><dt>Setup</dt><dd>${esc(label(r))}</dd></dl>`, cx, cy);
+      };
+      const hit = (ev) => { const b = sv.getBoundingClientRect(); const x = ev.clientX - b.left, y = ev.clientY - b.top; let ci = null; for (const [k, v] of G.xs) if (x >= v - 1 && x < v + G.pitch) { ci = k; break; } const k = Math.max(0, Math.min(2, Math.floor((G.h - y) / G.pitch))); return { ci, k }; };
+      sv.onpointermove = (ev) => { const h = hit(ev); if (h.ci == null) return; at(h.ci, h.k, ev.clientX, ev.clientY); };
+      sv.onpointerleave = () => { plateState.hover = null; bandAt(null); hideTip(); };
+      sv.onkeydown = (ev) => {
+        if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return; ev.preventDefault();
+        const i = plateState.hover == null ? 0 : G.order.indexOf(plateState.hover) + (ev.key === "ArrowRight" ? 1 : -1);
+        const ci = G.order[Math.max(0, Math.min(G.order.length - 1, i))]; const b = sv.getBoundingClientRect();
+        at(ci, 0, b.left + G.xs.get(ci), b.bottom);
+      };
+    });
+    $("#leg6").innerHTML = [["0", "right"], ["1", "declined"], ["2", "wrong (hedged, or no number)"], ["3", "unclear (counts as wrong)"], ["4", "confident-wrong"], [".", "not run yet"]].map(([c, l]) => `<span class="k">${swatch(c)}${l}</span>`).join("");
+  }
+
+  /* ---------- Figure 1's column heads stay on screen while its rows scroll by ---------- */
+  // The map scrolls sideways inside its box on narrow screens, which stops a sticky thead at the page's top;
+  // so a copy of the head (aria-hidden, no tab stops) sits sticky above the box, laid exactly over the real
+  // head, with each column's width copied and its sideways scroll kept in step.
+  let mapHeadRO = null;
+  function stickMapHead() {
+    const wrap = $(".mapwrap"), tbl = $("#map"), thead = tbl && tbl.tHead; if (!wrap || !thead) return;
+    let head = $("#maphead");
+    if (!head) {
+      head = document.createElement("div"); head.id = "maphead"; head.className = "maphead"; head.setAttribute("aria-hidden", "true"); head.dataset.mirror = "#map thead";
+      wrap.parentNode.insertBefore(head, wrap);
+      wrap.addEventListener("scroll", () => { head.scrollLeft = wrap.scrollLeft; }, { passive: true });
+    }
+    const t = document.createElement("table"); t.className = "map"; t.appendChild(thead.cloneNode(true));
+    t.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
+    t.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+    head.replaceChildren(t);
+    const fit = () => {
+      const W = tbl.getBoundingClientRect().width; t.style.width = W + "px"; t.style.minWidth = W + "px"; t.style.tableLayout = "fixed";
+      const src = [...thead.rows[0].cells], dst = [...t.tHead.rows[0].cells];
+      src.forEach((c, i) => { if (dst[i]) dst[i].style.width = c.getBoundingClientRect().width + "px"; });
+      head.style.marginBottom = -(thead.getBoundingClientRect().height + 1) + "px"; head.scrollLeft = wrap.scrollLeft;
+    };
+    fit();
+    if (mapHeadRO) mapHeadRO.disconnect();
+    if (window.ResizeObserver) { mapHeadRO = new ResizeObserver(() => fit()); mapHeadRO.observe(tbl); [...thead.rows[0].cells].forEach((c) => mapHeadRO.observe(c)); }
+  }
+  /* ---------- chapters: the contents rail, the bar that folds it on a phone, the hash and history ---------- */
+  // Each chapter is one view; the hash names it (#metricflow), or names a place inside it (#fig3,
+  // #term-covered, #map-<setup>, #setup-<setup>), which opens the chapter that holds it and scrolls there.
+  const nav = (() => {
+    const CHAPTERS = [
+      { key: "summary", title: "Summary", parts: [["abstract", "Abstract"], ["who-wins", "Who wins each kind of question"]] },
+      { key: "decision-map", title: "The decision map", parts: [["fig1", "Every setup, kind by kind", 1]] },
+      { key: "metricflow", title: "Where MetricFlow stands", parts: [["fig2", "Right and confidently wrong", 2], ["fig3", "Both measures at once", 3]] },
+      { key: "covered-uncovered", title: "Covered against uncovered", parts: [["fig4", "Right, by question group", 4], ["fig5", "From covered to uncovered", 5]] },
+      { key: "every-run", title: "Every run", parts: [["fig6", "Square by square", 6]] },
+      { key: "setups", title: "The setups", parts: [["setup-map", "The setup map"], ["one-at-a-time", "One setup at a time"]] },
+      { key: "question-sets", title: "Question sets", parts: [["other-set-versions", "More question sets"]] },
+      { key: "method", title: "Method and glossary", parts: [["method-briefly", "Method, briefly"], ["glossary", "Glossary"]] },
+    ];
+    const ALIAS = { "one-at-a-time": "setups-b" };
+    const byAlias = (h) => document.getElementById(ALIAS[h] || h);
+    const viewEl = (k) => document.getElementById(k);
+    // a chapter shows when its view holds anything; a part when its target exists
+    const chapters = CHAPTERS.filter((c) => { const v = viewEl(c.key); return v && v.children.length; })
+      .map((c) => Object.assign({}, c, { parts: c.parts.filter(([id]) => byAlias(id)) }));
+    CHAPTERS.forEach((c) => { const v = viewEl(c.key); if (v && !chapters.some((x) => x.key === c.key)) v.hidden = true; });
+    const views = chapters.map((c) => viewEl(c.key));
+    const idx = (k) => chapters.findIndex((c) => c.key === k);
+    const root = document.documentElement, toc = $("#toc"), rail = $("#rail"), bar = $("#bar"), barBtn = $("#barbtn");
+    const narrowMQ = window.matchMedia("(max-width: 899.98px)");
+    let cur = null, pendingFocus = null;
+
+    const decode = (h) => { try { return decodeURIComponent(String(h || "").replace(/^#/, "")); } catch (e) { return ""; } };
+    function resolve(hash) {
+      const h = decode(hash);
+      if (!h) return { key: chapters[0].key, target: null };
+      if (idx(h) >= 0) return { key: h, target: null };
+      let el = byAlias(h);
+      // the setup explorer names its setup in the hash (#setup-<name>); the explorer holds it
+      if (!el && /^setup-/.test(h)) el = byAlias("one-at-a-time");
+      const v = el && el.closest ? el.closest(".view") : null;
+      if (v && idx(v.id) >= 0) return { key: v.id, target: el === v ? null : el };
+      return { key: chapters[0].key, target: null };
+    }
+
+    /* the contents, written once from CHAPTERS */
+    toc.innerHTML = chapters.map((c, i) => `<li data-ch="${c.key}"><a class="cha" href="#${c.key}" data-go="${c.key}"><span class="no">${i + 1}</span><span class="ct">${esc(c.title)}</span></a>` +
+      (c.parts.length ? `<ol class="parts">${c.parts.map(([id, t, n]) => `<li><a class="pt" href="#${id}" data-go="${id}">${n ? `<span class="fn">Figure ${n}</span>` : ""}<span class="pd">${esc(t)}</span></a></li>`).join("")}</ol>` : "") + `</li>`).join("");
+    const links = () => [...toc.querySelectorAll("a")];
+    function rove(a) { links().forEach((l) => (l.tabIndex = l === a ? 0 : -1)); }
+    toc.addEventListener("keydown", (e) => {
+      const a = e.target.closest && e.target.closest("a"); if (!a) return;
+      const L = links(), i = L.indexOf(a); let to = null;
+      if (e.key === "ArrowDown") to = L[Math.min(L.length - 1, i + 1)];
+      else if (e.key === "ArrowUp") to = L[Math.max(0, i - 1)];
+      else if (e.key === "Home") to = L[0];
+      else if (e.key === "End") to = L[L.length - 1];
+      if (to) { e.preventDefault(); rove(to); to.focus(); }
+    });
+
+    /* the pager at the foot of each chapter */
+    views.forEach((v, i) => {
+      const pg = document.createElement("nav"); pg.className = "pager"; pg.setAttribute("aria-label", "Previous and next chapter");
+      const p = chapters[i - 1], n = chapters[i + 1];
+      pg.innerHTML = (p ? `<a class="pv" href="#${p.key}" data-go="${p.key}"><span class="pk">Previous</span><span class="pt2"><span class="no">${i}</span>${esc(p.title)}</span></a>` : "") +
+        (n ? `<a class="nx" href="#${n.key}" data-go="${n.key}"><span class="pk">Next</span><span class="pt2"><span class="no">${i + 2}</span>${esc(n.title)}</span></a>` : "");
+      v.appendChild(pg);
+    });
+
+    function sync() {
+      const i = idx(cur), c = chapters[i];
+      toc.querySelectorAll(":scope > li").forEach((li) => {
+        const on = li.dataset.ch === cur; li.classList.toggle("on", on);
+        const a = li.querySelector(".cha"); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+      });
+      rove(toc.querySelector(`li[data-ch="${cur}"] > .cha`));
+      $("#bar-k").textContent = `${i + 1} of ${chapters.length}`;
+      $("#bar-t").textContent = c.title;
+      barBtn.setAttribute("aria-label", `Contents; open: chapter ${i + 1} of ${chapters.length}, ${c.title}`);
+      document.title = i === 0 ? "Semantic bet memo" : `${c.title} · Semantic bet memo`;
+      spy();
+    }
+    // Opens a chapter; returns whether it changed. Whatever the last one held in hand (a pinned tooltip,
+    // a locked focus, a hovered mark, a "↑ Back") is let go, since it is out of sight.
+    function show(key) {
+      if (key === cur) return false;
+      const was = cur; cur = key;
+      root.setAttribute("data-ch", key);
+      views.forEach((v) => { v.inert = v.id !== key; });
+      if (was) {
+        unpin(false); hideTip(); clearLock();
+        if (focusFig) { applyFocus(focusFig, null); focusFig = null; }
+        document.querySelectorAll(".jumpback").forEach((b) => b.remove());
+      }
+      sync();
+      return true;
+    }
+    // the top of the open chapter, below the bar on a phone
+    const viewTop = () => Math.max(0, $("#views").getBoundingClientRect().top + window.scrollY - (narrowMQ.matches ? bar.offsetHeight + 8 : 16));
+    function focusQuiet(el) {
+      if (!el) return;
+      if (!el.hasAttribute("tabindex")) { el.setAttribute("tabindex", "-1"); el.setAttribute("data-navfocus", ""); }
+      quietFocus = true; el.focus({ preventScroll: true }); quietFocus = false;
+    }
+    function saveY() { try { history.replaceState(Object.assign({}, history.state, { y: window.scrollY }), ""); } catch (e) {} }
+    function go(hash, opt) {
+      opt = opt || {};
+      const r = resolve(hash);
+      if (opt.push && decode(location.hash) !== decode(hash)) { saveY(); try { history.pushState({ y: null, jump: opt.jump || null }, "", "#" + hash); } catch (e) {} }
+      else if (opt.push && opt.jump) { try { history.pushState({ y: null, jump: opt.jump }, "", "#" + hash); } catch (e) {} }
+      const changed = show(r.key);
+      if (!opt.noScroll) {
+        if (r.target) r.target.scrollIntoView({ block: "start" });
+        else window.scrollTo(0, Math.min(window.scrollY, viewTop()));
+      }
+      if (opt.focus) focusQuiet(r.target || viewEl(r.key));
+      return changed;
+    }
+
+    // a link to a place in the report (the contents, the pager, any in-page link) goes through go()
+    document.addEventListener("click", (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest && e.target.closest("a[href^='#']"); if (!a || $("#tip").contains(a)) return;
+      e.preventDefault();
+      const h = a.getAttribute("data-go") || a.getAttribute("href").slice(1);
+      closeSheet(false);
+      go(h, { push: true, focus: true });
+    });
+    window.addEventListener("popstate", (e) => {
+      const r = resolve(location.hash), changed = show(r.key);
+      const y = e.state && typeof e.state.y === "number" ? e.state.y : null;
+      if (y != null) window.scrollTo(0, y);
+      else if (r.target) r.target.scrollIntoView({ block: "start" });
+      else if (changed) window.scrollTo(0, Math.min(window.scrollY, viewTop()));
+      const f = pendingFocus; pendingFocus = null;
+      if (f && document.contains(f) && !f.closest("[inert]")) { quietFocus = true; f.focus({ preventScroll: true }); quietFocus = false; }
+      else if (changed && (document.activeElement === document.body || (document.activeElement && document.activeElement.closest("[inert]")))) focusQuiet(viewEl(r.key));
+    });
+    window.addEventListener("pagehide", saveY);
+
+    /* the part in view, marked in the contents */
+    let spyRaf = 0;
+    function spy() {
+      spyRaf = 0; const c = chapters[idx(cur)]; if (!c) return;
+      // the last part whose top has passed the upper half of the screen; at the page's foot, the last one in sight
+      const atFoot = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      const line = atFoot ? window.innerHeight - 24 : (narrowMQ.matches ? bar.offsetHeight : 0) + window.innerHeight * 0.45;
+      let here = null;
+      c.parts.forEach(([id]) => { const el = byAlias(id); if (el && el.getBoundingClientRect().top <= line) here = id; });
+      if (!here && c.parts.length) here = c.parts[0][0];
+      toc.querySelectorAll(".pt").forEach((a) => a.classList.toggle("here", a.closest("li[data-ch]").dataset.ch === cur && a.dataset.go === here));
+    }
+    window.addEventListener("scroll", () => { if (!spyRaf) spyRaf = requestAnimationFrame(spy); if (rail.classList.contains("open")) placeSheet(); }, { passive: true });
+
+    /* under 900 px: the bar opens the contents as a sheet */
+    function placeSheet() { rail.style.setProperty("--sheet-top", Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) + "px"); }
+    function openSheet() {
+      placeSheet(); rail.classList.add("open"); barBtn.setAttribute("aria-expanded", "true");
+      const a = toc.querySelector(`li[data-ch="${cur}"] > .cha`); if (a) a.focus();
+    }
+    function closeSheet(returnFocus) {
+      if (!rail.classList.contains("open")) return;
+      rail.classList.remove("open"); barBtn.setAttribute("aria-expanded", "false");
+      if (returnFocus) barBtn.focus();
+    }
+    barBtn.addEventListener("click", (e) => { e.stopPropagation(); if (rail.classList.contains("open")) closeSheet(false); else openSheet(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && rail.classList.contains("open")) { e.stopPropagation(); closeSheet(true); } }, true);
+    document.addEventListener("pointerdown", (e) => { if (rail.classList.contains("open") && !rail.contains(e.target) && !bar.contains(e.target)) closeSheet(false); });
+    rail.addEventListener("focusout", (e) => { if (narrowMQ.matches && e.relatedTarget && !rail.contains(e.relatedTarget) && !bar.contains(e.relatedTarget)) closeSheet(false); });
+    const onMQ = () => { closeSheet(false); rail.style.removeProperty("--sheet-top"); };
+    if (narrowMQ.addEventListener) narrowMQ.addEventListener("change", onMQ);
+
+    try { history.scrollRestoration = "manual"; } catch (e) {}
+    // The glossary and the map's rows are drawn after this runs, so a link to one of them keeps the
+    // chapter guessed in the head until settle() can find its target.
+    const first = resolve(location.hash), guessed = root.getAttribute("data-ch");
+    show(!first.target && decode(location.hash) && idx(decode(location.hash)) < 0 && idx(guessed) >= 0 ? guessed : first.key);
+    return {
+      go, hash: () => decode(location.hash) || cur, current: () => cur,
+      afterPop: (el) => { pendingFocus = el; },
+      // after the page and its sections have drawn: back to where a reload left the reader, else to the link's target
+      settle() {
+        const y = history.state && typeof history.state.y === "number" ? history.state.y : null;
+        const r = resolve(location.hash);
+        show(r.key);
+        if (y != null) window.scrollTo(0, y); else if (r.target) r.target.scrollIntoView({ block: "start" });
+        spy();
+      },
+    };
+  })();
+
+  function renderAll() { hideTip(); renderText(); renderWinners(); renderMap(); stickMapHead(); renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); }
+  let rt, lastW = window.innerWidth;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderScatter(); renderStrip(); renderSlopes(); renderPlate(); } }, 120); });
+  syncThemeBtn(); renderSwitches(); renderAll();
+  // Figures 2 and 5 wrap labels to a measured width: once the web font is in, they are drawn again with its measure.
+  if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { renderForest(); renderSlopes(); });
+
+  window.__reportMarkReady();
+  requestAnimationFrame(() => nav.settle());
+})();
+</script>

@@ -1,0 +1,1 @@
+{"case": "average_order_value", "run": 1, "turns": [{"question": "What was our average order value on 1 October 2026?", "answer": "Average order value was EUR 75.51 per non-cancelled order, for 1 October 2026 (that single day). Late: sales.silver is ready only up to 2026-10-03T00:00Z, older than its 36 h deadline.", "calls": ["list_metrics", "describe_metric", "query_metrics"]}]}

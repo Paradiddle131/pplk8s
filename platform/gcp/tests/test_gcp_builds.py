@@ -16,7 +16,7 @@ from check_gcp_builds import ROOT, problems
 
 @pytest.fixture
 def copy(tmp_path: Path) -> Path:
-    for context in ("dbt", "services/semantic-agent"):
+    for context in ("dbt", "services/semantic-agent", "services/el-factory"):
         shutil.copytree(
             ROOT / context,
             tmp_path / context,
@@ -29,6 +29,7 @@ def copy(tmp_path: Path) -> Path:
 
 
 AGENT = "services/semantic-agent"
+ELF = "services/el-factory"
 
 
 def test_the_repo_ships_no_postgres_and_no_tlc() -> None:
@@ -146,3 +147,50 @@ def test_the_postgres_stage_may_copy_tlc(copy: Path) -> None:
     """The TLC COPYs of the local stage are not the GCP build's."""
     assert "packages/tlc" in (copy / AGENT / "Dockerfile").read_text()
     assert problems(copy) == []
+
+
+def test_el_factorys_file_sources_stay_out(copy: Path) -> None:
+    dockerfile = copy / ELF / "Dockerfile"
+    dockerfile.write_text(dockerfile.read_text().replace("--exclude=tlc ", ""))
+    found = problems(copy)
+    assert found and all(
+        p.startswith(
+            f"el-factory: the bigquery build copies the TLC path {ELF}/src/el_factory/tlc/"
+        )
+        for p in found
+    )
+
+
+def test_a_tlc_module_outside_el_factorys_package_fails(copy: Path) -> None:
+    (copy / ELF / "src" / "el_factory" / "tlc_extra.py").write_text("")
+    assert problems(copy) == [
+        f"el-factory: the bigquery build copies the TLC path {ELF}/src/el_factory/tlc_extra.py"
+    ]
+
+
+def test_el_factorys_postgres_implementation_stays_out(copy: Path) -> None:
+    dockerfile = copy / ELF / "Dockerfile"
+    dockerfile.write_text(
+        dockerfile.read_text().replace("--exclude=warehouse_postgres.py ", "")
+    )
+    path = f"{ELF}/src/el_factory/warehouse_postgres.py"
+    assert problems(copy) == [
+        f"el-factory: the bigquery build copies the Postgres-only path {path}"
+    ]
+
+
+def test_pyarrow_or_psycopg_in_el_factorys_lock_fails(copy: Path) -> None:
+    lock = copy / ELF / "requirements-bigquery.txt"
+    lock.write_text(lock.read_text() + "pyarrow==21.0.0\npsycopg==3.3.6\n")
+    found = problems(copy)
+    assert (
+        f"el-factory: {ELF}/requirements-bigquery.txt holds the Postgres package psycopg"
+        in found
+    )
+    assert (
+        f"el-factory: {ELF}/requirements-bigquery.txt holds pyarrow, which"
+        " dbt/requirements-bigquery.exclude leaves out"
+    ) in found
+    assert any(
+        p.startswith("el-factory:") and "differs from `uv export" in p for p in found
+    )

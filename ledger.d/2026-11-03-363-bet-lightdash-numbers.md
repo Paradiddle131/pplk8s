@@ -1,0 +1,5 @@
+## 2026-11-03 — Semantic track — Lightdash's numbers against MetricFlow's, and the custom-lightdash arm (#363)
+
+- Done: `363_lightdash_numbers.py` compared, on the agents' fixture in `dbt_dev`, each of the 36 metrics open-source Lightdash 3.128.0 translated (a total and a by-day query, through its free query API) with MetricFlow's (the semantic agent's tool path); `334_lightdash_server.sh` now runs queries (no-TLS profile, a parse for the target database, the warehouse catalog, a port of choice); `363_lightdash_agent.py` is the `custom-lightdash` arm (one tool over the free API), joined to `328_mcp_live.py` and on rung 4 in `bet_eval.py`.
+- Evidence: 35 matched, 1 mismatched (`remaining_budget_eur`: the semi-additive metric became a plain sum, silently; 370,835 against 10,010), 0 not comparable; run 1 of 41 of 96 cases, 77 free requests: 58.5% right, 17.1% confident-wrong, against `custom-metricflow`'s 95.1% and 0.0% on the same cases (`docs/research/semantic-bet/findings/2026-11-03-363-lightdash-numbers.md`, `eval.md`).
+- Open: runs 2 and 3 and the other 55 cases (the free quota); the blind judge on two unclear turns and three hedged answers.

@@ -1,0 +1,623 @@
+<title>Semantic bet memo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F4F6F3; --paper-2: #EAEFEA; --ink: #16202A; --ink-2: #3D4954; --ink-3: #59646E;
+  --rule: #C3CECB; --grid: #E0E7E4; --grid-major: #CCD8D4;
+  --mf: #2A5BA8; --da: #0B8A6E; --gt: #B86A00; --ref: #6E7882; --cw: #B42340;
+  --s2: #E2E9EC; --s3: #CBD9E1; --s4: #AEC4D3; --s5: #8FAEC4;
+  --band: rgba(22, 32, 42, .07); --sel: #CBD9E1; --tip: #FFFFFF; --tip-shadow: 0 6px 18px rgba(22,32,42,.16);
+  --serif: "STIX Two Text", "STIX Two", Cambria, "Times New Roman", serif;
+  --label: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --code: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131A21; --paper-2: #18222B; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+    --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+    --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --cw: #E0607A;
+    --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+    --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131A21; --paper-2: #18222B; --ink: #E3E8EA; --ink-2: #B9C3C9; --ink-3: #939FA8;
+  --rule: #34414C; --grid: #1B252E; --grid-major: #25313B;
+  --mf: #6890D6; --da: #24A27F; --gt: #BF8424; --ref: #8A949C; --cw: #E0607A;
+  --s2: #1C2934; --s3: #223546; --s4: #2A445E; --s5: #345678;
+  --band: rgba(227, 232, 234, .07); --sel: #2A445E; --tip: #1C2730; --tip-shadow: 0 6px 18px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--rule) var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.58; font-variant-numeric: lining-nums; }
+::selection { background: var(--sel); color: var(--ink); }
+a { color: var(--mf); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; border-radius: 2px; }
+code, .id { font-family: var(--code); font-size: .8em; letter-spacing: -.01em; color: var(--ink); }
+
+.page { max-width: 1180px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)); }
+.col { max-width: 41rem; }
+header.memo { border-bottom: 1px solid var(--ink); padding-bottom: 18px; margin-bottom: 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 32px; align-items: end; }
+h1 { font-size: clamp(1.7rem, 1.1rem + 2vw, 2.35rem); line-height: 1.14; font-weight: 600; letter-spacing: -.012em; margin: 0; max-width: 19em; text-wrap: balance; }
+.byline { font-family: var(--label); font-size: 14.5px; color: var(--ink-2); line-height: 1.4; margin: 10px 0 0; }
+.byline b { font-weight: 600; color: var(--ink); }
+.setswitch { display: inline-flex; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; font-family: var(--label); font-size: 14.5px; }
+.setswitch button { appearance: none; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 6px 12px; cursor: pointer; min-height: 36px; }
+.setswitch button + button { border-left: 1px solid var(--ink-2); }
+.setswitch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.setswitch-wrap { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.setswitch-wrap span { font-family: var(--label); font-size: 13px; color: var(--ink-3); }
+
+.abstract { margin: 0 0 22px; max-width: 46rem; }
+.abstract p { margin: 0 0 .6em; }
+.runin { font-weight: 700; }
+
+h2 { font-size: 1.42rem; line-height: 1.25; font-weight: 600; margin: 56px 0 8px; letter-spacing: -.005em; text-wrap: balance; }
+h2 + p { margin-top: 0; }
+p { margin: 0 0 1em; }
+
+figure { margin: 18px 0 8px; }
+.figtitle { font-family: var(--serif); font-size: 1.08rem; line-height: 1.38; margin: 0 0 10px; max-width: 52rem; text-wrap: pretty; }
+.figtitle .fignum { font-weight: 700; margin-right: .35em; }
+.figtitle .take { font-weight: 500; }
+figcaption { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink-2); max-width: 46rem; margin-top: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--label); font-size: 14px; color: var(--ink-2); margin: 4px 0 8px; align-items: center; }
+.legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { overflow: visible; }
+.plot { width: 100%; position: relative; }
+.plot svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--label); }
+.plot text { fill: var(--ink-2); font-size: 12.5px; }
+.plot .t-ink { fill: var(--ink); }
+.plot .t-strong { fill: var(--ink); font-weight: 600; }
+.plot .t-mute { fill: var(--ink-3); }
+.plot .t-id { font-family: var(--code); font-size: 11.5px; fill: var(--ink); }
+.plot .hit { fill: transparent; cursor: default; }
+.plot .hit:hover, .plot .hit:focus { fill: var(--band); outline: none; }
+.plot g.mark:focus { outline: none; }
+.plot g.mark:focus .hit { fill: var(--band); stroke: var(--mf); stroke-width: 1; }
+
+/* decision map */
+.mapwrap { overflow-x: auto; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); -webkit-overflow-scrolling: touch; }
+table.map { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 940px; font-family: var(--label); font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+table.map th, table.map td { padding: 5px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--grid-major); }
+table.map thead th { font-weight: 600; color: var(--ink); font-size: 13.5px; vertical-align: bottom; border-bottom: 1px solid var(--ink-2); background: var(--paper); }
+table.map thead th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+table.map th.num, table.map td.num { text-align: right; }
+table.map td.g { text-align: center; width: 74px; padding: 3px 4px; }
+table.map td.g span { display: block; border-radius: 2px; padding: 3px 0; color: var(--ink); }
+table.map td.g span.best { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
+table.map td.g span.none { color: var(--ink-3); }
+.b1 { background: transparent; } .b2 { background: var(--s2); } .b3 { background: var(--s3); } .b4 { background: var(--s4); } .b5 { background: var(--s5); }
+table.map tr.rung th { background: var(--paper-2); font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 6px 8px; border-bottom: 1px solid var(--grid-major); }
+table.map tr.rung th small { font-weight: 400; color: var(--ink-3); margin-left: 6px; }
+table.map td.setup { position: sticky; left: 0; background: var(--paper); min-width: 178px; z-index: 1; }
+table.map tr.rung th:first-child { position: sticky; left: 0; z-index: 1; }
+table.map td.setup .id { display: block; font-size: 12.5px; }
+table.map td.setup .mdl { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+table.map td.what { color: var(--ink-2); max-width: 280px; min-width: 210px; font-size: 13.5px; }
+table.map tr.sub td { background: var(--paper); }
+table.map tr.sub td.setup { padding-left: 22px; }
+table.map tr.sub[hidden] { display: none; }
+table.map tr.future td { color: var(--ink-3); font-style: italic; font-family: var(--serif); font-size: 14.5px; }
+.flag { display: inline-block; font-size: 12px; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 2px; padding: 0 4px; line-height: 1.35; white-space: nowrap; }
+.flag.major { border-color: var(--ink-2); }
+.iv { white-space: nowrap; }
+.iv small { color: var(--ink-3); font-size: 12.5px; }
+.cwhot { color: var(--ink); }
+.cwhot::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--cw); border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.more { appearance: none; background: none; border: 0; padding: 0 2px; color: var(--mf); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
+.cost small { display: block; color: var(--ink-3); font-size: 12px; }
+.maptools { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; align-items: center; margin: 6px 0 8px; }
+.toggle-all { appearance: none; border: 1px solid var(--ink-2); background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 4px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; }
+.moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 28px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 15.5px; line-height: 1.45; }
+.moves li { border-top: 1px solid var(--rule); padding-top: 8px; }
+.moves b { font-weight: 600; display: block; font-size: 15.5px; }
+
+.tip { position: fixed; z-index: 20; max-width: 340px; background: var(--tip); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; box-shadow: var(--tip-shadow); padding: 10px 12px; font-family: var(--label); font-size: 13.5px; line-height: 1.4; pointer-events: none; opacity: 0; transition: opacity .12s ease-out; }
+.tip.on { opacity: 1; }
+.tip h4 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+.tip h4 .id { font-size: 12.5px; }
+.tip dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--ink-3); } .tip dd { margin: 0; }
+.tip q { display: block; font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; margin-top: 4px; quotes: none; }
+.tip .src { font-size: 12px; color: var(--ink-3); }
+
+.notes { font-size: 15.5px; }
+dl.gloss { display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: 6px 22px; margin: 8px 0 0; font-size: 15.5px; }
+dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--ink-2); }
+footer { margin-top: 48px; border-top: 1px solid var(--ink); padding-top: 10px; font-family: var(--label); font-size: 13.5px; color: var(--ink-3); }
+@media (max-width: 640px) {
+  body { font-size: 16.5px; }
+  .page { padding-top: 24px; }
+  header.memo { grid-template-columns: 1fr; }
+  dl.gloss { grid-template-columns: 1fr; gap: 0 0; } dl.gloss dd { margin-bottom: 8px; }
+  table.map td.setup { min-width: 150px; }
+}
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+</style>
+
+<div class="page">
+  <header class="memo">
+    <div>
+      <h1>Which agent setup gives a business user the right number, and which one is confidently wrong</h1>
+      <p class="byline" id="byline"></p>
+    </div>
+    <div class="setswitch-wrap">
+      <span id="setswitch-label">Question set for every figure</span>
+      <div class="setswitch" role="group" aria-labelledby="setswitch-label">
+        <button type="button" data-set="frozen" aria-pressed="true"></button>
+        <button type="button" data-set="hard" aria-pressed="false"></button>
+      </div>
+    </div>
+  </header>
+
+  <section class="abstract col">
+    <p><span class="runin">Abstract.</span> <span id="abstract"></span></p>
+  </section>
+
+  <figure id="fig1">
+    <p class="figtitle"><span class="fignum">Figure 1.</span><span class="take" id="t1"></span></p>
+    <div class="maptools">
+      <div class="legend" id="leg1"></div>
+      <button type="button" class="toggle-all" id="toggleall" aria-expanded="false">Show every model</button>
+    </div>
+    <div class="mapwrap" tabindex="0" aria-label="Decision map, scrolls sideways on small screens"><table class="map" id="map"></table></div>
+    <figcaption id="cap1"></figcaption>
+    <ul class="moves" id="moves"></ul>
+  </figure>
+
+  <h2 id="s-forest">Where the ADK agent on MetricFlow stands, with its intervals</h2>
+  <p class="col">Each setup and model is one row: the dot is its mean over cases, the line its 95% interval. Accuracy and confident-wrong share the rows, so a setup that is often right but sometimes sure of a wrong number shows both at once.</p>
+  <figure id="fig2">
+    <p class="figtitle"><span class="fignum">Figure 2.</span><span class="take" id="t2"></span></p>
+    <div class="legend" id="leg2"></div>
+    <div class="plot" id="forest"></div>
+    <figcaption id="cap2"></figcaption>
+  </figure>
+
+  <h2 id="s-split">Why: covered questions against uncovered ones</h2>
+  <p class="col">A semantic layer answers what a metric defines and declines the rest. The four panels group setups by how they reach the data; each line follows one setup and model from covered to hidden-rule to uncovered questions.</p>
+  <figure id="fig3">
+    <p class="figtitle"><span class="fignum">Figure 3.</span><span class="take" id="t3"></span></p>
+    <div class="legend" id="leg3"></div>
+    <div class="plot" id="slopes"></div>
+    <figcaption id="cap3"></figcaption>
+  </figure>
+
+  <h2 id="s-ladder">What each rung of the cost ladder buys over the floor</h2>
+  <p class="col">The ladder runs from the cheapest setup, the data agent with tables only, to the most custom. Each row is a setup's accuracy minus the floor's, in points; the staircase traces the best score reached so far.</p>
+  <figure id="fig4">
+    <p class="figtitle"><span class="fignum">Figure 4.</span><span class="take" id="t4"></span></p>
+    <div class="legend" id="leg4"></div>
+    <div class="plot" id="ladder"></div>
+    <figcaption id="cap4"></figcaption>
+  </figure>
+
+  <h2>Method, briefly</h2>
+  <div class="col notes" id="method"></div>
+
+  <h2>Glossary</h2>
+  <dl class="gloss col">
+    <dt>Setup</dt><dd>One way of answering: an agent, the tools and context it is given, and the tables in its reach. The eval code calls it an arm.</dd>
+    <dt>Hidden-rule question</dt><dd>A question whose obvious SQL gives another number, because a business rule (cancelled orders, a semi-additive balance) is not visible in the table. The eval calls it a trap.</dd>
+    <dt>Covered, uncovered</dt><dd>Covered: a metric of the semantic layer answers it. Uncovered: no metric does, though SQL over the tables can.</dd>
+    <dt>Confident-wrong</dt><dd>A wrong number stated with no hedge, the failure a business user feels. The rule credits a lower rate only when accuracy ties.</dd>
+    <dt>Decides, check</dt><dd>Our setups run on a free model, which decides; Claude Haiku, Sonnet and Opus repeat them as a check on whether a gap is the model's.</dd>
+    <dt>95% interval</dt><dd>A percentile bootstrap over cases: the range the mean would likely fall in on another draw of questions like these.</dd>
+    <dt>Partial pass</dt><dd>A pass still under way: fewer cases than the set, or fewer than three runs per case. Marked wherever it appears.</dd>
+    <dt>Managed best</dt><dd>The most accurate setup on Google's managed rungs (1 and 2), the bar each of ours is paired against.</dd>
+  </dl>
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+const D = /*__DATA__*/null;
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const P = (x) => Math.round(x * 100);
+  const fam = { da: "var(--da)", gt: "var(--gt)", mf: "var(--mf)", ref: "var(--ref)" };
+  const famOrder = ["da", "gt", "mf", "ref"];
+  const ROLE = { decides: "free model, decides", check: "Claude, check", gemini: "Gemini, in Google's agent", cc: "Claude Code subagent", other: "" };
+  let SET = "frozen";
+  try { const s = localStorage.getItem("semantic-bet-set"); if (s === "frozen" || s === "hard") SET = s; } catch (e) {}
+  let showAll = false;
+
+  const S = () => D.sets[SET];
+  const byId = (id) => S().rows.find((r) => r.id === id);
+  const ladderOf = {}; D.ladder.forEach((l) => l.arms.forEach((a) => (ladderOf[a] = l.key)));
+
+  /* ---------- marks ---------- */
+  function shape(role, x, y, color, r) {
+    r = r || 4.5;
+    if (role === "decides") return `<circle cx="${x}" cy="${y}" r="${r + 0.5}" fill="${color}" stroke="var(--paper)" stroke-width="2"/>`;
+    if (role === "check") return `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`;
+    if (role === "gemini") return `<rect x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}" fill="${color}" stroke="var(--paper)" stroke-width="2"/>`;
+    const d = r + 1;
+    return `<path d="M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z" fill="var(--paper)" stroke="${color}" stroke-width="2"/>`;
+  }
+  function shapeKey(role, color) { return `<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${shape(role, 0, 0, color || "var(--ink-2)", 4)}</svg>`; }
+  function famKey(f) { return `<svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${fam[f]}" stroke-width="2.5" stroke-linecap="round"/></svg>`; }
+  function legendRoles() {
+    return [["decides", "free model (decides)"], ["check", "Claude API (check)"], ["gemini", "Gemini in Google's agent"], ["cc", "Claude Code subagent"]]
+      .map(([r, l]) => `<span class="k">${shapeKey(r)}${l}</span>`).join("");
+  }
+  function legendFams(list) { return (list || famOrder).map((f) => `<span class="k">${famKey(f)}${esc(D.familyLabel[f])}</span>`).join(""); }
+
+  /* ---------- tooltip ---------- */
+  const tip = $("#tip");
+  function tipHTML(r) {
+    const o = r.outcomes; const order = ["right", "declined", "wrong", "confident-wrong", "unclear"];
+    const out = order.filter((k) => o[k]).map((k) => `${o[k]} ${k}`).join(", ");
+    const ex = r.example ? `<q>${esc(r.example.text)}</q><div class="src">Example: case <span class="id">${esc(r.example.case)}</span>, run ${r.example.run}, scored ${esc(r.example.outcome)}${r.example.tools && r.example.tools.length ? "; tools called: " + esc(r.example.tools.join(", ")) : ""}</div>` : "";
+    let s2 = "";
+    if (r.step2) { const a = r.step2.accuracy, c = r.step2.confident_wrong; s2 = `<dt>vs managed best</dt><dd>${sg(a[0])} pts [${sg(a[1])}, ${sg(a[2])}] right; ${sg(c[0])} [${sg(c[1])}, ${sg(c[2])}] conf.-wrong</dd>`; }
+    return `<h4><span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}</h4>
+      <div>${esc(ROLE[r.role] || "")}${r.partial ? `; partial: ${esc(r.partial)}` : ""}</div>
+      <dl><dt>Right</dt><dd>${P(r.acc[0])}% [${P(r.acc[1])}, ${P(r.acc[2])}]</dd>
+      <dt>Conf.-wrong</dt><dd>${P(r.cw[0])}% [${P(r.cw[1])}, ${P(r.cw[2])}]</dd>${s2}
+      <dt>Cases, runs</dt><dd>${r.cases} of ${r.of} cases, ${r.runs} of ${r.expected} runs</dd>
+      <dt>Outcomes</dt><dd>${out}</dd>
+      <dt>Cost</dt><dd>${esc(r.cost.label)}${r.cost.per100 != null ? " per 100 runs" : ""}; ${esc(r.cost.note)}</dd>
+      <dt>Harness</dt><dd>${esc(r.harness)}, session ${esc(r.session)}</dd></dl>${ex}`;
+  }
+  function sg(x) { const v = Math.round(x * 100); return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v); }
+  function showTip(html, ev, el) {
+    tip.innerHTML = html; tip.classList.add("on"); tip.setAttribute("aria-hidden", "false");
+    const w = tip.offsetWidth, h = tip.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    let x, y;
+    if (ev && ev.clientX != null && ev.type !== "focus") { x = ev.clientX + 14; y = ev.clientY + 14; }
+    else { const b = el.getBoundingClientRect(); x = b.left + 10; y = b.bottom + 8; }
+    if (x + w > vw - 8) x = Math.max(8, vw - w - 8);
+    if (y + h > vh - 8) y = Math.max(8, (ev && ev.clientY != null ? ev.clientY : y) - h - 14);
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip() { tip.classList.remove("on"); tip.setAttribute("aria-hidden", "true"); }
+  function wireTips(root) {
+    root.querySelectorAll("[data-tip]").forEach((el) => {
+      const r = byId(el.getAttribute("data-tip"));
+      if (!r) return;
+      const h = (ev) => showTip(tipHTML(r), ev, el);
+      el.addEventListener("pointerenter", h); el.addEventListener("pointermove", h);
+      el.addEventListener("pointerleave", hideTip); el.addEventListener("focus", h); el.addEventListener("blur", hideTip);
+    });
+  }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+  window.addEventListener("scroll", hideTip, { passive: true });
+
+  /* ---------- text ---------- */
+  function renderText() {
+    const s = S();
+    $("#byline").innerHTML = `Evidence as of <b>${esc(D.written)}</b>, read from <code>results.json</code> under the frozen rule (<code>${esc(D.rule)}</code>). A living memo: it states what the passes so far show and what would move each finding; nothing here closes the track.`;
+    document.querySelectorAll(".setswitch button").forEach((b) => {
+      const k = b.dataset.set; b.textContent = `${k === "frozen" ? "Frozen" : "Hard"}, ${D.sets[k].cases} questions`;
+      b.setAttribute("aria-pressed", String(k === SET));
+    });
+    $("#abstract").textContent = s.sentences.abstract || "";
+    $("#t1").textContent = s.sentences.map || "";
+    $("#t2").textContent = s.sentences.forest || "";
+    $("#t3").textContent = s.sentences.slope || "";
+    $("#t4").textContent = s.sentences.ladder || "";
+  }
+
+  /* ---------- Figure 1: decision map ---------- */
+  function bin(v) { return v >= 0.95 ? 5 : v >= 0.85 ? 4 : v >= 0.7 ? 3 : v >= 0.5 ? 2 : 1; }
+  function renderMap() {
+    const s = S(); const rows = s.rows.filter((r) => r.plotted);
+    const prim = rows.filter((r) => r.primary);
+    const best = {};
+    D.groups.forEach((g) => { best[g.key] = Math.max(...prim.filter((r) => r.family !== "ref" && r.groups[g.key]).map((r) => r.groups[g.key][0])); });
+    const mb = byId(s.managedBest);
+    let h = `<thead><tr><th scope="col">Setup<small>model it ran on</small></th><th scope="col">What this setup is</th>`;
+    D.groups.forEach((g) => (h += `<th scope="col" class="num" style="text-align:center">${g.label}<small>${s.groupCases[g.key]} cases, % right</small></th>`));
+    h += `<th scope="col" class="num">Right<small>mean [95%]</small></th><th scope="col" class="num">Confident-wrong<small>mean [95%]</small></th><th scope="col" class="num">Claude cost<small>per 100 runs</small></th></tr></thead><tbody>`;
+    D.ladder.forEach((L) => {
+      const arms = L.arms.filter((a) => rows.some((r) => r.arm === a));
+      const rungLabel = L.key.startsWith("L") ? `Rung ${L.key.slice(1)}. ` : "";
+      h += `<tr class="rung"><th colspan="9" scope="rowgroup">${rungLabel}${esc(L.label)}${L.key === "L1" ? "<small>every gain in Figure 4 is read against this row</small>" : ""}</th></tr>`;
+      if (L.key === "L8") {
+        h += `<tr class="future"><td class="setup" colspan="9">Not measurable today: <code>compile_query</code> and <code>execute_query</code> are advertised by Knowledge Catalog but fail in Google's backend for any request (#349). If they ship, a managed agent could run the imported metrics instead of reading them, and this rung gets its own row.</td></tr>`;
+      }
+      arms.forEach((a) => {
+        const list = rows.filter((r) => r.arm === a).sort((x, y) => (y.primary - x.primary));
+        list.forEach((r, i) => {
+          const others = list.length - 1;
+          const sub = !r.primary;
+          h += `<tr class="${sub ? "sub" : "main"}" ${sub ? `data-arm="${esc(a)}" ${showAll ? "" : "hidden"}` : ""} data-tip="${esc(r.id)}" tabindex="0">`;
+          h += `<td class="setup">${sub ? "" : `<span class="id">${esc(r.arm)}</span>`}<span class="mdl">${shapeKey(r.role, fam[r.family])}${esc(r.modelLabel)}${r.managedBest ? ' <span class="flag major">managed best</span>' : ""}</span>${r.partial ? `<span class="flag${r.major ? " major" : ""}">partial: ${esc(r.partial)}</span>` : ""}${!sub && others ? ` <button type="button" class="more" data-arm="${esc(a)}" aria-expanded="${showAll}">${showAll ? "hide" : "+" + others + (others > 1 ? " models" : " model")}</button>` : ""}</td>`;
+          h += `<td class="what">${sub ? "" : esc(r.desc)}</td>`;
+          D.groups.forEach((g) => {
+            const v = r.groups[g.key];
+            if (!v) { h += `<td class="g"><span class="none" title="no case of this group in the pass">n/a</span></td>`; return; }
+            const isBest = r.primary && r.family !== "ref" && v[0] === best[g.key];
+            h += `<td class="g"><span class="b${bin(v[0])}${isBest ? " best" : ""}" title="${P(v[0])}% of ${v[1]} cases right">${P(v[0])}</span></td>`;
+          });
+          const cwHot = r.cw[0] >= 0.1;
+          h += `<td class="num iv">${P(r.acc[0])}% <small>[${P(r.acc[1])}, ${P(r.acc[2])}]</small></td>`;
+          h += `<td class="num iv"><span class="${cwHot ? "cwhot" : ""}">${P(r.cw[0])}%</span> <small>[${P(r.cw[1])}, ${P(r.cw[2])}]</small></td>`;
+          h += `<td class="num cost">${esc(r.cost.label)}<small>${esc(r.role === "gemini" ? "free trial" : r.role === "decides" ? "free model" : r.role === "cc" ? "not metered" : "")}</small></td></tr>`;
+        });
+      });
+    });
+    h += `</tbody>`;
+    const t = $("#map"); t.innerHTML = h;
+    t.querySelectorAll("button.more").forEach((b) => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const a = b.dataset.arm; const open = b.getAttribute("aria-expanded") !== "true";
+      t.querySelectorAll(`tr.sub[data-arm="${CSS.escape(a)}"]`).forEach((tr) => (tr.hidden = !open));
+      b.setAttribute("aria-expanded", String(open));
+      const n = t.querySelectorAll(`tr.sub[data-arm="${CSS.escape(a)}"]`).length;
+      b.textContent = open ? "hide" : "+" + n + (n > 1 ? " models" : " model");
+    }));
+    wireTips(t);
+    $("#leg1").innerHTML = `<span class="k">Share right per question type:</span>` +
+      [[1, "under 50"], [2, "50 to 69"], [3, "70 to 84"], [4, "85 to 94"], [5, "95 and over"]].map(([b, l]) => `<span class="k"><span class="b${b}" style="display:inline-block;width:18px;height:12px;border:1px solid var(--rule);border-radius:2px"></span>${l}</span>`).join("") +
+      `<span class="k"><span style="display:inline-block;width:18px;height:12px;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:2px"></span>best in column</span><span class="k"><span class="cwhot"></span>confident-wrong 10% or more</span>`;
+    $("#cap1").innerHTML = `One row per setup on the model that decides for it (the free model for ours, Gemini's default for Google's agents, else the cheapest Claude); "+ models" opens the others. Question-type shares carry no interval here (the overall columns do); groups of few cases (${D.groups.map((g) => g.label.toLowerCase() + " " + s.groupCases[g.key]).join(", ")}) move by many points on one answer. Data agents bill $0.00 on Gemini's free trial until ${esc(D.freeTrialEnd)}. Rows with fewer than five cases are left out: ${s.unplotted.map((id) => { const r = byId(id); return `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)} (${r.cases} case)`; }).join(", ") || "none"}.`;
+    renderMoves();
+  }
+  function renderMoves() {
+    const s = S(); const rows = s.rows.filter((r) => r.plotted);
+    const ours = ["native-mcp", "custom-toolbox", "custom-metricflow", "custom-hybrid", "custom-lightdash"];
+    const noFree = ours.filter((a) => rows.some((r) => r.arm === a) && !rows.some((r) => r.arm === a && r.role === "decides"));
+    const parts = rows.filter((r) => r.partial && r.major && r.role === "decides");
+    const partsOther = rows.filter((r) => r.partial && r.major && r.role !== "decides");
+    const worth = s.rows.filter((r) => r.step2 && r.step2.worth);
+    const mbArm = byId(s.managedBest);
+    const items = [
+      ["If compile_query ships", "A managed agent could run the imported MetricFlow metrics rather than read them; rung 8 would then be measured, and the covered and hidden-rule columns are where it would show."],
+      ["When the free model finishes", (parts.length ? `Its passes still partial on this set: ${parts.map((r) => `<span class="id">${esc(r.arm)}</span>`).join(", ")}; each would firm its interval.` : "The free model has no partial pass on this set.") + (partsOther.length ? ` Also partial, on other models: ${partsOther.map((r) => `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`).join(", ")}.` : "")],
+      ["Where the deciding model has not run", noFree.length ? `${noFree.map((a) => `<span class="id">${esc(a)}</span>`).join(", ")} ran on Claude only, the check; the rule's decision needs the free model's pass.` : "Every one of our setups has a free-model pass on this set."],
+      ["What a tie means here", `This set detects about ${s.power} points of accuracy four times in five; smaller true gaps will mostly read as ties. ${worth.length ? `On it, ${worth.map((r) => `<span class="id">${esc(r.arm)}</span> on ${esc(r.modelLabel)}`).join(", ")} clears the rule's bar against ${esc(mbArm.arm)}, and the rule needs both sets.` : "No setup of ours clears the rule's bar against the managed best on it."}`],
+    ];
+    $("#moves").innerHTML = items.map(([t, b]) => `<li><b>${esc(t)}</b>${b}</li>`).join("");
+  }
+
+  /* ---------- shared axis helpers ---------- */
+  function lin(d0, d1, r0, r1) { return (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0); }
+  function graphPaper(x, x0v, x1v, minor, major, top, bottom) {
+    let g = "";
+    for (let v = x0v; v <= x1v + 1e-9; v += minor) {
+      const isMaj = Math.abs(v / major - Math.round(v / major)) < 1e-6;
+      g += `<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${bottom}" stroke="${isMaj ? "var(--grid-major)" : "var(--grid)"}" stroke-width="1"/>`;
+    }
+    return g;
+  }
+
+  /* ---------- Figure 2: forest plot ---------- */
+  function renderForest() {
+    const s = S(); const el = $("#forest"); const W = Math.max(320, el.clientWidth);
+    const narrow = W < 640;
+    const rows = s.rows.filter((r) => r.plotted);
+    const groups = famOrder.map((f) => ({ f, rows: rows.filter((r) => r.family === f).sort((a, b) => b.acc[0] - a.acc[0]) })).filter((g) => g.rows.length);
+    const L = narrow ? 128 : 290, gap = narrow ? 16 : 34;
+    const pw = W - L - gap * 2;
+    const pa = Math.round(pw * 0.62), pc = pw - pa;
+    const xa0 = L + gap, xc0 = xa0 + pa + gap;
+    const cwMax = Math.min(1, Math.ceil(Math.max(...rows.map((r) => r.cw[2])) * 10 + 0.5) / 10);
+    const xa = lin(0, 1, xa0, xa0 + pa), xc = lin(0, cwMax, xc0, xc0 + pc);
+    const rh = narrow ? 30 : 22, gh = 26, top = 44;
+    let y = top; const pos = [];
+    groups.forEach((g) => { pos.push({ head: g.f, y: y + 17 }); y += gh; g.rows.forEach((r) => { pos.push({ r, y: y + rh / 2 }); y += rh; }); });
+    const H = y + 34;
+    const mb = byId(s.managedBest);
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accuracy and confident-wrong rate per setup and model with 95% intervals">`;
+    o += graphPaper(xa, 0, 1, 0.02, 0.1, top - 6, H - 30) + graphPaper(xc, 0, cwMax, 0.01, 0.05, top - 6, H - 30);
+    // managed best band and line
+    o += `<rect x="${xa(mb.acc[1])}" y="${top - 6}" width="${xa(mb.acc[2]) - xa(mb.acc[1])}" height="${H - 30 - top + 6}" fill="var(--band)"/>`;
+    o += `<line x1="${xa(mb.acc[0])}" x2="${xa(mb.acc[0])}" y1="${top - 10}" y2="${H - 30}" stroke="var(--ink-2)" stroke-width="1"/>`;
+    o += `<text x="${xa(mb.acc[0])}" y="${top - 14}" text-anchor="end" class="t-ink" style="font-size:12px">managed best ${P(mb.acc[0])}%, its interval shaded</text>`;
+    // axes
+    (narrow ? [0, 0.5, 1] : [0, 0.2, 0.4, 0.6, 0.8, 1]).forEach((v) => (o += `<text x="${xa(v)}" y="${H - 14}" text-anchor="middle" class="t-mute">${P(v)}</text>`));
+    for (let v = 0; v <= cwMax + 1e-9; v += narrow ? 0.1 : cwMax > 0.3 ? 0.1 : 0.05) o += `<text x="${xc(v)}" y="${H - 14}" text-anchor="middle" class="t-mute">${P(v)}</text>`;
+    o += `<text x="${xa0}" y="${top - 30}" class="t-strong">Right, % of runs</text>`;
+    o += `<text x="${xc0}" y="${top - 30}" class="t-strong">Confident-wrong, % of runs</text>`;
+    o += `<text x="${xa0 + pa}" y="${H}" text-anchor="end" class="t-mute">mean over cases, 95% bootstrap interval</text>`;
+    pos.forEach((p) => {
+      if (p.head) {
+        o += `<line x1="0" x2="${W}" y1="${p.y - 15}" y2="${p.y - 15}" stroke="var(--rule)"/>`;
+        o += `<line x1="0" x2="16" y1="${p.y - 4}" y2="${p.y - 4}" stroke="${fam[p.head]}" stroke-width="2.5" stroke-linecap="round"/><text x="22" y="${p.y}" class="t-strong">${esc(D.familyLabel[p.head])}</text>`;
+        return;
+      }
+      const r = p.r, c = fam[r.family], yy = p.y;
+      const dash = r.major ? ` stroke-dasharray="3 3"` : "";
+      const isMF = r.arm === "custom-metricflow";
+      o += `<g class="mark" tabindex="0" data-tip="${esc(r.id)}" aria-label="${esc(r.arm + " on " + r.modelLabel + ": " + P(r.acc[0]) + "% right, " + P(r.cw[0]) + "% confident-wrong")}">`;
+      o += `<rect class="hit" x="0" y="${yy - rh / 2}" width="${W}" height="${rh}"/>`;
+      if (narrow) {
+        o += `<text x="0" y="${yy - 2}" class="t-id">${esc(r.arm)}</text><text x="0" y="${yy + 11}" style="font-size:11.5px">${esc(r.modelLabel)}${r.partial ? ", partial" : ""}</text>`;
+      } else {
+        o += `<text x="0" y="${yy + 4}" class="t-id">${esc(r.arm)}</text><text x="${152}" y="${yy + 4}">${esc(r.modelLabel)}${r.partial ? `<tspan class="t-mute">, partial</tspan>` : ""}</text>`;
+      }
+      o += `<line x1="${xa(r.acc[1])}" x2="${xa(r.acc[2])}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="2" stroke-linecap="round"${dash}/>`;
+      o += shape(r.role, xa(r.acc[0]), yy, c);
+      o += `<line x1="${xc(r.cw[1])}" x2="${xc(Math.min(cwMax, r.cw[2]))}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="2" stroke-linecap="round"${dash}/>`;
+      o += shape(r.role, xc(r.cw[0]), yy, c);
+      if ((isMF && r.role === "decides") || r.managedBest) {
+        const lx = xa(r.acc[2]) + 6;
+        const txt = `${P(r.acc[0])}%${isMF ? ", decides" : ""}`;
+        if (lx + 60 < xa0 + pa) o += `<text x="${lx}" y="${yy + 4}" class="t-strong">${txt}</text>`;
+        else o += `<text x="${xa(r.acc[1]) - 6}" y="${yy + 4}" text-anchor="end" class="t-strong">${txt}</text>`;
+      }
+      o += `</g>`;
+    });
+    o += `</svg>`;
+    el.innerHTML = o; wireTips(el);
+    $("#leg2").innerHTML = legendRoles() + `<span class="k"><svg width="22" height="6" aria-hidden="true"><line x1="1" y1="3" x2="21" y2="3" stroke="var(--ink-2)" stroke-width="2" stroke-dasharray="3 3"/></svg>partial pass (dashed interval)</span>`;
+    $("#cap2").innerHTML = `Colour gives how a setup reaches the data (group headings); the marker gives the model. Dashed intervals are passes with fewer cases than the set or under nine runs in ten. The rule credits a lower confident-wrong rate only when accuracy ties, so read the right-hand panel after the left. Paired differences against the managed best are in each row's details (hover or focus a row).`;
+  }
+
+  /* ---------- Figure 3: small-multiple slopes ---------- */
+  function renderSlopes() {
+    const s = S(); const el = $("#slopes"); const W = Math.max(320, el.clientWidth);
+    const cols = W >= 980 ? 4 : W >= 620 ? 2 : 1;
+    const gapX = 22, pw = (W - gapX * (cols - 1)) / cols, ph = 250;
+    const keys = ["covered", "trap", "uncovered"], names = ["Covered", "Hidden-rule", "Uncovered"];
+    const rows = s.rows.filter((r) => r.plotted && keys.every((k) => r.groups[k]));
+    const mb = byId(s.managedBest);
+    const panels = famOrder.map((f) => ({ f, rows: rows.filter((r) => r.family === f) })).filter((p) => p.rows.length);
+    const nRows = Math.ceil(panels.length / cols);
+    const H = nRows * (ph + 34);
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share right on covered, hidden-rule and uncovered questions, one panel per kind of setup">`;
+    panels.forEach((p, i) => {
+      const cx = (i % cols) * (pw + gapX), cy = Math.floor(i / cols) * (ph + 34);
+      const lw = Math.min(150, pw * 0.4); // label room
+      const x0 = cx + 26, x1 = cx + pw - lw - 8, t = cy + 40, b = cy + ph - 28;
+      const xs = keys.map((_, j) => x0 + (j * (x1 - x0)) / 2);
+      const y = lin(0, 1, b, t);
+      o += `<text x="${cx}" y="${cy + 14}" class="t-strong">${esc(D.familyLabel[p.f])}</text>`;
+      for (let v = 0; v <= 1.0001; v += 0.05) {
+        const maj = Math.round(v * 100) % 25 === 0;
+        o += `<line x1="${x0}" x2="${x1}" y1="${y(v)}" y2="${y(v)}" stroke="${maj ? "var(--grid-major)" : "var(--grid)"}"/>`;
+      }
+      [0, 0.25, 0.5, 0.75, 1].forEach((v) => (o += `<text x="${x0 - 6}" y="${y(v) + 4}" text-anchor="end" class="t-mute">${P(v)}</text>`));
+      xs.forEach((x, j) => {
+        o += `<line x1="${x}" x2="${x}" y1="${t - 4}" y2="${b}" stroke="var(--ink-3)" stroke-width="1"/>`;
+        o += `<text x="${x}" y="${b + (j === 1 ? 30 : 16)}" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}" class="t-ink" dx="${j === 0 ? -8 : j === 2 ? 8 : 0}">${names[j]}</text>`;
+      });
+      o += `<text x="${x0 - 6}" y="${t - 14}" text-anchor="start" class="t-mute" dx="-24">% right</text>`;
+      // ghost of managed best in other panels
+      if (p.f !== mb.family) {
+        o += `<polyline points="${keys.map((k, j) => `${xs[j]},${y(mb.groups[k][0])}`).join(" ")}" fill="none" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3" stroke-linecap="round"/>`;
+      }
+      // labels with collision avoidance at the right end
+      const sorted = p.rows.slice().sort((a, b2) => a.groups.uncovered[0] - b2.groups.uncovered[0]);
+      const lab = sorted.map((r) => ({ r, y: y(r.groups.uncovered[0]) }));
+      if (p.f !== mb.family) lab.push({ ghost: true, y: y(mb.groups.uncovered[0]) });
+      lab.sort((a, b2) => b2.y - a.y);
+      for (let k = 1; k < lab.length; k++) if (lab[k - 1].y - lab[k].y < 12) lab[k].y = lab[k - 1].y - 12;
+      const over = Math.min(0, lab.length ? lab[lab.length - 1].y - (t - 8) : 0);
+      if (over < 0) lab.forEach((l) => (l.y -= over));
+      const gl = lab.find((q) => q.ghost);
+      if (gl) o += `<text x="${xs[2] + 10}" y="${gl.y + 4}" class="t-mute" style="font-size:11.5px">managed best ${P(mb.groups.uncovered[0])}</text>`;
+      p.rows.slice().sort((a, b2) => (a.primary - b2.primary)).forEach((r) => {
+        const c = fam[r.family];
+        const pts = keys.map((k, j) => `${xs[j]},${y(r.groups[k][0])}`).join(" ");
+        const w = r.primary ? 2 : 1.25, op = r.primary ? 1 : 0.6;
+        o += `<g class="mark" tabindex="0" data-tip="${esc(r.id)}" aria-label="${esc(r.arm + " on " + r.modelLabel + ": covered " + P(r.groups.covered[0]) + "%, hidden-rule " + P(r.groups.trap[0]) + "%, uncovered " + P(r.groups.uncovered[0]) + "%")}">`;
+        o += `<polyline points="${pts}" fill="none" stroke="transparent" stroke-width="12" style="pointer-events:stroke"/>`;
+        o += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${w}" stroke-opacity="${op}" stroke-linejoin="round"${r.major ? ' stroke-dasharray="3 3"' : ""}/>`;
+        keys.forEach((k, j) => (o += shape(r.role, xs[j], y(r.groups[k][0]), c, r.primary ? 3.5 : 2.6)));
+        const l = lab.find((q) => q.r === r);
+        o += `<text x="${xs[2] + 10}" y="${l.y + 4}" style="font-size:11.5px" class="${r.primary ? "t-ink" : "t-mute"}">${esc(shortArm(r.arm))} ${esc(shortModel(r))} ${P(r.groups.uncovered[0])}</text>`;
+        o += `</g>`;
+      });
+    });
+    o += `</svg>`;
+    el.innerHTML = o; wireTips(el);
+    $("#leg3").innerHTML = legendRoles() + `<span class="k"><svg width="22" height="6" aria-hidden="true"><line x1="1" y1="3" x2="21" y2="3" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="1 3"/></svg>managed best, repeated in each panel</span><span class="k">labels: setup, model, % right on uncovered</span>`;
+    const g = s.groupCases;
+    $("#cap3").innerHTML = `Share of runs right per question type, ${g.covered} covered, ${g.trap} hidden-rule and ${g.uncovered} uncovered cases on a complete pass; a partial pass reaches fewer (details per line on hover or focus). The thicker line in each panel is the row Figure 1 shows; lighter lines are the other models. These shares carry no interval; with ${g.trap} hidden-rule cases one case is ${Math.round(100 / Math.max(1, g.trap))} points. On uncovered questions a semantic-layer setup declines by design: the rule scores a decline as not right and not confident-wrong.`;
+  }
+  function shortArm(a) { return a.replace("native-", "").replace("custom-", ""); }
+  function shortModel(r) { return r.modelLabel.replace("Nemotron free", "free").replace("Claude Code ", "CC ").replace("Gemini ", "").replace(", fresh sessions", " fresh"); }
+
+  /* ---------- Figure 4: the ladder ---------- */
+  function renderLadder() {
+    const s = S(); const el = $("#ladder"); const W = Math.max(320, el.clientWidth);
+    const narrow = W < 640;
+    const floor = byId(s.floor); const f0 = floor.acc[0];
+    const rows = s.rows.filter((r) => r.plotted);
+    const items = []; let best = -1, steps = [];
+    D.ladder.forEach((L) => {
+      if (L.key === "cc") return;
+      items.push({ head: L });
+      if (L.key === "L8") { items.push({ future: true }); return; }
+      L.arms.forEach((a) => {
+        const list = rows.filter((r) => r.arm === a);
+        const pr = list.find((r) => r.primary); if (!pr) return;
+        items.push({ r: pr, others: list.filter((r) => !r.primary), L });
+      });
+    });
+    const all = rows.filter((r) => ladderOf[r.arm] && ladderOf[r.arm] !== "cc");
+    const lo = Math.floor(Math.min(...all.map((r) => r.acc[1] - f0)) * 10) / 10;
+    const hi = Math.ceil((Math.max(...all.map((r) => r.acc[2] - f0)) + (narrow ? 0.08 : 0.02)) * 10) / 10;
+    const L = narrow ? 120 : 280, R = narrow ? 0 : 150;
+    const x = lin(lo, hi, L + 10, W - R - 10);
+    const rh = narrow ? 30 : 24, hh = 26, top = 30;
+    let yy = top; const pos = [];
+    items.forEach((it) => { if (it.head) { pos.push({ ...it, y: yy + 17 }); yy += hh; } else { pos.push({ ...it, y: yy + rh / 2 }); yy += it.future ? rh + 6 : rh; } });
+    const H = yy + 40;
+    let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accuracy over the floor per rung of the cost ladder">`;
+    o += graphPaper(x, lo, hi, 0.02, 0.1, top - 4, H - 34);
+    o += `<rect x="${x(floor.acc[1] - f0)}" y="${top - 4}" width="${x(floor.acc[2] - f0) - x(floor.acc[1] - f0)}" height="${H - 34 - top + 4}" fill="var(--band)"/>`;
+    o += `<line x1="${x(0)}" x2="${x(0)}" y1="${top - 8}" y2="${H - 34}" stroke="var(--ink)" stroke-width="1.25"/>`;
+    o += `<text x="${x(0) + (narrow ? -5 : 5)}" y="${top - 12}" text-anchor="${narrow ? "end" : "start"}" class="t-ink" style="font-size:12px">floor, ${P(f0)}%${narrow ? "" : "; its interval shaded"}</text>`;
+    for (let v = lo; v <= hi + 1e-9; v += 0.1) o += `<text x="${x(v)}" y="${H - 18}" text-anchor="middle" class="t-mute">${sg(v)}</text>`;
+    o += `<text x="${L + 10}" y="${H - 2}" class="t-mute">${narrow ? "points over the floor" : `points of accuracy over the floor (${esc(floor.arm)} on ${esc(floor.modelLabel)})`}</text>`;
+    if (!narrow) o += `<text x="${W}" y="${top - 12}" text-anchor="end" class="t-strong">Claude cost per 100 runs</text>`;
+    // staircase: best score so far down rungs 1 to 7
+    let run = 0, pts = [];
+    pos.forEach((p) => { if (p.r && p.L.key.startsWith("L")) { run = Math.max(run, p.r.acc[0] - f0); pts.push([x(run), p.y]); } });
+    if (pts.length) {
+      let d = `M${pts[0][0]} ${pts[0][1]}`;
+      for (let i = 1; i < pts.length; i++) d += ` V${pts[i][1]} H${pts[i][0]}`;
+      o += `<path d="${d}" fill="none" stroke="var(--ink-3)" stroke-width="1.25" stroke-linejoin="round"/>`;
+    }
+    pos.forEach((p) => {
+      if (p.head) {
+        const lbl = p.head.key.startsWith("L") ? `Rung ${p.head.key.slice(1)}. ${p.head.label}` : p.head.label;
+        o += `<text x="0" y="${p.y}" class="t-strong" style="font-size:12.5px">${esc(lbl)}</text>`;
+        return;
+      }
+      if (p.future) {
+        o += `<rect x="${x(lo)}" y="${p.y - rh / 2}" width="${x(hi) - x(lo)}" height="${rh}" fill="none" stroke="var(--ink-3)" stroke-dasharray="4 3"/>`;
+        o += `<text x="${(x(lo) + x(hi)) / 2}" y="${p.y + 4}" text-anchor="middle" class="t-mute" style="font-style:italic">${narrow ? "not measurable today (#349)" : "not measurable today: compile_query fails in Google's backend (#349)"}</text>`;
+        return;
+      }
+      const r = p.r, c = fam[r.family], y = p.y, d = r.acc[0] - f0;
+      o += `<g class="mark" tabindex="0" data-tip="${esc(r.id)}" aria-label="${esc(r.arm + " on " + r.modelLabel + ": " + sg(d) + " points over the floor")}">`;
+      o += `<rect class="hit" x="0" y="${y - rh / 2}" width="${W}" height="${rh}"/>`;
+      if (narrow) o += `<text x="0" y="${y - 2}" class="t-id">${esc(r.arm)}</text><text x="0" y="${y + 11}" style="font-size:11.5px">${esc(r.modelLabel)}${r.partial ? ", partial" : ""}</text>`;
+      else o += `<text x="12" y="${y + 4}" class="t-id">${esc(r.arm)}</text><text x="166" y="${y + 4}">${esc(r.modelLabel)}${r.partial ? `<tspan class="t-mute">, partial</tspan>` : ""}</text>`;
+      if (r.arm !== "native-bare") {
+        o += `<line x1="${x(0)}" x2="${x(d)}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="1" stroke-opacity=".45"/>`;
+        o += `<line x1="${x(r.acc[1] - f0)}" x2="${x(r.acc[2] - f0)}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="2" stroke-linecap="round"${r.major ? ' stroke-dasharray="3 3"' : ""}/>`;
+      }
+      p.others.forEach((q) => (o += shape(q.role, x(q.acc[0] - f0), y, c, 3)));
+      o += shape(r.role, x(d), y, c);
+      if (r.arm !== "native-bare") {
+        const lx = Math.max(x(r.acc[2] - f0), ...p.others.map((q) => x(q.acc[0] - f0) + 4)) + 6;
+        if (lx + 28 < W - R) o += `<text x="${lx}" y="${y + 4}" class="t-ink">${sg(d)}</text>`;
+        else o += `<text x="${x(r.acc[1] - f0) - 6}" y="${y + 4}" text-anchor="end" class="t-ink">${sg(d)}</text>`;
+      }
+      if (!narrow) o += `<text x="${W}" y="${y + 4}" text-anchor="end" class="t-ink">${esc(r.cost.label)}<tspan class="t-mute">${r.role === "gemini" ? " free trial" : r.role === "decides" ? " free model" : ""}</tspan></text>`;
+      o += `</g>`;
+    });
+    o += `</svg>`;
+    el.innerHTML = o; wireTips(el);
+    $("#leg4").innerHTML = legendFams() + legendRoles() + `<span class="k"><svg width="22" height="10" aria-hidden="true"><path d="M1 2H11V8H21" fill="none" stroke="var(--ink-3)" stroke-width="1.25"/></svg>best score so far</span>`;
+    $("#cap4").innerHTML = `Each row shows the setup's model from Figure 1 with its 95% interval, shifted by the floor's mean; small open markers are the same setup on its other models. The increments are differences of means across models (the floor runs on Gemini), not paired tests; the rule's paired test is against the managed best (Figure 2's details). Costs are Claude dollars per 100 scored runs, reruns included${narrow ? "; hover or focus a row for them" : ""}. Gemini's data agents bill $0.00 on the free trial until ${esc(D.freeTrialEnd)}.`;
+  }
+
+  /* ---------- method + footer ---------- */
+  function renderMethod() {
+    const s = S();
+    const un = D.spendUnmatched.reduce((a, b) => a + b.usd, 0);
+    $("#method").innerHTML = `<p>Each case is asked up to three times per setup and model, each run in a fresh session (Claude Code subagents share one per batch, so they stand outside the decision). A run is right when every turn carries the expected number; confident-wrong when a number outside tolerance comes with no hedge. Accuracy and confident-wrong are means over cases with a percentile bootstrap interval over cases; the paired comparison against the managed best resamples cases the same way. Both sets decide: a setup of ours is worth building only if it clears the bar on each. Runs refused by a quota or lost in the 2026-11-03 audit are quarantined in the findings and never scored.</p><p>Claude spend recorded so far: $${D.spendTotal.toFixed(2)}, of which $${un.toFixed(2)} went to probes and passes not tied to a scored row. ${D.examplesLoaded ? "Example answers in the row details come from the per-run logs: the first confident-wrong run of that setup, else its first decline." : "The per-run logs were not found at build time, so row details carry no example answer."}</p>`;
+    $("#foot").textContent = `Built from results.json written ${D.written}. Rebuild with python3 build.py results.json after a new pass; the page carries no number typed by hand.`;
+  }
+
+  function renderAll() { hideTip(); renderText(); renderMap(); renderForest(); renderSlopes(); renderLadder(); renderMethod(); }
+  document.querySelectorAll(".setswitch button").forEach((b) => b.addEventListener("click", () => {
+    SET = b.dataset.set; try { localStorage.setItem("semantic-bet-set", SET); } catch (e) {}
+    renderAll();
+  }));
+  $("#toggleall").addEventListener("click", (e) => {
+    showAll = !showAll; e.currentTarget.setAttribute("aria-expanded", String(showAll));
+    e.currentTarget.textContent = showAll ? "Show one model per setup" : "Show every model"; renderMap();
+  });
+  let rt; let lastW = 0;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== lastW) { lastW = window.innerWidth; renderForest(); renderSlopes(); renderLadder(); } }, 120); });
+  lastW = window.innerWidth;
+  renderAll();
+})();
+</script>

@@ -1,0 +1,293 @@
+<!--
+  Variant C, the question browser in place (#397). "See all N" turns the guide's right-hand panel into a browser:
+  the example card's spot becomes a searchable list of the kind's questions by name, a question opens to the guide's
+  own card in that same spot, and "Back to the guide" restores the example. The three lists on the left stay and
+  act as the browser's filter. Drop the <style>, <template> and <script> below into questions.html (after its own
+  script); the guide's script needs one seam line, after its closing `render(false);`:
+
+    root.qsBrowse = { show: (id, cur) => fill(card, G.q[id], cur || null),
+                      restore: (id) => { const i = CAT[st.cat].ids.indexOf(id); if (i >= 0) st.i = i; render(false); } };
+
+  and build.py drops the `hidden` from the "See all N" buttons.
+-->
+<style>
+/* ---------- the question browser in place (#397) ---------- */
+/* only the open kind's "See all N" shows */
+.qs .qs-seeall:not([data-current]) { display: none; }
+/* browsing: the guide's heading and stepper give way to the browser; the card shows only once a question is open */
+.qs .qs-panel.qb-on > .qs-head, .qs .qs-panel.qb-on > .qs-step { display: none; }
+.qs .qs-panel.qb-on.qb-list > .qs-card { display: none; }
+/* every question listed: the kind stays marked on the left, but only outlined, since it no longer filters */
+.qs.qb-wide .qs-cat[aria-pressed="true"] { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.qs.qb-wide .qs-cat[aria-pressed="true"] .c { color: var(--ink-3); }
+.qs .qb[hidden], .qs .qb [hidden] { display: none !important; }
+
+.qs .qb-trail { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; min-height: 32px; }
+.qs .qb-back { appearance: none; border: 0; background: none; padding: 4px 8px 4px 2px; margin-left: -2px; min-height: 32px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-family: var(--label); font-size: 14px; color: var(--ink); border-radius: 3px; }
+.qs .qb-back span { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.qs .qb-back:hover { background: var(--row-band); }
+.qs .qb-back:hover span { text-decoration-color: var(--ink); }
+.qs .qb-back svg { flex: none; color: var(--ink-2); }
+.qs .qb-head h4 { display: inline-block; font-family: var(--serif); font-size: 1.16rem; font-weight: 600; line-height: 1.25; margin: 0; }
+.qs .qb-head h4:focus { outline: none; }
+.qs .qb-head h4:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+.qs .qb-head h4 .n { font-family: var(--label); font-size: 14px; font-weight: 400; color: var(--ink-3); margin-left: 10px; font-variant-numeric: tabular-nums; }
+
+/* the tools: which questions (this kind or every one), and a search over names and wording */
+.qs .qb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 0; }
+.qs .qb-scope { display: inline-flex; border: 1px solid var(--ink-2); border-radius: 3px; overflow: hidden; flex: none; }
+.qs .qb-scope button { appearance: none; border: 0; background: transparent; color: var(--ink); font-family: var(--label); font-size: 14px; padding: 4px 12px; min-height: 32px; cursor: pointer; }
+.qs .qb-scope button + button { border-left: 1px solid var(--ink-2); }
+.qs .qb-scope button:hover { background: var(--row-band); }
+.qs .qb-scope button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.qs .qb-scope button:focus-visible { outline-offset: -3px; }
+.qs .qb-find { position: relative; flex: 1 1 14rem; max-width: 22rem; display: block; }
+.qs .qb-find svg { position: absolute; left: 10px; top: 50%; margin-top: -7px; color: var(--ink-3); pointer-events: none; }
+.qs .qb-find input { width: 100%; min-height: 34px; padding: 5px 10px 5px 30px; border: 1px solid var(--ink-3); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 14.5px var(--label); }
+.qs .qb-find input::placeholder { color: var(--ink-3); opacity: 1; }
+.qs .qb-find input:focus-visible { outline: 2px solid var(--mf); outline-offset: 1px; border-color: var(--ink-2); }
+.qs .qb-count { font-family: var(--label); font-size: 13.5px; color: var(--ink-3); margin: 8px 0 6px; min-height: 1.4em; }
+.qs .qb-count b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* the list: an index of names in its own scroll box, the card's paper and rules, shadows where more rows wait */
+.qs .qb-box { max-height: min(34rem, calc(100vh - var(--tabh, 0px) - 230px)); min-height: 15rem; overflow-y: auto; overscroll-behavior: contain;
+  border-top: 1px solid var(--ink-2); border-bottom: 1px solid var(--rule); scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+  background:
+    linear-gradient(var(--paper-2) 40%, transparent) top / 100% 18px no-repeat local,
+    linear-gradient(transparent, var(--paper-2) 60%) bottom / 100% 18px no-repeat local,
+    linear-gradient(var(--band), transparent) top / 100% 10px no-repeat scroll,
+    linear-gradient(transparent, var(--band)) bottom / 100% 10px no-repeat scroll,
+    var(--paper-2); }
+.qs .qb-list { list-style: none; margin: 0; padding: 0; }
+.qs .qb-list > li + li { border-top: 1px solid var(--grid-major); }
+.qs .qb-row { appearance: none; display: grid; grid-template-columns: minmax(0, 1fr) 14px; align-items: center; gap: 0 12px; width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; padding: 7px 12px 8px 14px; min-height: 44px; position: relative; }
+.qs .qb-row .t { min-width: 0; }
+.qs .qb-row .nm { display: block; font-family: var(--serif); font-size: 15.5px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+.qs .qb-row .ask { display: block; font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.4; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qs .qb-row svg { color: var(--ink-3); opacity: 0; transition: opacity .12s ease-out, transform .12s ease-out; }
+.qs .qb-row:hover { background: var(--row-band); }
+.qs .qb-row:hover svg, .qs .qb-row:focus-visible svg { opacity: 1; transform: translateX(2px); }
+.qs .qb-row:focus-visible { outline: 2px solid var(--mf); outline-offset: -2px; }
+/* the question last opened keeps a mark, so the way back lands where the reader left */
+.qs .qb-row[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; background: var(--ink); border-radius: 0 2px 2px 0; }
+.qs .qb-row mark { background: var(--sel); color: inherit; border-radius: 2px; padding: 0 1px; }
+.qs .qb-empty { font-family: var(--label); font-size: 14px; color: var(--ink-2); padding: 18px 14px; margin: 0; }
+.qs .qb-empty button { margin-right: 10px; appearance: none; border: 0; background: none; padding: 0 2px; color: var(--ink); font: inherit; text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; cursor: pointer; min-height: 28px; }
+
+/* an open question: back to the list, where it sits in the list, and Previous and Next through the list */
+.qs .qb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; font-family: var(--label); font-size: 14px; color: var(--ink-2); }
+.qs .qb-pos { font-variant-numeric: tabular-nums; min-width: 9em; text-align: center; }
+.qs .qb-bar .qb-tolist { margin-right: auto; }
+.qs .qs-panel.qb-on .qs-name:focus { outline: none; }
+.qs .qs-panel.qb-on .qs-name:focus-visible { outline: 2px solid var(--mf); outline-offset: 2px; }
+
+.qs .qb-in { animation: qb-in .16s ease-out; }
+@keyframes qb-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .qs .qb-in { animation: none; } .qs .qb-row svg { transition: none; } }
+
+@media (max-width: 560px) {
+  .qs .qb-tools { gap: 8px; }
+  .qs .qb-scope { width: 100%; }
+  .qs .qb-scope button { flex: 1 1 0; }
+  .qs .qb-find { max-width: none; flex-basis: 100%; }
+  .qs .qb-box { max-height: min(30rem, calc(100vh - var(--tabh, 0px) - 300px)); min-height: 16rem; }
+  .qs .qb-row { padding-left: 12px; }
+  .qs .qb-row .ask { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .qs .qb-bar .qb-tolist { flex-basis: 100%; }
+  .qs .qb-bar .qs-btn { flex: 1 1 0; justify-content: center; }
+  .qs .qb-pos { flex: 1 1 auto; min-width: 0; }
+}
+</style>
+<template id="qs-browse-tpl">
+<div class="qb" id="qs-browse" role="region" aria-labelledby="qb-h" hidden>
+  <div class="qb-trail"><button type="button" class="qb-back" data-qb="guide"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to the guide</span></button></div>
+  <div class="qb-head"><h4 id="qb-h" tabindex="-1"></h4><p class="qs-def" id="qb-def"></p></div>
+  <div class="qb-listview">
+    <div class="qb-tools">
+      <div class="qb-scope" role="group" aria-label="Which questions to list">
+        <button type="button" data-scope="kind" aria-pressed="true"></button><button type="button" data-scope="all" aria-pressed="false">Every question</button>
+      </div>
+      <label class="qb-find"><span class="vh">Find a question by name or wording</span><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.6 10.6L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="qb-find" placeholder="Find by name or wording" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <p class="qb-count" id="qb-count" aria-live="polite"></p>
+    <div class="qb-box" id="qb-box"><ul class="qb-list" id="qb-list" aria-labelledby="qb-h"></ul><p class="qb-empty" id="qb-empty" hidden></p></div>
+  </div>
+  <div class="qb-bar" id="qb-bar" hidden>
+    <button type="button" class="qb-back qb-tolist" data-qb="list"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to the list</span></button>
+    <button type="button" class="qs-btn" data-qb-step="-1" aria-label="Previous question in the list"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button>
+    <span class="qb-pos" id="qb-pos" aria-live="polite"></span>
+    <button type="button" class="qs-btn" data-qb-step="1" aria-label="Next question in the list">Next<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+</div>
+</template>
+<script>
+/* ---------- the question browser in place (#397) ---------- */
+// "See all N" swaps the guide's heading, stepper and example for a list of the kind's questions in the same spot;
+// a question opens in the guide's own card (filled by the guide's own renderer through root.qsBrowse), and
+// "Back to the guide" puts the guide back as it was, on the question last opened if it is of the guide's kind.
+window.reportReady(function () {
+  "use strict";
+  const D = window.REPORT, G = D && D.questionGuide, root = document.getElementById("question-guide"), tpl = document.getElementById("qs-browse-tpl");
+  if (!G || !root || !tpl || !root.qsBrowse) return;
+  const panel = root.querySelector("#qs-panel"), card = root.querySelector("#qs-card"), gpos = root.querySelector("#qs-pos");
+  panel.insertBefore(tpl.content.cloneNode(true), card);
+  const $ = (s) => panel.querySelector(s);
+  const box = $("#qs-browse"), head = $("#qb-h"), def = $("#qb-def"), list = $("#qb-list"), empty = $("#qb-empty"), count = $("#qb-count"),
+    find = $("#qb-find"), scroller = $("#qb-box"), listview = box.querySelector(".qb-listview"), bar = $("#qb-bar"), pos = $("#qb-pos"),
+    kindBtn = box.querySelector('[data-scope="kind"]'), allBtn = box.querySelector('[data-scope="all"]');
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const TERM = {}; (D.terms || []).forEach((t) => (TERM[t.key] = t));
+  const CAT = {}; G.cats.forEach((c) => (CAT[c.key] = c));
+  const ALL = Object.keys(G.q);
+  const plural = (n) => `${n} question${n === 1 ? "" : "s"}`;
+  const fold = (s) => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const hay = {}; ALL.forEach((id) => (hay[id] = fold(G.q[id].name + " \n " + G.q[id].turns.join(" \n "))));
+
+  const st = { open: false, scope: "kind", kind: null, query: "", view: "list", id: null, ids: [], top: 0, quiet: false };
+  const tabh = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+  function bring(el) { const r = el.getBoundingClientRect(); if (r.top < tabh() || r.top > window.innerHeight - 160) window.scrollBy(0, r.top - tabh() - 16); }
+
+  /* ---------- the list ---------- */
+  function mark(text, q) {
+    if (!q) return esc(text);
+    const f = fold(text), out = []; let i = 0, j;
+    while (q && (j = f.indexOf(q, i)) >= 0) { out.push(esc(text.slice(i, j)), "<mark>", esc(text.slice(j, j + q.length)), "</mark>"); i = j + q.length; }
+    out.push(esc(text.slice(i)));
+    return out.join("");
+  }
+  function heading() {
+    const c = CAT[st.kind];
+    if (st.scope === "kind") {
+      head.innerHTML = `${TERM[st.kind] ? `<span class="term" data-term="${esc(st.kind)}" tabindex="0">${esc(c.label)}</span>` : esc(c.label)}<span class="n">${plural(c.ids.length)}</span>`;
+      def.textContent = TERM[st.kind] ? TERM[st.kind].text : "";
+    } else {
+      head.innerHTML = `Every question<span class="n">${plural(ALL.length)}</span>`;
+      def.textContent = "Every question in the sets, of every kind; pick a kind to narrow the list again.";
+    }
+    kindBtn.textContent = `${c.label} only`;
+    kindBtn.setAttribute("aria-pressed", String(st.scope === "kind"));
+    allBtn.setAttribute("aria-pressed", String(st.scope === "all"));
+    root.classList.toggle("qb-wide", st.open && st.scope === "all");
+  }
+  function renderList() {
+    heading();
+    const base = st.scope === "kind" ? CAT[st.kind].ids : ALL, q = fold(st.query.trim());
+    st.ids = q ? base.filter((id) => hay[id].includes(q)) : base.slice();
+    const cur = st.ids.indexOf(st.id), roving = cur >= 0 ? cur : 0;
+    list.innerHTML = st.ids.map((id, i) => {
+      const x = G.q[id], ask = x.turns[0] || "";
+      return `<li><button type="button" class="qb-row" data-id="${esc(id)}" tabindex="${i === roving ? 0 : -1}"${id === st.id ? ' aria-current="true"' : ""}>` +
+        `<span class="t"><span class="nm">${mark(x.name, q)}</span><span class="ask">${mark(ask, q)}</span></span>` +
+        `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6 4.5 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></li>`;
+    }).join("");
+    if (!st.ids.length) {
+      empty.innerHTML = `No question ${st.scope === "kind" ? `of this kind ` : ""}matches “${esc(st.query.trim())}”. ` +
+        `<button type="button" data-qb="clear">Clear the search</button>` +
+        (st.scope === "kind" ? ` <button type="button" data-qb="widen">Search every question</button>` : "");
+      empty.hidden = false;
+    } else empty.hidden = true;
+    count.innerHTML = q ? `<b>${st.ids.length}</b> of ${plural(base.length)} match`
+      : (st.ids.length > 8 ? "Scroll the list, or find one by name or wording; pick a question to open it." : "Pick a question to open it.");
+  }
+  const rows = () => [...list.querySelectorAll(".qb-row")];
+
+  /* ---------- views ---------- */
+  function show(view) {
+    st.view = view;
+    panel.classList.toggle("qb-list", view === "list");
+    listview.hidden = view !== "list"; bar.hidden = view !== "card";
+    (view === "list" ? listview : card).classList.remove("qb-in"); void box.offsetWidth;
+    (view === "list" ? listview : card).classList.add("qb-in");
+  }
+  function open(kind, opener) {
+    if (!CAT[kind]) return;
+    Object.assign(st, { open: true, scope: "kind", kind, query: "", id: null, top: 0 });
+    find.value = "";
+    panel.classList.add("qb-on"); box.hidden = false;
+    show("list"); renderList(); scroller.scrollTop = 0;
+    head.focus({ preventScroll: true }); bring(box);
+  }
+  function close() {
+    if (!st.open) return;
+    st.open = false; st.quiet = true;
+    panel.classList.remove("qb-on", "qb-list"); root.classList.remove("qb-wide"); box.hidden = true; card.classList.remove("qb-in");
+    root.qsBrowse.restore(st.id); // the guide's own render: the example back in the card
+    st.quiet = false;
+    const b = root.querySelector(".qs-seeall[data-current]");
+    if (b) { b.focus({ preventScroll: true }); bring(b); }
+  }
+  function openQ(id) {
+    if (!G.q[id]) return;
+    st.top = scroller.scrollTop; st.id = id;
+    root.qsBrowse.show(id, st.scope === "kind" ? st.kind : null);
+    show("card"); place();
+    const name = card.querySelector(".qs-name");
+    name.tabIndex = -1; name.focus({ preventScroll: true }); bring(bar);
+  }
+  function place() { pos.textContent = `Question ${st.ids.indexOf(st.id) + 1} of ${st.ids.length}`; }
+  function step(d) { const n = st.ids.length, i = st.ids.indexOf(st.id); if (!n) return; openQ(st.ids[(i + d + n) % n]); bar.querySelector(`[data-qb-step="${d}"]`).focus(); }
+  function toList() {
+    show("list"); renderList(); scroller.scrollTop = st.top;
+    const r = list.querySelector('.qb-row[aria-current="true"]') || rows()[0];
+    if (r) { const a = r.getBoundingClientRect(), b = scroller.getBoundingClientRect(); if (a.top < b.top || a.bottom > b.bottom) r.scrollIntoView({ block: "nearest" }); r.focus({ preventScroll: true }); bring(box); }
+  }
+  function scope(s, keepFocus) {
+    if (st.scope === s) return;
+    st.scope = s; if (st.view !== "list") show("list");
+    renderList(); scroller.scrollTop = 0;
+    if (!keepFocus) (s === "all" ? allBtn : kindBtn).focus();
+  }
+
+  /* ---------- the guide's own kind changes (a kind on the left, a chip in the card) narrow the browser to it ---------- */
+  new MutationObserver(() => {
+    if (!st.open || st.quiet) return;
+    const on = root.querySelector('.qs-cat[aria-pressed="true"]'); if (!on) return;
+    const lost = !document.activeElement || document.activeElement === document.body || !document.activeElement.offsetParent;
+    st.kind = on.dataset.cat; st.scope = "kind"; st.top = 0;
+    show("list"); renderList(); scroller.scrollTop = 0;
+    if (lost) { head.focus({ preventScroll: true }); bring(box); }
+  }).observe(gpos, { childList: true, characterData: true, subtree: true });
+
+  document.addEventListener("qs:see-all", (e) => open(e.detail && e.detail.category));
+
+  box.addEventListener("click", (e) => {
+    const t = e.target.closest ? e.target : null; if (!t) return;
+    const row = t.closest(".qb-row"); if (row) { openQ(row.dataset.id); return; }
+    const sc = t.closest("[data-scope]"); if (sc) { scope(sc.dataset.scope); return; }
+    const sp = t.closest("[data-qb-step]"); if (sp) { step(+sp.dataset.qbStep); return; }
+    const a = t.closest("[data-qb]"); if (!a) return;
+    const k = a.dataset.qb;
+    if (k === "guide") close();
+    else if (k === "list") toList();
+    else if (k === "clear") { find.value = st.query = ""; renderList(); find.focus(); }
+    else if (k === "widen") { scope("all", true); find.focus(); }
+  });
+  find.addEventListener("input", () => { st.query = find.value; renderList(); scroller.scrollTop = 0; });
+
+  root.addEventListener("keydown", (e) => {
+    if (!st.open) return;
+    if (e.key === "Escape") {
+      if (document.querySelector(".tip.on")) return; // a tooltip goes first
+      if (!panel.contains(e.target) && !root.querySelector("#qs-nav").contains(e.target)) return;
+      e.preventDefault();
+      if (e.target === find && find.value) { find.value = st.query = ""; renderList(); return; }
+      if (st.view === "card") toList(); else close();
+      return;
+    }
+    const rs = rows();
+    if (e.target === find && e.key === "ArrowDown" && rs.length) { e.preventDefault(); (list.querySelector('.qb-row[tabindex="0"]') || rs[0]).focus(); return; }
+    const row = e.target.closest && e.target.closest(".qb-row"); if (!row) return;
+    const i = rs.indexOf(row); let j = null;
+    if (e.key === "ArrowDown") j = Math.min(i + 1, rs.length - 1);
+    else if (e.key === "ArrowUp") { if (i === 0) { e.preventDefault(); find.focus(); return; } j = i - 1; }
+    else if (e.key === "Home") j = 0; else if (e.key === "End") j = rs.length - 1;
+    else if (e.key === "PageDown") j = Math.min(i + 8, rs.length - 1); else if (e.key === "PageUp") j = Math.max(i - 8, 0);
+    if (j == null) return;
+    e.preventDefault();
+    rs.forEach((r, k) => (r.tabIndex = k === j ? 0 : -1));
+    rs[j].focus({ preventScroll: true }); rs[j].scrollIntoView({ block: "nearest" });
+  });
+  // the card's name takes focus while browsing, and gives up its tab stop when the guide has the card again
+  card.addEventListener("focusout", (e) => { if (!st.open && e.target.classList && e.target.classList.contains("qs-name")) e.target.removeAttribute("tabindex"); });
+});
+</script>

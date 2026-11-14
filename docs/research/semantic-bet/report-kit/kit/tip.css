@@ -1,0 +1,24 @@
+/* report-kit definition bubble: one reversed plate for every definition on the page, placed inside the viewport.
+   Pinned (when the page allows it), it gains a handle to drag it by, a close button and an optional link on. */
+.rk-tip { position: fixed; z-index: 20; left: 0; top: 0; max-width: min(20rem, calc(100vw - 32px)); padding: 10px 12px; border-radius: 8px;
+  background: var(--tip); color: var(--tip-ink); font: 400 var(--t-tip)/1.4 var(--sans); box-shadow: var(--shadow) }
+.rk-tip[hidden] { display: none }
+.rk-tip p { margin: 0 }
+.rk-tip :focus-visible { outline-color: var(--tip-ink); outline-offset: 2px }
+.rk-tip.is-pinned { position: absolute; padding-top: 4px; user-select: text }
+.rk-tip-bar { display: none; align-items: center; gap: var(--s2); margin: 0 -6px var(--s1) -6px }
+.rk-tip.is-pinned .rk-tip-bar { display: flex }
+.rk-tip-handle { flex: 1; min-width: 0; display: flex; gap: var(--s2); align-items: center; min-height: 32px; padding: 0 6px; border-radius: 6px;
+  font-weight: 700; cursor: grab; touch-action: none; user-select: none }
+.rk-tip-handle:hover { background: color-mix(in srgb, var(--tip-ink) 12%, transparent) }
+.rk-tip.is-dragging, .rk-tip.is-dragging .rk-tip-handle { cursor: grabbing }
+.rk-tip-handle svg, .rk-tip-close svg { flex: none }
+.rk-tip-close { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; cursor: pointer }
+.rk-tip-close:hover { background: color-mix(in srgb, var(--tip-ink) 12%, transparent) }
+.rk-tip-more { margin-top: var(--s2) !important; padding-top: var(--s2); border-top: 1px solid color-mix(in srgb, var(--tip-ink) 30%, transparent) }
+.rk-tip-more a { color: inherit; text-decoration-color: currentColor }
+/* words that carry a definition wear a dotted underline in the line colour */
+.rk-term { cursor: help; border-radius: 4px; text-decoration: underline dotted 1.5px var(--line); text-underline-offset: 5px }
+[data-tip] { cursor: help }
+button[data-tip], a[data-tip] { cursor: pointer }
