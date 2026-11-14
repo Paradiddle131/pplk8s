@@ -1,5 +1,5 @@
 {
- "written": "2026-11-14T00:24Z",
+ "written": "2026-11-14T00:50Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -290,16 +290,16 @@
    "rung": 3,
    "cases": 74,
    "of_cases": 74,
-   "runs": 74,
+   "runs": 222,
    "accuracy": [
-    0.472972972973,
+    0.477477477477,
     0.364864864865,
-    0.581081081081
+    0.59009009009
    ],
    "confident_wrong": [
     0.054054054054,
     0.013513513514,
-    0.108108108108
+    0.103603603604
    ],
    "groups": {
     "conversation": [
@@ -307,7 +307,7 @@
      7
     ],
     "covered": [
-     0.5,
+     0.5053763440860215,
      62
     ],
     "distractor": [
@@ -315,7 +315,7 @@
      1
     ],
     "planted": [
-     0.5,
+     0.5833333333333334,
      4
     ],
     "trap": [
@@ -327,15 +327,14 @@
      12
     ]
    },
-   "pass_all": 0.47297297297297297,
+   "pass_all": 0.44594594594594594,
    "outcomes": {
-    "right": 35,
-    "confident-wrong": 4,
-    "declined": 32,
-    "wrong": 3
+    "right": 106,
+    "confident-wrong": 12,
+    "declined": 97,
+    "wrong": 7
    },
-   "runs_beyond_rounds": 45,
-   "model_calls": 202,
+   "model_calls": 401,
    "unchecked_runs": 0
   },
   {
@@ -7191,17 +7190,17 @@
    "arm": "custom-toolbox",
    "model": "nvidia/nemotron-3.5-super-vl:free",
    "cases": 74,
-   "runs": 74,
-   "paired_runs": 296,
+   "runs": 222,
+   "paired_runs": 444,
    "accuracy": [
-    -0.527027027027,
+    -0.522522522523,
     -0.635135135135,
-    -0.418918918919
+    -0.40990990991
    ],
    "confident_wrong": [
     0.054054054054,
     0.013513513514,
-    0.108108108108
+    0.103603603604
    ],
    "worth": false
   },
