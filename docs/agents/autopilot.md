@@ -20,7 +20,8 @@ The paths that set a review tier: `REVIEW.md` at the repo root, read from the de
 
 ## Digest
 
-Steering lines (SKILL.md § Steering) at the top of [the digest issue](../../../../issues/43)'s body, which only the owner edits; with no `Mode` line a wake runs `offline`. Open owner questions are the `needs-owner` issues.
+Steering lines (SKILL.md § Steering) at the top of [the digest issue](../../../../issues/43)'s body, which only the owner edits; with no `Mode` line a wake runs `offline`.
+Open owner questions are the `needs-owner` issues.
 - `offline` keeps a wake off the lab's GCP project: no `make` target whose help starts with `Live` (`bigquery-live-check`, `gcp-plan`, `gcp-images`, `gcp-cost-check`, …), no live data-agent or Knowledge Catalog call, and no issue whose work needs one; the offline `gcp-validate` and `gcp-image-check` (the BigQuery emulator) stay gates.
 - `full` adds the free-tier GCP map's live steps, which wait for a wake the owner watches, because the billing export lags hours behind a cost.
 
