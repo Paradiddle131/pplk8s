@@ -1287,3 +1287,16 @@ def test_a_whole_pass_is_read_from_its_log_alone(tmp_path):
     assert bet_eval.remaining(bet, "native-mcp", "m", 1, directory=tmp_path) == 1
     assert bet_eval.remaining(bet, "native-mcp", "m", 1, ["revenue_one_day"], tmp_path) == 0
     assert bet_eval.remaining(bet, "baseline", "m", 2, directory=tmp_path) == 4
+
+
+def test_scored_runs_leave_out_an_error_still_to_be_asked_and_count_two_as_wrong():
+    base = {"arm": "custom-metricflow", "model": "m"}
+    entries = [
+        {**base, "case": "a", "run": 1, "error": "rate-limited"},
+        {**base, "case": "a", "run": 1, "outcome": "right", "turns": []},
+        {**base, "case": "b", "run": 2, "error": "rate-limited"},
+        {**base, "case": "c", "run": 1, "error": "rate-limited"},
+        {**base, "case": "c", "run": 1, "error": "rate-limited again"},
+    ]
+    kept = bet_eval.scored_entries(entries)
+    assert [(e["case"], e["outcome"]) for e in kept] == [("a", "right"), ("c", "wrong")]

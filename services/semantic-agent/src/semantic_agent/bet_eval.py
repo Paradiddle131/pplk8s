@@ -1897,6 +1897,30 @@ SCORED_RUNS = "scored-runs.jsonl"
 EXAMPLE_TEXT = 400
 
 
+def scored_entries(entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The rows that score a run, as `finished` counts them: every answered row, and for a run that
+    errored MAX_ERRORS times with no answer, its last error row as wrong; an error still waiting to
+    be asked again scores nothing yet, so it is left out."""
+    answered = {
+        (e.get("arm"), e.get("model"), e.get("case"), e.get("run"))
+        for e in entries
+        if not e.get("error") and e.get("outcome")
+    }
+    errors: dict[tuple, list[dict[str, Any]]] = {}
+    for e in entries:
+        key = (e.get("arm"), e.get("model"), e.get("case"), e.get("run"))
+        if e.get("error") and key not in answered:
+            errors.setdefault(key, []).append(e)
+    kept = []
+    for e in entries:
+        key = (e.get("arm"), e.get("model"), e.get("case"), e.get("run"))
+        if not e.get("error") and e.get("outcome"):
+            kept.append(e)
+        elif key in errors and len(errors[key]) >= MAX_ERRORS and e is errors[key][-1]:
+            kept.append({**e, "outcome": Outcome.WRONG.value})
+    return kept
+
+
 def write_scored_runs(directory: Path = RESEARCH) -> Path:
     """Every run of every set as it is scored now (the overlay applied, every turn scored again,
     the judge's verdicts in), for the report: it reads its squares and examples from here, never
@@ -1906,7 +1930,7 @@ def write_scored_runs(directory: Path = RESEARCH) -> Path:
     rows = []
     for name in SETS:
         bet = load_set(name, overlay=directory)
-        for e in judged_logs(bet, directory):
+        for e in scored_entries(judged_logs(bet, directory)):
             if e.get("case") not in bet.groups:
                 continue
             turns = [
