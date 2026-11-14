@@ -8,13 +8,12 @@ Every item is one branch `claude/<n>-<slug>`, the only branch a wake pushes, and
 
 ## Merge policy
 
-The wake merges a reviewed PR (`merge.sh`) unless one of these holds it:
+The wake merges a reviewed PR with `AUTOPILOT_HOLD_LABELS=needs-user $AP/scripts/merge.sh <pr>` (the prefix on the command itself, since no variable carries between calls; `merge.sh` then also holds a PR that carries `needs-user`, the older name of `needs-owner`) unless one of these holds it:
 - `needs-local-verify`: a gate the session cannot run (a `local` gate, or a `cloud` one a blocked host stops) waits for a local session to run it from the handoff's checklist and lift the label.
 - `owner-merges`, which the wake puts on the PR itself and never removes: a PR that costs money, raises a quota, cap or budget, or is costly to undo; its issue carries the decision packet and `needs-owner`, and only the owner's own merge lands it.
-  Always such a PR: one that touches `platform/gcp/infra/**`, the `caps` in `platform/gcp/free-path.yaml`, the cost check (`platform/gcp/cost-check.sh`), or a `make` target whose help calls it the owner's step.
+  Always such a PR: one that touches `platform/gcp/infra/**`, the `caps` in `platform/gcp/free-path.yaml`, the cost check (`platform/gcp/cost-check.sh`), or a `make` target whose help calls it the owner's step, or that changes a byte cap or the free-model guard (`maximum_bytes_billed` in `dbt/profiles.yml`, the `BQ_MAXIMUM_BYTES_BILLED` default in `services/semantic-agent/src/semantic_agent/warehouse_bigquery.py` and `tests/e2e/lib/bigquery_target.py`, the `:free` check in `services/semantic-agent/src/semantic_agent/model.py`).
 Agent PRs opened before this profile stay the owner's to merge: a wake that resumes one labels it `owner-merges`.
-`export AUTOPILOT_HOLD_LABELS="needs-user"` before the scripts, so `merge.sh` also holds a PR that carries `needs-user`, the older name of `needs-owner`.
-A routine prompt that says never merge is stricter and wins: `export AUTOPILOT_MERGE_POLICY=owner` for that wake.
+A routine prompt that says never merge is stricter and wins: that wake prefixes `AUTOPILOT_MERGE_POLICY=owner` to the same command, which then stops at ready.
 
 ## Review
 
@@ -31,7 +30,7 @@ Open owner questions are the `needs-owner` issues.
 ## Queue
 
 Maps are open `wayfinder:map` issues, named here by title; each map's `autopilot-ready` sub-issues go in its table's order.
-An issue labelled `in-train` is not pickable: its work sits on the unmerged `claude/semantic-bet` branch until that branch lands as reviewed slices or closes and the label goes.
+An issue labelled `semantic-bet` is not pickable: its work builds on the open `claude/semantic-bet` branch, so it waits until that branch has landed as reviewed slices or closed.
 1. `agent:ready` issues labelled `bug`, then `lesson` (a lesson for the GKE or Composer build, researched from primary sources: one line with its evidence and sources as a `🤖` comment on the issue, which the wake then closes; no file changes).
 2. *Map: the questions business users ask*, then *Map: one governed semantic layer for every agent*.
 3. *Map: the semantic track on a free-tier GCP project* (`Mode: full` only), under `platform/gcp/README.md`; an offline wake with nothing else pickable ends, never falling through to it.
@@ -44,10 +43,10 @@ Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-us
 `cloud`: one gate stamp per head, whose one argv covers every gate the change calls for, the path-bound ones joined to the first line with `&&`; run it with `run_in_background`, once on the PR's final head; counts in the handoff:
 `$R/scripts/gate_stamp.sh --pr <n> -- bash -c 'make tools && make check && make verify && <the path-bound gates>'`
 - always: `make tools`, `make check` (`make lint` and `make test`, the alert rules' promtool tests included, with the Compose warehouse up and required), `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
-- `dbt/**` changed: `(cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt build)` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`), and `make gcp-image-check`
+- `dbt/**` changed: `make dbt-deps && (cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt build)` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`), and `make gcp-image-check`
 - `services/el-factory/**` changed: `make el-factory-up && make el-factory-down` (it waits for the service's health check against the Compose services)
-- `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make cluster-up && make workloads-up && make agent-deploy-check`
-- `airflow/**` or `platform/helm/**` changed: `make ci-integration`, and the exit checks the change touches, with `DAG_DELIVERY=local`
+- `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make cluster-up && make workloads-up && make agent-deploy-check`; `agent-deploy-check` is a live model turn, so in `offline` such a change cannot complete its stamp on cloud and takes `needs-local-verify`
+- `airflow/**` or `platform/helm/**` changed: `make cluster-up && make ci-integration`, and the exit checks the change touches, with `DAG_DELIVERY=local`
 A PR whose full stamp cannot run in the session (a host the allowlist blocks, a gate that does not fit the session's disk) is never stamped with a subset: it takes `needs-local-verify`, its local checklist names the blocked gates and the full stamp command, and it waits for a local session to post that stamp before any review.
 
 `local` (never in the cloud stamp; an agent on the owner's laptop runs them from the handoff's checklist, and the PR waits on `needs-local-verify`):
