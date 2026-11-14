@@ -4,6 +4,7 @@ import datetime
 
 import pytest
 
+from semantic_agent import metrics
 from semantic_agent.metrics import (
     MAX_ROWS,
     Catalog,
@@ -11,6 +12,7 @@ from semantic_agent.metrics import (
     MetricQuery,
     QueryError,
     group_by_parameter,
+    refusal_reason,
     where_clause,
 )
 from tests.conftest import FIXTURES
@@ -501,3 +503,25 @@ def test_a_request_groups_by_the_fiscal_quarter():
         metrics=["revenue_eur"], group_by=["metric_time__fiscal_quarter"]
     ).request(CATALOG)
     assert [(p.name, p.grain) for p in request.group_by] == [("metric_time", "fiscal_quarter")]
+
+
+def test_a_warehouse_refusal_reaches_the_model_as_its_reason(monkeypatch):
+    """#384: dbt puts "Database Error" first and the warehouse's message under it."""
+    from dbt_common.exceptions import DbtDatabaseError
+
+    class Refusing:
+        def query(self, request):
+            raise DbtDatabaseError("Syntax error: Unexpected keyword ORDER at [15:17]")
+
+    monkeypatch.setattr(metrics, "engine", lambda: Refusing())
+    with pytest.raises(QueryError) as refused:
+        metrics.run(MetricQuery(metrics=["revenue_eur"]), CATALOG)
+    assert str(refused.value) == (
+        "the semantic layer rejected the query: "
+        "Database Error: Syntax error: Unexpected keyword ORDER at [15:17]"
+    )
+
+
+def test_metricflows_own_validation_error_keeps_its_first_line():
+    error = ValueError("Unable to parse the time grain 'fortnight'.\nSuggestions: day, week, month")
+    assert refusal_reason(error) == "Unable to parse the time grain 'fortnight'."

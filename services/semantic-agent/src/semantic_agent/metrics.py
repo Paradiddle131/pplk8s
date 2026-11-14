@@ -404,13 +404,28 @@ def engine():  # -> MetricFlowEngine
     )
 
 
+def refusal_reason(error: BaseException, limit: int = 500) -> str:
+    """An error's first line, joined with the next when the first is only a heading.
+
+    dbt's `DbtDatabaseError` reads "Database Error", then the warehouse's message on the
+    next line (#384); MetricFlow's own validation errors keep their first line as it is.
+    """
+    lines = [line.strip() for line in str(error).splitlines() if line.strip()]
+    if not lines:
+        return type(error).__name__
+    first = lines[0]
+    if len(lines) > 1 and first.endswith("Error") and len(first.split()) <= 3:
+        first = f"{first}: {lines[1]}"
+    return first[:limit]
+
+
 def run(query: MetricQuery, catalog: Catalog) -> dict[str, Any]:
     """Rows and the compiled SQL of a metric query."""
     request = query.request(catalog)
     try:
         result = engine().query(request)
-    except Exception as e:  # MetricFlow's own validation, e.g. an unknown time grain
-        raise QueryError(f"the semantic layer rejected the query: {str(e).splitlines()[0]}") from e
+    except Exception as e:  # MetricFlow's own validation, or the warehouse refusing the SQL
+        raise QueryError(f"the semantic layer rejected the query: {refusal_reason(e)}") from e
     table = result.result_df
     columns = list(table.column_names) if table else []
     rows = [
