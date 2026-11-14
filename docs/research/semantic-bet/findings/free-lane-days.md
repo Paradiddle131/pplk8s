@@ -352,3 +352,36 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   In the same-model pair on the frozen set, `native-mcp` at k = 3 (95.5%) sits 3 points under the hybrid's 98.6% (k = 1 there); unlike on hard-v2, the third run did not pull `native-mcp` down: frozen questions are easy enough that one Nemotron run per case read it within a point.
 - Report: rebuilt by the lane after every pass, the report republished (page versions 69 and 70), the report's page file on its issue read back equal to the file after each; the Approaches page did not change and was not republished.
 - Next: tomorrow's wake resumes `custom-toolbox` frozen k = 3 (about 103 runs: run 2 from `followup_day_before`, then run 3), then `custom-metricflow` frozen k = 3 and the rest of the frozen set's k = 3 round; `baseline` and `custom-hybrid` stay held until the reach-rerun issue closes (the owner's call), which clears `HELD` and puts `baseline` hard-v2 k = 3 first.
+
+## 2026-11-14, 2026-11-14T03:02Z (the daily wake: the free lane from 00:12Z, the day's quota spent by 02:47Z)
+
+- Free count 0 at the start, 993 of 1,000 at the end (read from `/api/v1/key`); the lane ran two chunks (`--until 02:01Z`, then `--until 04:01Z`), each exiting 0; the second chunk's `custom-lightdash` pass stopped on the cap (`stopped: requests`, free count 993).
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-13) and `gcp-usage-check` ok; the same at the end (export until 2026-11-13T23:57Z); no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2, no container restart).
+  Lightdash started this time (the image built, the server came up), so `custom-lightdash` frozen k = 3 ran.
+- Two fixes on the way:
+  the Approaches page build crashed (`KeyError: 'outcome'`) after `custom-metricflow`'s pass, because `scored-runs.jsonl` carried a rate-limited run still waiting to be asked again; `bet_eval.scored_entries` now leaves such rows out and scores a run that errored twice as wrong, as the results do, with a test.
+  The lane's last line said "every pass is done at k = 3" whenever its rounds ran through, even with passes held or cut; it now lists the passes it left not whole, and prints the old line only when none are.
+  Its first reading names `custom-metricflow` frozen k = 3 among them (exit 3) although `bet_eval --remaining` reads 0 for it: that pass's exit 3 speaks for the shared local log, where other setups still lack runs, so the list over-reports a pass that ends exit 3 but is whole.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog, after each pass | no turn waiting |
+| the reach reruns, `baseline` and `custom-hybrid`, every set | none | whole since 2026-11-11 |
+| `custom-toolbox` frozen k = 3 | 103 runs (run 2 from case 46, then run 3) | whole: 222 of 222 runs (74 cases x 3) |
+| `custom-metricflow` frozen k = 3 | 135 runs (runs 2 and 3; `leads_mtd` run 2 rate-limited, then asked again in the second chunk) | whole: 222 of 222 runs |
+| `custom-lightdash` frozen k = 3 | 121 runs (run 2, 74 cases; run 3, first 47 cases) | mid-way: 195 of 222 runs; run 3 stopped after `top_campaigns_by_spend` |
+
+- Mid-way: `custom-lightdash` frozen k = 3, run 3 at case 48 of 74; 27 runs to ask.
+- Figures that moved (Nemotron free, right / confident-wrong):
+  frozen `custom-metricflow` 91.0% / 0.5% at k = 3 on all 74 cases (was 91.9% / 0.0% at k = 1; interval 84.2% to 96.8%).
+  Frozen `custom-toolbox` 47.7% / 5.4% at k = 3 (was 47.3% / 5.4% at k = 1; interval 36.5% to 59.0%).
+  Frozen `custom-lightdash` 59.5% / 8.1% on its two whole runs (was 60.8% / 8.1% at k = 1).
+  Unchanged: frozen `custom-hybrid` 98.6% / 1.4% (k = 1), `native-mcp` 95.5% / 3.2%, `custom-metricflow-compute` 91.9% / 0.0%, `baseline` 90.5% / 5.4%; hard-v2 `custom-hybrid` 92.6% / 3.7%, `native-mcp` 90.7% / 4.9%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%.
+- What the numbers say: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%), frozen `custom-metricflow` at k = 3 reads 9 points under it (paired difference -0.090, interval -0.158 to -0.032), with almost no confident-wrong (0.5%) where the managed best has none: still not worth building on this model.
+  In the same-model pair, `custom-metricflow` (91.0%) sits 4.5 points under `native-mcp` (95.5%) and 7.6 under the hybrid (98.6%, k = 1 there), but is wrong and sure far less often than either (0.5% against 3.2% and 1.4%): metrics alone decline where they lack a definition instead of guessing.
+  `custom-toolbox` stays the weakest custom setup (-0.523 against the managed best); its third run moved it by half a point, so its k = 1 reading held.
+- Report: rebuilt by the lane after every pass (and once by hand after the fix), republished (page versions 71 to 74), the report's page file on its issue read back equal to the file after each; the Approaches page republished (versions 18 and 19).
+- Next: tomorrow's wake resumes `custom-lightdash` frozen k = 3 (27 runs: run 3 from case 48), then whatever the frozen k = 3 round still lacks (`custom-lightdash` hard is not in the round); `baseline` and `custom-hybrid` stay held until the reach-rerun issue closes (the owner's call), which clears `HELD` and puts `baseline` hard-v2 k = 3 first.
+  With those two held, the free lane has about one more day of unheld work; after it, each wake spends only the judge backlog and the reach reruns until the owner closes that issue.
