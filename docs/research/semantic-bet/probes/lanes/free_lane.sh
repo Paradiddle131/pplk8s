@@ -40,10 +40,13 @@ judge() {
 # Setups whose reach #445 changes are held until their reruns (#448) land: a new free run of them now would be
 # asked again under the new reach. Clear HELD once #448 is closed.
 HELD="${BET_FREE_HELD-baseline custom-hybrid}"
+# The passes this lane left not whole (held, cut by time or budget, or Lightdash down), for its last line.
+NOT_WHOLE=""
 # One pass: name, budget estimate, command (run from services/semantic-agent).
 pass() {
   local name=$1 est=$2; shift 2
-  local h; for h in $HELD; do
+  local h; for h in $HELD; do case "$name" in "$h "*) NOT_WHOLE+="$name (held); " ;; esac; done
+  for h in $HELD; do
     case "$name" in "$h "*) log "skip $name: held until #448 (its reach changes, #445)"; return 0 ;; esac
   done
   # A whole pass is read from its log alone, without starting its runner (#454): the name is "<arm> <set> k=<k>".
@@ -66,6 +69,7 @@ pass() {
   local rc=${PIPESTATUS[0]}
   rm -f "$S/current-pass"
   log "end $name: exit $rc, free count $(used)"
+  [ $rc -eq 0 ] || NOT_WHOLE+="$name (exit $rc); "
   [ $rc -eq 2 ] && { log "ANOMALY: $name missed its canary twice; lane stopped"; push "$name stopped at its canary"; exit 2; }
   judge
   rebuild
@@ -138,7 +142,7 @@ round() {
   # The 15 GB Lightdash image is pulled only when one of its passes has work (#454).
   LIGHTDASH_OFF=""
   if [ "$(remaining custom-lightdash frozen "$k")" != 0 ] || { [[ $v1 = hard ]] && [ "$(remaining custom-lightdash hard "$k")" != 0 ]; }; then
-    lightdash || LIGHTDASH_OFF=1
+    lightdash || { LIGHTDASH_OFF=1; NOT_WHOLE+="custom-lightdash k=$k (Lightdash did not start); "; }
   else
     LIGHTDASH_OFF=1
   fi
@@ -204,4 +208,7 @@ round 1 hard
 hard_v2 1
 hard_v2 3
 round 3
-log "free lane: every pass is done at k = 3; free count $(used)"
+# The rounds end here whether or not each pass is whole (a pass cut by time or budget returns 0), so the last line
+# says which passes are still not whole: only an empty list means the lane is complete.
+if [ -z "$NOT_WHOLE" ]; then log "free lane: every pass is done at k = 3; free count $(used)"
+else log "free lane: the rounds ended with passes not whole: ${NOT_WHOLE%; }; free count $(used)"; fi
