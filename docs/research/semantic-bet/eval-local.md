@@ -1,6 +1,6 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-14T00:49Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-14T01:30Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
@@ -8,7 +8,7 @@ A turn the code cannot decide (no number parses and no decline) goes to the blin
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 87 of 222, custom-hybrid 138 of 222, custom-metricflow-compute 222 of 222; model responses spent: baseline 550, custom-metricflow 337, custom-hybrid 557, custom-metricflow-compute 833.
+Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 221 of 222, custom-hybrid 138 of 222, custom-metricflow-compute 222 of 222; model responses spent: baseline 550, custom-metricflow 883, custom-hybrid 557, custom-metricflow-compute 833.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
@@ -29,15 +29,16 @@ Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
-Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 2 (`baseline` 2 unclear to confident-wrong).
+Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 3 (`baseline` 2 unclear to confident-wrong; `custom-metricflow` 1 unclear to confident-wrong).
 
-Turns judged: 11 (6 the code left unclear, 5 confident-wrong with a hedge outside the list); verdicts that stood: 9.
-Confident-wrong turns the judge moved: 2 of 5 (0 to wrong, hedged; 2 to unclear).
+Turns judged: 13 (7 the code left unclear, 6 confident-wrong with a hedge outside the list); verdicts that stood: 10.
+Confident-wrong turns the judge moved: 3 of 6 (0 to wrong, hedged; 3 to unclear).
 
 Turns still unclear after judging (counted as wrong):
 
 - `baseline` `bet_median_days_to_return` run 2 turn 1: right / right
 - `baseline` `bet_median_signup_to_first_order` run 1 turn 1: right / right
+- `custom-metricflow` `calls_about_returns` run 2 turn 1: right / right
 
 ## `claude-haiku-5-5`
 
@@ -156,3 +157,9 @@ Scored on partial: 1 run(s) of 73 of 74 cases; runs finished: custom-metricflow 
 Turns still unclear after judging (counted as wrong):
 
 - `custom-metricflow` `cancelled_total` run 2 turn 1: not judged yet
+
+## Errors
+
+Errors with no later answer of the same run (a run that errors 2 times is scored wrong; one retried and answered is not listed):
+
+- 2026-11-14T00:58:04Z `custom-metricflow` `leads_mtd` run 2: No answer: the model is rate-limited right now; ask again in 55 s.
