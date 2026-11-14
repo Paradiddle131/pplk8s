@@ -1,0 +1,4 @@
+# Exemptions for loadout's check-process-ids.py (cloud/githooks/check-process-ids.py in the collection).
+# The autopilot profile's Digest slot names the one issue whose body holds the owner's steering lines:
+# wakes read that link to find it, so its tracker link is a pointer the profile needs, not a history id.
+../../issues/43
