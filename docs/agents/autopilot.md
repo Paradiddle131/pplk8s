@@ -36,7 +36,7 @@ Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-us
 
 ## Gates
 
-`cloud` (every wake runs them; the stamp's command first, the path-bound ones before the stamp, a red one blocks the merge; counts in the handoff):
+`cloud` (every wake runs them, the path-bound ones before the gate stamp, whose command is the first line; a red one blocks the merge; counts in the handoff):
 - `make tools && make check` (the stamp: `make lint` and `make test`, the alert rules' promtool tests included, with the Compose warehouse up and required)
 - `make verify`: every image build (`BUILD_CA` passes the proxy's CA to the dependency steps)
 - `dbt/**` changed: dbt from the host, `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`), and `make gcp-image-check`
@@ -52,7 +52,7 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 
 ## Never
 
-- Start a paid or quota-bound eval pass (`make agent-eval`, `make record-call-labels`) except through the `experiment-preflight` skill, on free models only.
+- Start or resume a paid or quota-bound eval pass (`make agent-eval`, `make record-call-labels`) except through the `experiment-preflight` skill, its limits those of the owner's go.
 - Raise a GCP quota, spend cap or budget; run a live GCP step without `make gcp-cost-check` before and after, whose exit 1 (a cost) or 3 (not provable yet) ends the wake's GCP work with the SKU or the reason in the handoff; run an owner's step (`make gcp-up`, `gcp-down`, `gcp-workloads-up`): it is `needs-owner`.
 - Dispatch a GitHub workflow: they run on demand only.
 - Add to the frozen history (`PLAN.md`, `semantic/PLAN.md`, `LESSONS.md`, `LEDGER.md`, `ledger.d/`); a routine prompt asking for a fragment or a lessons line gets a `🤖` comment on its issue instead, listed under `Went wrong:` as `setup`.
@@ -67,4 +67,5 @@ A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local m
 - kind fails on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE`: `cluster-up.sh` adapts the kubelet and containerd; seen 2026-10-30.
 - kind nodes and pods cannot reach the internet through the host's loopback `HTTPS_PROXY`: `make egress-up` (run by `cluster-up` and every deploy target) relays the kind gateway to the proxy through the `kind-egress` container, gives containerd the proxy's CA, and sends docker.io pulls to mirror.gcr.io; seen 2026-10-31.
 - `no space left on device` (the session's disk is about 39 GB): `make push` and `airflow-image` skip a tag the local registry serves and drop Docker's copy after a push (`FORCE_BUILD=1` rebuilds an unchanged one); run `docker builder prune -af` and remove old tags' images; seen 2026-10-31.
+- `make tools` stops at kind's download and `make test` at the alert rules' promtool image, each on a `403`: `curl -sSI https://quay.io/v2/` answers `CONNECT tunnel failed, response 403`, so the environment's allowlist lacks `kind.sigs.k8s.io`, `get.helm.sh` and `quay.io`, which only the owner adds; install tofu and tflint alone from github.com with `scripts/install-tools.sh`'s pins and checksums so `make lint` still runs, and name each gate blocked by those hosts in the handoff; seen 2026-11-14.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.
