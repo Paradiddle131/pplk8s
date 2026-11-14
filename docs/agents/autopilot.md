@@ -1,85 +1,74 @@
 # Autopilot profile — pplk8s
 
-Unattended cloud wakes on this repo follow the `cloud:autopilot` skill (loadout's `cloud` plugin; if missing, read `/home/user/loadout/cloud/skills/autopilot/SKILL.md`) with the slots below.
-A wake with no `~/.claude/cloud-target` (the environment's setup didn't run: no Docker mirror, `dockerd` stopped, the skill missing) first runs `bash /home/user/loadout/cloud/setup.sh pplk8s`.
-The routine prompt: "Follow `docs/agents/autopilot.md` in pplk8s and do one wake."
+Unattended cloud wakes on this repo follow the `cloud:autopilot` skill (if missing, read `cloud/skills/autopilot/SKILL.md` in the collection's clone, which `~/.claude/CLAUDE.md` names) with the slots below.
+A wake with no `~/.claude/cloud-target` (the environment's setup didn't run) first runs `bash <clone>/cloud/setup.sh pplk8s`.
+The routine prompt: "Follow `docs/agents/autopilot.md` in pplk8s and do one wake." (optionally "on #n").
 Standing permission (owner, 2026-10-13): push `claude/*` branches, open and edit PRs and issues, comment, label, mark PRs ready, without asking.
-
-## Delivery
-
-`train claude/autopilot-train` (owner, 2026-11-02): one open train PR that every wake lands on (`export AUTOPILOT_TRAIN=claude/autopilot-train` before the scripts); the per-issue PRs open before the switch finish as they are, under the skill's resume rules.
-Image tags need no bump on the train: the `Makefile` computes each one from its build inputs (`scripts/image-tag.sh`).
-
-## Digest
-
-The body of [#43](../../../../issues/43) lists open owner questions only, under two steering lines the owner edits:
-- `Mode: paused | offline | full`: `paused` ends the wake after Orient (no claim, no writes); `offline` is § Offline wakes below; `full` lets a wake do Map #212's live steps.
-  The stricter of this line and the routine prompt wins; no line means `offline`.
-- `Owner lane: <maps or issues> — <path globs>`: the owner's attended work.
-  A wake picks no issue in those maps or naming a file under those globs, and, among the rest, prefers the one whose files lie furthest from them (docs-only first); `Owner lane: none` clears it.
+Every item is one branch `claude/<n>-<slug>`, the only branch a wake pushes, and one PR, reviewed by the `review` skill and merged by the wake once its gates and review records pass, unless the merge policy holds it.
 
 ## Merge policy
 
-Wakes merge one kind of PR themselves (owner, 2026-11-03: "merge things like 347 yourself"), with a merge commit, when all of these hold:
-- it carries out a decision the owner made in words (an answer on its issue or decision packet, or a request in a session), quoted in its body;
-- it is small and self-contained: not the train, not a PR another PR stacks on, no scope the decision didn't name;
-- the profile's `cloud` gates passed on its head in that session, with their counts in its body;
-- GitHub reports it mergeable, with no conflict.
-The wake says so in the issue's handoff and removes the digest line; every other PR waits for the owner.
-A routine prompt that says "never merge" is stricter and wins, as it does over `Mode`.
-The train PR is marked ready and labelled `needs-local-verify` once its gates pass (no `local` gates, so cloud's counts are the verification); the owner, or a session the owner asks, merges it with a merge commit, so each issue's commits stay findable.
+The wake merges a reviewed PR with `AUTOPILOT_HOLD_LABELS=needs-user $AP/scripts/merge.sh <pr>` (the prefix on the command itself, since no variable carries between calls; `merge.sh` then also holds a PR that carries `needs-user`, the older name of `needs-owner`) unless one of these holds it:
+- `needs-local-verify`: a gate the session cannot run (a `local` gate, or a `cloud` one a blocked host stops) waits for a local session to run it from the handoff's checklist and lift the label.
+- `owner-merges`, which the wake puts on the PR itself and never removes: a PR that costs money, raises a quota, cap or budget, or is costly to undo; its issue carries the decision packet and `needs-owner`, and only the owner's own merge lands it.
+  Always such a PR: one that touches `platform/gcp/infra/**`, the `caps` in `platform/gcp/free-path.yaml`, the cost check (`platform/gcp/cost-check.sh`), or a `make` target whose help calls it the owner's step, or that changes a byte cap or the free-model guard (`maximum_bytes_billed` in `dbt/profiles.yml`, the `BQ_MAXIMUM_BYTES_BILLED` default in `services/semantic-agent/src/semantic_agent/warehouse_bigquery.py` and `tests/e2e/lib/bigquery_target.py`, the `:free` check in `services/semantic-agent/src/semantic_agent/model.py`).
+Agent PRs opened before this profile stay the owner's to merge: a wake that resumes one labels it `owner-merges`.
+A routine prompt that says never merge is stricter and wins: that wake prefixes `AUTOPILOT_MERGE_POLICY=owner` to the same command, which then stops at ready.
+
+## Review
+
+The paths that set a review tier: `REVIEW.md` at the repo root, read from the default branch by the `review` skill's `tier.sh`.
+
+## Digest
+
+Steering lines (SKILL.md § Steering) at the top of [the digest issue](../../../../issues/43)'s body, which only the owner edits; with no `Mode` line a wake runs `offline`.
+A wake reads that body and never edits it, whatever older notes in it invite.
+Open owner questions are the `needs-owner` issues.
+- `offline` keeps a wake off the lab's GCP project: no `make` target whose help starts with `Live` (`bigquery-live-check`, `gcp-plan`, `gcp-images`, `gcp-cost-check`, …), no live data-agent or Knowledge Catalog call, and no issue whose work needs one; the offline `gcp-validate` and `gcp-image-check` (the BigQuery emulator) stay gates.
+- `full` adds the free-tier GCP map's live steps, which wait for a wake the owner watches, because the billing export lags hours behind a cost.
 
 ## Queue
 
-1. [Map #135: an agent-ready BigQuery warehouse](../../../../issues/135): its `autopilot-ready` sub-issues in order; design in `semantic/PLAN.md`.
-2. `agent:ready` issues labelled `bug`, then `lesson` (a lesson for the GKE or Composer build researched from primary sources: one line with its evidence and sources as a `🤖` comment on the issue, which the wake then closes; no file changes).
-3. The semantic track's next maps (owner's triage, 2026-10-31), each map's `autopilot-ready` sub-issues in its table's order: [Map #199: more domains](../../../../issues/199), then [Map #197: the questions business users ask](../../../../issues/197), [Map #200: one governed semantic layer for every agent](../../../../issues/200).
-4. [Map #212: the semantic track on a free-tier GCP project](../../../../issues/212) (unparked by the owner, 2026-11-01), under `semantic/PLAN.md` SL-13 and `platform/gcp/README.md`: never raise a quota, a spend cap or the budget; `make gcp-cost-check` before and after every live step, its exit 1 (a cost) or 3 (not provable yet) ending the wake's GCP work with the SKU or the reason in the handoff; `make gcp-up` is a `needs-owner` step.
-5. Low priority: [Map #198: the eval](../../../../issues/198), then [#202](../../../../issues/202) (dbt v2 research).
-
-**Offline wakes.** A routine prompt that says `offline` (the hourly schedule, owner 2026-11-01) skips Map #212, [#276](../../../../issues/276) and every step that reaches the real GCP project (a `make` target whose help starts with `Live`, such as `bigquery-live-check`, `gcp-plan`, `gcp-images` or `gcp-cost-check`; a live data-agent or Knowledge Catalog call); the offline `gcp-validate` and `gcp-image-check` (the BigQuery emulator) stay gates: live GCP work waits for a wake the owner watches, because the billing export lags hours behind a cost.
-An offline wake that finds nothing else pickable ends after step 9; it never falls through to Map #212.
+Maps are open `wayfinder:map` issues, named here by title; each map's `autopilot-ready` sub-issues go in its table's order.
+An issue labelled `semantic-bet` is not pickable: its work builds on the open `claude/semantic-bet` branch, so it waits until that branch has landed as reviewed slices or closed.
+1. `agent:ready` issues labelled `bug`, then `lesson` (a lesson for the GKE or Composer build, researched from primary sources: one line with its evidence and sources as a `🤖` comment on the issue, which the wake then closes; no file changes).
+2. *Map: the questions business users ask*, then *Map: one governed semantic layer for every agent*.
+3. *Map: the semantic track on a free-tier GCP project* (`Mode: full` only), under `platform/gcp/README.md`; an offline wake with nothing else pickable ends, never falling through to it.
+4. Low priority: *Map: an eval that measures what each approach is worth*, then the research issue on moving the semantic track to dbt v2.
 
 Until the labels are renamed, read `autopilot-ready` as `agent:ready`, `needs-user` as `needs-owner`, and a `🤖 Autopilot handoff` or `🤖 Autopilot claim` comment as the skill's `🤖 Handoff` and claim.
 
-## Records
-
-`CLAUDE.md` § Where things are recorded binds every wake, and wins over the skill's step that gives an append-only log a per-PR fragment: this repo's ledger is frozen, so a wake adds no fragment.
-- Evidence, choices and lessons for work go in the train note, the handoffs and the train PR body; a plan or analysis goes on its issue as an artifact.
-- A line a wake adds to a checked-in file names the work for what it does, with no issue, PR, phase, stage or decision id; the ids already in this profile and the plans are pointers to read, and a line a wake rewrites drops them.
-- A routine prompt that asks for a ledger fragment, a block appended to a findings or handoff file, or an id in a file: put that content in a `🤖` comment or an artifact on the issue the prompt names, and list it in the handoff's `Went wrong:` as a `setup` item naming the prompt line.
-
 ## Gates
 
-Cloud runs every gate below, with their counts in the handoff; this profile has no `local` gates (owner, 2026-11-01: the less left for the laptop the better), so each wake gives its long gates the time they need.
-Each wake has its own container, so wakes never share Docker, kind or the disk; within one wake, run the long gates one at a time (`run_in_background`), and run the long ones once on the PR's final head rather than before every push.
-- `make tools` first in each session: `make lint` runs `make gcp-validate`, which needs the pinned OpenTofu and tflint
-- `make check` (`make lint` and `make test` with the Compose warehouse up and required; GitHub Actions is off, PLAN.md D26, so a PR shows no checks)
-- dbt from the host when `dbt/**` changed: `cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt …` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`)
-- EL Factory from the host when `services/el-factory/**` changed: `uv run gunicorn` with the env from `scripts/el-factory-local.sh`
-- alert rules: Prometheus `quay.io/prometheus/prometheus:v3.15.0` on `--network pplk8s` with the rule file, as `tests/monitoring/rules-test.sh` does
-- `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
-- `make gcp-image-check` when `dbt/**` changed: the dbt image's GCP build, run on the emulator (SL-19)
-- the cluster when `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make tools`, `make cluster-up`, `make workloads-up`, and `make agent-deploy-check` for the semantic agent
+`cloud`: one gate stamp per head, whose one argv covers every gate the change calls for, the path-bound ones joined to the first line with `&&`; run it with `run_in_background`, once on the PR's final head; counts in the handoff:
+`$R/scripts/gate_stamp.sh --pr <n> -- bash -c 'make tools && make check && make verify && <the path-bound gates>'`
+- always: `make tools`, `make check` (`make lint` and `make test`, the alert rules' promtool tests included, with the Compose warehouse up and required), `make verify` (every image build; `BUILD_CA` passes the proxy's CA to the dependency steps)
+- `dbt/**` changed: `make dbt-deps && (cd dbt && DBT_HOST=localhost DBT_PORT=5433 DBT_PROFILES_DIR=$PWD uvx --from dbt-core==1.12.6 --with dbt-postgres==1.11.0 dbt build)` (add `--with dbt-metricflow[dbt-postgres]==0.15.0` for `mf`), and `make gcp-image-check`
+- `services/el-factory/**` changed: `make el-factory-up && make el-factory-down` (it waits for the service's health check against the Compose services)
+- `platform/k8s/**`, `platform/kind/**` or a workload image changed: `make cluster-up && make workloads-up && make agent-deploy-check`; `agent-deploy-check` is a live model turn, so in `offline` such a change cannot complete its stamp on cloud and takes `needs-local-verify`
+- `airflow/**` or `platform/helm/**` changed: `make cluster-up && make ci-integration`, and the exit checks the change touches, with `DAG_DELIVERY=local`
+A PR whose full stamp cannot run in the session (a host the allowlist blocks, a gate that does not fit the session's disk) is never stamped with a subset: it takes `needs-local-verify`, its local checklist names the blocked gates and the full stamp command, and it waits for a local session to post that stamp before any review.
 
-- Airflow when `airflow/**` or `platform/helm/**` changed: `make ci-integration`, and the phase checks the change touches, with `DAG_DELIVERY=local` (git-sync needs the laptop's deploy key)
-
-Left to the laptop (the handoff's local checklist): git-sync delivery and anything WSL2-specific; a check that does not fit the session's disk (below) says so in the handoff.
-A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: the default git-sync serves `main`, so the run would test the old DAG (seen on #113).
+`local` (never in the cloud stamp; an agent on the owner's laptop runs them from the handoff's checklist, and the PR waits on `needs-local-verify`):
+- git-sync delivery, when a change touches it: `make airflow-up` with the default `DAG_DELIVERY=git-sync` (the laptop's deploy key) — expect: the rollout Ready and `main`'s DAGs parsed.
+- a WSL2-specific check: the command the handoff names — expect: its `passed` line.
+A checklist that runs a DAG the PR changes deploys it with `DAG_DELIVERY=local make airflow-up`: git-sync serves `main`, so it would test the old DAG.
 
 ## Never
 
-- Dispatch a workflow (`ci.yaml` or `integration.yaml`; on-demand only, PLAN.md D26).
-- Add to the frozen history (`PLAN.md`, `semantic/PLAN.md`, `LESSONS.md`, `LEDGER.md`, `ledger.d/`), or add a process id to a checked-in file (§ Records).
-- Pin an image tag by hand in the `Makefile`: tags are computed from their build inputs (D16, `scripts/image-tag.sh`).
+- Start or resume a paid or quota-bound eval pass (`make agent-eval`, `make record-call-labels`) except through the `experiment-preflight` skill, its limits those of the owner's go.
+- Raise a GCP quota, spend cap or budget; run a live GCP step without `make gcp-cost-check` before and after, whose exit 1 (this month's cost at or above the tolerance) or 3 (not provable yet) ends the wake's GCP work with the SKU or the reason in the handoff; run an owner's step (`make gcp-up`, `gcp-down`, `gcp-workloads-up`): it is `needs-owner`.
+- Dispatch a GitHub workflow: they run on demand only.
+- Add to the frozen history (`PLAN.md`, `semantic/PLAN.md`, `LESSONS.md`, `LEDGER.md`, `ledger.d/`); a routine prompt asking for a fragment or a lessons line gets a `🤖` comment on its issue instead, listed under `Went wrong:` as `setup`.
+- Pin an image tag by hand in the `Makefile`: `scripts/image-tag.sh` computes each tag from its build inputs.
 - Change a choice the files describe without rewriting its present-tense reason in the same PR.
 
 ## Known conditions
 
-- `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists; a plain `docker build` still fails TLS; seen 2026-10-30.
-- Builds read and write a per-image layer cache at `ghcr.io/<owner>/<repo>/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill), so a fresh session rebuilds only what changed; seen 2026-10-30.
-- kind runs on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE` because `cluster-up.sh` adapts the kubelet and containerd; seen 2026-10-30.
-- The nodes and pods reach the internet through `platform/kind/egress-up.sh` (`make egress-up`, run by `cluster-up` and every deploy target): kind copies the host's loopback `HTTPS_PROXY` into the nodes, where it names the node itself, so a relay container `kind-egress` on the kind gateway pipes to the proxy, containerd uses it with the proxy's CA, and docker.io pulls go to mirror.gcr.io (#119); seen 2026-10-31.
-- The session's disk allowance (about 39 GB) holds the whole lab only without duplicates: on cloud `make push` and `airflow-image` skip a tag the local registry already serves (an image change gets a new tag by itself; `FORCE_BUILD=1` rebuilds an unchanged one) and drop Docker's copy and BuildKit's cache after a push (Makefile `publish`); on `no space left on device`, `docker builder prune -af` and remove images of old tags (#119); seen 2026-10-31.
-- A session can start without the cloud setup: no `~/.claude/settings.json` or `/etc/docker/daemon.json`, `dockerd` stopped, and uv warns `UV_NATIVE_TLS is deprecated`; Compose pulls then hit Docker Hub's 429. Write the mirror `daemon.json` (loadout `cloud/setup.sh`, the Docker step) and start `dockerd` as `cloud/hooks/session-start.sh` does; seen 2026-10-31 (seven times); fix: claude-dotfiles issue 28.
+- `docker build` steps reach PyPI through the TLS-intercepting proxy only with its CA: `make` passes it as the BuildKit secret `build_ca` when `BUILD_CA` (default `/root/.ccr/ca-bundle.crt`) exists, so build through `make`, never a plain `docker build`; seen 2026-10-30.
+- A fresh session rebuilds every image: builds share a per-image layer cache at `ghcr.io/<owner>/<repo>/<image>:buildcache` (Makefile `BUILD_CACHE`, on by default on cloud; the `image-cache` skill); seen 2026-10-30.
+- kind fails on the sandbox's cgroup v1 without `CAP_SYS_RESOURCE`: `cluster-up.sh` adapts the kubelet and containerd; seen 2026-10-30.
+- kind nodes and pods cannot reach the internet through the host's loopback `HTTPS_PROXY`: `make egress-up` (run by `cluster-up` and every deploy target) relays the kind gateway to the proxy through the `kind-egress` container, gives containerd the proxy's CA, and sends docker.io pulls to mirror.gcr.io; seen 2026-10-31.
+- `no space left on device` (the session's disk is about 39 GB): `make push` and `airflow-image` skip a tag the local registry serves and drop Docker's copy after a push (`FORCE_BUILD=1` rebuilds an unchanged one); run `docker builder prune -af` and remove old tags' images; seen 2026-10-31.
+- `make tools` stops at kind's download and `make test` at the alert rules' promtool image, each on a `403`: `curl -sSI https://quay.io/v2/` answers `CONNECT tunnel failed, response 403`, so the environment's allowlist lacks `kind.sigs.k8s.io`, `get.helm.sh` and `quay.io`, which only the owner adds; until then no full stamp runs on cloud, so every PR takes `needs-local-verify` with those gates and the full stamp command in its checklist; seen 2026-11-14.
 - Exporters publish no host port: read one with `docker run --rm --network pplk8s curlimages/curl …`; seen 2026-10-14.
