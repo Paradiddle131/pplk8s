@@ -385,3 +385,26 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Report: rebuilt by the lane after every pass (and once by hand after the fix), republished (page versions 71 to 74), the report's page file on its issue read back equal to the file after each; the Approaches page republished (versions 18 and 19).
 - Next: tomorrow's wake resumes `custom-lightdash` frozen k = 3 (27 runs: run 3 from case 48), then whatever the frozen k = 3 round still lacks (`custom-lightdash` hard is not in the round); `baseline` and `custom-hybrid` stay held until the reach-rerun issue closes (the owner's call), which clears `HELD` and puts `baseline` hard-v2 k = 3 first.
   With those two held, the free lane has about one more day of unheld work; after it, each wake spends only the judge backlog and the reach reruns until the owner closes that issue.
+
+## 2026-11-15, 2026-11-15T00:56Z (the daily wake: the free lane from 00:11Z, its unheld work done by 00:54Z)
+
+- Free count 0 at the start, 54 of 1,000 at the end (read from `/api/v1/key`); one chunk (`--until 02:01Z`) exiting 0; 946 of the day's free requests left unspent, since every pass still to run is held.
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-14) and `gcp-usage-check` ok; the same at the end (export until 2026-11-14T21:14Z); no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2, no container restart); Lightdash started.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog, before and after the pass | no turn waiting |
+| the reach reruns, `baseline` and `custom-hybrid`, every set | none | whole since 2026-11-11 |
+| `custom-metricflow` frozen k = 3 | none | whole: 222 of 222 runs |
+| `custom-lightdash` frozen k = 3 | 27 runs (run 3, cases 48 to 74) | whole: 222 of 222 runs (74 cases x 3) |
+
+- Mid-way: none. The lane's last line lists only held passes as not whole: `baseline` and `custom-hybrid` at k = 1 on frozen, hard and hard-v2, and at k = 3 on hard-v2 and frozen.
+- Figures that moved (Nemotron free, right / confident-wrong):
+  frozen `custom-lightdash` 59.0% / 9.0% at k = 3 on all 74 cases (was 59.5% / 8.1% on its two whole runs, 60.8% / 8.1% at k = 1; interval 48.6% to 69.4%).
+  Unchanged: frozen `custom-hybrid` 98.6% / 1.4% (k = 1), `native-mcp` 95.5% / 3.2%, `custom-metricflow-compute` 91.9% / 0.0%, `custom-metricflow` 91.0% / 0.5%, `baseline` 90.5% / 5.4%, `custom-toolbox` 47.7% / 5.4%; hard-v2 `custom-hybrid` 92.6% / 3.7%, `native-mcp` 90.7% / 4.9%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%.
+- What the numbers say: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%), frozen `custom-lightdash` at k = 3 reads 41 points under it, and is wrong and sure most often of the custom setups (9.0%).
+  In the same-model pair it sits 36.5 points under `native-mcp` (95.5%) and 39.6 under the hybrid (98.6%, k = 1 there); only `custom-toolbox` (47.7%) reads lower: a BI tool's metric layer read through its API alone does not carry this model, and the third run held its k = 1 reading within two points.
+- Report: rebuilt by the lane after every pass and once by hand, republished (page version 75), the report's page file on its issue read back equal to the file; the Approaches page republished (version 20).
+- Next: nothing unheld is left in the free lane's rounds. The next wake starts on `baseline` hard-v2 k = 3 the moment `HELD` is cleared (the owner closing the reach-rerun issue); until then each wake spends only the judge backlog and the already whole reach reruns, about 50 requests a day.
