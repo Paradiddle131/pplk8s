@@ -386,7 +386,7 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
 - Next: tomorrow's wake resumes `custom-lightdash` frozen k = 3 (27 runs: run 3 from case 48), then whatever the frozen k = 3 round still lacks (`custom-lightdash` hard is not in the round); `baseline` and `custom-hybrid` stay held until the reach-rerun issue closes (the owner's call), which clears `HELD` and puts `baseline` hard-v2 k = 3 first.
   With those two held, the free lane has about one more day of unheld work; after it, each wake spends only the judge backlog and the reach reruns until the owner closes that issue.
 
-## 2026-11-15, 2026-11-15T00:56Z (the daily wake: the free lane from 00:11Z, its unheld work done by 00:54Z)
+## 2026-11-15, 2026-11-15T00:55Z (the daily wake: the free lane from 00:11Z, its unheld work done by 00:54Z)
 
 - Free count 0 at the start, 54 of 1,000 at the end (read from `/api/v1/key`); one chunk (`--until 02:01Z`) exiting 0; 946 of the day's free requests left unspent, since every pass still to run is held.
 - Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-14) and `gcp-usage-check` ok; the same at the end (export until 2026-11-14T21:14Z); no GCP work in the lane.
