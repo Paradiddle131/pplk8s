@@ -24,10 +24,14 @@ used() { curl -sS https://openrouter.ai/api/v1/key -H "Authorization: Bearer x" 
   python3 -c "import json,sys; print(json.load(sys.stdin)['data']['free_model_daily_requests']['used'])"; }
 log() { echo "$(date -u +%FT%H:%MZ) $*"; }
 push() {
-  cd "$REPO" && git add -A docs/research/semantic-bet &&
+  # A refused commit or push is said as such: a "pushed:" line names only a commit that reached the remote.
+  if cd "$REPO" && git add -A docs/research/semantic-bet &&
     git commit -q -m "feat(semantic-bet): free model, $1 (#333)" &&
-    git pull -q --rebase --autostash origin claude/semantic-bet && git push -q origin claude/semantic-bet
-  log "pushed: $1 ($(git -C "$REPO" log -1 --format=%h))"
+    git pull -q --rebase --autostash origin claude/semantic-bet && git push -q origin claude/semantic-bet; then
+    log "pushed: $1 ($(git -C "$REPO" log -1 --format=%h))"
+  else
+    log "NOT pushed: $1 (the commit or push failed; the runs stay in the working tree)"
+  fi
 }
 # The judge on Claude Haiku through `claude -p` (#427, #458): no free OpenRouter request goes to judging.
 judge() {
