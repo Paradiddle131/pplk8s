@@ -37,9 +37,9 @@ judge() {
       --concurrency 4 2>&1 | grep -v Warning | tail -1
   done
 }
-# Setups whose reach #445 changes are held until their reruns (#448) land: a new free run of them now would be
-# asked again under the new reach. Clear HELD once #448 is closed.
-HELD="${BET_FREE_HELD-baseline custom-hybrid}"
+# Setups to hold out of the rounds (space-separated arms), e.g. while a change to what data they may reach is pending:
+# a run asked before it settles would be asked again. None is held; BET_FREE_HELD names some for one lane.
+HELD="${BET_FREE_HELD-}"
 # The passes this lane left not whole (held, cut by time or budget, or Lightdash down), for its last line.
 NOT_WHOLE=""
 # One pass: name, budget estimate, command (run from services/semantic-agent).
@@ -47,7 +47,7 @@ pass() {
   local name=$1 est=$2; shift 2
   local h; for h in $HELD; do case "$name" in "$h "*) NOT_WHOLE+="$name (held); " ;; esac; done
   for h in $HELD; do
-    case "$name" in "$h "*) log "skip $name: held until #448 (its reach changes, #445)"; return 0 ;; esac
+    case "$name" in "$h "*) log "skip $name: held (BET_FREE_HELD)"; return 0 ;; esac
   done
   # A whole pass is read from its log alone, without starting its runner (#454): the name is "<arm> <set> k=<k>".
   local arm=${name%% *} rest=${name#* }; local set=${rest%% *} k=${name##*k=}
