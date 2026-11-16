@@ -1,5 +1,5 @@
 {
- "written": "2026-11-16T22:44Z",
+ "written": "2026-11-16T23:08Z",
  "rule": "RULE.md",
  "arms": [
   {
@@ -11,16 +11,16 @@
    "rung": null,
    "cases": 74,
    "of_cases": 74,
-   "runs": 74,
+   "runs": 148,
    "accuracy": [
-    0.905405405405,
-    0.837837837838,
+    0.925675675676,
+    0.871621621622,
     0.972972972973
    ],
    "confident_wrong": [
-    0.054054054054,
-    0.013513513514,
-    0.108108108108
+    0.040540540541,
+    0.006756756757,
+    0.081081081081
    ],
    "groups": {
     "conversation": [
@@ -28,7 +28,7 @@
      7
     ],
     "covered": [
-     0.8870967741935484,
+     0.9112903225806451,
      62
     ],
     "distractor": [
@@ -36,11 +36,11 @@
      1
     ],
     "planted": [
-     1.0,
+     0.875,
      4
     ],
     "trap": [
-     0.8,
+     0.9,
      10
     ],
     "uncovered": [
@@ -48,15 +48,15 @@
      12
     ]
    },
-   "pass_all": 0.9054054054054054,
+   "pass_all": 0.8918918918918919,
    "outcomes": {
-    "right": 67,
+    "right": 137,
     "declined": 1,
-    "confident-wrong": 4,
-    "wrong": 2
+    "confident-wrong": 6,
+    "wrong": 4
    },
-   "runs_beyond_rounds": 96,
-   "model_calls": 692,
+   "runs_beyond_rounds": 65,
+   "model_calls": 903,
    "unchecked_runs": 35
   },
   {
