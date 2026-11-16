@@ -4,15 +4,15 @@ Each set is scored on its own under [the rule](RULE.md), with its own comparison
 
 ## Every arm on the frozen set
 
-Written 2026-11-16T21:32Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-16T22:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl) and each live arm's `eval-<arm>.jsonl` under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-110 of `baseline`'s 352 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+110 of `baseline`'s 352 logged runs had the `legacy` tables in reach (logged with `legacy` since the equal-reach arms); the others did not.
 
 ### `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 222 of 222, custom-hybrid 138 of 222, custom-metricflow-compute 222 of 222, custom-lightdash 222 of 222, custom-toolbox 222 of 222, native-mcp 222 of 222; model responses spent: baseline 550, custom-metricflow 887, custom-hybrid 557, custom-metricflow-compute 833, custom-lightdash 441, custom-toolbox 401, native-mcp 1329.
+Scored on partial: 1 run(s) of 74 of 74 cases; runs finished: baseline 138 of 222, custom-metricflow 222 of 222, custom-hybrid 222 of 222, custom-metricflow-compute 222 of 222, custom-lightdash 222 of 222, custom-toolbox 222 of 222, native-mcp 222 of 222; model responses spent: baseline 550, custom-metricflow 887, custom-hybrid 903, custom-metricflow-compute 833, custom-lightdash 441, custom-toolbox 401, native-mcp 1329.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` | `custom-lightdash` | `custom-toolbox` | `native-mcp` |
 |---|---|---|---|---|---|---|---|
@@ -387,7 +387,7 @@ The managed best (RULE.md § The rule, 1): `native-context-bare` on `google-data
 Each arm of ours on each model it ran with, paired by case against it on the cases both reached (each case's share over its finished runs), percentile bootstrap 95% (10,000 resamples, seed 325); ours on `nvidia/nemotron-3.5-super-vl:free` decides (RULE.md § The rule, 2), ours on any other model is the check on whether a gap is the model's:
 
 - `custom-metricflow` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.090 [-0.158, -0.032], confident-wrong +0.005 [+0.000, +0.014]: not worth building (decides; 222 runs finished).
-- `custom-hybrid` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.014 [-0.041, +0.000], confident-wrong +0.014 [+0.000, +0.041]: not worth building (decides; 74 runs finished).
+- `custom-hybrid` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.009 [-0.027, +0.000], confident-wrong +0.005 [+0.000, +0.014]: not worth building (decides; 222 runs finished).
 - `custom-metricflow-compute` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.081 [-0.149, -0.027], confident-wrong +0.000 [+0.000, +0.000]: not worth building (decides; 222 runs finished).
 - `custom-lightdash` (rung 4) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.410 [-0.514, -0.306], confident-wrong +0.090 [+0.036, +0.149]: not worth building (decides; 222 runs finished).
 - `custom-toolbox` (rung 3) on `nvidia/nemotron-3.5-super-vl:free` against `native-context-bare` on `google-data-agent (MODEL_UNSPECIFIED, THINKING)`, 74 of 74 cases: accuracy -0.523 [-0.635, -0.410], confident-wrong +0.054 [+0.014, +0.104]: not worth building (decides; 222 runs finished).
@@ -425,11 +425,11 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set
 
-Written 2026-11-16T21:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-16T22:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-local.jsonl`](eval-hard-local.jsonl) and each live arm's `eval-hard-<arm>.jsonl` under [the rule](RULE.md): 40 cases of `services/semantic-agent/evals/semantic_bet_hard.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-192 of `baseline`'s 192 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+192 of `baseline`'s 192 logged runs had the `legacy` tables in reach (logged with `legacy` since the equal-reach arms); the others did not.
 
 ### `claude-haiku-5-5`
 
@@ -788,11 +788,11 @@ Each arm of ours on each model it ran with, paired by case against it on the cas
 
 ## Every arm on the hard set v2
 
-Written 2026-11-16T21:33Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-16T22:27Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-hard-v2-local.jsonl`](eval-hard-v2-local.jsonl) and each live arm's `eval-hard-v2-<arm>.jsonl` under [the rule](RULE.md): 54 cases of `services/semantic-agent/evals/semantic_bet_hard_v2.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-228 of `baseline`'s 228 logged runs had the `legacy` tables in reach (logged with `legacy`, from #357 on); the others did not.
+280 of `baseline`'s 280 logged runs had the `legacy` tables in reach (logged with `legacy` since the equal-reach arms); the others did not.
 
 ### `claude-haiku-5-5`
 
@@ -849,7 +849,7 @@ Confident-wrong turns the judge moved: 6 of 11 (6 to wrong, hedged; 0 to unclear
 
 ### `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 1 run(s) of 40 of 54 cases; runs finished: baseline 110 of 162, custom-metricflow 162 of 162, custom-hybrid 162 of 162, custom-metricflow-compute 162 of 162, custom-lightdash 40 of 162, custom-toolbox 40 of 162, native-mcp 162 of 162; model responses spent: baseline 541, custom-metricflow 616, custom-hybrid 696, custom-metricflow-compute 598, custom-lightdash 74, custom-toolbox 77, native-mcp 1117.
+Scored on partial: 1 run(s) of 40 of 54 cases; runs finished: baseline 162 of 162, custom-metricflow 162 of 162, custom-hybrid 162 of 162, custom-metricflow-compute 162 of 162, custom-lightdash 40 of 162, custom-toolbox 40 of 162, native-mcp 162 of 162; model responses spent: baseline 831, custom-metricflow 616, custom-hybrid 696, custom-metricflow-compute 598, custom-lightdash 74, custom-toolbox 77, native-mcp 1117.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` | `custom-lightdash` | `custom-toolbox` | `native-mcp` |
 |---|---|---|---|---|---|---|---|
@@ -871,7 +871,7 @@ Both local arms are on rung 3 or 4 and none is the managed best, so this pair is
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 22 (`baseline` 1 wrong to right; `custom-hybrid` 1 right to unclear; `custom-hybrid` 3 wrong to right; `custom-lightdash` 1 wrong to right; `custom-metricflow` 4 confident-wrong to right; `custom-metricflow` 4 right to unclear; `custom-metricflow` 1 wrong to right; `custom-metricflow-compute` 3 wrong to right; `custom-toolbox` 1 right to unclear; `custom-toolbox` 1 wrong to right; `native-mcp` 1 right to unclear; `native-mcp` 1 wrong to right).
 
-Turns judged: 37 (22 the code left unclear, 15 confident-wrong with a hedge outside the list); verdicts that stood: 37.
+Turns judged: 38 (23 the code left unclear, 15 confident-wrong with a hedge outside the list); verdicts that stood: 38.
 Confident-wrong turns the judge moved: 8 of 15 (8 to wrong, hedged; 0 to unclear).
 
 ### `claude-code-strict (haiku)`
