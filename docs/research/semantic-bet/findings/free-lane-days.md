@@ -429,3 +429,33 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   The hybrid's lead stays at k = 1 until the hold lifts and its k = 3 runs land.
 - Report: rebuilt by hand (no figure moved), republished (page version 76), the report's page file on its issue read back equal to the file; the Approaches page unchanged, so not republished.
 - Next: nothing unheld is left. The next wake starts on `baseline` hard-v2 k = 3 the moment `HELD` is cleared (the owner closing the reach-rerun issue); until then a wake spends no free requests, and the owner may want to pause this schedule until that issue closes.
+
+## 2026-11-16, 2026-11-16T23:12Z (an owner-started session: the hold lifted, the free lane from 21:31Z, the day's quota spent by 23:10Z)
+
+- The owner, in a session at about 21:20Z: "the data-access change is settled, lift the pause. work for today's quota while we still can"; the free lane now holds no setup, and the reach-rerun issue is closed.
+- Free count 0 at the start, 986 of 1,000 at the end (read from `/api/v1/key`); two chunks, the first cut by a container restart at about 22:35Z mid-`baseline` frozen (its 32 whole lines pushed by hand), the second (`--until 23:45Z`) exiting 0 on the cap.
+- Gates before each chunk: free count, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU) and `gcp-usage-check` ok; no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2). Two faults found and fixed on the way:
+  the eval page's legacy-reach line carried an issue tag, so the process-id commit check refused the commit after `baseline` hard-v2 while the lane still printed "pushed:"; the line is reworded in `bet_eval`, and the lane now prints "NOT pushed:" when its commit or push fails.
+  The refused pass's runs stayed in the working tree and went out with the next push, so nothing was lost.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog, before each chunk | no turn waiting |
+| `baseline` hard-v2 k = 3 | 52 runs | whole: 162 of 162 runs (54 cases x 3) |
+| `custom-hybrid` frozen k = 3 | 84 runs | whole: 222 of 222 runs (74 cases x 3) |
+| `custom-hybrid` hard-v2 k = 3 | none | whole: 162 of 162 runs |
+| `baseline` frozen k = 3 | 75 runs (32 before the restart, the rest after) | mid-way: 213 of 222 runs; `--remaining` reads 9; scored on its two whole runs |
+
+- Mid-way: `baseline` frozen k = 3, run 3 with 9 runs to ask; it stopped on the cap (`stopped: requests`).
+- Figures that moved (Nemotron free, right / confident-wrong):
+  frozen `custom-hybrid` 99.1% / 0.5% at k = 3 on all 74 cases (was 98.6% / 1.4% at k = 1; interval 97.3% to 100%).
+  Hard-v2 `baseline` 82.7% / 11.1% at k = 3 (was 85.2% / 9.3% at k = 1; interval 74.1% to 90.7%).
+  Frozen `baseline` 92.6% / 4.1% on its two whole runs (was 90.5% / 5.4% at k = 1).
+  Unchanged: frozen `native-mcp` 95.5% / 3.2%, `custom-metricflow-compute` 91.9% / 0.0%, `custom-metricflow` 91.0% / 0.5%; hard-v2 `custom-hybrid` 92.6% / 3.7%, `native-mcp` 90.7% / 4.9%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%.
+- What the numbers say: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%, hard-v2 99.4%), the hybrid on the free model now reads within one point of it on the frozen set at k = 3 (99.1%), and is wrong and sure on 0.5% of runs where the managed best has none.
+  In the same-model pair the hybrid leads `native-mcp` by 3.6 points on frozen (99.1% against 95.5%) and 1.9 on hard-v2 (92.6% against 90.7%), with less confident-wrong on frozen (0.5% against 3.2%).
+  Plain text-to-SQL (`baseline`) fell on hard-v2 at k = 3 (82.7%) and is wrong and sure there most often of the four setups that write SQL (11.1%): the hard questions need definitions it does not have.
+- Report: rebuilt by the lane after every pass, republished (page version 77), the report's page file on its issue read back equal to the file; the Approaches page republished (version 21).
+- Next: tomorrow's wake finishes `baseline` frozen k = 3 (9 runs, a few dozen requests); that is the last pass, so the lane's last line should then read "every pass is done at k = 3", and the wake says "OWNER NEEDED: free lane complete" and turns this schedule off.
