@@ -1780,7 +1780,7 @@ def report(
         reached = sum(1 for e in baseline if e.get("legacy"))
         lines.append(
             f"{reached} of `baseline`'s {len(baseline)} logged runs had the `legacy` tables in "
-            "reach (logged with `legacy`, from #357 on); the others did not."
+            "reach (logged with `legacy` since the equal-reach arms); the others did not."
         )
     if not models:
         lines += ["", "No run is logged yet."]
