@@ -1,37 +1,37 @@
 # The bet's local arms on the frozen set
 
-Written 2026-11-17T00:13Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
+Written 2026-11-17T00:31Z by `make agent-eval ARM=bet` (`semantic_agent/bet_eval.py`) from [`eval-local.jsonl`](eval-local.jsonl), the log of every run, under [the rule](RULE.md): 74 cases of `services/semantic-agent/evals/semantic_bet.yaml`, k = 3 runs each, each run in a fresh session, on `dbt/dev/fixture.sql` and `fixture_weeks.sql` in the Compose warehouse.
 Within a model, arms stand side by side on the cases every arm reached; the rule's comparison pairs arms by case across models, each arm's model named (RULE.md § The rule, 2).
 `custom-metricflow` is the semantic agent on its MetricFlow tools; it cannot read the `legacy` schema (RULE.md § The arms). `baseline` is the text-to-SQL baseline that reads the generated docs.
 A turn the code cannot decide (no number parses and no decline) goes to the blind judge, `claude -p (haiku)` asked 2 times ([`judge.jsonl`](judge.jsonl), RULE.md § Scoring a run): equal verdicts stand; a turn still unclear counts as wrong and is listed under its model.
-185 of `baseline`'s 427 logged runs had the `legacy` tables in reach (logged with `legacy` since the equal-reach arms); the others did not.
+194 of `baseline`'s 436 logged runs had the `legacy` tables in reach (logged with `legacy` since the equal-reach arms); the others did not.
 
 ## `nvidia/nemotron-3.5-super-vl:free`
 
-Scored on partial: 2 run(s) of 74 of 74 cases; runs finished: baseline 213 of 222, custom-metricflow 222 of 222, custom-hybrid 222 of 222, custom-metricflow-compute 222 of 222; model responses spent: baseline 903, custom-metricflow 887, custom-hybrid 903, custom-metricflow-compute 833.
+Scored on all 3 runs of every case; runs finished: baseline 222 of 222, custom-metricflow 222 of 222, custom-hybrid 222 of 222, custom-metricflow-compute 222 of 222; model responses spent: baseline 940, custom-metricflow 887, custom-hybrid 903, custom-metricflow-compute 833.
 
 | | `baseline` | `custom-metricflow` | `custom-hybrid` | `custom-metricflow-compute` |
 |---|---|---|---|---|
-| Accuracy | 89.9% | 91.2% | 99.3% | 91.9% |
-| Confident-wrong | 4.1% | 0.0% | 0.7% | 0.0% |
-| pass^2 | 83.8% | 90.5% | 98.6% | 91.9% |
-| `conversation` (7) accuracy | 57.1% | 100.0% | 100.0% | 100.0% |
-| `covered` (62) accuracy | 89.5% | 97.6% | 99.2% | 98.4% |
+| Accuracy | 90.1% | 90.5% | 99.1% | 91.9% |
+| Confident-wrong | 4.5% | 0.5% | 0.5% | 0.0% |
+| pass^3 | 81.1% | 87.8% | 98.6% | 91.9% |
+| `conversation` (7) accuracy | 61.9% | 100.0% | 100.0% | 100.0% |
+| `covered` (62) accuracy | 89.8% | 97.3% | 98.9% | 98.4% |
 | `distractor` (1) accuracy | 100.0% | 100.0% | 100.0% | 100.0% |
-| `planted` (4) accuracy | 87.5% | 100.0% | 100.0% | 100.0% |
+| `planted` (4) accuracy | 91.7% | 100.0% | 100.0% | 100.0% |
 | `trap` (10) accuracy | 90.0% | 100.0% | 100.0% | 100.0% |
-| `uncovered` (12) accuracy | 91.7% | 58.3% | 100.0% | 58.3% |
+| `uncovered` (12) accuracy | 91.7% | 55.6% | 100.0% | 58.3% |
 
 Paired by case, `custom-metricflow` minus `baseline`, percentile bootstrap 95% (10,000 resamples, seed 325):
 
-- Accuracy: +0.014 [-0.061, +0.088]: no difference.
-- Confident-wrong: -0.041 [-0.081, -0.007]: a difference.
+- Accuracy: +0.005 [-0.072, +0.077]: no difference.
+- Confident-wrong: -0.041 [-0.081, -0.009]: a difference.
 
 Both local arms are on rung 3 or 4 and none is the managed best, so this pair is descriptive (RULE.md § The rule, 5) until the native arms are scored.
 
 Turns the current wordings score otherwise than their log (RULE.md § Changes since freezing, applied on read): 3 (`baseline` 2 unclear to confident-wrong; `custom-metricflow` 1 unclear to confident-wrong).
 
-Turns judged: 17 (10 the code left unclear, 7 confident-wrong with a hedge outside the list); verdicts that stood: 14.
+Turns judged: 18 (11 the code left unclear, 7 confident-wrong with a hedge outside the list); verdicts that stood: 15.
 Confident-wrong turns the judge moved: 3 of 7 (0 to wrong, hedged; 3 to unclear).
 
 Turns still unclear after judging (counted as wrong):
