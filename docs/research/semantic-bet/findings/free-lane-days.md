@@ -459,3 +459,28 @@ A block holds the OpenRouter free count at start and end, each pass touched (cas
   Plain text-to-SQL (`baseline`) fell on hard-v2 at k = 3 (82.7%) and is wrong and sure there most often of the four setups that write SQL (11.1%): the hard questions need definitions it does not have.
 - Report: rebuilt by the lane after every pass, republished (page version 77), the report's page file on its issue read back equal to the file; the Approaches page republished (version 21).
 - Next: tomorrow's wake finishes `baseline` frozen k = 3 (9 runs, a few dozen requests); that is the last pass, so the lane's last line should then read "every pass is done at k = 3", and the wake says "OWNER NEEDED: free lane complete" and turns this schedule off.
+
+
+## 2026-11-17, 2026-11-17T00:40Z (the daily wake: the free lane from 00:12Z, the last pass whole by 00:33Z, every pass done at k = 3)
+
+- Free count 0 at the start, 40 of 1,000 at the end (read from `/api/v1/key`); one chunk (`--until 02:02Z`) exiting 0 with the lane's last line "every pass is done at k = 3; free count 40".
+- Gates at the start: free count reset, `services-up`, the agent fixture, `gcp-cost-check` exit 0 ($0.000010, the same Artifact Registry SKU as on 2026-11-16; export until 2026-11-16T19:13Z) and `gcp-usage-check` ok; the lane reran both before each pass, all ok; no GCP work in the lane.
+- Anomalies: none (no exit 1 or 2, no container restart); no `custom-lightdash` pass was due, so the image was not pulled.
+- One snag, not an anomaly: the session's default `python3` is 3.11, and `report/build.py` needs 3.12 (an f-string with nested quotes), so a by-hand rebuild must call `python3.12`, as the lane does.
+- Passes (Nemotron free; cases of the set as scored, read from `results.json` `sets.<set>.cases` today: frozen 74, hard 40, hard-v2 54):
+
+| Pass | Logged today | Where it stands |
+|---|---|---|
+| judge backlog (Claude Haiku), all three sets | the backlog, before the passes | no turn waiting |
+| `baseline` frozen k = 3 | 9 runs | whole: 222 of 222 runs (74 cases x 3) |
+| every other pass of the k = 1, hard-v2 and frozen k = 3 rounds | none | whole |
+
+- Mid-way: none.
+- Figures that moved (Nemotron free, right / confident-wrong): frozen `baseline` 91.9% / 4.5% at k = 3 on all 74 cases (was 92.6% / 4.1% on its two whole runs; interval 86.0% to 96.8%).
+  Unchanged: frozen `custom-hybrid` 99.1% / 0.5%, `native-mcp` 95.5% / 3.2%, `custom-metricflow-compute` 91.9% / 0.0%, `custom-metricflow` 91.0% / 0.5%, `custom-lightdash` 59.0% / 9.0%, `custom-toolbox` 47.7% / 5.4%; hard-v2 `custom-hybrid` 92.6% / 3.7%, `native-mcp` 90.7% / 4.9%, `baseline` 82.7% / 11.1%, `custom-metricflow-compute` 80.9% / 4.9%, `custom-metricflow` 71.6% / 5.6%.
+- What the numbers say, now that every free pass is whole at k = 3: against the managed best (`managed_best`, `native-context-bare`, Google's data agent on Gemini: frozen 100%, hard-v2 99.4%), no setup on the free model reaches it; the hybrid comes closest (99.1% frozen, 92.6% hard-v2).
+  In the same-model pair the hybrid leads `native-mcp` on both sets (3.6 points on frozen, 1.9 on hard-v2), and its frozen interval (97.3% to 100%) no longer overlaps `native-mcp`'s point (95.5%).
+  Plain text-to-SQL (`baseline`) ties `custom-metricflow-compute` on frozen (91.9%) but is wrong and sure there nine times as often (4.5% against 0.0%), and on hard-v2 it is the most often wrong and sure of the setups that write SQL (11.1%).
+  What would move these: a stronger free model, or the hybrid's hard-v2 misses read case by case.
+- Report: rebuilt (no change beyond what the lane wrote), republished (page version 78), the report's page file on its issue read back equal to the file; the Approaches page republished (version 22).
+- Next: none. The free lane is complete at k = 3; this schedule is turned off, and the owner decides what follows (the merges in the completion plan, a new pass or set).
